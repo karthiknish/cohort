@@ -454,7 +454,10 @@ function TasksPageContent({
   const handleBulkAssign = useCallback(
     async (assignees: string[]) => {
       if (!hasSelection) return
-      const normalized = assignees.map((name) => name.trim()).filter((name) => name.length > 0)
+      const normalized = assignees.flatMap((name) => {
+        const trimmed = name.trim()
+        return trimmed.length > 0 ? [trimmed] : []
+      })
       const ids = Array.from(selectedTaskIds)
       setBulkState({ active: true, label: 'Updating assignees', progress: 0 })
       const ok = await handleBulkUpdate(ids, { assignedTo: normalized })

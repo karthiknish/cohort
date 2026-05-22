@@ -101,8 +101,8 @@ export function MobileCollapsible({
       >
         <span>{title}</span>
         {!isMobile && (
-          <span aria-hidden="true" className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md">
-            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          <span aria-hidden="true" className="inline-flex size-6 shrink-0 items-center justify-center rounded-md">
+            {isOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
           </span>
         )}
       </button>
@@ -148,7 +148,7 @@ export function MobileFilterSheet({
         <DrawerHeader className="relative flex-row items-start justify-between gap-4 border-b border-border/60 pb-4 text-left">
           <div className="min-w-0 space-y-1">
             <DrawerTitle className="flex items-center gap-2">
-              <SlidersHorizontal className="h-5 w-5" aria-hidden />
+              <SlidersHorizontal className="size-5" aria-hidden />
               {title}
               {filterCount && filterCount > 0 ? (
                 <Badge variant="secondary" className="ml-2">
@@ -159,7 +159,7 @@ export function MobileFilterSheet({
             {description ? <DrawerDescription>{description}</DrawerDescription> : null}
           </div>
           <Button variant="ghost" size="icon" onClick={handleClose} aria-label="Close filters">
-            <X className="h-5 w-5" aria-hidden />
+            <X className="size-5" aria-hidden />
           </Button>
         </DrawerHeader>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -200,9 +200,9 @@ export function MobileQuickActions({ actions, className }: MobileQuickActionsPro
               className="flex flex-col items-center gap-1 rounded-lg p-2 text-xs text-muted-foreground transition-colors hover:bg-muted/50 active:bg-muted"
             >
               <div className="relative">
-                <action.icon className="h-5 w-5" />
+                <action.icon className="size-5" />
                 {action.badge && (
-                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
+                  <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
                     {action.badge}
                   </span>
                 )}
@@ -243,7 +243,7 @@ function MobileActionSheet({ actions }: MobileActionSheetProps) {
           type="button"
           className="flex flex-col items-center gap-1 rounded-lg p-2 text-xs text-muted-foreground transition-colors hover:bg-muted/50 active:bg-muted"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <div className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <span className="text-sm font-medium">{actions.length + 4}</span>
           </div>
           <span>More</span>
@@ -270,7 +270,7 @@ function MobileActionSheetItem({
   action: MobileActionSheetProps['actions'][number]
   onClose: () => void
 }) {
-  const handleClick = useCallback(() => {
+  const onRunFabAction = useCallback(() => {
     action.onClick()
     onClose()
   }, [action, onClose])
@@ -278,10 +278,10 @@ function MobileActionSheetItem({
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onRunFabAction}
       className="flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-muted"
     >
-      <action.icon className="h-5 w-5 text-muted-foreground" />
+      <action.icon className="size-5 text-muted-foreground" />
       <span className="text-sm font-medium">{action.label}</span>
     </button>
   )
@@ -452,7 +452,7 @@ export function PullToRefresh({
           className="text-muted-foreground transition-transform"
           style={rotationStyle}
         >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </div>
@@ -462,7 +462,7 @@ export function PullToRefresh({
 
       {isRefreshing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-sm md:hidden">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
       )}
     </div>
@@ -477,6 +477,14 @@ export function useIsMobile(breakpoint: number = 768) {
   return useIsMobileHook(breakpoint)
 }
 
+function resolveBreakpoint(width: number): MobileBreakpoint {
+  if (width < 640) return 'sm'
+  if (width < 768) return 'md'
+  if (width < 1024) return 'lg'
+  if (width < 1280) return 'xl'
+  return '2xl'
+}
+
 /**
  * Hook to get current breakpoint
  */
@@ -485,12 +493,7 @@ export function useBreakpoint() {
 
   useEffect(() => {
     const handleResize = () => {
-      const width = window.innerWidth
-      if (width < 640) setBreakpoint('sm')
-      else if (width < 768) setBreakpoint('md')
-      else if (width < 1024) setBreakpoint('lg')
-      else if (width < 1280) setBreakpoint('xl')
-      else setBreakpoint('2xl')
+      setBreakpoint(resolveBreakpoint(window.innerWidth))
     }
 
     handleResize()

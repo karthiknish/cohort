@@ -56,11 +56,11 @@ function ActionTooltipButton({
   )
 }
 
-const pauseIcon = <Pause className="h-4 w-4" />
-const playIcon = <Play className="h-4 w-4" />
-const dollarSignIcon = <DollarSign className="h-4 w-4" />
-const trendingUpIcon = <TrendingUp className="h-4 w-4" />
-const trash2Icon = <Trash2 className="h-4 w-4" />
+const pauseIcon = <Pause className="size-4" />
+const playIcon = <Play className="size-4" />
+const dollarSignIcon = <DollarSign className="size-4" />
+const trendingUpIcon = <TrendingUp className="size-4" />
+const trash2Icon = <Trash2 className="size-4" />
 
 function CampaignRowActions({
   actionLoading,
@@ -197,7 +197,7 @@ function CampaignGroupRowActions({
         disabled={actionLoading === group.id}
         aria-label="Update campaign group budget"
       >
-        <DollarSign className="h-4 w-4" />
+        <DollarSign className="size-4" />
       </Button>
     </div>
   )
@@ -250,7 +250,7 @@ function CampaignManagementHeader({
           </Button>
         ) : null}
         <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`mr-2 size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>

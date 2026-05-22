@@ -2,7 +2,7 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useReducer } from 'react'
 import { ChevronDown, FileText } from 'lucide-react'
 
 import { useToast } from '@/shared/ui/use-toast'
@@ -41,6 +41,82 @@ type TemplateRow = {
   updatedAtMs?: number
 }
 
+type ProposalTemplateSelectorState = {
+  open: boolean
+  saveDialogOpen: boolean
+  saving: boolean
+  deleting: string | null
+  templateName: string
+  templateDescription: string
+  templateIndustry: string
+  isDefault: boolean
+}
+
+type ProposalTemplateSelectorAction =
+  | { type: 'setOpen'; value: boolean }
+  | { type: 'setSaveDialogOpen'; value: boolean }
+  | { type: 'openSaveDialog' }
+  | { type: 'setSaving'; value: boolean }
+  | { type: 'setDeleting'; value: string | null }
+  | { type: 'setTemplateName'; value: string }
+  | { type: 'setTemplateDescription'; value: string }
+  | { type: 'setTemplateIndustry'; value: string }
+  | { type: 'setIsDefault'; value: boolean }
+  | { type: 'resetSaveForm' }
+  | { type: 'applyTemplate' }
+
+function createInitialSelectorState(): ProposalTemplateSelectorState {
+  return {
+    open: false,
+    saveDialogOpen: false,
+    saving: false,
+    deleting: null,
+    templateName: '',
+    templateDescription: '',
+    templateIndustry: '',
+    isDefault: false,
+  }
+}
+
+function proposalTemplateSelectorReducer(
+  state: ProposalTemplateSelectorState,
+  action: ProposalTemplateSelectorAction,
+): ProposalTemplateSelectorState {
+  switch (action.type) {
+    case 'setOpen':
+      return { ...state, open: action.value }
+    case 'setSaveDialogOpen':
+      return { ...state, saveDialogOpen: action.value }
+    case 'openSaveDialog':
+      return { ...state, open: false, saveDialogOpen: true }
+    case 'setSaving':
+      return { ...state, saving: action.value }
+    case 'setDeleting':
+      return { ...state, deleting: action.value }
+    case 'setTemplateName':
+      return { ...state, templateName: action.value }
+    case 'setTemplateDescription':
+      return { ...state, templateDescription: action.value }
+    case 'setTemplateIndustry':
+      return { ...state, templateIndustry: action.value }
+    case 'setIsDefault':
+      return { ...state, isDefault: action.value }
+    case 'resetSaveForm':
+      return {
+        ...state,
+        saveDialogOpen: false,
+        templateName: '',
+        templateDescription: '',
+        templateIndustry: '',
+        isDefault: false,
+      }
+    case 'applyTemplate':
+      return { ...state, open: false }
+    default:
+      return state
+  }
+}
+
 export function ProposalTemplateSelector({
   currentFormData,
   onApplyTemplate,
@@ -76,23 +152,28 @@ export function ProposalTemplateSelector({
     }})
   }, [templatesRows])
 
-  const [open, setOpen] = useState(false)
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState<string | null>(null)
-
-  // Save dialog state
-  const [templateName, setTemplateName] = useState('')
-  const [templateDescription, setTemplateDescription] = useState('')
-  const [templateIndustry, setTemplateIndustry] = useState('')
-  const [isDefault, setIsDefault] = useState(false)
+  const [selectorState, dispatch] = useReducer(
+    proposalTemplateSelectorReducer,
+    undefined,
+    createInitialSelectorState,
+  )
+  const {
+    open,
+    saveDialogOpen,
+    saving,
+    deleting,
+    templateName,
+    templateDescription,
+    templateIndustry,
+    isDefault,
+  } = selectorState
 
   const loading = templatesRows === undefined
   const canManageTemplates = Boolean(workspaceId)
 
   const handleApplyTemplate = useCallback((template: ProposalTemplate) => {
     onApplyTemplate(template.formData)
-    setOpen(false)
+    dispatch({ type: 'applyTemplate' })
     toast({
       title: 'Template applied',
       description: `"${template.name}" has been applied to your proposal.`,
@@ -108,14 +189,14 @@ export function ProposalTemplateSelector({
       return
     }
 
-    setSaving(true)
+    dispatch({ type: 'setSaving', value: true })
 
     if (!workspaceId) {
       notifyFailure({
         title: 'Error',
         message: 'Workspace context missing',
       })
-      setSaving(false)
+      dispatch({ type: 'setSaving', value: false })
       return
     }
 
@@ -130,11 +211,7 @@ export function ProposalTemplateSelector({
       createdBy: user?.id ?? null,
     })
       .then(() => {
-        setSaveDialogOpen(false)
-        setTemplateName('')
-        setTemplateDescription('')
-        setTemplateIndustry('')
-        setIsDefault(false)
+        dispatch({ type: 'resetSaveForm' })
 
         toast({
           title: 'Template saved',
@@ -150,19 +227,19 @@ export function ProposalTemplateSelector({
         })
       })
       .finally(() => {
-        setSaving(false)
+        dispatch({ type: 'setSaving', value: false })
       })
   }, [createTemplate, currentFormData, isDefault, templateDescription, templateIndustry, templateName, toast, user?.id, workspaceId])
 
   const handleDeleteTemplate = useCallback(async (templateId: string, templateName: string) => {
-    setDeleting(templateId)
+    dispatch({ type: 'setDeleting', value: templateId })
 
     if (!workspaceId) {
       notifyFailure({
         title: 'Error',
         message: 'Workspace context missing',
       })
-      setDeleting(null)
+      dispatch({ type: 'setDeleting', value: null })
       return
     }
 
@@ -182,19 +259,42 @@ export function ProposalTemplateSelector({
         })
       })
       .finally(() => {
-        setDeleting(null)
+        dispatch({ type: 'setDeleting', value: null })
       })
   }, [deleteTemplate, toast, workspaceId])
 
   const handleOpenSaveDialog = useCallback(() => {
-    setOpen(false)
-    setSaveDialogOpen(true)
+    dispatch({ type: 'openSaveDialog' })
+  }, [])
+
+  const handleOpenChange = useCallback((value: boolean) => {
+    dispatch({ type: 'setOpen', value })
+  }, [])
+
+  const handleSaveDialogOpenChange = useCallback((value: boolean) => {
+    dispatch({ type: 'setSaveDialogOpen', value })
+  }, [])
+
+  const handleTemplateNameChange = useCallback((value: string) => {
+    dispatch({ type: 'setTemplateName', value })
+  }, [])
+
+  const handleTemplateDescriptionChange = useCallback((value: string) => {
+    dispatch({ type: 'setTemplateDescription', value })
+  }, [])
+
+  const handleTemplateIndustryChange = useCallback((value: string) => {
+    dispatch({ type: 'setTemplateIndustry', value })
+  }, [])
+
+  const handleDefaultChange = useCallback((value: boolean) => {
+    dispatch({ type: 'setIsDefault', value })
   }, [])
 
 
   return (
     <>
-      <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenu open={open} onOpenChange={handleOpenChange}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
@@ -202,9 +302,9 @@ export function ProposalTemplateSelector({
             disabled={disabled}
             className="gap-2"
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="size-4" />
             Templates
-            <ChevronDown className="h-3 w-3 opacity-50" />
+            <ChevronDown className="size-3 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
         <ProposalTemplateDropdownContent
@@ -225,11 +325,11 @@ export function ProposalTemplateSelector({
         templateDescription={templateDescription}
         templateIndustry={templateIndustry}
         isDefault={isDefault}
-        onOpenChange={setSaveDialogOpen}
-        onTemplateNameChange={setTemplateName}
-        onTemplateDescriptionChange={setTemplateDescription}
-        onTemplateIndustryChange={setTemplateIndustry}
-        onDefaultChange={setIsDefault}
+        onOpenChange={handleSaveDialogOpenChange}
+        onTemplateNameChange={handleTemplateNameChange}
+        onTemplateDescriptionChange={handleTemplateDescriptionChange}
+        onTemplateIndustryChange={handleTemplateIndustryChange}
+        onDefaultChange={handleDefaultChange}
         onSave={handleSaveAsTemplate}
       />
     </>

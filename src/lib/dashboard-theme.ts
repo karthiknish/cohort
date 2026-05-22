@@ -29,10 +29,10 @@ export const DASHBOARD_THEME = {
     ghost: 'hover:bg-muted/5 hover:text-primary',
   },
   icons: {
-    container: 'flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-primary shadow-sm border border-accent/20',
-    small: 'h-6 w-6',
-    medium: 'h-8 w-8',
-    large: 'h-12 w-12',
+    container: 'flex size-12 items-center justify-center rounded-2xl bg-accent/10 text-primary shadow-sm border border-accent/20',
+    small: 'size-6',
+    medium: 'size-8',
+    large: 'size-12',
   },
   inputs: {
     base: 'rounded-xl border-muted/40 bg-background',
@@ -56,7 +56,7 @@ export const DASHBOARD_THEME = {
   skeletons: {
     card: 'h-28 w-full',
     text: 'h-4 w-32',
-    avatar: 'h-10 w-10 rounded-full',
+    avatar: 'size-10 rounded-full',
   },
   animations: {
     fadeIn: 'animate-in fade-in-50 slide-in-from-bottom-2 duration-500',

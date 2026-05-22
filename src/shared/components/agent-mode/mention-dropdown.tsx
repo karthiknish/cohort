@@ -72,13 +72,13 @@ const DROPDOWN_TRANSITION = {
 function getTypeIcon(type: MentionType) {
 	switch (type) {
 		case "client":
-			return <Building2 className="h-3.5 w-3.5 text-info" />;
+			return <Building2 className="size-3.5 text-info" />;
 		case "project":
-			return <FolderKanban className="h-3.5 w-3.5 text-success" />;
+			return <FolderKanban className="size-3.5 text-success" />;
 		case "team":
-			return <Users className="h-3.5 w-3.5 text-warning" />;
+			return <Users className="size-3.5 text-warning" />;
 		case "user":
-			return <User className="h-3.5 w-3.5 text-primary" />;
+			return <User className="size-3.5 text-primary" />;
 	}
 }
 
@@ -108,14 +108,14 @@ function MentionCategoryButton({
 	label: string
 	onSelect: (type: MentionType | null) => void
 }) {
-	const handleClick = useCallback(() => {
+	const onSelectMentionCategory = useCallback(() => {
 		onSelect(type)
 	}, [onSelect, type])
 
 	return (
 		<button
 			type="button"
-			onClick={handleClick}
+			onClick={onSelectMentionCategory}
 			className={cn(
 				"flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
 				activeCategory === type
@@ -123,7 +123,7 @@ function MentionCategoryButton({
 					: "text-muted-foreground hover:bg-muted hover:text-foreground",
 			)}
 		>
-			<Icon className="h-3 w-3" />
+			<Icon className="size-3" />
 			{label}
 		</button>
 	)
@@ -142,7 +142,7 @@ function MentionResultButton({
 	onSelect: (item: MentionItem) => void
 	showAmbiguousSubtitle: boolean
 }) {
-	const handleClick = useCallback(() => {
+	const onSelectMentionItem = useCallback(() => {
 		onSelect(item)
 	}, [item, onSelect])
 
@@ -152,7 +152,7 @@ function MentionResultButton({
 			id={`agent-mention-option-${item.type}-${item.id}`}
 			role="option"
 			aria-selected={index === clampedSelectedIndex}
-			onClick={handleClick}
+			onClick={onSelectMentionItem}
 			className={cn(
 				"flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
 				index === clampedSelectedIndex
@@ -162,7 +162,7 @@ function MentionResultButton({
 		>
 			<div
 				className={cn(
-					"flex h-7 w-7 items-center justify-center rounded-md border",
+					"flex size-7 items-center justify-center rounded-md border",
 					getTypeColor(item.type),
 				)}
 			>
@@ -216,57 +216,50 @@ export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdown
 		const query = searchQuery.toLowerCase();
 		const items: MentionItem[] = [];
 
-		// Filter and add clients
-		clients
-			.filter((c) => c.name.toLowerCase().includes(query))
-			.forEach((c) => {
-				items.push({
-					id: c.id,
-					name: c.name,
-					type: "client",
-					subtitle: c.company,
-				});
-			});
+		for (const c of clients) {
+			if (!c.name.toLowerCase().includes(query)) continue
+			items.push({
+				id: c.id,
+				name: c.name,
+				type: "client",
+				subtitle: c.company,
+			})
+		}
 
-		// Filter and add projects
-		projects
-			.filter((p) => p.name.toLowerCase().includes(query))
-			.forEach((p) => {
-				items.push({
-					id: p.id,
-					name: p.name,
-					type: "project",
-					subtitle: p.status,
-				});
-			});
+		for (const p of projects) {
+			if (!p.name.toLowerCase().includes(query)) continue
+			items.push({
+				id: p.id,
+				name: p.name,
+				type: "project",
+				subtitle: p.status,
+			})
+		}
 
-		// Filter and add teams
-		teams
-			.filter((t) => t.name.toLowerCase().includes(query))
-			.forEach((t) => {
-				items.push({
-					id: t.id,
-					name: t.name,
-					type: "team",
-					subtitle: t.memberCount ? `${t.memberCount} members` : undefined,
-				});
-			});
+		for (const t of teams) {
+			if (!t.name.toLowerCase().includes(query)) continue
+			items.push({
+				id: t.id,
+				name: t.name,
+				type: "team",
+				subtitle: t.memberCount ? `${t.memberCount} members` : undefined,
+			})
+		}
 
-		// Filter and add users
-		users
-			.filter(
-				(u) =>
-					u.name.toLowerCase().includes(query) ||
-					u.email?.toLowerCase().includes(query),
-			)
-			.forEach((u) => {
-				items.push({
-					id: u.id,
-					name: u.name,
-					type: "user",
-					subtitle: u.role || u.email,
-				});
-			});
+		for (const u of users) {
+			if (
+				!u.name.toLowerCase().includes(query) &&
+				!u.email?.toLowerCase().includes(query)
+			) {
+				continue
+			}
+			items.push({
+				id: u.id,
+				name: u.name,
+				type: "user",
+				subtitle: u.role || u.email,
+			})
+		}
 
 		// If active category, filter further
 		if (activeCategory) {
@@ -288,7 +281,7 @@ export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdown
 			counts.set(key, (counts.get(key) ?? 0) + 1);
 		}
 		return new Set(
-			[...counts.entries()].filter(([, count]) => count > 1).map(([name]) => name),
+			[...counts.entries()].flatMap(([name, count]) => (count > 1 ? [name] : [])),
 		);
 	}, [filteredItems]);
 	const closeDropdown = useEffectEvent(() => {
@@ -408,7 +401,7 @@ export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdown
 					<ScrollArea className="max-h-[280px] overflow-y-auto">
 						{isLoading ? (
 							<div className="flex items-center justify-center py-6">
-								<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+								<Loader2 className="size-5 animate-spin text-muted-foreground" />
 							</div>
 						) : filteredItems.length === 0 ? (
 							<div className="py-6 text-center text-sm text-muted-foreground">

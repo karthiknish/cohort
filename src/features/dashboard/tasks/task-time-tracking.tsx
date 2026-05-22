@@ -172,7 +172,7 @@ export function TaskTimeTracking({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Clock className={cn(
-            'h-4 w-4',
+            'size-4',
             isRunning ? 'text-success animate-pulse' : 'text-muted-foreground'
           )} />
           <span className="text-sm font-medium">
@@ -187,12 +187,12 @@ export function TaskTimeTracking({
           <div className="flex items-center gap-1">
             {isRunning ? (
               <Button size="sm" variant="destructive" onClick={handleStop} className="h-7 gap-1">
-                <Square className="h-3 w-3" />
+                <Square className="size-3" />
                 Stop
               </Button>
             ) : (
               <Button size="sm" variant="outline" onClick={handleStart} className="h-7 gap-1">
-                <Play className="h-3 w-3" />
+                <Play className="size-3" />
                 Start
               </Button>
             )}
@@ -213,7 +213,7 @@ export function TaskTimeTracking({
         <Dialog open={open} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
             <Button variant="ghost" size="sm" className="h-7 gap-1 w-full justify-start">
-              <Plus className="h-3 w-3" />
+              <Plus className="size-3" />
               Add time manually
             </Button>
           </DialogTrigger>
@@ -246,7 +246,7 @@ export function TaskTimeTracking({
                   className="flex items-center justify-between p-2 rounded-lg bg-muted/20 text-sm"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <Clock className="size-3.5 text-muted-foreground shrink-0" />
                     <span className="font-medium">
                       {entry.duration
                         ? `${Math.floor(entry.duration / 60)}h ${entry.duration % 60}m`
@@ -279,7 +279,7 @@ function TimeEntryDeleteButton({
   entryId: string
   onDeleteEntry: (entryId: string) => void
 }) {
-  const handleClick = useCallback(() => {
+  const onDeleteTimeEntry = useCallback(() => {
     onDeleteEntry(entryId)
   }, [entryId, onDeleteEntry])
 
@@ -287,8 +287,8 @@ function TimeEntryDeleteButton({
     <Button
       variant="ghost"
       size="sm"
-      onClick={handleClick}
-      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+      onClick={onDeleteTimeEntry}
+      className="size-6 p-0 text-muted-foreground hover:text-destructive"
     >
       ×
     </Button>

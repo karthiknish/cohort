@@ -97,23 +97,25 @@ export const listStatuses = zWorkspaceQuery({
       .withIndex('by_workspace_provider', (q) => q.eq('workspaceId', args.workspaceId))
       .collect()
 
-    return all
-      .filter((row) => (clientId === null ? row.clientId === null : row.clientId === clientId))
-      .map((row) => ({
-        providerId: row.providerId,
-        clientId: row.clientId,
-        accountId: row.accountId,
-        accountName: row.accountName,
-        currency: row.currency,
-        lastSyncStatus: row.lastSyncStatus,
-        lastSyncMessage: row.lastSyncMessage,
-        lastSyncedAtMs: row.lastSyncedAtMs,
-        lastSyncRequestedAtMs: row.lastSyncRequestedAtMs,
-        linkedAtMs: row.linkedAtMs,
-        autoSyncEnabled: row.autoSyncEnabled,
-        syncFrequencyMinutes: row.syncFrequencyMinutes,
-        scheduledTimeframeDays: row.scheduledTimeframeDays,
-      }))
+    return all.flatMap((row) =>
+      (clientId === null ? row.clientId === null : row.clientId === clientId)
+        ? [{
+            providerId: row.providerId,
+            clientId: row.clientId,
+            accountId: row.accountId,
+            accountName: row.accountName,
+            currency: row.currency,
+            lastSyncStatus: row.lastSyncStatus,
+            lastSyncMessage: row.lastSyncMessage,
+            lastSyncedAtMs: row.lastSyncedAtMs,
+            lastSyncRequestedAtMs: row.lastSyncRequestedAtMs,
+            linkedAtMs: row.linkedAtMs,
+            autoSyncEnabled: row.autoSyncEnabled,
+            syncFrequencyMinutes: row.syncFrequencyMinutes,
+            scheduledTimeframeDays: row.scheduledTimeframeDays,
+          }]
+        : [],
+    )
   },
 })
 

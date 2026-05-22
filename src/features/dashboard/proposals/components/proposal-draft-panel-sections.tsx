@@ -22,7 +22,7 @@ export function ProposalDraftStatusStrip({
       <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <div
           className={cn(
-            'h-2 w-2 shrink-0 rounded-full',
+            'size-2 shrink-0 rounded-full',
             autosaveStatus === 'saving'
               ? 'animate-pulse bg-primary'
               : autosaveStatus === 'error'
@@ -94,7 +94,7 @@ export function ProposalDraftFooter({
           disabled={isFirstStep}
           className="h-10 gap-1.5 rounded-full px-4 font-medium"
         >
-          <ChevronLeft className="h-4 w-4" aria-hidden />
+          <ChevronLeft className="size-4" aria-hidden />
           Previous
         </Button>
         <p className="hidden text-center text-xs text-muted-foreground sm:block">
@@ -112,13 +112,13 @@ export function ProposalDraftFooter({
         >
           {isLastStep ? (
             <>
-              <FileText className="h-4 w-4" aria-hidden />
+              <FileText className="size-4" aria-hidden />
               {isSubmitting ? 'Generating…' : 'Generate strategy'}
             </>
           ) : (
             <>
               {isSubmitting ? 'Saving…' : 'Continue'}
-              {!isSubmitting ? <ChevronRight className="h-4 w-4" aria-hidden /> : null}
+              {!isSubmitting ? <ChevronRight className="size-4" aria-hidden /> : null}
             </>
           )}
         </Button>

@@ -137,7 +137,7 @@ function TeamMemberFieldRow({
           onClick={handleRemove}
           disabled={teamMembersLength <= 1 || clientSaving}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="size-4" />
           <span className="sr-only">Remove team member</span>
         </Button>
       </div>
@@ -189,7 +189,7 @@ function ClientRow({
             onClick={handleAddTeamMember}
             disabled={addingMember && clientPendingMembersId === client.id}
           >
-            <Plus className="mr-2 h-4 w-4" /> Add teammate
+            <Plus className="mr-2 size-4" /> Add teammate
           </Button>
           <Button
             variant="destructive"
@@ -199,11 +199,11 @@ function ClientRow({
           >
             {deletingClientId === client.id ? (
               <>
-                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Deleting…
+                <LoaderCircle className="mr-2 size-4 animate-spin" /> Deleting…
               </>
             ) : (
               <>
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                <Trash2 className="mr-2 size-4" /> Delete
               </>
             )}
           </Button>
@@ -263,9 +263,9 @@ function ClientTeamMemberBadge({ client, member, removingTeamMemberKey, onRemove
         }
       >
         {isRemoving ? (
-          <LoaderCircle className="h-3 w-3 animate-spin" />
+          <LoaderCircle className="size-3 animate-spin" />
         ) : (
-          <X className="h-3 w-3" />
+          <X className="size-3" />
         )}
       </button>
     </div>
@@ -457,7 +457,7 @@ export default function AdminClientsPage() {
             <Link href="/admin">Admin home</Link>
           </Button>
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={clientsLoading} className="inline-flex items-center gap-2">
-            <LoaderCircle className={`h-4 w-4 ${clientsLoading ? 'animate-spin' : ''}`} /> Refresh
+            <LoaderCircle className={`size-4 ${clientsLoading ? 'animate-spin' : ''}`} /> Refresh
           </Button>
         </>
       }
@@ -466,7 +466,7 @@ export default function AdminClientsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Active clients</CardTitle>
-              <UsersIcon className={`h-4 w-4 text-muted-foreground ${clientsLoading ? 'animate-spin' : ''}`} />
+              <UsersIcon className={`size-4 text-muted-foreground ${clientsLoading ? 'animate-spin' : ''}`} />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold">{clients.length}</div>
@@ -562,7 +562,7 @@ export default function AdminClientsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <Label className="text-sm font-medium">Team members</Label>
                   <Button type="button" variant="outline" size="sm" onClick={addTeamMemberField} disabled={clientSaving}>
-                    <Plus className="mr-2 h-4 w-4" /> Add teammate
+                    <Plus className="mr-2 size-4" /> Add teammate
                   </Button>
                 </div>
                 <div className="space-y-2">
@@ -577,9 +577,9 @@ export default function AdminClientsPage() {
                       onUpdateName={handleUpdateTeamMemberName}
                       onUpdateRole={handleUpdateTeamMemberRole}
                       onRemove={removeTeamMemberField}
-                      excludeNames={teamMemberFields
-                        .filter((candidate) => candidate.key !== member.key)
-                        .map((candidate) => candidate.name)}
+                      excludeNames={teamMemberFields.flatMap((candidate) =>
+                        candidate.key !== member.key ? [candidate.name] : [],
+                      )}
                     />
                   ))}
                 </div>
@@ -595,7 +595,7 @@ export default function AdminClientsPage() {
                   Reset form
                 </Button>
                 <Button type="submit" disabled={clientSaving}>
-                  {clientSaving && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                  {clientSaving && <LoaderCircle className="mr-2 size-4 animate-spin" />}
                   Create client
                 </Button>
               </div>
@@ -605,7 +605,7 @@ export default function AdminClientsPage() {
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <UsersIcon className="h-4 w-4" />
+                  <UsersIcon className="size-4" />
                   <span>Existing client workspaces</span>
                   <Badge variant="secondary">{clients.length}</Badge>
                 </div>
@@ -622,7 +622,7 @@ export default function AdminClientsPage() {
               />
               {clientsLoading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <LoaderCircle className="h-4 w-4 animate-spin" /> Loading clients…
+                  <LoaderCircle className="size-4 animate-spin" /> Loading clients…
                 </div>
               ) : clients.length === 0 && !clientsError && !workspaceQueryError ? (
                 <p className="text-sm text-muted-foreground">No clients yet. Add a workspace to get started.</p>
@@ -655,7 +655,7 @@ export default function AdminClientsPage() {
                       >
                         {loadingMore ? (
                           <>
-                            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Loading…
+                            <LoaderCircle className="mr-2 size-4 animate-spin" /> Loading…
                           </>
                         ) : (
                           'Load more clients'
@@ -694,7 +694,7 @@ export default function AdminClientsPage() {
               onClick={handleConfirmDelete}
               disabled={Boolean(deletingClientId)}
             >
-              {deletingClientId ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              {deletingClientId ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <Trash2 className="mr-2 size-4" />}
               {deletingClientId ? 'Deleting…' : 'Delete client'}
             </Button>
           </DialogFooter>
@@ -751,7 +751,7 @@ export default function AdminClientsPage() {
               Cancel
             </Button>
             <Button type="button" onClick={handleConfirmAddTeamMember} disabled={addingMember}>
-              {addingMember && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+              {addingMember && <LoaderCircle className="mr-2 size-4 animate-spin" />}
               Add teammate
             </Button>
           </DialogFooter>

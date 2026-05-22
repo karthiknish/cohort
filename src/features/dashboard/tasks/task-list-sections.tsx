@@ -53,13 +53,13 @@ export function TaskListErrorState({
   return (
     <div className={viewMode === 'grid' ? 'col-span-full' : ''}>
       <div className="mx-4 my-8 px-4 text-center">
-        <TriangleAlert className="mx-auto h-8 w-8 text-destructive" aria-hidden />
+        <TriangleAlert className="mx-auto size-8 text-destructive" aria-hidden />
         <p className="mt-2 text-sm text-destructive">{error}</p>
         <Button variant="outline" size="sm" className="mt-4 h-8" onClick={onRefresh} disabled={loading}>
           {loading ? (
-            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+            <LoaderCircle className="mr-2 size-4 animate-spin" />
           ) : (
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="mr-2 size-4" />
           )}
           Try again
         </Button>
@@ -84,8 +84,8 @@ export function TaskListEmptyState({
   return (
     <div className={viewMode === 'grid' ? 'col-span-full p-4' : 'p-4'}>
       <div className={TASKS_THEME.emptyPanel}>
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-border/60 bg-background shadow-sm">
-          <ListTodo className="h-6 w-6 text-muted-foreground" aria-hidden />
+        <div className="mb-4 flex size-12 items-center justify-center rounded-2xl border border-border/60 bg-background shadow-sm">
+          <ListTodo className="size-6 text-muted-foreground" aria-hidden />
         </div>
         <p className="text-base font-semibold tracking-tight text-foreground">No tasks here yet</p>
         <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
@@ -101,7 +101,7 @@ export function TaskListEmptyState({
           ) : null}
           {!showEmptyStateFiltered && onCreateTask ? (
             <Button type="button" size="sm" className="h-9 gap-1.5" onClick={onCreateTask}>
-              <Plus className="h-4 w-4" aria-hidden />
+              <Plus className="size-4" aria-hidden />
               Create task
             </Button>
           ) : null}
@@ -125,7 +125,7 @@ export function TaskListLoadMore({
       <Button variant="ghost" size="sm" className="h-8 w-full text-muted-foreground" onClick={onLoadMore} disabled={loadingMore}>
         {loadingMore ? (
           <span className="inline-flex items-center gap-2">
-            <LoaderCircle className="h-4 w-4 animate-spin" />
+            <LoaderCircle className="size-4 animate-spin" />
             Loading…
           </span>
         ) : (

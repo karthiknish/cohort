@@ -172,13 +172,16 @@ function hasPaginatedItems(value: unknown): value is PaginatedTaskRows {
 function mapConvexTaskToTaskRecord(row: TaskQueryRow): TaskRecord {
   const attachments = Array.isArray(row.attachments)
     ? row.attachments
-      .filter((item) => item && typeof item.name === 'string' && typeof item.url === 'string')
-      .map((item) => ({
-        name: item.name,
-        url: item.url,
-        type: typeof item.type === 'string' ? item.type : null,
-        size: typeof item.size === 'string' ? item.size : null,
-      }))
+      .flatMap((item) =>
+        item && typeof item.name === 'string' && typeof item.url === 'string'
+          ? [{
+              name: item.name,
+              url: item.url,
+              type: typeof item.type === 'string' ? item.type : null,
+              size: typeof item.size === 'string' ? item.size : null,
+            }]
+          : [],
+      )
     : []
 
   return {

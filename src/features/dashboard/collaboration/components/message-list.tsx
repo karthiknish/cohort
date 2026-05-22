@@ -494,7 +494,7 @@ export function MessageList({
             className="pointer-events-auto gap-1.5 shadow-md ring-1 ring-border/60"
             onClick={scrollToLatest}
           >
-            <ArrowDown className="h-3.5 w-3.5" />
+            <ArrowDown className="size-3.5" />
             Latest
           </Button>
         </div>

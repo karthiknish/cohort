@@ -251,48 +251,66 @@ function normalize(text: string): string {
     .trim()
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+const ACTION_PHRASE_PATTERN = new RegExp(
+  ACTION_PHRASES.map(escapeRegExp).join('|'),
+)
+
+function containsTerm(text: string, term: string): boolean {
+  return new RegExp(escapeRegExp(term)).test(text)
+}
+
+function scoreKeywordMatches(
+  normalizedInput: string,
+  wordSet: Set<string>,
+  keywords: readonly string[],
+): number {
+  let score = 0
+  for (const keyword of keywords) {
+    if (wordSet.has(keyword)) {
+      score += 10
+    } else if (containsTerm(normalizedInput, keyword)) {
+      score += 5
+    }
+  }
+  return score
+}
+
+function scoreSubstringMatches(
+  normalizedInput: string,
+  terms: readonly string[],
+  pointsPerMatch: number,
+): number {
+  let score = 0
+  for (const term of terms) {
+    if (containsTerm(normalizedInput, term)) {
+      score += pointsPerMatch
+    }
+  }
+  return score
+}
+
 /**
  * Calculates a match score between input and a route mapping
  */
 function calculateScore(input: string, mapping: RouteMapping): number {
   const normalizedInput = normalize(input)
-  const words = normalizedInput.split(' ')
-  
-  let score = 0
-  
-  // Check for exact keyword matches
-  for (const keyword of mapping.keywords) {
-    if (words.includes(keyword)) {
-      score += 10
-    } else if (normalizedInput.includes(keyword)) {
-      score += 5
-    }
-  }
-  
-  // Check for alias matches
-  for (const alias of mapping.aliases) {
-    if (normalizedInput.includes(alias)) {
-      score += 15
-    }
-  }
-  
-  // Check for action matches
+  const wordSet = new Set(normalizedInput.split(' '))
+
+  let score = scoreKeywordMatches(normalizedInput, wordSet, mapping.keywords)
+  score += scoreSubstringMatches(normalizedInput, mapping.aliases, 15)
+
   if (mapping.actions) {
-    for (const action of mapping.actions) {
-      if (normalizedInput.includes(action)) {
-        score += 12
-      }
-    }
+    score += scoreSubstringMatches(normalizedInput, mapping.actions, 12)
   }
-  
-  // Boost if action phrase is present
-  for (const phrase of ACTION_PHRASES) {
-    if (normalizedInput.includes(phrase)) {
-      score += 2
-      break
-    }
+
+  if (ACTION_PHRASE_PATTERN.test(normalizedInput)) {
+    score += 2
   }
-  
+
   return score
 }
 

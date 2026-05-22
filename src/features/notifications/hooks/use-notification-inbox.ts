@@ -179,7 +179,7 @@ export function useNotificationInbox() {
   useEffect(() => {
     if (!open || ackInFlight) return
 
-    const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id)
+    const unreadIds = notifications.flatMap((item) => (!item.read ? [item.id] : []))
     if (unreadIds.length === 0) return
 
     const frame = requestAnimationFrame(() => {
@@ -197,7 +197,7 @@ export function useNotificationInbox() {
   )
 
   const handleMarkAllRead = useCallback(() => {
-    const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id)
+    const unreadIds = notifications.flatMap((item) => (!item.read ? [item.id] : []))
     if (unreadIds.length === 0) return
     void updateNotificationStatus(unreadIds, 'read')
   }, [notifications, updateNotificationStatus])

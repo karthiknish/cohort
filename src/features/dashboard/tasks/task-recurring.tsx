@@ -59,7 +59,7 @@ export function RecurrenceEditor({
     <div className="space-y-3">
       {showLabel && (
         <div className="flex items-center gap-2">
-          <Repeat className="h-4 w-4 text-muted-foreground" />
+          <Repeat className="size-4 text-muted-foreground" />
           <Label className="text-sm">Repeat</Label>
         </div>
       )}
@@ -88,7 +88,7 @@ export function RecurrenceEditor({
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1">
-                <Calendar className="h-3.5 w-3.5" />
+                <Calendar className="size-3.5" />
                 {endDate ? 'End date set' : 'Set end date'}
               </Button>
             </PopoverTrigger>
@@ -120,7 +120,7 @@ export function RecurrenceEditor({
 
       {value !== 'none' && (
         <div className="flex items-start gap-2 rounded-md bg-info/10 p-2 text-xs text-info">
-          <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <Info className="size-3.5 shrink-0 mt-0.5" />
           <p suppressHydrationWarning>
             New tasks will be created automatically based on this recurrence pattern.
             {endDate && ` Recurring until ${new Date(endDate).toLocaleDateString()}.`}
@@ -150,7 +150,7 @@ export function RecurrenceBadge({
         className
       )}
     >
-      <Repeat className="h-2.5 w-2.5" />
+      <Repeat className="size-2.5" />
       {formatRecurrenceLabel(rule)}
     </Badge>
   )
@@ -243,7 +243,7 @@ export function RecurringSeriesInfo({
   return (
     <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
       <div className="flex items-center gap-2 text-sm font-medium">
-        <Repeat className="h-4 w-4" />
+        <Repeat className="size-4" />
         <span>Recurring Series</span>
       </div>
       <div className="grid grid-cols-2 gap-2 text-xs">

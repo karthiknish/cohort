@@ -49,7 +49,7 @@ interface AgentModePanelProps {
   maxMessageLength: number
   onClose: () => void
   onOpenChange?: (open: boolean) => void
-  onRegisterRequestClose?: (handler: (() => void) | null) => void
+  requestCloseRef?: RefObject<(() => void) | null>
   onPanelLayoutChange?: (layout: AgentPanelLayout) => void
   messages: AgentMessage[]
   isProcessing: boolean
@@ -113,7 +113,7 @@ export function AgentModePanel({
   maxMessageLength,
   onClose,
   onOpenChange,
-  onRegisterRequestClose,
+  requestCloseRef,
   onPanelLayoutChange,
   messages,
   isProcessing,
@@ -212,10 +212,14 @@ export function AgentModePanel({
     [onRetryUserMessage],
   )
 
-  const handleSetPanelLayout = useCallback((layout: AgentPanelLayout) => {
-    setPanelLayout(layout)
-    writeAgentPanelLayout(layout)
-  }, [])
+  const handleSetPanelLayout = useCallback(
+    (layout: AgentPanelLayout) => {
+      setPanelLayout(layout)
+      writeAgentPanelLayout(layout)
+      onPanelLayoutChange?.(layout)
+    },
+    [onPanelLayoutChange],
+  )
 
   const closeGuardState = useMemo(
     () => ({
@@ -236,14 +240,16 @@ export function AgentModePanel({
     onClose()
   }, [closeGuardState, onClose])
 
-  useEffect(() => {
-    onRegisterRequestClose?.(requestClose)
-    return () => onRegisterRequestClose?.(null)
-  }, [onRegisterRequestClose, requestClose])
+  if (requestCloseRef) {
+    requestCloseRef.current = requestClose
+  }
 
   useEffect(() => {
-    onPanelLayoutChange?.(panelLayout)
-  }, [onPanelLayoutChange, panelLayout])
+    if (!requestCloseRef) return
+    return () => {
+      requestCloseRef.current = null
+    }
+  }, [requestCloseRef])
 
   const { openHistoryView, closeHistoryView } = useAgentPanelUrl({
     isOpen,

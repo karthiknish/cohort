@@ -91,7 +91,7 @@ function InsightLevelIcon({ level }: { level: AlgorithmicInsight['level'] }) {
     critical: Zap,
   }
   const Icon = icons[level] || Info
-  return <Icon className="h-3.5 w-3.5 shrink-0" />
+  return <Icon className="size-3.5 shrink-0" />
 }
 
 function CompactInsightItem({ insight }: { insight: AlgorithmicInsight }) {
@@ -125,8 +125,8 @@ function EfficiencyScoreMini({ score }: { score: number }) {
   const offset = circumference * (1 - score / 100)
 
   return (
-    <div className="relative flex h-12 w-12 items-center justify-center">
-      <svg className="h-full w-full" viewBox="0 0 40 40">
+    <div className="relative flex size-12 items-center justify-center">
+      <svg className="size-full" viewBox="0 0 40 40">
         <circle
           className="stroke-muted/20"
           strokeWidth="3"
@@ -238,18 +238,18 @@ export function AdInsightsWidget({
       <Card className="shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Lightbulb className="h-4 w-4 text-warning" />
+            <Lightbulb className="size-4 text-warning" />
             Ad Insights
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex flex-col items-center gap-3 py-4 text-center text-sm text-muted-foreground">
-            <TrendingUp className="h-6 w-6 text-muted-foreground/50" />
+            <TrendingUp className="size-6 text-muted-foreground/50" />
             <p>Connect ad platforms to see AI-powered insights</p>
             <Button asChild variant="outline" size="sm">
               <Link href="/dashboard/ads">
                 Go to Ads Hub
-                <ArrowRight className="ml-1 h-3 w-3" />
+                <ArrowRight className="ml-1 size-3" />
               </Link>
             </Button>
           </div>
@@ -263,7 +263,7 @@ export function AdInsightsWidget({
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Lightbulb className="h-4 w-4 text-warning" />
+            <Lightbulb className="size-4 text-warning" />
             Ad Insights
             {actionCount > 0 && (
               <Badge
@@ -292,7 +292,7 @@ export function AdInsightsWidget({
       <CardContent className="space-y-1 pt-0">
         {insights.length === 0 ? (
           <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-            <CircleCheck className="h-4 w-4 text-success" />
+            <CircleCheck className="size-4 text-success" />
             <span>All campaigns performing well</span>
           </div>
         ) : (
@@ -305,7 +305,7 @@ export function AdInsightsWidget({
             <Button asChild variant="ghost" size="sm" className="w-full mt-2">
               <Link href="/dashboard/ads">
                 View all insights
-                <ArrowRight className="ml-1 h-3 w-3" />
+                <ArrowRight className="ml-1 size-3" />
               </Link>
             </Button>
           </>

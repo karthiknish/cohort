@@ -3,7 +3,7 @@
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import { AdminQueryErrorAlert } from '../components/admin-query-error-alert'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useReducer } from 'react'
 import { Lightbulb, LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -39,7 +39,7 @@ function AdminFeaturesToolbarActions({
 }) {
   return (
     <Button type="button" variant="outline" size="sm" onClick={onRefresh} disabled={refreshing}>
-      <RefreshCw className={cn('mr-2 h-4 w-4', refreshing && 'animate-spin')} aria-hidden />
+      <RefreshCw className={cn('mr-2 size-4', refreshing && 'animate-spin')} aria-hidden />
       Refresh
     </Button>
   )
@@ -63,6 +63,55 @@ function toFeatureDocId(value: string): FeatureDocId {
   return value as unknown as FeatureDocId
 }
 
+type AdminFeaturesState = {
+  refreshing: boolean
+  previewFeatures: FeatureItem[]
+  formDialogOpen: boolean
+  editingFeature: FeatureItem | null
+  defaultStatus: FeatureStatus
+  deleteConfirmOpen: boolean
+  featureToDelete: FeatureItem | null
+  isDeleting: boolean
+}
+
+type AdminFeaturesAction =
+  | { type: 'setRefreshing'; value: boolean }
+  | { type: 'setPreviewFeatures'; value: FeatureItem[] }
+  | { type: 'updatePreviewFeatures'; updater: (current: FeatureItem[]) => FeatureItem[] }
+  | { type: 'openFormDialog'; editingFeature: FeatureItem | null; defaultStatus: FeatureStatus }
+  | { type: 'setFormDialogOpen'; value: boolean }
+  | { type: 'openDeleteConfirm'; feature: FeatureItem }
+  | { type: 'closeDeleteConfirm' }
+  | { type: 'setIsDeleting'; value: boolean }
+
+function adminFeaturesReducer(state: AdminFeaturesState, action: AdminFeaturesAction): AdminFeaturesState {
+  switch (action.type) {
+    case 'setRefreshing':
+      return { ...state, refreshing: action.value }
+    case 'setPreviewFeatures':
+      return { ...state, previewFeatures: action.value }
+    case 'updatePreviewFeatures':
+      return { ...state, previewFeatures: action.updater(state.previewFeatures) }
+    case 'openFormDialog':
+      return {
+        ...state,
+        formDialogOpen: true,
+        editingFeature: action.editingFeature,
+        defaultStatus: action.defaultStatus,
+      }
+    case 'setFormDialogOpen':
+      return { ...state, formDialogOpen: action.value }
+    case 'openDeleteConfirm':
+      return { ...state, deleteConfirmOpen: true, featureToDelete: action.feature }
+    case 'closeDeleteConfirm':
+      return { ...state, deleteConfirmOpen: false, featureToDelete: null, isDeleting: false }
+    case 'setIsDeleting':
+      return { ...state, isDeleting: action.value }
+    default:
+      return state
+  }
+}
+
 export default function AdminFeaturesPage() {
   // Convex identity auth is handled by Convex client.
   // This page no longer calls `/api/admin/*`.
@@ -70,18 +119,26 @@ export default function AdminFeaturesPage() {
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
-  const [refreshing, setRefreshing] = useState(false)
-  const [previewFeatures, setPreviewFeatures] = useState<FeatureItem[]>(() => getPreviewAdminFeatures())
-
-  // Dialog states
-  const [formDialogOpen, setFormDialogOpen] = useState(false)
-  const [editingFeature, setEditingFeature] = useState<FeatureItem | null>(null)
-  const [defaultStatus, setDefaultStatus] = useState<FeatureStatus>('backlog')
-
-  // Delete confirmation
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [featureToDelete, setFeatureToDelete] = useState<FeatureItem | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [state, dispatch] = useReducer(adminFeaturesReducer, {
+    refreshing: false,
+    previewFeatures: getPreviewAdminFeatures(),
+    formDialogOpen: false,
+    editingFeature: null,
+    defaultStatus: 'backlog',
+    deleteConfirmOpen: false,
+    featureToDelete: null,
+    isDeleting: false,
+  })
+  const {
+    refreshing,
+    previewFeatures,
+    formDialogOpen,
+    editingFeature,
+    defaultStatus,
+    deleteConfirmOpen,
+    featureToDelete,
+    isDeleting,
+  } = state
 
   const featuresResponse = useQuery(api.adminFeatures.listFeatures, isPreviewMode ? 'skip' : {})
   const createFeature = useMutation(api.adminFeatures.createFeature)
@@ -119,14 +176,14 @@ export default function AdminFeaturesPage() {
   const fetchFeatures = useCallback(
     async (isRefresh = false) => {
       if (!isRefresh) return
-      setRefreshing(true)
+      dispatch({ type: 'setRefreshing', value: true })
       if (isPreviewMode) {
-        setPreviewFeatures(getPreviewAdminFeatures())
-        setTimeout(() => setRefreshing(false), 250)
+        dispatch({ type: 'setPreviewFeatures', value: getPreviewAdminFeatures() })
+        setTimeout(() => dispatch({ type: 'setRefreshing', value: false }), 250)
         return
       }
       // Convex is realtime; keep button for UX.
-      setTimeout(() => setRefreshing(false), 400)
+      setTimeout(() => dispatch({ type: 'setRefreshing', value: false }), 400)
     },
     [isPreviewMode]
   )
@@ -136,37 +193,44 @@ export default function AdminFeaturesPage() {
   }, [fetchFeatures])
 
   const handleAddFeature = useCallback((status: FeatureStatus) => {
-    setEditingFeature(null)
-    setDefaultStatus(status)
-    setFormDialogOpen(true)
+    dispatch({ type: 'openFormDialog', editingFeature: null, defaultStatus: status })
   }, [])
 
   const handleEditFeature = useCallback((feature: FeatureItem) => {
-    setEditingFeature(feature)
-    setDefaultStatus(feature.status)
-    setFormDialogOpen(true)
+    dispatch({ type: 'openFormDialog', editingFeature: feature, defaultStatus: feature.status })
   }, [])
 
   const handleDeleteFeature = useCallback((feature: FeatureItem) => {
-    setFeatureToDelete(feature)
-    setDeleteConfirmOpen(true)
+    dispatch({ type: 'openDeleteConfirm', feature })
+  }, [])
+
+  const handleFormDialogOpenChange = useCallback((open: boolean) => {
+    dispatch({ type: 'setFormDialogOpen', value: open })
+  }, [])
+
+  const handleDeleteConfirmOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      dispatch({ type: 'closeDeleteConfirm' })
+    }
   }, [])
 
   const confirmDelete = useCallback(() => {
     if (!featureToDelete) return
 
     if (isPreviewMode) {
-      setPreviewFeatures((current) => current.filter((feature) => feature.id !== featureToDelete.id))
+      dispatch({
+        type: 'updatePreviewFeatures',
+        updater: (current) => current.filter((feature) => feature.id !== featureToDelete.id),
+      })
       toast({
         title: 'Preview mode',
         description: 'Sample feature removed locally for this session.',
       })
-      setDeleteConfirmOpen(false)
-      setFeatureToDelete(null)
+      dispatch({ type: 'closeDeleteConfirm' })
       return
     }
 
-    setIsDeleting(true)
+    dispatch({ type: 'setIsDeleting', value: true })
 
     void deleteFeature({ id: toFeatureDocId(featureToDelete.id) })
       .then(() => {
@@ -184,9 +248,7 @@ export default function AdminFeaturesPage() {
         })
       })
       .finally(() => {
-        setIsDeleting(false)
-        setDeleteConfirmOpen(false)
-        setFeatureToDelete(null)
+        dispatch({ type: 'closeDeleteConfirm' })
       })
   }, [deleteFeature, featureToDelete, isPreviewMode, toast])
 
@@ -196,9 +258,12 @@ export default function AdminFeaturesPage() {
       if (!feature || feature.status === newStatus) return
 
       if (isPreviewMode) {
-        setPreviewFeatures((current) => current.map((item) => (
-          item.id === featureId ? { ...item, status: newStatus, updatedAt: new Date().toISOString() } : item
-        )))
+        dispatch({
+          type: 'updatePreviewFeatures',
+          updater: (current) => current.map((item) => (
+            item.id === featureId ? { ...item, status: newStatus, updatedAt: new Date().toISOString() } : item
+          )),
+        })
         toast({
           title: 'Preview mode',
           description: `Sample feature moved to ${newStatus.replace('_', ' ')}.`,
@@ -237,35 +302,41 @@ export default function AdminFeaturesPage() {
       if (isPreviewMode) {
         return Promise.resolve().then(() => {
           if (editingFeature) {
-            setPreviewFeatures((current) => current.map((feature) => (
-              feature.id === editingFeature.id
-                ? {
-                    ...feature,
-                    title: data.title,
-                    description: data.description,
-                    status: data.status,
-                    priority: data.priority,
-                    imageUrl: data.imageUrl,
-                    references: data.references,
-                    updatedAt: new Date().toISOString(),
-                  }
-                : feature
-            )))
+            dispatch({
+              type: 'updatePreviewFeatures',
+              updater: (current) => current.map((feature) => (
+                feature.id === editingFeature.id
+                  ? {
+                      ...feature,
+                      title: data.title,
+                      description: data.description,
+                      status: data.status,
+                      priority: data.priority,
+                      imageUrl: data.imageUrl,
+                      references: data.references,
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : feature
+              )),
+            })
           } else {
-            setPreviewFeatures((current) => [
-              {
-                id: `preview-feature-${Date.now()}`,
-                title: data.title,
-                description: data.description,
-                status: data.status,
-                priority: data.priority,
-                imageUrl: data.imageUrl,
-                references: data.references,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-              ...current,
-            ])
+            dispatch({
+              type: 'updatePreviewFeatures',
+              updater: (current) => [
+                {
+                  id: `preview-feature-${Date.now()}`,
+                  title: data.title,
+                  description: data.description,
+                  status: data.status,
+                  priority: data.priority,
+                  imageUrl: data.imageUrl,
+                  references: data.references,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
+                ...current,
+              ],
+            })
           }
 
           toast({
@@ -355,8 +426,8 @@ export default function AdminFeaturesPage() {
       <AdminQueryErrorAlert error={featuresQueryError} title="Unable to load features" />
 
       <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent/10 text-primary">
-          <Lightbulb className="h-4 w-4" />
+        <span className="flex size-8 items-center justify-center rounded-md bg-accent/10 text-primary">
+          <Lightbulb className="size-4" />
         </span>
         <span>Drag cards between columns or open a card to edit details.</span>
       </div>
@@ -372,13 +443,13 @@ export default function AdminFeaturesPage() {
 
       <FeatureFormDialog
         open={formDialogOpen}
-        onOpenChange={setFormDialogOpen}
+        onOpenChange={handleFormDialogOpenChange}
         feature={editingFeature}
         defaultStatus={defaultStatus}
         onSubmit={handleSubmitFeature}
       />
 
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={handleDeleteConfirmOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Feature</AlertDialogTitle>
@@ -394,7 +465,7 @@ export default function AdminFeaturesPage() {
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeleting && <LoaderCircle className="mr-2 size-4 animate-spin" />}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

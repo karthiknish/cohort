@@ -36,26 +36,28 @@ export interface CurrencyInfo {
 
 const MONEY_FORMATTER_CACHE = new Map<string, Intl.NumberFormat>()
 
+function moneyFormatterCacheKey(
+  locale: string | undefined,
+  currency: string,
+  minimumFractionDigits: number,
+  maximumFractionDigits: number,
+): string {
+  return `${locale ?? 'default'}|${currency}|${minimumFractionDigits}|${maximumFractionDigits}`
+}
+
 function getMoneyFormatter(
   locale: string | undefined,
   currency: string,
   minimumFractionDigits: number,
   maximumFractionDigits: number,
 ): Intl.NumberFormat {
-  const cacheKey = `${locale ?? 'default'}|${currency}|${minimumFractionDigits}|${maximumFractionDigits}`
-  const existingFormatter = MONEY_FORMATTER_CACHE.get(cacheKey)
-  if (existingFormatter) {
-    return existingFormatter
+  const cacheKey = moneyFormatterCacheKey(locale, currency, minimumFractionDigits, maximumFractionDigits)
+  const cachedFormatter = MONEY_FORMATTER_CACHE.get(cacheKey)
+  if (cachedFormatter) {
+    return cachedFormatter
   }
 
-  const formatter = new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    minimumFractionDigits,
-    maximumFractionDigits,
-  })
-  MONEY_FORMATTER_CACHE.set(cacheKey, formatter)
-  return formatter
+  return MONEY_FORMATTER_CACHE.get(moneyFormatterCacheKey(undefined, 'USD', 2, 2))!
 }
 
 export const SUPPORTED_CURRENCIES: Record<CurrencyCode, CurrencyInfo> = {
@@ -222,6 +224,38 @@ export const SUPPORTED_CURRENCIES: Record<CurrencyCode, CurrencyInfo> = {
 }
 
 const CURRENCY_CODES = Object.keys(SUPPORTED_CURRENCIES) as CurrencyCode[]
+
+for (const code of CURRENCY_CODES) {
+  const info = SUPPORTED_CURRENCIES[code]
+  MONEY_FORMATTER_CACHE.set(
+    moneyFormatterCacheKey(info.locale, code, info.decimalDigits, info.decimalDigits),
+    new Intl.NumberFormat(info.locale, {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: info.decimalDigits,
+      maximumFractionDigits: info.decimalDigits,
+    }),
+  )
+  MONEY_FORMATTER_CACHE.set(
+    moneyFormatterCacheKey(undefined, code, 2, 2),
+    new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }),
+  )
+}
+
+MONEY_FORMATTER_CACHE.set(
+  moneyFormatterCacheKey(undefined, 'USD', 2, 2),
+  new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }),
+)
 
 export const DEFAULT_CURRENCY: CurrencyCode = 'USD'
 

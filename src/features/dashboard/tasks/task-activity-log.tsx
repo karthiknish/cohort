@@ -76,7 +76,7 @@ export function TaskActivityLog({ activities, loading, className, maxItems = 20 
       <div className={cn('space-y-4', className)}>
         {loadingSlots.map((slot) => (
           <div key={slot} className="flex gap-3">
-            <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+            <Skeleton className="size-8 rounded-full shrink-0" />
             <div className="flex-1 space-y-1">
               <Skeleton className="h-4 w-48" />
               <Skeleton className="h-3 w-32" />
@@ -90,7 +90,7 @@ export function TaskActivityLog({ activities, loading, className, maxItems = 20 
   if (activities.length === 0) {
     return (
       <div className={cn('text-center py-8 text-muted-foreground', className)}>
-        <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <Clock className="size-8 mx-auto mb-2 opacity-50" />
         <p className="text-sm">No activity yet</p>
       </div>
     )
@@ -109,10 +109,10 @@ export function TaskActivityLog({ activities, loading, className, maxItems = 20 
                 {/* Timeline connector line */}
                 <div className="flex flex-col items-center">
                   <div className={cn(
-                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border',
+                    'flex size-8 shrink-0 items-center justify-center rounded-full border',
                     ACTIVITY_COLORS[activity.action]
                   )}>
-                    <Icon className="h-4 w-4" />
+                    <Icon className="size-4" />
                   </div>
                   {!isLast && (
                     <div className="w-px flex-1 bg-muted min-h-[2rem] mt-1" />
@@ -157,7 +157,7 @@ export function ActivitySummary({ activities }: { activities: TaskActivity[] }) 
 
   return (
     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-      <Clock className="h-3 w-3" />
+      <Clock className="size-3" />
       <span>Last activity {timeAgo}</span>
     </div>
   )

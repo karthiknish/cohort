@@ -39,7 +39,7 @@ export function AuthField({ id, label, labelAction, icon, error, children, class
       </div>
       {error ? (
         <p className="flex items-center gap-1.5 text-xs text-destructive" role="alert">
-          <CircleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <CircleAlert className="size-3.5 shrink-0" aria-hidden />
           {error}
         </p>
       ) : null}

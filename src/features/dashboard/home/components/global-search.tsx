@@ -134,7 +134,7 @@ function SearchResultRelativeTime({ createdAt }: { createdAt: string }) {
 
   return (
     <span className="text-xs text-muted-foreground flex items-center gap-1">
-      <Clock className="h-3 w-3" />
+      <Clock className="size-3" />
       {relativeTime}
     </span>
   )
@@ -178,15 +178,15 @@ export function GlobalSearch({
 
     dispatch({ type: 'setIsSearching', isSearching: true })
 
-    const searchPromises = Object.entries(searchFunctions).map(async ([type, fn]) => {
+    const searchOneType = async ([type, fn]: [string, typeof searchFunctions[keyof typeof searchFunctions]]) => {
       if (fn && (selectedType === 'all' || selectedType === type)) {
         const typeResults = await fn(query.trim())
         return typeResults.map((r) => ({ ...r, type: type as SearchResultType }))
       }
       return []
-    })
+    }
 
-    void Promise.all(searchPromises)
+    void Promise.all(Object.entries(searchFunctions).map(searchOneType))
       .then((allResults) => {
         const flattened = allResults.flat()
 
@@ -290,7 +290,7 @@ export function GlobalSearch({
   const defaultTrigger = (
     <DialogTrigger asChild>
       <Button variant="outline" size="sm" className="gap-2">
-        <Search className="h-4 w-4" />
+        <Search className="size-4" />
         Search
         <kbd className="ml-1 hidden sm:inline-flex h-5 px-1.5 bg-muted rounded text-xs font-medium text-muted-foreground opacity-70">
           {shortcut}
@@ -305,7 +305,7 @@ export function GlobalSearch({
       <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col p-0">
         {/* Search input */}
         <div className="flex items-center gap-2 p-4 border-b">
-          <Search className="h-5 w-5 text-muted-foreground" />
+          <Search className="size-5 text-muted-foreground" />
           <Input
             id="global-search-dialog-query"
             value={query}
@@ -323,7 +323,7 @@ export function GlobalSearch({
               onClick={handleClearQuery}
               aria-label="Clear search"
             >
-              <X className="h-4 w-4" aria-hidden />
+              <X className="size-4" aria-hidden />
             </Button>
           )}
         </div>
@@ -352,14 +352,14 @@ export function GlobalSearch({
         <div className="flex-1 overflow-y-auto p-2">
           {isSearching && (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <div className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               <span className="ml-2">Searching…</span>
             </div>
           )}
 
           {!isSearching && query.trim().length < 2 && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Search className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <Search className="size-12 text-muted-foreground/50 mb-4" />
               <p className="text-muted-foreground">Type to search</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Search across tasks, projects, messages, and more
@@ -378,31 +378,30 @@ export function GlobalSearch({
 
           {!isSearching && results.length > 0 && (
             <div className="space-y-4">
-              {Object.entries(groupedResults)
-                .filter(([type]) => selectedType === 'all' || selectedType === type)
-                .map(([type, items]) => {
-                  const IconComponent = SEARCH_TYPE_ICONS[type as SearchResultType]
-                  return (
-                    <div key={type} className="space-y-1">
-                      <div className="flex items-center gap-2 px-2 py-1">
-                        <IconComponent className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">
-                          {SEARCH_TYPE_LABELS[type as SearchResultType]}
-                        </span>
-                        <Badge variant="secondary" className="text-xs">
-                          {items.length}
-                        </Badge>
-                      </div>
-                      {items.map((result) => (
-                        <SearchResultItem
-                          key={result.id}
-                          result={result}
-                          onSelect={handleResultClick}
-                        />
-                      ))}
+              {Object.entries(groupedResults).flatMap(([type, items]) => {
+                if (selectedType !== 'all' && selectedType !== type) return []
+                const IconComponent = SEARCH_TYPE_ICONS[type as SearchResultType]
+                return [(
+                  <div key={type} className="space-y-1">
+                    <div className="flex items-center gap-2 px-2 py-1">
+                      <IconComponent className="size-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">
+                        {SEARCH_TYPE_LABELS[type as SearchResultType]}
+                      </span>
+                      <Badge variant="secondary" className="text-xs">
+                        {items.length}
+                      </Badge>
                     </div>
-                  )
-                })}
+                    {items.map((result) => (
+                      <SearchResultItem
+                        key={result.id}
+                        result={result}
+                        onSelect={handleResultClick}
+                      />
+                    ))}
+                  </div>
+                )]
+              })}
             </div>
           )}
         </div>
@@ -453,14 +452,14 @@ interface SearchTypeButtonProps {
 }
 
 function SearchTypeButton({ label, selected, onSelect, typeValue }: SearchTypeButtonProps) {
-  const handleClick = useCallback(() => {
+  const onSelectSearchType = useCallback(() => {
     onSelect(typeValue)
   }, [onSelect, typeValue])
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectSearchType}
       className={cn(
         'px-2 py-1 rounded-md text-xs font-medium transition-colors',
         selected ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
@@ -473,19 +472,19 @@ function SearchTypeButton({ label, selected, onSelect, typeValue }: SearchTypeBu
 
 function SearchResultItem({ result, onSelect }: SearchResultItemProps) {
   const IconComponent = SEARCH_TYPE_ICONS[result.type]
-  const handleClick = useCallback(() => {
+  const onSelectSearchResult = useCallback(() => {
     onSelect(result)
   }, [onSelect, result])
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectSearchResult}
       className="w-full text-left p-3 rounded-lg hover:bg-muted transition-colors"
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-accent/10">
-          <IconComponent className="h-4 w-4 text-primary" />
+        <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-lg bg-accent/10">
+          <IconComponent className="size-4 text-primary" />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -533,7 +532,7 @@ export function QuickSearchInput({
 }) {
   const [value, setValue] = useState('')
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const onQuickSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setValue(e.target.value)
   }, [])
 
@@ -553,11 +552,11 @@ export function QuickSearchInput({
 
   return (
     <form onSubmit={handleSubmit} className={cn('relative', className)}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
       <Input
         placeholder={placeholder}
         value={value}
-        onChange={handleChange}
+        onChange={onQuickSearchChange}
         className="pl-9"
         aria-label={placeholder}
       />
@@ -568,7 +567,7 @@ export function QuickSearchInput({
           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           aria-label="Clear search"
         >
-          <X className="h-4 w-4" aria-hidden />
+          <X className="size-4" aria-hidden />
         </button>
       )}
     </form>

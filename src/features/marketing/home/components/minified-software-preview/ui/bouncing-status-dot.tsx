@@ -7,7 +7,7 @@ export function BouncingStatusDot({ style }: { style: { animationDelay: string }
 
   return (
     <span
-      className="block h-1.5 w-1.5 animate-subtle-dot-drift rounded-full bg-accent"
+      className="block size-1.5 animate-subtle-dot-drift rounded-full bg-accent"
       style={dotStyle}
     />
   )

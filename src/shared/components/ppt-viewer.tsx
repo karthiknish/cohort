@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useReducer } from 'react'
 import JSZip from 'jszip'
 import {
   AlertCircle,
@@ -29,13 +29,58 @@ interface Slide {
   textContent: string
 }
 
+type PptViewerState = {
+  slides: Slide[]
+  currentSlide: number
+  isLoading: boolean
+  error: string | null
+  isFullscreen: boolean
+}
+
+type PptViewerAction =
+  | { type: 'beginLoad' }
+  | { type: 'loadResolved'; slides: Slide[]; error?: string | null }
+  | { type: 'setCurrentSlide'; value: number }
+  | { type: 'toggleFullscreen' }
+  | { type: 'setFullscreen'; value: boolean }
+
+function createInitialPptViewerState(): PptViewerState {
+  return {
+    slides: [],
+    currentSlide: 0,
+    isLoading: true,
+    error: null,
+    isFullscreen: false,
+  }
+}
+
+function pptViewerReducer(state: PptViewerState, action: PptViewerAction): PptViewerState {
+  switch (action.type) {
+    case 'beginLoad':
+      return { ...state, isLoading: true, error: null, slides: [], currentSlide: 0 }
+    case 'loadResolved':
+      return {
+        ...state,
+        isLoading: false,
+        slides: action.slides,
+        currentSlide: 0,
+        error: action.error ?? null,
+      }
+    case 'setCurrentSlide':
+      return { ...state, currentSlide: action.value }
+    case 'toggleFullscreen':
+      return { ...state, isFullscreen: !state.isFullscreen }
+    case 'setFullscreen':
+      return { ...state, isFullscreen: action.value }
+    default:
+      return state
+  }
+}
+
 export function PptViewer({ url, className, title = 'Presentation' }: PptViewerProps) {
-  const [slides, setSlides] = useState<Slide[]>([])
-  const [currentSlide, setCurrentSlide] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isFullscreen, setIsFullscreen] = useState(false)
-  const [reloadKey, setReloadKey] = useState(0)
+  const [state, dispatch] = useReducer(pptViewerReducer, undefined, createInitialPptViewerState)
+  const { slides, currentSlide, isLoading, error, isFullscreen } = state
+  const loadRequestRef = useRef(0)
 
   const extractSlides = useCallback(async (arrayBuffer: ArrayBuffer): Promise<Slide[]> => {
     const zip = await JSZip.loadAsync(arrayBuffer)
@@ -54,62 +99,67 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
       name.startsWith('ppt/media/'),
     )
 
-    for (const [name, file] of mediaEntries) {
-      const blob = await file.async('blob').catch(() => null)
-      if (blob) {
-        mediaFiles[name] = URL.createObjectURL(blob)
-      }
-    }
+    await Promise.all(
+      mediaEntries.map(async ([name, file]) => {
+        const blob = await file.async('blob').catch(() => null)
+        if (blob) {
+          mediaFiles[name] = URL.createObjectURL(blob)
+        }
+      }),
+    )
 
-    for (let i = 0; i < slideFiles.length; i++) {
-      const slideFile = slideFiles[i]
-      if (!slideFile) continue
-      const slideNum = parseInt(slideFile.match(/slide(\d+)/)?.[1] || '0', 10)
+    const mediaValues = Object.values(mediaFiles)
+    const parsedSlides = await Promise.all(
+      slideFiles.map(async (slideFile, i) => {
+        if (!slideFile) return null
+        const slideNum = parseInt(slideFile.match(/slide(\d+)/)?.[1] || '0', 10)
 
-      let imageUrl: string | null = null
-      let textContent = ''
+        let imageUrl: string | null = null
+        let textContent = ''
 
-      const relsPath = `ppt/slides/_rels/slide${slideNum}.xml.rels`
-      const relsFile = zip.files[relsPath]
+        const relsPath = `ppt/slides/_rels/slide${slideNum}.xml.rels`
+        const relsFile = zip.files[relsPath]
 
-      if (relsFile) {
-        const relsContent = await relsFile.async('text').catch(() => null)
-        if (relsContent) {
-          const imageMatch = relsContent.match(/Target="\.\.\/media\/(image\d+\.[^"]+)"/)
-          if (imageMatch) {
-            const mediaPath = `ppt/media/${imageMatch[1]}`
-            imageUrl = mediaFiles[mediaPath] || null
+        if (relsFile) {
+          const relsContent = await relsFile.async('text').catch(() => null)
+          if (relsContent) {
+            const imageMatch = relsContent.match(/Target="\.\.\/media\/(image\d+\.[^"]+)"/)
+            if (imageMatch) {
+              const mediaPath = `ppt/media/${imageMatch[1]}`
+              imageUrl = mediaFiles[mediaPath] || null
+            }
           }
         }
-      }
 
-      const slideFileEntry = zip.files[slideFile]
-      if (slideFileEntry) {
-        const slideContent = await slideFileEntry.async('text').catch(() => null)
-        if (slideContent) {
-          const textMatches = slideContent.match(/<a:t>([^<]*)<\/a:t>/g)
-          if (textMatches) {
-            textContent = textMatches
-              .map((match: string | undefined) => match?.replace(/<\/?a:t>/g, '') ?? '')
-              .filter((text: string) => text.trim())
-              .join(' ')
+        const slideFileEntry = zip.files[slideFile]
+        if (slideFileEntry) {
+          const slideContent = await slideFileEntry.async('text').catch(() => null)
+          if (slideContent) {
+            const textMatches = slideContent.match(/<a:t>([^<]*)<\/a:t>/g)
+            if (textMatches) {
+              textContent = textMatches
+                .flatMap((match: string | undefined) => {
+                  const text = match?.replace(/<\/?a:t>/g, '') ?? ''
+                  return text.trim() ? [text] : []
+                })
+                .join(' ')
+            }
           }
         }
-      }
 
-      if (!imageUrl && Object.values(mediaFiles).length > 0) {
-        const mediaValues = Object.values(mediaFiles)
-        if (mediaValues[i]) {
+        if (!imageUrl && mediaValues.length > 0 && mediaValues[i]) {
           imageUrl = mediaValues[i] ?? null
         }
-      }
 
-      extractedSlides.push({
-        index: i,
-        imageUrl,
-        textContent: textContent.slice(0, 500),
-      })
-    }
+        return {
+          index: i,
+          imageUrl,
+          textContent: textContent.slice(0, 500),
+        }
+      }),
+    )
+
+    extractedSlides.push(...parsedSlides.filter((slide): slide is NonNullable<typeof slide> => slide !== null))
 
     return extractedSlides
   }, [])
@@ -134,41 +184,39 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
     return response.arrayBuffer()
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
+  const loadPresentation = useCallback(() => {
+    const requestId = loadRequestRef.current + 1
+    loadRequestRef.current = requestId
 
-    setIsLoading(true)
-    setError(null)
+    dispatch({ type: 'beginLoad' })
 
     void fetchPresentation(url)
       .then((arrayBuffer) => {
-        if (cancelled) return null
+        if (loadRequestRef.current !== requestId) return null
         return extractSlides(arrayBuffer)
       })
       .then((extractedSlides) => {
-        if (cancelled || !extractedSlides) return
+        if (loadRequestRef.current !== requestId || !extractedSlides) return
 
         if (extractedSlides.length === 0) {
           throw new Error('No slides found in presentation')
         }
 
-        setSlides(extractedSlides)
-        setCurrentSlide(0)
+        dispatch({ type: 'loadResolved', slides: extractedSlides })
       })
       .catch((err) => {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : 'Failed to load presentation')
+        if (loadRequestRef.current !== requestId) return
+        dispatch({
+          type: 'loadResolved',
+          slides: [],
+          error: err instanceof Error ? err.message : 'Failed to load presentation',
+        })
       })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
-      })
+  }, [url, extractSlides, fetchPresentation])
 
-    return () => {
-      cancelled = true
-    }
-  }, [url, extractSlides, fetchPresentation, reloadKey])
+  useEffect(() => {
+    loadPresentation()
+  }, [loadPresentation])
 
   useEffect(() => {
     return () => {
@@ -183,11 +231,23 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
   const goToSlide = useCallback(
     (index: number) => {
       if (index >= 0 && index < slides.length) {
-        setCurrentSlide(index)
+        dispatch({ type: 'setCurrentSlide', value: index })
       }
     },
     [slides.length],
   )
+
+  const handlePrevSlide = useCallback(() => {
+    goToSlide(currentSlide - 1)
+  }, [currentSlide, goToSlide])
+
+  const handleNextSlide = useCallback(() => {
+    goToSlide(currentSlide + 1)
+  }, [currentSlide, goToSlide])
+
+  const handleToggleFullscreen = useCallback(() => {
+    dispatch({ type: 'toggleFullscreen' })
+  }, [])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -200,7 +260,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
       } else if (e.key === 'End') {
         goToSlide(slides.length - 1)
       } else if (e.key === 'Escape' && isFullscreen) {
-        setIsFullscreen(false)
+        dispatch({ type: 'setFullscreen', value: false })
       }
     },
     [currentSlide, goToSlide, isFullscreen, slides.length],
@@ -212,8 +272,8 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
   }, [handleKeyDown])
 
   const handleRetry = useCallback(() => {
-    setReloadKey((k) => k + 1)
-  }, [])
+    loadPresentation()
+  }, [loadPresentation])
 
   if (isLoading) {
     return (
@@ -224,7 +284,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
         )}
       >
         <div className="flex flex-col items-center gap-4 text-viewer-chrome/70">
-          <Loader2 className="h-9 w-9 animate-spin" aria-hidden />
+          <Loader2 className="size-9 animate-spin" aria-hidden />
           <div className="text-center">
             <p className="text-sm font-medium text-viewer-chrome/90">Extracting slides</p>
             <p className="mt-1 text-xs text-viewer-chrome/50">This may take a few seconds for large decks</p>
@@ -242,19 +302,19 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
           className,
         )}
       >
-        <AlertCircle className="h-10 w-10 text-destructive" aria-hidden />
+        <AlertCircle className="size-10 text-destructive" aria-hidden />
         <div className="max-w-md text-center">
           <p className="font-medium text-foreground">Unable to load presentation</p>
           <p className="mt-1 text-sm text-muted-foreground">{error}</p>
         </div>
         <div className="flex flex-wrap justify-center gap-2">
           <Button variant="outline" size="sm" onClick={handleRetry}>
-            <RotateCcw className="mr-2 h-4 w-4" />
+            <RotateCcw className="mr-2 size-4" />
             Try again
           </Button>
           <Button variant="secondary" size="sm" asChild>
             <a href={url} target="_blank" rel="noreferrer">
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="mr-2 size-4" />
               Download file
             </a>
           </Button>
@@ -300,22 +360,22 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
           <Button
             variant="ghost"
             size="icon"
-            className="absolute left-3 top-1/2 z-10 h-11 w-11 -translate-y-1/2 rounded-full border border-white/10 bg-black/55 text-viewer-chrome shadow-lg backdrop-blur-sm hover:bg-black/75 disabled:opacity-25"
-            onClick={() => goToSlide(currentSlide - 1)}
+            className="absolute left-3 top-1/2 z-10 size-11 -translate-y-1/2 rounded-full border border-white/10 bg-black/55 text-viewer-chrome shadow-lg backdrop-blur-sm hover:bg-black/75 disabled:opacity-25"
+            onClick={handlePrevSlide}
             disabled={currentSlide === 0}
             aria-label="Previous slide"
           >
-            <ChevronLeft className="h-6 w-6" aria-hidden />
+            <ChevronLeft className="size-6" aria-hidden />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-3 top-1/2 z-10 h-11 w-11 -translate-y-1/2 rounded-full border border-white/10 bg-black/55 text-viewer-chrome shadow-lg backdrop-blur-sm hover:bg-black/75 disabled:opacity-25"
-            onClick={() => goToSlide(currentSlide + 1)}
+            className="absolute right-3 top-1/2 z-10 size-11 -translate-y-1/2 rounded-full border border-white/10 bg-black/55 text-viewer-chrome shadow-lg backdrop-blur-sm hover:bg-black/75 disabled:opacity-25"
+            onClick={handleNextSlide}
             disabled={currentSlide === slides.length - 1}
             aria-label="Next slide"
           >
-            <ChevronRight className="h-6 w-6" aria-hidden />
+            <ChevronRight className="size-6" aria-hidden />
           </Button>
         </>
       ) : null}
@@ -327,14 +387,14 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
         <Button
           variant="ghost"
           size="icon"
-          className="pointer-events-auto h-9 w-9 rounded-full border border-white/10 bg-black/50 text-viewer-chrome hover:bg-black/70"
-          onClick={() => setIsFullscreen((v) => !v)}
+          className="pointer-events-auto size-9 rounded-full border border-white/10 bg-black/50 text-viewer-chrome hover:bg-black/70"
+          onClick={handleToggleFullscreen}
           aria-label={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
         >
           {isFullscreen ? (
-            <Minimize2 className="h-4 w-4" aria-hidden />
+            <Minimize2 className="size-4" aria-hidden />
           ) : (
-            <Maximize2 className="h-4 w-4" aria-hidden />
+            <Maximize2 className="size-4" aria-hidden />
           )}
         </Button>
       </div>
@@ -399,7 +459,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
         aria-modal="true"
         aria-label={`${title} full screen`}
       >
-        <div className="mx-auto flex h-full w-full max-w-6xl flex-col justify-center">
+        <div className="mx-auto flex size-full max-w-6xl flex-col justify-center">
           {viewerBody}
         </div>
       </div>
@@ -422,7 +482,7 @@ function PptViewerThumbnailButton({
   onGoToSlide: (index: number) => void
   'aria-label': string
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectSlideThumbnail = useCallback(() => {
     onGoToSlide(index)
   }, [index, onGoToSlide])
 
@@ -430,7 +490,7 @@ function PptViewerThumbnailButton({
     <button
       type="button"
       role="tab"
-      onClick={handleClick}
+      onClick={onSelectSlideThumbnail}
       aria-label={ariaLabel}
       aria-selected={index === currentSlide}
       className={cn(
@@ -451,7 +511,7 @@ function PptViewerThumbnailButton({
             className="object-cover"
           />
         ) : (
-          <span className="flex h-full w-full items-center justify-center text-xs font-medium tabular-nums text-viewer-chrome/60">
+          <span className="flex size-full items-center justify-center text-xs font-medium tabular-nums text-viewer-chrome/60">
             {index + 1}
           </span>
         )}

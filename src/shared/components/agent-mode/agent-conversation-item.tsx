@@ -178,7 +178,7 @@ export function AgentConversationItem({
           variant="ghost"
           size="icon"
           className={cn(
-            'h-8 w-8 shrink-0 rounded-full text-muted-foreground',
+            'size-8 shrink-0 rounded-full text-muted-foreground',
             'opacity-100 focus-visible:opacity-100',
             'md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100',
             isActive && 'md:opacity-100',
@@ -186,24 +186,24 @@ export function AgentConversationItem({
           aria-label={`Actions for ${title}`}
           onClick={stopPropagation}
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <MoreHorizontal className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48" onClick={stopPropagation}>
         <DropdownMenuItem onClick={handleStartEditing}>
-          <Pencil className="mr-2 h-4 w-4" />
+          <Pencil className="mr-2 size-4" />
           Rename
         </DropdownMenuItem>
         {onPinConversation ? (
           <DropdownMenuItem onClick={handlePinConversation}>
             {conversation.pinnedAt ? (
               <>
-                <PinOff className="mr-2 h-4 w-4" />
+                <PinOff className="mr-2 size-4" />
                 Unpin
               </>
             ) : (
               <>
-                <Pin className="mr-2 h-4 w-4" />
+                <Pin className="mr-2 size-4" />
                 Pin
               </>
             )}
@@ -211,31 +211,31 @@ export function AgentConversationItem({
         ) : null}
         {onDuplicateConversation ? (
           <DropdownMenuItem onClick={handleDuplicateConversation}>
-            <Copy className="mr-2 h-4 w-4" />
+            <Copy className="mr-2 size-4" />
             Duplicate
           </DropdownMenuItem>
         ) : null}
         {onExportConversation ? (
           <DropdownMenuItem onClick={handleExportConversation}>
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="mr-2 size-4" />
             Export
           </DropdownMenuItem>
         ) : null}
         {onShareConversation ? (
           <DropdownMenuItem onClick={handleShareConversation}>
-            <Link2 className="mr-2 h-4 w-4" />
+            <Link2 className="mr-2 size-4" />
             Share link
           </DropdownMenuItem>
         ) : null}
         {onArchiveConversation ? (
           <DropdownMenuItem onClick={handleArchiveConversation}>
-            <Archive className="mr-2 h-4 w-4" />
+            <Archive className="mr-2 size-4" />
             {conversation.archivedAt ? 'Restore' : 'Archive'}
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={handleDelete}>
-          <Trash2 className="mr-2 h-4 w-4" />
+          <Trash2 className="mr-2 size-4" />
           Delete
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -243,16 +243,16 @@ export function AgentConversationItem({
   ) : (
     <div className="flex shrink-0 items-center gap-0.5">
       {isEditing ? (
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSaveTitle} aria-label="Save title">
-          <Check className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="size-8" onClick={handleSaveTitle} aria-label="Save title">
+          <Check className="size-4" />
         </Button>
       ) : (
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleStartEditing} aria-label="Edit title">
-          <Pencil className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="size-8" onClick={handleStartEditing} aria-label="Edit title">
+          <Pencil className="size-4" />
         </Button>
       )}
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDelete} aria-label="Delete chat">
-        <Trash2 className="h-4 w-4" />
+      <Button variant="ghost" size="icon" className="size-8" onClick={handleDelete} aria-label="Delete chat">
+        <Trash2 className="size-4" />
       </Button>
     </div>
   )
@@ -269,7 +269,7 @@ export function AgentConversationItem({
       )}
     >
       {isEditing ? (
-        <div className="flex items-center gap-2 px-2 py-2">
+        <div className="flex items-center gap-2 p-2">
           <Input
             ref={titleInputRef}
             value={editingTitle}
@@ -278,8 +278,8 @@ export function AgentConversationItem({
             className="h-8 flex-1"
             placeholder="Chat title"
           />
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleSaveTitle} aria-label="Save title">
-            <Check className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={handleSaveTitle} aria-label="Save title">
+            <Check className="size-4" />
           </Button>
         </div>
       ) : (
@@ -296,7 +296,7 @@ export function AgentConversationItem({
           >
             <div className="flex items-start gap-2">
               {conversation.pinnedAt ? (
-                <Pin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+                <Pin className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
               ) : null}
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
@@ -304,7 +304,7 @@ export function AgentConversationItem({
                     {title}
                   </span>
                   {isLoadingThis ? (
-                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
+                    <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
                   ) : relativeTime ? (
                     <span
                       className="shrink-0 text-[10px] tabular-nums text-muted-foreground"

@@ -70,8 +70,7 @@ function formatRoasValue(value: number | null): string {
 function formatProviderLabel(providerId: string): string {
   return providerId
     .split(/[-_]/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .flatMap((part) => (part ? [part.charAt(0).toUpperCase() + part.slice(1)] : []))
     .join(' ')
 }
 
@@ -248,8 +247,8 @@ export function parseClientSummaryResponse(options: {
   const headline = headlineLine?.replace(/^headline:\s*/i, '').trim() ?? ''
 
   const bullets = lines
-    .filter((line) => line.startsWith('-'))
     .flatMap((line) => {
+      if (!line.startsWith('-')) return []
       const trimmedLine = line.replace(/^-+\s*/, '').trim()
       return trimmedLine ? [trimmedLine] : []
     })

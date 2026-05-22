@@ -50,7 +50,7 @@ export function CreativeImageViewer({
           className,
         )}
       >
-        <ImageIcon className="h-8 w-8 text-muted-foreground/40" aria-hidden />
+        <ImageIcon className="size-8 text-muted-foreground/40" aria-hidden />
         <p className="text-xs font-medium text-muted-foreground">Image unavailable</p>
         <p className="max-w-xs text-[11px] text-muted-foreground/80">
           The asset may have expired or the URL is not publicly reachable.
@@ -67,7 +67,7 @@ export function CreativeImageViewer({
             type="button"
             onClick={showExpand ? handleOpenLightbox : undefined}
             className={cn(
-              'relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-muted ring-1 ring-border/50',
+              'relative size-20 shrink-0 overflow-hidden rounded-lg bg-muted ring-1 ring-border/50',
               showExpand && 'cursor-zoom-in transition-opacity hover:opacity-90',
             )}
             aria-label={showExpand ? `View full image: ${alt}` : undefined}
@@ -88,14 +88,14 @@ export function CreativeImageViewer({
             <div className="flex flex-wrap gap-1.5">
               {showExpand ? (
                 <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={handleOpenLightbox}>
-                  <Maximize2 className="h-3 w-3" aria-hidden />
+                  <Maximize2 className="size-3" aria-hidden />
                   View
                 </Button>
               ) : null}
               {showOpenLink ? (
                 <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 text-xs" asChild>
                   <a href={src} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-3 w-3" aria-hidden />
+                    <ExternalLink className="size-3" aria-hidden />
                     Open
                   </a>
                 </Button>
@@ -137,13 +137,13 @@ export function CreativeImageViewer({
               className="h-8 gap-1.5 bg-background/95 shadow-md"
               onClick={handleOpenLightbox}
             >
-              <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+              <Maximize2 className="size-3.5" aria-hidden />
               Expand
             </Button>
             {showOpenLink ? (
               <Button type="button" size="sm" variant="secondary" className="h-8 bg-background/95 shadow-md" asChild>
                 <a href={src} target="_blank" rel="noopener noreferrer" aria-label="Open image in new tab">
-                  <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                  <ExternalLink className="size-3.5" aria-hidden />
                 </a>
               </Button>
             ) : null}
@@ -168,6 +168,10 @@ function ImageLightbox({
   alt: string
   onError: () => void
 }) {
+  const handleClose = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl gap-0 overflow-hidden border-border/60 p-0">
@@ -187,11 +191,11 @@ function ImageLightbox({
             type="button"
             variant="secondary"
             size="icon"
-            className="absolute right-3 top-3 h-9 w-9 rounded-full bg-background/90 shadow-md"
-            onClick={() => onOpenChange(false)}
+            className="absolute right-3 top-3 size-9 rounded-full bg-background/90 shadow-md"
+            onClick={handleClose}
             aria-label="Close image preview"
           >
-            <X className="h-4 w-4" aria-hidden />
+            <X className="size-4" aria-hidden />
           </Button>
         </div>
       </DialogContent>

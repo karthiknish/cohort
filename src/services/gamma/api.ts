@@ -414,7 +414,7 @@ export class GammaService {
         const headers = this.ensureRequestHeaders()
         let lastError: unknown = null
 
-        for (let attempt = 1; attempt <= retries; attempt++) {
+        const attemptGet = async (attempt: number): Promise<GammaGenerationStatus> => {
             try {
                 const response = await fetch(`${GAMMA_BASE_URL}/generations/${encodeURIComponent(generationId)}`, {
                     headers,
@@ -430,13 +430,11 @@ export class GammaService {
                 const status = typeof payload.status === 'string' ? payload.status : 'unknown'
 
                 const generatedFiles = Array.isArray(payload.generatedFiles)
-                    ? (payload.generatedFiles as Array<Record<string, unknown>>)
-                        .map((entry) => {
+                    ? (payload.generatedFiles as Array<Record<string, unknown>>).flatMap((entry) => {
                             const fileType = typeof entry.fileType === 'string' ? entry.fileType : typeof entry.type === 'string' ? entry.type : 'unknown'
                             const fileUrl = typeof entry.fileUrl === 'string' ? entry.fileUrl : typeof entry.url === 'string' ? entry.url : ''
-                            return fileUrl ? { fileType, fileUrl } : null
+                            return fileUrl ? [{ fileType, fileUrl }] : []
                         })
-                        .filter((value): value is GammaGeneratedFile => Boolean(value))
                     : []
 
                 // Handle legacy exportUrl field (single export URL returned as string instead of array)
@@ -497,20 +495,14 @@ export class GammaService {
                     const backoffMs = 2000 * attempt
                     console.warn(`[GammaService] Network error on getGeneration attempt ${attempt}, retrying in ${backoffMs}ms...`, error)
                     await wait(backoffMs)
-                    continue
+                    return attemptGet(attempt + 1)
                 }
                 
                 throw error
             }
         }
 
-        throw lastError instanceof Error
-            ? lastError
-            : new Error(
-                  lastError == null
-                      ? `Gamma API getGeneration failed after ${retries} attempts`
-                      : String(lastError),
-              )
+        return attemptGet(1)
     }
 
     // ==========================================================================
@@ -633,7 +625,7 @@ export class GammaService {
         const requiredExports = new Set(normalizeExportFormats(exportAs))
         let pollCount = 0
 
-        while (true) {
+        const pollOnce = async (): Promise<GammaGenerationStatus> => {
             pollCount++
             console.log(`[GammaService] Poll attempt ${pollCount} for generation ${generationId}`)
 
@@ -689,7 +681,10 @@ export class GammaService {
 
             console.log(`[GammaService] Waiting ${pollDelay}ms before next poll`)
             await wait(pollDelay)
+            return pollOnce()
         }
+
+        return pollOnce()
     }
 
     /**

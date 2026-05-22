@@ -73,7 +73,7 @@ function ProjectsHeaderSection() {
       <div className="min-w-0 space-y-2">
         <div className="flex items-center gap-3">
           <div className={getIconContainerClasses('medium')}>
-            <Briefcase className="h-6 w-6" aria-hidden />
+            <Briefcase className="size-6" aria-hidden />
           </div>
           <div className="min-w-0">
             <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.projects?.title ?? 'Projects'}</h1>
@@ -128,9 +128,9 @@ function ProjectsHeaderSection() {
               aria-label="Refresh projects"
             >
               {loading ? (
-                <LoaderCircle className={cn('h-4 w-4', DASHBOARD_THEME.animations.spin)} />
+                <LoaderCircle className={cn('size-4', DASHBOARD_THEME.animations.spin)} />
               ) : (
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className="size-4" />
               )}
               <span className="hidden sm:inline">Refresh</span>
             </Button>
@@ -169,7 +169,7 @@ function ProjectsDialogs() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <CircleX className="h-5 w-5 text-destructive" />
+              <CircleX className="size-5 text-destructive" />
               Delete project?
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -184,7 +184,7 @@ function ProjectsDialogs() {
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {deleting ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -242,7 +242,7 @@ function ProjectsSummarySection() {
             value={openTaskTotal}
             description={taskTotal > 0 ? `${taskTotal - openTaskTotal} closed` : 'Waiting for tasks'}
           />
-          <div className="flex min-w-0 items-center gap-4 rounded-xl border border-border/60 bg-background/80 px-4 py-4 shadow-sm">
+          <div className="flex min-w-0 items-center gap-4 rounded-xl border border-border/60 bg-background/80 p-4 shadow-sm">
             <div className="min-w-0 flex-1">
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">

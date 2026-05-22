@@ -62,11 +62,11 @@ export function ShareMessageButton({ message, onShare, sharedTo = EMPTY_SHARED_T
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="size-7"
                 disabled={isSharing}
                 aria-label={`Share message from ${message.senderName ?? 'sender'} via email`}
               >
-                <Share2 className="h-4 w-4" />
+                <Share2 className="size-4" />
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
@@ -81,7 +81,7 @@ export function ShareMessageButton({ message, onShare, sharedTo = EMPTY_SHARED_T
             disabled={isSharing || isSharedToEmail}
             className="gap-2"
           >
-            <Mail className="h-4 w-4" />
+            <Mail className="size-4" />
             <span>Share via Email</span>
             {isSharedToEmail && <span className="ml-auto text-xs text-success">✓</span>}
           </DropdownMenuItem>
@@ -112,8 +112,8 @@ export function SharedPlatformIcons({ sharedTo }: SharedPlatformIconsProps) {
       <TooltipProvider delayDuration={200}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex h-5 w-5 items-center justify-center text-info">
-              <Mail className="h-4 w-4" />
+            <div className="flex size-5 items-center justify-center text-info">
+              <Mail className="size-4" />
             </div>
           </TooltipTrigger>
           <TooltipContent side="top" className="text-xs">

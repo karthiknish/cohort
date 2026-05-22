@@ -66,11 +66,11 @@ export function AdsPageLayout({
       <Tabs value={mobileTab} onValueChange={setMobileTab} className="w-full lg:hidden">
         <TabsList className={ADS_PAGE_THEME.mobileTabs}>
           <TabsTrigger value="performance" className={ADS_PAGE_THEME.mobileTabTrigger}>
-            <LineChart className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <LineChart className="size-3.5 shrink-0" aria-hidden />
             Performance
           </TabsTrigger>
           <TabsTrigger value="setup" className={ADS_PAGE_THEME.mobileTabTrigger}>
-            <Link2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <Link2 className="size-3.5 shrink-0" aria-hidden />
             Accounts
             {connectedAccountCount > 0 ? (
               <span className="rounded-full bg-background px-1.5 py-0 text-[10px] font-semibold tabular-nums text-foreground shadow-sm">
@@ -155,7 +155,7 @@ function AdsAdvancedAnalyticsCollapsible({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className={ADS_PAGE_THEME.advancedPanel}>
-      <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
+      <div className="flex items-center justify-between gap-3 p-4 sm:px-5">
         <div className="min-w-0 space-y-0.5">
           <p className="text-sm font-semibold tracking-tight text-foreground">Advanced analytics</p>
           <p className="text-xs leading-relaxed text-muted-foreground">
@@ -164,7 +164,7 @@ function AdsAdvancedAnalyticsCollapsible({
         </div>
         <CollapsibleTrigger asChild>
           <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-xl">
-            <Settings2 className="h-3.5 w-3.5" aria-hidden />
+            <Settings2 className="size-3.5" aria-hidden />
             {open ? 'Hide' : 'Show'}
           </Button>
         </CollapsibleTrigger>

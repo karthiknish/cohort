@@ -47,8 +47,7 @@ export function buildMetaTargetingFromNormalized(source: MetaTargetingSource): R
 
   const excluded_geo_locations: Record<string, unknown> = {}
   const excludedCountries = source.locations.excluded
-    .filter((loc) => loc.type === 'country')
-    .map((loc) => loc.id || loc.name)
+    .flatMap((loc) => (loc.type === 'country' ? [loc.id || loc.name] : []))
   if (excludedCountries.length > 0) {
     excluded_geo_locations.countries = excludedCountries
   }
@@ -61,9 +60,10 @@ export function buildMetaTargetingFromNormalized(source: MetaTargetingSource): R
   const ageMax = ages.length > 0 ? Math.max(...ages.map((a) => a.max ?? 65)) : undefined
 
   const genderMap: Record<string, number> = { male: 1, female: 2, all: 0 }
-  const genders = source.demographics.genders
-    .map((g) => genderMap[g.toLowerCase()])
-    .filter((value): value is number => typeof value === 'number' && value > 0)
+  const genders = source.demographics.genders.flatMap((g) => {
+    const value = genderMap[g.toLowerCase()]
+    return typeof value === 'number' && value > 0 ? [value] : []
+  })
 
   const targeting: Record<string, unknown> = {
     geo_locations,

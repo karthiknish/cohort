@@ -362,8 +362,7 @@ export async function fetchMetaCreatives(options: {
   }
 
   // Base mapping first
-  const baseCreatives = ads
-    .map((ad) => {
+  const baseCreatives = ads.flatMap((ad): MetaCreative[] => {
       const creative = Array.isArray(ad.adcreatives?.data) && ad.adcreatives.data.length > 0 ? ad.adcreatives.data[0] : undefined
       const storySpec = creative?.object_story_spec
 
@@ -376,7 +375,7 @@ export async function fetchMetaCreatives(options: {
 
       // For lead gen ads without traditional creatives, provide minimal info
       if (!creative && isLeadGenFlag) {
-        return {
+        return [{
           adId: ad.id ?? '',
           adSetId: ad.adset_id ?? '',
           campaignId: ad.campaign_id ?? '',
@@ -389,12 +388,12 @@ export async function fetchMetaCreatives(options: {
           // Mark as lead gen for UI handling
           isLeadGen: true,
           leadgenFormId,
-        }
+        }]
       }
 
       // Skip ads with no creative data and not lead gen
       if (!creative) {
-        return null
+        return []
       }
 
       // Extract image from asset_feed_spec for lead gen and dynamic creative ads
@@ -472,7 +471,7 @@ export async function fetchMetaCreatives(options: {
         || metaPageIdFromObjectStoryId(creative?.object_story_id)
         || metaPageIdFromObjectStoryId(creative?.effective_object_story_id)
 
-      return {
+      return [{
         adId: ad.id ?? '',
         adSetId: ad.adset_id ?? '',
         campaignId: ad.campaign_id ?? '',
@@ -516,9 +515,8 @@ export async function fetchMetaCreatives(options: {
         // Lead gen specific fields
         isLeadGen: isLeadGenFlag,
         leadgenFormId,
-      }
+      }]
     })
-    .filter((c): c is NonNullable<typeof c> => c !== null)
 
   if (!includeVideoMedia) {
     return baseCreatives
@@ -526,9 +524,9 @@ export async function fetchMetaCreatives(options: {
 
   const videoIds = Array.from(
     new Set(
-      baseCreatives
-        .map((c) => c.videoId)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+      baseCreatives.flatMap((c) =>
+        typeof c.videoId === 'string' && c.videoId.length > 0 ? [c.videoId] : [],
+      )
     )
   ).slice(0, Math.max(0, videoLookupLimit))
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useState } from 'react'
+import { useCallback, useReducer } from 'react'
 import { useAction } from 'convex/react'
 
 import { Card } from '@/shared/ui/card'
@@ -33,6 +33,45 @@ type Props = {
   maxGoogleAdsSearchPages?: number
 }
 
+type CreativesCardState = {
+  creatives: Creative[]
+  loading: boolean
+  summary: { total: number; byType: Record<string, number> } | null
+  selectedIds: Set<string>
+  compareOpen: boolean
+}
+
+type CreativesCardAction =
+  | { type: 'setCreatives'; value: Creative[] }
+  | { type: 'setLoading'; value: boolean }
+  | { type: 'setSummary'; value: { total: number; byType: Record<string, number> } | null }
+  | { type: 'toggleSelected'; creativeId: string }
+  | { type: 'setCompareOpen'; value: boolean }
+
+function creativesCardReducer(state: CreativesCardState, action: CreativesCardAction): CreativesCardState {
+  switch (action.type) {
+    case 'setCreatives':
+      return { ...state, creatives: action.value }
+    case 'setLoading':
+      return { ...state, loading: action.value }
+    case 'setSummary':
+      return { ...state, summary: action.value }
+    case 'toggleSelected': {
+      const next = new Set(state.selectedIds)
+      if (next.has(action.creativeId)) {
+        next.delete(action.creativeId)
+      } else {
+        next.add(action.creativeId)
+      }
+      return { ...state, selectedIds: next }
+    }
+    case 'setCompareOpen':
+      return { ...state, compareOpen: action.value }
+    default:
+      return state
+  }
+}
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -42,14 +81,21 @@ export function CreativesCard({ providerId, providerName, isConnected, maxMetaCr
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const listCreatives = useAction(adsCreativesApi.listCreatives)
 
-  const [creatives, setCreatives] = useState<Creative[]>([])
-  const [loading, setLoading] = useState(false)
-  const [summary, setSummary] = useState<{ total: number; byType: Record<string, number> } | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [compareOpen, setCompareOpen] = useState(false)
+  const [state, dispatch] = useReducer(creativesCardReducer, {
+    creatives: [],
+    loading: false,
+    summary: null,
+    selectedIds: new Set<string>(),
+    compareOpen: false,
+  })
+  const { creatives, loading, summary, selectedIds, compareOpen } = state
 
   const handleOpenCompare = useCallback(() => {
-    setCompareOpen(true)
+    dispatch({ type: 'setCompareOpen', value: true })
+  }, [])
+
+  const handleCompareOpenChange = useCallback((open: boolean) => {
+    dispatch({ type: 'setCompareOpen', value: open })
   }, [])
 
   const handlePromoteCreative = useCallback(() => {
@@ -62,9 +108,9 @@ export function CreativesCard({ providerId, providerName, isConnected, maxMetaCr
   const fetchCreatives = useCallback(async () => {
     if (!isConnected) return
 
-    setLoading(true)
+    dispatch({ type: 'setLoading', value: true })
     if (!workspaceId) {
-      setLoading(false)
+      dispatch({ type: 'setLoading', value: false })
       return
     }
 
@@ -81,8 +127,8 @@ export function CreativesCard({ providerId, providerName, isConnected, maxMetaCr
       })
 
       .then((creativesList) => {
-        setCreatives(Array.isArray(creativesList) ? (creativesList as Creative[]) : [])
-        setSummary(null)
+        dispatch({ type: 'setCreatives', value: Array.isArray(creativesList) ? (creativesList as Creative[]) : [] })
+        dispatch({ type: 'setSummary', value: null })
       })
       .catch((error) => {
         reportConvexFailure({
@@ -93,20 +139,12 @@ export function CreativesCard({ providerId, providerName, isConnected, maxMetaCr
         })
       })
       .finally(() => {
-        setLoading(false)
+        dispatch({ type: 'setLoading', value: false })
       })
   }, [isConnected, listCreatives, maxGoogleAdsSearchPages, maxMetaCreativePages, providerId, workspaceId])
 
   const handleToggleSelected = useCallback((creativeId: string) => {
-    setSelectedIds((current) => {
-      const next = new Set(current)
-      if (next.has(creativeId)) {
-        next.delete(creativeId)
-      } else {
-        next.add(creativeId)
-      }
-      return next
-    })
+    dispatch({ type: 'toggleSelected', creativeId })
   }, [])
 
   if (!isConnected) {
@@ -117,7 +155,7 @@ export function CreativesCard({ providerId, providerName, isConnected, maxMetaCr
     <Card>
       <CreativesCardHeader loading={loading} onCompare={handleOpenCompare} onLoad={fetchCreatives} providerName={providerName} selectedCount={selectedIds.size} summary={summary} />
       <CreativesCardContent creatives={creatives} onToggleSelected={handleToggleSelected} selectedIds={selectedIds} summary={summary} />
-      <CreativeComparisonDialog creatives={creatives} onOpenChange={setCompareOpen} onPromote={handlePromoteCreative} open={compareOpen} providerName={providerName} selectedIds={selectedIds} />
+      <CreativeComparisonDialog creatives={creatives} onOpenChange={handleCompareOpenChange} onPromote={handlePromoteCreative} open={compareOpen} providerName={providerName} selectedIds={selectedIds} />
     </Card>
   )
 }

@@ -54,28 +54,37 @@ export const listByProjectIds = workspaceQuery({
   handler: async (ctx, args) => {
     const result: Record<string, unknown[]> = {}
 
-    for (const projectId of args.projectIds) {
-      const rows = await ctx.db
-        .query('projectMilestones')
-        .withIndex('by_workspace_project_start_created_legacyId', (q) =>
-          q.eq('workspaceId', args.workspaceId).eq('projectId', projectId)
-        )
-        .order('asc')
-        .collect()
+    const milestonesByProject = await Promise.all(
+      args.projectIds.map(async (projectId) => {
+        const rows = await ctx.db
+          .query('projectMilestones')
+          .withIndex('by_workspace_project_start_created_legacyId', (q) =>
+            q.eq('workspaceId', args.workspaceId).eq('projectId', projectId),
+          )
+          .order('asc')
+          .collect()
 
-      result[projectId] = rows.map((row) => ({
-        legacyId: row.legacyId,
-        projectId: row.projectId,
-        title: row.title,
-        description: row.description,
-        status: row.status,
-        startDateMs: row.startDateMs,
-        endDateMs: row.endDateMs,
-        ownerId: row.ownerId,
-        order: row.order,
-        createdAtMs: row.createdAtMs,
-        updatedAtMs: row.updatedAtMs,
-      }))
+        return {
+          projectId,
+          milestones: rows.map((row) => ({
+            legacyId: row.legacyId,
+            projectId: row.projectId,
+            title: row.title,
+            description: row.description,
+            status: row.status,
+            startDateMs: row.startDateMs,
+            endDateMs: row.endDateMs,
+            ownerId: row.ownerId,
+            order: row.order,
+            createdAtMs: row.createdAtMs,
+            updatedAtMs: row.updatedAtMs,
+          })),
+        }
+      }),
+    )
+
+    for (const { projectId, milestones } of milestonesByProject) {
+      result[projectId] = milestones
     }
 
     return result as Record<string, Array<{

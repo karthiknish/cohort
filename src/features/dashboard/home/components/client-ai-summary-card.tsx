@@ -252,7 +252,7 @@ function ClientAiSummaryCardBody({
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               {state.summary.bullets.map((bullet) => (
                 <li key={bullet} className="flex gap-2">
-                  <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                  <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
                   <span>{bullet}</span>
                 </li>
               ))}
@@ -323,7 +323,7 @@ export function ClientAiSummaryCard({
       <CardHeader className="flex flex-row items-start justify-between gap-3">
         <div>
           <CardTitle className="flex items-center gap-2 text-base">
-            <BrainCircuit className="h-4 w-4 text-primary" />
+            <BrainCircuit className="size-4 text-primary" />
             AI Client Summary
           </CardTitle>
           <CardDescription>
@@ -339,7 +339,7 @@ export function ClientAiSummaryCard({
           onClick={handleManualRefresh}
           disabled={!summarySnapshot || waitingForData}
         >
-          <RefreshCw className="mr-2 h-3.5 w-3.5" />
+          <RefreshCw className="mr-2 size-3.5" />
           Refresh
         </Button>
       </CardHeader>

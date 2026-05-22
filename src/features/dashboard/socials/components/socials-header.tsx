@@ -30,13 +30,13 @@ export function SocialsHeader({
         )}
       >
         <div
-          className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-info/10 blur-3xl"
+          className="pointer-events-none absolute -right-8 -top-8 size-32 rounded-full bg-info/10 blur-3xl"
           aria-hidden
         />
         <div className="relative space-y-3">
           <div className="flex flex-wrap items-start gap-4">
             <div className={cn(DASHBOARD_THEME.icons.container, 'bg-info/10 text-info border-info/25')}>
-              <Share2 className="h-6 w-6" aria-hidden />
+              <Share2 className="size-6" aria-hidden />
             </div>
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -45,7 +45,7 @@ export function SocialsHeader({
                 </p>
                 {metricsReady ? (
                   <Badge className={cn(getBadgeClasses('success'), 'gap-1 normal-case tracking-normal')}>
-                    <Sparkles className="h-3 w-3" aria-hidden />
+                    <Sparkles className="size-3" aria-hidden />
                     Metrics live
                   </Badge>
                 ) : null}
@@ -66,7 +66,7 @@ export function SocialsHeader({
 
         <div className="relative flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <Badge className={cn('w-fit', getBadgeClasses('secondary'), 'hidden sm:inline-flex')}>
-            <CalendarRange className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+            <CalendarRange className="mr-1.5 size-3.5" aria-hidden />
             Compare periods
           </Badge>
           <DateRangePicker value={dateRange} onChange={onDateRangeChange} />

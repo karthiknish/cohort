@@ -49,8 +49,8 @@ export default function AuthError({
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <Card className="max-w-md border-muted/60">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-            <Lock className="h-8 w-8 text-destructive" />
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
+            <Lock className="size-8 text-destructive" />
           </div>
           <CardTitle className="text-xl">Authentication error</CardTitle>
           <CardDescription>
@@ -63,7 +63,7 @@ export default function AuthError({
           {/* Component info */}
           <div className="flex items-center justify-between rounded-lg border border-muted/40 bg-muted/20 p-3">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Code2 className="h-3 w-3" />
+              <Code2 className="size-3" />
               <span>Component: {componentName}</span>
             </div>
             <Button
@@ -73,7 +73,7 @@ export default function AuthError({
               className="h-7 px-2"
               title="Copy error details"
             >
-              <Copy className="h-3 w-3 mr-1" />
+              <Copy className="size-3 mr-1" />
               Copy
             </Button>
           </div>
@@ -109,7 +109,7 @@ export default function AuthError({
 
           <div className="flex flex-col gap-2 pt-2">
             <Button onClick={handleRetry} className="w-full">
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 size-4" />
               Try again
             </Button>
             <Button variant="outline" asChild className="w-full">

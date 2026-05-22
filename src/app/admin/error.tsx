@@ -51,8 +51,8 @@ export default function AdminError({
     <div className="flex min-h-dvh items-center justify-center bg-muted/20 p-4 sm:p-6">
       <Card className="w-full max-w-md border-border/80 shadow-md">
         <CardHeader className="space-y-3 text-center sm:text-left">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 sm:mx-0">
-            <ShieldAlert className="h-7 w-7 text-destructive" />
+          <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-destructive/10 sm:mx-0">
+            <ShieldAlert className="size-7 text-destructive" />
           </div>
           <CardTitle className="text-xl font-semibold tracking-tight">Admin panel error</CardTitle>
           <CardDescription className="text-pretty">
@@ -65,7 +65,7 @@ export default function AdminError({
           {/* Component info */}
           <div className="flex items-center justify-between rounded-lg border border-muted/40 bg-muted/20 p-3">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Code2 className="h-3 w-3" />
+              <Code2 className="size-3" />
               <span>Component: {componentName}</span>
             </div>
             <Button
@@ -75,7 +75,7 @@ export default function AdminError({
               className="h-7 px-2"
               title="Copy error details"
             >
-              <Copy className="h-3 w-3 mr-1" />
+              <Copy className="size-3 mr-1" />
               Copy
             </Button>
           </div>
@@ -116,12 +116,12 @@ export default function AdminError({
 
           <div className="flex flex-col gap-2 pt-2">
             <Button onClick={handleRetry} className="w-full">
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 size-4" />
               Try again
             </Button>
             <Button variant="outline" asChild className="w-full">
               <Link href="/dashboard">
-                <Home className="mr-2 h-4 w-4" />
+                <Home className="mr-2 size-4" />
                 Back to dashboard
               </Link>
             </Button>

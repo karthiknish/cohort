@@ -280,30 +280,32 @@ export const seedTimeModule = zAuthenticatedMutation({
       { personName: 'Kiran Patel', role: 'Project manager', project: 'Northstar migration', status: 'clocked-out' as const, minutesAgo: 480, durationMinutes: 443, locationLabel: 'HQ · Bengaluru', flaggedReason: null },
     ]
 
-    for (const [index, row] of seedRows.entries()) {
-      const startedAtMs = ctx.now - row.minutesAgo * 60_000
-      const endedAtMs = row.status === 'clocked-out' || row.status === 'needs-review'
-        ? startedAtMs + row.durationMinutes * 60_000
-        : null
+    await Promise.all(
+      seedRows.map(async (row, index) => {
+        const startedAtMs = ctx.now - row.minutesAgo * 60_000
+        const endedAtMs = row.status === 'clocked-out' || row.status === 'needs-review'
+          ? startedAtMs + row.durationMinutes * 60_000
+          : null
 
-      await ctx.db.insert('workforceTimeSessions', {
-        workspaceId: args.workspaceId,
-        legacyId: `time_seed_${index + 1}`,
-        personId: `${index + 1}`,
-        personName: row.personName,
-        role: row.role,
-        project: row.project,
-        status: row.status,
-        startedAtMs,
-        endedAtMs,
-        durationMinutes: row.durationMinutes,
-        locationLabel: row.locationLabel,
-        flaggedReason: row.flaggedReason,
-        managerReview: row.status === 'needs-review' ? 'pending' : 'none',
-        createdAtMs: ctx.now,
-        updatedAtMs: ctx.now,
-      })
-    }
+        await ctx.db.insert('workforceTimeSessions', {
+          workspaceId: args.workspaceId,
+          legacyId: `time_seed_${index + 1}`,
+          personId: `${index + 1}`,
+          personName: row.personName,
+          role: row.role,
+          project: row.project,
+          status: row.status,
+          startedAtMs,
+          endedAtMs,
+          durationMinutes: row.durationMinutes,
+          locationLabel: row.locationLabel,
+          flaggedReason: row.flaggedReason,
+          managerReview: row.status === 'needs-review' ? 'pending' : 'none',
+          createdAtMs: ctx.now,
+          updatedAtMs: ctx.now,
+        })
+      }),
+    )
 
     return { inserted: seedRows.length }
   },
@@ -597,14 +599,16 @@ export const seedSchedulingModule = zAuthenticatedMutation({
       { legacyId: 'shift_seed_4', title: 'Weekly launch room', assigneeId: 'member-maya', assigneeName: 'Maya Adler', team: 'Delivery', dayLabel: 'Fri', timeLabel: '10:00 - 15:00', coverageLabel: 'Ready to publish', status: 'scheduled' as const, dayStartMs: ctx.now + 4 * 86_400_000 },
     ]
 
-    for (const row of shifts) {
-      await ctx.db.insert('workforceShifts', {
-        workspaceId: args.workspaceId,
-        ...row,
-        createdAtMs: ctx.now,
-        updatedAtMs: ctx.now,
-      })
-    }
+    await Promise.all(
+      shifts.map(async (row) =>
+        ctx.db.insert('workforceShifts', {
+          workspaceId: args.workspaceId,
+          ...row,
+          createdAtMs: ctx.now,
+          updatedAtMs: ctx.now,
+        }),
+      ),
+    )
 
     await ctx.db.insert('workforceShiftSwaps', {
       workspaceId: args.workspaceId,
@@ -861,15 +865,17 @@ export const seedFormsModule = zAuthenticatedMutation({
       { legacyId: 'template_seed_3', title: 'Creative upload QA', category: 'Creative ops', completionRate: 95, fieldsCount: 11, frequency: 'Per asset batch' },
     ]
 
-    for (const row of templates) {
-      await ctx.db.insert('workforceFormTemplates', {
-        workspaceId: args.workspaceId,
-        ...row,
-        fields,
-        createdAtMs: ctx.now,
-        updatedAtMs: ctx.now,
-      })
-    }
+    await Promise.all(
+      templates.map(async (row) =>
+        ctx.db.insert('workforceFormTemplates', {
+          workspaceId: args.workspaceId,
+          ...row,
+          fields,
+          createdAtMs: ctx.now,
+          updatedAtMs: ctx.now,
+        }),
+      ),
+    )
 
     const submissions = [
       { legacyId: 'submission_seed_1', templateLegacyId: 'template_seed_1', templateTitle: 'Campaign launch readiness', submittedBy: 'Sofia Reyes', status: 'ready' as const, scoreCompleted: 14, scoreTotal: 14, submittedAtMs: ctx.now - 90 * 60_000 },
@@ -877,14 +883,16 @@ export const seedFormsModule = zAuthenticatedMutation({
       { legacyId: 'submission_seed_3', templateLegacyId: 'template_seed_3', templateTitle: 'Creative upload QA', submittedBy: 'James Liu', status: 'needs-follow-up' as const, scoreCompleted: 9, scoreTotal: 11, submittedAtMs: ctx.now - 24 * 60 * 60_000 },
     ]
 
-    for (const row of submissions) {
-      await ctx.db.insert('workforceFormSubmissions', {
-        workspaceId: args.workspaceId,
-        ...row,
-        createdAtMs: ctx.now,
-        updatedAtMs: ctx.now,
-      })
-    }
+    await Promise.all(
+      submissions.map(async (row) =>
+        ctx.db.insert('workforceFormSubmissions', {
+          workspaceId: args.workspaceId,
+          ...row,
+          createdAtMs: ctx.now,
+          updatedAtMs: ctx.now,
+        }),
+      ),
+    )
 
     return { inserted: templates.length + submissions.length }
   },
@@ -1113,14 +1121,16 @@ export const seedTimeOffModule = zWorkspaceMutation({
       { legacyId: 'to_balance_3', label: 'Sick leave', usedLabel: '2 days used', remainingLabel: '6 days left' },
     ]
 
-    for (const row of balances) {
-      await ctx.db.insert('workforceTimeOffBalances', {
-        workspaceId: args.workspaceId,
-        ...row,
-        createdAtMs: ctx.now,
-        updatedAtMs: ctx.now,
-      })
-    }
+    await Promise.all(
+      balances.map(async (row) =>
+        ctx.db.insert('workforceTimeOffBalances', {
+          workspaceId: args.workspaceId,
+          ...row,
+          createdAtMs: ctx.now,
+          updatedAtMs: ctx.now,
+        }),
+      ),
+    )
 
     const requests = [
       {
@@ -1143,14 +1153,16 @@ export const seedTimeOffModule = zWorkspaceMutation({
       },
     ]
 
-    for (const row of requests) {
-      await ctx.db.insert('workforceTimeOffRequests', {
-        workspaceId: args.workspaceId,
-        ...row,
-        createdAtMs: ctx.now,
-        updatedAtMs: ctx.now,
-      })
-    }
+    await Promise.all(
+      requests.map(async (row) =>
+        ctx.db.insert('workforceTimeOffRequests', {
+          workspaceId: args.workspaceId,
+          ...row,
+          createdAtMs: ctx.now,
+          updatedAtMs: ctx.now,
+        }),
+      ),
+    )
 
     return { inserted: balances.length + requests.length }
   },
@@ -1221,14 +1233,15 @@ export const reviewTimeOffRequest = zWorkspaceMutation({
         .withIndex('by_workspace_dayStartMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
         .take(80)
       const message = `Approved ${row.type} (${row.windowLabel}) — reassign if needed.`
-      for (const s of shifts) {
-        if (s.assigneeId === row.personId) {
-          await ctx.db.patch(s._id, {
+      const shiftsToUpdate = shifts.filter((s) => s.assigneeId === row.personId)
+      await Promise.all(
+        shiftsToUpdate.map(async (s) =>
+          ctx.db.patch(s._id, {
             conflictWithTimeOff: message,
             updatedAtMs: ctx.now,
-          })
-        }
-      }
+          }),
+        ),
+      )
     }
 
     return { ok: true as const }

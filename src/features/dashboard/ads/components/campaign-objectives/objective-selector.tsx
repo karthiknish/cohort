@@ -41,7 +41,7 @@ function ObjectiveOptionCard({
 }) {
   const Icon = ICON_MAP[objective.icon]
 
-  const handleClick = useCallback(() => {
+  const onSelectObjective = useCallback(() => {
     onChange(objective.objective)
   }, [objective.objective, onChange])
 
@@ -72,7 +72,7 @@ function ObjectiveOptionCard({
     <button
       type="button"
       disabled={disabled}
-      onClick={handleClick}
+      onClick={onSelectObjective}
       className={cn(
         'relative flex flex-col items-start rounded-lg border-2 p-4 text-left motion-chromatic',
         'hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2',
@@ -82,15 +82,15 @@ function ObjectiveOptionCard({
       style={buttonStyle}
     >
       {isSelected && (
-        <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full" style={selectionIndicatorStyle}>
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={selectedIconForegroundStyle}>
+        <div className="absolute right-3 top-3 flex size-5 items-center justify-center rounded-full" style={selectionIndicatorStyle}>
+          <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={selectedIconForegroundStyle}>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
         </div>
       )}
 
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg" style={iconContainerStyle}>
-        <Icon className="h-6 w-6" style={iconStyle} />
+      <div className="mb-3 flex size-12 items-center justify-center rounded-lg" style={iconContainerStyle}>
+        <Icon className="size-6" style={iconStyle} />
       </div>
 
       <div className="space-y-1">
@@ -122,7 +122,7 @@ function CompactObjectiveOptionButton({
 }) {
   const Icon = ICON_MAP[objective.icon]
 
-  const handleClick = useCallback(() => {
+  const onSelectObjective = useCallback(() => {
     onChange(objective.objective)
   }, [objective.objective, onChange])
 
@@ -132,14 +132,14 @@ function CompactObjectiveOptionButton({
     <button
       type="button"
       disabled={disabled}
-      onClick={handleClick}
+      onClick={onSelectObjective}
       className={cn(
         'inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium motion-chromatic',
         isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted',
         disabled && 'cursor-not-allowed opacity-50'
       )}
     >
-      <Icon className="h-4 w-4" />
+      <Icon className="size-4" />
       {objective.displayName}
     </button>
   )

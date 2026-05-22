@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { useCallback } from 'react'
 import { Sparkles, ArrowRight, CircleCheck } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -30,12 +33,16 @@ const onboardingSteps = [
 export function OnboardingCard() {
   const { startTour } = useOnboardingTour()
 
+  const handleStartTour = useCallback(() => {
+    void startTour({ ensureDashboard: true })
+  }, [startTour])
+
   return (
     <Card className="border-muted/70 bg-gradient-to-br from-primary/5 via-background to-background shadow-sm">
       <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-primary">
-            <Sparkles className="h-5 w-5" />
+          <span className="flex size-10 items-center justify-center rounded-full bg-accent/10 text-primary">
+            <Sparkles className="size-5" />
           </span>
           <div>
             <CardTitle className="text-lg">Welcome to Cohorts</CardTitle>
@@ -47,18 +54,18 @@ export function OnboardingCard() {
             Getting started
           </Badge>
           <Button
-            onClick={() => void startTour({ ensureDashboard: true })}
+            onClick={handleStartTour}
             size="sm"
             variant="default"
             className="bg-primary hover:bg-accent/90"
           >
             Start Tour
-            <Sparkles className="ml-1.5 h-3.5 w-3.5" />
+            <Sparkles className="ml-1.5 size-3.5" />
           </Button>
           <Button asChild size="sm" variant="outline">
             <Link href="/docs/background-sync-setup">
               Setup guide
-              <ArrowRight className="ml-1 h-3 w-3" />
+              <ArrowRight className="ml-1 size-3" />
             </Link>
           </Button>
         </div>
@@ -74,7 +81,7 @@ export function OnboardingCard() {
                 <Badge variant="outline" className="text-xs">
                   Step {index + 1}
                 </Badge>
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <div className="flex size-6 items-center justify-center rounded-full bg-muted text-muted-foreground">
                   <span className="text-xs font-medium">{index + 1}</span>
                 </div>
               </div>
@@ -86,7 +93,7 @@ export function OnboardingCard() {
                 <Button asChild variant="ghost" size="sm" className="w-full justify-start px-0 text-primary">
                   <Link href={step.href}>
                     {step.actionLabel}
-                    <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                    <ArrowRight className="ml-1 size-3 transition-transform group-hover:translate-x-0.5" />
                   </Link>
                 </Button>
               )}
@@ -95,7 +102,7 @@ export function OnboardingCard() {
         </div>
 
         <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-          <CircleCheck className="h-3.5 w-3.5" />
+          <CircleCheck className="size-3.5" />
           <span>Tip: Press <kbd className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">⌘K</kbd> anytime to quickly navigate between pages</span>
         </div>
       </CardContent>

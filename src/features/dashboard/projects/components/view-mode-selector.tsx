@@ -50,7 +50,7 @@ function ViewModeButton({
   icon: typeof List
   onChange: (mode: ViewMode) => void
 }) {
-  const handleClick = useCallback(() => onChange(mode), [mode, onChange])
+  const onSelectViewMode = useCallback(() => onChange(mode), [mode, onChange])
 
   return (
     <Tooltip>
@@ -58,11 +58,11 @@ function ViewModeButton({
         <button
           type="button"
           className={PROJECTS_THEME.segmentedItem(active)}
-          onClick={handleClick}
+          onClick={onSelectViewMode}
           aria-label={label}
           aria-pressed={active}
         >
-          <Icon className="h-3.5 w-3.5" aria-hidden />
+          <Icon className="size-3.5" aria-hidden />
           <span className="hidden sm:inline">{label}</span>
         </button>
       </TooltipTrigger>

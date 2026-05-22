@@ -127,7 +127,7 @@ async function createWorkspaceNotification(input: WorkspaceNotificationInput): P
 
   let lastError: Error | null = null
 
-  for (let attempt = 0; attempt < RETRY_CONFIG.maxRetries; attempt++) {
+  const attemptCreate = async (attempt: number): Promise<void> => {
     try {
       const nowMs = Date.now()
       const legacyId = nanoid() // Generate unique ID for the notification
@@ -160,12 +160,14 @@ async function createWorkspaceNotification(input: WorkspaceNotificationInput): P
       if (attempt < RETRY_CONFIG.maxRetries - 1) {
         console.warn(`[notifications] Convex write failed, retrying...`, error)
         await sleep(calculateBackoffDelay(attempt))
-        continue
+        return attemptCreate(attempt + 1)
       }
     }
+
+    console.error('[notifications] failed to record workspace notification after all retries', lastError)
   }
 
-  console.error('[notifications] failed to record workspace notification after all retries', lastError)
+  await attemptCreate(0)
 }
 
 // =============================================================================
@@ -334,32 +336,34 @@ export async function recordTaskMentionNotifications(options: {
     typeof task.clientId === 'string' && task.clientId.trim().length > 0 ? task.clientId.trim() : null
   const senderName = options.actorName ?? 'Someone'
 
-  for (const mention of options.mentions) {
-    await createWorkspaceNotification({
-      workspaceId,
-      kind: 'task.mention',
-      title: `${senderName} mentioned you`,
-      body: options.snippet,
-      actor: {
-        id: options.actorId ?? null,
-        name: senderName,
-      },
-      resource: { type: 'task', id: task.id },
-      recipients: {
-        roles: ['admin', 'team', 'client'],
-        clientIds: clientId ? [clientId] : undefined,
-        clientId,
-      },
-      metadata: {
-        taskId: task.id,
-        taskTitle: task.title,
-        commentId: options.commentId,
-        mentionedName: mention.name,
-        mentionSlug: mention.slug,
-        clientId,
-      },
-    })
-  }
+  await Promise.all(
+    options.mentions.map((mention) =>
+      createWorkspaceNotification({
+        workspaceId,
+        kind: 'task.mention',
+        title: `${senderName} mentioned you`,
+        body: options.snippet,
+        actor: {
+          id: options.actorId ?? null,
+          name: senderName,
+        },
+        resource: { type: 'task', id: task.id },
+        recipients: {
+          roles: ['admin', 'team', 'client'],
+          clientIds: clientId ? [clientId] : undefined,
+          clientId,
+        },
+        metadata: {
+          taskId: task.id,
+          taskTitle: task.title,
+          commentId: options.commentId,
+          mentionedName: mention.name,
+          mentionSlug: mention.slug,
+          clientId,
+        },
+      }),
+    ),
+  )
 }
 
 // =============================================================================
@@ -467,35 +471,37 @@ export async function recordMentionNotifications(options: {
   const senderName = options.actorName ?? message.senderName ?? 'Someone'
 
   // Create a notification for each mention
-  for (const mention of message.mentions) {
-    const mentionedName = mention.name
+  await Promise.all(
+    message.mentions.map((mention) => {
+      const mentionedName = mention.name
 
-    await createWorkspaceNotification({
-      workspaceId,
-      kind: 'collaboration.mention',
-      title: `${senderName} mentioned you`,
-      body: snippet,
-      actor: {
-        id: options.actorId ?? null,
-        name: senderName,
-      },
-      resource: { type: 'collaboration', id: message.id },
-      recipients: {
-        roles: ['admin', 'team', 'client'],
-        clientIds: clientId ? [clientId] : undefined,
-        clientId,
-      },
-      metadata: {
-        channelType: message.channelType,
-        clientId,
-        senderId: message.senderId ?? null,
-        senderName: message.senderName ?? null,
-        mentionedName,
-        mentionSlug: mention.slug,
+      return createWorkspaceNotification({
+        workspaceId,
+        kind: 'collaboration.mention',
+        title: `${senderName} mentioned you`,
+        body: snippet,
+        actor: {
+          id: options.actorId ?? null,
+          name: senderName,
+        },
+        resource: { type: 'collaboration', id: message.id },
+        recipients: {
+          roles: ['admin', 'team', 'client'],
+          clientIds: clientId ? [clientId] : undefined,
+          clientId,
+        },
+        metadata: {
+          channelType: message.channelType,
+          clientId,
+          senderId: message.senderId ?? null,
+          senderName: message.senderName ?? null,
+          mentionedName,
+          mentionSlug: mention.slug,
         projectId: isProjectChannel && typeof message.projectId === 'string' ? message.projectId : null,
       },
-    })
-  }
+      })
+    }),
+  )
 }
 
 // =============================================================================

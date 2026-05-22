@@ -58,7 +58,7 @@ function MarkdownToolbarActionButton({
   icon: string
   onInsert: (markdown: string) => void
 }) {
-  const handleClick = useCallback(() => {
+  const onInsertMarkdown = useCallback(() => {
     onInsert(insert)
   }, [insert, onInsert])
 
@@ -68,7 +68,7 @@ function MarkdownToolbarActionButton({
       variant="ghost"
       size="sm"
       className="h-7 px-2"
-      onClick={handleClick}
+      onClick={onInsertMarkdown}
       title={title}
     >
       {icon}
@@ -104,7 +104,7 @@ export function MarkdownPreview({
   const handleToggleFullscreen = useCallback(() => {
     setIsFullscreen((current) => !current)
   }, [])
-  const handleChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value), [onChange])
+  const onMarkdownChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value), [onChange])
 
   const charCount = value.length
   const remaining = maxLength - charCount
@@ -122,7 +122,7 @@ export function MarkdownPreview({
       {/* Header bar */}
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted">
         <div className="flex items-center gap-2">
-          <Type className="h-4 w-4 text-muted-foreground" />
+          <Type className="size-4 text-muted-foreground" />
           <span className="text-sm font-medium">Message</span>
         </div>
 
@@ -137,12 +137,12 @@ export function MarkdownPreview({
           >
             {showPreview ? (
               <>
-                <EyeOff className="h-3.5 w-3.5 mr-1" />
+                <EyeOff className="size-3.5 mr-1" />
                 Edit
               </>
             ) : (
               <>
-                <Eye className="h-3.5 w-3.5 mr-1" />
+                <Eye className="size-3.5 mr-1" />
                 Preview
               </>
             )}
@@ -153,7 +153,7 @@ export function MarkdownPreview({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="size-7"
             onClick={handleToggleFullscreen}
             aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
           >
@@ -191,7 +191,7 @@ export function MarkdownPreview({
           <TabsContent value="write" className="mt-0">
             <Textarea
               value={value}
-              onChange={handleChange}
+              onChange={onMarkdownChange}
               placeholder={placeholder}
               maxLength={maxLength}
               rows={minRows}

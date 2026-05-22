@@ -87,7 +87,7 @@ export const taskPillColors = {
 
 export const taskInfoPanelClasses = {
   base: 'rounded-[1.15rem] border border-border bg-background px-3.5 py-3 shadow-sm',
-  icon: 'flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted text-muted-foreground shadow-sm',
+  icon: 'flex size-8 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted text-muted-foreground shadow-sm',
   label: 'text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground',
   value: 'text-sm font-semibold leading-tight text-foreground',
 } as const
@@ -255,8 +255,10 @@ export function parseMentionNames(value: string): string[] {
   if (names.length === 0) {
     return value
       .split(',')
-      .map((n) => n.trim())
-      .filter((n) => n.length > 0)
+      .flatMap((n) => {
+        const trimmed = n.trim()
+        return trimmed.length > 0 ? [trimmed] : []
+      })
   }
 
   return names

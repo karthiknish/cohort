@@ -52,7 +52,7 @@ export function SupportProofSection() {
         </FadeIn>
 
         <FadeIn className="mb-12">
-          <div className="rounded-2xl border border-border/60 bg-background/80 px-5 py-5 shadow-sm backdrop-blur-sm sm:px-8 sm:py-6">
+          <div className="rounded-2xl border border-border/60 bg-background/80 p-5 shadow-sm backdrop-blur-sm sm:px-8 sm:py-6">
             <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:text-left">
               Same platform depth you expect
             </p>
@@ -71,7 +71,7 @@ export function SupportProofSection() {
               >
                 <CardHeader className="space-y-4 pb-2">
                   <div className={cn('w-fit rounded-2xl p-3', point.wellClass)}>
-                    <point.icon className="h-5 w-5" aria-hidden />
+                    <point.icon className="size-5" aria-hidden />
                   </div>
                   <CardTitle className="text-lg leading-snug sm:text-xl">{point.title}</CardTitle>
                 </CardHeader>

@@ -306,13 +306,14 @@ export const processAllQueuedJobs = internalAction({
     let failed = 0
     const MAX_JOBS_PER_WORKSPACE = 5
 
-    for (const workspaceId of workspaceIds) {
-      for (let i = 0; i < MAX_JOBS_PER_WORKSPACE; i++) {
-        const job = await ctx.runMutation(
-          internal.adsIntegrations.claimNextSyncJobInternal,
-          { workspaceId }
-        )
-        if (!job) break
+    const processWorkspaceJobs = async (workspaceId: string) => {
+      const processNextJob = async (jobsProcessed: number): Promise<void> => {
+        if (jobsProcessed >= MAX_JOBS_PER_WORKSPACE) return
+
+        const job = await ctx.runMutation(internal.adsIntegrations.claimNextSyncJobInternal, {
+          workspaceId,
+        })
+        if (!job) return
 
         const clientId = normalizeClientId(job.clientId)
 
@@ -358,8 +359,18 @@ export const processAllQueuedJobs = internalAction({
 
           failed++
         }
+
+        await processNextJob(jobsProcessed + 1)
       }
+
+      await processNextJob(0)
     }
+
+    let workspaceChain: Promise<void> = Promise.resolve()
+    for (const workspaceId of workspaceIds) {
+      workspaceChain = workspaceChain.then(() => processWorkspaceJobs(workspaceId))
+    }
+    await workspaceChain
 
     return { processed, failed }
   },

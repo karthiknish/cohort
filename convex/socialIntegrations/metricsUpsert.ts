@@ -41,51 +41,55 @@ export const writeMetricsBatchInternal = internalMutation({
     let inserted = 0
     let updated = 0
 
-    for (const metric of args.metrics) {
-      const existing = await ctx.db
-        .query('socialMetricsDaily')
-        .withIndex('by_workspace_client_surface_entity_date', (q) =>
-          q
-            .eq('workspaceId', args.workspaceId)
-            .eq('clientId', clientId)
-            .eq('surface', metric.surface)
-            .eq('entityId', metric.entityId)
-            .eq('date', metric.date),
-        )
-        .unique()
+    const upsertResults = await Promise.all(
+      args.metrics.map(async (metric) => {
+        const existing = await ctx.db
+          .query('socialMetricsDaily')
+          .withIndex('by_workspace_client_surface_entity_date', (q) =>
+            q
+              .eq('workspaceId', args.workspaceId)
+              .eq('clientId', clientId)
+              .eq('surface', metric.surface)
+              .eq('entityId', metric.entityId)
+              .eq('date', metric.date),
+          )
+          .unique()
 
-      const payload = {
-        workspaceId: args.workspaceId,
-        clientId,
-        surface: metric.surface,
-        entityId: metric.entityId,
-        entityName: metric.entityName,
-        date: metric.date,
-        impressions: metric.impressions,
-        reach: metric.reach,
-        engagedUsers: metric.engagedUsers,
-        reactions: metric.reactions,
-        comments: metric.comments,
-        shares: metric.shares,
-        saves: metric.saves,
-        followerCount: metric.followerCount,
-        followerDelta: metric.followerDelta,
-        engagementRate: metric.engagementRate,
-        rawPayload: metric.rawPayload,
-        updatedAtMs: timestamp,
-      }
+        const payload = {
+          workspaceId: args.workspaceId,
+          clientId,
+          surface: metric.surface,
+          entityId: metric.entityId,
+          entityName: metric.entityName,
+          date: metric.date,
+          impressions: metric.impressions,
+          reach: metric.reach,
+          engagedUsers: metric.engagedUsers,
+          reactions: metric.reactions,
+          comments: metric.comments,
+          shares: metric.shares,
+          saves: metric.saves,
+          followerCount: metric.followerCount,
+          followerDelta: metric.followerDelta,
+          engagementRate: metric.engagementRate,
+          rawPayload: metric.rawPayload,
+          updatedAtMs: timestamp,
+        }
 
-      if (existing) {
-        await ctx.db.patch(existing._id, payload)
-        updated++
-      } else {
+        if (existing) {
+          await ctx.db.patch(existing._id, payload)
+          return 'updated' as const
+        }
+
         await ctx.db.insert('socialMetricsDaily', {
           ...payload,
           createdAtMs: timestamp,
         })
-        inserted++
-      }
-    }
+        return 'inserted' as const
+      }),
+    )
+    inserted = upsertResults.filter((result) => result === 'inserted').length
+    updated = upsertResults.filter((result) => result === 'updated').length
 
     return { inserted, updated }
   },

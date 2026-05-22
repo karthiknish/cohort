@@ -2,38 +2,9 @@
  * Meeting Scheduled Email Template
  */
 
+import { getMeetingEmailDateFormatter, getMeetingEmailTimeFormatter } from '@/lib/intl/meeting-email-formatters'
+
 import { escapeHtml, wrapEmailTemplate } from './utils'
-
-const MEETING_SCHEDULED_DATE_FORMATTERS = new Map<string, Intl.DateTimeFormat>()
-const MEETING_SCHEDULED_TIME_FORMATTERS = new Map<string, Intl.DateTimeFormat>()
-
-function getMeetingScheduledDateFormatter(timezone: string): Intl.DateTimeFormat {
-  const existingFormatter = MEETING_SCHEDULED_DATE_FORMATTERS.get(timezone)
-  if (existingFormatter) {
-    return existingFormatter
-  }
-
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'full',
-    timeZone: timezone,
-  })
-  MEETING_SCHEDULED_DATE_FORMATTERS.set(timezone, formatter)
-  return formatter
-}
-
-function getMeetingScheduledTimeFormatter(timezone: string): Intl.DateTimeFormat {
-  const existingFormatter = MEETING_SCHEDULED_TIME_FORMATTERS.get(timezone)
-  if (existingFormatter) {
-    return existingFormatter
-  }
-
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeStyle: 'short',
-    timeZone: timezone,
-  })
-  MEETING_SCHEDULED_TIME_FORMATTERS.set(timezone, formatter)
-  return formatter
-}
 
 export interface MeetingScheduledTemplateParams {
   meetingTitle: string
@@ -48,16 +19,16 @@ export interface MeetingScheduledTemplateParams {
 function formatMeetingTime(startIso: string, endIso: string | null | undefined, timezone: string): string {
   try {
     const start = new Date(startIso)
-    const dateLabel = getMeetingScheduledDateFormatter(timezone).format(start)
+    const dateLabel = getMeetingEmailDateFormatter(timezone).format(start)
 
-    const startLabel = getMeetingScheduledTimeFormatter(timezone).format(start)
+    const startLabel = getMeetingEmailTimeFormatter(timezone).format(start)
 
     if (!endIso) {
       return `${dateLabel} at ${startLabel}`
     }
 
     const end = new Date(endIso)
-    const endLabel = getMeetingScheduledTimeFormatter(timezone).format(end)
+    const endLabel = getMeetingEmailTimeFormatter(timezone).format(end)
 
     return `${dateLabel} at ${startLabel} - ${endLabel}`
   } catch {

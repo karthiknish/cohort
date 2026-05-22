@@ -88,7 +88,7 @@ export function AnalyticsInsightsSection({
         <CardHeader className={DASHBOARD_THEME.cards.header}>
           <div className="flex items-center gap-3">
             <div className={getIconContainerClasses('small')}>
-              <Lightbulb className="h-4 w-4" />
+              <Lightbulb className="size-4" />
             </div>
             <div>
               <CardTitle className="text-sm font-semibold text-foreground">Recommended next actions</CardTitle>
@@ -123,14 +123,14 @@ export function AnalyticsInsightsSection({
                         <div className="flex items-center gap-2">
                           <div
                             className={cn(
-                              'flex h-7 w-7 items-center justify-center rounded-md',
+                              'flex size-7 items-center justify-center rounded-md',
                               suggestionIconClasses(suggestion.level),
                             )}
                           >
-                            {suggestion.level === 'success' && <CircleCheck className="h-3.5 w-3.5" />}
-                            {suggestion.level === 'warning' && <TriangleAlert className="h-3.5 w-3.5" />}
-                            {suggestion.level === 'critical' && <TriangleAlert className="h-3.5 w-3.5" />}
-                            {suggestion.level === 'info' && <Info className="h-3.5 w-3.5" />}
+                            {suggestion.level === 'success' && <CircleCheck className="size-3.5" />}
+                            {suggestion.level === 'warning' && <TriangleAlert className="size-3.5" />}
+                            {suggestion.level === 'critical' && <TriangleAlert className="size-3.5" />}
+                            {suggestion.level === 'info' && <Info className="size-3.5" />}
                           </div>
                           <span className="text-xs font-medium text-muted-foreground">
                             {formatInsightProviderLabel(group.providerId)}
@@ -140,14 +140,14 @@ export function AnalyticsInsightsSection({
                         <p className="text-sm text-muted-foreground">{suggestion.message}</p>
                       </div>
                       {suggestion.score ? (
-                        <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg border border-border/60 bg-card">
+                        <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-lg border border-border/60 bg-card">
                           <span className="text-xs font-bold text-primary leading-none">{suggestion.score}</span>
                           <span className="text-[10px] text-muted-foreground">Score</span>
                         </div>
                       ) : null}
                     </div>
                     <div className="mt-4 flex items-center gap-2 rounded-lg border border-border/60 bg-card/80 p-3 text-sm text-foreground">
-                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <ArrowRight className="size-3.5 shrink-0 text-primary" />
                       <span className="line-clamp-2">{suggestion.suggestion}</span>
                     </div>
                   </div>
@@ -175,7 +175,7 @@ export function AnalyticsInsightsSection({
               disabled={insightsLoading || insightsRefreshing}
               className="gap-2"
             >
-              <RefreshCw className={cn('h-3.5 w-3.5', insightsRefreshing && 'animate-spin')} />
+              <RefreshCw className={cn('size-3.5', insightsRefreshing && 'animate-spin')} />
               Refresh
             </Button>
           </div>
@@ -183,7 +183,7 @@ export function AnalyticsInsightsSection({
         <CardContent className="space-y-4">
           {insightsError ? (
             <Alert variant="destructive">
-              <TriangleAlert className="h-4 w-4" />
+              <TriangleAlert className="size-4" />
               <AlertTitle>Insight generation failed</AlertTitle>
               <AlertDescription>{insightsError.message}</AlertDescription>
             </Alert>
@@ -209,7 +209,7 @@ export function AnalyticsInsightsSection({
                 className="rounded-lg border border-border/60 bg-muted/30 p-5"
               >
                 <div className="mb-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                  <TrendingUp className="size-3.5 text-primary" />
                   <span>{formatInsightProviderLabel(insight.providerId)}</span>
                   <span className={getBadgeClasses('secondary')}>Brief</span>
                 </div>

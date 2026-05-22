@@ -54,7 +54,7 @@ export function ProposalTemplateDropdownContent(props: {
     <DropdownMenuContent align="end" className="w-72">
       <DropdownMenuLabel className="flex items-center justify-between gap-2">
         <span>Proposal Templates</span>
-        {loading ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Badge variant="outline" className="text-[10px]">{templates.length} saved</Badge>}
+        {loading ? <LoaderCircle className="size-3 animate-spin" /> : <Badge variant="outline" className="text-[10px]">{templates.length} saved</Badge>}
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
 
@@ -72,7 +72,7 @@ export function ProposalTemplateDropdownContent(props: {
         ))
       ) : (
         <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-          <FileText className="mx-auto mb-2 h-8 w-8 opacity-30" />
+          <FileText className="mx-auto mb-2 size-8 opacity-30" />
           <p>No templates yet</p>
           <p className="text-xs">Save this proposal once the basics look good so future proposals can start faster.</p>
         </div>
@@ -82,7 +82,7 @@ export function ProposalTemplateDropdownContent(props: {
 
       <DropdownMenuSeparator />
       <DropdownMenuItem className="cursor-pointer gap-2" disabled={!canManageTemplates} onSelect={handleSaveSelect}>
-        <Save className="h-4 w-4" />
+        <Save className="size-4" />
         Save current as template
       </DropdownMenuItem>
     </DropdownMenuContent>
@@ -115,7 +115,7 @@ function ProposalTemplateMenuItem({
       <div className="flex-1 space-y-1">
         <div className="flex items-center gap-2">
           <span className="font-medium">{template.name}</span>
-          {template.isDefault ? <Star className="h-3 w-3 fill-warning text-warning" /> : null}
+          {template.isDefault ? <Star className="size-3 fill-warning text-warning" /> : null}
         </div>
         {template.description ? <p className="line-clamp-2 text-xs text-muted-foreground">{template.description}</p> : null}
         <div className="flex flex-wrap gap-1">
@@ -123,8 +123,8 @@ function ProposalTemplateMenuItem({
           {template.tags.slice(0, 2).map((tag) => <Badge key={tag} variant="outline" className="text-[10px]">{tag}</Badge>)}
         </div>
       </div>
-      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive" disabled={deletingTemplateId === template.id} aria-label={`Delete ${template.name} template`} onClick={handleDelete}>
-        {deletingTemplateId === template.id ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+      <Button variant="ghost" size="icon" className="size-6 shrink-0 text-muted-foreground hover:text-destructive" disabled={deletingTemplateId === template.id} aria-label={`Delete ${template.name} template`} onClick={handleDelete}>
+        {deletingTemplateId === template.id ? <LoaderCircle className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
       </Button>
     </DropdownMenuItem>
   )
@@ -216,7 +216,7 @@ export function ProposalTemplateSaveDialog(props: {
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel} disabled={saving}>Cancel</Button>
           <Button onClick={onSave} disabled={saving || !templateName.trim()}>
-            {saving ? <><LoaderCircle className="mr-2 h-4 w-4 animate-spin" />Saving…</> : <><Save className="mr-2 h-4 w-4" />Save Template</>}
+            {saving ? <><LoaderCircle className="mr-2 size-4 animate-spin" />Saving…</> : <><Save className="mr-2 size-4" />Save Template</>}
           </Button>
         </DialogFooter>
       </DialogContent>

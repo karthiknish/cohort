@@ -54,12 +54,12 @@ function QuickPresetButton({
   onSelect: (days: number) => void
   preset: { days: number; label: string }
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectPreset = useCallback(() => {
     onSelect(preset.days)
   }, [onSelect, preset.days])
 
   return (
-    <Button variant="ghost" size="sm" className="justify-start font-normal" onClick={handleClick}>
+    <Button variant="ghost" size="sm" className="justify-start font-normal" onClick={onSelectPreset}>
       {preset.label}
     </Button>
   )
@@ -177,7 +177,7 @@ export function AnalyticsDateRangePicker({
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       </div>
 
       {currentPreset === 'custom' ? (
@@ -190,10 +190,10 @@ export function AnalyticsDateRangePicker({
                 !value && 'text-muted-foreground',
               )}
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
+              <CalendarIcon className="mr-2 size-4" />
               {formatDateRange(value)}
               <X
-                className="ml-2 h-3 w-3 opacity-50 hover:opacity-100"
+                className="ml-2 size-3 opacity-50 hover:opacity-100"
                 onClick={handleClearClick}
               />
             </Button>
@@ -204,9 +204,11 @@ export function AnalyticsDateRangePicker({
                 <span className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Quick select
                 </span>
-                {PERIOD_OPTIONS.filter((p) => p.value !== 'custom').map((preset) => (
-                  <QuickPresetButton key={preset.days} preset={preset} onSelect={handleQuickPresetClick} />
-                ))}
+                {PERIOD_OPTIONS.flatMap((preset) =>
+                  preset.value !== 'custom'
+                    ? [<QuickPresetButton key={preset.days} preset={preset} onSelect={handleQuickPresetClick} />]
+                    : [],
+                )}
               </div>
               <div className="p-1">
                 <Calendar

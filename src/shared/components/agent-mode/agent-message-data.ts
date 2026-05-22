@@ -65,7 +65,7 @@ function asNumber(value: unknown): number | null {
 
 function asRecordArray(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value)
-    ? value.map((item) => asRecord(item)).filter((item): item is Record<string, unknown> => item !== null)
+    ? value.flatMap((item) => { const record = asRecord(item); return record !== null ? [record] : [] })
     : []
 }
 
@@ -101,8 +101,7 @@ function formatRatio(value: number): string {
 function formatLabel(value: string): string {
   return value
     .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .flatMap((part) => (part ? [part.charAt(0).toUpperCase() + part.slice(1)] : []))
     .join(' ')
 }
 
@@ -343,17 +342,15 @@ export function buildAgentMessageCharts(
 
   const providerBreakdown = asRecordArray(data.providerBreakdown)
   if (providerBreakdown.length > 0) {
-    const points = providerBreakdown
-      .map((provider) => {
+    const points = providerBreakdown.flatMap((provider) => {
         const spend = asNumber(asRecord(provider.totals)?.spend)
-        if (spend === null || spend <= 0) return null
+        if (spend === null || spend <= 0) return []
         const providerId = asString(provider.providerId) ?? 'unknown'
-        return {
+        return [{
           name: asString(provider.label) ?? formatProviderName(providerId),
           value: spend,
-        }
+        }]
       })
-      .filter((point): point is AgentChartPoint => point !== null)
 
     if (points.length >= 1) {
       charts.push({
@@ -394,16 +391,14 @@ export function buildAgentMessageCharts(
 
   if (operation === 'summarizeClientTasks') {
     const statusBreakdown = asRecordArray(data.statusBreakdown)
-    const statusPoints = statusBreakdown
-      .map((entry) => {
+    const statusPoints = statusBreakdown.flatMap((entry) => {
         const count = asNumber(entry.count)
-        if (count === null || count <= 0) return null
-        return {
+        if (count === null || count <= 0) return []
+        return [{
           name: formatLabel(asString(entry.status) ?? 'unknown'),
           value: count,
-        }
+        }]
       })
-      .filter((point): point is AgentChartPoint => point !== null)
 
     if (statusPoints.length >= 2) {
       charts.push({

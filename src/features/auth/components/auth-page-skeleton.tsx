@@ -9,8 +9,8 @@ export function AuthPageSkeleton() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <div className="w-full max-w-md rounded-xl border border-border/60 bg-background p-6 shadow-sm">
         <div className="space-y-3 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted/60">
-            <Skeleton className="h-8 w-8 rounded-full" />
+          <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-muted/60">
+            <Skeleton className="size-8 rounded-full" />
           </div>
           <Skeleton className="mx-auto h-7 w-40" />
           <Skeleton className="mx-auto h-4 w-64" />

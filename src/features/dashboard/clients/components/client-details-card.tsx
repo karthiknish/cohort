@@ -32,14 +32,14 @@ export function ClientDetailsCard({
     <Card className="overflow-hidden border-muted/40 bg-card shadow-sm motion-chromatic hover:shadow-md">
       <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-primary" />
+          <div className="size-2 rounded-full bg-primary" />
           <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Client Identity</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="pt-6 space-y-5">
         <div className="group flex items-center gap-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/5 text-primary shadow-sm border border-accent/10 transition-colors group-hover:bg-accent/10">
-            <Calendar className="h-4 w-4" />
+          <div className="flex size-9 items-center justify-center rounded-xl bg-accent/5 text-primary shadow-sm border border-accent/10 transition-colors group-hover:bg-accent/10">
+            <Calendar className="size-4" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Team Footprint</p>
@@ -50,8 +50,8 @@ export function ClientDetailsCard({
         </div>
 
          <div className="group flex items-center gap-4">
-           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/5 text-primary shadow-sm border border-accent/10 transition-colors group-hover:bg-accent/10">
-             <Calendar className="h-4 w-4" />
+           <div className="flex size-9 items-center justify-center rounded-xl bg-accent/5 text-primary shadow-sm border border-accent/10 transition-colors group-hover:bg-accent/10">
+             <Calendar className="size-4" />
            </div>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Workspace Index</p>
@@ -63,8 +63,8 @@ export function ClientDetailsCard({
 
          {createdAt && (
            <div className="group flex items-center gap-4">
-             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/5 text-primary shadow-sm border border-accent/10 transition-colors group-hover:bg-accent/10">
-               <Calendar className="h-4 w-4" />
+             <div className="flex size-9 items-center justify-center rounded-xl bg-accent/5 text-primary shadow-sm border border-accent/10 transition-colors group-hover:bg-accent/10">
+               <Calendar className="size-4" />
              </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Registration</p>

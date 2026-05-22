@@ -25,14 +25,14 @@ function ProposalGenerationStatusIcon({ isComplete }: { isComplete: boolean }) {
   return (
     <div className="relative">
       <div className="absolute inset-0 rounded-full bg-accent/20 blur-3xl" />
-      <div className="relative flex h-24 w-24 items-center justify-center rounded-full border-4 border-accent/20 bg-background shadow-xl">
+      <div className="relative flex size-24 items-center justify-center rounded-full border-4 border-accent/20 bg-background shadow-xl">
         {isComplete ? (
           <div className="animate-in zoom-in fill-mode-forwards duration-500 text-success">
-            <CircleCheck className="h-12 w-12" />
+            <CircleCheck className="size-12" />
           </div>
         ) : (
           <div className="relative">
-            <LoaderCircle className="h-12 w-12 animate-[spin_3s_linear_infinite] text-primary" />
+            <LoaderCircle className="size-12 animate-[spin_3s_linear_infinite] text-primary" />
           </div>
         )}
       </div>
@@ -100,22 +100,22 @@ export function ProposalGenerationOverlayContent({
         </div>
       </div>
 
-      <div className="absolute -left-8 top-1/4 h-16 w-16 animate-pulse rounded-full bg-accent/5 blur-xl" />
-      <div className="absolute -right-8 bottom-1/4 h-20 w-20 animate-pulse rounded-full bg-accent/10 blur-2xl delay-700" />
+      <div className="absolute -left-8 top-1/4 size-16 animate-pulse rounded-full bg-accent/5 blur-xl" />
+      <div className="absolute -right-8 bottom-1/4 size-20 animate-pulse rounded-full bg-accent/10 blur-2xl delay-700" />
     </div>
   )
 }
 
 function DeckProgressStageIcon({ stage }: { stage: DeckProgressStage }) {
   if (stage === 'launching') {
-    return <CircleCheck className="h-10 w-10 text-primary" />
+    return <CircleCheck className="size-10 text-primary" />
   }
 
   if (stage === 'error') {
-    return <TriangleAlert className="h-10 w-10 text-destructive" />
+    return <TriangleAlert className="size-10 text-destructive" />
   }
 
-  return <LoaderCircle className="h-10 w-10 animate-spin text-primary" />
+  return <LoaderCircle className="size-10 animate-spin text-primary" />
 }
 
 export function DeckProgressOverlayContent({ copy, stage }: { copy: DeckStageCopy; stage: DeckProgressStage }) {

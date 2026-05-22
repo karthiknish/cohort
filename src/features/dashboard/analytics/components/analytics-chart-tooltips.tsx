@@ -81,7 +81,7 @@ function DayChange({ value }: { value: number | null }) {
         !isUp && !isDown && 'text-muted-foreground',
       )}
     >
-      <Icon className="h-3 w-3" aria-hidden />
+      <Icon className="size-3" aria-hidden />
       {isUp ? '+' : ''}
       {value.toFixed(1)}% vs prior day
     </span>

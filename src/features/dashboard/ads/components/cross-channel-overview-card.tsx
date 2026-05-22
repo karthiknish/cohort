@@ -22,6 +22,8 @@ import {
   totalsHaveDeliveryActivity,
 } from './cross-channel-overview-card.utils'
 
+const EMPTY_CONNECTED_PROVIDER_IDS: string[] = []
+
 interface CrossChannelOverviewCardProps {
   processedMetrics: MetricRecord[]
   serverSideSummary?: MetricsSummary | null
@@ -44,7 +46,7 @@ export function CrossChannelOverviewCard({
   processedMetrics,
   serverSideSummary,
   currency,
-  connectedProviderIds = [],
+  connectedProviderIds = EMPTY_CONNECTED_PROVIDER_IDS,
   hasMetricData,
   initialMetricsLoading,
   metricsLoading,
@@ -70,10 +72,10 @@ export function CrossChannelOverviewCard({
     if (canonicalConnected.length > 0) {
       return canonicalConnected
     }
-    const fromMetrics = scopedMetrics
-      .map((metric) => metric.providerId)
-      .filter(Boolean)
-    return [...new Set(fromMetrics)].sort()
+    const fromMetrics = scopedMetrics.flatMap((metric) =>
+      metric.providerId ? [metric.providerId] : [],
+    )
+    return [...new Set(fromMetrics)].toSorted()
   }, [canonicalConnected, scopedMetrics])
 
   const filteredMetrics = useMemo(

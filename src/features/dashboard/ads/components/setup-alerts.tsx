@@ -53,8 +53,8 @@ export function SetupAlerts({
     return (
       <Alert className="border-accent/40 bg-accent/5">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10">
-            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <div className="flex size-8 items-center justify-center rounded-full bg-accent/10">
+            <Loader2 className="size-4 animate-spin text-primary" />
           </div>
           <div>
             <AlertTitle className="text-sm font-semibold">
@@ -74,7 +74,7 @@ export function SetupAlerts({
       {metaSetupMessage && (
         <Alert className="border-warning/20 bg-warning/5 text-warning-foreground">
           <AlertTitle className="flex items-center gap-2 text-sm font-semibold">
-            <AlertTriangle className="h-4 w-4 text-warning" /> Meta setup issue
+            <AlertTriangle className="size-4 text-warning" /> Meta setup issue
           </AlertTitle>
           <AlertDescription className="mt-1 text-xs leading-relaxed">
             {metaSetupMessage}
@@ -90,7 +90,7 @@ export function SetupAlerts({
       {metaNeedsAccountSelection && !metaSetupMessage && (
         <Alert className="border-accent/40 bg-accent/5">
           <AlertTitle className="flex items-center gap-2 text-sm font-semibold">
-            <CircleAlert className="h-4 w-4 text-primary" /> Complete Meta setup
+            <CircleAlert className="size-4 text-primary" /> Complete Meta setup
           </AlertTitle>
           <AlertDescription className="mt-2 space-y-3 text-xs text-muted-foreground">
             <p>Select a Meta ad account to finish setup and start syncing.</p>
@@ -116,7 +116,7 @@ export function SetupAlerts({
               <Button size="sm" variant="outline" onClick={onReloadMetaAccountOptions} disabled={loadingMetaAccountOptions || initializingMeta}>
                 {loadingMetaAccountOptions ? (
                   <>
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    <Loader2 className="mr-2 size-3 animate-spin" />
                     Loading…
                   </>
                 ) : (
@@ -127,7 +127,7 @@ export function SetupAlerts({
               <Button size="sm" onClick={onInitializeMeta} disabled={initializingMeta || loadingMetaAccountOptions || !selectedMetaAccountId}>
                 {initializingMeta ? (
                   <>
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    <Loader2 className="mr-2 size-3 animate-spin" />
                     Finishing…
                   </>
                 ) : (
@@ -146,7 +146,7 @@ export function SetupAlerts({
       {tiktokSetupMessage && (
         <Alert className="border-warning/20 bg-warning/5 text-warning-foreground">
           <AlertTitle className="flex items-center gap-2 text-sm font-semibold">
-            <AlertTriangle className="h-4 w-4 text-warning" /> TikTok setup issue
+            <AlertTriangle className="size-4 text-warning" /> TikTok setup issue
           </AlertTitle>
           <AlertDescription className="mt-1 text-xs leading-relaxed">
             {tiktokSetupMessage}
@@ -163,12 +163,12 @@ export function SetupAlerts({
         <Alert className="border-accent/40 bg-accent/5">
           <AlertTitle className="flex items-center justify-between gap-3 text-sm font-semibold">
             <span className="flex items-center gap-2">
-              <CircleAlert className="h-4 w-4 text-primary" /> Complete TikTok setup
+              <CircleAlert className="size-4 text-primary" /> Complete TikTok setup
             </span>
             <Button size="sm" onClick={onInitializeTikTok} disabled={initializingTikTok}>
               {initializingTikTok ? (
                 <>
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  <Loader2 className="mr-2 size-3 animate-spin" />
                   Finishing…
                 </>
               ) : (

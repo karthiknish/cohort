@@ -70,10 +70,10 @@ export function ProjectsListState({
   if (error) {
     return (
       <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-8 text-center">
-        <TriangleAlert className="mx-auto h-10 w-10 text-destructive/60" />
+        <TriangleAlert className="mx-auto size-10 text-destructive/60" />
         <p className="mt-2 text-sm font-medium text-destructive">{error}</p>
         <Button variant="outline" size="sm" className="mt-4" onClick={onRefresh} disabled={loading}>
-          {loading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+          {loading ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}
           Try again
         </Button>
       </div>
@@ -83,14 +83,14 @@ export function ProjectsListState({
   if (projects.length === 0 && !hasActiveFilters) {
     return (
       <div className={PROJECTS_THEME.emptyPanel}>
-        <FolderKanban className="h-12 w-12 text-muted-foreground/40" />
+        <FolderKanban className="size-12 text-muted-foreground/40" />
         <h3 className="mt-4 text-lg font-semibold tracking-tight text-foreground">No projects yet</h3>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
           Create a project to group tasks, timelines, and collaboration. New projects use the client selected in the
           header.
         </p>
         <Button type="button" className={cn(getButtonClasses('primary'), 'mt-6 gap-2')} onClick={openCreateProject}>
-          <Plus className="h-4 w-4" aria-hidden />
+          <Plus className="size-4" aria-hidden />
           New project
         </Button>
       </div>
@@ -100,7 +100,7 @@ export function ProjectsListState({
   if (!hasVisibleProjects && hasActiveFilters) {
     return (
       <div className={PROJECTS_THEME.emptyPanel}>
-        <FolderKanban className="h-12 w-12 text-muted-foreground/40" />
+        <FolderKanban className="size-12 text-muted-foreground/40" />
         <h3 className="mt-4 text-lg font-medium text-foreground">No matching projects</h3>
         <p className="mt-1 text-sm text-muted-foreground">Try a different search or reset filters.</p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
@@ -120,7 +120,7 @@ export function ProjectsListState({
   if (!hasVisibleProjects) {
     return (
       <div className={PROJECTS_THEME.emptyPanel}>
-        <FolderKanban className="h-12 w-12 text-muted-foreground/40" />
+        <FolderKanban className="size-12 text-muted-foreground/40" />
         <h3 className="mt-4 text-lg font-semibold text-foreground">Nothing in this view</h3>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
           Filters, search, or a deep link may be hiding results.
@@ -130,7 +130,7 @@ export function ProjectsListState({
             Reset search & filters
           </Button>
           <Button type="button" size="sm" onClick={openCreateProject}>
-            <Plus className="mr-2 h-4 w-4" aria-hidden />
+            <Plus className="mr-2 size-4" aria-hidden />
             New project
           </Button>
         </div>

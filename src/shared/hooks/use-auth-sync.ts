@@ -96,18 +96,23 @@ async function fetchConvexTokenWithRetry(assertActive: () => void): Promise<stri
     return token
   }
 
-  for (const delay of TOKEN_RETRY_DELAYS_MS) {
+  const retryWithDelays = async (delayIndex: number): Promise<string | null> => {
+    const delay = TOKEN_RETRY_DELAYS_MS[delayIndex]
+    if (delay === undefined) return null
+
     if (delay > 0) {
       await sleep(delay)
     }
     assertActive()
-    token = await fetchConvexTokenOnce()
-    if (token) {
-      return token
+    const nextToken = await fetchConvexTokenOnce()
+    if (nextToken) {
+      return nextToken
     }
+
+    return retryWithDelays(delayIndex + 1)
   }
 
-  return null
+  return retryWithDelays(0)
 }
 
 async function runAuthSyncPipeline(assertActive: () => void): Promise<{
@@ -159,11 +164,14 @@ export function useAuthSync() {
   const syncGenerationRef = useRef(syncGeneration)
   syncGenerationRef.current = syncGeneration
 
-  const [syncState, setSyncState] = useState<AuthSyncState>('idle')
-  const [authError, setAuthError] = useState<AuthError | null>(null)
-  const [sessionUser, setSessionUser] = useState<AuthUser | null>(null)
-  const [convexLegacyId, setConvexLegacyId] = useState<string | null>(null)
-  const [bootstrapProfile, setBootstrapProfile] = useState<BootstrapProfile | null>(null)
+  const [sessionSync, setSessionSync] = useState({
+    syncState: 'idle' as AuthSyncState,
+    authError: null as AuthError | null,
+    sessionUser: null as AuthUser | null,
+    convexLegacyId: null as string | null,
+    bootstrapProfile: null as BootstrapProfile | null,
+  })
+  const { syncState, authError, sessionUser, convexLegacyId, bootstrapProfile } = sessionSync
 
   const { data: betterAuthSession, isPending: sessionPending } = authClient.useSession()
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
@@ -210,30 +218,36 @@ export function useAuthSync() {
       return
     }
 
-    setSyncState('failed')
-    setAuthError(
-      createAuthError(
+    setSessionSync((prev) => ({
+      ...prev,
+      syncState: 'failed',
+      authError: createAuthError(
         'SESSION_SYNC_FAILED',
         'Workspace profile not found. Your sign-in succeeded but the profile could not be loaded.',
         undefined,
         true
-      )
-    )
+      ),
+    }))
   }, [profileMissing])
 
   useEffect(() => {
     const rawUser = betterAuthSession?.user
     if (rawUser) {
-      setSessionUser(authService.mapBetterAuthUser(rawUser as Record<string, unknown>))
+      setSessionSync((prev) => ({
+        ...prev,
+        sessionUser: authService.mapBetterAuthUser(rawUser as Record<string, unknown>),
+      }))
       return
     }
 
     if (!awaitingSession) {
-      setSessionUser(null)
-      setConvexLegacyId(null)
-      setBootstrapProfile(null)
-      setSyncState('idle')
-      setAuthError(null)
+      setSessionSync({
+        syncState: 'idle',
+        authError: null,
+        sessionUser: null,
+        convexLegacyId: null,
+        bootstrapProfile: null,
+      })
     }
   }, [awaitingSession, betterAuthSession])
 
@@ -245,10 +259,53 @@ export function useAuthSync() {
     void authService.waitForInitialAuth().then(() => {
       const cachedUser = authService.getCurrentUser()
       if (cachedUser) {
-        setSessionUser((prev) => prev ?? cachedUser)
+        setSessionSync((prev) => ({
+          ...prev,
+          sessionUser: prev.sessionUser ?? cachedUser,
+        }))
       }
     })
   }, [hasSession])
+
+  const runSessionSync = useCallback(async (runId: number) => {
+    setSessionSync((prev) => ({ ...prev, syncState: 'running', authError: null }))
+
+    const assertActive = () => {
+      if (syncGenerationRef.current !== runId) {
+        throw new StaleSyncError()
+      }
+    }
+
+    try {
+      const result = await runAuthSyncPipeline(assertActive)
+
+      if (syncGenerationRef.current !== runId) {
+        return
+      }
+
+      setSessionSync((prev) => ({
+        ...prev,
+        convexLegacyId: result.subject,
+        bootstrapProfile: result.profile,
+        syncState: 'success',
+      }))
+    } catch (error) {
+      if (error instanceof StaleSyncError) {
+        return
+      }
+
+      if (syncGenerationRef.current !== runId) {
+        return
+      }
+
+      const message = error instanceof Error ? error.message : 'Failed to sync your session'
+      setSessionSync((prev) => ({
+        ...prev,
+        syncState: 'failed',
+        authError: createAuthError('SESSION_SYNC_FAILED', message, undefined, true),
+      }))
+    }
+  }, [])
 
   useEffect(() => {
     if (awaitingSession || !hasSession) {
@@ -267,43 +324,8 @@ export function useAuthSync() {
       return
     }
 
-    const runId = syncGeneration
-
-    setSyncState('running')
-    setAuthError(null)
-
-    void (async () => {
-      const assertActive = () => {
-        if (syncGenerationRef.current !== runId) {
-          throw new StaleSyncError()
-        }
-      }
-
-      try {
-        const result = await runAuthSyncPipeline(assertActive)
-
-        if (syncGenerationRef.current !== runId) {
-          return
-        }
-
-        setConvexLegacyId(result.subject)
-        setBootstrapProfile(result.profile)
-        setSyncState('success')
-      } catch (error) {
-        if (error instanceof StaleSyncError) {
-          return
-        }
-
-        if (syncGenerationRef.current !== runId) {
-          return
-        }
-
-        const message = error instanceof Error ? error.message : 'Failed to sync your session'
-        setSyncState('failed')
-        setAuthError(createAuthError('SESSION_SYNC_FAILED', message, undefined, true))
-      }
-    })()
-  }, [awaitingSession, bootstrapProfile, convexLegacyId, hasSession, syncGeneration, syncState])
+    void runSessionSync(syncGeneration)
+  }, [awaitingSession, bootstrapProfile, convexLegacyId, hasSession, runSessionSync, syncGeneration, syncState])
 
   const phase = useMemo<AuthPhase>(() => deriveAuthPhase({
     sessionPending: awaitingSession,
@@ -324,40 +346,44 @@ export function useAuthSync() {
   ])
 
   const retrySync = useCallback(async () => {
-    setAuthError(null)
-    setSyncState('idle')
+    setSessionSync((prev) => ({ ...prev, authError: null, syncState: 'idle' }))
     setSyncGeneration((value) => value + 1)
   }, [])
 
   const clearAuthError = useCallback(() => {
-    setAuthError(null)
+    setSessionSync((prev) => ({ ...prev, authError: null }))
   }, [])
 
   const resetSession = useCallback(() => {
     resetBootstrapSessionCache()
-    setSessionUser(null)
-    setConvexLegacyId(null)
-    setBootstrapProfile(null)
-    setSyncState('idle')
-    setAuthError(null)
+    setSessionSync({
+      syncState: 'idle',
+      authError: null,
+      sessionUser: null,
+      convexLegacyId: null,
+      bootstrapProfile: null,
+    })
   }, [])
 
   const applySessionUser = useCallback((nextUser: AuthUser | null) => {
-    setSessionUser(nextUser)
     if (nextUser) {
       if (nextUser.agencyId && nextUser.role && nextUser.status) {
-        setBootstrapProfile({
-          legacyId: nextUser.id,
-          role: nextUser.role,
-          status: nextUser.status,
-          agencyId: nextUser.agencyId,
+        setSessionSync({
+          syncState: 'success',
+          authError: null,
+          sessionUser: nextUser,
+          convexLegacyId: nextUser.id,
+          bootstrapProfile: {
+            legacyId: nextUser.id,
+            role: nextUser.role,
+            status: nextUser.status,
+            agencyId: nextUser.agencyId,
+          },
         })
-        setConvexLegacyId(nextUser.id)
-        setSyncState('success')
-        setAuthError(null)
         return
       }
 
+      setSessionSync((prev) => ({ ...prev, sessionUser: nextUser }))
       setSyncGeneration((value) => value + 1)
     } else {
       resetSession()

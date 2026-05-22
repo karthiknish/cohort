@@ -76,8 +76,8 @@ export function FeatureTips({ tips, storageKey, className }: FeatureTipsProps) {
       <CardContent className="py-3 px-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/20 text-primary">
-              <Lightbulb className="h-4 w-4" />
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent/20 text-primary">
+              <Lightbulb className="size-4" />
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -98,7 +98,7 @@ export function FeatureTips({ tips, storageKey, className }: FeatureTipsProps) {
                   onClick={currentTip.action.onClick}
                 >
                   {currentTip.action.label}
-                  <ChevronRight className="ml-1 h-3 w-3" />
+                  <ChevronRight className="ml-1 size-3" />
                 </Button>
               )}
             </div>
@@ -110,33 +110,33 @@ export function FeatureTips({ tips, storageKey, className }: FeatureTipsProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
+                  className="size-6"
                   onClick={handlePrev}
                   disabled={isFirst}
                   aria-label="Previous tip"
                 >
-                  <ChevronLeft className="h-4 w-4" aria-hidden />
+                  <ChevronLeft className="size-4" aria-hidden />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
+                  className="size-6"
                   onClick={handleNext}
                   disabled={isLast}
                   aria-label="Next tip"
                 >
-                  <ChevronRight className="h-4 w-4" aria-hidden />
+                  <ChevronRight className="size-4" aria-hidden />
                 </Button>
               </>
             )}
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-muted-foreground"
+              className="size-6 text-muted-foreground"
               onClick={handleDismiss}
               aria-label="Dismiss tips"
             >
-              <X className="h-4 w-4" aria-hidden />
+              <X className="size-4" aria-hidden />
             </Button>
           </div>
         </div>

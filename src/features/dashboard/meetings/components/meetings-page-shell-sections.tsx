@@ -46,7 +46,7 @@ export function SharedRoomLoadingSection(props: MeetingRoomLoadingStateProps) {
 export function MeetingsTimezoneFooter({ timezone }: { timezone: string }) {
   return (
     <p className="flex items-center justify-center gap-2 border-t border-border/60 pt-6 text-center text-sm text-muted-foreground">
-      <Globe className="h-4 w-4 shrink-0" aria-hidden />
+      <Globe className="size-4 shrink-0" aria-hidden />
       All times are shown in {timezone}
     </p>
   )
@@ -65,11 +65,11 @@ function MeetingsMobileWorkspace({
     <Tabs value={tab} onValueChange={setTab} className="w-full lg:hidden">
       <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1">
         <TabsTrigger value="upcoming" className="gap-1.5 text-xs sm:text-sm">
-          <Video className="h-3.5 w-3.5 shrink-0" />
+          <Video className="size-3.5 shrink-0" />
           Upcoming
         </TabsTrigger>
         <TabsTrigger value="schedule" className="gap-1.5 text-xs sm:text-sm">
-          <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+          <CalendarDays className="size-3.5 shrink-0" />
           Schedule
         </TabsTrigger>
       </TabsList>

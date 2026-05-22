@@ -165,19 +165,21 @@ export const hasPendingGoogleAnalyticsSyncJob = zWorkspaceQuery({
   returns: z.boolean(),
   handler: async (ctx, args) => {
     const clientId = normalizeClientId(args.clientId ?? null)
-    for (const status of ['queued', 'running'] as const) {
-      const job = await ctx.db
-        .query('adSyncJobs')
-        .withIndex('by_workspace_provider_client_status', (q) =>
-          q.eq('workspaceId', args.workspaceId)
-            .eq('providerId', 'google-analytics')
-            .eq('clientId', clientId)
-            .eq('status', status)
-        )
-        .first()
-      if (job) return true
-    }
-    return false
+    const jobs = await Promise.all(
+      (['queued', 'running'] as const).map((status) =>
+        ctx.db
+          .query('adSyncJobs')
+          .withIndex('by_workspace_provider_client_status', (q) =>
+            q
+              .eq('workspaceId', args.workspaceId)
+              .eq('providerId', 'google-analytics')
+              .eq('clientId', clientId)
+              .eq('status', status),
+          )
+          .first(),
+      ),
+    )
+    return jobs.some((job) => job !== null)
   },
 })
 

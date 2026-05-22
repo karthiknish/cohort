@@ -117,9 +117,11 @@ export const searchByUser = workspaceQuery({
       type: 'user' | 'agent'
     }> = []
 
-    for (const conversation of conversations) {
-      if (hits.length >= limit) break
+    const scanConversation = async (index: number): Promise<void> => {
+      if (index >= conversations.length || hits.length >= limit) return
 
+      const conversation = conversations[index]
+      if (!conversation) return
       const messages = await ctx.db
         .query('agentMessages')
         .withIndex('by_workspace_conversation_createdAt', (q) =>
@@ -131,9 +133,9 @@ export const searchByUser = workspaceQuery({
       for (const message of messages) {
         if (!message.content.toLowerCase().includes(needle)) continue
 
-        const index = message.content.toLowerCase().indexOf(needle)
-        const start = Math.max(0, index - 40)
-        const end = Math.min(message.content.length, index + needle.length + 60)
+        const matchIndex = message.content.toLowerCase().indexOf(needle)
+        const start = Math.max(0, matchIndex - 40)
+        const end = Math.min(message.content.length, matchIndex + needle.length + 60)
         const excerpt = message.content.slice(start, end).trim()
 
         hits.push({
@@ -144,9 +146,13 @@ export const searchByUser = workspaceQuery({
           type: message.type,
         })
 
-        if (hits.length >= limit) break
+        if (hits.length >= limit) return
       }
+
+      await scanConversation(index + 1)
     }
+
+    await scanConversation(0)
 
     return { hits }
   },

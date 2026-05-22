@@ -113,8 +113,8 @@ export function HeroBackground({ className }: HeroBackgroundProps) {
       <div className="absolute inset-x-0 top-0 h-[min(100%,42rem)] bg-[radial-gradient(ellipse_90%_65%_at_50%_-5%,rgb(from_var(--primary)_r_g_b_/_0.16),transparent_62%)]" />
 
       {/* Corner accents */}
-      <div className="absolute -left-24 top-1/4 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
-      <div className="absolute -right-16 top-1/3 h-56 w-56 rounded-full bg-accent/10 blur-3xl" />
+      <div className="absolute -left-24 top-1/4 size-64 rounded-full bg-primary/10 blur-3xl" />
+      <div className="absolute -right-16 top-1/3 size-56 rounded-full bg-accent/10 blur-3xl" />
 
       {/* Diagonal shimmer bands (very subtle) */}
       <div className="absolute inset-0 opacity-[0.04]" style={diagonalShimmerStyle} />

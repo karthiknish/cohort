@@ -74,10 +74,11 @@ export function ProjectActionsMenu({
   const statusUpdateHandlers = useMemo(
     () =>
       Object.fromEntries(
-        PROJECT_STATUSES.filter((status) => status !== project.status).map((status) => [
-          status,
-          () => onUpdateStatus(project, status),
-        ]),
+        PROJECT_STATUSES.flatMap((status) =>
+          status !== project.status
+            ? [[status, () => onUpdateStatus(project, status)] as const]
+            : [],
+        ),
       ) as Partial<Record<ProjectStatus, () => void>>,
     [onUpdateStatus, project],
   )
@@ -88,34 +89,34 @@ export function ProjectActionsMenu({
         <Button
           variant="ghost"
           size="icon"
-          className={cn('h-8 w-8 text-muted-foreground/60 hover:text-foreground', triggerClassName)}
+          className={cn('size-8 text-muted-foreground/60 hover:text-foreground', triggerClassName)}
           aria-label={`Actions for ${project.name}`}
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <MoreHorizontal className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-52">
         {showEditItem ? (
           <DropdownMenuItem onClick={handleEdit} className="gap-2">
-            <Pencil className="h-4 w-4" />
+            <Pencil className="size-4" />
             <span>Edit project</span>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem asChild className="gap-2 cursor-pointer">
           <Link href={createTaskHref} prefetch>
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4" />
             <span>Create task</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="gap-2 cursor-pointer">
           <Link href={tasksHref} prefetch>
-            <ListChecks className="h-4 w-4" />
+            <ListChecks className="size-4" />
             <span>View tasks</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="gap-2 cursor-pointer">
           <Link href={collaborationHref} prefetch>
-            <MessageSquare className="h-4 w-4" />
+            <MessageSquare className="size-4" />
             <span>Open discussion</span>
           </Link>
         </DropdownMenuItem>
@@ -125,15 +126,19 @@ export function ProjectActionsMenu({
             Update status
           </span>
         </div>
-        {PROJECT_STATUSES.filter((status) => status !== project.status).map((status) => (
+        {PROJECT_STATUSES.flatMap((status) =>
+          status !== project.status
+            ? [(
           <DropdownMenuItem key={status} onClick={statusUpdateHandlers[status]} className="gap-2">
-            <div className="h-2 w-2 rounded-full" style={statusAccentStyles[status]} />
+            <div className="size-2 rounded-full" style={statusAccentStyles[status]} />
             <span>{formatStatusLabel(status)}</span>
           </DropdownMenuItem>
-        ))}
+        )]
+            : [],
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={handleDelete}>
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="size-4" />
           <span>Delete project</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

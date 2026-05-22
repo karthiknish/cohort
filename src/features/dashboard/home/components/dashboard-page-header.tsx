@@ -36,9 +36,9 @@ export function DashboardPageHeader({
         {Icon && (
           <div className={getIconContainerClasses(iconSize)}>
             <Icon className={cn(
-              iconSize === 'small' && 'h-4 w-4',
-              iconSize === 'medium' && 'h-6 w-6',
-              iconSize === 'large' && 'h-8 w-8'
+              iconSize === 'small' && 'size-4',
+              iconSize === 'medium' && 'size-6',
+              iconSize === 'large' && 'size-8'
             )} />
           </div>
         )}
@@ -92,8 +92,8 @@ export function StatCard({ label, value, description, icon: Icon, variant = 'def
     <div className={getStatCardClasses(variant)}>
       <div className="flex items-center gap-5 p-5">
         {Icon && (
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/5 text-primary">
-            <Icon className="h-5 w-5" />
+          <div className="flex size-10 items-center justify-center rounded-xl bg-accent/5 text-primary">
+            <Icon className="size-5" />
           </div>
         )}
         <div className="flex-1 min-w-0">
@@ -156,7 +156,7 @@ export function EmptyState({
   const headingId = useId()
   return (
     <div className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center" role="region" aria-labelledby={headingId}>
-      <Icon className="mx-auto h-12 w-12 text-muted-foreground/40" aria-hidden />
+      <Icon className="mx-auto size-12 text-muted-foreground/40" aria-hidden />
       <h3 id={headingId} className="mt-4 text-lg font-medium text-foreground">
         {title}
       </h3>
@@ -188,11 +188,11 @@ export function ModulePageLoadingPlaceholder({ message = 'Loading…' }: { messa
       <div className="rounded-lg border border-muted/50 bg-muted/20 p-6">
         <div className="mx-auto max-w-lg space-y-3">
           <div className="flex justify-center">
-            <Skeleton className="h-12 w-12 rounded-full" />
+            <Skeleton className="size-12 rounded-full" />
           </div>
           <Skeleton className="mx-auto h-5 w-2/3 max-w-sm" />
           <Skeleton className="h-4 w-full" />
-          <Skeleton className="mx-auto h-4 w-4/5" />
+          <Skeleton className="mx-auto size-4/5" />
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -213,7 +213,7 @@ interface ErrorStateProps {
 export function ErrorState({ icon: Icon, title, description, action }: ErrorStateProps) {
   return (
     <div className="rounded-md border border-destructive/40 bg-destructive/10 p-6 text-center">
-      {Icon && <Icon className="mx-auto h-10 w-10 text-destructive/60" />}
+      {Icon && <Icon className="mx-auto size-10 text-destructive/60" />}
       <p className="mt-2 text-sm font-medium text-destructive">{title}</p>
       {description && (
         <p className="mt-1 text-xs text-muted-foreground">{description}</p>

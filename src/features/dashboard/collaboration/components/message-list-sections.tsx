@@ -53,7 +53,7 @@ export function MessageListLoadingState({ loadingSkeleton }: { loadingSkeleton?:
         <div className="space-y-4">
           {loadingRowSlots.map((slot, index) => (
             <div key={slot} className={cn('flex gap-2', index % 2 === 1 && 'justify-end')}>
-              <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-muted" />
+              <div className="size-10 shrink-0 animate-pulse rounded-full bg-muted" />
               <div className="space-y-2">
                 <div className="h-4 w-32 animate-pulse rounded bg-muted" />
                 <div className="h-16 w-48 animate-pulse rounded-lg bg-muted" />
@@ -92,12 +92,12 @@ export function MessageListLoadMoreButton({
       <Button variant="ghost" size="sm" onClick={onLoadMore} disabled={disabled}>
         {isLoading ? (
           <>
-            <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" />
+            <LoaderCircle className="mr-2 size-3.5 animate-spin" />
             Loading…
           </>
         ) : (
           <>
-            <RefreshCw className="mr-2 h-3.5 w-3.5" />
+            <RefreshCw className="mr-2 size-3.5" />
             Load older messages
           </>
         )}
@@ -166,7 +166,7 @@ function MessageReactionRow({
               reaction.userIds.includes(currentUserId ?? '') ? 'border border-accent/20 bg-accent/10' : 'bg-muted hover:bg-muted/80',
             )}
           >
-            {isPending ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <span>{reaction.emoji}</span>}
+            {isPending ? <LoaderCircle className="size-3 animate-spin" /> : <span>{reaction.emoji}</span>}
             <span className="text-muted-foreground">{reaction.count}</span>
           </button>
         )
@@ -199,8 +199,8 @@ function MessageReactionPickerActions({
     <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 shrink-0">
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-6 w-6" disabled={disabled} aria-label="Add reaction">
-            <Smile className="h-3 w-3" />
+          <Button variant="ghost" size="icon" className="size-6" disabled={disabled} aria-label="Add reaction">
+            <Smile className="size-3" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align={align}>
@@ -254,7 +254,7 @@ export function ChannelMessageCard({
     >
       {showAvatars ? (
         <div className="shrink-0 pt-1">
-          <Avatar className="h-8 w-8">
+          <Avatar className="size-8">
             <AvatarFallback className="bg-muted text-xs">{getInitials(message.senderName)}</AvatarFallback>
           </Avatar>
         </div>
@@ -310,7 +310,7 @@ export function ChannelMessageCard({
 
       {isDeleting ? (
         <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/80">
-          <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" />
+          <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
         </div>
       ) : null}
     </div>
@@ -352,7 +352,7 @@ export function DirectMessageCard({
       )}
     >
       {showAvatars && !isOwn ? (
-        <Avatar className="h-8 w-8 shrink-0">
+        <Avatar className="size-8 shrink-0">
           <AvatarFallback className="bg-muted text-xs">{getInitials(message.senderName)}</AvatarFallback>
         </Avatar>
       ) : null}
@@ -416,14 +416,14 @@ export function DirectMessageCard({
       </div>
 
       {showAvatars && isOwn ? (
-        <Avatar className="h-8 w-8 shrink-0">
+        <Avatar className="size-8 shrink-0">
           <AvatarFallback className="bg-primary text-xs text-primary-foreground">{getInitials(message.senderName)}</AvatarFallback>
         </Avatar>
       ) : null}
 
       {isDeleting ? (
         <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/80">
-          <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" />
+          <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
         </div>
       ) : null}
     </div>

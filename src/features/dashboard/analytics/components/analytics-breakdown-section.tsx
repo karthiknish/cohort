@@ -78,7 +78,7 @@ function BreakdownCard({
     <Card className={DASHBOARD_THEME.cards.base}>
       <CardHeader className={DASHBOARD_THEME.cards.header}>
         <div className="flex items-center gap-2">
-          <meta.icon className="h-4 w-4 text-muted-foreground" />
+          <meta.icon className="size-4 text-muted-foreground" />
           <div>
             <CardTitle className="text-sm font-semibold text-foreground">{meta.title}</CardTitle>
             <CardDescription className="mt-1 text-xs text-muted-foreground">{meta.description}</CardDescription>

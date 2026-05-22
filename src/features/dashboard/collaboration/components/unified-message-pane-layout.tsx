@@ -19,8 +19,8 @@ export function UnifiedMessagePaneEmptyState() {
   return (
     <div className="flex-1 flex items-center justify-center border-muted/40 h-full bg-background/50">
       <div className="text-center p-8">
-        <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-          <Send className="h-8 w-8 text-muted-foreground" />
+        <div className="size-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+          <Send className="size-8 text-muted-foreground" />
         </div>
         <h3 className="text-lg font-medium text-foreground">Select a conversation</h3>
         <p className="text-sm text-muted-foreground mt-1">
@@ -194,7 +194,7 @@ export function UnifiedMessagePaneConversationLayout({
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background/50 max-lg:min-h-[min(72dvh,640px)] lg:h-[640px]">
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[100%] -left-[100%] w-[300%] h-[300%] animate-shimmer bg-gradient-to-br from-transparent via-muted/30 to-transparent opacity-50" />
+        <div className="absolute -top-[100%] -left-[100%] size-[300%] animate-shimmer bg-gradient-to-br from-transparent via-muted/30 to-transparent opacity-50" />
       </div>
       <UnifiedConversationHeader
         header={header}

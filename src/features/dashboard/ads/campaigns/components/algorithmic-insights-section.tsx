@@ -51,11 +51,11 @@ export function AlgorithmicInsightsSection({
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center space-y-4 py-6">
           {loading ? (
-            <Skeleton className="h-32 w-32 rounded-full" />
+            <Skeleton className="size-32 rounded-full" />
           ) : (
             <>
-              <div className="relative flex h-36 w-36 items-center justify-center">
-                <svg className="h-full w-full" viewBox="0 0 100 100">
+              <div className="relative flex size-36 items-center justify-center">
+                <svg className="size-full" viewBox="0 0 100 100">
                   <circle
                     className="stroke-muted/20"
                     strokeWidth="8"
@@ -116,7 +116,7 @@ export function AlgorithmicInsightsSection({
             <div className="space-y-4">
                 {[1, 2, 3].map((skeletonId) => (
                   <div key={`insight-skeleton-${skeletonId}`} className="flex gap-4">
-                  <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+                  <Skeleton className="size-10 shrink-0 rounded-lg" />
                   <div className="w-full space-y-2">
                     <Skeleton className="h-4 w-1/4" />
                     <Skeleton className="h-4 w-full" />
@@ -127,7 +127,7 @@ export function AlgorithmicInsightsSection({
           ) : insights.length === 0 ? (
             <div className={cn(ADS_PAGE_THEME.emptyState, 'min-h-[200px] py-8')}>
               <div className="rounded-2xl bg-muted/30 p-4 ring-1 ring-border/50">
-                <CircleCheck className="h-8 w-8 text-muted-foreground/50" aria-hidden />
+                <CircleCheck className="size-8 text-muted-foreground/50" aria-hidden />
               </div>
               <p className="text-sm font-bold">Everything looks great!</p>
               <p className="max-w-[280px] text-xs font-medium text-muted-foreground/60">
@@ -139,15 +139,15 @@ export function AlgorithmicInsightsSection({
                 {insights.map((insight) => (
                   <div key={`${insight.type}-${insight.title}`} className="group relative flex gap-4 motion-chromatic">
                   <div className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                    "flex size-10 shrink-0 items-center justify-center rounded-xl",
                     insight.level === 'success' ? "bg-success/10 text-success" :
                     insight.level === 'info' ? "bg-info/10 text-info" :
                     insight.level === 'warning' ? "bg-warning/10 text-warning" :
                     "bg-destructive/10 text-destructive"
                   )}>
-                    {insight.type === 'efficiency' ? <TrendingUp className="h-5 w-5" /> : 
-                     insight.type === 'budget' ? <Target className="h-5 w-5" /> :
-                     <Lightbulb className="h-5 w-5" />}
+                    {insight.type === 'efficiency' ? <TrendingUp className="size-5" /> : 
+                     insight.type === 'budget' ? <Target className="size-5" /> :
+                     <Lightbulb className="size-5" />}
                   </div>
                   <div className="space-y-1.5 pb-2">
                     <div className="flex items-center gap-2">

@@ -87,7 +87,7 @@ function ProjectDateField({
             aria-describedby={validationError ? errorId : undefined}
             aria-label={`${label} — open calendar`}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" aria-hidden />
+            <CalendarIcon className="mr-2 size-4" aria-hidden />
             {selected ? format(selected, 'PPP') : <span>Pick a date</span>}
           </Button>
         </PopoverTrigger>
@@ -123,7 +123,7 @@ function ProjectTagBadge({
 
   return (
     <Badge variant="secondary" className="gap-1 pr-1">
-      <Tag className="h-3 w-3" />
+      <Tag className="size-3" />
       {tag}
       <button
         type="button"
@@ -132,7 +132,7 @@ function ProjectTagBadge({
         disabled={loading}
         aria-label={`Remove tag ${tag}`}
       >
-        <X className="h-3 w-3" />
+        <X className="size-3" />
       </button>
     </Badge>
   )
@@ -344,7 +344,7 @@ export function EditProjectFormFields({
             disabled={loading || !tagInput.trim() || tags.length >= 10}
             aria-label="Add tag"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4" />
           </Button>
         </div>
         {tags.length > 0 ? (

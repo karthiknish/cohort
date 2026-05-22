@@ -45,7 +45,7 @@ function AudienceStepButton({
   step: CompletionStep
   totalSteps: number
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectAudienceStep = useCallback(() => {
     onSelectStep(step.id)
   }, [onSelectStep, step.id])
 
@@ -53,7 +53,7 @@ function AudienceStepButton({
     <div className="flex items-center">
       <button
         type="button"
-        onClick={handleClick}
+        onClick={onSelectAudienceStep}
         className={cn(
           'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
           activeTab === step.id
@@ -65,7 +65,7 @@ function AudienceStepButton({
       >
         <span
           className={cn(
-            'flex h-4 w-4 items-center justify-center rounded-full text-[10px]',
+            'flex size-4 items-center justify-center rounded-full text-[10px]',
             step.complete ? 'bg-accent/20' : 'bg-muted-foreground/20',
           )}
         >
@@ -73,7 +73,7 @@ function AudienceStepButton({
         </span>
         {step.label}
       </button>
-      {index < totalSteps - 1 ? <ChevronRight className="mx-1 h-4 w-4 text-muted-foreground" /> : null}
+      {index < totalSteps - 1 ? <ChevronRight className="mx-1 size-4 text-muted-foreground" /> : null}
     </div>
   )
 }
@@ -93,7 +93,7 @@ function AudienceInput({
   placeholder?: string
   value: string
 }) {
-  const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const onAudienceInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     onValueChange(event.target.value)
   }, [onValueChange])
 
@@ -104,7 +104,7 @@ function AudienceInput({
     }
   }, [onEnter])
 
-  return <Input id={id} placeholder={placeholder} value={value} onChange={handleChange} onKeyDown={onEnter ? handleKeyDown : undefined} className={className} />
+  return <Input id={id} placeholder={placeholder} value={value} onChange={onAudienceInputChange} onKeyDown={onEnter ? handleKeyDown : undefined} className={className} />
 }
 
 function AudienceTextarea({
@@ -120,11 +120,11 @@ function AudienceTextarea({
   rows?: number
   value: string
 }) {
-  const handleChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const onAudienceTextareaChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     onValueChange(event.target.value)
   }, [onValueChange])
 
-  return <Textarea id={id} placeholder={placeholder} value={value} onChange={handleChange} rows={rows} />
+  return <Textarea id={id} placeholder={placeholder} value={value} onChange={onAudienceTextareaChange} rows={rows} />
 }
 
 function SegmentBadge({
@@ -144,7 +144,7 @@ function SegmentBadge({
     <Badge key={segment} variant="secondary" className="gap-1 rounded-lg">
       {segment}
       <button type="button" onClick={handleRemove} className="ml-0.5 hover:text-destructive" aria-label={`Remove segment: ${segment}`}>
-        <X className="h-3 w-3" />
+        <X className="size-3" />
       </button>
     </Badge>
   )
@@ -157,7 +157,7 @@ function InterestBadge({
   interest: string
   onAddInterest: (interest: string) => void
 }) {
-  const handleClick = useCallback(() => {
+  const onAddSuggestedInterest = useCallback(() => {
     onAddInterest(interest)
   }, [interest, onAddInterest])
 
@@ -165,11 +165,11 @@ function InterestBadge({
     <Badge variant="outline" asChild>
       <button
         type="button"
-        onClick={handleClick}
+        onClick={onAddSuggestedInterest}
         className="cursor-pointer rounded-lg transition-colors hover:border-primary hover:bg-accent/10"
         aria-label={`Add interest: ${interest}`}
       >
-        <Plus className="mr-1 h-3 w-3" aria-hidden />
+        <Plus className="mr-1 size-3" aria-hidden />
         {interest}
       </button>
     </Badge>
@@ -191,7 +191,7 @@ function SelectedInterestBadge({
     <Badge className="gap-1 rounded-lg">
       {interest}
       <button type="button" onClick={handleRemove} className="ml-0.5 hover:text-destructive" aria-label={`Remove interest: ${interest}`}>
-        <X className="h-3 w-3" />
+        <X className="size-3" />
       </button>
     </Badge>
   )
@@ -206,14 +206,14 @@ function AgePresetButton({
   onAgePreset: (min: number, max: number) => void
   preset: { label: string; min: number; max: number }
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectAgePreset = useCallback(() => {
     onAgePreset(preset.min, preset.max)
   }, [onAgePreset, preset.max, preset.min])
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectAgePreset}
       className={cn(
         'rounded-lg border px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         active ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-muted',
@@ -237,7 +237,7 @@ function GenderButton({
   onGenderToggle: (gender: string) => void
   onResetGenders: () => void
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectGender = useCallback(() => {
     if (gender === 'All') {
       onResetGenders()
     } else {
@@ -250,7 +250,7 @@ function GenderButton({
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectGender}
       className={cn(
         'flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         gender === 'All' && formData.genders.length === 0
@@ -281,8 +281,8 @@ export function AudienceBuilderDialogHeader({
   return (
     <DialogHeader className="border-b bg-gradient-to-r from-primary/5 to-transparent p-6 pb-4">
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10 ring-1 ring-primary/20">
-          <Users className="h-5 w-5 text-primary" />
+        <div className="flex size-11 items-center justify-center rounded-xl bg-accent/10 ring-1 ring-primary/20">
+          <Users className="size-5 text-primary" />
         </div>
         <div>
           <DialogTitle className="text-lg">Build New Audience</DialogTitle>
@@ -393,7 +393,7 @@ export function AudienceBuilderDialogTabs({
         <TabsContent value="locations" className="m-0 space-y-4 p-6">
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />Target Locations
+              <Globe className="size-4" />Target Locations
             </Label>
             <p className="text-xs text-muted-foreground">Search and select locations to target with your audience</p>
           </div>
@@ -411,7 +411,7 @@ export function AudienceBuilderDialogTabs({
         <TabsContent value="targeting" className="m-0 space-y-6 p-6">
           <div className="space-y-3">
             <Label className="flex items-center gap-2">
-              <Tag className="h-4 w-4" />Custom Segments
+              <Tag className="size-4" />Custom Segments
             </Label>
             <div className="flex gap-2">
               <AudienceInput
@@ -422,7 +422,7 @@ export function AudienceBuilderDialogTabs({
                 className="h-10"
               />
               <Button type="button" size="sm" onClick={onAddSegment} className="h-10 px-4" aria-label="Add segment">
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
               </Button>
             </div>
             <div className="flex min-h-[32px] flex-wrap gap-1.5">
@@ -438,7 +438,7 @@ export function AudienceBuilderDialogTabs({
 
           <div className="space-y-3">
             <Label className="flex items-center gap-2">
-              <Heart className="h-4 w-4" />Interests
+              <Heart className="size-4" />Interests
             </Label>
             <div className="flex gap-2">
               <AudienceInput
@@ -456,18 +456,20 @@ export function AudienceBuilderDialogTabs({
                 className="h-10 px-4"
                 aria-label="Add interest"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
               </Button>
             </div>
 
             <div className="space-y-2">
               <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Sparkles className="h-3 w-3" />Suggested interests
+                <Sparkles className="size-3" />Suggested interests
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {SUGGESTED_INTERESTS.filter((interest) => !formData.interests.includes(interest)).map((interest) => (
-                  <InterestBadge key={interest} interest={interest} onAddInterest={onAddInterest} />
-                ))}
+                {SUGGESTED_INTERESTS.flatMap((interest) =>
+                  !formData.interests.includes(interest)
+                    ? [<InterestBadge key={interest} interest={interest} onAddInterest={onAddInterest} />]
+                    : [],
+                )}
               </div>
             </div>
 
@@ -482,7 +484,7 @@ export function AudienceBuilderDialogTabs({
 
           <div className="space-y-3">
             <Label className="flex items-center gap-2">
-              <Users className="h-4 w-4" />Age Range
+              <Users className="size-4" />Age Range
             </Label>
             <div className="flex flex-wrap gap-2">
               {AGE_PRESETS.map((preset) => (
@@ -540,7 +542,7 @@ export function AudienceBuilderDialogFooter({
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <div
             className={cn(
-              'flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium',
+              'flex size-6 items-center justify-center rounded-full text-xs font-medium',
               completedCount >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted',
             )}
           >

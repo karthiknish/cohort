@@ -60,9 +60,9 @@ export function ActivityDetailsModal({
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div
-              className={`flex h-10 w-10 items-center justify-center rounded-full ${colorClass}`}
+              className={`flex size-10 items-center justify-center rounded-full ${colorClass}`}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="size-5" />
             </div>
             <div>
               <DialogTitle className="text-lg">{activity.entityName}</DialogTitle>
@@ -109,7 +109,7 @@ export function ActivityDetailsModal({
           {/* User */}
           {activity.userName && (
             <div className="flex items-center gap-2">
-              <Avatar className="h-6 w-6">
+              <Avatar className="size-6">
                 {activity.userAvatar ? (
                   <AvatarImage src={activity.userAvatar} alt={activity.userName} />
                 ) : (
@@ -127,7 +127,7 @@ export function ActivityDetailsModal({
           {/* Tags */}
           {activity.metadata?.tags && (
             <div className="flex items-center gap-2 flex-wrap">
-              <Tag className="h-3 w-3 text-muted-foreground" />
+              <Tag className="size-3 text-muted-foreground" />
               {activity.metadata.tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="text-xs">
                   {tag}
@@ -145,12 +145,12 @@ export function ActivityDetailsModal({
           >
             {activity.isPinned ? (
               <>
-                <PinOff className="h-4 w-4 mr-1" />
+                <PinOff className="size-4 mr-1" />
                 Unpin
               </>
             ) : (
               <>
-                <Pin className="h-4 w-4 mr-1" />
+                <Pin className="size-4 mr-1" />
                 Pin
               </>
             )}
@@ -161,7 +161,7 @@ export function ActivityDetailsModal({
               size="sm"
               onClick={handleMarkAsReadClick}
             >
-              <Check className="h-4 w-4 mr-1" />
+              <Check className="size-4 mr-1" />
               Mark as Read
             </Button>
           )}
@@ -169,7 +169,7 @@ export function ActivityDetailsModal({
             <Button asChild size="sm">
               <Link href={activity.navigationUrl}>
                 View Details
-                <ArrowUpRight className="h-4 w-4 ml-1" />
+                <ArrowUpRight className="size-4 ml-1" />
               </Link>
             </Button>
           )}

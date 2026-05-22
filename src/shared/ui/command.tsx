@@ -22,7 +22,7 @@ const Command = ({ className, ref, ...props }: CommandProps) => (
   <CommandPrimitive
     ref={ref}
     className={cn(
-      "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
+      "flex size-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
       interactiveTransitionClass,
       className
     )}
@@ -51,7 +51,7 @@ const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
 
 const CommandInput = ({ className, ref, ...props }: CommandInputProps) => (
   <div className="flex items-center border-b px-3" data-cmdk-input-wrapper="">
-    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" aria-hidden />
+    <Search className="mr-2 size-4 shrink-0 opacity-50" aria-hidden />
     <CommandPrimitive.Input
       ref={ref}
       className={cn(

@@ -31,8 +31,7 @@ function isAllowed<TValue extends string>(
 
 // Stable deep equality check for arrays
 function arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
-  if (a.length !== b.length) return false
-  return a.every((v, i) => v === b[i])
+  return a.length === b.length && a.every((v, i) => v === b[i])
 }
 
 /** @deprecated Consumers of this hook must be wrapped in <Suspense> */

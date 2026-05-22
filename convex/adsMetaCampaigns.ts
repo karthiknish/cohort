@@ -9,6 +9,7 @@ import {
   requireFacebookAdAccount,
   resolveFacebookAccessToken,
 } from './lib/facebookAdsAccess'
+import type { CampaignObjective } from '@/services/integrations/meta-ads/campaign-modules/types'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -37,8 +38,10 @@ export const createMetaCampaign = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
-      const adAccountId = await requireFacebookAdAccount(integration)
+      const [accessToken, adAccountId] = await Promise.all([
+        resolveFacebookAccessToken(args.workspaceId, integration, clientId),
+        requireFacebookAdAccount(integration),
+      ])
 
       const { createMetaCampaign: createCampaignOnMeta } = await import(
         '@/services/integrations/meta-ads/campaign-modules/core'
@@ -48,7 +51,7 @@ export const createMetaCampaign = action({
         accessToken,
         adAccountId,
         name: args.name,
-        objective: args.objective as import('@/services/integrations/meta-ads/campaign-modules/types').CampaignObjective,
+        objective: args.objective as CampaignObjective,
         status: args.status ?? 'PAUSED',
         dailyBudget: args.dailyBudget,
         lifetimeBudget: args.lifetimeBudget,

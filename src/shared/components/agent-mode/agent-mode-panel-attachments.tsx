@@ -11,7 +11,7 @@ function AttachmentStatusBadge({ attachment }: { attachment: AgentAttachmentCont
   if (attachment.extractionStatus === 'extracting') {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+        <Loader2 className="size-3 animate-spin" aria-hidden />
         Reading
       </span>
     )
@@ -50,7 +50,7 @@ function AttachmentItem({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-primary/10 p-2 text-primary ring-1 ring-primary/10">
-            <AttachmentKindIcon kind={kind} className="h-4 w-4" />
+            <AttachmentKindIcon kind={kind} className="size-4" />
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -61,7 +61,7 @@ function AttachmentItem({
             <p className="mt-1 text-xs leading-5 text-muted-foreground">{attachment.excerpt}</p>
             {attachment.errorMessage ? (
               <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-warning">
-                <AlertCircle className="h-3.5 w-3.5" />
+                <AlertCircle className="size-3.5" />
                 <span>{attachment.errorMessage}</span>
               </div>
             ) : null}
@@ -71,11 +71,11 @@ function AttachmentItem({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 rounded-full"
+          className="size-8 rounded-full"
           onClick={handleRemove}
           aria-label={`Remove ${attachment.name}`}
         >
-          <X className="h-4 w-4" />
+          <X className="size-4" />
         </Button>
       </div>
     </div>
@@ -123,8 +123,8 @@ export function AgentMessageAttachmentChips({
             key={attachment.id}
             className="flex items-start gap-2.5 rounded-xl border border-primary-foreground/15 bg-primary-foreground/10 px-3 py-2 text-left text-xs"
           >
-            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-foreground/15 ring-1 ring-primary-foreground/20">
-              <AttachmentKindIcon kind={kind} className="h-4 w-4 opacity-90" />
+            <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-foreground/15 ring-1 ring-primary-foreground/20">
+              <AttachmentKindIcon kind={kind} className="size-4 opacity-90" />
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-1.5">

@@ -113,14 +113,15 @@ async function listWorkspaceMembers(
   })
   const members = Array.isArray(rawMembers) ? rawMembers : []
 
-  return members
-    .map((member) => ({
+  return members.flatMap((member) => {
+    const normalized = {
       id: asNonEmptyString(member?.id) ?? '',
       name: asNonEmptyString(member?.name) ?? '',
       email: asNonEmptyString(member?.email) ?? undefined,
       role: asNonEmptyString(member?.role) ?? undefined,
-    }))
-    .filter((member) => member.id.length > 0 && member.name.length > 0)
+    }
+    return normalized.id.length > 0 && normalized.name.length > 0 ? [normalized] : []
+  })
 }
 
 function resolveMemberMatches(members: WorkspaceMember[], query: string): WorkspaceMember[] {
@@ -259,12 +260,12 @@ async function resolveClientIdFromParams(
         : []
 
     const normalizedTarget = directClientName.trim().toLowerCase()
-    const matches = items
-      .map((item) => asRecord(item))
-      .filter((item) => {
-        const name = asNonEmptyString(item?.name)
-        return name?.trim().toLowerCase().includes(normalizedTarget)
-      })
+    const matches = items.flatMap((item) => {
+      const record = asRecord(item)
+      if (!record) return []
+      const name = asNonEmptyString(record.name)
+      return name?.trim().toLowerCase().includes(normalizedTarget) ? [record] : []
+    })
 
     const exactMatch = matches.find((item) => {
       const name = asNonEmptyString(item?.name)
@@ -285,8 +286,10 @@ async function resolveClientIdFromParams(
         clientId: '',
         clientName: directClientName,
         suggestions: matches
-          .map((item) => asNonEmptyString(item?.name))
-          .filter((name): name is string => Boolean(name))
+          .flatMap((item) => {
+            const name = asNonEmptyString(item?.name)
+            return name ? [name] : []
+          })
           .slice(0, 5),
       }
     }

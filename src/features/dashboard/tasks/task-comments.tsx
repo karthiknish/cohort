@@ -234,15 +234,16 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
       return []
     }
 
-    return convexRows
-      .map((row) => {
+    return convexRows.flatMap((row) => {
         const createdAt = typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null
         const updatedAt = typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null
         const deletedAt = typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null
         const isDeleted = Boolean(row?.deleted || deletedAt)
+        const id = String(row?.legacyId ?? '')
+        if (!id || isDeleted) return []
 
-        return {
-          id: String(row?.legacyId ?? ''),
+        return [{
+          id,
           taskId,
           content: typeof row?.content === 'string' ? row.content : '',
           format: row?.format === 'plaintext' ? 'plaintext' : 'markdown',
@@ -260,9 +261,8 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
           mentions: Array.isArray(row?.mentions) ? row.mentions : undefined,
           parentCommentId: typeof row?.parentCommentId === 'string' ? row.parentCommentId : null,
           threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
-        } as TaskComment
+        } as TaskComment]
       })
-      .filter((comment) => comment.id && !comment.isDeleted)
   }, [convexEnabled, convexRows, taskId])
 
   const loading = convexEnabled && convexRows === undefined

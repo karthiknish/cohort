@@ -72,8 +72,8 @@ function InputGroupButton({
       className={cn(
         'shrink-0 shadow-none',
         size === 'xs' && 'h-7 gap-1 px-2 text-xs',
-        size === 'icon-xs' && 'h-7 w-7',
-        size === 'icon-sm' && 'h-8 w-8',
+        size === 'icon-xs' && 'size-7',
+        size === 'icon-sm' && 'size-8',
         className,
       )}
       {...props}

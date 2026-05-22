@@ -149,7 +149,7 @@ export function MeetingScheduleDateSection({
             )}
             disabled={disabled}
           >
-            <CalendarDays className="mr-2 h-4 w-4" />
+            <CalendarDays className="mr-2 size-4" />
             {meetingDate ? format(meetingDate, 'PPP') : <span>Pick a date</span>}
           </Button>
         </PopoverTrigger>

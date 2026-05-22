@@ -13,8 +13,7 @@ export function normalizeStringList(items: string[]): string[] {
 export function listsEqual(a: string[], b: string[]): boolean {
   const na = normalizeStringList(a)
   const nb = normalizeStringList(b)
-  if (na.length !== nb.length) return false
-  return na.every((value, index) => value === nb[index])
+  return na.length === nb.length && na.every((value, index) => value === nb[index])
 }
 
 export function creativeCopyIsDirty(

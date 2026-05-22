@@ -54,7 +54,7 @@ function PendingAttachmentPill({
       className="flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground"
       key={attachment.id}
     >
-      <Paperclip className="h-3.5 w-3.5 shrink-0" />
+      <Paperclip className="size-3.5 shrink-0" />
       <span className="max-w-[10rem] truncate">{attachment.name}</span>
       <span className="text-muted-foreground">{attachment.sizeLabel}</span>
       <button
@@ -62,7 +62,7 @@ function PendingAttachmentPill({
         className="rounded-full p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
         onClick={handleRemoveAttachment}
       >
-        <X className="h-3.5 w-3.5" />
+        <X className="size-3.5" />
         <span className="sr-only">Remove {attachment.name}</span>
       </button>
     </div>
@@ -94,7 +94,7 @@ function MentionResultButton({
         isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
       )}
     >
-      <Avatar className="h-8 w-8 shrink-0 border border-border/60">
+      <Avatar className="size-8 shrink-0 border border-border/60">
         {candidate.avatarUrl ? <AvatarImage src={candidate.avatarUrl} alt={candidate.label} /> : null}
         <AvatarFallback className="bg-muted text-[11px] font-semibold text-foreground">{getMeetingChatInitials(candidate.label)}</AvatarFallback>
       </Avatar>
@@ -149,7 +149,7 @@ export function MeetingChatMessageItem({
   return (
     <div className={cn('flex gap-3', isLocal && 'justify-end')}>
       {showAvatarOnLeft ? (
-        <Avatar className="h-8 w-8 shrink-0 border border-border/80">
+        <Avatar className="size-8 shrink-0 border border-border/80">
           {avatarUrl ? <AvatarImage src={avatarUrl} alt={authorLabel} /> : null}
           <AvatarFallback className="bg-muted text-[11px] font-semibold text-foreground">{getMeetingChatInitials(authorLabel)}</AvatarFallback>
         </Avatar>
@@ -188,7 +188,7 @@ export function MeetingChatMessageItem({
         </div>
       </div>
       {isLocal ? (
-        <Avatar className="h-8 w-8 shrink-0 border border-accent/25">
+        <Avatar className="size-8 shrink-0 border border-accent/25">
           {avatarUrl ? <AvatarImage src={avatarUrl} alt={authorLabel} /> : null}
           <AvatarFallback className="bg-accent/15 text-[11px] font-semibold text-primary">{getMeetingChatInitials(authorLabel)}</AvatarFallback>
         </Avatar>
@@ -206,7 +206,7 @@ export function MeetingChatLauncherButton({ unreadCount, onOpen }: { unreadCount
       className="border border-border/60 bg-card text-foreground shadow-sm backdrop-blur hover:bg-muted/40"
       onClick={onOpen}
     >
-      <MessageSquareText className="mr-2 h-4 w-4" />
+      <MessageSquareText className="mr-2 size-4" />
       Meeting chat
       {unreadCount > 0 ? (
         <Badge variant="secondary" className="ml-2 rounded-full border border-border/60 bg-muted/30 text-foreground">
@@ -325,10 +325,10 @@ export function MeetingChatPanel({
           type="button"
           size="icon"
           variant="ghost"
-          className="h-8 w-8 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+          className="size-8 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           onClick={onClose}
         >
-          <X className="h-4 w-4" />
+          <X className="size-4" />
           <span className="sr-only">Close meeting chat</span>
         </Button>
       </div>
@@ -411,11 +411,11 @@ export function MeetingChatPanel({
               type="button"
               size="icon"
               variant="ghost"
-              className="h-9 w-9 border border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="size-9 border border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground"
               disabled={uploadingFiles}
               onClick={handleAttachFiles}
             >
-              <Paperclip className="h-4 w-4" />
+              <Paperclip className="size-4" />
               <span className="sr-only">Attach files to meeting chat</span>
             </Button>
             <Button
@@ -425,7 +425,7 @@ export function MeetingChatPanel({
               disabled={!canSend || isSending || uploadingFiles}
               onClick={onSend}
             >
-              {isSending || uploadingFiles ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+              {isSending || uploadingFiles ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <Send className="mr-2 size-4" />}
               {uploadingFiles ? 'Uploading…' : isSending ? 'Sending…' : 'Send'}
             </Button>
           </div>

@@ -71,14 +71,16 @@ async function buildMemberSummaries(
   }
 
   const workspaceUsers = await loadWorkspaceUsers(ctx, workspaceId)
-  const summaries = workspaceUsers
-    .filter((row) => memberIdSet.has(row.legacyId))
-    .map((row) => ({
-      id: row.legacyId,
-      name: row.name ?? row.email ?? 'Unnamed user',
-      role: row.role ?? null,
-      email: row.email ?? null,
-    }))
+  const summaries = workspaceUsers.flatMap((row) =>
+    memberIdSet.has(row.legacyId)
+      ? [{
+          id: row.legacyId,
+          name: row.name ?? row.email ?? 'Unnamed user',
+          role: row.role ?? null,
+          email: row.email ?? null,
+        }]
+      : [],
+  )
 
   if (summaries.length !== memberIdSet.size) {
     throw Errors.validation.invalidInput('One or more selected members are not part of this workspace')
@@ -162,16 +164,16 @@ export const listAccessible = zWorkspaceQuery({
 
     rows = rows.filter((row) => row.archivedAtMs === null)
 
-    return rows
-      .filter((row) =>
-        canAccessChannel({
-          currentUserId,
-          currentUserRole: ctx.user.role,
-          visibility: row.visibility,
-          memberIds: row.memberIds,
-        }),
-      )
-      .map(mapChannel)
+    return rows.flatMap((row) =>
+      canAccessChannel({
+        currentUserId,
+        currentUserRole: ctx.user.role,
+        visibility: row.visibility,
+        memberIds: row.memberIds,
+      })
+        ? [mapChannel(row)]
+        : [],
+    )
   },
 })
 

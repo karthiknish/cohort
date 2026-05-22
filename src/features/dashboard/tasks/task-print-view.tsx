@@ -64,7 +64,7 @@ export function TaskPrintView({ tasks, title = 'Tasks', summary, onClose }: Task
         {onClose && (
           <div className="no-print flex gap-2">
             <Button onClick={handlePrint} size="sm" className="gap-1">
-              <Printer className="h-4 w-4" />
+              <Printer className="size-4" />
               Print
             </Button>
             <Button onClick={onClose} variant="outline" size="sm">
@@ -228,7 +228,7 @@ export function PrintTasksButton({ tasks, title }: { tasks: TaskRecord[], title?
       onClick={handlePrint}
       className="gap-1.5 no-print"
     >
-      <Printer className="h-4 w-4" />
+      <Printer className="size-4" />
       Print List
     </Button>
   )

@@ -112,7 +112,7 @@ export function ComparisonCard({ title, description, metrics, isLoading, classNa
                       change.type === 'neutral' && 'bg-muted text-muted-foreground'
                     )}
                   >
-                    <ChangeIcon className="h-3 w-3" />
+                    <ChangeIcon className="size-3" />
                     {change.value.toFixed(1)}%
                   </div>
                 </div>
@@ -193,12 +193,12 @@ export function SideBySideComparison({
         </CardTitle>
         <div className="flex items-center gap-4 mt-2">
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-primary" />
+            <div className="size-2 rounded-full bg-primary" />
             <span className="text-xs text-muted-foreground">{leftLabel}</span>
           </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+          <ArrowRight className="size-4 text-muted-foreground" />
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-secondary-foreground" />
+            <div className="size-2 rounded-full bg-secondary-foreground" />
             <span className="text-xs text-muted-foreground">{rightLabel}</span>
           </div>
         </div>
@@ -218,7 +218,7 @@ export function SideBySideComparison({
             <div
               key={`${metric.label}-${metric.leftValue}-${metric.rightValue}`}
               className={cn(
-                'grid grid-cols-12 gap-2 px-3 py-3 rounded-lg transition-colors hover:bg-muted/30',
+                'grid grid-cols-12 gap-2 p-3 rounded-lg transition-colors hover:bg-muted/30',
                 index % 2 === 0 && 'bg-muted/20'
               )}
             >

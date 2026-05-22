@@ -81,14 +81,14 @@ function ObjectiveSelectorCard({
           className="absolute top-3 right-3 flex size-5 items-center justify-center rounded-full"
           style={selectedIndicatorStyle}
         >
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={checkStyle}>
+          <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={checkStyle}>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
         </div>
       )}
 
       <div className="mb-3 flex size-12 items-center justify-center rounded-lg" style={iconContainerStyle}>
-        <Icon className="h-6 w-6" style={iconStyle} />
+        <Icon className="size-6" style={iconStyle} />
       </div>
 
       <div className="space-y-1">

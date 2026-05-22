@@ -391,29 +391,35 @@ export async function writeMetricsBatch(options: {
 
     // Avoid oversized payloads.
     const chunkSize = 100
+    const chunks: typeof metrics[] = []
     for (let i = 0; i < metrics.length; i += chunkSize) {
-        const chunk = metrics.slice(i, i + chunkSize)
-        await executeMutation(convex, 'adsIntegrations:writeMetricsBatch', {
-            workspaceId,
-            metrics: chunk.map((metric) => ({
-                providerId: metric.providerId,
-                clientId: normalizeClientId(metric.clientId ?? null),
-                accountId: normalizeClientId(metric.accountId ?? null),
-                date: metric.date,
-                spend: metric.spend,
-                impressions: metric.impressions,
-                clicks: metric.clicks,
-                conversions: metric.conversions,
-                revenue: metric.revenue ?? null,
-                currency: metric.currency ?? null,
-                currencySource: metric.currencySource ?? null,
-                campaignId: metric.campaignId,
-                campaignName: metric.campaignName,
-                creatives: metric.creatives,
-                rawPayload: metric.rawPayload,
-            })),
-        }, { userId: options.userId, metricsCount: chunk.length })
+        chunks.push(metrics.slice(i, i + chunkSize))
     }
+
+    await Promise.all(
+        chunks.map((chunk) =>
+            executeMutation(convex, 'adsIntegrations:writeMetricsBatch', {
+                workspaceId,
+                metrics: chunk.map((metric) => ({
+                    providerId: metric.providerId,
+                    clientId: normalizeClientId(metric.clientId ?? null),
+                    accountId: normalizeClientId(metric.accountId ?? null),
+                    date: metric.date,
+                    spend: metric.spend,
+                    impressions: metric.impressions,
+                    clicks: metric.clicks,
+                    conversions: metric.conversions,
+                    revenue: metric.revenue ?? null,
+                    currency: metric.currency ?? null,
+                    currencySource: metric.currencySource ?? null,
+                    campaignId: metric.campaignId,
+                    campaignName: metric.campaignName,
+                    creatives: metric.creatives,
+                    rawPayload: metric.rawPayload,
+                })),
+            }, { userId: options.userId, metricsCount: chunk.length }),
+        ),
+    )
 }
 
 export async function hasPendingSyncJob(options: {

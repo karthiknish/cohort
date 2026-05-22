@@ -55,7 +55,7 @@ export function FeatureCard({
     >
       {/* Drag Handle */}
       <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab">
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+        <GripVertical className="size-4 text-muted-foreground" />
       </div>
 
       {/* Header */}
@@ -68,14 +68,14 @@ export function FeatureCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="size-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
             >
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={handleEditClick}>
-              <Pencil className="mr-2 h-4 w-4" />
+              <Pencil className="mr-2 size-4" />
               Edit
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -83,7 +83,7 @@ export function FeatureCard({
               onClick={handleDeleteClick}
               className="text-destructive focus:text-destructive"
             >
-              <Trash2 className="mr-2 h-4 w-4" />
+              <Trash2 className="mr-2 size-4" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -97,7 +97,7 @@ export function FeatureCard({
           <LazyImage
             src={feature.imageUrl}
             alt={feature.title}
-            className="h-full w-full object-cover"
+            className="size-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
         </div>
@@ -123,12 +123,12 @@ export function FeatureCard({
         <div className="flex items-center gap-2 text-muted-foreground">
           {feature.imageUrl && (
             <div className="flex items-center gap-0.5" title="Has image">
-              <ImageIcon className="h-3 w-3" />
+              <ImageIcon className="size-3" />
             </div>
           )}
           {feature.references.length > 0 && (
             <div className="flex items-center gap-0.5" title={`${feature.references.length} reference(s)`}>
-              <Link2 className="h-3 w-3" />
+              <Link2 className="size-3" />
               <span className="text-[10px]">{feature.references.length}</span>
             </div>
           )}
@@ -147,7 +147,7 @@ export function FeatureCard({
               className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline max-w-[120px] truncate"
               onClick={handleReferenceClick}
             >
-              <ExternalLink className="h-2.5 w-2.5 shrink-0" />
+              <ExternalLink className="size-2.5 shrink-0" />
               {ref.label}
             </a>
           ))}

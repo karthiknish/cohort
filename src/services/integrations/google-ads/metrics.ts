@@ -281,54 +281,60 @@ export async function fetchGoogleAdAccounts(options: {
   const listData = (await listResponse.json()) as GoogleAccessibleCustomersResponse
   const resourceNames = listData.resourceNames ?? []
   const customerIds = resourceNames
-    .map((r) => r.replace('customers/', ''))
-    .filter((id) => id.length > 0)
+    .flatMap((r) => {
+    const id = r.replace('customers/', '')
+    return id.length > 0 ? [id] : []
+  })
 
   if (customerIds.length === 0) {
     return []
   }
 
-  const accounts: GoogleAdAccount[] = []
-
-  for (const customerId of customerIds) {
-    const summary = await fetchCustomerSummary({
-      accessToken,
-      developerToken: resolvedDeveloperToken,
-      customerId,
-      maxRetries,
-    })
-
-    if (!summary) continue
-
-    if (summary.manager) {
-      const clients = await fetchManagerClients({
+  const accountGroups = await Promise.all(
+    customerIds.map(async (customerId) => {
+      const summary = await fetchCustomerSummary({
         accessToken,
         developerToken: resolvedDeveloperToken,
-        managerId: customerId,
+        customerId,
         maxRetries,
       })
-      accounts.push(...clients)
-      accounts.push({
-        id: summary.id,
-        name: summary.name,
-        currencyCode: summary.currencyCode,
-        manager: true,
-        loginCustomerId: null,
-        managerCustomerId: null,
-      })
-    } else {
-      accounts.push({
-        id: summary.id,
-        name: summary.name,
-        currencyCode: summary.currencyCode,
-        manager: false,
-        loginCustomerId: null,
-        managerCustomerId: null,
-      })
-    }
-  }
 
-  return accounts
+      if (!summary) return []
+
+      if (summary.manager) {
+        const clients = await fetchManagerClients({
+          accessToken,
+          developerToken: resolvedDeveloperToken,
+          managerId: customerId,
+          maxRetries,
+        })
+        return [
+          ...clients,
+          {
+            id: summary.id,
+            name: summary.name,
+            currencyCode: summary.currencyCode,
+            manager: true,
+            loginCustomerId: null,
+            managerCustomerId: null,
+          },
+        ]
+      }
+
+      return [
+        {
+          id: summary.id,
+          name: summary.name,
+          currencyCode: summary.currencyCode,
+          manager: false,
+          loginCustomerId: null,
+          managerCustomerId: null,
+        },
+      ]
+    }),
+  )
+
+  return accountGroups.flat()
 }
 
 // =============================================================================

@@ -1,29 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { toISO as toISOStandard, parseDate } from './dates'
-
-const CURRENCY_FORMATTER_CACHE = new Map<string, Intl.NumberFormat>()
-
-function getCurrencyFormatter(currency: string, options: Intl.NumberFormatOptions): Intl.NumberFormat {
-  const serializedOptions = Object.entries(options)
-    .toSorted(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
-    .map(([key, value]) => `${key}:${String(value)}`)
-    .join('|')
-  const cacheKey = `en-US|${currency}|${serializedOptions}`
-  const existingFormatter = CURRENCY_FORMATTER_CACHE.get(cacheKey)
-  if (existingFormatter) {
-    return existingFormatter
-  }
-
-  const formatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-    ...options,
-  })
-  CURRENCY_FORMATTER_CACHE.set(cacheKey, formatter)
-  return formatter
-}
+import { formatEnUsCurrency } from './intl/formatters'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -34,7 +12,7 @@ export function formatCurrency(
   currency = 'USD',
   options: Intl.NumberFormatOptions = {},
 ) {
-  return getCurrencyFormatter(currency, options).format(value)
+  return formatEnUsCurrency(value, currency, options)
 }
 
 export function exportToCsv<T extends Record<string, unknown>>(
@@ -143,9 +121,10 @@ export function sanitizeCsvValue(value: unknown): string {
 // Normalize arrays of strings, trimming and removing empties
 export function coerceStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
-  return value
-    .map((item) => (typeof item === 'string' ? item.trim() : ''))
-    .filter((item) => item.length > 0)
+  return value.flatMap((item) => {
+    const trimmed = typeof item === 'string' ? item.trim() : ''
+    return trimmed.length > 0 ? [trimmed] : []
+  })
 }
 
 // Coerce number from mixed inputs

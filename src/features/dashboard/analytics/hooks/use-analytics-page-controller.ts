@@ -45,10 +45,9 @@ const PREVIEW_GA_ACCOUNT_LABEL = 'Preview Google Analytics'
 const PREVIEW_GA_PROPERTY_ID = 'preview-google-analytics-property'
 
 function getPreviewGoogleAnalyticsStatus() {
-  const latestMetricDate = getPreviewAnalyticsMetrics()
-    .filter((metric) => metric.providerId === 'google-analytics')
-    .map((metric) => new Date(`${metric.date}T12:00:00Z`).getTime())
-    .reduce<number | null>((latest, value) => {
+  const latestMetricDate = getPreviewAnalyticsMetrics().reduce<number | null>((latest, metric) => {
+      if (metric.providerId !== 'google-analytics') return latest
+      const value = new Date(`${metric.date}T12:00:00Z`).getTime()
       if (!Number.isFinite(value)) return latest
       return latest === null || value > latest ? value : latest
     }, null)
@@ -131,9 +130,23 @@ export function useAnalyticsPageController() {
   const [gaIntegrationCurrency, setGaIntegrationCurrency] = useState<string | null>(
     isPreviewMode ? 'GBP' : null,
   )
-  const [gaLoading, setGaLoading] = useState(false)
-  const [gaSetupDialogOpen, setGaSetupDialogOpen] = useState(false)
-  const [gaSetupMessage, setGaSetupMessage] = useState<string | null>(null)
+  const [gaSetupFlow, setGaSetupFlow] = useState({
+    loading: false,
+    setupDialogOpen: false,
+    setupMessage: null as string | null,
+  })
+  const gaLoading = gaSetupFlow.loading
+  const gaSetupDialogOpen = gaSetupFlow.setupDialogOpen
+  const gaSetupMessage = gaSetupFlow.setupMessage
+  const setGaLoading = useCallback((loading: boolean) => {
+    setGaSetupFlow((prev) => ({ ...prev, loading }))
+  }, [])
+  const setGaSetupDialogOpen = useCallback((setupDialogOpen: boolean) => {
+    setGaSetupFlow((prev) => ({ ...prev, setupDialogOpen }))
+  }, [])
+  const setGaSetupMessage = useCallback((setupMessage: string | null) => {
+    setGaSetupFlow((prev) => ({ ...prev, setupMessage }))
+  }, [])
   const [gaProperties, setGaProperties] = useState<GoogleAnalyticsPropertyOption[]>([])
   const [gaSelectedPropertyId, setGaSelectedPropertyId] = useState('')
   const [gaLoadingProperties, setGaLoadingProperties] = useState(false)
@@ -264,19 +277,20 @@ export function useAnalyticsPageController() {
     window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
 
     requestAnimationFrame(() => {
-      setGaLoading(false)
+      setGaSetupFlow((prev) => ({
+        ...prev,
+        loading: false,
+        setupMessage: oauthSuccess ? null : prev.setupMessage,
+        setupDialogOpen: oauthSuccess ? true : prev.setupDialogOpen,
+      }))
     })
 
     if (oauthSuccess) {
-      requestAnimationFrame(() => {
-        setGaSetupMessage(null)
-        setGaSetupDialogOpen(true)
-      })
       toast({ title: 'Google Analytics connected', description: 'Select a property to finish setup.' })
       void loadGoogleAnalyticsPropertyOptions().catch((error) => {
         const mappedMessage = mapGoogleAnalyticsIntegrationError(error)
         requestAnimationFrame(() => {
-          setGaSetupMessage(mappedMessage)
+          setGaSetupFlow((prev) => ({ ...prev, setupMessage: mappedMessage }))
         })
         notifyFailure({ title: 'Property load failed', message: mappedMessage })
       })

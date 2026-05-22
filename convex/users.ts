@@ -200,10 +200,11 @@ export const listWorkspaceMembers = zWorkspaceQuery({
       ? [agencyAdmin, ...membersByAgency.filter((r) => r.legacyId !== agencyAdmin.legacyId)]
       : membersByAgency
 
-    return allRows
-      .slice(0, limit)
-      .filter((row) => row.status !== 'disabled' && row.status !== 'suspended')
-      .map((row) => serializeDirectoryUser(row))
+    return allRows.slice(0, limit).flatMap((row) =>
+      row.status !== 'disabled' && row.status !== 'suspended'
+        ? [serializeDirectoryUser(row)]
+        : [],
+    )
   },
 })
 
@@ -224,9 +225,11 @@ export const listAllUsers = zAdminQuery({
       .query('users')
       .take(limit)
 
-    return rows
-      .filter((row) => row.status !== 'disabled' && row.status !== 'suspended')
-      .map((row) => serializeDirectoryUser(row))
+    return rows.flatMap((row) =>
+      row.status !== 'disabled' && row.status !== 'suspended'
+        ? [serializeDirectoryUser(row)]
+        : [],
+    )
   },
 })
 
@@ -387,48 +390,50 @@ export const bulkUpsert = zAdminMutation({
   handler: async (ctx, args) => {
     const timestamp = nowMs()
 
-    for (const user of args.users) {
-      const existing = await ctx.db
-        .query('users')
-        .withIndex('by_legacyId', (q) => q.eq('legacyId', user.legacyId))
-        .unique()
+    await Promise.all(
+      args.users.map(async (user) => {
+        const existing = await ctx.db
+          .query('users')
+          .withIndex('by_legacyId', (q) => q.eq('legacyId', user.legacyId))
+          .unique()
 
-      const normalized = normalizeEmail((user.email ?? null) as string | null)
+        const normalized = normalizeEmail((user.email ?? null) as string | null)
 
-      const payload = {
-        legacyId: user.legacyId,
-        email: normalized.email,
-        emailLower: normalized.emailLower,
-        name: (user.name ?? null) as string | null,
-        role: (user.role ?? null) as string | null,
-        status: (user.status ?? null) as string | null,
-        agencyId: (user.agencyId ?? null) as string | null,
-        phoneNumber: (user.phoneNumber ?? null) as string | null,
-        photoUrl: (user.photoUrl ?? null) as string | null,
-        notificationPreferences: user.notificationPreferences
-          ? normalizePreferences(user.notificationPreferences as StoredNotificationPreferences)
-          : undefined,
-        regionalPreferences: (user.regionalPreferences ?? undefined) as
-          | { currency?: string | null; timezone?: string | null; locale?: string | null }
-          | undefined,
-        createdAtMs: (user.createdAtMs ?? null) as number | null,
-        updatedAtMs: (user.updatedAtMs ?? null) as number | null,
-      }
+        const payload = {
+          legacyId: user.legacyId,
+          email: normalized.email,
+          emailLower: normalized.emailLower,
+          name: (user.name ?? null) as string | null,
+          role: (user.role ?? null) as string | null,
+          status: (user.status ?? null) as string | null,
+          agencyId: (user.agencyId ?? null) as string | null,
+          phoneNumber: (user.phoneNumber ?? null) as string | null,
+          photoUrl: (user.photoUrl ?? null) as string | null,
+          notificationPreferences: user.notificationPreferences
+            ? normalizePreferences(user.notificationPreferences as StoredNotificationPreferences)
+            : undefined,
+          regionalPreferences: (user.regionalPreferences ?? undefined) as
+            | { currency?: string | null; timezone?: string | null; locale?: string | null }
+            | undefined,
+          createdAtMs: (user.createdAtMs ?? null) as number | null,
+          updatedAtMs: (user.updatedAtMs ?? null) as number | null,
+        }
 
-      if (existing) {
-        await ctx.db.patch(existing._id, {
+        if (existing) {
+          await ctx.db.patch(existing._id, {
+            ...payload,
+            updatedAtMs: payload.updatedAtMs ?? timestamp,
+          })
+          return
+        }
+
+        await ctx.db.insert('users', {
           ...payload,
+          createdAtMs: payload.createdAtMs ?? timestamp,
           updatedAtMs: payload.updatedAtMs ?? timestamp,
         })
-        continue
-      }
-
-      await ctx.db.insert('users', {
-        ...payload,
-        createdAtMs: payload.createdAtMs ?? timestamp,
-        updatedAtMs: payload.updatedAtMs ?? timestamp,
-      })
-    }
+      }),
+    )
 
     return { ok: true, upserted: args.users.length }
   },

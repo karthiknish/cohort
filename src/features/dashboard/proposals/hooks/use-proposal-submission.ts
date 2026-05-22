@@ -290,21 +290,25 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             const maxAttempts = 75 // 75 attempts × 4 seconds = 5 minutes
             const pollIntervalMs = 4000
 
-            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            const pollAiStatus = async (attempt: number): Promise<void> => {
                 const latest = await refreshProposalDraft(activeDraftId, {
                     workspaceId: workspaceId ?? '',
-                            convexToken: (await getIdToken()) ?? '',
-
+                    convexToken: (await getIdToken()) ?? '',
                 })
                 response = toProposalDeckState(latest)
 
                 // Accept ready, partial_success, or failed as terminal states
                 if (latest.status === 'ready' || latest.status === 'partial_success' || latest.status === 'failed') {
-                    break
+                    return
                 }
 
-                await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+                if (attempt < maxAttempts - 1) {
+                    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+                    return pollAiStatus(attempt + 1)
+                }
             }
+
+            await pollAiStatus(0)
 
             const isReady = response?.status === 'ready' || response?.status === 'partial_success'
             const isFailed = response?.status === 'failed'
@@ -342,14 +346,15 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 const maxAttempts = 30 // Poll for up to ~60 seconds
                 const pollInterval = 2000 // 2 seconds between attempts
 
-                for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                    await new Promise(resolve => setTimeout(resolve, pollInterval))
+                const pollDeckUrl = async (attempt: number): Promise<void> => {
+                    if (attempt > 0) {
+                        await new Promise((resolve) => setTimeout(resolve, pollInterval))
+                    }
 
                     try {
                         const refreshedProposal = await refreshProposalDraft(activeDraftId, {
                             workspaceId: workspaceId ?? '',
-                    convexToken: (await getIdToken()) ?? '',
-
+                            convexToken: (await getIdToken()) ?? '',
                         })
                         const deckUrl = refreshedProposal.pptUrl ?? refreshedProposal.presentationDeck?.storageUrl ?? null
 
@@ -357,13 +362,19 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                             finalPptUrl = deckUrl
                             finalDeck = refreshedProposal.presentationDeck ?? null
                             console.log('[ProposalWizard] Presentation deck ready after polling:', deckUrl)
-                            break
+                            return
                         }
                     } catch (pollError) {
                         logError(pollError, 'useProposalSubmission:pollDeckUrl')
                         // Continue polling even if one request fails
                     }
+
+                    if (attempt < maxAttempts - 1) {
+                        return pollDeckUrl(attempt + 1)
+                    }
                 }
+
+                await pollDeckUrl(0)
             }
 
             // Mark presentation as ready (either we have it or we've polled enough)
@@ -579,8 +590,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             const maxPollAttempts = 30
             const pollInterval = 3000
 
-            for (let attempt = 0; attempt < maxPollAttempts; attempt++) {
-                // Check current state
+            const pollRecheckDeck = async (attempt: number): Promise<void> => {
                 const currentProposal = await refreshProposalDraft(proposalId, {
                     workspaceId: workspaceId ?? '',
                     convexToken: (await getIdToken()) ?? '',
@@ -589,7 +599,6 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 const newDeckUrl = currentProposal.pptUrl ?? currentProposal.presentationDeck?.storageUrl ?? null
                 const newStatus = currentProposal.status
 
-                // Check for terminal states
                 if (newDeckUrl && (newStatus === 'ready' || newStatus === 'partial_success')) {
                     setPresentationDeck(
                         currentProposal.presentationDeck
@@ -621,23 +630,24 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 if (newStatus === 'failed') {
                     const deckError = getDeckError(currentProposal.presentationDeck)
                     notifyFailure({
-        title: 'Generation failed',
-        message: deckError,
-      })
+                        title: 'Generation failed',
+                        message: deckError,
+                    })
                     return
                 }
 
-                // If not done yet, wait before next poll (skip waiting on last iteration)
                 if (attempt < maxPollAttempts - 1) {
-                    await new Promise(resolve => setTimeout(resolve, pollInterval))
+                    await new Promise((resolve) => setTimeout(resolve, pollInterval))
+                    return pollRecheckDeck(attempt + 1)
                 }
+
+                toast({
+                    title: 'Still processing',
+                    description: 'The presentation is still being generated. Please try again in a few moments.',
+                })
             }
 
-            // Still pending after all polls
-            toast({
-                title: 'Still processing',
-                description: 'The presentation is still being generated. Please try again in a few moments.',
-            })
+            await pollRecheckDeck(0)
         } catch (error: unknown) {
             logError(error, 'useProposalSubmission:handleRecheckDeck')
             const message = asErrorMessage(error)

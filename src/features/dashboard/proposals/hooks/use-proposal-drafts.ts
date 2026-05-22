@@ -1,6 +1,6 @@
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo, useReducer } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -63,6 +63,32 @@ export interface UseProposalDraftsReturn {
     // Refs
     draftIdRef: React.MutableRefObject<string | null>
     wizardRef: React.RefObject<HTMLDivElement | null>
+}
+
+type ProposalBootstrapState = {
+    draftId: string | null
+    isBootstrapping: boolean
+}
+
+type ProposalBootstrapAction =
+    | { type: 'setDraftId'; value: string | null }
+    | { type: 'bootstrapStart' }
+    | { type: 'bootstrapFinish'; draftId: string | null }
+
+function proposalBootstrapReducer(
+    state: ProposalBootstrapState,
+    action: ProposalBootstrapAction,
+): ProposalBootstrapState {
+    switch (action.type) {
+        case 'setDraftId':
+            return { ...state, draftId: action.value }
+        case 'bootstrapStart':
+            return { ...state, isBootstrapping: true }
+        case 'bootstrapFinish':
+            return { draftId: action.draftId, isBootstrapping: false }
+        default:
+            return state
+    }
 }
 
 type ProposalRow = {
@@ -146,9 +172,16 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         }))
     }, [workspaceId, selectedClientId, convexProposals])
 
-    const [draftId, setDraftId] = useState<string | null>(null)
+    const [bootstrapState, dispatchBootstrap] = useReducer(proposalBootstrapReducer, {
+        draftId: null,
+        isBootstrapping: true,
+    })
+    const { draftId, isBootstrapping } = bootstrapState
+    const setDraftId = useCallback(
+        (value: string | null) => dispatchBootstrap({ type: 'setDraftId', value }),
+        [],
+    )
     const [isCreatingDraft, setIsCreatingDraft] = useState(false)
-    const [isBootstrapping, setIsBootstrapping] = useState(true)
     const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
     const [deletingProposalId, setDeletingProposalId] = useState<string | null>(null)
     const [proposalPendingDelete, setProposalPendingDelete] = useState<ProposalDraft | null>(null)
@@ -496,10 +529,10 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         let cancelled = false
 
         const bootstrapDraft = async () => {
-            setIsBootstrapping(true)
+            dispatchBootstrap({ type: 'bootstrapStart' })
+            let resolvedDraftId: string | null = null
             try {
                 if (!selectedClientId) {
-                    setDraftId(null)
                     const initialForm = createInitialProposalFormState()
                     onFormStateChangeRef.current(initialForm, { resetHistory: true })
                     onStepChangeRef.current(0)
@@ -508,45 +541,43 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                     onAiSuggestionsChangeRef.current(null)
                     onLastSubmissionSnapshotChangeRef.current(null)
                     lastSavedSnapshotRef.current = buildSnapshotKey({ form: initialForm, step: 0, clientId: null })
-                    return
-                }
-
-                const allProposals = proposals
-                if (cancelled) {
-                    return
-                }
-
-                const draft = allProposals.find((proposal) => proposal.status === 'draft') ?? allProposals[0]
-
-                if (draft) {
-                    setDraftId(draft.id)
-                    const mergedForm = mergeProposalForm(draft.formData as Partial<ProposalFormData>)
-                    const targetStep = Math.min(draft.stepProgress ?? 0, steps.length - 1)
-                    onFormStateChangeRef.current(mergedForm, { resetHistory: true })
-                    onStepChangeRef.current(targetStep)
-                    onSubmittedChangeRef.current(draft.status === 'ready')
-                    onPresentationDeckChangeRef.current(draft.presentationDeck ? { ...draft.presentationDeck, storageUrl: draft.presentationDeck.storageUrl ?? draft.pptUrl ?? null } : null)
-                    onAiSuggestionsChangeRef.current(draft.aiSuggestions ?? null)
-                    onLastSubmissionSnapshotChangeRef.current(null)
-                    lastSavedSnapshotRef.current = buildSnapshotKey({
-                        form: mergedForm,
-                        step: targetStep,
-                        clientId: draft.clientId ?? selectedClientId,
-                    })
                 } else {
-                    setDraftId(null)
-                    const initialForm = createInitialProposalFormState()
-                    onFormStateChangeRef.current(initialForm, { resetHistory: true })
-                    onStepChangeRef.current(0)
-                    onSubmittedChangeRef.current(false)
-                    onPresentationDeckChangeRef.current(null)
-                    onAiSuggestionsChangeRef.current(null)
-                    onLastSubmissionSnapshotChangeRef.current(null)
-                    lastSavedSnapshotRef.current = buildSnapshotKey({
-                        form: initialForm,
-                        step: 0,
-                        clientId: selectedClientId,
-                    })
+                    const allProposals = proposals
+                    if (cancelled) {
+                        return
+                    }
+
+                    const draft = allProposals.find((proposal) => proposal.status === 'draft') ?? allProposals[0]
+
+                    if (draft) {
+                        resolvedDraftId = draft.id
+                        const mergedForm = mergeProposalForm(draft.formData as Partial<ProposalFormData>)
+                        const targetStep = Math.min(draft.stepProgress ?? 0, steps.length - 1)
+                        onFormStateChangeRef.current(mergedForm, { resetHistory: true })
+                        onStepChangeRef.current(targetStep)
+                        onSubmittedChangeRef.current(draft.status === 'ready')
+                        onPresentationDeckChangeRef.current(draft.presentationDeck ? { ...draft.presentationDeck, storageUrl: draft.presentationDeck.storageUrl ?? draft.pptUrl ?? null } : null)
+                        onAiSuggestionsChangeRef.current(draft.aiSuggestions ?? null)
+                        onLastSubmissionSnapshotChangeRef.current(null)
+                        lastSavedSnapshotRef.current = buildSnapshotKey({
+                            form: mergedForm,
+                            step: targetStep,
+                            clientId: draft.clientId ?? selectedClientId,
+                        })
+                    } else {
+                        const initialForm = createInitialProposalFormState()
+                        onFormStateChangeRef.current(initialForm, { resetHistory: true })
+                        onStepChangeRef.current(0)
+                        onSubmittedChangeRef.current(false)
+                        onPresentationDeckChangeRef.current(null)
+                        onAiSuggestionsChangeRef.current(null)
+                        onLastSubmissionSnapshotChangeRef.current(null)
+                        lastSavedSnapshotRef.current = buildSnapshotKey({
+                            form: initialForm,
+                            step: 0,
+                            clientId: selectedClientId,
+                        })
+                    }
                 }
             } catch (err: unknown) {
                 if (cancelled) {
@@ -561,7 +592,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             } finally {
                 if (!cancelled) {
                     hydrationRef.current = true
-                    setIsBootstrapping(false)
+                    dispatchBootstrap({ type: 'bootstrapFinish', draftId: resolvedDraftId })
                 }
             }
         }

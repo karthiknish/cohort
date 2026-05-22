@@ -59,7 +59,7 @@ export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams
 
   let lastError: Error | null = null
 
-  for (let attempt = 0; attempt < TOKEN_REFRESH_CONFIG.maxRetries; attempt++) {
+  const attemptRefresh = async (attempt: number): Promise<string> => {
     try {
       const response = await fetch(`${META_OAUTH_TOKEN_ENDPOINT}?${params.toString()}`)
 
@@ -84,7 +84,7 @@ export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams
             { isRetryable: true, httpStatus: response.status },
           )
           await sleep(calculateBackoffDelay(attempt))
-          continue
+          return attemptRefresh(attempt + 1)
         }
 
         throw new IntegrationTokenError(
@@ -124,10 +124,12 @@ export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams
 
       if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
         await sleep(calculateBackoffDelay(attempt))
-        continue
+        return attemptRefresh(attempt + 1)
       }
     }
+
+    throw lastError ?? new IntegrationTokenError('Meta token refresh failed after all retries', 'facebook', userId)
   }
 
-  throw lastError ?? new IntegrationTokenError('Meta token refresh failed after all retries', 'facebook', userId)
+  return attemptRefresh(0)
 }

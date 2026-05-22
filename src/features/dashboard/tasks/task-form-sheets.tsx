@@ -180,7 +180,7 @@ export function EditTaskSheet({
             <Button type="submit" disabled={updating} className={TASKS_THEME.footerPrimary}>
               {updating ? (
                 <span className="inline-flex items-center gap-2">
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  <LoaderCircle className="size-4 animate-spin" />
                   Saving…
                 </span>
               ) : (

@@ -50,7 +50,7 @@ const DialogContent = ({ className, children, ref, ...props }: DialogContentProp
           interactiveTransitionClass
         )}
       >
-        <X className="h-4 w-4" />
+        <X className="size-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>

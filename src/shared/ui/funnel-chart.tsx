@@ -115,7 +115,7 @@ export function FunnelChart({
         <div className="mt-4 pt-4 border-t border-muted/20">
           <div className="flex flex-wrap gap-4 text-[10px] text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full" style={legendDotStyle} />
+              <div className="size-2 rounded-full" style={legendDotStyle} />
               <span>Conversion Stage</span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -196,7 +196,7 @@ function FunnelStepRow({
           className="absolute inset-y-0 left-0 h-full min-w-0 overflow-hidden rounded-lg transition-[width] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
           style={widthStyle}
         >
-          <div className="h-full w-full rounded-lg" style={fillStyle} />
+          <div className="size-full rounded-lg" style={fillStyle} />
           <div
             className="pointer-events-none absolute inset-0 flex min-w-0 items-center px-3 text-[10px] font-medium text-viewer-chrome drop-shadow-[0_1px_2px_rgb(0_0_0/0.55)]"
             style={labelStyle}

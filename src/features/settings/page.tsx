@@ -33,7 +33,7 @@ function SettingsPageFallback() {
   return (
     <div className="flex min-h-[40vh] items-center justify-center" role="status" aria-live="polite">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+        <LoaderCircle className="size-4 animate-spin" aria-hidden />
         Loading settings…
       </div>
     </div>
@@ -88,7 +88,7 @@ function SettingsPageInner() {
               'gap-2 rounded-lg py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm',
             )}
           >
-            <User className="h-4 w-4" aria-hidden />
+            <User className="size-4" aria-hidden />
             Profile
           </TabsTrigger>
           <TabsTrigger
@@ -97,7 +97,7 @@ function SettingsPageInner() {
               'gap-2 rounded-lg py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm',
             )}
           >
-            <Bell className="h-4 w-4" aria-hidden />
+            <Bell className="size-4" aria-hidden />
             Notifications
           </TabsTrigger>
           <TabsTrigger
@@ -106,7 +106,7 @@ function SettingsPageInner() {
               'gap-2 rounded-lg py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm',
             )}
           >
-            <Shield className="h-4 w-4" aria-hidden />
+            <Shield className="size-4" aria-hidden />
             Account
           </TabsTrigger>
         </TabsList>

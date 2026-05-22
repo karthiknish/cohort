@@ -111,10 +111,11 @@ export function metricsForOverviewDisplay(
 }
 
 export function buildCanonicalConnectedIds(rawIds: string[]): CanonicalAdsProviderId[] {
-  const ids = rawIds
-    .map((id) => normalizeAdsProviderId(id))
-    .filter((id): id is CanonicalAdsProviderId => id !== null)
-  return [...new Set(ids)].sort()
+  const ids = rawIds.flatMap((id) => {
+    const normalized = normalizeAdsProviderId(id)
+    return normalized !== null ? [normalized] : []
+  })
+  return [...new Set(ids)].toSorted()
 }
 
 export function filterMetricsToConnected(

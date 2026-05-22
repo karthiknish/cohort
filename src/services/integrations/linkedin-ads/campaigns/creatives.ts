@@ -32,39 +32,43 @@ export async function resolveLinkedInUrns(options: {
   const videoUrns = uniqueUrns.filter(u => u.includes('digitalmediaAsset'))
   const imageUrns = uniqueUrns.filter(u => u.includes('image'))
 
+  const resolveVideoUrn = async (urn: string) => {
+    try {
+      const id = urn.split(':').pop()
+      const url = `https://api.linkedin.com/v2/videos/${id}`
+      const { payload } = await linkedinAdsClient.executeRequest<{ downloadUrl?: string }>({
+        url,
+        method: 'GET',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        operation: 'resolveVideo',
+        maxRetries,
+      })
+      if (payload.downloadUrl) results[urn] = payload.downloadUrl
+    } catch (e) {
+      console.warn(`Failed to resolve video URN: ${urn}`, e)
+    }
+  }
+
+  const resolveImageUrn = async (urn: string) => {
+    try {
+      const id = urn.split(':').pop()
+      const url = `https://api.linkedin.com/v2/images/${id}`
+      const { payload } = await linkedinAdsClient.executeRequest<{ downloadUrl?: string }>({
+        url,
+        method: 'GET',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        operation: 'resolveImage',
+        maxRetries,
+      })
+      if (payload.downloadUrl) results[urn] = payload.downloadUrl
+    } catch (e) {
+      console.warn(`Failed to resolve image URN: ${urn}`, e)
+    }
+  }
+
   await Promise.all([
-    ...videoUrns.map(async (urn) => {
-      try {
-        const id = urn.split(':').pop()
-        const url = `https://api.linkedin.com/v2/videos/${id}`
-        const { payload } = await linkedinAdsClient.executeRequest<{ downloadUrl?: string }>({
-          url,
-          method: 'GET',
-          headers: { Authorization: `Bearer ${accessToken}` },
-          operation: 'resolveVideo',
-          maxRetries,
-        })
-        if (payload.downloadUrl) results[urn] = payload.downloadUrl
-      } catch (e) {
-        console.warn(`Failed to resolve video URN: ${urn}`, e)
-      }
-    }),
-    ...imageUrns.map(async (urn) => {
-      try {
-        const id = urn.split(':').pop()
-        const url = `https://api.linkedin.com/v2/images/${id}`
-        const { payload } = await linkedinAdsClient.executeRequest<{ downloadUrl?: string }>({
-          url,
-          method: 'GET',
-          headers: { Authorization: `Bearer ${accessToken}` },
-          operation: 'resolveImage',
-          maxRetries,
-        })
-        if (payload.downloadUrl) results[urn] = payload.downloadUrl
-      } catch (e) {
-        console.warn(`Failed to resolve image URN: ${urn}`, e)
-      }
-    })
+    ...videoUrns.map(resolveVideoUrn),
+    ...imageUrns.map(resolveImageUrn),
   ])
 
   return results

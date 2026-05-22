@@ -72,7 +72,7 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Target className="w-4 h-4 text-accent" />
+            <Target className="size-4 text-accent" />
             Target Impression Share
           </CardTitle>
           <CardDescription>
@@ -192,7 +192,7 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
       <Card className="border-accent/20 bg-accent/5">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <Eye className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+            <Eye className="size-5 text-accent flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Brand Awareness Best Practices</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useReducer, useCallback, useMemo } from 'react'
 import NextImage from 'next/image'
 import { AnimatePresence, LazyMotion, domAnimation, m } from '@/shared/ui/motion'
 import {
@@ -62,6 +62,56 @@ export type CreativePerformanceSummary = AdMetricsSummary & {
 
 type Platform = 'facebook' | 'instagram' | 'linkedin' | 'tiktok'
 
+type CreativeSocialPreviewState = {
+  imageLoadFailed: boolean
+  imageLightboxOpen: boolean
+  profileImageError: boolean
+  aspectRatio: 'feed' | 'reel'
+  isPlaying: boolean
+  activePlatform: Platform
+}
+
+type CreativeSocialPreviewAction =
+  | { type: 'setImageLoadFailed'; value: boolean }
+  | { type: 'setImageLightboxOpen'; value: boolean }
+  | { type: 'setProfileImageError'; value: boolean }
+  | { type: 'setAspectRatio'; value: 'feed' | 'reel' }
+  | { type: 'setIsPlaying'; value: boolean }
+  | { type: 'setActivePlatform'; value: Platform }
+
+function createInitialCreativeSocialPreviewState(defaultPlatform: Platform): CreativeSocialPreviewState {
+  return {
+    imageLoadFailed: false,
+    imageLightboxOpen: false,
+    profileImageError: false,
+    aspectRatio: 'feed',
+    isPlaying: false,
+    activePlatform: defaultPlatform,
+  }
+}
+
+function creativeSocialPreviewReducer(
+  state: CreativeSocialPreviewState,
+  action: CreativeSocialPreviewAction,
+): CreativeSocialPreviewState {
+  switch (action.type) {
+    case 'setImageLoadFailed':
+      return { ...state, imageLoadFailed: action.value }
+    case 'setImageLightboxOpen':
+      return { ...state, imageLightboxOpen: action.value }
+    case 'setProfileImageError':
+      return { ...state, profileImageError: action.value }
+    case 'setAspectRatio':
+      return { ...state, aspectRatio: action.value }
+    case 'setIsPlaying':
+      return { ...state, isPlaying: action.value }
+    case 'setActivePlatform':
+      return { ...state, activePlatform: action.value }
+    default:
+      return state
+  }
+}
+
 function safeHostname(url: string | undefined, fallback: string): string {
   if (!url) return fallback
   try {
@@ -91,12 +141,12 @@ function PreviewAvatar(props: {
           width={40}
           height={40}
           unoptimized
-          className="h-full w-full object-cover"
+          className="size-full object-cover"
           onError={onProfileImageError}
           style={crispEdgesStyle}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-[#e4e6eb] text-sm font-semibold text-[#050505]">
+        <div className="flex size-full items-center justify-center bg-[#e4e6eb] text-sm font-semibold text-[#050505]">
           {initial}
         </div>
       )}
@@ -113,12 +163,12 @@ function PreviewVariantButton({
   selected: boolean
   onSelect: (index: number) => void
 }) {
-  const handleClick = useCallback(() => onSelect(index), [index, onSelect])
+  const onSelectPreview = useCallback(() => onSelect(index), [index, onSelect])
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectPreview}
       className={cn(
         'h-6 min-w-6 rounded-md px-1.5 text-[10px] font-bold transition-colors',
         selected
@@ -158,23 +208,42 @@ export function CreativeSocialPreview(props: {
     onPreviewDescriptionIndexChange,
   } = props
 
-  const [imageLoadFailed, setImageLoadFailed] = useState(false)
-  const [imageLightboxOpen, setImageLightboxOpen] = useState(false)
-  const [profileImageError, setProfileImageError] = useState(false)
-  const [aspectRatio, setAspectRatio] = useState<'feed' | 'reel'>('feed')
-  const [isPlaying, setIsPlaying] = useState(false)
+  const availablePlatforms: Platform[] = creative.providerId === 'linkedin'
+    ? ['linkedin']
+    : creative.providerId === 'tiktok'
+      ? ['tiktok' as Platform]
+      : ['facebook', 'instagram']
+
+  const [previewState, dispatch] = useReducer(
+    creativeSocialPreviewReducer,
+    availablePlatforms[0] ?? 'facebook',
+    createInitialCreativeSocialPreviewState,
+  )
+  const {
+    imageLoadFailed,
+    imageLightboxOpen,
+    profileImageError,
+    aspectRatio,
+    isPlaying,
+    activePlatform,
+  } = previewState
+
   const videoRef = React.useRef<HTMLVideoElement>(null)
 
   const mediaAspectClass = aspectRatio === 'reel' ? 'aspect-[9/16]' : 'aspect-square'
 
-  const handlePlay = useCallback(() => setIsPlaying(true), [])
-  const handlePause = useCallback(() => setIsPlaying(false), [])
-  const handleEnded = useCallback(() => setIsPlaying(false), [])
-  const handleImageLoadFailed = useCallback(() => setImageLoadFailed(true), [])
-  const handleOpenImageLightbox = useCallback(() => setImageLightboxOpen(true), [])
-  const handleProfileImageError = useCallback(() => setProfileImageError(true), [])
-  const handleSetFeed = useCallback(() => setAspectRatio('feed'), [])
-  const handleSetReel = useCallback(() => setAspectRatio('reel'), [])
+  const handlePlay = useCallback(() => dispatch({ type: 'setIsPlaying', value: true }), [])
+  const handlePause = useCallback(() => dispatch({ type: 'setIsPlaying', value: false }), [])
+  const handleEnded = useCallback(() => dispatch({ type: 'setIsPlaying', value: false }), [])
+  const handleImageLoadFailed = useCallback(() => dispatch({ type: 'setImageLoadFailed', value: true }), [])
+  const handleOpenImageLightbox = useCallback(() => dispatch({ type: 'setImageLightboxOpen', value: true }), [])
+  const handleProfileImageError = useCallback(() => dispatch({ type: 'setProfileImageError', value: true }), [])
+  const handleSetFeed = useCallback(() => dispatch({ type: 'setAspectRatio', value: 'feed' }), [])
+  const handleSetReel = useCallback(() => dispatch({ type: 'setAspectRatio', value: 'reel' }), [])
+  const handleImageLightboxOpenChange = useCallback(
+    (value: boolean) => dispatch({ type: 'setImageLightboxOpen', value }),
+    [],
+  )
   const togglePlayPause = useCallback(() => {
     if (videoRef.current) {
       if (isPlaying) {
@@ -182,7 +251,7 @@ export function CreativeSocialPreview(props: {
       } else {
         videoRef.current.play()
       }
-      setIsPlaying(!isPlaying)
+      dispatch({ type: 'setIsPlaying', value: !isPlaying })
     }
   }, [isPlaying])
 
@@ -218,7 +287,7 @@ export function CreativeSocialPreview(props: {
           <video
             ref={videoRef}
             src={creative.videoUrl}
-            className="w-full h-full object-cover"
+            className="size-full object-cover"
             poster={creative.imageUrl || creative.thumbnailUrl}
             onPlay={handlePlay}
             onPause={handlePause}
@@ -232,8 +301,8 @@ export function CreativeSocialPreview(props: {
             onClick={togglePlayPause}
             className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
           >
-            <div className="h-14 w-14 rounded-full bg-background/40 backdrop-blur-xl border border-background/20 flex items-center justify-center shadow-2xl">
-              {isPlaying ? <Pause className="h-6 w-6 text-background" /> : <Play className="h-6 w-6 text-background ml-1" />}
+            <div className="size-14 rounded-full bg-background/40 backdrop-blur-xl border border-background/20 flex items-center justify-center shadow-2xl">
+              {isPlaying ? <Pause className="size-6 text-background" /> : <Play className="size-6 text-background ml-1" />}
             </div>
           </button>
         </div>
@@ -256,7 +325,7 @@ export function CreativeSocialPreview(props: {
             />
           ) : (
             <div className="text-muted-foreground flex flex-col items-center">
-              <Video className="h-10 w-10 mb-2 opacity-20" />
+              <Video className="size-10 mb-2 opacity-20" />
               <p className="text-[10px] text-background/40 uppercase tracking-widest font-black">Video Preview</p>
             </div>
           )}
@@ -265,9 +334,9 @@ export function CreativeSocialPreview(props: {
             whileHover={whileHoverScale}
             whileTap={whileTapScale}
             variants={scaleVariants}
-            className="h-14 w-14 rounded-full bg-background/40 backdrop-blur-xl border border-background/20 flex items-center justify-center shadow-2xl cursor-pointer"
+            className="size-14 rounded-full bg-background/40 backdrop-blur-xl border border-background/20 flex items-center justify-center shadow-2xl cursor-pointer"
           >
-              <Video className="h-6 w-6 text-background" />
+              <Video className="size-6 text-background" />
             </m.div>
           </div>
           <div className="absolute bottom-4 left-4 flex gap-2">
@@ -285,13 +354,13 @@ export function CreativeSocialPreview(props: {
           <div className={cn('relative overflow-hidden bg-muted/10 group', mediaAspectClass)}>
             {imageLoadFailed ? (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                <ImageIcon className="mb-2 h-8 w-8 opacity-20" aria-hidden />
+                <ImageIcon className="mb-2 size-8 opacity-20" aria-hidden />
                 <p className="text-[10px] font-bold uppercase tracking-tighter">Asset Unavailable</p>
               </div>
             ) : (
               <button
                 type="button"
-                className="relative block h-full w-full cursor-zoom-in"
+                className="relative block size-full cursor-zoom-in"
                 onClick={handleOpenImageLightbox}
                 aria-label={`View full image for ${displayName}`}
               >
@@ -319,13 +388,13 @@ export function CreativeSocialPreview(props: {
                   className="pointer-events-auto h-8 gap-1.5 bg-background/95 shadow-md"
                   onClick={handleOpenImageLightbox}
                 >
-                  <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+                  <Maximize2 className="size-3.5" aria-hidden />
                   Expand
                 </Button>
               </div>
             ) : null}
           </div>
-          <Dialog open={imageLightboxOpen} onOpenChange={setImageLightboxOpen}>
+          <Dialog open={imageLightboxOpen} onOpenChange={handleImageLightboxOpenChange}>
             <DialogContent className="max-w-4xl gap-0 overflow-hidden border-border/60 p-0">
               <DialogTitle className="sr-only">{displayName}</DialogTitle>
               <DialogDescription className="sr-only">Full-size creative preview</DialogDescription>
@@ -348,7 +417,7 @@ export function CreativeSocialPreview(props: {
 
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground bg-muted/5 rounded-2xl border-2 border-dashed border-muted">
-        <FileText className="h-10 w-10 mb-2 opacity-10" />
+        <FileText className="size-10 mb-2 opacity-10" />
         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">No Asset Data</p>
       </div>
     )
@@ -376,7 +445,7 @@ export function CreativeSocialPreview(props: {
                     profileImageUrl={creative.pageProfileImageUrl}
                     profileImageError={profileImageError}
                     onProfileImageError={handleProfileImageError}
-                    className="h-8 w-8"
+                    className="size-8"
                     ringClassName="p-[2px] bg-gradient-to-tr from-[#feda75] via-[#fa7e1e] to-[#d62976]"
                   />
                   <div className="min-w-0">
@@ -384,7 +453,7 @@ export function CreativeSocialPreview(props: {
                     <p className="text-[11px] leading-tight text-[#8e8e8e]">Sponsored</p>
                   </div>
                 </div>
-                <MoreHorizontal className="h-5 w-5 shrink-0 text-[#262626]" strokeWidth={1.75} />
+                <MoreHorizontal className="size-5 shrink-0 text-[#262626]" strokeWidth={1.75} />
               </div>
 
               {/* Primary text above media (common for IG link ads) */}
@@ -400,11 +469,11 @@ export function CreativeSocialPreview(props: {
               {/* Action row */}
               <div className="flex items-center justify-between px-3 py-2.5">
                 <div className="flex items-center gap-4">
-                  <Heart className="h-6 w-6" strokeWidth={1.75} />
-                  <MessageCircle className="h-6 w-6" strokeWidth={1.75} />
-                  <Share2 className="h-6 w-6" strokeWidth={1.75} />
+                  <Heart className="size-6" strokeWidth={1.75} />
+                  <MessageCircle className="size-6" strokeWidth={1.75} />
+                  <Share2 className="size-6" strokeWidth={1.75} />
                 </div>
-                <Bookmark className="h-6 w-6" strokeWidth={1.75} />
+                <Bookmark className="size-6" strokeWidth={1.75} />
               </div>
 
               <div className="space-y-1 px-3 pb-2">
@@ -436,7 +505,7 @@ export function CreativeSocialPreview(props: {
           {activePlatform === 'linkedin' && (
             <div className="bg-background rounded-tr-[2.5rem] rounded-tl-[2.5rem] overflow-hidden text-left">
               <div className="p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-info flex items-center justify-center text-info-foreground font-black text-lg overflow-hidden shrink-0">
+                <div className="size-10 rounded-lg bg-info flex items-center justify-center text-info-foreground font-black text-lg overflow-hidden shrink-0">
                   {creative.pageProfileImageUrl && !profileImageError ? (
                     <NextImage
                       src={creative.pageProfileImageUrl}
@@ -444,7 +513,7 @@ export function CreativeSocialPreview(props: {
                       width={40}
                       height={40}
                       unoptimized
-                      className="h-full w-full object-cover"
+                      className="size-full object-cover"
                       onError={handleProfileImageError}
                       style={crispEdgesStyle}
                     />
@@ -479,9 +548,9 @@ export function CreativeSocialPreview(props: {
               </div>
 
               <div className="px-5 py-3 flex items-center gap-6 opacity-60">
-                <span className="text-[11px] font-bold flex items-center gap-1.5"><Heart className="h-4 w-4" /> Like</span>
-                <span className="text-[11px] font-bold flex items-center gap-1.5"><MessageCircle className="h-4 w-4" /> Comment</span>
-                <span className="text-[11px] font-bold flex items-center gap-1.5"><Share2 className="h-4 w-4" /> Repost</span>
+                <span className="text-[11px] font-bold flex items-center gap-1.5"><Heart className="size-4" /> Like</span>
+                <span className="text-[11px] font-bold flex items-center gap-1.5"><MessageCircle className="size-4" /> Comment</span>
+                <span className="text-[11px] font-bold flex items-center gap-1.5"><Share2 className="size-4" /> Repost</span>
               </div>
             </div>
           )}
@@ -490,7 +559,7 @@ export function CreativeSocialPreview(props: {
             <div className="bg-background rounded-tr-[2.5rem] rounded-tl-[2.5rem] overflow-hidden text-left">
               <div className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-foreground text-background flex items-center justify-center font-black text-sm overflow-hidden shrink-0">
+                  <div className="size-10 rounded-full bg-foreground text-background flex items-center justify-center font-black text-sm overflow-hidden shrink-0">
                     {creative.pageProfileImageUrl && !profileImageError ? (
                       <NextImage
                         src={creative.pageProfileImageUrl}
@@ -498,7 +567,7 @@ export function CreativeSocialPreview(props: {
                         width={40}
                         height={40}
                         unoptimized
-                        className="h-full w-full object-cover"
+                        className="size-full object-cover"
                         onError={handleProfileImageError}
                         style={crispEdgesStyle}
                       />
@@ -511,16 +580,16 @@ export function CreativeSocialPreview(props: {
                     <p className="text-[11px] opacity-60 leading-tight">Sponsored content</p>
                   </div>
                 </div>
-                <MoreHorizontal className="h-4 w-4 opacity-40" />
+                <MoreHorizontal className="size-4 opacity-40" />
               </div>
 
               {renderMedia()}
 
               <div className="p-4 space-y-4">
                 <div className="flex items-center gap-6 text-[11px] font-bold opacity-80">
-                  <span className="flex items-center gap-1.5"><Heart className="h-4 w-4" /> 12.4K</span>
-                  <span className="flex items-center gap-1.5"><MessageCircle className="h-4 w-4" /> 418</span>
-                  <span className="flex items-center gap-1.5"><Share2 className="h-4 w-4" /> 109</span>
+                  <span className="flex items-center gap-1.5"><Heart className="size-4" /> 12.4K</span>
+                  <span className="flex items-center gap-1.5"><MessageCircle className="size-4" /> 418</span>
+                  <span className="flex items-center gap-1.5"><Share2 className="size-4" /> 109</span>
                 </div>
 
                 <div className="space-y-1.5">
@@ -549,17 +618,17 @@ export function CreativeSocialPreview(props: {
                     profileImageUrl={creative.pageProfileImageUrl}
                     profileImageError={profileImageError}
                     onProfileImageError={handleProfileImageError}
-                    className="h-10 w-10"
+                    className="size-10"
                   />
                   <div className="min-w-0 flex-1 text-left">
                     <p className="truncate text-[15px] font-semibold leading-[1.2]">{pageDisplayName}</p>
                     <p className="flex items-center gap-1 text-[13px] leading-[1.2] text-[#65676b]">
                       <span>Sponsored</span>
                       <span aria-hidden>·</span>
-                      <Globe className="h-3 w-3" aria-hidden />
+                      <Globe className="size-3" aria-hidden />
                     </p>
                   </div>
-                  <MoreHorizontal className="h-5 w-5 shrink-0 text-[#65676b]" strokeWidth={1.75} />
+                  <MoreHorizontal className="size-5 shrink-0 text-[#65676b]" strokeWidth={1.75} />
                 </div>
 
                 {/* Primary text — spaced clearly above media */}
@@ -591,26 +660,26 @@ export function CreativeSocialPreview(props: {
                 </div>
 
                 {/* Reactions */}
-                <div className="flex items-center justify-around border-b border-[#dadde1] px-1 py-1">
+                <div className="flex items-center justify-around border-b border-[#dadde1] p-1">
                   <button
                     type="button"
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[15px] font-semibold text-[#65676b] hover:bg-[#f0f2f5]"
                   >
-                    <ThumbsUp className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                    <ThumbsUp className="size-[18px]" strokeWidth={1.75} />
                     Like
                   </button>
                   <button
                     type="button"
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[15px] font-semibold text-[#65676b] hover:bg-[#f0f2f5]"
                   >
-                    <MessageCircle className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                    <MessageCircle className="size-[18px]" strokeWidth={1.75} />
                     Comment
                   </button>
                   <button
                     type="button"
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[15px] font-semibold text-[#65676b] hover:bg-[#f0f2f5]"
                   >
-                    <Share2 className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                    <Share2 className="size-[18px]" strokeWidth={1.75} />
                     Share
                   </button>
                 </div>
@@ -622,15 +691,10 @@ export function CreativeSocialPreview(props: {
     )
   }
 
-  // Determine available platforms based on provider
-  const availablePlatforms: Platform[] = creative.providerId === 'linkedin'
-    ? ['linkedin']
-    : creative.providerId === 'tiktok'
-      ? ['tiktok' as Platform]
-      : ['facebook', 'instagram'] // Meta ads show Facebook & Instagram
-
-  const [activePlatform, setActivePlatform] = useState<Platform>(availablePlatforms[0] ?? 'facebook')
-  const handlePlatformChange = useCallback((v: string) => setActivePlatform(v as Platform), [])
+  const handlePlatformChange = useCallback(
+    (v: string) => dispatch({ type: 'setActivePlatform', value: v as Platform }),
+    [],
+  )
 
   return (
     <LazyMotion features={domAnimation}>
@@ -649,23 +713,23 @@ export function CreativeSocialPreview(props: {
                 type="button"
                 onClick={handleSetFeed}
                 className={cn(
-                  "h-8 w-8 rounded-md flex items-center justify-center motion-chromatic",
+                  "size-8 rounded-md flex items-center justify-center motion-chromatic",
                   aspectRatio === 'feed' ? "bg-background shadow-sm" : "hover:bg-muted/50"
                 )}
                 title="Feed (1:1)"
               >
-                <Square className="h-4 w-4" />
+                <Square className="size-4" />
               </button>
               <button
                 type="button"
                 onClick={handleSetReel}
                 className={cn(
-                  "h-8 w-8 rounded-md flex items-center justify-center motion-chromatic",
+                  "size-8 rounded-md flex items-center justify-center motion-chromatic",
                   aspectRatio === 'reel' ? "bg-background shadow-sm" : "hover:bg-muted/50"
                 )}
                 title="Reel (9:16)"
               >
-                <RectangleVertical className="h-4 w-4" />
+                <RectangleVertical className="size-4" />
               </button>
             </div>
 
@@ -674,18 +738,18 @@ export function CreativeSocialPreview(props: {
               <Tabs value={activePlatform} onValueChange={handlePlatformChange} className="w-auto">
                 <TabsList className="h-10 bg-muted/30 p-1 rounded-lg border border-muted-foreground/10">
                   {availablePlatforms.includes('facebook') && (
-                    <TabsTrigger value="facebook" className="h-8 w-8 p-0 rounded-md">
-                      <Facebook className="h-4 w-4" />
+                    <TabsTrigger value="facebook" className="size-8 p-0 rounded-md">
+                      <Facebook className="size-4" />
                     </TabsTrigger>
                   )}
                   {availablePlatforms.includes('instagram') && (
-                    <TabsTrigger value="instagram" className="h-8 w-8 p-0 rounded-md">
-                      <Instagram className="h-4 w-4" />
+                    <TabsTrigger value="instagram" className="size-8 p-0 rounded-md">
+                      <Instagram className="size-4" />
                     </TabsTrigger>
                   )}
                   {availablePlatforms.includes('linkedin') && (
-                    <TabsTrigger value="linkedin" className="h-8 w-8 p-0 rounded-md">
-                      <Linkedin className="h-4 w-4" />
+                    <TabsTrigger value="linkedin" className="size-8 p-0 rounded-md">
+                      <Linkedin className="size-4" />
                     </TabsTrigger>
                   )}
                 </TabsList>
@@ -751,8 +815,8 @@ export function CreativeSocialPreview(props: {
           <Card className="border border-border/60 bg-card shadow-lg rounded-[2.5rem] overflow-hidden">
             <CardHeader className="pb-4 pt-8 px-8">
               <CardTitle className="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-3 text-primary/80">
-                <div className="h-6 w-6 rounded-lg bg-accent/10 flex items-center justify-center">
-                  <Activity className="h-3.5 w-3.5 text-primary" />
+                <div className="size-6 rounded-lg bg-accent/10 flex items-center justify-center">
+                  <Activity className="size-3.5 text-primary" />
                 </div>
                 The Alpha Score
               </CardTitle>

@@ -113,8 +113,8 @@ export function MeetingScheduleCardFrame({
     <Card className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden')}>
       <CardHeader className="space-y-3 border-b border-muted/40 bg-muted/10 pb-4">
         <div className="flex items-start gap-3">
-          <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 shrink-0 rounded-lg')}>
-            <CalendarPlus className="h-5 w-5" aria-hidden />
+          <div className={cn(DASHBOARD_THEME.icons.container, 'size-10 shrink-0 rounded-lg')}>
+            <CalendarPlus className="size-5" aria-hidden />
           </div>
           <div className="min-w-0 flex-1 space-y-1">
             <CardTitle className="text-base leading-tight">{cardTitle}</CardTitle>
@@ -191,7 +191,7 @@ export function MeetingScheduleCardFrame({
             <Button type="submit" className={cn(getButtonClasses('primary'), 'min-w-40')} disabled={submitDisabled}>
               {scheduling ? (
                 <>
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
                   {submittingLabel}
                 </>
               ) : (

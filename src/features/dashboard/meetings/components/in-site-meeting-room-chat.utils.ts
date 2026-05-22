@@ -216,8 +216,7 @@ export function countUnreadMeetingChatMessages(messages: ReceivedChatMessage[], 
 export function getMeetingChatInitials(label: string): string {
   return label
     .split(' ')
-    .filter(Boolean)
-    .map((segment) => segment[0])
+    .flatMap((segment) => (segment ? [segment[0]] : []))
     .join('')
     .slice(0, 2)
     .toUpperCase() || 'P'

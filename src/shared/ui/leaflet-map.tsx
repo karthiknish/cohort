@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -39,7 +39,7 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
   const markersRef = useRef<LeafletMarkerBinding[]>([])
-  const [mapReady, setMapReady] = useState(false)
+  const mapReadyRef = useRef(false)
   const initialViewRef = useRef<{ center: L.LatLngTuple; zoom: number }>(
     locations.length === 1
       ? { center: [locations[0]!.lat, locations[0]!.lng], zoom: getZoomForLocation(locations[0]!) }
@@ -47,6 +47,95 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
         ? { center: [locations[0]!.lat, locations[0]!.lng], zoom: 4 }
         : { center: [20, 0], zoom: 2 }
   )
+
+  const syncMarkers = useCallback(() => {
+    const map = mapInstanceRef.current
+    if (!map || !mapReadyRef.current) {
+      return undefined
+    }
+
+    let frameId: number | null = null
+
+    markersRef.current.forEach(({ marker, clickHandler }) => {
+      if (clickHandler) {
+        marker.off('click', clickHandler)
+      }
+      marker.remove()
+    })
+    markersRef.current = []
+
+    const validLocations = locations.filter(
+      (loc) => Number.isFinite(loc.lat) && Number.isFinite(loc.lng) && !(loc.lat === 0 && loc.lng === 0)
+    )
+
+    if (validLocations.length === 0) {
+      map.setView([20, 0], 2)
+      return undefined
+    }
+
+    validLocations.forEach((loc) => {
+      const marker = L.marker([loc.lat, loc.lng])
+        .addTo(map)
+        .bindPopup(
+          `<div class="text-sm"><p class="font-medium">${loc.name}</p>${loc.type ? `<p class="text-xs opacity-70 capitalize">${loc.type}</p>` : ''}</div>`
+        )
+
+      let clickHandler: (() => void) | undefined
+
+      if (onMarkerClick) {
+        clickHandler = () => onMarkerClick(loc)
+        marker.on('click', clickHandler)
+      }
+
+      markersRef.current.push({ marker, clickHandler })
+    })
+
+    // Ensure the map has a real size before fitting/centering.
+    frameId = requestAnimationFrame(() => {
+      map.invalidateSize()
+
+      if (validLocations.length === 1) {
+        const zoomLevel = getZoomForLocation(validLocations[0]!)
+        map.setView([validLocations[0]!.lat, validLocations[0]!.lng], zoomLevel, { animate: false })
+        return
+      }
+
+      const bounds = L.latLngBounds(validLocations.map((loc) => [loc.lat, loc.lng] as L.LatLngTuple))
+
+      // If all coordinates are nearly identical, fitBounds can look like it "didn't zoom".
+      // Expand the bounds slightly to force a sensible zoom.
+      if (bounds.isValid()) {
+        const northEast = bounds.getNorthEast()
+        const southWest = bounds.getSouthWest()
+        const latSpan = Math.abs(northEast.lat - southWest.lat)
+        const lngSpan = Math.abs(northEast.lng - southWest.lng)
+
+        if (latSpan < 0.01 && lngSpan < 0.01) {
+          bounds.extend([northEast.lat + 0.05, northEast.lng + 0.05])
+          bounds.extend([southWest.lat - 0.05, southWest.lng - 0.05])
+        }
+      }
+
+      map.fitBounds(bounds, { padding: [50, 50], animate: false, maxZoom: 12 })
+    })
+
+    return () => {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId)
+      }
+
+      markersRef.current.forEach(({ marker, clickHandler }) => {
+        if (clickHandler) {
+          marker.off('click', clickHandler)
+        }
+        marker.remove()
+      })
+      markersRef.current = []
+    }
+  }, [locations, onMarkerClick])
+
+  const syncMarkersRef = useRef(syncMarkers)
+  syncMarkersRef.current = syncMarkers
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return
@@ -77,7 +166,8 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
     mapInstanceRef.current = map
 
     const handleMapReady = () => {
-      setMapReady(true)
+      mapReadyRef.current = true
+      syncMarkersRef.current()
     }
 
     map.whenReady(handleMapReady)
@@ -86,93 +176,13 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
       map.off('load', handleMapReady)
       map.remove()
       mapInstanceRef.current = null
-      setMapReady(false)
+      mapReadyRef.current = false
     }
   }, [interactive])
 
-   useEffect(() => {
-     const map = mapInstanceRef.current
-     if (!map || !mapReady) return
+  useEffect(() => {
+    return syncMarkers()
+  }, [syncMarkers])
 
-     let frameId: number | null = null
-
-     markersRef.current.forEach(({ marker, clickHandler }) => {
-       if (clickHandler) {
-         marker.off('click', clickHandler)
-       }
-       marker.remove()
-     })
-     markersRef.current = []
-
-     const validLocations = locations.filter(
-       (loc) => Number.isFinite(loc.lat) && Number.isFinite(loc.lng) && !(loc.lat === 0 && loc.lng === 0)
-     )
-
-     if (validLocations.length === 0) {
-       map.setView([20, 0], 2)
-       return
-     }
-
-     validLocations.forEach((loc) => {
-       const marker = L.marker([loc.lat, loc.lng])
-         .addTo(map)
-         .bindPopup(
-           `<div class="text-sm"><p class="font-medium">${loc.name}</p>${loc.type ? `<p class="text-xs opacity-70 capitalize">${loc.type}</p>` : ''}</div>`
-         )
-
-       let clickHandler: (() => void) | undefined
-
-       if (onMarkerClick) {
-         clickHandler = () => onMarkerClick(loc)
-         marker.on('click', clickHandler)
-       }
-
-       markersRef.current.push({ marker, clickHandler })
-     })
-
-     // Ensure the map has a real size before fitting/centering.
-     frameId = requestAnimationFrame(() => {
-       map.invalidateSize()
-
-       if (validLocations.length === 1) {
-         const zoomLevel = getZoomForLocation(validLocations[0]!)
-         map.setView([validLocations[0]!.lat, validLocations[0]!.lng], zoomLevel, { animate: false })
-         return
-       }
-
-       const bounds = L.latLngBounds(validLocations.map((loc) => [loc.lat, loc.lng] as L.LatLngTuple))
-
-       // If all coordinates are nearly identical, fitBounds can look like it "didn't zoom".
-       // Expand the bounds slightly to force a sensible zoom.
-       if (bounds.isValid()) {
-         const northEast = bounds.getNorthEast()
-         const southWest = bounds.getSouthWest()
-         const latSpan = Math.abs(northEast.lat - southWest.lat)
-         const lngSpan = Math.abs(northEast.lng - southWest.lng)
-
-         if (latSpan < 0.01 && lngSpan < 0.01) {
-           bounds.extend([northEast.lat + 0.05, northEast.lng + 0.05])
-           bounds.extend([southWest.lat - 0.05, southWest.lng - 0.05])
-         }
-       }
-
-       map.fitBounds(bounds, { padding: [50, 50], animate: false, maxZoom: 12 })
-     })
-
-     return () => {
-       if (frameId !== null) {
-         cancelAnimationFrame(frameId)
-       }
-
-       markersRef.current.forEach(({ marker, clickHandler }) => {
-         if (clickHandler) {
-           marker.off('click', clickHandler)
-         }
-         marker.remove()
-       })
-       markersRef.current = []
-     }
-   }, [locations, onMarkerClick, mapReady])
-
-  return <div ref={mapRef} className="h-full w-full" />
+  return <div ref={mapRef} className="size-full" />
 }

@@ -5,7 +5,7 @@ import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import { AdminActionErrorAlert } from '../components/admin-action-error-alert'
 import { AdminQueryErrorAlert } from '../components/admin-query-error-alert'
 import { useAdminActionError } from '../hooks/use-admin-action-error'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useReducer } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import {
@@ -82,17 +82,120 @@ function isAdminUserStatus(value: unknown): value is AdminUserStatus {
   return typeof value === 'string' && ADMIN_USER_STATUSES.includes(value as AdminUserStatus)
 }
 
+type AdminTeamPageState = {
+  usersOverride: AdminUserRecord[] | null
+  previewUsers: AdminUserRecord[]
+  loadingMore: boolean
+  statusFilter: StatusFilter
+  roleFilter: RoleFilter
+  searchTerm: string
+  savingId: string | null
+  inviteOpen: boolean
+  inviteEmail: string
+  inviteRole: AdminUserRole
+  inviteSending: boolean
+}
+
+type AdminTeamPageAction =
+  | { type: 'setUsersOverride'; value: AdminUserRecord[] | null | ((prev: AdminUserRecord[] | null) => AdminUserRecord[] | null) }
+  | { type: 'setPreviewUsers'; value: AdminUserRecord[] | ((prev: AdminUserRecord[]) => AdminUserRecord[]) }
+  | { type: 'setLoadingMore'; value: boolean }
+  | { type: 'setStatusFilter'; value: StatusFilter }
+  | { type: 'setRoleFilter'; value: RoleFilter }
+  | { type: 'setSearchTerm'; value: string }
+  | { type: 'setSavingId'; value: string | null }
+  | { type: 'setInviteOpen'; value: boolean }
+  | { type: 'setInviteEmail'; value: string }
+  | { type: 'setInviteRole'; value: AdminUserRole }
+  | { type: 'setInviteSending'; value: boolean }
+  | { type: 'resetInviteForm' }
+  | { type: 'clearFilters' }
+  | { type: 'refresh'; previewUsers: AdminUserRecord[] }
+
+function createInitialAdminTeamPageState(): AdminTeamPageState {
+  return {
+    usersOverride: null,
+    previewUsers: getPreviewAdminUsers(),
+    loadingMore: false,
+    statusFilter: 'all',
+    roleFilter: 'all',
+    searchTerm: '',
+    savingId: null,
+    inviteOpen: false,
+    inviteEmail: '',
+    inviteRole: 'team',
+    inviteSending: false,
+  }
+}
+
+function adminTeamPageReducer(state: AdminTeamPageState, action: AdminTeamPageAction): AdminTeamPageState {
+  switch (action.type) {
+    case 'setUsersOverride':
+      return {
+        ...state,
+        usersOverride:
+          typeof action.value === 'function' ? action.value(state.usersOverride) : action.value,
+      }
+    case 'setPreviewUsers':
+      return {
+        ...state,
+        previewUsers:
+          typeof action.value === 'function' ? action.value(state.previewUsers) : action.value,
+      }
+    case 'setLoadingMore':
+      return { ...state, loadingMore: action.value }
+    case 'setStatusFilter':
+      return { ...state, statusFilter: action.value }
+    case 'setRoleFilter':
+      return { ...state, roleFilter: action.value }
+    case 'setSearchTerm':
+      return { ...state, searchTerm: action.value }
+    case 'setSavingId':
+      return { ...state, savingId: action.value }
+    case 'setInviteOpen':
+      return { ...state, inviteOpen: action.value }
+    case 'setInviteEmail':
+      return { ...state, inviteEmail: action.value }
+    case 'setInviteRole':
+      return { ...state, inviteRole: action.value }
+    case 'setInviteSending':
+      return { ...state, inviteSending: action.value }
+    case 'resetInviteForm':
+      return { ...state, inviteOpen: false, inviteEmail: '', inviteRole: 'team' }
+    case 'clearFilters':
+      return { ...state, statusFilter: 'all', roleFilter: 'all', searchTerm: '' }
+    case 'refresh':
+      return {
+        ...state,
+        statusFilter: 'all',
+        roleFilter: 'all',
+        searchTerm: '',
+        usersOverride: null,
+        previewUsers: action.previewUsers,
+      }
+    default:
+      return state
+  }
+}
+
 export default function AdminTeamPage() {
   const { user } = useAuth()
   const { isPreviewMode } = usePreview()
-  const [usersOverride, setUsersOverride] = useState<AdminUserRecord[] | null>(null)
-  const [previewUsers, setPreviewUsers] = useState<AdminUserRecord[]>(() => getPreviewAdminUsers())
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
-  const [searchTerm, setSearchTerm] = useState('')
+  const [state, dispatch] = useReducer(adminTeamPageReducer, undefined, createInitialAdminTeamPageState)
+  const {
+    usersOverride,
+    previewUsers,
+    loadingMore,
+    statusFilter,
+    roleFilter,
+    searchTerm,
+    savingId,
+    inviteOpen,
+    inviteEmail,
+    inviteRole,
+    inviteSending,
+  } = state
   const { actionError, clearActionError, reportActionFailure } = useAdminActionError()
-  const [savingId, setSavingId] = useState<string | null>(null)
   const workspaceContext = useQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
   const workspaceId = workspaceContext?.workspaceId ?? null
   const includeAllWorkspaces = workspaceContext?.role === 'admin'
@@ -124,41 +227,36 @@ export default function AdminTeamPage() {
   )
 
   // Invite dialog state
-  const [inviteOpen, setInviteOpen] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState<AdminUserRole>('team')
-  const [inviteSending, setInviteSending] = useState(false)
-
   const handleInviteEmailChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setInviteEmail(event.target.value)
+    dispatch({ type: 'setInviteEmail', value: event.target.value })
   }, [])
 
   const handleInviteRoleChange = useCallback((value: string) => {
-    setInviteRole(value as AdminUserRole)
+    dispatch({ type: 'setInviteRole', value: value as AdminUserRole })
   }, [])
 
   const handleCloseInviteDialog = useCallback(() => {
-    setInviteOpen(false)
+    dispatch({ type: 'setInviteOpen', value: false })
   }, [])
 
   const handleInviteOpenChange = useCallback((open: boolean) => {
-    setInviteOpen(open)
+    dispatch({ type: 'setInviteOpen', value: open })
     if (!open) {
-      setInviteEmail('')
-      setInviteRole('team')
+      dispatch({ type: 'setInviteEmail', value: '' })
+      dispatch({ type: 'setInviteRole', value: 'team' })
     }
   }, [])
 
   const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value)
+    dispatch({ type: 'setSearchTerm', value: event.target.value })
   }, [])
 
   const handleStatusFilterChange = useCallback((value: string) => {
-    setStatusFilter(value as StatusFilter)
+    dispatch({ type: 'setStatusFilter', value: value as StatusFilter })
   }, [])
 
   const handleRoleFilterChange = useCallback((value: string) => {
-    setRoleFilter(value as RoleFilter)
+    dispatch({ type: 'setRoleFilter', value: value as RoleFilter })
   }, [])
 
   const createRoleChangeHandler = (userId: string) => (value: string) => {
@@ -176,7 +274,7 @@ export default function AdminTeamPage() {
   const handleLoadMore = useCallback(() => {
     if (isPreviewMode) return
     if (loadingMore) return
-    setLoadingMore(true)
+    dispatch({ type: 'setLoadingMore', value: true })
 
     void Promise.resolve()
       .then(() => loadMore(50))
@@ -188,7 +286,7 @@ export default function AdminTeamPage() {
         })
       })
       .finally(() => {
-        setLoadingMore(false)
+        dispatch({ type: 'setLoadingMore', value: false })
       })
   }, [isPreviewMode, loadMore, loadingMore, reportActionFailure])
 
@@ -286,21 +384,27 @@ export default function AdminTeamPage() {
 
   const handleRoleChange = (userId: string, role: AdminUserRecord['role']) => {
     if (isPreviewMode) {
-      setPreviewUsers((current) => current.map((record) => (
-        record.id === userId ? { ...record, role, updatedAt: new Date().toISOString() } : record
-      )))
+      dispatch({
+        type: 'setPreviewUsers',
+        value: (current) => current.map((record) => (
+          record.id === userId ? { ...record, role, updatedAt: new Date().toISOString() } : record
+        )),
+      })
       toast({ title: 'Preview mode', description: `Member role updated to ${role} in the sample workspace.` })
       return
     }
 
-    setSavingId(userId)
+    dispatch({ type: 'setSavingId', value: userId })
     clearActionError()
 
     void updateUserRoleStatus({ legacyId: userId, role })
       .then(() => {
-        setUsersOverride((prev) => {
-          const base = prev ?? users
-          return base.map((record) => (record.id === userId ? { ...record, role } : record))
+        dispatch({
+          type: 'setUsersOverride',
+          value: (prev) => {
+            const base = prev ?? users
+            return base.map((record) => (record.id === userId ? { ...record, role } : record))
+          },
         })
         toast({ title: 'Role updated', description: `Member is now a ${role}.` })
       })
@@ -312,7 +416,7 @@ export default function AdminTeamPage() {
         })
       })
       .finally(() => {
-        setSavingId(null)
+        dispatch({ type: 'setSavingId', value: null })
       })
   }
 
@@ -333,9 +437,12 @@ export default function AdminTeamPage() {
     const nextStatus = deriveNextStatus(userRecord.status)
 
     if (isPreviewMode) {
-      setPreviewUsers((current) => current.map((record) => (
-        record.id === userRecord.id ? { ...record, status: nextStatus, updatedAt: new Date().toISOString() } : record
-      )))
+      dispatch({
+        type: 'setPreviewUsers',
+        value: (current) => current.map((record) => (
+          record.id === userRecord.id ? { ...record, status: nextStatus, updatedAt: new Date().toISOString() } : record
+        )),
+      })
       toast({
         title: 'Preview mode',
         description: `Member is now ${nextStatus.replace(/_/g, ' ')} in the sample workspace.`,
@@ -343,14 +450,17 @@ export default function AdminTeamPage() {
       return
     }
 
-    setSavingId(userRecord.id)
+    dispatch({ type: 'setSavingId', value: userRecord.id })
     clearActionError()
 
     void updateUserRoleStatus({ legacyId: userRecord.id, status: nextStatus })
       .then(() => {
-        setUsersOverride((prev) => {
-          const base = prev ?? users
-          return base.map((record) => (record.id === userRecord.id ? { ...record, status: nextStatus } : record))
+        dispatch({
+          type: 'setUsersOverride',
+          value: (prev) => {
+            const base = prev ?? users
+            return base.map((record) => (record.id === userRecord.id ? { ...record, status: nextStatus } : record))
+          },
         })
         toast({
           title: 'Status updated',
@@ -365,7 +475,7 @@ export default function AdminTeamPage() {
         })
       })
       .finally(() => {
-        setSavingId(null)
+        dispatch({ type: 'setSavingId', value: null })
       })
   }
 
@@ -377,33 +487,34 @@ export default function AdminTeamPage() {
     if (!email || !looksLikeEmail(email)) return
 
     if (isPreviewMode) {
-      setPreviewUsers((current) => [
-        {
-          id: `preview-user-${Date.now()}`,
-          email,
-          name: email.split('@')[0] ?? 'Preview User',
-          role: inviteRole,
-          status: 'invited',
-          agencyId: 'preview-agency',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          lastLoginAt: null,
-        },
-        ...current,
-      ])
+      dispatch({
+        type: 'setPreviewUsers',
+        value: (current) => [
+          {
+            id: `preview-user-${Date.now()}`,
+            email,
+            name: email.split('@')[0] ?? 'Preview User',
+            role: inviteRole,
+            status: 'invited',
+            agencyId: 'preview-agency',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            lastLoginAt: null,
+          },
+          ...current,
+        ],
+      })
       toast({
         title: 'Preview mode',
         description: `Invitation created for ${email} in the sample workspace.`,
       })
-      setInviteOpen(false)
-      setInviteEmail('')
-      setInviteRole('team')
+      dispatch({ type: 'resetInviteForm' })
       return
     }
 
     if (!user?.id) return
 
-    setInviteSending(true)
+    dispatch({ type: 'setInviteSending', value: true })
 
     void createInvitation({
       email,
@@ -416,9 +527,7 @@ export default function AdminTeamPage() {
           title: 'Invitation sent!',
           description: `Invitation created for ${email} as ${inviteRole}. Email delivery depends on server integration settings.`,
         })
-        setInviteOpen(false)
-        setInviteEmail('')
-        setInviteRole('team')
+        dispatch({ type: 'resetInviteForm' })
       })
       .catch((err: unknown) => {
         reportActionFailure({
@@ -428,7 +537,7 @@ export default function AdminTeamPage() {
         })
       })
       .finally(() => {
-        setInviteSending(false)
+        dispatch({ type: 'setInviteSending', value: false })
       })
   }, [createInvitation, inviteEmail, inviteRole, isPreviewMode, reportActionFailure, toast, user])
 
@@ -441,27 +550,21 @@ export default function AdminTeamPage() {
   )
 
   const handleOpenInviteDialog = useCallback(() => {
-    setInviteOpen(true)
+    dispatch({ type: 'setInviteOpen', value: true })
   }, [])
 
   const handleClearFilters = useCallback(() => {
-    setStatusFilter('all')
-    setRoleFilter('all')
-    setSearchTerm('')
+    dispatch({ type: 'clearFilters' })
   }, [])
 
   const handleRefresh = useCallback(() => {
     if (loading) return
-    setStatusFilter('all')
-    setRoleFilter('all')
-    setSearchTerm('')
     clearActionError()
-    setUsersOverride(null)
-
-    if (isPreviewMode) {
-      setPreviewUsers(getPreviewAdminUsers())
-    }
-  }, [clearActionError, isPreviewMode, loading])
+    dispatch({
+      type: 'refresh',
+      previewUsers: isPreviewMode ? getPreviewAdminUsers() : state.previewUsers,
+    })
+  }, [clearActionError, isPreviewMode, loading, state.previewUsers])
 
   if (!user && !isPreviewMode) {
     return (
@@ -502,12 +605,12 @@ export default function AdminTeamPage() {
             disabled={loading}
             className="inline-flex items-center gap-2"
           >
-            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} /> Refresh
+            <RefreshCw className={cn('size-4', loading && 'animate-spin')} /> Refresh
           </Button>
           <Dialog open={inviteOpen} onOpenChange={handleInviteOpenChange}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
-                <UserPlus className="h-4 w-4" /> Invite user
+                <UserPlus className="size-4" /> Invite user
               </Button>
             </DialogTrigger>
               <DialogContent>
@@ -566,7 +669,7 @@ export default function AdminTeamPage() {
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total teammates</CardTitle>
-              <UsersIcon className={cn('h-4 w-4 text-muted-foreground', loading && 'animate-spin')} />
+              <UsersIcon className={cn('size-4 text-muted-foreground', loading && 'animate-spin')} />
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -581,7 +684,7 @@ export default function AdminTeamPage() {
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active accounts</CardTitle>
-              <UserCheck className="h-4 w-4 text-success" />
+              <UserCheck className="size-4 text-success" />
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -596,7 +699,7 @@ export default function AdminTeamPage() {
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Administrators</CardTitle>
-              <ShieldCheck className="h-4 w-4 text-primary" />
+              <ShieldCheck className="size-4 text-primary" />
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -611,7 +714,7 @@ export default function AdminTeamPage() {
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Allocated to clients</CardTitle>
-              <UsersIcon className="h-4 w-4 text-muted-foreground" />
+              <UsersIcon className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -702,7 +805,7 @@ export default function AdminTeamPage() {
                           <span className="inline-flex flex-col items-center gap-3">
                             <span>No internal teammates in this workspace yet.</span>
                             <Button type="button" size="sm" variant="outline" onClick={handleOpenInviteDialog}>
-                              <UserPlus className="mr-2 h-4 w-4" />
+                              <UserPlus className="mr-2 size-4" />
                               Invite teammate
                             </Button>
                           </span>
@@ -796,7 +899,7 @@ export default function AdminTeamPage() {
                               className="inline-flex items-center gap-2"
                             >
                               {savingId === record.id ? (
-                                <LoaderCircle className="h-4 w-4 animate-spin" />
+                                <LoaderCircle className="size-4 animate-spin" />
                               ) : (
                                 <ActionIcon status={record.status} />
                               )}
@@ -821,7 +924,7 @@ export default function AdminTeamPage() {
                   disabled={loadingMore}
                   className="inline-flex items-center gap-2"
                 >
-                  {loadingMore ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  {loadingMore ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
                   {loadingMore ? 'Loading…' : 'Load more'}
                 </Button>
               </div>
@@ -878,10 +981,10 @@ function formatDate(value: string | null): string {
 
 function ActionIcon({ status }: { status: UserStatus }) {
   if (status === 'active') {
-    return <UserMinus className="h-4 w-4" />
+    return <UserMinus className="size-4" />
   }
   if (status === 'disabled' || status === 'suspended') {
-    return <UserCheck className="h-4 w-4" />
+    return <UserCheck className="size-4" />
   }
-  return <CircleAlert className="h-4 w-4" />
+  return <CircleAlert className="size-4" />
 }

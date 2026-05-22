@@ -78,8 +78,8 @@ export function ConfirmDialog({
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <div className="flex items-start gap-4">
-            <div className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-full', config.bgClass)}>
-              <Icon className={cn('h-6 w-6', config.iconClass)} />
+            <div className={cn('flex size-12 shrink-0 items-center justify-center rounded-full', config.bgClass)}>
+              <Icon className={cn('size-6', config.iconClass)} />
             </div>
             <div className="space-y-2">
               <AlertDialogTitle className="text-lg">{title}</AlertDialogTitle>
@@ -103,7 +103,7 @@ export function ConfirmDialog({
               onClick={handleConfirm}
               disabled={isLoading}
             >
-              {isLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+              {isLoading && <LoaderCircle className="mr-2 size-4 animate-spin" />}
               {confirmLabel}
             </Button>
           </AlertDialogAction>

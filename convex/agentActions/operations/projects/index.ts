@@ -21,23 +21,21 @@ export const projectOperationHandlers: Record<string, OperationHandler> = {
     })
 
     const projects = Array.isArray(rawProjects)
-      ? rawProjects
-          .map((row) => {
-            if (!row || typeof row !== 'object') return null
-            const record = row as Record<string, unknown>
-            const legacyId = asNonEmptyString(record.legacyId)
-            const name = asNonEmptyString(record.name)
-            if (!legacyId || !name) return null
-            const status = asNonEmptyString(record.status) ?? 'unknown'
-            return {
-              projectId: legacyId,
-              name,
-              status,
-              clientName: asNonEmptyString(record.clientName) ?? null,
-              route: buildProjectRoute(legacyId, name),
-            }
-          })
-          .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+      ? rawProjects.flatMap((row) => {
+          if (!row || typeof row !== 'object') return []
+          const record = row as Record<string, unknown>
+          const legacyId = asNonEmptyString(record.legacyId)
+          const name = asNonEmptyString(record.name)
+          if (!legacyId || !name) return []
+          const status = asNonEmptyString(record.status) ?? 'unknown'
+          return [{
+            projectId: legacyId,
+            name,
+            status,
+            clientName: asNonEmptyString(record.clientName) ?? null,
+            route: buildProjectRoute(legacyId, name),
+          }]
+        })
       : []
 
     const activeStatuses = new Set(['active', 'in_progress', 'planning', 'on_track'])

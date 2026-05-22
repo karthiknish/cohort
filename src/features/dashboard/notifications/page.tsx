@@ -111,7 +111,7 @@ function NotificationsLoadingSkeleton() {
     >
       {['n-sk-1', 'n-sk-2', 'n-sk-3', 'n-sk-4', 'n-sk-5'].map((key) => (
         <div key={key} className="flex items-start gap-4 rounded-lg border p-4">
-          <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
+          <Skeleton className="size-12 shrink-0 rounded-lg" />
           <div className="min-w-0 flex-1 space-y-2">
             <Skeleton className="h-4 w-full max-w-[240px]" />
             <Skeleton className="h-3 w-full max-w-[320px]" />
@@ -383,7 +383,7 @@ function NotificationsPageContent() {
   )
 
   const handleMarkAllRead = useCallback(() => {
-    const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id)
+    const unreadIds = notifications.flatMap((item) => (!item.read ? [item.id] : []))
     if (unreadIds.length === 0) {
       toast({ title: 'All caught up!', description: 'You have no unread notifications.' })
       return
@@ -464,7 +464,7 @@ function NotificationsPageContent() {
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" asChild className={getButtonClasses('outline')}>
             <Link href="/settings?tab=notifications">
-              <Settings2 className="mr-2 h-4 w-4" aria-hidden />
+              <Settings2 className="mr-2 size-4" aria-hidden />
               Settings
             </Link>
           </Button>
@@ -476,16 +476,16 @@ function NotificationsPageContent() {
             className={getButtonClasses('outline')}
           >
             {!isPreviewMode && notificationsInfiniteQuery.isFetching ? (
-              <LoaderCircle className={cn('mr-2 h-4 w-4', DASHBOARD_THEME.animations.spin)} />
+              <LoaderCircle className={cn('mr-2 size-4', DASHBOARD_THEME.animations.spin)} />
             ) : null}
             Refresh
           </Button>
           <Button variant="outline" size="sm" onClick={handleMarkAllRead} disabled={unreadCount === 0 || ackInFlight} className={getButtonClasses('outline')}>
-            <CheckCheck className="mr-2 h-4 w-4" />
+            <CheckCheck className="mr-2 size-4" />
             Mark all read
           </Button>
           <Button variant="outline" size="sm" onClick={handleClearAll} disabled={notifications.length === 0 || ackInFlight} className={getButtonClasses('outline')}>
-            <Trash2 className="mr-2 h-4 w-4" />
+            <Trash2 className="mr-2 size-4" />
             Clear all
           </Button>
         </div>
@@ -515,7 +515,7 @@ function NotificationsPageContent() {
                 disabled={notificationsInfiniteQuery.isFetching}
               >
                 {notificationsInfiniteQuery.isFetching ? (
-                  <LoaderCircle className={cn('mr-2 h-4 w-4', DASHBOARD_THEME.animations.spin)} />
+                  <LoaderCircle className={cn('mr-2 size-4', DASHBOARD_THEME.animations.spin)} />
                 ) : null}
                 Try again
               </Button>
@@ -543,13 +543,13 @@ function NotificationsPageContent() {
             )}
           </TabsTrigger>
           <TabsTrigger value="mentions">
-            <MessageSquare className="mr-2 h-4 w-4" />
+            <MessageSquare className="mr-2 size-4" />
             Mentions
           </TabsTrigger>
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
           <TabsTrigger value="collaboration">Chat</TabsTrigger>
           <TabsTrigger value="system">
-            <Filter className="mr-1 h-4 w-4" aria-hidden />
+            <Filter className="mr-1 size-4" aria-hidden />
             System
           </TabsTrigger>
         </TabsList>
@@ -658,7 +658,7 @@ function NotificationsPageContent() {
                     onClick={handleLoadMore}
                     disabled={loadingMore}
                   >
-                    {loadingMore ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {loadingMore ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
                     Load more
                   </Button>
                 </div>

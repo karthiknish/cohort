@@ -35,8 +35,8 @@ export default function SettingsError({
     <div className="flex min-h-[60vh] items-center justify-center bg-muted/20 p-4">
       <Card className="max-w-lg border-muted/60">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="h-8 w-8 text-destructive" />
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
+            <AlertTriangle className="size-8 text-destructive" />
           </div>
           <CardTitle className="text-xl">Settings failed to load</CardTitle>
           <CardDescription>
@@ -45,12 +45,12 @@ export default function SettingsError({
         </CardHeader>
         <CardContent className="space-y-3">
           <Button className="w-full" onClick={handleRetry}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="mr-2 size-4" />
             Try again
           </Button>
           <Button variant="outline" asChild className="w-full">
             <Link href="/">
-              <Home className="mr-2 h-4 w-4" />
+              <Home className="mr-2 size-4" />
               Go to home
             </Link>
           </Button>

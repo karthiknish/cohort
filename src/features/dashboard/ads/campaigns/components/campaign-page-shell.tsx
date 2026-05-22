@@ -53,7 +53,7 @@ function CampaignAdvancedCollapsible({ children }: { children: ReactNode }) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className={ADS_PAGE_THEME.advancedPanel}>
-      <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
+      <div className="flex items-center justify-between gap-3 p-4 sm:px-5">
         <div className="min-w-0 space-y-0.5">
           <p className="text-sm font-semibold tracking-tight text-foreground">Advanced analytics</p>
           <p className="text-xs leading-relaxed text-muted-foreground">
@@ -62,7 +62,7 @@ function CampaignAdvancedCollapsible({ children }: { children: ReactNode }) {
         </div>
         <CollapsibleTrigger asChild>
           <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-xl">
-            <Settings2 className="h-3.5 w-3.5" aria-hidden />
+            <Settings2 className="size-3.5" aria-hidden />
             {open ? 'Hide' : 'Show'}
           </Button>
         </CollapsibleTrigger>
@@ -100,15 +100,15 @@ export function CampaignPageLayout({
       <div className={ADS_PAGE_THEME.stickyTabBar}>
         <TabsList className={ADS_PAGE_THEME.mobileTabs}>
           <TabsTrigger value="performance" className={ADS_PAGE_THEME.mobileTabTrigger}>
-            <BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <BarChart3 className="size-3.5 shrink-0" aria-hidden />
             Performance
           </TabsTrigger>
           <TabsTrigger value="controls" className={ADS_PAGE_THEME.mobileTabTrigger}>
-            <Settings2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <Settings2 className="size-3.5 shrink-0" aria-hidden />
             Settings
           </TabsTrigger>
           <TabsTrigger value="creatives" className={ADS_PAGE_THEME.mobileTabTrigger}>
-            <Layers className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <Layers className="size-3.5 shrink-0" aria-hidden />
             Creatives
             {typeof creativesCount === 'number' && creativesCount > 0 ? (
               <span className="rounded-full bg-background px-1.5 py-0 text-[10px] font-semibold tabular-nums text-foreground shadow-sm">

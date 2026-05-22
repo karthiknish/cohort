@@ -36,13 +36,13 @@ function PreviewTile({ image, previewIndex, onPreview, className, aspectClassNam
       aria-label={`Preview image ${image.name}`}
     >
       <div className={cn('relative overflow-hidden', aspectClassName)}>
-        <LazyImage src={image.url} alt={image.name} className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105" />
+        <LazyImage src={image.url} alt={image.name} className="size-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105" />
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
           {typeof overlayCount === 'number' ? (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-2xl font-bold text-viewer-chrome">+{overlayCount}</div>
           ) : (
             <div className="rounded-full bg-black/60 p-2 text-viewer-chrome opacity-0 transition-opacity group-hover:opacity-100">
-              <ZoomIn className="h-4 w-4" />
+              <ZoomIn className="size-4" />
             </div>
           )}
         </div>
@@ -75,12 +75,12 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
           <PreviewTile image={image} previewIndex={0} onPreview={handleImageClick} aspectClassName="aspect-video max-h-96" className="rounded-none border-0" />
           <figcaption className="flex items-center justify-between gap-3 border-t border-muted/40 p-3 text-xs text-muted-foreground">
             <div className="flex flex-1 items-center gap-2 truncate">
-              <ImageIcon className="h-4 w-4 flex-shrink-0" />
+              <ImageIcon className="size-4 flex-shrink-0" />
               <span className="truncate">{image.name}</span>
               {image.size ? <span className="whitespace-nowrap text-muted-foreground/60">{image.size}</span> : null}
             </div>
             <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
-              <a href={image.url} download={image.name}><Download className="mr-1 h-3.5 w-3.5" />Download</a>
+              <a href={image.url} download={image.name}><Download className="mr-1 size-3.5" />Download</a>
             </Button>
           </figcaption>
         </figure>

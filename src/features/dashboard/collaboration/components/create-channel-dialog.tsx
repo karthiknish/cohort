@@ -256,7 +256,7 @@ export function CreateChannelDialog({
   const defaultTrigger = (
     <DialogTrigger asChild>
       <Button className="gap-2">
-        <Plus className="h-4 w-4" />
+        <Plus className="size-4" />
         Create channel
       </Button>
     </DialogTrigger>
@@ -271,7 +271,7 @@ export function CreateChannelDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Hash className="h-5 w-5" />
+            <Hash className="size-5" />
             Create collaboration channel
           </DialogTitle>
           <DialogDescription>
@@ -284,7 +284,7 @@ export function CreateChannelDialog({
             <div className="space-y-2">
               <Label htmlFor="channel-name">Channel name</Label>
               <div className="relative">
-                <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Hash className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="channel-name"
                   value={channelName}
@@ -319,13 +319,13 @@ export function CreateChannelDialog({
                 <SelectContent>
                   <SelectItem value="private">
                     <div className="flex items-center gap-2">
-                      <Lock className="h-4 w-4" />
+                      <Lock className="size-4" />
                       Private
                     </div>
                   </SelectItem>
                   <SelectItem value="public">
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
+                      <Users className="size-4" />
                       Public to team
                     </div>
                   </SelectItem>
@@ -376,7 +376,7 @@ export function CreateChannelDialog({
             Cancel
           </Button>
           <Button onClick={handleCreate} disabled={isCreating}>
-            {isCreating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {isCreating ? <LoaderCircle className="size-4 animate-spin" /> : <Plus className="size-4" />}
             Create channel
           </Button>
         </DialogFooter>
@@ -390,7 +390,7 @@ export function QuickCreateChannelButton(props: Omit<CreateChannelDialogProps, '
     () => (
       <DialogTrigger asChild>
         <Button size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
+          <Plus className="size-4" />
           Create channel
         </Button>
       </DialogTrigger>

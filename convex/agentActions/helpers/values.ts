@@ -28,16 +28,17 @@ function asNumber(value: unknown): number | null {
 
 function asStringArray(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value
-      .map((item) => asNonEmptyString(item))
-      .filter((item): item is string => item !== null)
+    return value.flatMap((item) => {
+      const normalized = asNonEmptyString(item)
+      return normalized !== null ? [normalized] : []
+    })
   }
 
   if (typeof value === 'string') {
-    return value
-      .split(',')
-      .map((part) => part.trim())
-      .filter((part) => part.length > 0)
+    return value.split(',').flatMap((part) => {
+      const trimmed = part.trim()
+      return trimmed.length > 0 ? [trimmed] : []
+    })
   }
 
   return []
@@ -83,9 +84,10 @@ function normalizeProviderIds(value: unknown): ProviderId[] {
       ? value.split(',')
       : []
 
-  const providers = rawValues
-    .map((item) => normalizeProviderId(item))
-    .filter((item): item is ProviderId => item !== null)
+  const providers = rawValues.flatMap((item) => {
+    const provider = normalizeProviderId(item)
+    return provider !== null ? [provider] : []
+  })
 
   return Array.from(new Set(providers))
 }

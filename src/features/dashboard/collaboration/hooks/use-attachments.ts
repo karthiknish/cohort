@@ -56,37 +56,35 @@ export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
     setUploading(true)
 
     try {
-      const results: CollaborationAttachment[] = []
+      const results = await Promise.all(
+        attachments.map(async (attachment) => {
+          const uploadUrlPayload = (await generateUploadUrl({})) as { url?: string }
+          const uploadUrl = uploadUrlPayload?.url
+          if (!uploadUrl) throw new Error('Unable to create upload URL')
 
+          const uploadResponse = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': attachment.mimeType || 'application/octet-stream',
+            },
+            body: attachment.file,
+          })
 
-      for (const attachment of attachments) {
-        const uploadUrlPayload = (await generateUploadUrl({})) as { url?: string }
-        const uploadUrl = uploadUrlPayload?.url
-        if (!uploadUrl) throw new Error('Unable to create upload URL')
+          const uploadResult = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
+          const storageId = uploadResult?.storageId
+          if (!uploadResponse.ok || !storageId) {
+            throw new Error('Upload failed')
+          }
 
-        const uploadResponse = await fetch(uploadUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': attachment.mimeType || 'application/octet-stream',
-          },
-          body: attachment.file,
-        })
-
-        const uploadResult = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
-        const storageId = uploadResult?.storageId
-        if (!uploadResponse.ok || !storageId) {
-          throw new Error('Upload failed')
-        }
-
-        results.push({
-          name: attachment.name,
-          url: 'about:blank',
-          storageId,
-          type: attachment.mimeType,
-          size: attachment.sizeLabel,
-        })
-
-      }
+          return {
+            name: attachment.name,
+            url: 'about:blank',
+            storageId,
+            type: attachment.mimeType,
+            size: attachment.sizeLabel,
+          } satisfies CollaborationAttachment
+        }),
+      )
 
       return results
     } catch (error) {

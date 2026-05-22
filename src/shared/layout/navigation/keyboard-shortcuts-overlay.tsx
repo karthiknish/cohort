@@ -49,7 +49,7 @@ export function KeyboardShortcutsOverlay({
       <DialogContent className="sm:max-w-2xl overflow-hidden p-0">
         <DialogHeader className="border-b border-muted/40 px-6 py-5">
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <Keyboard className="h-5 w-5 text-primary" />
+            <Keyboard className="size-5 text-primary" />
             Keyboard Shortcuts
           </DialogTitle>
           <DialogDescription>

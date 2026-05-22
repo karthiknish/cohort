@@ -179,42 +179,48 @@ async function resolveYoutubeVideoIdsFromAssetResources(options: {
   const maxChunks = options.maxChunks ?? 5
   const { accessToken, developerToken, customerId, loginCustomerId, maxRetries } = options
 
+  const chunks: string[][] = []
   for (let i = 0, chunkIndex = 0; i < unique.length && chunkIndex < maxChunks; i += YOUTUBE_VIDEO_ASSET_GAQL_CHUNK) {
     chunkIndex += 1
-    const chunk = unique.slice(i, i + YOUTUBE_VIDEO_ASSET_GAQL_CHUNK)
-    const query = buildGoogleYoutubeVideoAssetsGaql(chunk)
-    if (!query) continue
-
-    const assetRows = await googleAdsSearch({
-      accessToken,
-      developerToken,
-      customerId,
-      loginCustomerId,
-      query,
-      pageSize: YOUTUBE_VIDEO_ASSET_GAQL_CHUNK,
-      maxPages: 1,
-      maxRetries,
-    })
-
-    for (const row of assetRows) {
-      const asset = row.asset as
-        | {
-            resourceName?: string
-            resource_name?: string
-            youtubeVideoAsset?: { youtubeVideoId?: string }
-            youtube_video_asset?: { youtube_video_id?: string }
-          }
-        | undefined
-      const rn = (asset?.resourceName ?? asset?.resource_name)?.trim()
-      const yid = (
-        asset?.youtubeVideoAsset?.youtubeVideoId
-        ?? asset?.youtube_video_asset?.youtube_video_id
-      )?.trim()
-      if (rn && yid) {
-        out.set(rn, yid)
-      }
-    }
+    chunks.push(unique.slice(i, i + YOUTUBE_VIDEO_ASSET_GAQL_CHUNK))
   }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const query = buildGoogleYoutubeVideoAssetsGaql(chunk)
+      if (!query) return
+
+      const assetRows = await googleAdsSearch({
+        accessToken,
+        developerToken,
+        customerId,
+        loginCustomerId,
+        query,
+        pageSize: YOUTUBE_VIDEO_ASSET_GAQL_CHUNK,
+        maxPages: 1,
+        maxRetries,
+      })
+
+      for (const row of assetRows) {
+        const asset = row.asset as
+          | {
+              resourceName?: string
+              resource_name?: string
+              youtubeVideoAsset?: { youtubeVideoId?: string }
+              youtube_video_asset?: { youtube_video_id?: string }
+            }
+          | undefined
+        const rn = (asset?.resourceName ?? asset?.resource_name)?.trim()
+        const yid = (
+          asset?.youtubeVideoAsset?.youtubeVideoId
+          ?? asset?.youtube_video_asset?.youtube_video_id
+        )?.trim()
+        if (rn && yid) {
+          out.set(rn, yid)
+        }
+      }
+    }),
+  )
 
   return out
 }

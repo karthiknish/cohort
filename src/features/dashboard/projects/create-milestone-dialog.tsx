@@ -2,7 +2,7 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 import { useMutation } from 'convex/react'
 import { v4 as uuidv4 } from 'uuid'
 import { Calendar as CalendarIcon, LoaderCircle, Plus } from 'lucide-react'
@@ -59,6 +59,56 @@ export type CreateMilestoneDialogProps = {
   onCreated?: (milestone: MilestoneRecord) => void
 }
 
+type MilestoneFormState = {
+  projectId: string
+  title: string
+  status: MilestoneStatus
+  startDate: Date | undefined
+  endDate: Date | undefined
+  description: string
+}
+
+type MilestoneFormAction =
+  | { type: 'reset'; projectId: string }
+  | { type: 'setProjectId'; value: string }
+  | { type: 'setTitle'; value: string }
+  | { type: 'setStatus'; value: MilestoneStatus }
+  | { type: 'setStartDate'; value: Date | undefined }
+  | { type: 'setEndDate'; value: Date | undefined }
+  | { type: 'setDescription'; value: string }
+
+function createInitialMilestoneFormState(projectId: string): MilestoneFormState {
+  return {
+    projectId,
+    title: '',
+    status: 'planned',
+    startDate: undefined,
+    endDate: undefined,
+    description: '',
+  }
+}
+
+function milestoneFormReducer(state: MilestoneFormState, action: MilestoneFormAction): MilestoneFormState {
+  switch (action.type) {
+    case 'reset':
+      return createInitialMilestoneFormState(action.projectId)
+    case 'setProjectId':
+      return { ...state, projectId: action.value }
+    case 'setTitle':
+      return { ...state, title: action.value }
+    case 'setStatus':
+      return { ...state, status: action.value }
+    case 'setStartDate':
+      return { ...state, startDate: action.value }
+    case 'setEndDate':
+      return { ...state, endDate: action.value }
+    case 'setDescription':
+      return { ...state, description: action.value }
+    default:
+      return state
+  }
+}
+
 export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onCreated }: CreateMilestoneDialogProps) {
   const { user } = useAuth()
   const createMilestone = useMutation(projectMilestonesApi.create)
@@ -66,24 +116,35 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
 
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-
-  const [projectId, setProjectId] = useState(defaultProjectId ?? '')
-  const [title, setTitle] = useState('')
-  const [status, setStatus] = useState<MilestoneStatus>('planned')
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
-  const [description, setDescription] = useState('')
+  const [formState, dispatch] = useReducer(
+    milestoneFormReducer,
+    defaultProjectId ?? '',
+    createInitialMilestoneFormState,
+  )
+  const { projectId, title, status, startDate, endDate, description } = formState
 
   const handleTitleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(event.target.value)
+    dispatch({ type: 'setTitle', value: event.target.value })
   }, [])
 
   const handleDescriptionChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setDescription(event.target.value)
+    dispatch({ type: 'setDescription', value: event.target.value })
   }, [])
 
   const handleStatusChange = useCallback((value: MilestoneStatus) => {
-    setStatus(value)
+    dispatch({ type: 'setStatus', value })
+  }, [])
+
+  const handleProjectChange = useCallback((value: string) => {
+    dispatch({ type: 'setProjectId', value })
+  }, [])
+
+  const handleStartDateSelect = useCallback((date: Date | undefined) => {
+    dispatch({ type: 'setStartDate', value: date })
+  }, [])
+
+  const handleEndDateSelect = useCallback((date: Date | undefined) => {
+    dispatch({ type: 'setEndDate', value: date })
   }, [])
 
   const handleStartDateDisabled = useCallback((date: Date) => date < MIN_CALENDAR_DATE, [])
@@ -101,12 +162,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
     if (!open) return
 
     const frame = requestAnimationFrame(() => {
-      setProjectId(defaultProjectId ?? '')
-      setTitle('')
-      setStatus('planned')
-      setStartDate(undefined)
-      setEndDate(undefined)
-      setDescription('')
+      dispatch({ type: 'reset', projectId: defaultProjectId ?? '' })
     })
 
     return () => {
@@ -204,7 +260,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
       <DialogTrigger asChild>
         {trigger ?? (
           <Button size="sm" className="gap-2">
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4" />
             Add milestone
           </Button>
         )}
@@ -219,7 +275,11 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
           <div className="mt-6 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="milestone-project">Project</Label>
-              <Select value={projectId} onValueChange={setProjectId} disabled={loading}>
+              <Select
+                value={projectId}
+                onValueChange={handleProjectChange}
+                disabled={loading}
+              >
                 <SelectTrigger id="milestone-project">
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
@@ -258,7 +318,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
                       )}
                       disabled={loading}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="mr-2 size-4" />
                       {startDate ? format(startDate, 'PPP') : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
@@ -266,7 +326,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
                     <Calendar
                       mode="single"
                       selected={startDate}
-                      onSelect={setStartDate}
+                      onSelect={handleStartDateSelect}
                       initialFocus
                       disabled={handleStartDateDisabled}
                     />
@@ -285,7 +345,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
                       )}
                       disabled={loading}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="mr-2 size-4" />
                       {endDate ? format(endDate, 'PPP') : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
@@ -293,7 +353,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
                     <Calendar
                       mode="single"
                       selected={endDate}
-                      onSelect={setEndDate}
+                      onSelect={handleEndDateSelect}
                       initialFocus
                       disabled={handleEndDateDisabled}
                     />
@@ -336,7 +396,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !projectId || !title.trim()}>
-              {loading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+              {loading && <LoaderCircle className="mr-2 size-4 animate-spin" />}
               Add milestone
             </Button>
           </DialogFooter>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import { useQuery } from 'convex/react'
 
 import { projectsApi } from '@/lib/convex-api'
@@ -41,9 +41,6 @@ export function useProjectsData({
   selectedClientId,
   isPreviewMode,
 }: UseProjectsDataOptions) {
-  const [projects, setProjects] = useState<ProjectRecord[]>([])
-  const [projectsLoading, setProjectsLoading] = useState(false)
-
   const projectsRealtime = useQuery(
     projectsApi.list,
     isPreviewMode || !workspaceId || !userId
@@ -55,22 +52,20 @@ export function useProjectsData({
         }
   ) as ProjectRow[] | undefined
 
-  useEffect(() => {
+  const { projects, projectsLoading } = useMemo(() => {
     if (isPreviewMode) {
-      setProjects(getPreviewProjects(selectedClientId ?? null))
-      setProjectsLoading(false)
-      return
+      return {
+        projects: getPreviewProjects(selectedClientId ?? null),
+        projectsLoading: false,
+      }
     }
 
     if (!workspaceId || !userId) {
-      setProjects([])
-      setProjectsLoading(false)
-      return
+      return { projects: [] as ProjectRecord[], projectsLoading: false }
     }
 
     if (!projectsRealtime) {
-      setProjectsLoading(true)
-      return
+      return { projects: [] as ProjectRecord[], projectsLoading: true }
     }
 
     const rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
@@ -93,8 +88,7 @@ export function useProjectsData({
       deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
     }))
 
-    setProjects(mapped)
-    setProjectsLoading(false)
+    return { projects: mapped, projectsLoading: false }
   }, [isPreviewMode, projectsRealtime, selectedClientId, userId, workspaceId])
 
   return { projects, projectsLoading }

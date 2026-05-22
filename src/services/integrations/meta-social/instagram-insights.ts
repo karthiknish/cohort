@@ -83,7 +83,7 @@ export async function fetchInstagramUserDailyInsights(options: {
 
   const rows: OrganicSocialDailyMetric[] = []
 
-  for (const date of [...dates].sort()) {
+  for (const date of [...dates].toSorted()) {
     const impressions = getMetricValue(byName, 'impressions', date)
     const reach = getMetricValue(byName, 'reach', date)
     const engagedUsers = getMetricValue(byName, 'accounts_engaged', date)

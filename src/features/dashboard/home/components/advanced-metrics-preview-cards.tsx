@@ -24,7 +24,7 @@ export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props)
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
+                  <Info className="size-3 text-muted-foreground/40 transition-colors hover:text-primary" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs">Marketing Efficiency Ratio: Total Revenue / Total Spend</p>
@@ -45,7 +45,7 @@ export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props)
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
+                  <Info className="size-3 text-muted-foreground/40 transition-colors hover:text-primary" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs">Average revenue generated per conversion</p>
@@ -66,7 +66,7 @@ export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props)
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
+                  <Info className="size-3 text-muted-foreground/40 transition-colors hover:text-primary" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs">Average revenue generated for every click</p>

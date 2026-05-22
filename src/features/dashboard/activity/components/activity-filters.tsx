@@ -94,7 +94,7 @@ export function ActivityFilters({
       <div className="relative flex-1 md:max-w-sm">
         <svg
           aria-hidden="true"
-          className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
+          className="absolute left-2.5 top-2.5 size-4 text-muted-foreground"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -121,7 +121,7 @@ export function ActivityFilters({
             className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
             aria-label="Clear search"
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
           </button>
         )}
       </div>
@@ -184,9 +184,9 @@ export function ActivityFilters({
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" aria-label="Sort options">
               {sortBy === 'newest' ? (
-                <SortDesc className="h-4 w-4 mr-1" />
+                <SortDesc className="size-4 mr-1" />
               ) : (
-                <SortAsc className="h-4 w-4 mr-1" />
+                <SortAsc className="size-4 mr-1" />
               )}
               Sort
             </Button>
@@ -194,11 +194,11 @@ export function ActivityFilters({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Sort by</DropdownMenuLabel>
             <DropdownMenuItem onClick={handleSortNewest}>
-              <SortDesc className="h-4 w-4 mr-2" />
+              <SortDesc className="size-4 mr-2" />
               Newest first
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleSortOldest}>
-              <SortAsc className="h-4 w-4 mr-2" />
+              <SortAsc className="size-4 mr-2" />
               Oldest first
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleSortType}>Type</DropdownMenuItem>
@@ -214,7 +214,7 @@ export function ActivityFilters({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 {selectedCount} selected
-                <ChevronDown className="h-4 w-4 ml-1" />
+                <ChevronDown className="size-4 ml-1" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -223,11 +223,11 @@ export function ActivityFilters({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onBulkDismiss}>
-                <Trash2 className="h-4 w-4 mr-2" />
+                <Trash2 className="size-4 mr-2" />
                 Dismiss all
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onMarkAllAsRead}>
-                <Check className="h-4 w-4 mr-2" />
+                <Check className="size-4 mr-2" />
                 Mark all as read
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -238,7 +238,7 @@ export function ActivityFilters({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" aria-label="More options">
-              <Filter className="h-4 w-4" />
+              <Filter className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -251,11 +251,11 @@ export function ActivityFilters({
             </DropdownMenuCheckboxItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onMarkAllAsRead}>
-              <Check className="h-4 w-4 mr-2" />
+              <Check className="size-4 mr-2" />
               Mark all as read
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onClearAllPins}>
-              <PinOff className="h-4 w-4 mr-2" />
+              <PinOff className="size-4 mr-2" />
               Clear all pins
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -275,7 +275,7 @@ export function ActivityFilters({
                 className="hover:bg-muted-foreground/20 rounded-full p-0.5"
                 aria-label="Remove type filter"
               >
-                <X className="h-3 w-3" />
+                <X className="size-3" />
               </button>
             </Badge>
           )}
@@ -288,7 +288,7 @@ export function ActivityFilters({
                 className="hover:bg-muted-foreground/20 rounded-full p-0.5"
                 aria-label="Remove date filter"
               >
-                <X className="h-3 w-3" />
+                <X className="size-3" />
               </button>
             </Badge>
           )}
@@ -301,7 +301,7 @@ export function ActivityFilters({
                 className="hover:bg-muted-foreground/20 rounded-full p-0.5"
                 aria-label="Remove status filter"
               >
-                <X className="h-3 w-3" />
+                <X className="size-3" />
               </button>
             </Badge>
           )}
@@ -314,7 +314,7 @@ export function ActivityFilters({
                 className="hover:bg-muted-foreground/20 rounded-full p-0.5"
                 aria-label="Clear search"
               >
-                <X className="h-3 w-3" />
+                <X className="size-3" />
               </button>
             </Badge>
           )}

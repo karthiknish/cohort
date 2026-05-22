@@ -152,7 +152,7 @@ export function FeaturesBento() {
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      <PlatformBrandLogo brand={bar.slug} className="h-4 w-4" labeled={false} />
+                      <PlatformBrandLogo brand={bar.slug} className="size-4" labeled={false} />
                       <span className="text-sm text-muted-foreground">{bar.label}</span>
                     </div>
                     <div className="text-2xl font-medium">{bar.pct}%</div>

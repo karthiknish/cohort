@@ -1,7 +1,7 @@
 'use client'
 
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useReducer } from 'react'
 import { LoaderCircle, Lock, Settings2, Trash2, Users } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
@@ -45,6 +45,55 @@ interface ChannelMembersDialogProps {
   onDelete?: () => Promise<void> | void
 }
 
+type ChannelMembersDialogFormState = {
+  selectedMemberIds: string[]
+  visibility: 'public' | 'private'
+  saving: boolean
+  deleting: boolean
+  confirmDeleteOpen: boolean
+}
+
+type ChannelMembersDialogFormAction =
+  | { type: 'setSelectedMemberIds'; value: string[] | ((prev: string[]) => string[]) }
+  | { type: 'setVisibility'; value: 'public' | 'private' }
+  | { type: 'setSaving'; value: boolean }
+  | { type: 'setDeleting'; value: boolean }
+  | { type: 'setConfirmDeleteOpen'; value: boolean }
+
+function createInitialChannelMembersDialogFormState(channel: Channel): ChannelMembersDialogFormState {
+  return {
+    selectedMemberIds: Array.isArray(channel.memberIds) ? channel.memberIds : [],
+    visibility: channel.visibility === 'public' ? 'public' : 'private',
+    saving: false,
+    deleting: false,
+    confirmDeleteOpen: false,
+  }
+}
+
+function channelMembersDialogFormReducer(
+  state: ChannelMembersDialogFormState,
+  action: ChannelMembersDialogFormAction,
+): ChannelMembersDialogFormState {
+  switch (action.type) {
+    case 'setSelectedMemberIds':
+      return {
+        ...state,
+        selectedMemberIds:
+          typeof action.value === 'function' ? action.value(state.selectedMemberIds) : action.value,
+      }
+    case 'setVisibility':
+      return { ...state, visibility: action.value }
+    case 'setSaving':
+      return { ...state, saving: action.value }
+    case 'setDeleting':
+      return { ...state, deleting: action.value }
+    case 'setConfirmDeleteOpen':
+      return { ...state, confirmDeleteOpen: action.value }
+    default:
+      return state
+  }
+}
+
 function ChannelMembersDialogForm({
   channel,
   teamMembers,
@@ -59,15 +108,12 @@ function ChannelMembersDialogForm({
   onDelete?: () => Promise<void> | void
 }) {
   const { toast } = useToast()
-  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>(() =>
-    Array.isArray(channel.memberIds) ? channel.memberIds : [],
+  const [state, dispatch] = useReducer(
+    channelMembersDialogFormReducer,
+    channel,
+    createInitialChannelMembersDialogFormState,
   )
-  const [visibility, setVisibility] = useState<'public' | 'private'>(() =>
-    channel.visibility === 'public' ? 'public' : 'private',
-  )
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const { selectedMemberIds, visibility, saving, deleting, confirmDeleteOpen } = state
 
   const sortedMembers = useMemo(
     () => teamMembers.toSorted((a, b) => a.name.localeCompare(b.name)),
@@ -75,11 +121,11 @@ function ChannelMembersDialogForm({
   )
 
   const handleVisibilityChange = useCallback((value: string) => {
-    setVisibility(value as 'public' | 'private')
+    dispatch({ type: 'setVisibility', value: value as 'public' | 'private' })
   }, [])
 
   const handleOpenDeleteConfirm = useCallback(() => {
-    setConfirmDeleteOpen(true)
+    dispatch({ type: 'setConfirmDeleteOpen', value: true })
   }, [])
 
   const handleCloseDialog = useCallback(() => {
@@ -87,13 +133,15 @@ function ChannelMembersDialogForm({
   }, [onOpenChange])
 
   const handleMemberToggle = useCallback((memberId: string) => {
-    setSelectedMemberIds((prev) =>
-      prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId],
-    )
+    dispatch({
+      type: 'setSelectedMemberIds',
+      value: (prev) =>
+        prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId],
+    })
   }, [])
 
   const handleSave = useCallback(() => {
-    setSaving(true)
+    dispatch({ type: 'setSaving', value: true })
     void Promise.resolve(
       onSave({
         memberIds: selectedMemberIds,
@@ -113,7 +161,7 @@ function ChannelMembersDialogForm({
         })
       })
       .finally(() => {
-        setSaving(false)
+        dispatch({ type: 'setSaving', value: false })
       })
   }, [onOpenChange, onSave, selectedMemberIds, toast, visibility])
 
@@ -130,10 +178,10 @@ function ChannelMembersDialogForm({
       return
     }
 
-    setDeleting(true)
+    dispatch({ type: 'setDeleting', value: true })
     void Promise.resolve(onDelete())
       .then(() => {
-        setConfirmDeleteOpen(false)
+        dispatch({ type: 'setConfirmDeleteOpen', value: false })
         onOpenChange(false)
       })
       .catch((error) => {
@@ -145,16 +193,20 @@ function ChannelMembersDialogForm({
         })
       })
       .finally(() => {
-        setDeleting(false)
+        dispatch({ type: 'setDeleting', value: false })
       })
   }, [channel.isCustom, onDelete, onOpenChange])
+
+  const handleConfirmDeleteOpenChange = useCallback((open: boolean) => {
+    dispatch({ type: 'setConfirmDeleteOpen', value: open })
+  }, [])
 
   return (
     <>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Settings2 className="h-5 w-5" />
+            <Settings2 className="size-5" />
             Manage channel access
           </DialogTitle>
           <DialogDescription>
@@ -174,7 +226,7 @@ function ChannelMembersDialogForm({
                 )}
               </div>
               <Badge variant="outline" className="gap-1.5">
-                {visibility === 'private' ? <Lock className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+                {visibility === 'private' ? <Lock className="size-3.5" /> : <Users className="size-3.5" />}
                 {visibility === 'private' ? 'Private' : 'Public to team'}
               </Badge>
             </div>
@@ -237,7 +289,7 @@ function ChannelMembersDialogForm({
               disabled={saving || deleting}
               className="mr-auto"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="size-4" />
               Delete channel
             </Button>
           ) : null}
@@ -245,7 +297,7 @@ function ChannelMembersDialogForm({
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={saving || deleting}>
-            {saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+            {saving ? <LoaderCircle className="size-4 animate-spin" /> : <Users className="size-4" />}
             Save access
           </Button>
         </DialogFooter>
@@ -253,7 +305,7 @@ function ChannelMembersDialogForm({
 
       <ConfirmDialog
         open={confirmDeleteOpen}
-        onOpenChange={setConfirmDeleteOpen}
+        onOpenChange={handleConfirmDeleteOpenChange}
         title="Delete channel?"
         description={`This will permanently remove #${channel.name} and its message history for everyone.`}
         confirmLabel={deleting ? 'Deleting...' : 'Delete channel'}

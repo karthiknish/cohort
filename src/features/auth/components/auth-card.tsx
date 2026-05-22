@@ -71,9 +71,9 @@ function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
   return (
     <div className="flex items-center gap-2 text-xs">
       {met ? (
-        <Check className="h-3 w-3 shrink-0 text-success" aria-hidden />
+        <Check className="size-3 shrink-0 text-success" aria-hidden />
       ) : (
-        <X className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
+        <X className="size-3 shrink-0 text-muted-foreground" aria-hidden />
       )}
       <span className={cn(met ? 'text-success' : 'text-muted-foreground')}>{label}</span>
     </div>
@@ -101,7 +101,7 @@ function PasswordToggle({
       disabled={disabled}
       aria-label={label}
     >
-      {visible ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+      {visible ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
     </Button>
   )
 }
@@ -268,7 +268,7 @@ export function AuthCard({
                 >
                   {isSubmitting ? (
                     <>
-                      <LoaderCircle className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                      <LoaderCircle className="mr-2 size-4 shrink-0 animate-spin" aria-hidden />
                       Signing in…
                     </>
                   ) : (
@@ -351,7 +351,7 @@ export function AuthCard({
                   <div className="mt-3 space-y-2.5 rounded-2xl border border-border/50 bg-muted/25 p-3.5">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Shield className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        <Shield className="size-3.5 shrink-0" aria-hidden />
                         <span>Password strength</span>
                       </div>
                       <span
@@ -426,12 +426,12 @@ export function AuthCard({
                   >
                     {passwordsMatch ? (
                       <>
-                        <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        <Check className="size-3.5 shrink-0" aria-hidden />
                         Passwords match
                       </>
                     ) : (
                       <>
-                        <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        <X className="size-3.5 shrink-0" aria-hidden />
                         Passwords do not match
                       </>
                     )}
@@ -447,7 +447,7 @@ export function AuthCard({
                 >
                   {isSubmitting ? (
                     <>
-                      <LoaderCircle className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                      <LoaderCircle className="mr-2 size-4 shrink-0 animate-spin" aria-hidden />
                       Creating account…
                     </>
                   ) : (
@@ -477,9 +477,9 @@ export function AuthCard({
             className="h-11 w-full gap-2.5 rounded-full border-border/70 bg-background/60 font-medium hover:bg-muted/40"
           >
             {isSubmitting ? (
-              <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+              <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden />
             ) : (
-              <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+              <svg className="size-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   fill={PROVIDER_COLORS.google.blue}
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -502,7 +502,7 @@ export function AuthCard({
           </Button>
 
           <div className="flex items-center justify-center gap-2 rounded-xl bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
-            <Shield className="h-3.5 w-3.5 shrink-0 text-primary/80" aria-hidden />
+            <Shield className="size-3.5 shrink-0 text-primary/80" aria-hidden />
             <span>Encrypted in transit · SOC-ready infrastructure</span>
           </div>
         </div>

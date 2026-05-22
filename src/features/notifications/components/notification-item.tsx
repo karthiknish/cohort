@@ -78,7 +78,7 @@ export function NotificationItem({
   const accentClass = CATEGORY_ACCENT[category] ?? 'border-l-border bg-muted/15'
   const badgeClass = CATEGORY_BADGE[category] ?? 'border-border bg-muted text-muted-foreground'
 
-  const handleClick = useCallback(() => {
+  const onOpenNotification = useCallback(() => {
     onOpen?.(notification)
   }, [notification, onOpen])
 
@@ -109,11 +109,11 @@ export function NotificationItem({
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onOpenNotification}
       className={cn(
         'group relative flex w-full cursor-pointer gap-3 border-b border-border/50 border-l-[3px] text-left transition-[background-color,box-shadow]',
         accentClass,
-        compact ? 'px-3.5 py-3' : 'rounded-lg border px-4 py-4',
+        compact ? 'px-3.5 py-3' : 'rounded-lg border p-4',
         !notification.read && 'shadow-sm',
         selected && 'ring-2 ring-primary/25 ring-inset',
         'hover:bg-muted/35',
@@ -123,14 +123,14 @@ export function NotificationItem({
         <input
           type="checkbox"
           checked={selected}
-          className="mt-1 h-4 w-4 shrink-0 accent-primary"
+          className="mt-1 size-4 shrink-0 accent-primary"
           onChange={handleSelectChange}
           onClick={handleSelectClick}
           aria-label={`Select ${notification.title}`}
         />
       ) : null}
 
-      <Avatar className={cn('shrink-0 ring-1 ring-border/40', compact ? 'h-9 w-9' : 'h-10 w-10')}>
+      <Avatar className={cn('shrink-0 ring-1 ring-border/40', compact ? 'size-9' : 'size-10')}>
         <AvatarFallback className="bg-muted/40 text-xs font-semibold">
           {getInitials(notification.actor.name)}
         </AvatarFallback>
@@ -163,12 +163,12 @@ export function NotificationItem({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7 rounded-md bg-background/80 shadow-sm"
+            className="size-7 rounded-md bg-background/80 shadow-sm"
             disabled={ackInFlight}
             onClick={handleMarkRead}
             aria-label="Mark as read"
           >
-            <Check className="h-3.5 w-3.5" />
+            <Check className="size-3.5" />
           </Button>
         ) : null}
         {onDismiss ? (
@@ -176,12 +176,12 @@ export function NotificationItem({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7 rounded-md bg-background/80 text-muted-foreground shadow-sm hover:text-destructive"
+            className="size-7 rounded-md bg-background/80 text-muted-foreground shadow-sm hover:text-destructive"
             disabled={ackInFlight}
             onClick={handleDismiss}
             aria-label="Dismiss notification"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="size-3.5" />
           </Button>
         ) : null}
       </div>

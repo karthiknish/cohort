@@ -89,7 +89,7 @@ export default function TermsPage() {
       <FadeIn>
         <div className="flex flex-col gap-4">
           <Link href="/" className="group flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground w-fit">
-            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-1" />
             Back to Home
           </Link>
           <div className="space-y-2">
@@ -103,8 +103,8 @@ export default function TermsPage() {
         <Card className="border-border/60 shadow-xl shadow-black/[0.04]">
           <CardHeader className="border-b bg-muted/30 pb-8 pt-8">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-foreground">
-                <FileText className="h-6 w-6" />
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-foreground">
+                <FileText className="size-6" />
               </div>
               <div className="space-y-1">
                 <CardTitle className="text-2xl">Welcome to Cohorts</CardTitle>
@@ -122,8 +122,8 @@ export default function TermsPage() {
                   index !== sections.length - 1 && "border-b border-border/40"
                 )}>
                   <div className="flex flex-col gap-4 sm:flex-row sm:gap-8">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:bg-accent/10 group-hover:text-primary transition-colors">
-                      <section.icon className="h-5 w-5" />
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:bg-accent/10 group-hover:text-primary transition-colors">
+                      <section.icon className="size-5" />
                     </div>
                     <div className="space-y-2">
                       <h2 className="text-lg font-semibold text-foreground tracking-tight">{section.title}</h2>

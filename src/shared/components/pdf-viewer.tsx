@@ -28,17 +28,17 @@ export function PdfViewer({ url, title = 'PDF document', className }: PdfViewerP
 
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
-      <div className="relative min-h-[min(72dvh,720px)] flex-1 overflow-hidden rounded-xl border border-border/60 bg-zinc-950 shadow-inner ring-1 ring-border/40">
+      <div className="relative min-h-[min(72dvh,720px)] flex-1 overflow-hidden rounded-xl border border-border/60 bg-black shadow-inner ring-1 ring-border/40">
         {isLoading && !loadError ? (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-zinc-950/90">
-            <Loader2 className="h-8 w-8 animate-spin text-viewer-chrome/70" aria-hidden />
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/90">
+            <Loader2 className="size-8 animate-spin text-viewer-chrome/70" aria-hidden />
             <p className="text-sm text-viewer-chrome/60">Loading PDF…</p>
           </div>
         ) : null}
 
         {loadError ? (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 p-8 text-center">
-            <FileText className="h-10 w-10 text-viewer-chrome/50" aria-hidden />
+            <FileText className="size-10 text-viewer-chrome/50" aria-hidden />
             <div className="space-y-1">
               <p className="font-medium text-viewer-chrome">Preview unavailable in browser</p>
               <p className="max-w-sm text-sm text-viewer-chrome/60">
@@ -48,7 +48,7 @@ export function PdfViewer({ url, title = 'PDF document', className }: PdfViewerP
             <div className="flex flex-wrap justify-center gap-2">
               <Button variant="secondary" size="sm" asChild>
                 <a href={url} target="_blank" rel="noreferrer">
-                  <ExternalLink className="mr-2 h-4 w-4" />
+                  <ExternalLink className="mr-2 size-4" />
                   Open in new tab
                 </a>
               </Button>
@@ -59,7 +59,7 @@ export function PdfViewer({ url, title = 'PDF document', className }: PdfViewerP
         <iframe
           src={url}
           title={title}
-          className="h-full min-h-[min(72dvh,720px)] w-full bg-zinc-900"
+          className="h-full min-h-[min(72dvh,720px)] w-full bg-black"
           onLoad={handleLoad}
           onError={handleError}
         />

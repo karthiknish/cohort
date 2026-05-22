@@ -2,7 +2,7 @@
 // CLIENTS PAGE - Data Management Hook
 // =============================================================================
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useQuery } from 'convex/react'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { customFormulasApi, projectsApi, proposalsApi, tasksApi } from '@/lib/convex-api'
@@ -41,35 +41,29 @@ export function useClientsData(selectedClient: ClientRecord | null, isPreviewMod
       : 'skip'
   ) as QueryRow[] | undefined
 
-  const [adStatusLoading, setAdStatusLoading] = useState(false)
-  const [adAccountsConnected, setAdAccountsConnected] = useState<boolean | null>(null)
-
   // Formulas connectivity check
   const formulasConnectivity = useQuery(
     customFormulasApi.listByWorkspace,
     !isPreviewMode && selectedClient ? { workspaceId: selectedClient.id, activeOnly: true } : 'skip'
   ) as QueryRow[] | undefined
 
-  // Check ad connectivity
-  useEffect(() => {
+  const { adStatusLoading, adAccountsConnected } = useMemo(() => {
     if (isPreviewMode) {
-      setAdAccountsConnected(true)
-      setAdStatusLoading(false)
-      return
+      return { adStatusLoading: false, adAccountsConnected: true as boolean | null }
     }
 
     if (!selectedClient) {
-      setAdAccountsConnected(null)
-      return
+      return { adStatusLoading: false, adAccountsConnected: null as boolean | null }
     }
 
     if (formulasConnectivity === undefined) {
-      setAdStatusLoading(true)
-      return
+      return { adStatusLoading: true, adAccountsConnected: null as boolean | null }
     }
 
-    setAdAccountsConnected(Array.isArray(formulasConnectivity) ? formulasConnectivity.length > 0 : false)
-    setAdStatusLoading(false)
+    return {
+      adStatusLoading: false,
+      adAccountsConnected: Array.isArray(formulasConnectivity) ? formulasConnectivity.length > 0 : false,
+    }
   }, [formulasConnectivity, isPreviewMode, selectedClient])
 
   // Compute stats reactively from Convex queries

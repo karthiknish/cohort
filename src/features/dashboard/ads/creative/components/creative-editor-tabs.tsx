@@ -82,7 +82,7 @@ function HeadlineEditRow(props: {
 }) {
   const { value, index, isPreviewing, onUpdate, onRemove, onSelectPreview } = props
 
-  const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+  const onHeadlineChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     onUpdate(index, event.target.value)
   }, [index, onUpdate])
 
@@ -105,7 +105,7 @@ function HeadlineEditRow(props: {
       <div className="min-w-0 flex-1 space-y-1">
         <Input
           value={value}
-          onChange={handleChange}
+          onChange={onHeadlineChange}
           placeholder="Headline variant…"
           className="h-9 border-muted bg-background text-sm focus-visible:ring-primary/20"
         />
@@ -116,22 +116,22 @@ function HeadlineEditRow(props: {
           type="button"
           variant={isPreviewing ? 'default' : 'ghost'}
           size="icon"
-          className="h-8 w-8"
+          className="size-8"
           onClick={handleSelectPreview}
           title="Show in preview"
           aria-label={`Preview headline ${index + 1}`}
         >
-          {isPreviewing ? <Eye className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+          {isPreviewing ? <Eye className="size-3.5" /> : <Pin className="size-3.5" />}
         </Button>
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          className="size-8 text-muted-foreground hover:text-destructive"
           onClick={handleRemove}
           aria-label={`Remove headline ${index + 1}`}
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash2 className="size-3.5" />
         </Button>
       </div>
     </div>
@@ -159,11 +159,11 @@ function HeadlineDisplayRow(props: {
       <Button
         variant="ghost"
         size="icon"
-        className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="size-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
         onClick={handleCopy}
         aria-label={`Copy headline ${index + 1}`}
       >
-        {copiedField === `headline-${index}` ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+        {copiedField === `headline-${index}` ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
       </Button>
     </div>
   )
@@ -179,7 +179,7 @@ function DescriptionEditRow(props: {
 }) {
   const { value, index, isPreviewing, onUpdate, onRemove, onSelectPreview } = props
 
-  const handleChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
+  const onDescriptionChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
     onUpdate(index, event.target.value)
   }, [index, onUpdate])
 
@@ -202,7 +202,7 @@ function DescriptionEditRow(props: {
       <div className="min-w-0 flex-1 space-y-1">
         <Textarea
           value={value}
-          onChange={handleChange}
+          onChange={onDescriptionChange}
           placeholder="Primary text variant…"
           className="min-h-[88px] resize-y border-muted bg-background text-sm leading-relaxed focus-visible:ring-primary/20"
         />
@@ -213,22 +213,22 @@ function DescriptionEditRow(props: {
           type="button"
           variant={isPreviewing ? 'default' : 'ghost'}
           size="icon"
-          className="h-8 w-8"
+          className="size-8"
           onClick={handleSelectPreview}
           title="Show in preview"
           aria-label={`Preview primary text ${index + 1}`}
         >
-          {isPreviewing ? <Eye className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+          {isPreviewing ? <Eye className="size-3.5" /> : <Pin className="size-3.5" />}
         </Button>
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          className="size-8 text-muted-foreground hover:text-destructive"
           onClick={handleRemove}
           aria-label={`Remove primary text ${index + 1}`}
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash2 className="size-3.5" />
         </Button>
       </div>
     </div>
@@ -256,11 +256,11 @@ function DescriptionDisplayRow(props: {
       <Button
         variant="ghost"
         size="icon"
-        className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="size-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
         onClick={handleCopy}
         aria-label={`Copy primary text ${index + 1}`}
       >
-        {copiedField === `desc-${index}` ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+        {copiedField === `desc-${index}` ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
       </Button>
     </div>
   )
@@ -379,15 +379,15 @@ export function CreativeEditorTabs(props: {
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <TabsList className="h-10 bg-muted/40 p-1">
             <TabsTrigger value="edit" className="gap-2 px-3 text-xs">
-              <Edit3 className="h-3.5 w-3.5" />
+              <Edit3 className="size-3.5" />
               Content
             </TabsTrigger>
             <TabsTrigger value="insights" className="gap-2">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <Sparkles className="size-3.5 text-primary" />
               AI Insights
             </TabsTrigger>
             <TabsTrigger value="details" className="gap-2">
-              <Layout className="h-3.5 w-3.5" />
+              <Layout className="size-3.5" />
               Technical
             </TabsTrigger>
           </TabsList>
@@ -402,7 +402,7 @@ export function CreativeEditorTabs(props: {
             <Card className="border border-border/60 shadow-none">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <MousePointer2 className="h-4 w-4 text-primary" />
+                  <MousePointer2 className="size-4 text-primary" />
                   Call to action
                 </CardTitle>
               </CardHeader>
@@ -433,7 +433,7 @@ export function CreativeEditorTabs(props: {
             <Card className="border border-border/60 shadow-none">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <LinkIcon className="h-4 w-4 text-primary" />
+                  <LinkIcon className="size-4 text-primary" />
                   Landing page
                 </CardTitle>
               </CardHeader>
@@ -456,9 +456,9 @@ export function CreativeEditorTabs(props: {
                       field="landing"
                       copiedField={copiedField}
                       onCopy={onCopy}
-                      className="h-7 w-7 shrink-0"
+                      className="size-7 shrink-0"
                       ariaLabel="Copy landing page URL"
-                      iconClassName="h-3 w-3"
+                      iconClassName="size-3"
                     />
                   </div>
                 ) : (
@@ -473,7 +473,7 @@ export function CreativeEditorTabs(props: {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Type className="h-4 w-4 text-primary" />
+                    <Type className="size-4 text-primary" />
                     Headlines
                   </CardTitle>
                   <CardDescription className="text-xs">
@@ -486,7 +486,7 @@ export function CreativeEditorTabs(props: {
                   </Badge>
                   {showEditableContent ? (
                     <Button variant="outline" size="sm" onClick={onAddHeadline} className="h-8 gap-1">
-                      <Plus className="h-3.5 w-3.5" />
+                      <Plus className="size-3.5" />
                       Add
                     </Button>
                   ) : null}
@@ -513,7 +513,7 @@ export function CreativeEditorTabs(props: {
                   <div className="rounded-lg border-2 border-dashed p-6 text-center">
                     <p className="mb-3 text-sm text-muted-foreground">No headlines yet.</p>
                     <Button variant="outline" size="sm" onClick={onAddHeadline}>
-                      <Plus className="mr-1 h-4 w-4" /> Add headline
+                      <Plus className="mr-1 size-4" /> Add headline
                     </Button>
                   </div>
                 )
@@ -540,7 +540,7 @@ export function CreativeEditorTabs(props: {
                   disabled={!onGenerateHeadlines || generatingHeadlines}
                   className="mt-2 h-8 gap-1.5 text-xs"
                 >
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <Sparkles className="size-3.5 text-primary" />
                   {generatingHeadlines ? 'Generating…' : 'Generate AI headlines'}
                 </Button>
               ) : null}
@@ -553,7 +553,7 @@ export function CreativeEditorTabs(props: {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-base flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" />
+                    <FileText className="size-4 text-primary" />
                     Primary Text
                   </CardTitle>
                   <CardDescription className="text-xs">
@@ -566,7 +566,7 @@ export function CreativeEditorTabs(props: {
                   </Badge>
                   {showEditableContent ? (
                     <Button variant="outline" size="sm" onClick={onAddDescription} className="h-8 gap-1">
-                      <Plus className="h-3.5 w-3.5" />
+                      <Plus className="size-3.5" />
                       Add
                     </Button>
                   ) : null}
@@ -593,7 +593,7 @@ export function CreativeEditorTabs(props: {
                   <div className="rounded-lg border-2 border-dashed p-6 text-center">
                     <p className="mb-3 text-sm text-muted-foreground">No primary text yet.</p>
                     <Button variant="outline" size="sm" onClick={onAddDescription}>
-                      <Plus className="mr-1 h-4 w-4" /> Add primary text
+                      <Plus className="mr-1 size-4" /> Add primary text
                     </Button>
                   </div>
                 )
@@ -620,7 +620,7 @@ export function CreativeEditorTabs(props: {
                   disabled={!onGenerateDescriptions || generatingDescriptions}
                   className="mt-2 h-8 gap-1.5 text-xs"
                 >
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <Sparkles className="size-3.5 text-primary" />
                   {generatingDescriptions ? 'Generating…' : 'Generate AI primary text'}
                 </Button>
               ) : null}
@@ -632,7 +632,7 @@ export function CreativeEditorTabs(props: {
           <Card className="border-none shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-base flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
+                <Sparkles className="size-4 text-primary" />
                 AI Creative Analysis
               </CardTitle>
               <CardDescription className="text-xs">
@@ -642,7 +642,7 @@ export function CreativeEditorTabs(props: {
             <CardContent className="space-y-4">
               {!performanceSummary ? (
                 <div className="p-8 text-center border-2 border-dashed rounded-2xl">
-                  <Zap className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                  <Zap className="size-10 text-muted-foreground/30 mx-auto mb-3" />
                   <p className="text-sm text-muted-foreground">Load performance metrics to generate AI insights.</p>
                   {onRefreshPerformance ? (
                     <Button variant="outline" size="sm" className="mt-4" onClick={onRefreshPerformance}>
@@ -676,13 +676,13 @@ export function CreativeEditorTabs(props: {
 
                       <div className="p-3 rounded-xl bg-accent/5 border border-accent/10">
                         <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1 flex items-center gap-1">
-                          <Zap className="h-3 w-3" /> Recommendation
+                          <Zap className="size-3" /> Recommendation
                         </p>
                         <p className="text-xs font-medium">{insight.suggestion}</p>
                       </div>
 
-                      <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100" aria-label="Add recommendation to draft">
-                        <Plus className="h-3.5 w-3.5" />
+                      <Button variant="ghost" size="icon" className="absolute top-2 right-2 size-7 opacity-0 group-hover:opacity-100" aria-label="Add recommendation to draft">
+                        <Plus className="size-3.5" />
                       </Button>
                     </div>
                   ))}
@@ -696,7 +696,7 @@ export function CreativeEditorTabs(props: {
           <Card className="border-none shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-base flex items-center gap-2">
-                <Layout className="h-4 w-4 text-primary" />
+                <Layout className="size-4 text-primary" />
                 Technical Metadata
               </CardTitle>
             </CardHeader>
@@ -711,9 +711,9 @@ export function CreativeEditorTabs(props: {
                       field="creativeId"
                       copiedField={copiedField}
                       onCopy={onCopy}
-                      className="h-6 w-6"
+                      className="size-6"
                       ariaLabel="Copy creative ID"
-                      iconClassName="h-3 w-3"
+                      iconClassName="size-3"
                     />
                   </div>
                 </div>
@@ -726,9 +726,9 @@ export function CreativeEditorTabs(props: {
                       field="campaignId"
                       copiedField={copiedField}
                       onCopy={onCopy}
-                      className="h-6 w-6"
+                      className="size-6"
                       ariaLabel="Copy campaign ID"
-                      iconClassName="h-3 w-3"
+                      iconClassName="size-3"
                     />
                   </div>
                 </div>
@@ -750,9 +750,9 @@ export function CreativeEditorTabs(props: {
                         field="imageUrl"
                         copiedField={copiedField}
                         onCopy={onCopy}
-                        className="h-8 w-8"
+                        className="size-8"
                         ariaLabel="Copy source image URL"
-                        iconClassName="h-3.5 w-3.5"
+                        iconClassName="size-3.5"
                       />
                     </div>
                   </div>
@@ -761,8 +761,8 @@ export function CreativeEditorTabs(props: {
                 {creative.videoUrl && (
                   <div className="p-3 rounded-xl border bg-background flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
-                        <Video className="h-5 w-5 text-muted-foreground" />
+                      <div className="size-10 rounded bg-muted flex items-center justify-center shrink-0">
+                        <Video className="size-5 text-muted-foreground" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Source Video</p>
@@ -774,9 +774,9 @@ export function CreativeEditorTabs(props: {
                         field="videoUrl"
                         copiedField={copiedField}
                         onCopy={onCopy}
-                        className="h-8 w-8"
+                        className="size-8"
                         ariaLabel="Copy source video URL"
-                        iconClassName="h-3.5 w-3.5"
+                        iconClassName="size-3.5"
                       />
                   </div>
                 )}

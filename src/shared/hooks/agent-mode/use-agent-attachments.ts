@@ -47,33 +47,34 @@ export function useAgentAttachments(workspaceId: string | null) {
     setIsExtractingAttachments(true)
 
     try {
-      for (let index = 0; index < nextFiles.length; index += 1) {
-        const file = nextFiles[index]
-        const placeholderId = placeholders[index]?.id
-        if (!file || !placeholderId) continue
+      await Promise.all(
+        nextFiles.map(async (file, index) => {
+          const placeholderId = placeholders[index]?.id
+          if (!file || !placeholderId) return
 
-        try {
-          const extracted = await buildAgentAttachmentContext(file, { extractPdfOnServer })
-          setPendingAttachments((prev) =>
-            prev.map((attachment) => (attachment.id === placeholderId ? extracted : attachment)),
-          )
-        } catch (err) {
-          console.error('[useAgentMode] Attachment processing failed:', err, file.name)
-          setPendingAttachments((prev) =>
-            prev.map((attachment) =>
-              attachment.id === placeholderId
-                ? {
-                    ...attachment,
-                    extractionStatus: 'failed',
-                    excerpt: 'Could not read this file.',
-                    errorMessage:
-                      err instanceof Error ? err.message : 'Could not process this attachment.',
-                  }
-                : attachment,
-            ),
-          )
-        }
-      }
+          try {
+            const extracted = await buildAgentAttachmentContext(file, { extractPdfOnServer })
+            setPendingAttachments((prev) =>
+              prev.map((attachment) => (attachment.id === placeholderId ? extracted : attachment)),
+            )
+          } catch (err) {
+            console.error('[useAgentMode] Attachment processing failed:', err, file.name)
+            setPendingAttachments((prev) =>
+              prev.map((attachment) =>
+                attachment.id === placeholderId
+                  ? {
+                      ...attachment,
+                      extractionStatus: 'failed',
+                      excerpt: 'Could not read this file.',
+                      errorMessage:
+                        err instanceof Error ? err.message : 'Could not process this attachment.',
+                    }
+                  : attachment,
+              ),
+            )
+          }
+        }),
+      )
     } finally {
       setIsExtractingAttachments(false)
     }

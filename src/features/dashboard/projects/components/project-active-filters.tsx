@@ -26,7 +26,7 @@ export function ProjectActiveFilters({ labels, onClearAll }: ProjectActiveFilter
         </Badge>
       ))}
       <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={onClearAll}>
-        <X className="h-3 w-3" aria-hidden />
+        <X className="size-3" aria-hidden />
         Clear all
       </Button>
     </div>

@@ -35,7 +35,7 @@ export function TrafficObjectiveSection({ formData, onChange, disabled }: Object
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <ExternalLink className="w-4 h-4 text-warning" />
+            <ExternalLink className="size-4 text-warning" />
             Traffic Destination
           </CardTitle>
           <CardDescription>
@@ -58,8 +58,8 @@ export function TrafficObjectiveSection({ formData, onChange, disabled }: Object
                 {DESTINATION_TYPES.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     <div className="flex items-center gap-2">
-                      {type.value === 'WEBSITE' && <Globe className="w-4 h-4" />}
-                      {type.value === 'MESSENGER' && <MessageCircle className="w-4 h-4" />}
+                      {type.value === 'WEBSITE' && <Globe className="size-4" />}
+                      {type.value === 'MESSENGER' && <MessageCircle className="size-4" />}
                       <div className="flex flex-col items-start">
                         <span>{type.label}</span>
                         <span className="text-xs text-muted-foreground">{type.description}</span>
@@ -133,7 +133,7 @@ export function TrafficObjectiveSection({ formData, onChange, disabled }: Object
       <Card className="border-warning/20 bg-warning/5">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <ExternalLink className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+            <ExternalLink className="size-5 text-warning flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Traffic Campaign Tips</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">

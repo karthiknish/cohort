@@ -154,7 +154,7 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
 
   const meetingShell = (
     <>
-      <div className="flex flex-col gap-5 px-5 py-5 lg:px-6">
+      <div className="flex flex-col gap-5 p-5 lg:px-6">
         <MeetingRoomHeroSection
           meetingStatus={meetingStatus}
           meetingTitle={meetingTitle}

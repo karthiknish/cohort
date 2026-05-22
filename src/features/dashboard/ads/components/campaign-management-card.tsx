@@ -521,6 +521,14 @@ export function CampaignManagementCard({
     void fetchCampaigns()
   }, [fetchCampaigns, fetchGroups, view])
 
+  const handleMetaCampaignCreated = useCallback(() => {
+    void fetchCampaigns()
+  }, [fetchCampaigns])
+
+  const handleOpenMetaCreateDialog = useCallback(() => {
+    setMetaCreateOpen(true)
+  }, [])
+
   const runInitialCampaignFetch = useEffectEvent(() => {
     void fetchCampaigns()
     if (providerId === 'linkedin') {
@@ -872,7 +880,7 @@ export function CampaignManagementCard({
         <CreateMetaCampaignDialog
           open={metaCreateOpen}
           onOpenChange={setMetaCreateOpen}
-          onCreated={() => void fetchCampaigns()}
+          onCreated={handleMetaCampaignCreated}
         />
       ) : null}
       <CampaignManagementConnectedView
@@ -891,7 +899,7 @@ export function CampaignManagementCard({
         onBiddingOpenChange={handleBiddingOpenChange}
         onBudgetChange={handleBudgetChange}
         onBudgetOpenChange={handleBudgetOpenChange}
-        onCreateCampaign={isMetaProvider ? () => setMetaCreateOpen(true) : undefined}
+        onCreateCampaign={isMetaProvider ? handleOpenMetaCreateDialog : undefined}
         onRefresh={handleRefresh}
         onRowClick={openInsightsPage}
         onSubmitBidding={handleBiddingUpdate}

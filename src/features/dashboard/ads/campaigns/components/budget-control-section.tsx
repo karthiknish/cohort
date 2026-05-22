@@ -76,6 +76,43 @@ function toApiBudgetMode(providerId: string, mode: BudgetUiMode | null): string 
   return mode
 }
 
+function BudgetModeOption({
+  opt,
+  selected,
+  disabled,
+  onSelect,
+}: {
+  opt: { value: BudgetUiMode; label: string; hint: string }
+  selected: boolean
+  disabled: boolean
+  onSelect: (value: BudgetUiMode) => void
+}) {
+  const handleClick = useCallback(() => {
+    onSelect(opt.value)
+  }, [onSelect, opt.value])
+
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      disabled={disabled}
+      onClick={handleClick}
+      className={cn(
+        'flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left transition-[border-color,box-shadow,background-color]',
+        selected
+          ? 'border-primary/40 bg-primary/[0.06] shadow-sm ring-1 ring-primary/20'
+          : 'border-border/60 bg-card/50 hover:border-primary/25 hover:bg-card',
+        disabled && 'pointer-events-none opacity-60',
+        'motion-reduce:transition-none',
+      )}
+    >
+      <span className="text-sm font-medium text-foreground">{opt.label}</span>
+      <span className="text-xs text-muted-foreground">{opt.hint}</span>
+    </button>
+  )
+}
+
 function formatModeLabel(providerId: string, mode: BudgetUiMode | null): string {
   if (!mode) return 'Not set'
   const opt = getBudgetModeOptions(providerId).find((o) => o.value === mode)
@@ -212,15 +249,15 @@ export function BudgetControlSection({
       <Button
         variant="ghost"
         size="icon"
-        className="h-9 w-9"
+        className="size-9"
         onClick={handleRefresh}
         disabled={saving}
         aria-label="Refresh campaign budget"
       >
-        <RefreshCw className={cn('h-4 w-4', saving && 'animate-spin')} aria-hidden />
+        <RefreshCw className={cn('size-4', saving && 'animate-spin')} aria-hidden />
       </Button>
       <Button onClick={handleSave} disabled={!canEdit || saving || !hasUnsavedChanges} className="gap-2">
-        <Save className="h-4 w-4" aria-hidden />
+        <Save className="size-4" aria-hidden />
         {saving ? 'Saving…' : 'Save changes'}
       </Button>
     </>
@@ -248,7 +285,7 @@ export function BudgetControlSection({
       <CardContent className="space-y-5 pt-6">
         {!canEdit ? (
           <div className={ADS_PAGE_THEME.controlPreviewBanner} role="status">
-            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+            <Sparkles className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
             <p>
               <span className="font-medium text-foreground">Preview mode</span> — switch to live mode to
               edit budgets on the ad platform.
@@ -263,7 +300,7 @@ export function BudgetControlSection({
               {currentBudgetLabel}
             </p>
             <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
-              <CalendarClock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <CalendarClock className="size-3.5 shrink-0" aria-hidden />
               {formatModeLabel(providerId, mode)} budget
             </p>
             {hasUnsavedChanges && draftBudgetLabel ? (
@@ -283,30 +320,15 @@ export function BudgetControlSection({
                   role="radiogroup"
                   aria-label="Budget type"
                 >
-                  {modeOptions.map((opt) => {
-                    const selected = mode === opt.value
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        disabled={!canEdit || saving}
-                        onClick={() => handleModeSelect(opt.value)}
-                        className={cn(
-                          'flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left transition-[border-color,box-shadow,background-color]',
-                          selected
-                            ? 'border-primary/40 bg-primary/[0.06] shadow-sm ring-1 ring-primary/20'
-                            : 'border-border/60 bg-card/50 hover:border-primary/25 hover:bg-card',
-                          (!canEdit || saving) && 'pointer-events-none opacity-60',
-                          'motion-reduce:transition-none',
-                        )}
-                      >
-                        <span className="text-sm font-medium text-foreground">{opt.label}</span>
-                        <span className="text-xs text-muted-foreground">{opt.hint}</span>
-                      </button>
-                    )
-                  })}
+                  {modeOptions.map((opt) => (
+                    <BudgetModeOption
+                      key={opt.value}
+                      opt={opt}
+                      selected={mode === opt.value}
+                      disabled={!canEdit || saving}
+                      onSelect={handleModeSelect}
+                    />
+                  ))}
                 </div>
               </div>
             ) : null}

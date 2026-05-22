@@ -62,7 +62,7 @@ export function OverviewPanel({ activeMetricId, onMetricClick }: OverviewPanelPr
             <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/60 uppercase">
               {metric.chartLabel}
             </p>
-            <TrendingUp className="h-3 w-3 text-muted-foreground/40" />
+            <TrendingUp className="size-3 text-muted-foreground/40" />
           </div>
           <div className="flex h-20 items-end gap-[5px]">
             {metric.bars.map((bar) => (

@@ -827,19 +827,12 @@ export function getPreviewCollaborationMessages(
     viewerId?: string | null,
 ): CollaborationMessage[] {
     return PREVIEW_CHANNEL_MESSAGES
-        .filter((message) => {
-            if (message.channelType !== channelType) {
-                return false
-            }
-            if (channelType === 'client') {
-                return message.clientId === clientId
-            }
-            if (channelType === 'project') {
-                return message.projectId === projectId
-            }
-            return true
+        .flatMap((message) => {
+            if (message.channelType !== channelType) return []
+            if (channelType === 'client' && message.clientId !== clientId) return []
+            if (channelType === 'project' && message.projectId !== projectId) return []
+            return [mapCollaborationMessage(message, viewerId)]
         })
-        .map((message) => mapCollaborationMessage(message, viewerId))
         .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
 }
 

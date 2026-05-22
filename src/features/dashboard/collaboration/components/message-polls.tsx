@@ -2,7 +2,7 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { createElement, useState, useCallback, useMemo } from 'react'
+import { createElement, useReducer, useState, useCallback, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -199,6 +199,67 @@ interface CreatePollDialogProps {
   trigger?: React.ReactNode
 }
 
+type CreatePollFormState = {
+  question: string
+  options: Array<{ id: string; text: string }>
+  multipleChoice: boolean
+  anonymous: boolean
+}
+
+type CreatePollFormAction =
+  | { type: 'reset' }
+  | { type: 'setQuestion'; value: string }
+  | { type: 'addOption' }
+  | { type: 'removeOption'; id: string }
+  | { type: 'setOptionText'; id: string; text: string }
+  | { type: 'setMultipleChoice'; value: boolean }
+  | { type: 'setAnonymous'; value: boolean }
+
+function createInitialPollFormState(): CreatePollFormState {
+  return {
+    question: '',
+    options: [
+      { id: '1', text: '' },
+      { id: '2', text: '' },
+    ],
+    multipleChoice: false,
+    anonymous: false,
+  }
+}
+
+function createPollFormReducer(
+  state: CreatePollFormState,
+  action: CreatePollFormAction,
+): CreatePollFormState {
+  switch (action.type) {
+    case 'reset':
+      return createInitialPollFormState()
+    case 'setQuestion':
+      return { ...state, question: action.value }
+    case 'addOption':
+      return {
+        ...state,
+        options: [...state.options, { id: String(state.options.length + 1), text: '' }],
+      }
+    case 'removeOption':
+      if (state.options.length <= 2) return state
+      return { ...state, options: state.options.filter((opt) => opt.id !== action.id) }
+    case 'setOptionText':
+      return {
+        ...state,
+        options: state.options.map((opt) =>
+          opt.id === action.id ? { ...opt, text: action.text } : opt
+        ),
+      }
+    case 'setMultipleChoice':
+      return { ...state, multipleChoice: action.value }
+    case 'setAnonymous':
+      return { ...state, anonymous: action.value }
+    default:
+      return state
+  }
+}
+
 /**
  * Dialog for creating a new poll
  */
@@ -210,31 +271,36 @@ export function CreatePollDialog({
 }: CreatePollDialogProps) {
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
-  const [question, setQuestion] = useState('')
-  const [options, setOptions] = useState<Array<{ id: string; text: string }>>([
-    { id: '1', text: '' },
-    { id: '2', text: '' },
-  ])
-  const [multipleChoice, setMultipleChoice] = useState(false)
-  const [anonymous, setAnonymous] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [formState, dispatch] = useReducer(createPollFormReducer, undefined, createInitialPollFormState)
+  const { question, options, multipleChoice, anonymous } = formState
 
   const handleAddOption = useCallback(() => {
-    setOptions((prev) => [
-      ...prev,
-      { id: String(prev.length + 1), text: '' },
-    ])
+    dispatch({ type: 'addOption' })
   }, [])
 
   const handleRemoveOption = useCallback((id: string) => {
-    if (options.length <= 2) return
-    setOptions((prev) => prev.filter((opt) => opt.id !== id))
-  }, [options.length])
+    dispatch({ type: 'removeOption', id })
+  }, [])
 
   const handleOptionChange = useCallback((id: string, text: string) => {
-    setOptions((prev) =>
-      prev.map((opt) => (opt.id === id ? { ...opt, text } : opt))
-    )
+    dispatch({ type: 'setOptionText', id, text })
+  }, [])
+
+  const handleQuestionChange = useCallback((value: string) => {
+    dispatch({ type: 'setQuestion', value })
+  }, [])
+
+  const handleMultipleChoiceChange = useCallback((value: boolean) => {
+    dispatch({ type: 'setMultipleChoice', value })
+  }, [])
+
+  const handleAnonymousChange = useCallback((value: boolean) => {
+    dispatch({ type: 'setAnonymous', value })
+  }, [])
+
+  const resetForm = useCallback(() => {
+    dispatch({ type: 'reset' })
   }, [])
 
   const handleCreate = useCallback(async () => {
@@ -256,8 +322,10 @@ export function CreatePollDialog({
     }
 
     const validOptions = options
-      .filter((opt) => opt.text.trim().length > 0)
-      .map((opt) => ({ ...opt, text: opt.text.trim(), id: crypto.randomUUID() }))
+      .flatMap((opt) => {
+        const text = opt.text.trim()
+        return text.length > 0 ? [{ ...opt, text, id: crypto.randomUUID() }] : []
+      })
 
     if (validOptions.length < 2) {
       notifyFailure({
@@ -286,13 +354,7 @@ export function CreatePollDialog({
         })
 
         // Reset form
-        setQuestion('')
-        setOptions([
-          { id: '1', text: '' },
-          { id: '2', text: '' },
-        ])
-        setMultipleChoice(false)
-        setAnonymous(false)
+        resetForm()
         setOpen(false)
       })
       .catch((error) => {
@@ -306,7 +368,7 @@ export function CreatePollDialog({
       .finally(() => {
         setIsCreating(false)
       })
-  }, [question, options, multipleChoice, anonymous, workspaceId, userId, onCreate, toast])
+  }, [question, options, multipleChoice, anonymous, workspaceId, userId, onCreate, toast, resetForm])
 
   const handleCancelCreate = useCallback(() => {
     setOpen(false)
@@ -324,7 +386,7 @@ export function CreatePollDialog({
         <CreatePollFormFields
           onAddOption={handleAddOption}
           onOptionChange={handleOptionChange}
-          onQuestionChange={setQuestion}
+          onQuestionChange={handleQuestionChange}
           onRemoveOption={handleRemoveOption}
           options={options}
           question={question}
@@ -332,8 +394,8 @@ export function CreatePollDialog({
         <CreatePollSettings
           anonymous={anonymous}
           multipleChoice={multipleChoice}
-          onAnonymousChange={setAnonymous}
-          onMultipleChoiceChange={setMultipleChoice}
+          onAnonymousChange={handleAnonymousChange}
+          onMultipleChoiceChange={handleMultipleChoiceChange}
         />
         <CreatePollDialogFooter isCreating={isCreating} onCancel={handleCancelCreate} onCreate={handleCreate} question={question} />
       </DialogContent>

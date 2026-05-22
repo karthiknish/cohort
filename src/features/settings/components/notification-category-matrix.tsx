@@ -74,13 +74,13 @@ function NotificationCategoryRow({
   return (
     <div
       className={cn(
-        'grid grid-cols-[1fr_4.5rem_4.5rem_4.5rem] items-center gap-2 px-4 py-4 sm:grid-cols-[1fr_5rem_5rem_5rem]',
+        'grid grid-cols-[1fr_4.5rem_4.5rem_4.5rem] items-center gap-2 p-4 sm:grid-cols-[1fr_5rem_5rem_5rem]',
         index < NOTIFICATION_CATEGORIES.length - 1 && 'border-b border-border/60',
       )}
     >
       <div className="flex min-w-0 items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground">
-          <Icon className="h-4 w-4" aria-hidden />
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground">
+          <Icon className="size-4" aria-hidden />
         </div>
         <div className="min-w-0 space-y-0.5">
           <FieldTitle className="text-sm">{meta.title}</FieldTitle>
@@ -142,7 +142,7 @@ export function NotificationCategoryMatrix({
       ))}
 
       <div className="flex items-center gap-2 border-t border-border/60 bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground">
-        <Smartphone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <Smartphone className="size-3.5 shrink-0" aria-hidden />
         Browser push notifications are coming soon.
       </div>
     </div>

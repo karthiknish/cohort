@@ -42,7 +42,7 @@ export function AdsPageHeader({
           <p className={ADS_PAGE_THEME.sectionEyebrow}>Paid media</p>
           <div className="flex flex-wrap items-center gap-3">
             <div className={getIconContainerClasses('medium')}>
-              <Megaphone className="h-6 w-6 text-primary" aria-hidden />
+              <Megaphone className="size-6 text-primary" aria-hidden />
             </div>
             <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.ads?.title ?? 'Ads'}</h1>
           </div>
@@ -84,7 +84,7 @@ export function AdsPageHeader({
               disabled={refreshing}
               aria-busy={refreshing}
             >
-              <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} aria-hidden />
+              <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} aria-hidden />
               <span className="hidden sm:inline">Refresh</span>
               <span className="sm:hidden">Sync</span>
             </Button>
@@ -92,12 +92,12 @@ export function AdsPageHeader({
               type="button"
               variant="outline"
               size="icon"
-              className="h-10 w-10 shrink-0 rounded-xl border-border/70"
+              className="size-10 shrink-0 rounded-xl border-border/70"
               onClick={onExport}
               disabled={!canExport}
               aria-label="Export metrics as CSV"
             >
-              <Download className="h-4 w-4" />
+              <Download className="size-4" />
             </Button>
           </div>
         </div>

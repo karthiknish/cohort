@@ -101,8 +101,8 @@ export function MessagePrioritySelector({
   )
 
   const sizeClasses = {
-    sm: 'h-7 w-7',
-    md: 'h-8 w-8',
+    sm: 'size-7',
+    md: 'size-8',
   }
 
   const priorityButtonHandlers = useMemo(
@@ -126,7 +126,7 @@ export function MessagePrioritySelector({
           >
             <Flag
               className={cn(
-                'h-4 w-4',
+                'size-4',
                 priority === 'none' && 'text-muted-foreground',
                 priority === 'low' && 'text-secondary-foreground',
                 priority === 'medium' && 'text-accent-foreground',
@@ -165,11 +165,11 @@ export function MessagePrioritySelector({
                 disabled={disabled}
               >
                 {priority === 'none' ? (
-                  <Flag className="h-4 w-4 text-muted-foreground" />
+                  <Flag className="size-4 text-muted-foreground" />
                 ) : (
                   <Flag
                     className={cn(
-                      'h-4 w-4 fill-current',
+                      'size-4 fill-current',
                       priority === 'low' && 'text-secondary-foreground',
                       priority === 'medium' && 'text-accent-foreground',
                       priority === 'high' && 'text-primary',
@@ -245,7 +245,7 @@ export function PriorityFilter({ selected, onChange, className }: PriorityFilter
               : 'bg-muted hover:bg-muted/70'
           )}
         >
-          <span className={cn('h-2 w-2 rounded-full', option.color)} />
+          <span className={cn('size-2 rounded-full', option.color)} />
           {option.label}
         </button>
       ))}

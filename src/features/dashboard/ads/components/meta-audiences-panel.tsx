@@ -26,7 +26,6 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
   const listAudiences = useAction(adsAudiencesApi.listAudiences)
   const [audiences, setAudiences] = useState<MetaAudienceRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [refreshKey, setRefreshKey] = useState(0)
 
   const loadAudiences = useCallback(() => {
     setLoading(true)
@@ -53,12 +52,16 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
 
   useEffect(() => {
     void loadAudiences()
-  }, [loadAudiences, refreshKey])
+  }, [loadAudiences])
+
+  const handleRefresh = useCallback(() => {
+    void loadAudiences()
+  }, [loadAudiences])
 
   if (loading) {
     return (
       <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+        <Loader2 className="size-4 animate-spin" aria-hidden />
         Loading Meta custom audiences…
       </div>
     )
@@ -76,7 +79,7 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium text-muted-foreground">Existing audiences</p>
-        <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setRefreshKey((k) => k + 1)}>
+        <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={handleRefresh}>
           Refresh
         </Button>
       </div>
@@ -87,7 +90,7 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
             className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/10 px-3 py-2"
           >
             <div className="flex min-w-0 items-center gap-2">
-              <Users className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              <Users className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{audience.name}</p>
                 {audience.approximateCount != null ? (

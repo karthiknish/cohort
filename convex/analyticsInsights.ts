@@ -280,24 +280,27 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
   }
 
   // 2. Generate AI Insights
-  for (const summary of summaries) {
-    const prompt = isGoogleAnalyticsProvider(summary.providerId)
-      ? buildGoogleAnalyticsPrompt(summary)
-      : buildInsightPrompt(enrichSummaryWithMetrics(summary as AdMetricsSummary))
+  const generatedInsights = await Promise.all(
+    summaries.map(async (summary) => {
+      const prompt = isGoogleAnalyticsProvider(summary.providerId)
+        ? buildGoogleAnalyticsPrompt(summary)
+        : buildInsightPrompt(enrichSummaryWithMetrics(summary as AdMetricsSummary))
 
-    try {
-      const content = await geminiAI.generateContent(prompt)
-      insights.push({ providerId: summary.providerId, summary: content })
-    } catch (error) {
-      console.error('[analyticsInsights] gemini failed', error)
-      insights.push({
-        providerId: summary.providerId,
-        summary: isGoogleAnalyticsProvider(summary.providerId)
-          ? buildGoogleAnalyticsFallback(summary)
-          : `Unable to generate AI insight. Spend ${formatCurrency(summary.totalSpend)}, revenue ${formatCurrency(summary.totalRevenue)}, ROAS ${summary.averageRoaS.toFixed(2)}x.`,
-      })
-    }
-  }
+      try {
+        const content = await geminiAI.generateContent(prompt)
+        return { providerId: summary.providerId, summary: content }
+      } catch (error) {
+        console.error('[analyticsInsights] gemini failed', error)
+        return {
+          providerId: summary.providerId,
+          summary: isGoogleAnalyticsProvider(summary.providerId)
+            ? buildGoogleAnalyticsFallback(summary)
+            : `Unable to generate AI insight. Spend ${formatCurrency(summary.totalSpend)}, revenue ${formatCurrency(summary.totalRevenue)}, ROAS ${summary.averageRoaS.toFixed(2)}x.`,
+        }
+      }
+    }),
+  )
+  insights.push(...generatedInsights)
 
   const googleSummary = summaries.find((s) => s.providerId === 'google')
   const metaSummary = summaries.find((s) => s.providerId === 'facebook')
@@ -380,26 +383,23 @@ export const generateInsights = action({
 
       const metricRows = Array.isArray(metrics) ? metrics : []
 
-      const records: MetricRecord[] = metricRows
-        .map((row) => {
-          const record = row && typeof row === 'object' ? (row as Record<string, unknown>) : null
-          return {
-            providerId: typeof record?.providerId === 'string' ? record.providerId : 'unknown',
-            date: typeof record?.date === 'string' ? record.date : 'unknown',
-            spend: Number(record?.spend ?? 0),
-            impressions: Number(record?.impressions ?? 0),
-            clicks: Number(record?.clicks ?? 0),
-            conversions: Number(record?.conversions ?? 0),
-            revenue: record?.revenue !== undefined && record.revenue !== null ? Number(record.revenue) : null,
-            createdAt: toISO(typeof record?.createdAtMs === 'number' ? record.createdAtMs : null),
-            clientId: typeof record?.clientId === 'string' ? record.clientId : null,
-          }
-        })
-        .filter((metric) => {
-          if (!metric.date) return false
-          const metricDate = new Date(metric.date).getTime()
-          return Number.isFinite(metricDate) ? metricDate >= cutoff : true
-        })
+      const records: MetricRecord[] = metricRows.flatMap((row) => {
+        const record = row && typeof row === 'object' ? (row as Record<string, unknown>) : null
+        const metric = {
+          providerId: typeof record?.providerId === 'string' ? record.providerId : 'unknown',
+          date: typeof record?.date === 'string' ? record.date : 'unknown',
+          spend: Number(record?.spend ?? 0),
+          impressions: Number(record?.impressions ?? 0),
+          clicks: Number(record?.clicks ?? 0),
+          conversions: Number(record?.conversions ?? 0),
+          revenue: record?.revenue !== undefined && record.revenue !== null ? Number(record.revenue) : null,
+          createdAt: toISO(typeof record?.createdAtMs === 'number' ? record.createdAtMs : null),
+          clientId: typeof record?.clientId === 'string' ? record.clientId : null,
+        }
+        if (!metric.date) return []
+        const metricDate = new Date(metric.date).getTime()
+        return Number.isFinite(metricDate) && metricDate >= cutoff ? [metric] : []
+      })
 
       if (records.length === 0) {
         return { insights: [], algorithmic: [] }

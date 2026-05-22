@@ -45,7 +45,7 @@ export function LiveRoomCanvasHeader({
       </div>
       <div className="flex flex-wrap gap-2">
         <Badge variant={captureLabel === 'Recording live' ? 'secondary' : 'outline'}>
-          <Radio className="h-3 w-3" />
+          <Radio className="size-3" />
           {captureLabel}
         </Badge>
         <Badge variant={isSupported ? 'secondary' : 'outline'}>
@@ -102,16 +102,16 @@ export function LiveRoomCanvasOverlay({
               : 'border-warning/20 bg-warning/10 text-warning-foreground',
           )}
         >
-          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-warning ring-4 ring-warning/20" />
+          <span className="size-2.5 animate-pulse rounded-full bg-warning ring-4 ring-warning/20" />
           <span className={compactBadgeTextColor}>{captureLabel}</span>
         </div>
 
         {useDarkChrome ? (
           <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/90 px-3 py-1.5 text-xs font-medium text-card-foreground shadow-sm backdrop-blur">
             {autoSyncing || notesProcessingState === 'processing' || finalizingSession || transcriptProcessingState === 'processing' ? (
-              <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+              <LoaderCircle className="size-3.5 animate-spin" />
             ) : (
-              <Sparkles className="h-3.5 w-3.5 text-info" />
+              <Sparkles className="size-3.5 text-info" />
             )}
             {aiStatusLabel}
           </div>
@@ -121,13 +121,13 @@ export function LiveRoomCanvasOverlay({
       <div className="pointer-events-auto flex gap-2">
         {pipSupported ? (
           <Button type="button" size="sm" variant="secondary" className={chromeClassName} onClick={onTogglePictureInPicture}>
-            <PictureInPicture2 className="mr-2 h-3.5 w-3.5" />
+            <PictureInPicture2 className="mr-2 size-3.5" />
             {pipActive ? 'Exit PiP' : 'Enter PiP'}
           </Button>
         ) : null}
         {canMinimize ? (
           <Button type="button" size="sm" variant="secondary" className={cn(chromeClassName, 'md:hidden')} onClick={onToggleMinimize}>
-            {isMinimized ? <Maximize2 className="mr-2 h-3.5 w-3.5" /> : <Minimize2 className="mr-2 h-3.5 w-3.5" />}
+            {isMinimized ? <Maximize2 className="mr-2 size-3.5" /> : <Minimize2 className="mr-2 size-3.5" />}
             {isMinimized ? 'Restore room' : 'Send to tray'}
           </Button>
         ) : null}
@@ -284,7 +284,7 @@ export function LiveRoomCanvasShell({
 
         {children}
 
-        <div className={cn('border-t border-border bg-card/95 backdrop-blur', compact ? 'px-2.5 py-2.5' : 'px-3 py-3')}>
+        <div className={cn('border-t border-border bg-card/95 backdrop-blur', compact ? 'p-2.5' : 'p-3')}>
           <ControlBar controls={MEETING_CONTROL_BAR_CONTROLS} />
         </div>
 

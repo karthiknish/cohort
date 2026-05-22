@@ -45,11 +45,11 @@ export function getProblemReportSeverityDisplay(severity: string): ProblemReport
 export function getProblemReportStatusDisplay(status: string): ProblemReportStatusDisplay {
   switch (status) {
     case 'resolved':
-      return { icon: 'resolved', className: 'h-4 w-4 text-success' }
+      return { icon: 'resolved', className: 'size-4 text-success' }
     case 'in-progress':
-      return { icon: 'in-progress', className: 'h-4 w-4 text-info' }
+      return { icon: 'in-progress', className: 'size-4 text-info' }
     case 'open':
-      return { icon: 'open', className: 'h-4 w-4 text-warning' }
+      return { icon: 'open', className: 'size-4 text-warning' }
     default:
       return { icon: null }
   }

@@ -1,7 +1,7 @@
 'use client'
 
 import { notifyFailure } from '@/lib/notifications'
-import { useCallback, useState } from 'react'
+import { useCallback, useReducer } from 'react'
 
 import { useAction } from 'convex/react'
 
@@ -83,6 +83,54 @@ type AudienceTargetingResponse = {
   insights?: Insights | null
 }
 
+type AudienceTargetingState = {
+  targeting: TargetingData[]
+  insights: Insights | null
+  loading: boolean
+  expandedId: string | null
+  builderOpen: boolean
+}
+
+type AudienceTargetingAction =
+  | { type: 'setTargeting'; value: TargetingData[] }
+  | { type: 'setInsights'; value: Insights | null }
+  | { type: 'setLoading'; value: boolean }
+  | { type: 'setExpandedId'; value: string | null | ((prev: string | null) => string | null) }
+  | { type: 'setBuilderOpen'; value: boolean }
+
+function createInitialAudienceTargetingState(): AudienceTargetingState {
+  return {
+    targeting: [],
+    insights: null,
+    loading: false,
+    expandedId: null,
+    builderOpen: false,
+  }
+}
+
+function audienceTargetingReducer(
+  state: AudienceTargetingState,
+  action: AudienceTargetingAction,
+): AudienceTargetingState {
+  switch (action.type) {
+    case 'setTargeting':
+      return { ...state, targeting: action.value }
+    case 'setInsights':
+      return { ...state, insights: action.value }
+    case 'setLoading':
+      return { ...state, loading: action.value }
+    case 'setExpandedId':
+      return {
+        ...state,
+        expandedId: typeof action.value === 'function' ? action.value(state.expandedId) : action.value,
+      }
+    case 'setBuilderOpen':
+      return { ...state, builderOpen: action.value }
+    default:
+      return state
+  }
+}
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -94,11 +142,8 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
 
   const getTargeting = useAction(adsTargetingApi.getTargeting)
 
-  const [targeting, setTargeting] = useState<TargetingData[]>([])
-  const [insights, setInsights] = useState<Insights | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [builderOpen, setBuilderOpen] = useState(false)
+  const [state, dispatch] = useReducer(audienceTargetingReducer, undefined, createInitialAudienceTargetingState)
+  const { targeting, insights, loading, expandedId, builderOpen } = state
 
   const fetchTargeting = useCallback(async () => {
     if (!isConnected) return
@@ -111,7 +156,7 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
       return
     }
 
-    setLoading(true)
+    dispatch({ type: 'setLoading', value: true })
 
     void getTargeting({
         workspaceId,
@@ -121,8 +166,8 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
 
       .then((data) => {
         const payload = data as AudienceTargetingResponse | null | undefined
-        setTargeting(Array.isArray(payload?.targeting) ? payload.targeting : [])
-        setInsights(payload?.insights ?? null)
+        dispatch({ type: 'setTargeting', value: Array.isArray(payload?.targeting) ? payload.targeting : [] })
+        dispatch({ type: 'setInsights', value: payload?.insights ?? null })
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : 'Failed to load audience targeting data'
@@ -145,18 +190,25 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
         }
       })
       .finally(() => {
-        setLoading(false)
+        dispatch({ type: 'setLoading', value: false })
       })
   }, [getTargeting, isConnected, providerId, selectedClientId, workspaceId])
 
   const handleOpenBuilder = useCallback(() => {
-    setBuilderOpen(true)
+    dispatch({ type: 'setBuilderOpen', value: true })
   }, [])
 
   const handleEdit = useCallback(() => {}, [])
 
   const handleToggleExpanded = useCallback((entityId: string) => {
-    setExpandedId((current) => (current === entityId ? null : entityId))
+    dispatch({
+      type: 'setExpandedId',
+      value: (current) => (current === entityId ? null : entityId),
+    })
+  }, [])
+
+  const handleBuilderOpenChange = useCallback((open: boolean) => {
+    dispatch({ type: 'setBuilderOpen', value: open })
   }, [])
 
   const formatAgeRange = useCallback((range: string) => {
@@ -173,7 +225,7 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
       <AudienceTargetingContent expandedId={expandedId} formatAgeRange={formatAgeRange} insights={insights} onEdit={handleEdit} onToggleExpanded={handleToggleExpanded} targeting={targeting} />
       <AudienceBuilderDialog 
         isOpen={builderOpen} 
-        onOpenChange={setBuilderOpen} 
+        onOpenChange={handleBuilderOpenChange} 
         providerId={providerId} 
       />
     </Card>

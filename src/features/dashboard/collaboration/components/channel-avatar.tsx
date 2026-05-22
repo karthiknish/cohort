@@ -21,7 +21,7 @@ export function ChannelAvatar({ channel, className, fallbackClassName }: Channel
         <AvatarImage src={channel.avatarUrl} alt={channel.name} className="object-cover" />
       ) : null}
       <AvatarFallback className={cn('bg-muted text-muted-foreground', fallbackClassName)}>
-        <Hash className="h-4 w-4" aria-hidden />
+        <Hash className="size-4" aria-hidden />
         <span className="sr-only">{getInitials(channel.name)}</span>
       </AvatarFallback>
     </Avatar>

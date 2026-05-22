@@ -104,9 +104,9 @@ export function useCollaborationData(): UseCollaborationDataReturn {
 
   const customChannels = useMemo<CustomChannel[]>(
     () =>
-      (customChannelsResult ?? [])
-        .filter((channel) => typeof channel?.legacyId === 'string' && typeof channel?.name === 'string')
-        .map((channel): CustomChannel => ({
+      (customChannelsResult ?? []).flatMap((channel) =>
+        typeof channel?.legacyId === 'string' && typeof channel?.name === 'string'
+          ? [{
           legacyId: String(channel.legacyId),
           name: String(channel.name),
           description: typeof channel.description === 'string' ? channel.description : null,
@@ -115,18 +115,19 @@ export function useCollaborationData(): UseCollaborationDataReturn {
             ? channel.memberIds.filter((memberId): memberId is string => typeof memberId === 'string')
             : [],
           memberSummaries: Array.isArray(channel.memberSummaries)
-            ? channel.memberSummaries
-                .filter(
-                  (member): member is { id: string; name: string; role?: string | null } =>
-                    typeof member?.id === 'string' && typeof member?.name === 'string',
-                )
-                .map((member) => ({
-                  id: member.id,
-                  name: member.name,
-                  role: typeof member.role === 'string' ? member.role : null,
-                }))
+            ? channel.memberSummaries.flatMap((member) =>
+                typeof member?.id === 'string' && typeof member?.name === 'string'
+                  ? [{
+                      id: member.id,
+                      name: member.name,
+                      role: typeof member.role === 'string' ? member.role : null,
+                    }]
+                  : [],
+              )
             : [],
-        })),
+        }]
+          : [],
+      ),
     [customChannelsResult],
   )
 
@@ -179,9 +180,11 @@ export function useCollaborationData(): UseCollaborationDataReturn {
   const isBootstrapping = (clientsLoading || projectsLoading) && channels.length === 0
 
   const sharedFiles = useMemo(() => {
-    const attachmentGroups = messages.channelMessages
-      .filter((message) => !message.isDeleted && Array.isArray(message.attachments) && message.attachments.length > 0)
-      .map((message) => message.attachments ?? [])
+    const attachmentGroups = messages.channelMessages.flatMap((message) =>
+      !message.isDeleted && Array.isArray(message.attachments) && message.attachments.length > 0
+        ? [message.attachments ?? []]
+        : [],
+    )
     return collectSharedFiles(attachmentGroups)
   }, [messages.channelMessages])
 

@@ -93,7 +93,7 @@ function ChartCardHeader({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger className="rounded-md p-1 text-muted-foreground hover:text-primary">
-              <Info className="h-4 w-4" aria-hidden />
+              <Info className="size-4" aria-hidden />
               <span className="sr-only">Chart tips</span>
             </TooltipTrigger>
             <TooltipContent side="left" className="max-w-xs">

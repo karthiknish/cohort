@@ -55,7 +55,7 @@ function ProfileMenuItem({
   const content = (
     <>
       <span className={iconClass}>
-        <Icon className="h-4 w-4" aria-hidden />
+        <Icon className="size-4" aria-hidden />
       </span>
       <span className="font-medium">{label}</span>
     </>
@@ -105,7 +105,7 @@ export function ProfileDropdown({
           className={HEADER_DROPDOWN_THEME.triggerAvatar}
           aria-label={`Open account menu for ${displayedName}`}
         >
-          <Avatar className="h-8 w-8">
+          <Avatar className="size-8">
             <AvatarFallback className="bg-muted/50 text-xs font-semibold">{initials}</AvatarFallback>
           </Avatar>
         </Button>

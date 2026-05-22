@@ -47,7 +47,7 @@ export function TaskViewControls({
         disabled={!canExport}
         aria-label="Export tasks to CSV"
       >
-        <Download className="h-3.5 w-3.5" aria-hidden />
+        <Download className="size-3.5" aria-hidden />
         <span className="hidden sm:inline">Export</span>
       </Button>
     </div>
@@ -67,7 +67,7 @@ function ViewToggleButton({
   onViewModeChange: (mode: 'list' | 'grid' | 'board') => void
   icon: typeof List
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectTaskViewMode = useCallback(() => {
     onViewModeChange(mode)
   }, [mode, onViewModeChange])
 
@@ -75,11 +75,11 @@ function ViewToggleButton({
     <button
       type="button"
       className={TASKS_THEME.segmentedButton(active)}
-      onClick={handleClick}
+      onClick={onSelectTaskViewMode}
       aria-label={`${label} view`}
       aria-pressed={active}
     >
-      <Icon className="h-3.5 w-3.5" aria-hidden />
+      <Icon className="size-3.5" aria-hidden />
       <span className="hidden sm:inline">{label}</span>
     </button>
   )

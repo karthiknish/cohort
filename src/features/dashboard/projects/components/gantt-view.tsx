@@ -8,6 +8,7 @@ import type { MilestoneRecord, MilestoneStatus } from '@/types/milestones'
 import { MILESTONE_STATUSES } from '@/types/milestones'
 import { Button } from '@/shared/ui/button'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { GANTT_SHORT_DATE_FORMATTER } from '@/lib/intl/formatters'
 import { cn } from '@/lib/utils'
 import { CreateMilestoneDialog } from '@/features/dashboard/projects/create-milestone-dialog'
 import { 
@@ -55,7 +56,7 @@ export function GanttView({ projects, milestones, loading, error, onRefresh, onM
   if (error) {
     return (
       <div className="rounded-md border border-destructive/40 bg-destructive/10 p-6 text-center">
-        <TriangleAlert className="mx-auto h-10 w-10 text-destructive/60" />
+        <TriangleAlert className="mx-auto size-10 text-destructive/60" />
         <p className="mt-2 text-sm font-medium text-destructive">{error}</p>
         <Button
           variant="outline"
@@ -63,7 +64,7 @@ export function GanttView({ projects, milestones, loading, error, onRefresh, onM
           className="mt-4"
           onClick={onRefresh}
         >
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="mr-2 size-4" />
           Refresh data
         </Button>
       </div>
@@ -73,7 +74,7 @@ export function GanttView({ projects, milestones, loading, error, onRefresh, onM
   if (projects.length === 0) {
     return (
       <div className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center">
-        <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/40" />
+        <FolderKanban className="mx-auto size-12 text-muted-foreground/40" />
         <h3 className="mt-4 text-lg font-medium text-foreground">No projects to chart</h3>
         <p className="mt-1 text-sm text-muted-foreground">Create a project to see it on the timeline.</p>
       </div>
@@ -152,7 +153,7 @@ function renderMilestonesForProject(
 function MilestoneStatusIndicator({ status }: { status: MilestoneStatus }) {
   const indicatorStyle = useMemo(() => ({ backgroundColor: milestoneStatusColor(status) }), [status])
 
-  return <span className="h-2 w-2 rounded-full" style={indicatorStyle} />
+  return <span className="size-2 rounded-full" style={indicatorStyle} />
 }
 
 function ProjectTimelineRow({
@@ -164,8 +165,8 @@ function ProjectTimelineRow({
 }) {
   const trigger = useMemo(
     () => (
-      <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Add milestone">
-        <Plus className="h-4 w-4" />
+      <Button variant="ghost" size="icon" className="size-8" aria-label="Add milestone">
+        <Plus className="size-4" />
       </Button>
     ),
     []
@@ -237,7 +238,7 @@ function computeBarMetrics(milestone: MilestoneRecord, chartStart: Date, dayWidt
 }
 
 function TimelineGrid({ start, totalDays, dayWidth }: { start: Date; totalDays: number; dayWidth: number }) {
-  const formatter = useMemo(() => new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }), [])
+  const formatter = GANTT_SHORT_DATE_FORMATTER
   const weeks = Math.ceil(totalDays / 7)
   return (
     <div className="relative">
@@ -297,7 +298,7 @@ function StatusPill({ status }: { status: ProjectStatus }) {
       'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium',
       STATUS_CLASSES[status]
     )}>
-      <Icon className="h-3 w-3" />
+      <Icon className="size-3" />
       {formatStatusLabel(status)}
     </span>
   )

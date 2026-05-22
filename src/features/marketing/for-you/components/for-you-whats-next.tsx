@@ -155,8 +155,8 @@ function WhatsNextRow({ item }: { item: WhatsNextItem }) {
         href={item.href}
         className="group flex items-center gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-muted/40"
       >
-        <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', item.iconClass)}>
-          <Icon className="h-5 w-5" aria-hidden />
+        <div className={cn('flex size-10 shrink-0 items-center justify-center rounded-lg', item.iconClass)}>
+          <Icon className="size-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>
@@ -272,7 +272,7 @@ export function ForYouWhatsNext() {
         <div className="space-y-2 rounded-xl border border-border/60 bg-card p-2">
           {['w1', 'w2', 'w3', 'w4', 'w5'].map((key) => (
             <div key={key} className="flex gap-3 px-2 py-3">
-              <Skeleton className="h-10 w-10 rounded-lg" />
+              <Skeleton className="size-10 rounded-lg" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-1/2" />
@@ -285,7 +285,7 @@ export function ForYouWhatsNext() {
           {tab === 'tasks' ? 'No open tasks assigned to you.' : 'No recent updates.'}
         </div>
       ) : (
-        <ul className="divide-y divide-border/50 rounded-xl border border-border/60 bg-card" role="list">
+        <ul className="divide-y divide-border/50 rounded-xl border border-border/60 bg-card">
           {items.map((item) => (
             <WhatsNextRow key={item.id} item={item} />
           ))}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useId, useState } from 'react'
+import { useCallback, useId, useState, type ChangeEvent, type MouseEvent } from 'react'
 import { Loader2, Search } from 'lucide-react'
 
 import { useMetaTargetingSearch, type MetaTargetingSearchResult } from '@/features/dashboard/ads/hooks/use-meta-targeting-search'
@@ -45,23 +45,32 @@ export function MetaTargetingSearchCombobox({
     [clear, onSelect],
   )
 
-  const handleFocus = useCallback(() => setOpen(true), [])
-  const handleBlur = useCallback(() => {
+  const onComboboxOpen = useCallback(() => setOpen(true), [])
+  const onComboboxClose = useCallback(() => {
     window.setTimeout(() => setOpen(false), 150)
+  }, [])
+
+  const handleQueryChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setQuery(event.target.value)
+      setOpen(true)
+    },
+    [setQuery],
+  )
+
+  const handleResultMouseDown = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
   }, [])
 
   return (
     <div className={cn('relative', className)}>
       <div className="relative">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
         <Input
           value={query}
-          onChange={(event) => {
-            setQuery(event.target.value)
-            setOpen(true)
-          }}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
+          onChange={handleQueryChange}
+          onFocus={onComboboxOpen}
+          onBlur={onComboboxClose}
           disabled={disabled || !workspaceId}
           placeholder={placeholder ?? (mode === 'interests' ? 'Search Meta interests…' : 'Search countries, regions, cities…')}
           className="h-9 pl-9 text-sm"
@@ -71,7 +80,7 @@ export function MetaTargetingSearchCombobox({
           autoComplete="off"
         />
         {loading ? (
-          <Loader2 className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" aria-hidden />
+          <Loader2 className="absolute right-2.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" aria-hidden />
         ) : null}
       </div>
 
@@ -85,25 +94,12 @@ export function MetaTargetingSearchCombobox({
             <li className="px-3 py-2 text-xs text-destructive">{error}</li>
           ) : null}
           {results.map((item) => (
-            <li key={`${item.type}-${item.id}`} role="option">
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-auto w-full justify-start rounded-none px-3 py-2 text-left font-normal"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => handleSelect(item)}
-              >
-                <span className="block text-sm font-medium">{item.name}</span>
-                {item.path?.length ? (
-                  <span className="block text-[10px] text-muted-foreground">{item.path.join(' › ')}</span>
-                ) : null}
-                {item.audienceSize ? (
-                  <span className="block text-[10px] text-muted-foreground">
-                    ~{item.audienceSize.toLocaleString()} people
-                  </span>
-                ) : null}
-              </Button>
-            </li>
+            <MetaTargetingResultOption
+              key={`${item.type}-${item.id}`}
+              item={item}
+              onMouseDown={handleResultMouseDown}
+              onSelect={handleSelect}
+            />
           ))}
           {!error && results.length === 0 && query.trim().length >= 2 && !loading ? (
             <li className="px-3 py-2 text-xs text-muted-foreground">No matches — try a different term</li>
@@ -111,5 +107,41 @@ export function MetaTargetingSearchCombobox({
         </ul>
       ) : null}
     </div>
+  )
+}
+
+function MetaTargetingResultOption({
+  item,
+  onMouseDown,
+  onSelect,
+}: {
+  item: MetaTargetingSearchResult
+  onMouseDown: (event: MouseEvent<HTMLButtonElement>) => void
+  onSelect: (item: MetaTargetingSearchResult) => void
+}) {
+  const handleClick = useCallback(() => {
+    onSelect(item)
+  }, [item, onSelect])
+
+  return (
+    <li role="option" aria-selected={false}>
+      <Button
+        type="button"
+        variant="ghost"
+        className="h-auto w-full justify-start rounded-none px-3 py-2 text-left font-normal"
+        onMouseDown={onMouseDown}
+        onClick={handleClick}
+      >
+        <span className="block text-sm font-medium">{item.name}</span>
+        {item.path?.length ? (
+          <span className="block text-[10px] text-muted-foreground">{item.path.join(' › ')}</span>
+        ) : null}
+        {item.audienceSize ? (
+          <span className="block text-[10px] text-muted-foreground">
+            ~{item.audienceSize.toLocaleString()} people
+          </span>
+        ) : null}
+      </Button>
+    </li>
   )
 }

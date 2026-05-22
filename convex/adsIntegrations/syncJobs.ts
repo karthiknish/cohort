@@ -144,14 +144,12 @@ export const cleanupOldJobsInternal = internalMutation({
         .collect()
     )
 
-    let deleted = 0
-    for (const job of completed) {
+    const jobsToDelete = completed.filter((job) => {
       const processedAt = job.processedAtMs
-      if (typeof processedAt === 'number' && processedAt < args.cutoffMs) {
-        await ctx.db.delete(job._id)
-        deleted++
-      }
-    }
+      return typeof processedAt === 'number' && processedAt < args.cutoffMs
+    })
+    await Promise.all(jobsToDelete.map(async (job) => ctx.db.delete(job._id)))
+    const deleted = jobsToDelete.length
 
     return { deleted }
   },
@@ -180,18 +178,20 @@ export const resetStaleJobsInternal = internalMutation({
       .withIndex('by_status_startedAt', (q) => q.eq('status', 'running'))
       .collect()
 
-    let reset = 0
-    for (const job of running) {
+    const jobsToReset = running.filter((job) => {
       const startedAt = job.startedAtMs
-      if (typeof startedAt === 'number' && startedAt < args.startedBeforeMs) {
-        await ctx.db.patch(job._id, {
+      return typeof startedAt === 'number' && startedAt < args.startedBeforeMs
+    })
+    await Promise.all(
+      jobsToReset.map(async (job) =>
+        ctx.db.patch(job._id, {
           status: 'queued',
           startedAtMs: null,
           errorMessage: 'Reset due to stale execution',
-        })
-        reset++
-      }
-    }
+        }),
+      ),
+    )
+    const reset = jobsToReset.length
 
     return { reset }
   },

@@ -62,7 +62,7 @@ export function MeetingRoomPageHeader({
         </div>
       </div>
       <Button type="button" variant="outline" onClick={onBack}>
-        <ArrowLeft className="mr-2 h-4 w-4" />
+        <ArrowLeft className="mr-2 size-4" />
         {joinConfigPresent ? 'Leave room' : 'Back to meetings'}
       </Button>
     </div>
@@ -123,11 +123,11 @@ export function MeetingRoomHeroSection({
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">
-            <CalendarDays className="mr-1 h-3 w-3" />
+            <CalendarDays className="mr-1 size-3" />
             {formatLocalDateTime(meetingStartTimeMs, meetingTimezone)}
           </Badge>
           <Badge variant="outline">
-            <Clock3 className="mr-1 h-3 w-3" />
+            <Clock3 className="mr-1 size-3" />
             Ends {formatLocalDateTime(meetingEndTimeMs, meetingTimezone)}
           </Badge>
           <Badge variant="secondary">{meetingStatus.replace('_', ' ')}</Badge>
@@ -150,19 +150,19 @@ export function MeetingRoomHeroSection({
         </Button>
         {joinConfigPresent ? (
           <Button type="button" variant="outline" onClick={onTogglePictureInPicture} disabled={!pipSupported} title={pipSupported ? undefined : 'Picture in Picture is unavailable in this browser'}>
-            <PictureInPicture2 className="mr-2 h-4 w-4" />
+            <PictureInPicture2 className="mr-2 size-4" />
             {pipActive ? 'Exit PiP' : pipSupported ? 'Enter PiP' : 'PiP unavailable'}
           </Button>
         ) : null}
         {joinConfigPresent && canMinimizeRoom ? (
           <Button type="button" variant="outline" className="md:hidden" onClick={onToggleMinimize}>
-            {isMinimized ? <Maximize2 className="mr-2 h-4 w-4" /> : <Minimize2 className="mr-2 h-4 w-4" />}
+            {isMinimized ? <Maximize2 className="mr-2 size-4" /> : <Minimize2 className="mr-2 size-4" />}
             {isMinimized ? 'Restore room' : 'Send to tray'}
           </Button>
         ) : null}
         {meetingLink ? (
           <Button type="button" variant="outline" className="min-w-[152px]" onClick={onCopyLink}>
-            <Copy className="mr-2 h-4 w-4" />
+            <Copy className="mr-2 size-4" />
             Copy link
           </Button>
         ) : null}
@@ -183,8 +183,8 @@ export function MeetingRoomEmptyState({
   return (
     <div className="flex min-h-[420px] items-center justify-center rounded-[32px] border border-border bg-card p-6 shadow-sm lg:min-h-[560px] lg:p-8">
       <div className="max-w-3xl space-y-6 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-accent/20 bg-accent/10 text-primary">
-          <Video className="h-7 w-7" />
+        <div className="mx-auto flex size-16 items-center justify-center rounded-3xl border border-accent/20 bg-accent/10 text-primary">
+          <Video className="size-7" />
         </div>
         <div className="space-y-3">
           <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Native meeting workspace</p>
@@ -213,7 +213,7 @@ export function MeetingRoomEmptyState({
 
         {inlineJoinError ? (
           <Alert className="border-destructive/40 bg-destructive/5 text-left">
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className="size-4" />
             <AlertTitle>{hasJoinReference ? 'Unable to join the room' : 'Room unavailable'}</AlertTitle>
             <AlertDescription>{inlineJoinError}</AlertDescription>
           </Alert>
@@ -283,7 +283,7 @@ export function MeetingRoomCanvasSection({
                   </p>
                 </div>
                 <Button type="button" size="sm" variant="outline" onClick={onToggleMinimize}>
-                  <Maximize2 className="mr-2 h-4 w-4" />
+                  <Maximize2 className="mr-2 size-4" />
                   Restore
                 </Button>
               </div>
@@ -335,7 +335,7 @@ export function MeetingRoomCanvasSection({
 
       {joinConfig && joinError ? (
         <Alert className="border-destructive/40 bg-destructive/5">
-          <AlertTriangle className="h-4 w-4" />
+          <AlertTriangle className="size-4" />
           <AlertTitle>Room connection warning</AlertTitle>
           <AlertDescription>{joinError}</AlertDescription>
         </Alert>
@@ -408,13 +408,13 @@ export function MeetingRoomToolsSection({
           {lastAutoSyncAt ? <Badge variant="outline">Last sync {formatLocalDateTime(lastAutoSyncAt, meetingTimezone)}</Badge> : null}
           {transcriptProcessingState === 'processing' ? (
             <Badge variant="info">
-              <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+              <LoaderCircle className="mr-1 size-3 animate-spin" />
               Finalizing transcript
             </Badge>
           ) : null}
           {notesProcessingState === 'processing' ? (
             <Badge variant="info">
-              <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+              <LoaderCircle className="mr-1 size-3 animate-spin" />
               Generating AI notes
             </Badge>
           ) : null}
@@ -439,7 +439,7 @@ export function MeetingRoomToolsSection({
         </Button>
         {joinConfigPresent && isMobileViewport ? (
           <Button type="button" variant="outline" className="md:hidden" onClick={onToggleMinimize}>
-            {isMinimized ? <Maximize2 className="mr-2 h-4 w-4" /> : <Minimize2 className="mr-2 h-4 w-4" />}
+            {isMinimized ? <Maximize2 className="mr-2 size-4" /> : <Minimize2 className="mr-2 size-4" />}
             {isMinimized ? 'Restore room' : 'Send to tray'}
           </Button>
         ) : null}
@@ -450,7 +450,7 @@ export function MeetingRoomToolsSection({
             disabled={joiningRoom || isPreviewMeeting || !hasJoinReference}
             onClick={onJoinRoom}
           >
-            {joiningRoom ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Video className="mr-2 h-4 w-4" />}
+            {joiningRoom ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <Video className="mr-2 size-4" />}
             {roomActionLabel}
           </Button>
         ) : null}

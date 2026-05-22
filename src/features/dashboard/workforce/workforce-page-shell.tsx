@@ -52,7 +52,7 @@ export function WorkforcePageShell({
       <Button asChild variant="outline" className="rounded-xl">
         <Link href={ctaHref}>
           {ctaLabel}
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="size-4" />
         </Link>
       </Button>
     ),
@@ -80,7 +80,7 @@ export function WorkforcePageShell({
           </div>
           <div className="rounded-2xl border border-accent/20 bg-accent/5 p-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2 font-medium text-foreground">
-              <Construction className="h-4 w-4" />
+              <Construction className="size-4" />
               Tip
             </div>
             <p className="mt-2 max-w-xs text-muted-foreground">
@@ -118,9 +118,9 @@ export function WorkforcePageShell({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="rounded-2xl bg-accent/10 p-3 text-primary">
-                    <route.icon className="h-4 w-4" />
+                    <route.icon className="size-4" />
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  <ArrowRight className="size-4 text-muted-foreground" />
                 </div>
                 <p className="mt-4 font-medium text-foreground">{route.title}</p>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">{route.description}</p>

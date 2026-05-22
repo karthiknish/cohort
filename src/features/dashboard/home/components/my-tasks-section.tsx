@@ -143,7 +143,7 @@ function TaskRow({ task, nowMs }: { task: TaskRecord; nowMs: number }) {
       href={`/dashboard/tasks?taskId=${task.id}`}
       className="group flex items-start gap-3 rounded-xl border border-border/50 bg-background/80 p-3 transition-colors hover:border-border hover:bg-muted/20"
     >
-      <CheckSquare className={cn('mt-0.5 h-4 w-4 shrink-0', isOverdue ? 'text-destructive' : 'text-muted-foreground/60')} />
+      <CheckSquare className={cn('mt-0.5 size-4 shrink-0', isOverdue ? 'text-destructive' : 'text-muted-foreground/60')} />
 
       <div className="min-w-0 flex-1 space-y-1.5">
         <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">{task.title}</p>
@@ -176,13 +176,13 @@ function TaskRow({ task, nowMs }: { task: TaskRecord; nowMs: number }) {
         {/* Due date */}
         {task.dueDate && (
           <p className={cn('flex items-center gap-1 text-[11px]', isOverdue ? 'font-medium text-destructive' : 'text-muted-foreground')}>
-            <Clock className="h-3 w-3" />
+            <Clock className="size-3" />
             {formatDueDate(task.dueDate, nowMs)}
           </p>
         )}
       </div>
 
-      <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+      <ArrowUpRight className="mt-0.5 size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
     </Link>
   )
 }
@@ -194,7 +194,7 @@ const TASK_SKELETON_KEYS = ['ts-a', 'ts-b', 'ts-c', 'ts-d'] as const
 function TaskSkeleton() {
   return (
     <div className="flex items-start gap-3 rounded-xl border border-border/40 bg-background/80 p-3">
-      <Skeleton className="mt-0.5 h-4 w-4 shrink-0 rounded" />
+      <Skeleton className="mt-0.5 size-4 shrink-0 rounded" />
       <div className="flex-1 space-y-2">
         <Skeleton className="h-4 w-3/4" />
         <div className="flex gap-1.5">
@@ -277,7 +277,7 @@ export function MyTasksSection() {
           </div>
         ) : tasks.length === 0 ? (
           <div className="rounded-xl border border-dashed p-5 text-center text-sm text-muted-foreground">
-            <CheckSquare className="mx-auto mb-2 h-6 w-6 opacity-30" />
+            <CheckSquare className="mx-auto mb-2 size-6 opacity-30" />
             <p>You&apos;re all caught up, no open tasks assigned to you right now.</p>
           </div>
         ) : (

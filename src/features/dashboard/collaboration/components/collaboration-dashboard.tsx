@@ -226,11 +226,11 @@ function CollaborationProjectBanner() {
           type="button"
           variant="ghost"
           size="icon"
-          className="h-6 w-6 hover:text-foreground"
+          className="size-6 hover:text-foreground"
           onClick={clearProjectFilter}
           aria-label="Clear project filter from collaboration"
         >
-          <X className="h-3.5 w-3.5" aria-hidden />
+          <X className="size-3.5" aria-hidden />
         </Button>
       </div>
     </div>

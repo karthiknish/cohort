@@ -48,8 +48,8 @@ export function DashboardDailySnapshotCard({
     >
       <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'bg-muted/[0.02]')}>
         <div className="flex items-start gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
-            <Activity className="h-5 w-5" aria-hidden />
+          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+            <Activity className="size-5" aria-hidden />
           </span>
           <div className="space-y-1">
             <CardTitle className="text-lg tracking-tight">Today&apos;s workload</CardTitle>
@@ -113,8 +113,8 @@ function SnapshotMetric({
             link.accent,
           )}
         >
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-background text-primary ring-1 ring-border/60">
-            <Icon className="h-4 w-4" aria-hidden />
+          <span className="inline-flex size-9 items-center justify-center rounded-lg bg-background text-primary ring-1 ring-border/60">
+            <Icon className="size-4" aria-hidden />
           </span>
           <p className="mt-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">{label}</p>
           {loading ? (
@@ -125,7 +125,7 @@ function SnapshotMetric({
           <div className="mt-2 flex items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">{hint}</p>
             <ArrowUpRight
-              className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary"
+              className="size-3.5 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary"
               aria-hidden
             />
           </div>

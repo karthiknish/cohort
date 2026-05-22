@@ -38,7 +38,7 @@ function AgentShortcutButton({
   const Icon =
     shortcut.icon && shortcut.icon in SHORTCUT_ICONS ? SHORTCUT_ICONS[shortcut.icon] : null
 
-  const handleClick = useCallback(() => {
+  const onRunShortcutPrompt = useCallback(() => {
     onShortcutPrompt(shortcut.prompt)
   }, [onShortcutPrompt, shortcut.prompt])
 
@@ -49,9 +49,9 @@ function AgentShortcutButton({
       size="sm"
       disabled={disabled}
       className={cn('h-7 gap-1.5 rounded-full px-2.5 text-xs')}
-      onClick={handleClick}
+      onClick={onRunShortcutPrompt}
     >
-      {Icon ? <Icon className="h-3 w-3" aria-hidden /> : null}
+      {Icon ? <Icon className="size-3" aria-hidden /> : null}
       {shortcut.label}
     </Button>
   )

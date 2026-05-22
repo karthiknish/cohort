@@ -21,9 +21,9 @@ export function TasksCard({ tasks, loading }: TasksCardProps) {
           <CardTitle className="text-base">Upcoming Tasks</CardTitle>
           <CardDescription>Priority items for this week</CardDescription>
         </div>
-        <Button asChild variant="ghost" size="icon" className="h-8 w-8" title="Manage tasks" aria-label="Manage tasks">
+        <Button asChild variant="ghost" size="icon" className="size-8" title="Manage tasks" aria-label="Manage tasks">
           <Link href="/dashboard/tasks">
-            <Calendar className="h-4 w-4" />
+            <Calendar className="size-4" />
             <span className="sr-only">Manage tasks</span>
           </Link>
         </Button>
@@ -45,7 +45,7 @@ export function TasksCard({ tasks, loading }: TasksCardProps) {
           </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-8 text-center text-sm text-muted-foreground">
-            <CircleCheck className="h-8 w-8 text-muted-foreground/50" />
+            <CircleCheck className="size-8 text-muted-foreground/50" />
             <div className="space-y-1">
               <p className="font-medium text-foreground">All caught up!</p>
               <p>No pending tasks on your radar.</p>
@@ -72,7 +72,7 @@ const TaskItem = memo(function TaskItem({ task }: { task: DashboardTaskItem }) {
 
   return (
     <div className="group flex items-start gap-3 rounded-lg border border-transparent p-3 transition-colors hover:bg-muted/50 hover:border-border">
-      <div className={cn('mt-0.5 h-2 w-2 rounded-full shrink-0', priorityDotClass)} />
+      <div className={cn('mt-0.5 size-2 rounded-full shrink-0', priorityDotClass)} />
       <div className="flex-1 space-y-1 min-w-0">
         <p className="text-sm font-medium leading-none truncate">{task.title}</p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">

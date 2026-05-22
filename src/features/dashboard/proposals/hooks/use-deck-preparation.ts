@@ -136,7 +136,7 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
             const pollMaxAttempts = 30
             const pollIntervalMs = 2000
 
-            for (let attempt = 0; attempt < pollMaxAttempts; attempt++) {
+            const pollDeck = async (attempt: number): Promise<void> => {
                 const row = await refreshProposalDraft(proposal.id, {
                     workspaceId,
                     convexToken: token,
@@ -180,15 +180,20 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
                     return
                 }
 
-                await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+                if (attempt < pollMaxAttempts - 1) {
+                    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+                    return pollDeck(attempt + 1)
+                }
+
+                setDeckProgressStage('queued')
+                const pendingWindow = pendingDeckWindowRef.current
+                if (pendingWindow && !pendingWindow.closed) {
+                    pendingWindow.close()
+                }
+                pendingDeckWindowRef.current = null
             }
 
-            setDeckProgressStage('queued')
-            const pendingWindow = pendingDeckWindowRef.current
-            if (pendingWindow && !pendingWindow.closed) {
-                pendingWindow.close()
-            }
-            pendingDeckWindowRef.current = null
+            await pollDeck(0)
         } catch (error: unknown) {
             logError(error, 'useDeckPreparation:handleDownloadDeck')
             setDeckProgressStage('error')

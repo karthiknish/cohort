@@ -229,14 +229,14 @@ export const getCampaignInsights = action({
       const accountCurrency = accountRes.payload?.currency || integration.currency || 'USD'
 
       const series: SeriesRow[] = rows
-        .map((row): SeriesRow | null => {
+        .flatMap((row): SeriesRow[] => {
           const date =
             typeof row?.date_start === 'string'
               ? row.date_start
               : typeof row?.date_stop === 'string'
                 ? row.date_stop
                 : null
-          if (!date) return null
+          if (!date) return []
 
           const rowRecord = asRecord(row) ?? {}
 
@@ -268,7 +268,7 @@ export const getCampaignInsights = action({
             return acc
           }, 0)
 
-          return {
+          return [{
             date,
             spend,
             impressions,
@@ -276,9 +276,8 @@ export const getCampaignInsights = action({
             conversions,
             revenue,
             reach: reach !== null && Number.isFinite(reach) ? reach : null,
-          }
+          }]
         })
-        .filter((row): row is SeriesRow => Boolean(row))
         .sort((a, b) => a.date.localeCompare(b.date))
 
       const totals = series.reduce(

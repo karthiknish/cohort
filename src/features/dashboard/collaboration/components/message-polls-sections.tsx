@@ -26,7 +26,7 @@ export function PollCardHeader({
   return (
     <div className="border-b bg-muted/50 p-3">
       <div className="flex items-start gap-2">
-        <BarChart3 className="mt-0.5 h-5 w-5 text-primary" />
+        <BarChart3 className="mt-0.5 size-5 text-primary" />
         <div className="min-w-0 flex-1">
           <p className="font-medium">{poll.question}</p>
           <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
@@ -116,7 +116,7 @@ export function PollOptionRow({
         ) : null}
 
         {showOptionResults && hasLeadingWinner && voteCount > 0 && voteCount > (sortedOptions[1]?.voters.length ?? 0) ? (
-          <Check className="h-4 w-4 text-primary" />
+          <Check className="size-4 text-primary" />
         ) : null}
 
         <div className="min-w-0 flex-1">
@@ -193,7 +193,7 @@ export function CreatePollDialogTrigger({ trigger }: { trigger?: ReactNode }) {
   return (
     <DialogTrigger asChild>
       <Button variant="outline" size="sm" className="gap-2">
-        <BarChart3 className="h-4 w-4" />
+        <BarChart3 className="size-4" />
         Create Poll
       </Button>
     </DialogTrigger>
@@ -204,7 +204,7 @@ export function CreatePollDialogHeader() {
   return (
     <DialogHeader>
       <DialogTitle className="flex items-center gap-2">
-        <BarChart3 className="h-5 w-5" />
+        <BarChart3 className="size-5" />
         Create Poll
       </DialogTitle>
       <DialogDescription>Create a poll to gather team feedback or make decisions.</DialogDescription>
@@ -256,7 +256,7 @@ export function CreatePollFormFields({
           ))}
         </div>
         <Button type="button" variant="outline" size="sm" onClick={onAddOption} className="w-full">
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 size-4" />
           Add Option
         </Button>
       </div>
@@ -341,8 +341,8 @@ function CreatePollOptionRow({
       <span className="w-6 text-sm text-muted-foreground">{index + 1}.</span>
       <Input placeholder={`Option ${index + 1}`} value={option.text} onChange={handleOptionChange} className="flex-1" />
       {optionsLength > 2 ? (
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={handleRemoveOption} aria-label={`Remove option ${index + 1}`}>
-          <Trash2 className="h-4 w-4" />
+        <Button type="button" variant="ghost" size="icon" className="size-8" onClick={handleRemoveOption} aria-label={`Remove option ${index + 1}`}>
+          <Trash2 className="size-4" />
           <span className="sr-only">Remove option {index + 1}</span>
         </Button>
       ) : null}
@@ -375,8 +375,8 @@ export function CreatePollDialogFooter({
 
 export function QuickPollTrigger() {
   return (
-    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" aria-label="Create poll">
-      <BarChart3 className="h-4 w-4" />
+    <Button type="button" variant="ghost" size="icon" className="size-7" aria-label="Create poll">
+      <BarChart3 className="size-4" />
       <span className="sr-only">Create poll</span>
     </Button>
   )

@@ -48,7 +48,7 @@ export function DashboardHeader({ userDisplayName, onRefresh, isRefreshing, last
             disabled={isRefreshing}
             className="gap-2"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>

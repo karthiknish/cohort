@@ -112,7 +112,7 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-primary" aria-hidden />
+            <AlertCircle className="size-5 text-primary" aria-hidden />
             Report a Problem
           </DialogTitle>
           <DialogDescription>
@@ -177,12 +177,12 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
             <Button type="submit" disabled={submitting}>
               {submitting ? (
                 <>
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
                   Submitting…
                 </>
               ) : (
                 <>
-                  <MessageSquare className="mr-2 h-4 w-4" />
+                  <MessageSquare className="mr-2 size-4" />
                   Submit Report
                 </>
               )}

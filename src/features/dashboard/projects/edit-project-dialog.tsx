@@ -382,7 +382,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
 
             {error && (
               <Alert variant="destructive" className="mt-4">
-                <CircleAlert className="h-4 w-4" />
+                <CircleAlert className="size-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -411,7 +411,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
                 Cancel
               </Button>
               <Button type="submit" disabled={loading || !name.trim() || !hasChanges}>
-                {loading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                {loading && <LoaderCircle className="mr-2 size-4 animate-spin" />}
                 {hasChanges ? 'Save changes' : 'No changes'}
               </Button>
             </DialogFooter>

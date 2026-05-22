@@ -39,7 +39,7 @@ function ClientTile({ client, colorClass }: { client: ClientRecord; colorClass: 
     >
       <div
         className={cn(
-          'flex h-14 w-14 items-center justify-center rounded-2xl text-sm font-bold shadow-sm',
+          'flex size-14 items-center justify-center rounded-2xl text-sm font-bold shadow-sm',
           colorClass,
         )}
       >
@@ -75,7 +75,7 @@ export function ForYouClients() {
           className="inline-flex items-center gap-0.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           Show all
-          <ChevronRight className="h-4 w-4" aria-hidden />
+          <ChevronRight className="size-4" aria-hidden />
         </Link>
       </div>
 

@@ -5,7 +5,7 @@ import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-qu
 import { AdminActionErrorAlert } from '../components/admin-action-error-alert'
 import { AdminQueryErrorAlert } from '../components/admin-query-error-alert'
 import { useAdminActionError } from '../hooks/use-admin-action-error'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useReducer } from 'react'
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import {
   CircleAlert,
@@ -92,6 +92,140 @@ function normalizeAdminStatus(value: string | null | undefined): AdminUserStatus
   return 'pending'
 }
 
+type AdminUsersPageState = {
+  usersOverride: AdminUserRecord[] | null
+  previewUsers: AdminUserRecord[]
+  previewInvitations: AdminInvitationRecord[]
+  loadingMore: boolean
+  statusFilter: StatusFilter
+  roleFilter: RoleFilter
+  searchTerm: string
+  invitationSearchTerm: string
+  invitationStatusFilter: InvitationLifecycleStatus
+  savingId: string | null
+  invitationActionKey: string | null
+  inviteOpen: boolean
+  revokeOpen: boolean
+  selectedUser: AdminUserRecord | null
+  inviteEmail: string
+  inviteRole: AdminUserRole
+  inviteSending: boolean
+}
+
+type AdminUsersPageAction =
+  | { type: 'setUsersOverride'; value: AdminUserRecord[] | null | ((prev: AdminUserRecord[] | null) => AdminUserRecord[] | null) }
+  | { type: 'setPreviewUsers'; value: AdminUserRecord[] | ((prev: AdminUserRecord[]) => AdminUserRecord[]) }
+  | { type: 'setPreviewInvitations'; value: AdminInvitationRecord[] | ((prev: AdminInvitationRecord[]) => AdminInvitationRecord[]) }
+  | { type: 'setLoadingMore'; value: boolean }
+  | { type: 'setStatusFilter'; value: StatusFilter }
+  | { type: 'setRoleFilter'; value: RoleFilter }
+  | { type: 'setSearchTerm'; value: string }
+  | { type: 'setInvitationSearchTerm'; value: string }
+  | { type: 'setInvitationStatusFilter'; value: InvitationLifecycleStatus }
+  | { type: 'setSavingId'; value: string | null }
+  | { type: 'setInvitationActionKey'; value: string | null | ((prev: string | null) => string | null) }
+  | { type: 'setInviteOpen'; value: boolean }
+  | { type: 'setRevokeOpen'; value: boolean }
+  | { type: 'setSelectedUser'; value: AdminUserRecord | null }
+  | { type: 'setInviteEmail'; value: string }
+  | { type: 'setInviteRole'; value: AdminUserRole }
+  | { type: 'setInviteSending'; value: boolean }
+  | { type: 'resetInviteForm' }
+  | { type: 'refresh'; previewUsers: AdminUserRecord[]; previewInvitations: AdminInvitationRecord[] }
+
+function createInitialAdminUsersPageState(): AdminUsersPageState {
+  return {
+    usersOverride: null,
+    previewUsers: getPreviewAdminUsers(),
+    previewInvitations: getPreviewAdminInvitations(),
+    loadingMore: false,
+    statusFilter: 'all',
+    roleFilter: 'all',
+    searchTerm: '',
+    invitationSearchTerm: '',
+    invitationStatusFilter: 'pending',
+    savingId: null,
+    invitationActionKey: null,
+    inviteOpen: false,
+    revokeOpen: false,
+    selectedUser: null,
+    inviteEmail: '',
+    inviteRole: 'team',
+    inviteSending: false,
+  }
+}
+
+function adminUsersPageReducer(state: AdminUsersPageState, action: AdminUsersPageAction): AdminUsersPageState {
+  switch (action.type) {
+    case 'setUsersOverride':
+      return {
+        ...state,
+        usersOverride:
+          typeof action.value === 'function' ? action.value(state.usersOverride) : action.value,
+      }
+    case 'setPreviewUsers':
+      return {
+        ...state,
+        previewUsers:
+          typeof action.value === 'function' ? action.value(state.previewUsers) : action.value,
+      }
+    case 'setPreviewInvitations':
+      return {
+        ...state,
+        previewInvitations:
+          typeof action.value === 'function' ? action.value(state.previewInvitations) : action.value,
+      }
+    case 'setLoadingMore':
+      return { ...state, loadingMore: action.value }
+    case 'setStatusFilter':
+      return { ...state, statusFilter: action.value }
+    case 'setRoleFilter':
+      return { ...state, roleFilter: action.value }
+    case 'setSearchTerm':
+      return { ...state, searchTerm: action.value }
+    case 'setInvitationSearchTerm':
+      return { ...state, invitationSearchTerm: action.value }
+    case 'setInvitationStatusFilter':
+      return { ...state, invitationStatusFilter: action.value }
+    case 'setSavingId':
+      return { ...state, savingId: action.value }
+    case 'setInvitationActionKey':
+      return {
+        ...state,
+        invitationActionKey:
+          typeof action.value === 'function' ? action.value(state.invitationActionKey) : action.value,
+      }
+    case 'setInviteOpen':
+      return { ...state, inviteOpen: action.value }
+    case 'setRevokeOpen':
+      return { ...state, revokeOpen: action.value }
+    case 'setSelectedUser':
+      return { ...state, selectedUser: action.value }
+    case 'setInviteEmail':
+      return { ...state, inviteEmail: action.value }
+    case 'setInviteRole':
+      return { ...state, inviteRole: action.value }
+    case 'setInviteSending':
+      return { ...state, inviteSending: action.value }
+    case 'resetInviteForm':
+      return { ...state, inviteOpen: false, inviteEmail: '', inviteRole: 'team' }
+    case 'refresh':
+      return {
+        ...state,
+        statusFilter: 'all',
+        roleFilter: 'all',
+        searchTerm: '',
+        invitationStatusFilter: 'pending',
+        invitationSearchTerm: '',
+        usersOverride: null,
+        previewUsers: action.previewUsers,
+        previewInvitations: action.previewInvitations,
+      }
+    default:
+      return state
+  }
+}
+
 function UserRow({
   record,
   savingId,
@@ -166,7 +300,7 @@ function UserRow({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="ghost" size="sm" aria-label={`Actions for ${record.name}`}>
-              <MoreHorizontal className="h-4 w-4" aria-hidden />
+              <MoreHorizontal className="size-4" aria-hidden />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -178,7 +312,7 @@ function UserRow({
               onClick={onRevokeOpen}
               className="text-destructive focus:text-destructive"
             >
-              <Trash2 className="mr-2 h-4 w-4" />
+              <Trash2 className="mr-2 size-4" />
               Revoke access
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -274,18 +408,27 @@ export default function AdminUsersPage() {
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
-  const [usersOverride, setUsersOverride] = useState<AdminUserRecord[] | null>(null)
-  const [previewUsers, setPreviewUsers] = useState<AdminUserRecord[]>(() => getPreviewAdminUsers())
-  const [previewInvitations, setPreviewInvitations] = useState<AdminInvitationRecord[]>(() => getPreviewAdminInvitations())
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [invitationSearchTerm, setInvitationSearchTerm] = useState('')
-  const [invitationStatusFilter, setInvitationStatusFilter] = useState<InvitationLifecycleStatus>('pending')
+  const [state, dispatch] = useReducer(adminUsersPageReducer, undefined, createInitialAdminUsersPageState)
+  const {
+    usersOverride,
+    previewUsers,
+    previewInvitations,
+    loadingMore,
+    statusFilter,
+    roleFilter,
+    searchTerm,
+    invitationSearchTerm,
+    invitationStatusFilter,
+    savingId,
+    invitationActionKey,
+    inviteOpen,
+    revokeOpen,
+    selectedUser,
+    inviteEmail,
+    inviteRole,
+    inviteSending,
+  } = state
   const { actionError, clearActionError, reportActionFailure } = useAdminActionError()
-  const [savingId, setSavingId] = useState<string | null>(null)
-  const [invitationActionKey, setInvitationActionKey] = useState<string | null>(null)
   const workspaceContext = useQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
   const workspaceId = workspaceContext?.workspaceId ?? null
   const includeAllWorkspaces = workspaceContext?.role === 'admin'
@@ -309,13 +452,7 @@ export default function AdminUsersPage() {
     | { invitations?: Array<Record<string, unknown>> }
     | undefined
 
-  // Dialog states
-  const [inviteOpen, setInviteOpen] = useState(false)
-  const [revokeOpen, setRevokeOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<AdminUserRecord | null>(null)
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState<AdminUserRole>('team')
-  const [inviteSending, setInviteSending] = useState(false)
+  // Dialog states handled via reducer
 
   const users: AdminUserRecord[] = useMemo(() => {
     if (isPreviewMode) return previewUsers
@@ -386,8 +523,7 @@ export default function AdminUsersPage() {
 
     const rows = Array.isArray(invitationResponse?.invitations) ? invitationResponse.invitations : []
 
-    return rows
-      .map((row) => {
+    return rows.flatMap((row) => {
         const invitation = row as {
           id?: string
           email?: string
@@ -409,7 +545,7 @@ export default function AdminUsersPage() {
           invitation.effectiveStatus ??
           status
 
-        return {
+        const mapped = {
           id: invitation.id ?? '',
           email: invitation.email ?? '',
           role: invitation.role ?? 'team',
@@ -423,8 +559,8 @@ export default function AdminUsersPage() {
           createdAtMs: typeof invitation.createdAtMs === 'number' ? invitation.createdAtMs : 0,
           acceptedAtMs: typeof invitation.acceptedAtMs === 'number' ? invitation.acceptedAtMs : null,
         }
+        return mapped.id.length > 0 ? [mapped] : []
       })
-      .filter((invitation) => invitation.id.length > 0)
   }, [invitationResponse, isPreviewMode, previewInvitations])
 
   const invitationSummary = useMemo(() => {
@@ -474,20 +610,26 @@ export default function AdminUsersPage() {
     }
 
     if (isPreviewMode) {
-      setPreviewUsers((current) => current.map((userRecord) => (
-        userRecord.id === record.id ? { ...userRecord, role: nextRole, updatedAt: new Date().toISOString() } : userRecord
-      )))
+      dispatch({
+        type: 'setPreviewUsers',
+        value: (current) => current.map((userRecord) => (
+          userRecord.id === record.id ? { ...userRecord, role: nextRole, updatedAt: new Date().toISOString() } : userRecord
+        )),
+      })
       toast({ title: 'Preview mode', description: `${record.name} is now ${nextRole} in the sample workspace.` })
       return
     }
 
-    setSavingId(record.id)
+    dispatch({ type: 'setSavingId', value: record.id })
 
     void updateUserRoleStatus({ legacyId: record.id, role: nextRole })
       .then(() => {
-        setUsersOverride((prev) => {
-          const base = prev ?? users
-          return base.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, role: nextRole } : userRecord))
+        dispatch({
+          type: 'setUsersOverride',
+          value: (prev) => {
+            const base = prev ?? users
+            return base.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, role: nextRole } : userRecord))
+          },
         })
         toast({ title: 'Role updated', description: `${record.name} is now ${nextRole}.` })
       })
@@ -499,7 +641,7 @@ export default function AdminUsersPage() {
         })
       })
       .finally(() => {
-        setSavingId(null)
+        dispatch({ type: 'setSavingId', value: null })
       })
   }, [isPreviewMode, reportActionFailure, toast, updateUserRoleStatus, users])
 
@@ -518,27 +660,33 @@ export default function AdminUsersPage() {
     }
 
     if (isPreviewMode) {
-      setPreviewUsers((current) => current.map((userRecord) => (
-        userRecord.id === record.id ? { ...userRecord, status: nextStatus, updatedAt: new Date().toISOString() } : userRecord
-      )))
+      dispatch({
+        type: 'setPreviewUsers',
+        value: (current) => current.map((userRecord) => (
+          userRecord.id === record.id ? { ...userRecord, status: nextStatus, updatedAt: new Date().toISOString() } : userRecord
+        )),
+      })
       toast({
         title: 'Preview mode',
         description: `${record.name} status set to ${nextStatus} in the sample workspace.`,
       })
-      setRevokeOpen(false)
+      dispatch({ type: 'setRevokeOpen', value: false })
       return
     }
 
-    setSavingId(record.id)
+    dispatch({ type: 'setSavingId', value: record.id })
 
     void updateUserRoleStatus({ legacyId: record.id, status: nextStatus })
       .then(() => {
-        setUsersOverride((prev) => {
-          const base = prev ?? users
-          return base.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, status: nextStatus } : userRecord))
+        dispatch({
+          type: 'setUsersOverride',
+          value: (prev) => {
+            const base = prev ?? users
+            return base.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, status: nextStatus } : userRecord))
+          },
         })
         toast({ title: approved ? 'Account approved' : 'Approval revoked', description: `${record.name} status set to ${nextStatus}.` })
-        setRevokeOpen(false)
+        dispatch({ type: 'setRevokeOpen', value: false })
       })
       .catch((err: unknown) => {
         reportActionFailure({
@@ -548,7 +696,7 @@ export default function AdminUsersPage() {
         })
       })
       .finally(() => {
-        setSavingId(null)
+        dispatch({ type: 'setSavingId', value: null })
       })
   }, [isPreviewMode, reportActionFailure, toast, updateUserRoleStatus, users])
 
@@ -557,36 +705,37 @@ export default function AdminUsersPage() {
 
     if (isPreviewMode) {
       const nowMs = Date.now()
-      setPreviewInvitations((current) => [
-        {
-          id: `preview-invite-${nowMs}`,
-          email: inviteEmail,
-          role: inviteRole,
-          name: null,
-          message: 'Created from the preview admin invite flow.',
-          status: 'pending',
-          effectiveStatus: 'pending',
-          invitedBy: user?.id ?? 'preview-admin-1',
-          invitedByName: user?.name ?? 'Avery Stone',
-          createdAtMs: nowMs,
-          expiresAtMs: nowMs + 7 * 24 * 60 * 60 * 1000,
-          acceptedAtMs: null,
-        },
-        ...current,
-      ])
+      dispatch({
+        type: 'setPreviewInvitations',
+        value: (current) => [
+          {
+            id: `preview-invite-${nowMs}`,
+            email: inviteEmail,
+            role: inviteRole,
+            name: null,
+            message: 'Created from the preview admin invite flow.',
+            status: 'pending',
+            effectiveStatus: 'pending',
+            invitedBy: user?.id ?? 'preview-admin-1',
+            invitedByName: user?.name ?? 'Avery Stone',
+            createdAtMs: nowMs,
+            expiresAtMs: nowMs + 7 * 24 * 60 * 60 * 1000,
+            acceptedAtMs: null,
+          },
+          ...current,
+        ],
+      })
       toast({
         title: 'Preview mode',
         description: `Invitation queued for ${inviteEmail} in the sample workspace.`,
       })
-      setInviteOpen(false)
-      setInviteEmail('')
-      setInviteRole('team')
+      dispatch({ type: 'resetInviteForm' })
       return
     }
 
     if (!user?.id) return
     
-    setInviteSending(true)
+    dispatch({ type: 'setInviteSending', value: true })
 
     void createInvitation({
       email: inviteEmail,
@@ -599,9 +748,7 @@ export default function AdminUsersPage() {
           title: 'Invitation created',
           description: `Invitation created for ${inviteEmail} as ${inviteRole}. Email delivery depends on server integration settings.`,
         })
-        setInviteOpen(false)
-        setInviteEmail('')
-        setInviteRole('team')
+        dispatch({ type: 'resetInviteForm' })
       })
       .catch((err: unknown) => {
         reportActionFailure({
@@ -611,30 +758,33 @@ export default function AdminUsersPage() {
         })
       })
       .finally(() => {
-        setInviteSending(false)
+        dispatch({ type: 'setInviteSending', value: false })
       })
   }, [createInvitation, inviteEmail, inviteRole, isPreviewMode, reportActionFailure, toast, user])
 
   const handleResendInvitation = useCallback((invitation: AdminInvitationRecord) => {
     if (isPreviewMode) {
       const nowMs = Date.now()
-      setPreviewInvitations((current) => current.map((record) => (
-        record.id === invitation.id
-          ? {
-              ...record,
-              status: 'pending',
-              effectiveStatus: 'pending',
-              createdAtMs: nowMs,
-              expiresAtMs: nowMs + 7 * 24 * 60 * 60 * 1000,
-            }
-          : record
-      )))
+      dispatch({
+        type: 'setPreviewInvitations',
+        value: (current) => current.map((record) => (
+          record.id === invitation.id
+            ? {
+                ...record,
+                status: 'pending',
+                effectiveStatus: 'pending',
+                createdAtMs: nowMs,
+                expiresAtMs: nowMs + 7 * 24 * 60 * 60 * 1000,
+              }
+            : record
+        )),
+      })
       toast({ title: 'Preview mode', description: `Sample invitation resent to ${invitation.email}.` })
       return
     }
 
     const actionKey = `resend:${invitation.id}`
-    setInvitationActionKey(actionKey)
+    dispatch({ type: 'setInvitationActionKey', value: actionKey })
 
     void resendInvitation({ id: invitation.id })
       .then(() => {
@@ -651,23 +801,29 @@ export default function AdminUsersPage() {
         })
       })
       .finally(() => {
-        setInvitationActionKey((current) => (current === actionKey ? null : current))
+        dispatch({
+          type: 'setInvitationActionKey',
+          value: (current) => (current === actionKey ? null : current),
+        })
       })
   }, [isPreviewMode, reportActionFailure, resendInvitation, toast])
 
   const handleRevokeInvitation = useCallback((invitation: AdminInvitationRecord) => {
     if (isPreviewMode) {
-      setPreviewInvitations((current) => current.map((record) => (
-        record.id === invitation.id
-          ? { ...record, status: 'revoked', effectiveStatus: 'revoked' }
-          : record
-      )))
+      dispatch({
+        type: 'setPreviewInvitations',
+        value: (current) => current.map((record) => (
+          record.id === invitation.id
+            ? { ...record, status: 'revoked', effectiveStatus: 'revoked' }
+            : record
+        )),
+      })
       toast({ title: 'Preview mode', description: `${invitation.email} was revoked in the sample workspace.` })
       return
     }
 
     const actionKey = `revoke:${invitation.id}`
-    setInvitationActionKey(actionKey)
+    dispatch({ type: 'setInvitationActionKey', value: actionKey })
 
     void revokeInvitation({ id: invitation.id })
       .then(() => {
@@ -684,60 +840,69 @@ export default function AdminUsersPage() {
         })
       })
       .finally(() => {
-        setInvitationActionKey((current) => (current === actionKey ? null : current))
+        dispatch({
+          type: 'setInvitationActionKey',
+          value: (current) => (current === actionKey ? null : current),
+        })
       })
   }, [isPreviewMode, reportActionFailure, revokeInvitation, toast])
 
   const handleRefresh = useCallback(() => {
     if (loading) return
-    setStatusFilter('all')
-    setRoleFilter('all')
-    setSearchTerm('')
-    setInvitationStatusFilter('pending')
-    setInvitationSearchTerm('')
-    setUsersOverride(null)
     clearActionError()
-
-    if (isPreviewMode) {
-      setPreviewUsers(getPreviewAdminUsers())
-      setPreviewInvitations(getPreviewAdminInvitations())
-    }
-  }, [clearActionError, isPreviewMode, loading])
+    dispatch({
+      type: 'refresh',
+      previewUsers: isPreviewMode ? getPreviewAdminUsers() : state.previewUsers,
+      previewInvitations: isPreviewMode ? getPreviewAdminInvitations() : state.previewInvitations,
+    })
+  }, [clearActionError, isPreviewMode, loading, state.previewInvitations, state.previewUsers])
 
   const handleInviteEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setInviteEmail(e.target.value)
+    dispatch({ type: 'setInviteEmail', value: e.target.value })
   }, [])
 
   const handleInviteRoleChange = useCallback((v: string) => {
-    setInviteRole(v as AdminUserRole)
+    dispatch({ type: 'setInviteRole', value: v as AdminUserRole })
   }, [])
 
   const handleInviteClose = useCallback(() => {
-    setInviteOpen(false)
+    dispatch({ type: 'setInviteOpen', value: false })
+  }, [])
+
+  const handleInviteOpenChange = useCallback((open: boolean) => {
+    dispatch({ type: 'setInviteOpen', value: open })
   }, [])
 
   const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value)
+    dispatch({ type: 'setSearchTerm', value: event.target.value })
   }, [])
 
   const handleStatusFilterChange = useCallback((value: string) => {
-    setStatusFilter(value as StatusFilter)
+    dispatch({ type: 'setStatusFilter', value: value as StatusFilter })
   }, [])
 
   const handleRoleFilterChange = useCallback((value: string) => {
-    setRoleFilter(value as RoleFilter)
+    dispatch({ type: 'setRoleFilter', value: value as RoleFilter })
   }, [])
 
   const handleInvitationSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setInvitationSearchTerm(event.target.value)
+    dispatch({ type: 'setInvitationSearchTerm', value: event.target.value })
   }, [])
 
   const handleInvitationStatusFilterChange = useCallback((value: string) => {
-    setInvitationStatusFilter(value as InvitationLifecycleStatus)
+    dispatch({ type: 'setInvitationStatusFilter', value: value as InvitationLifecycleStatus })
   }, [])
 
   const handleRevokeClose = useCallback(() => {
-    setRevokeOpen(false)
+    dispatch({ type: 'setRevokeOpen', value: false })
+  }, [])
+
+  const handleRevokeOpenChange = useCallback((open: boolean) => {
+    dispatch({ type: 'setRevokeOpen', value: open })
+  }, [])
+
+  const handleSelectUser = useCallback((userRecord: AdminUserRecord) => {
+    dispatch({ type: 'setSelectedUser', value: userRecord })
   }, [])
 
   const handleRevokeConfirm = useCallback(() => {
@@ -749,7 +914,7 @@ export default function AdminUsersPage() {
   const handleLoadMore = useCallback(() => {
     if (isPreviewMode) return
     if (loadingMore) return
-    setLoadingMore(true)
+    dispatch({ type: 'setLoadingMore', value: true })
     void Promise.resolve()
       .then(() => loadMore(50))
       .catch((err: unknown) => {
@@ -760,12 +925,12 @@ export default function AdminUsersPage() {
         })
       })
       .finally(() => {
-        setLoadingMore(false)
+        dispatch({ type: 'setLoadingMore', value: false })
       })
   }, [isPreviewMode, loadingMore, loadMore, reportActionFailure])
 
   const handleRevokeOpen = useCallback(() => {
-    setRevokeOpen(true)
+    dispatch({ type: 'setRevokeOpen', value: true })
   }, [])
 
   if (!user && !isPreviewMode) {
@@ -801,12 +966,12 @@ export default function AdminUsersPage() {
               <Link href="/admin/clients">Client workspaces</Link>
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={handleRefresh} disabled={loading} className="inline-flex items-center gap-2">
-              <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} /> Refresh
+              <RefreshCw className={cn('size-4', loading && 'animate-spin')} /> Refresh
             </Button>
-            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+            <Dialog open={inviteOpen} onOpenChange={handleInviteOpenChange}>
               <DialogTrigger asChild>
                 <Button size="sm" className="gap-2">
-                  <UserPlus className="h-4 w-4" /> Invite user
+                  <UserPlus className="size-4" /> Invite user
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -855,7 +1020,7 @@ export default function AdminUsersPage() {
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total users</CardTitle>
-              <UsersIcon className={cn('h-4 w-4 text-muted-foreground', loading && 'animate-spin')} />
+              <UsersIcon className={cn('size-4 text-muted-foreground', loading && 'animate-spin')} />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold">{summary.total}</div>
@@ -866,7 +1031,7 @@ export default function AdminUsersPage() {
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending approval</CardTitle>
-              <CircleAlert className="h-4 w-4 text-warning" />
+              <CircleAlert className="size-4 text-warning" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold">{summary.pending}</div>
@@ -877,7 +1042,7 @@ export default function AdminUsersPage() {
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Internal team</CardTitle>
-              <ShieldCheck className="h-4 w-4 text-primary" />
+              <ShieldCheck className="size-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold">{summary.internal}</div>
@@ -888,7 +1053,7 @@ export default function AdminUsersPage() {
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Client access</CardTitle>
-              <UsersIcon className="h-4 w-4 text-muted-foreground" />
+              <UsersIcon className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold">{summary.clients}</div>
@@ -972,7 +1137,7 @@ export default function AdminUsersPage() {
                         savingId={savingId}
                         onRoleChange={handleRoleChange}
                         onApprovalToggle={handleApprovalToggle}
-                        onSelectUser={setSelectedUser}
+                        onSelectUser={handleSelectUser}
                         onRevokeOpen={handleRevokeOpen}
                       />
                     ))
@@ -991,7 +1156,7 @@ export default function AdminUsersPage() {
                   disabled={loadingMore}
                   className="inline-flex items-center gap-2"
                 >
-                  {loadingMore ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  {loadingMore ? <RefreshCw className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
                   {loadingMore ? 'Loading…' : 'Load more'}
                 </Button>
               </div>
@@ -1070,7 +1235,7 @@ export default function AdminUsersPage() {
         </Card>
     </AdminPageShell>
 
-    <Dialog open={revokeOpen} onOpenChange={setRevokeOpen}>
+    <Dialog open={revokeOpen} onOpenChange={handleRevokeOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Revoke access?</DialogTitle>

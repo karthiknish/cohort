@@ -29,10 +29,11 @@ export const listAudiences = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
-      const adAccountId = await requireFacebookAdAccount(integration)
-
-      const { listMetaAudiences } = await import('@/services/integrations/meta-ads/campaign-modules/audiences')
+      const [accessToken, adAccountId, { listMetaAudiences }] = await Promise.all([
+        resolveFacebookAccessToken(args.workspaceId, integration, clientId),
+        requireFacebookAdAccount(integration),
+        import('@/services/integrations/meta-ads/campaign-modules/audiences'),
+      ])
       const audiences = await listMetaAudiences({ accessToken, adAccountId })
 
       return audiences.map((audience) => ({

@@ -38,6 +38,86 @@ const EMPTY_SORTING: SortingState = []
 const EMPTY_COLUMN_FILTERS: ColumnFiltersState = []
 const EMPTY_COLUMN_VISIBILITY: VisibilityState = {}
 
+type DataTableState = {
+  sorting: SortingState
+  columnFilters: ColumnFiltersState
+  columnVisibility: VisibilityState
+  rowSelection: RowSelectionState
+  localPagination: PaginationState
+}
+
+type DataTableInitArg = {
+  pageSize: number
+  initialSorting: SortingState
+  initialColumnFilters: ColumnFiltersState
+  initialColumnVisibility: VisibilityState
+}
+
+type DataTableAction =
+  | { type: 'setSorting'; value: SortingState }
+  | {
+      type: 'setColumnFilters'
+      value: ColumnFiltersState | ((prev: ColumnFiltersState) => ColumnFiltersState)
+    }
+  | {
+      type: 'setColumnVisibility'
+      value: VisibilityState | ((prev: VisibilityState) => VisibilityState)
+    }
+  | {
+      type: 'setRowSelection'
+      value: RowSelectionState | ((prev: RowSelectionState) => RowSelectionState)
+    }
+  | {
+      type: 'setLocalPagination'
+      value: PaginationState | ((prev: PaginationState) => PaginationState)
+    }
+
+function createInitialDataTableState(init: DataTableInitArg): DataTableState {
+  return {
+    sorting: init.initialSorting,
+    columnFilters: init.initialColumnFilters,
+    columnVisibility: init.initialColumnVisibility,
+    rowSelection: {},
+    localPagination: {
+      pageIndex: 0,
+      pageSize: init.pageSize,
+    },
+  }
+}
+
+function dataTableReducer(state: DataTableState, action: DataTableAction): DataTableState {
+  switch (action.type) {
+    case 'setSorting':
+      return { ...state, sorting: action.value }
+    case 'setColumnFilters':
+      return {
+        ...state,
+        columnFilters:
+          typeof action.value === 'function' ? action.value(state.columnFilters) : action.value,
+      }
+    case 'setColumnVisibility':
+      return {
+        ...state,
+        columnVisibility:
+          typeof action.value === 'function' ? action.value(state.columnVisibility) : action.value,
+      }
+    case 'setRowSelection':
+      return {
+        ...state,
+        rowSelection:
+          typeof action.value === 'function' ? action.value(state.rowSelection) : action.value,
+      }
+    case 'setLocalPagination':
+      return {
+        ...state,
+        localPagination:
+          typeof action.value === 'function' ? action.value(state.localPagination) : action.value,
+      }
+    default:
+      return state
+  }
+}
+
 function getLoadingRowIds(loadingRows: number) {
   return Array.from({ length: loadingRows }, (_, slotIndex) => `loading-row-${slotIndex + 1}`)
 }
@@ -175,118 +255,58 @@ export interface DataTableProps<TData, TValue> {
   urlPageSizeOptions?: number[]
 }
 
-function DataTableUrlSync({
-  syncPaginationToUrl,
-  showPagination,
-  manualPagination,
-  pageSize,
-  urlPageParam,
-  urlPageSizeParam,
-  urlPageSizeOptions,
-  pagination,
-  setPagination,
-}: {
-  syncPaginationToUrl: boolean
-  showPagination: boolean
-  manualPagination: boolean
-  pageSize: number
-  urlPageParam: string
-  urlPageSizeParam: string
-  urlPageSizeOptions: number[]
-  pagination: PaginationState
-  setPagination: React.Dispatch<React.SetStateAction<PaginationState>>
-}) {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const { get } = searchParams
+function parsePaginationFromSearchParams(
+  get: (key: string) => string | null,
+  defaultPageSize: number,
+  urlPageParam: string,
+  urlPageSizeParam: string,
+  isValidUrlPageSize: (pageSize: number) => boolean,
+): PaginationState {
+  const pageRaw = get(urlPageParam)
+  const sizeRaw = get(urlPageSizeParam)
 
-  const isValidUrlPageSize = React.useCallback(
-    (n: number) => urlPageSizeOptions.includes(n),
-    [urlPageSizeOptions]
-  )
-
-  // Sync from URL to state
-  React.useEffect(() => {
-    if (!syncPaginationToUrl || !showPagination || manualPagination) {
-      return
+  let pageIndex = 0
+  if (pageRaw) {
+    const parsed = Number.parseInt(pageRaw, 10)
+    if (Number.isFinite(parsed) && parsed >= 1) {
+      pageIndex = parsed - 1
     }
+  }
 
-    const pageRaw = get(urlPageParam)
-    const sizeRaw = get(urlPageSizeParam)
-
-    let nextIndex = 0
-    if (pageRaw) {
-      const parsed = Number.parseInt(pageRaw, 10)
-      if (Number.isFinite(parsed) && parsed >= 1) {
-        nextIndex = parsed - 1
-      }
+  let nextPageSize = defaultPageSize
+  if (sizeRaw) {
+    const parsed = Number.parseInt(sizeRaw, 10)
+    if (Number.isFinite(parsed) && isValidUrlPageSize(parsed)) {
+      nextPageSize = parsed
     }
+  }
 
-    let nextSize = pageSize
-    if (sizeRaw) {
-      const parsed = Number.parseInt(sizeRaw, 10)
-      if (Number.isFinite(parsed) && isValidUrlPageSize(parsed)) {
-        nextSize = parsed
-      }
-    }
+  return { pageIndex, pageSize: nextPageSize }
+}
 
-    setPagination((prev) => {
-      if (nextIndex === prev.pageIndex && nextSize === prev.pageSize) {
-        return prev
-      }
-      return { pageIndex: nextIndex, pageSize: nextSize }
-    })
-  }, [
-    isValidUrlPageSize,
-    manualPagination,
-    pageSize,
-    searchParams,
-    setPagination,
-    showPagination,
-    syncPaginationToUrl,
-    get,
-    urlPageParam,
-    urlPageSizeParam,
-  ])
+function buildPaginationSearchParams(
+  searchParams: URLSearchParams,
+  pagination: PaginationState,
+  defaultPageSize: number,
+  urlPageParam: string,
+  urlPageSizeParam: string,
+  isValidUrlPageSize: (pageSize: number) => boolean,
+) {
+  const params = new URLSearchParams(searchParams.toString())
+  const oneBased = pagination.pageIndex + 1
+  if (oneBased > 1) {
+    params.set(urlPageParam, String(oneBased))
+  } else {
+    params.delete(urlPageParam)
+  }
 
-  // Sync from state to URL
-  React.useEffect(() => {
-    if (!syncPaginationToUrl || !showPagination || manualPagination) {
-      return
-    }
+  if (pagination.pageSize !== defaultPageSize && isValidUrlPageSize(pagination.pageSize)) {
+    params.set(urlPageSizeParam, String(pagination.pageSize))
+  } else {
+    params.delete(urlPageSizeParam)
+  }
 
-    const params = new URLSearchParams(searchParams.toString())
-    const oneBased = pagination.pageIndex + 1
-    if (oneBased > 1) {
-      params.set(urlPageParam, String(oneBased))
-    } else {
-      params.delete(urlPageParam)
-    }
-
-    if (pagination.pageSize !== pageSize && isValidUrlPageSize(pagination.pageSize)) {
-      params.set(urlPageSizeParam, String(pagination.pageSize))
-    } else {
-      params.delete(urlPageSizeParam)
-    }
-
-    const queryString = params.toString()
-    const nextUrl = queryString ? `${pathname}?${queryString}` : pathname
-    window.history.replaceState(null, '', nextUrl)
-  }, [
-    isValidUrlPageSize,
-    manualPagination,
-    pageSize,
-    pagination.pageIndex,
-    pagination.pageSize,
-    pathname,
-    searchParams,
-    showPagination,
-    syncPaginationToUrl,
-    urlPageParam,
-    urlPageSizeParam,
-  ])
-
-  return null
+  return params
 }
 
 export function DataTable<TData, TValue>({
@@ -327,18 +347,78 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   'use no memo'
 
-  const [sorting, setSorting] = React.useState<SortingState>(() => initialSorting)
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(() => initialColumnFilters)
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(() => initialColumnVisibility)
-  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
-  const [pagination, setPagination] = React.useState<PaginationState>({
-    pageIndex: 0,
-    pageSize,
-  })
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const usesUrlPagination = syncPaginationToUrl && showPagination && !manualPagination
+
+  const isValidUrlPageSize = React.useCallback(
+    (pageSizeOption: number) => urlPageSizeOptions.includes(pageSizeOption),
+    [urlPageSizeOptions],
+  )
+
+  const urlPagination = React.useMemo(
+    () =>
+      parsePaginationFromSearchParams(
+        (key) => searchParams.get(key),
+        pageSize,
+        urlPageParam,
+        urlPageSizeParam,
+        isValidUrlPageSize,
+      ),
+    [isValidUrlPageSize, pageSize, searchParams, urlPageParam, urlPageSizeParam],
+  )
+
+  const [tableState, dispatch] = React.useReducer(
+    dataTableReducer,
+    {
+      pageSize,
+      initialSorting,
+      initialColumnFilters,
+      initialColumnVisibility,
+    },
+    createInitialDataTableState,
+  )
+  const { sorting, columnFilters, columnVisibility, rowSelection, localPagination } = tableState
+
+  const setSorting = React.useCallback((value: SortingState) => {
+    dispatch({ type: 'setSorting', value })
+  }, [])
+
+  const setColumnFilters = React.useCallback(
+    (value: ColumnFiltersState | ((prev: ColumnFiltersState) => ColumnFiltersState)) => {
+      dispatch({ type: 'setColumnFilters', value })
+    },
+    [],
+  )
+
+  const setColumnVisibility = React.useCallback(
+    (value: VisibilityState | ((prev: VisibilityState) => VisibilityState)) => {
+      dispatch({ type: 'setColumnVisibility', value })
+    },
+    [],
+  )
+
+  const setRowSelection = React.useCallback(
+    (value: RowSelectionState | ((prev: RowSelectionState) => RowSelectionState)) => {
+      dispatch({ type: 'setRowSelection', value })
+    },
+    [],
+  )
+
+  const setLocalPagination = React.useCallback(
+    (value: PaginationState | ((prev: PaginationState) => PaginationState)) => {
+      dispatch({ type: 'setLocalPagination', value })
+    },
+    [],
+  )
+
+  const pagination = usesUrlPagination ? urlPagination : localPagination
 
   // Controlled/uncontrolled search value
-  const [internalSearchValue, setInternalSearchValue] = React.useState('')
-  const effectiveSearchValue = searchValue ?? internalSearchValue
+  const internalSearchValueRef = React.useRef('')
+  const effectiveSearchValue = searchValue ?? internalSearchValueRef.current
 
   // Sync search value into column filters
   React.useEffect(() => {
@@ -377,7 +457,7 @@ export function DataTable<TData, TValue>({
 
         // Sync internal state only when uncontrolled
         if (searchValue === undefined) {
-          setInternalSearchValue(nextSearch)
+          internalSearchValueRef.current = nextSearch
         }
 
         onSearchChange?.(nextSearch)
@@ -386,7 +466,24 @@ export function DataTable<TData, TValue>({
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     onPaginationChange: (updater) => {
-      setPagination((old) => {
+      if (usesUrlPagination) {
+        const newPagination =
+          typeof updater === 'function' ? updater(urlPagination) : updater
+        const params = buildPaginationSearchParams(
+          new URLSearchParams(searchParams.toString()),
+          newPagination,
+          pageSize,
+          urlPageParam,
+          urlPageSizeParam,
+          isValidUrlPageSize,
+        )
+        const queryString = params.toString()
+        router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
+        onPaginationChange?.(newPagination)
+        return
+      }
+
+      setLocalPagination((old) => {
         const newPagination = typeof updater === 'function' ? updater(old) : updater
         onPaginationChange?.(newPagination)
         return newPagination
@@ -526,19 +623,6 @@ export function DataTable<TData, TValue>({
       {showPagination && (
         <DataTablePagination table={table} showRowSelection={showRowSelection} />
       )}
-      <React.Suspense fallback={null}>
-        <DataTableUrlSync
-          syncPaginationToUrl={syncPaginationToUrl}
-          showPagination={showPagination}
-          manualPagination={manualPagination}
-          pageSize={pageSize}
-          urlPageParam={urlPageParam}
-          urlPageSizeParam={urlPageSizeParam}
-          urlPageSizeOptions={urlPageSizeOptions}
-          pagination={pagination}
-          setPagination={setPagination}
-        />
-      </React.Suspense>
     </div>
   )
 }

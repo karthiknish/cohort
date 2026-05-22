@@ -45,14 +45,14 @@ export function TaskTemplatesDialog({ onSelectTemplate }: TaskTemplateProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
-          <Sparkles className="h-4 w-4" />
+          <Sparkles className="size-4" />
           Use Template
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+            <FileText className="size-5" />
             Task Templates
           </DialogTitle>
           <DialogDescription>
@@ -93,12 +93,12 @@ function TaskTemplateCategoryButton({
   selected: boolean
   onSelect: (categoryId: string) => void
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectCategory = useCallback(() => {
     onSelect(category.id)
   }, [category.id, onSelect])
 
   return (
-    <Button variant={selected ? 'default' : 'outline'} size="sm" onClick={handleClick} className="text-xs">
+    <Button variant={selected ? 'default' : 'outline'} size="sm" onClick={onSelectCategory} className="text-xs">
       {category.label}
     </Button>
   )
@@ -111,12 +111,12 @@ function TaskTemplateCard({
   template: TaskTemplate
   onSelect: (template: TaskTemplate) => void
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectTemplate = useCallback(() => {
     onSelect(template)
   }, [onSelect, template])
 
   return (
-    <button type="button" onClick={handleClick} className="text-left group">
+    <button type="button" onClick={onSelectTemplate} className="text-left group">
       <div className="rounded-lg border border-muted/40 bg-background p-4 motion-chromatic hover:border-accent/40 hover:shadow-md">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 space-y-2">
@@ -144,7 +144,7 @@ function TaskTemplateCard({
               <span>Status: <span className="font-medium">{template.status === 'todo' ? 'To Do' : template.status}</span></span>
             </div>
           </div>
-          <Plus className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+          <Plus className="size-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
         </div>
       </div>
     </button>

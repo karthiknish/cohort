@@ -6,11 +6,11 @@ export const ADS_PAGE_THEME = {
   hero: cn(
     'relative overflow-hidden rounded-2xl border border-border/50',
     'bg-linear-to-br from-primary/[0.07] via-card/80 to-info/[0.05]',
-    'px-5 py-5 sm:px-6 sm:py-6',
+    'p-5 sm:px-6 sm:py-6',
     'shadow-sm ring-1 ring-border/40',
   ),
   heroGlow:
-    'pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/12 blur-3xl',
+    'pointer-events-none absolute -right-12 -top-12 size-40 rounded-full bg-primary/12 blur-3xl',
   sectionEyebrow: 'text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80',
   sectionTitle: 'text-lg font-semibold tracking-tight text-foreground',
   sectionDescription: 'max-w-2xl text-sm leading-relaxed text-muted-foreground',
@@ -56,11 +56,11 @@ export const ADS_PAGE_THEME = {
   innerHero: cn(
     'relative overflow-hidden rounded-2xl border border-border/50',
     'bg-linear-to-br from-primary/[0.06] via-card/90 to-info/[0.04]',
-    'px-5 py-5 sm:px-6 sm:py-6',
+    'p-5 sm:px-6 sm:py-6',
     'shadow-sm ring-1 ring-border/40',
   ),
   innerHeroGlow:
-    'pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-primary/10 blur-3xl',
+    'pointer-events-none absolute -right-10 -top-10 size-36 rounded-full bg-primary/10 blur-3xl',
   chartCard: cn(
     'overflow-hidden rounded-2xl border border-border/60 bg-card/95',
     'shadow-sm ring-1 ring-border/30',
@@ -70,13 +70,13 @@ export const ADS_PAGE_THEME = {
   sectionHeader: 'space-y-1 border-b border-border/50 pb-4',
   /** Campaign budget / audience control panels */
   controlHeaderIcon: cn(
-    'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
+    'flex size-11 shrink-0 items-center justify-center rounded-2xl',
     'bg-linear-to-br from-primary/15 via-primary/8 to-transparent',
     'ring-1 ring-primary/20 shadow-sm',
   ),
   controlPreviewBanner: cn(
-    'flex items-start gap-3 rounded-xl border border-amber-500/25',
-    'bg-amber-500/[0.06] px-4 py-3 text-sm text-muted-foreground',
+    'flex items-start gap-3 rounded-xl border border-warning/25',
+    'bg-warning/6 px-4 py-3 text-sm text-muted-foreground',
   ),
   controlHighlightTile: cn(
     'relative overflow-hidden rounded-2xl border border-primary/15',

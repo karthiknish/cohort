@@ -3,7 +3,7 @@
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useAction } from 'convex/react'
-import { useCallback, useState } from 'react'
+import { useCallback, useReducer } from 'react'
 
 import {
   Dialog,
@@ -32,98 +32,159 @@ type Props = {
   providerId: string
 }
 
-export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Props) {
-  const { user } = useAuth()
-  const { selectedClientId } = useClientContext()
+type AudienceBuilderState = {
+  activeTab: string
+  loading: boolean
+  formData: AudienceFormData
+  newSegment: string
+  newInterest: string
+}
 
-  const createAudience = useAction(adsAudiencesApi.createAudience)
+type AudienceBuilderAction =
+  | { type: 'setActiveTab'; value: string }
+  | { type: 'setLoading'; value: boolean }
+  | { type: 'setFormData'; value: AudienceFormData | ((prev: AudienceFormData) => AudienceFormData) }
+  | { type: 'setNewSegment'; value: string }
+  | { type: 'setNewInterest'; value: string }
+  | { type: 'resetForm' }
 
-  const [activeTab, setActiveTab] = useState('basics')
-  const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState<AudienceFormData>({
-    name: '',
-    description: '',
-    segments: [],
-    locations: [],
-    interests: [],
-    genders: [],
-  })
-  const [newSegment, setNewSegment] = useState('')
-  const [newInterest, setNewInterest] = useState('')
-
-  const handleAddSegment = useCallback(() => {
-    if (!newSegment.trim()) return
-    setFormData(prev => ({
-      ...prev,
-      segments: [...prev.segments, newSegment.trim()]
-    }))
-    setNewSegment('')
-  }, [newSegment])
-
-  const handleRemoveSegment = useCallback((index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      segments: prev.segments.filter((_, i) => i !== index)
-    }))
-  }, [])
-
-  const handleAddInterest = useCallback((interest: string) => {
-    if (formData.interests.includes(interest)) return
-    setFormData(prev => ({
-      ...prev,
-      interests: [...prev.interests, interest]
-    }))
-    setNewInterest('')
-  }, [formData.interests])
-
-  const handleRemoveInterest = useCallback((interest: string) => {
-    setFormData(prev => ({
-      ...prev,
-      interests: prev.interests.filter(i => i !== interest)
-    }))
-  }, [])
-
-  const handleLocationSelect = useCallback((location: LocationMarker) => {
-    setFormData(prev => {
-      if (prev.locations.some(l => l.id === location.id)) return prev
-      return { ...prev, locations: [...prev.locations, location] }
-    })
-  }, [])
-
-  const handleLocationRemove = useCallback((locationId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      locations: prev.locations.filter(l => l.id !== locationId)
-    }))
-  }, [])
-
-  const handleGenderToggle = useCallback((gender: string) => {
-    setFormData(prev => ({
-      ...prev,
-      genders: prev.genders.includes(gender)
-        ? prev.genders.filter(g => g !== gender)
-        : [...prev.genders, gender]
-    }))
-  }, [])
-
-  const handleAgePreset = useCallback((min: number, max: number) => {
-    setFormData(prev => ({
-      ...prev,
-      ageMin: min,
-      ageMax: max
-    }))
-  }, [])
-
-  const resetForm = useCallback(() => {
-    setFormData({
+function createInitialAudienceBuilderState(): AudienceBuilderState {
+  return {
+    activeTab: 'basics',
+    loading: false,
+    formData: {
       name: '',
       description: '',
       segments: [],
       locations: [],
       interests: [],
       genders: [],
+    },
+    newSegment: '',
+    newInterest: '',
+  }
+}
+
+function audienceBuilderReducer(state: AudienceBuilderState, action: AudienceBuilderAction): AudienceBuilderState {
+  switch (action.type) {
+    case 'setActiveTab':
+      return { ...state, activeTab: action.value }
+    case 'setLoading':
+      return { ...state, loading: action.value }
+    case 'setFormData':
+      return {
+        ...state,
+        formData: typeof action.value === 'function' ? action.value(state.formData) : action.value,
+      }
+    case 'setNewSegment':
+      return { ...state, newSegment: action.value }
+    case 'setNewInterest':
+      return { ...state, newInterest: action.value }
+    case 'resetForm':
+      return createInitialAudienceBuilderState()
+    default:
+      return state
+  }
+}
+
+export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Props) {
+  const { user } = useAuth()
+  const { selectedClientId } = useClientContext()
+
+  const createAudience = useAction(adsAudiencesApi.createAudience)
+
+  const [state, dispatch] = useReducer(audienceBuilderReducer, undefined, createInitialAudienceBuilderState)
+  const { activeTab, loading, formData, newSegment, newInterest } = state
+
+  const handleAddSegment = useCallback(() => {
+    if (!newSegment.trim()) return
+    dispatch({
+      type: 'setFormData',
+      value: (prev) => ({
+        ...prev,
+        segments: [...prev.segments, newSegment.trim()],
+      }),
     })
-    setActiveTab('basics')
+    dispatch({ type: 'setNewSegment', value: '' })
+  }, [newSegment])
+
+  const handleRemoveSegment = useCallback((index: number) => {
+    dispatch({
+      type: 'setFormData',
+      value: (prev) => ({
+        ...prev,
+        segments: prev.segments.filter((_, i) => i !== index),
+      }),
+    })
+  }, [])
+
+  const handleAddInterest = useCallback((interest: string) => {
+    if (formData.interests.includes(interest)) return
+    dispatch({
+      type: 'setFormData',
+      value: (prev) => ({
+        ...prev,
+        interests: [...prev.interests, interest],
+      }),
+    })
+    dispatch({ type: 'setNewInterest', value: '' })
+  }, [formData.interests])
+
+  const handleRemoveInterest = useCallback((interest: string) => {
+    dispatch({
+      type: 'setFormData',
+      value: (prev) => ({
+        ...prev,
+        interests: prev.interests.filter((i) => i !== interest),
+      }),
+    })
+  }, [])
+
+  const handleLocationSelect = useCallback((location: LocationMarker) => {
+    dispatch({
+      type: 'setFormData',
+      value: (prev) => {
+        if (prev.locations.some((l) => l.id === location.id)) return prev
+        return { ...prev, locations: [...prev.locations, location] }
+      },
+    })
+  }, [])
+
+  const handleLocationRemove = useCallback((locationId: string) => {
+    dispatch({
+      type: 'setFormData',
+      value: (prev) => ({
+        ...prev,
+        locations: prev.locations.filter((l) => l.id !== locationId),
+      }),
+    })
+  }, [])
+
+  const handleGenderToggle = useCallback((gender: string) => {
+    dispatch({
+      type: 'setFormData',
+      value: (prev) => ({
+        ...prev,
+        genders: prev.genders.includes(gender)
+          ? prev.genders.filter((g) => g !== gender)
+          : [...prev.genders, gender],
+      }),
+    })
+  }, [])
+
+  const handleAgePreset = useCallback((min: number, max: number) => {
+    dispatch({
+      type: 'setFormData',
+      value: (prev) => ({
+        ...prev,
+        ageMin: min,
+        ageMax: max,
+      }),
+    })
+  }, [])
+
+  const resetForm = useCallback(() => {
+    dispatch({ type: 'resetForm' })
   }, [])
 
   const convexProviderId = toAdsProviderId(providerId)
@@ -151,14 +212,14 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
       return
     }
 
-    setLoading(true)
+    dispatch({ type: 'setLoading', value: true })
     const workspaceId = user?.agencyId ? String(user.agencyId) : null
     if (!workspaceId) {
       notifyFailure({
         title: 'Error',
         message: 'Failed to create audience.',
       })
-      setLoading(false)
+      dispatch({ type: 'setLoading', value: false })
       return
     }
 
@@ -200,7 +261,7 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
         })
       })
       .finally(() => {
-        setLoading(false)
+        dispatch({ type: 'setLoading', value: false })
       })
   }, [convexProviderId, formData, isMetaAudience, user, selectedClientId, createAudience, onOpenChange, resetForm])
 
@@ -214,15 +275,36 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
   }, [onOpenChange])
 
   const handleDescriptionChange = useCallback((value: string) => {
-    setFormData((prev) => ({ ...prev, description: value }))
+    dispatch({
+      type: 'setFormData',
+      value: (prev) => ({ ...prev, description: value }),
+    })
   }, [])
 
   const handleNameChange = useCallback((value: string) => {
-    setFormData((prev) => ({ ...prev, name: value }))
+    dispatch({
+      type: 'setFormData',
+      value: (prev) => ({ ...prev, name: value }),
+    })
   }, [])
 
   const handleResetGenders = useCallback(() => {
-    setFormData((prev) => ({ ...prev, genders: [] }))
+    dispatch({
+      type: 'setFormData',
+      value: (prev) => ({ ...prev, genders: [] }),
+    })
+  }, [])
+
+  const handleSelectStep = useCallback((step: string) => {
+    dispatch({ type: 'setActiveTab', value: step })
+  }, [])
+
+  const handleSegmentInputChange = useCallback((value: string) => {
+    dispatch({ type: 'setNewSegment', value })
+  }, [])
+
+  const handleInterestInputChange = useCallback((value: string) => {
+    dispatch({ type: 'setNewInterest', value })
   }, [])
 
   const completionSteps = [
@@ -237,7 +319,7 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
-        <AudienceBuilderDialogHeader activeTab={activeTab} completionSteps={completionSteps} onSelectStep={setActiveTab} providerId={providerId} />
+        <AudienceBuilderDialogHeader activeTab={activeTab} completionSteps={completionSteps} onSelectStep={handleSelectStep} providerId={providerId} />
         {isMetaAudience && user?.agencyId ? (
           <div className="space-y-3 px-6 pb-2">
             <Alert>
@@ -258,16 +340,16 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
           onAgePreset={handleAgePreset}
           onDescriptionChange={handleDescriptionChange}
           onGenderToggle={handleGenderToggle}
-          onInterestInputChange={setNewInterest}
+          onInterestInputChange={handleInterestInputChange}
           onLocationRemove={handleLocationRemove}
           onLocationSelect={handleLocationSelect}
           onNameChange={handleNameChange}
           onRemoveInterest={handleRemoveInterest}
           onRemoveSegment={handleRemoveSegment}
           onResetGenders={handleResetGenders}
-          onSegmentInputChange={setNewSegment}
+          onSegmentInputChange={handleSegmentInputChange}
           providerId={providerId}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleSelectStep}
         />
         <AudienceBuilderDialogFooter completedCount={completedCount} loading={loading} onCancel={handleCancel} onCreate={handleCreate} totalSteps={completionSteps.length} />
       </DialogContent>

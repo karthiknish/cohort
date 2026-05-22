@@ -57,7 +57,7 @@ function ProjectStatusOptionPill({
   active: boolean
   onStatusChange: (value: StatusFilter) => void
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectStatus = useCallback(() => {
     onStatusChange(status)
   }, [onStatusChange, status])
 
@@ -67,7 +67,7 @@ function ProjectStatusOptionPill({
       count={count}
       active={active}
       dotStyle={STATUS_DOT_STYLES[status]}
-      onClick={handleClick}
+      onClick={onSelectStatus}
     />
   )
 }
@@ -99,7 +99,7 @@ function StatusPill({
       )}
     >
       {dotStyle ? (
-        <span className="h-2 w-2 shrink-0 rounded-full" style={dotStyle} aria-hidden />
+        <span className="size-2 shrink-0 rounded-full" style={dotStyle} aria-hidden />
       ) : null}
       <span>{label}</span>
       <span

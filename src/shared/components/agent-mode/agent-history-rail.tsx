@@ -59,7 +59,7 @@ function HistorySkeleton() {
   return (
     <div className="space-y-2 p-3">
       {['history-skeleton-1', 'history-skeleton-2', 'history-skeleton-3', 'history-skeleton-4'].map((key) => (
-        <div key={key} className="animate-pulse rounded-xl bg-muted/70 px-3 py-3">
+        <div key={key} className="animate-pulse rounded-xl bg-muted/70 p-3">
           <div className="mb-2 h-3 w-2/3 rounded bg-muted-foreground/20" />
           <div className="h-2.5 w-full rounded bg-muted-foreground/15" />
         </div>
@@ -152,23 +152,23 @@ export function AgentHistoryRail({
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {isHistoryLoading && history.length > 0 ? (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Refreshing chats" />
+            <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="Refreshing chats" />
           ) : null}
           {conversationId || messagesCount > 0 ? (
             <Button variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full px-2.5 text-xs" onClick={onStartNewChat}>
-              <SquarePen className="h-3.5 w-3.5" />
+              <SquarePen className="size-3.5" />
               New
             </Button>
           ) : null}
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={onClose} aria-label="Close history">
-            <X className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="size-8 rounded-full" onClick={onClose} aria-label="Close history">
+            <X className="size-4" />
           </Button>
         </div>
       </div>
 
       <div className="space-y-2 border-b border-border/50 px-3 py-2.5">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden />
+          <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" aria-hidden />
           <Input
             value={historySearch}
             onChange={handleHistorySearchChange}
@@ -184,23 +184,23 @@ export function AgentHistoryRail({
           className="h-7 gap-1.5 rounded-full px-3 text-xs"
           onClick={handleToggleArchivedHistory}
         >
-          <Archive className="h-3.5 w-3.5" />
+          <Archive className="size-3.5" />
           {showArchivedHistory ? 'Showing archived' : 'Archived'}
         </Button>
       </div>
 
       <ScrollArea className="min-h-0 flex-1">
         {historyError ? (
-          <div className="m-3 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-3 text-sm">
+          <div className="m-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm">
             <div className="flex items-start gap-2 text-destructive">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
               <div>
                 <p className="font-medium">Could not load chats</p>
                 <p className="mt-1 text-xs text-muted-foreground">{historyError}</p>
               </div>
             </div>
             <Button type="button" size="sm" variant="outline" className="mt-3 gap-2 rounded-full" onClick={onRetryHistory}>
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className="size-3.5" />
               Retry
             </Button>
           </div>
@@ -264,7 +264,7 @@ export function AgentHistoryRail({
                 >
                   {isHistoryLoading ? (
                     <>
-                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="mr-2 size-3.5 animate-spin" />
                       Loading…
                     </>
                   ) : (

@@ -158,19 +158,21 @@ export const create = zWorkspaceMutation({
     })
 
     const mentions = Array.isArray(args.mentions) ? args.mentions : []
-    for (const mention of mentions) {
-      if (!mention || typeof mention !== 'object') continue
-      const mentionSlug = typeof mention.slug === 'string' ? mention.slug : ''
-      const mentionName = typeof mention.name === 'string' ? mention.name : ''
-      if (!mentionSlug) continue
+    await Promise.all(
+      mentions.map(async (mention) => {
+        if (!mention || typeof mention !== 'object') return
+        const mentionSlug = typeof mention.slug === 'string' ? mention.slug : ''
+        const mentionName = typeof mention.name === 'string' ? mention.name : ''
+        if (!mentionSlug) return
 
-      const recipientUserIds = (await resolveMentionRecipientUserIds(ctx, args.workspaceId, [mention]))
-        .filter((id) => id !== currentUserId)
-      if (recipientUserIds.length === 0) continue
+        const recipientUserIds = (await resolveMentionRecipientUserIds(ctx, args.workspaceId, [mention])).filter(
+          (id) => id !== currentUserId,
+        )
+        if (recipientUserIds.length === 0) return
 
-      const mentionSnippet = content.length > 150 ? `${content.slice(0, 147)}…` : content
+        const mentionSnippet = content.length > 150 ? `${content.slice(0, 147)}…` : content
 
-      await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+        await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
         workspaceId: args.workspaceId,
         legacyId: `collab:${args.legacyId}:mention:${mentionSlug}`,
         kind: 'collaboration.mention',
@@ -200,7 +202,8 @@ export const create = zWorkspaceMutation({
         createdAtMs: nowMs,
         updatedAtMs: nowMs,
       })
-    }
+      }),
+    )
 
     return args.legacyId
   },
@@ -331,7 +334,8 @@ export const toggleReaction = zWorkspaceMutation({
 
       reactionFound = true
       const existingUsers = Array.from(new Set(userIds))
-      const hasReacted = existingUsers.includes(currentUserId)
+      const existingUserSet = new Set(existingUsers)
+      const hasReacted = existingUserSet.has(currentUserId)
       const nextUsers: string[] = hasReacted
         ? existingUsers.filter((id) => id !== currentUserId)
         : [...existingUsers, currentUserId]

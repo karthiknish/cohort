@@ -36,7 +36,7 @@ export function GoogleSalesSection({ formData, onChange, disabled }: GoogleObjec
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <DollarSign className="w-4 h-4 text-success" />
+            <DollarSign className="size-4 text-success" />
             Bidding Strategy
           </CardTitle>
           <CardDescription>
@@ -114,7 +114,7 @@ export function GoogleSalesSection({ formData, onChange, disabled }: GoogleObjec
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <TrendingUp className="w-4 h-4 text-success" />
+            <TrendingUp className="size-4 text-success" />
             Conversion Goal
           </CardTitle>
           <CardDescription>
@@ -151,7 +151,7 @@ export function GoogleSalesSection({ formData, onChange, disabled }: GoogleObjec
       <Card className="border-success/20 bg-success/5">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <TrendingUp className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+            <TrendingUp className="size-5 text-success flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Sales Campaign Best Practices</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">

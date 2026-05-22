@@ -185,7 +185,7 @@ export function MessageForwardDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Forward className="h-5 w-5" />
+            <Forward className="size-5" />
             Forward Message
           </DialogTitle>
           <DialogDescription>
@@ -284,12 +284,12 @@ export function MessageForwardDialog({
           >
             {isForwarding ? (
               <>
-                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                <LoaderCircle className="mr-2 size-4 animate-spin" />
                 Forwarding…
               </>
             ) : (
               <>
-                <Forward className="mr-2 h-4 w-4" />
+                <Forward className="mr-2 size-4" />
                 Forward
               </>
             )}
@@ -317,11 +317,11 @@ export function ForwardMessageButton({
       type="button"
       variant="ghost"
       size="icon"
-      className={cn('h-7 w-7', className)}
+      className={cn('size-7', className)}
       onClick={onClick}
       disabled={disabled}
     >
-      <Forward className="h-4 w-4" />
+      <Forward className="size-4" />
       <span className="sr-only">Forward message</span>
     </Button>
   )

@@ -406,7 +406,7 @@ export function RichComposer({
     [highlightedMention, insertMention, mentionResults, mentionState.active, onSend, resetMentionState]
   )
 
-  const handleBlur = useCallback(() => {
+  const onComposerBlur = useCallback(() => {
     if (mentionTimeoutRef.current) {
       clearTimeout(mentionTimeoutRef.current)
       mentionTimeoutRef.current = null
@@ -416,7 +416,7 @@ export function RichComposer({
     onBlur?.()
   }, [onBlur, resetMentionState])
 
-  const handleFocus = useCallback(() => {
+  const onComposerFocus = useCallback(() => {
     onFocus?.()
   }, [onFocus])
 
@@ -488,13 +488,13 @@ export function RichComposer({
       <RichComposerTextareaShell
         disabled={disabled}
         isDraggingOver={isDraggingOver}
-        onBlur={handleBlur}
+        onBlur={onComposerBlur}
         onChange={handleInputChange}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOverInternal}
         onDrop={handleDropInternal}
-        onFocus={handleFocus}
+        onFocus={onComposerFocus}
         onKeyDown={handleKeyDown}
         onPaste={onPaste}
         placeholder={placeholder}

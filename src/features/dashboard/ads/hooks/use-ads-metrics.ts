@@ -91,18 +91,28 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   const { isPreviewMode } = usePreview()
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
 
-  // State
-  const [metrics, setMetrics] = useState<MetricRecord[]>([])
-  const [metricsLoading, setMetricsLoading] = useState(false)
-  const [metricError, setMetricError] = useState<string | null>(null)
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [metricsView, setMetricsView] = useState({
+    metrics: [] as MetricRecord[],
+    metricsLoading: false,
+    metricError: null as string | null,
+    nextCursor: null as string | null,
+    loadMoreError: null as string | null,
+    visibleCount: METRICS_PAGE_SIZE,
+    serverSideSummary: null as MetricsSummary | null,
+    adsInsightsSummary: null as AdsInsightsSummary | null,
+  })
+  const {
+    metrics,
+    metricsLoading,
+    metricError,
+    nextCursor,
+    loadMoreError,
+    visibleCount,
+    serverSideSummary,
+    adsInsightsSummary,
+  } = metricsView
   const [loadingMore, setLoadingMore] = useState(false)
-  const [loadMoreError, setLoadMoreError] = useState<string | null>(null)
   const [internalRefreshTick, setInternalRefreshTick] = useState(0)
-  const [visibleCount, setVisibleCount] = useState(METRICS_PAGE_SIZE)
-  
-  const [serverSideSummary, setServerSideSummary] = useState<MetricsSummary | null>(null)
-  const [adsInsightsSummary, setAdsInsightsSummary] = useState<AdsInsightsSummary | null>(null)
   
   const [dateRange, setDateRange] = useState<DateRange>(() => ({
     start: startOfDay(subDays(new Date(), DEFAULT_DATE_RANGE_DAYS - 1)),
@@ -124,7 +134,10 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
 
     // Keep initial auth boot silent, but if we previously surfaced an error,
     // swap it to a session-expired message.
-    setMetricError((prev) => (prev ? ERROR_MESSAGES.SIGN_IN_REQUIRED : prev))
+    setMetricsView((prev) => ({
+      ...prev,
+      metricError: prev.metricError ? ERROR_MESSAGES.SIGN_IN_REQUIRED : prev.metricError,
+    }))
   }, [canQueryConvex, isPreviewMode, workspaceId])
 
   const metricsRealtime = useQuery(
@@ -164,7 +177,9 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     const v2Rows = Array.isArray(metricsRealtimeV2?.metrics) ? metricsRealtimeV2.metrics : null
     const v1Rows = Array.isArray(metricsRealtime?.metrics) ? metricsRealtime.metrics : []
     const rows = (v2Rows ?? v1Rows) as RealtimeMetricRow[]
-    return rows.filter((row: RealtimeMetricRow) => isAdsProviderId(row.providerId)).map((row: RealtimeMetricRow) => mapRealtimeMetricRow(row))
+    return rows.flatMap((row: RealtimeMetricRow) =>
+      isAdsProviderId(row.providerId) ? [mapRealtimeMetricRow(row)] : [],
+    )
   }, [isPreviewMode, metricsRealtime, metricsRealtimeV2, canQueryConvex, workspaceId])
 
   const processedMetrics = useMemo(
@@ -212,53 +227,48 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
 
   useEffect(() => {
     const resetRequested = refreshTick > 0
-    setVisibleCount(METRICS_PAGE_SIZE)
-    if (resetRequested) {
-      setMetricError(null)
-      setLoadMoreError(null)
-    }
+    setMetricsView((prev) => ({
+      ...prev,
+      visibleCount: METRICS_PAGE_SIZE,
+      ...(resetRequested ? { metricError: null, loadMoreError: null } : {}),
+    }))
   }, [refreshTick])
 
   // Load/refresh local paged list from Convex/preview.
   // Important: avoid state updates during render.
   useEffect(() => {
-    // If auth isn't ready, don't show misleading loading/errors.
-    if (!isPreviewMode && workspaceId && !canQueryConvex) {
-      setMetricsLoading(false)
-      setMetricError(null)
-      setLoadMoreError(null)
-      setMetrics([])
-      setNextCursor(null)
-      setServerSideSummary(null)
-      setAdsInsightsSummary(null)
-      return
-    }
+    setMetricsView((prev) => {
+      if (!isPreviewMode && workspaceId && !canQueryConvex) {
+        return {
+          ...prev,
+          metricsLoading: false,
+          metricError: null,
+          loadMoreError: null,
+          metrics: [],
+          nextCursor: null,
+          serverSideSummary: null,
+          adsInsightsSummary: null,
+        }
+      }
 
-    if (isConvexLoading) {
-      setMetricsLoading(true)
-      return
-    }
+      if (isConvexLoading) {
+        return { ...prev, metricsLoading: true }
+      }
 
-    setMetricsLoading(false)
+      const summary = !isPreviewMode && metricsRealtime?.summary ? metricsRealtime.summary : null
+      const v2Summary = !isPreviewMode && metricsRealtimeV2?.summary ? metricsRealtimeV2.summary : null
+      const firstPage = metricsSource.slice(0, METRICS_PAGE_SIZE)
 
-    // Populate server-side aggregated summary when available.
-    const summary = !isPreviewMode && metricsRealtime?.summary ? metricsRealtime.summary : null
-    setServerSideSummary(summary)
-
-    // Populate V2 currency-aware insights summary.
-    const v2Summary = !isPreviewMode && metricsRealtimeV2?.summary ? metricsRealtimeV2.summary : null
-    setAdsInsightsSummary(v2Summary as AdsInsightsSummary | null)
-
-    const firstPage = metricsSource.slice(0, METRICS_PAGE_SIZE)
-    setMetrics(firstPage)
-    setNextCursor(metricsSource.length > METRICS_PAGE_SIZE ? 'more' : null)
+      return {
+        ...prev,
+        metricsLoading: false,
+        serverSideSummary: summary,
+        adsInsightsSummary: v2Summary as AdsInsightsSummary | null,
+        metrics: firstPage,
+        nextCursor: metricsSource.length > prev.visibleCount ? 'more' : null,
+      }
+    })
   }, [canQueryConvex, isConvexLoading, isPreviewMode, metricsRealtime, metricsRealtimeV2, metricsSource, workspaceId])
-
-  // Keep nextCursor in sync with current visible count.
-  useEffect(() => {
-    if (isConvexLoading) return
-    setNextCursor(metricsSource.length > visibleCount ? 'more' : null)
-  }, [isConvexLoading, metricsSource.length, visibleCount])
 
   // Handlers
   const handleManualRefresh = useCallback(() => {
@@ -270,18 +280,21 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     if (!nextCursor || loadingMore || metricsLoading) return
 
     setLoadingMore(true)
-    setLoadMoreError(null)
+    setMetricsView((prev) => ({ ...prev, loadMoreError: null }))
 
     try {
       const nextCount = visibleCount + METRICS_PAGE_SIZE
-      setVisibleCount(nextCount)
-      setMetrics(metricsSource.slice(0, nextCount))
+      setMetricsView((prev) => ({
+        ...prev,
+        visibleCount: nextCount,
+        metrics: metricsSource.slice(0, nextCount),
+      }))
     } catch (error: unknown) {
       logError(error, 'useAdsMetrics:handleLoadMore')
       const message = isAuthError(error)
         ? ERROR_MESSAGES.SIGN_IN_REQUIRED
         : asErrorMessage(error)
-      setLoadMoreError(message)
+      setMetricsView((prev) => ({ ...prev, loadMoreError: message }))
     } finally {
       setLoadingMore(false)
     }

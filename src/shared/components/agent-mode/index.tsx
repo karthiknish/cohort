@@ -94,10 +94,6 @@ function AgentModeInner() {
     setOpen(true)
   }, [handleClose, isOpen, setOpen])
 
-  const handleRegisterRequestClose = useCallback((handler: (() => void) | null) => {
-    requestCloseRef.current = handler
-  }, [])
-
   const handleSendMessage = useCallback(
     (text: string, options?: Parameters<typeof processInput>[1]) => {
       void processInput(text, options)
@@ -156,7 +152,7 @@ function AgentModeInner() {
         maxMessageLength={maxMessageLength}
         onClose={handleClose}
         onOpenChange={setOpen}
-        onRegisterRequestClose={handleRegisterRequestClose}
+        requestCloseRef={requestCloseRef}
         messages={messages}
         isProcessing={isProcessing}
         onSendMessage={handleSendMessage}

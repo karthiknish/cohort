@@ -243,12 +243,14 @@ export const resendInvitation = zAdminMutation({
         .withIndex('by_emailLower_status', (q) => q.eq('emailLower', existing.emailLower).eq('status', 'pending'))
         .collect()
 
-      for (const pendingInvitation of pendingInvitations) {
-        await ctx.db.patch(pendingInvitation._id, {
-          status: 'revoked',
-          acceptedAtMs: null,
-        })
-      }
+      await Promise.all(
+        pendingInvitations.map(async (pendingInvitation) =>
+          ctx.db.patch(pendingInvitation._id, {
+            status: 'revoked',
+            acceptedAtMs: null,
+          }),
+        ),
+      )
 
       const createdAtMs = nowMs()
       const expiresAtMs = createdAtMs + INVITATION_EXPIRY_MS

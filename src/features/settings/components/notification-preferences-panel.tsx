@@ -2,7 +2,7 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useReducer } from 'react'
 import { Bell, ExternalLink, LoaderCircle, Moon } from 'lucide-react'
 import { useMutation, useQuery } from 'convex/react'
 
@@ -28,8 +28,66 @@ import { useToast } from '@/shared/ui/use-toast'
 import { NotificationCategoryMatrix } from './notification-category-matrix'
 
 const QUIET_HOURS_LABEL_PREFIX = (
-  <Moon className="h-4 w-4 text-muted-foreground" aria-hidden />
+  <Moon className="size-4 text-muted-foreground" aria-hidden />
 )
+
+type NotificationPreferencesPanelState = {
+  localPrefs: NotificationPreferencesV2 | null
+  loading: boolean
+  saving: boolean
+  error: string | null
+}
+
+type NotificationPreferencesPanelAction =
+  | { type: 'setLocalPrefs'; value: NotificationPreferencesV2 | null }
+  | { type: 'setLoading'; value: boolean }
+  | { type: 'setSaving'; value: boolean }
+  | { type: 'setError'; value: string | null }
+  | { type: 'syncPreview'; value: NotificationPreferencesV2 }
+  | { type: 'syncServer'; value: NotificationPreferencesV2 }
+  | { type: 'syncLoadFailed'; error: string }
+  | { type: 'beginPersist'; previous: NotificationPreferencesV2; next: NotificationPreferencesV2 }
+  | { type: 'persistSuccess'; value: NotificationPreferencesV2 }
+  | { type: 'persistFailure'; previous: NotificationPreferencesV2; error: string }
+
+function createInitialNotificationPreferencesPanelState(): NotificationPreferencesPanelState {
+  return {
+    localPrefs: null,
+    loading: true,
+    saving: false,
+    error: null,
+  }
+}
+
+function notificationPreferencesPanelReducer(
+  state: NotificationPreferencesPanelState,
+  action: NotificationPreferencesPanelAction,
+): NotificationPreferencesPanelState {
+  switch (action.type) {
+    case 'setLocalPrefs':
+      return { ...state, localPrefs: action.value }
+    case 'setLoading':
+      return { ...state, loading: action.value }
+    case 'setSaving':
+      return { ...state, saving: action.value }
+    case 'setError':
+      return { ...state, error: action.value }
+    case 'syncPreview':
+      return { localPrefs: action.value, loading: false, saving: false, error: null }
+    case 'syncServer':
+      return { localPrefs: action.value, loading: false, saving: false, error: null }
+    case 'syncLoadFailed':
+      return { ...state, loading: false, error: action.error }
+    case 'beginPersist':
+      return { ...state, localPrefs: action.next, saving: true, error: null }
+    case 'persistSuccess':
+      return { ...state, localPrefs: action.value, saving: false }
+    case 'persistFailure':
+      return { ...state, localPrefs: action.previous, error: action.error, saving: false }
+    default:
+      return state
+  }
+}
 
 export function NotificationPreferencesPanel() {
   const { toast } = useToast()
@@ -42,11 +100,13 @@ export function NotificationPreferencesPanel() {
   })
   const updatePrefs = useMutation(settingsApi.updateMyNotificationPreferences)
 
-  const [previewPrefs, setPreviewPrefs] = useState(() => getPreviewSettingsNotificationPreferences())
-  const [localPrefs, setLocalPrefs] = useState<NotificationPreferencesV2 | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const previewPrefsRef = useRef(getPreviewSettingsNotificationPreferences())
+  const [state, dispatch] = useReducer(
+    notificationPreferencesPanelReducer,
+    undefined,
+    createInitialNotificationPreferencesPanelState,
+  )
+  const { localPrefs, loading, saving, error } = state
   const displayError = mergeQueryErrors(error, prefsQueryError)
   const isMountedRef = useRef(true)
 
@@ -59,27 +119,22 @@ export function NotificationPreferencesPanel() {
 
   useEffect(() => {
     if (isPreviewMode) {
-      setLocalPrefs(previewPrefs)
-      setLoading(false)
-      setError(null)
+      dispatch({ type: 'syncPreview', value: previewPrefsRef.current })
       return
     }
 
     if (serverPrefs === undefined) {
-      setLoading(true)
+      dispatch({ type: 'setLoading', value: true })
       return
     }
 
     if (serverPrefs === null) {
-      setLoading(false)
-      setError('Unable to load notification preferences')
+      dispatch({ type: 'syncLoadFailed', error: 'Unable to load notification preferences' })
       return
     }
 
-    setLocalPrefs(normalizePreferences(serverPrefs))
-    setLoading(false)
-    setError(null)
-  }, [isPreviewMode, previewPrefs, serverPrefs])
+    dispatch({ type: 'syncServer', value: normalizePreferences(serverPrefs) })
+  }, [isPreviewMode, serverPrefs])
 
   const persist = useCallback(
     async (patch: Parameters<typeof applyPreferencesPatch>[1], options?: { silent?: boolean }) => {
@@ -88,19 +143,18 @@ export function NotificationPreferencesPanel() {
       const previous = localPrefs
       const next = applyPreferencesPatch(localPrefs, patch)
 
-      setLocalPrefs(next)
-      setSaving(true)
-      setError(null)
+      dispatch({ type: 'beginPersist', previous, next })
 
       try {
         if (isPreviewMode) {
-          setPreviewPrefs(next)
+          previewPrefsRef.current = next
           if (!options?.silent) {
             toast({
               title: 'Preview mode',
               description: 'Notification settings updated locally for this session.',
             })
           }
+          dispatch({ type: 'setSaving', value: false })
           return next
         }
 
@@ -112,7 +166,7 @@ export function NotificationPreferencesPanel() {
 
         const normalized = normalizePreferences(updated)
         if (isMountedRef.current) {
-          setLocalPrefs(normalized)
+          dispatch({ type: 'persistSuccess', value: normalized })
         }
 
         if (!options?.silent) {
@@ -124,8 +178,7 @@ export function NotificationPreferencesPanel() {
         logError(saveError, 'NotificationPreferencesPanel:persist')
         const message = asErrorMessage(saveError)
         if (isMountedRef.current) {
-          setLocalPrefs(previous)
-          setError(message)
+          dispatch({ type: 'persistFailure', previous, error: message })
         }
         if (!options?.silent) {
           notifyFailure({
@@ -134,10 +187,6 @@ export function NotificationPreferencesPanel() {
       })
         }
         return null
-      } finally {
-        if (isMountedRef.current) {
-          setSaving(false)
-        }
       }
     },
     [isPreviewMode, localPrefs, toast, updatePrefs],
@@ -195,7 +244,7 @@ export function NotificationPreferencesPanel() {
     return (
       <Card>
         <CardContent className="flex items-center gap-2 py-10 text-sm text-muted-foreground" role="status">
-          <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+          <LoaderCircle className="size-4 animate-spin" aria-hidden />
           Loading notification preferences…
         </CardContent>
       </Card>
@@ -208,7 +257,7 @@ export function NotificationPreferencesPanel() {
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1.5">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Bell className="h-5 w-5 text-primary" aria-hidden />
+              <Bell className="size-5 text-primary" aria-hidden />
               Notifications
             </CardTitle>
             <CardDescription>
@@ -220,13 +269,13 @@ export function NotificationPreferencesPanel() {
             className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-primary hover:underline"
           >
             Open notification center
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+            <ExternalLink className="size-3.5" aria-hidden />
           </Link>
         </CardHeader>
         <CardContent className="space-y-6">
           {saving ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+              <LoaderCircle className="size-4 animate-spin" aria-hidden />
               Saving…
             </p>
           ) : null}

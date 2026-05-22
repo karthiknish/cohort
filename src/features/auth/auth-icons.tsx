@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { Lock, Mail, User } from 'lucide-react'
 
-export const authMailIconSm = <Mail className="h-4 w-4" aria-hidden />
-export const authMailIconLg = <Mail className="h-6 w-6" aria-hidden />
-export const authLockIconSm = <Lock className="h-4 w-4" aria-hidden />
-export const authLockIconLg = <Lock className="h-6 w-6" aria-hidden />
-export const authUserIconSm = <User className="h-4 w-4" aria-hidden />
+export const authMailIconSm = <Mail className="size-4" aria-hidden />
+export const authMailIconLg = <Mail className="size-6" aria-hidden />
+export const authLockIconSm = <Lock className="size-4" aria-hidden />
+export const authLockIconLg = <Lock className="size-6" aria-hidden />
+export const authUserIconSm = <User className="size-4" aria-hidden />
 
 export const authForgotPasswordLink = (
   <Link

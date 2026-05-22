@@ -44,13 +44,11 @@ export function groupNotificationsByDate(
     buckets[group].push(notification)
   }
 
-  return (['today', 'yesterday', 'earlier'] as const)
-    .filter((key) => buckets[key].length > 0)
-    .map((key) => ({
-      key,
-      label: GROUP_LABELS[key],
-      items: buckets[key],
-    }))
+  return (['today', 'yesterday', 'earlier'] as const).flatMap((key) =>
+    buckets[key].length > 0
+      ? [{ key, label: GROUP_LABELS[key], items: buckets[key] }]
+      : [],
+  )
 }
 
 export function formatNotificationTimestamp(createdAt: string | null): string {

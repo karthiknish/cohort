@@ -245,25 +245,25 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className={cn(getButtonClasses('outline'), 'h-10 px-4')}>
-                <Settings className="mr-2 h-3.5 w-3.5" />
+                <Settings className="mr-2 size-3.5" />
                 Settings
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 rounded-xl border-muted/40 shadow-xl backdrop-blur-md">
               <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-accent/5 focus:text-primary">
                 <Link href="/admin/clients" className="flex items-center">
-                  <Settings className="mr-2 h-4 w-4 opacity-70" />
+                  <Settings className="mr-2 size-4 opacity-70" />
                   Manage client
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExport} className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-accent/5 focus:text-primary">
-                <Download className="mr-2 h-4 w-4 opacity-70" />
+                <Download className="mr-2 size-4 opacity-70" />
                 Export data
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-accent/5 focus:text-primary">
                 <Link href={`/dashboard/collaboration?clientId=${selectedClient.id}`} className="flex items-center">
-                  <UsersIcon className="mr-2 h-4 w-4 opacity-70" />
+                  <UsersIcon className="mr-2 size-4 opacity-70" />
                   Collaboration
                 </Link>
               </DropdownMenuItem>
@@ -277,9 +277,9 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
                 size="sm"
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className={cn(getButtonClasses('outline'), 'h-10 w-10 p-0')}
+                className={cn(getButtonClasses('outline'), 'size-10 p-0')}
               >
-                <RefreshCcw className={cn('h-4 w-4', refreshing && DASHBOARD_THEME.animations.pulse)} />
+                <RefreshCcw className={cn('size-4', refreshing && DASHBOARD_THEME.animations.pulse)} />
               </Button>
             </TooltipTrigger>
             <TooltipContent className="rounded-lg border-muted/40 font-bold uppercase tracking-widest text-[10px]">Refresh data</TooltipContent>

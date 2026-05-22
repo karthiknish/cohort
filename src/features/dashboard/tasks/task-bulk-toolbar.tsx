@@ -48,8 +48,10 @@ export type TaskBulkToolbarProps = {
 function parseAssignees(value: string): string[] {
   return value
     .split(',')
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0)
+    .flatMap((entry) => {
+      const trimmed = entry.trim()
+      return trimmed.length > 0 ? [trimmed] : []
+    })
 }
 
 export function TaskBulkToolbar({
@@ -130,17 +132,17 @@ export function TaskBulkToolbar({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="ghost" size="sm" onClick={onSelectAll} disabled={bulkActive}>
-            <CheckSquare className="mr-2 h-4 w-4" />
+            <CheckSquare className="mr-2 size-4" />
             {selectAllLabel}
           </Button>
           <Button variant="ghost" size="sm" onClick={onClearSelection} disabled={!hasSelection || bulkActive}>
             Clear
           </Button>
           <Button variant="secondary" size="sm" onClick={onSelectHighPriority} disabled={bulkActive}>
-            <Filter className="mr-2 h-4 w-4" /> High priority
+            <Filter className="mr-2 size-4" /> High priority
           </Button>
           <Button variant="secondary" size="sm" onClick={onSelectDueSoon} disabled={bulkActive}>
-            <CalendarClock className="mr-2 h-4 w-4" /> Due soon
+            <CalendarClock className="mr-2 size-4" /> Due soon
           </Button>
         </div>
       </div>
@@ -202,7 +204,7 @@ export function TaskBulkToolbar({
                 )}
                 disabled={!hasSelection || bulkActive}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
+                <CalendarIcon className="mr-2 size-4" />
                 {dueDate ? format(dueDate, 'PP') : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
@@ -241,7 +243,7 @@ export function TaskBulkToolbar({
             onClick={onBulkDelete}
             disabled={!hasSelection || bulkActive}
           >
-            <Trash2 className="mr-2 h-4 w-4" /> Delete
+            <Trash2 className="mr-2 size-4" /> Delete
           </Button>
         </div>
       </div>

@@ -107,16 +107,15 @@ export class GeminiAIService {
       const parts = candidate?.content?.parts
       if (Array.isArray(parts)) {
         const firstText = parts
-          .map((part: unknown) => {
+          .flatMap((part: unknown) => {
             if (typeof part === 'string') {
-              return part
+              return [part]
             }
             if (typeof part === 'object' && part !== null && 'text' in part && typeof (part as { text: unknown }).text === 'string') {
-              return (part as { text: string }).text
+              return [(part as { text: string }).text]
             }
-            return null
+            return []
           })
-          .filter((value: string | null): value is string => Boolean(value))
           .join('\n')
         if (firstText) {
           return firstText.trim()

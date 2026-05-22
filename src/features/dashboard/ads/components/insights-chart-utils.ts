@@ -41,18 +41,20 @@ export function providerSummariesToSyntheticMetrics(
 ): MetricRecord[] {
   const today = new Date().toISOString().split('T')[0] ?? ''
 
-  return Object.entries(summaries)
-    .filter(([, totals]) => totals.impressions > 0 || totals.spend > 0 || totals.clicks > 0)
-    .map(([providerId, totals], index) => ({
-      id: `summary-${providerId}-${index}`,
-      providerId: normalizeProviderId(providerId),
-      date: today,
-      spend: totals.spend,
-      impressions: totals.impressions,
-      clicks: totals.clicks,
-      conversions: totals.conversions,
-      revenue: totals.revenue,
-    }))
+  return Object.entries(summaries).flatMap(([providerId, totals], index) =>
+    totals.impressions > 0 || totals.spend > 0 || totals.clicks > 0
+      ? [{
+          id: `summary-${providerId}-${index}`,
+          providerId: normalizeProviderId(providerId),
+          date: today,
+          spend: totals.spend,
+          impressions: totals.impressions,
+          clicks: totals.clicks,
+          conversions: totals.conversions,
+          revenue: totals.revenue,
+        }]
+      : [],
+  )
 }
 
 export type InsightsTabId = 'comparison' | 'efficiency' | 'trends' | 'funnel' | 'benchmarks'

@@ -62,23 +62,22 @@ export async function fetchTikTokAdAccounts(options: {
   const list = Array.isArray(payload?.data?.list) ? payload.data?.list ?? [] : []
 
   const accounts = list
-    .map((candidate): TikTokAdAccount | null => {
+    .flatMap((candidate): TikTokAdAccount[] => {
       const id = typeof candidate?.advertiser_id === 'string' ? candidate.advertiser_id : null
-      if (!id) return null
-      return {
+      if (!id) return []
+      return [{
         id,
         name: typeof candidate?.name === 'string' && candidate.name.length > 0 ? candidate.name : `TikTok advertiser ${id}`,
         status: typeof candidate?.status === 'string' ? candidate.status : undefined,
         currency: typeof candidate?.currency === 'string' ? candidate.currency : undefined,
         timezone: typeof candidate?.timezone === 'string' ? candidate.timezone : undefined,
-      }
+      }]
     })
-    .filter((account): account is TikTokAdAccount => Boolean(account))
 
   if (!accounts.length && Array.isArray(advertiserIds)) {
-    return advertiserIds
-      .filter((id): id is string => typeof id === 'string' && id.length > 0)
-      .map((id) => ({ id, name: `TikTok advertiser ${id}` }))
+    return advertiserIds.flatMap((id) =>
+      typeof id === 'string' && id.length > 0 ? [{ id, name: `TikTok advertiser ${id}` }] : [],
+    )
   }
 
   return accounts

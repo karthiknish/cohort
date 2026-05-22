@@ -82,15 +82,15 @@ function CopyButton({ code }: { code: string }) {
       <Button
         variant="ghost"
         size="icon"
-        className="absolute right-2 top-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background"
+        className="absolute right-2 top-2 size-7 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background"
         onClick={handleCopy}
         title={copied ? "Copied!" : "Copy code"}
         aria-label={copied ? "Code copied" : "Copy code block to clipboard"}
       >
         {copied ? (
-          <Check className="h-3.5 w-3.5 text-success" aria-hidden />
+          <Check className="size-3.5 text-success" aria-hidden />
         ) : (
-          <Copy className="h-3.5 w-3.5" aria-hidden />
+          <Copy className="size-3.5" aria-hidden />
         )}
       </Button>
     </>
@@ -225,13 +225,15 @@ function RawMessageContent({ content, mentions, highlightTerms }: MessageContent
       return []
     }
 
-    return mentions
-      .filter((item) => item && typeof item.name === "string" && item.name.trim().length > 0)
-      .map((item) => ({
-        key: item.slug ?? item.name,
-        name: item.name.trim(),
-        role: item.role ?? null,
-      }))
+    return mentions.flatMap((item) =>
+      item && typeof item.name === "string" && item.name.trim().length > 0
+        ? [{
+            key: item.slug ?? item.name,
+            name: item.name.trim(),
+            role: item.role ?? null,
+          }]
+        : [],
+    )
   }, [mentions])
 
   if (!markdown) {

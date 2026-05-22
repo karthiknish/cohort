@@ -102,9 +102,9 @@ function dedupe(values: string[]) {
 
 function normalizeSelections(value: string, aliases: Array<{ value: string; aliases: string[] }>) {
   const raw = normalize(value)
-  const matched = aliases
-    .filter((entry) => entry.aliases.some((alias) => raw.includes(alias)))
-    .map((entry) => entry.value)
+  const matched = aliases.flatMap((entry) =>
+    entry.aliases.some((alias) => raw.includes(alias)) ? [entry.value] : [],
+  )
 
   if (matched.length > 0) return dedupe(matched)
 

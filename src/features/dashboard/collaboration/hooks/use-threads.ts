@@ -170,8 +170,10 @@ export function useThreads({ workspaceId, currentUserId }: UseThreadsOptions) {
 
       const mapped = rows
         .slice(0, THREAD_PAGE_SIZE)
-        .map(mapThreadReplyRow)
-        .filter((message) => message.id)
+        .flatMap((row) => {
+          const message = mapThreadReplyRow(row)
+          return message.id ? [message] : []
+        })
         .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
         .map((message) => ({
           ...message,

@@ -78,20 +78,20 @@ export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButt
           className="gap-2"
         >
           {isExporting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="size-4 animate-spin" />
           ) : (
-            <Download className="h-4 w-4" />
+            <Download className="size-4" />
           )}
           Export
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={handleExportCsv}>
-          <Download className="mr-2 h-4 w-4" />
+          <Download className="mr-2 size-4" />
           Export as CSV
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleExportJson}>
-          <Download className="mr-2 h-4 w-4" />
+          <Download className="mr-2 size-4" />
           Export as JSON
         </DropdownMenuItem>
       </DropdownMenuContent>

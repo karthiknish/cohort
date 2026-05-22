@@ -163,7 +163,9 @@ export function getPreviewMeetings(clientId: string | null, timezone: string): M
     },
   ]
 
-  return clientId ? meetings.filter((entry) => entry.clientId === clientId).map((entry) => entry.meeting) : meetings.map((entry) => entry.meeting)
+  return meetings.flatMap((entry) =>
+    !clientId || entry.clientId === clientId ? [entry.meeting] : [],
+  )
 }
 
 export function getPreviewGoogleWorkspaceStatus() {

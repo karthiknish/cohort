@@ -291,10 +291,7 @@ async function fetchMetaAsyncInsightsReportRowsInternal(options: {
     onTokenRefresh,
   } = options
 
-  const rows: MetaInsightsRow[] = []
-  let paging: MetaPagingState | undefined
-
-  for (let page = 0; page < maxPages; page += 1) {
+  const fetchPage = async (page: number, paging?: MetaPagingState): Promise<MetaInsightsRow[]> => {
     const params = new URLSearchParams({ limit: '500' })
     await appendMetaAuthParams({
       params,
@@ -319,16 +316,19 @@ async function fetchMetaAsyncInsightsReportRowsInternal(options: {
     })
 
     const batch = Array.isArray(payload?.data) ? payload.data : []
-    rows.push(...batch)
-
     const nextCursor = payload?.paging?.cursors?.after ?? null
     const nextLink = payload?.paging?.next ?? null
-    paging = nextCursor ? { after: nextCursor, next: nextLink ?? undefined } : undefined
+    const nextPaging = nextCursor ? { after: nextCursor, next: nextLink ?? undefined } : undefined
 
-    if (!paging?.after) break
+    if (!nextPaging?.after || page + 1 >= maxPages) {
+      return batch
+    }
+
+    const nextBatch = await fetchPage(page + 1, nextPaging)
+    return [...batch, ...nextBatch]
   }
 
-  return rows
+  return fetchPage(0)
 }
 
 export async function fetchMetaAsyncInsightsReportRows(options: {
@@ -373,7 +373,7 @@ async function waitForMetaAsyncInsightsReportInternal(options: {
 
   const deadline = Date.now() + maxWaitMs
 
-  while (Date.now() < deadline) {
+  const pollStatus = async (): Promise<{ status: MetaAsyncInsightsJobStatus }> => {
     const { status } = await getMetaAsyncInsightsReportStatusInternal({
       reportRunId,
       maxRetries,
@@ -390,10 +390,15 @@ async function waitForMetaAsyncInsightsReportInternal(options: {
       throw new Error(`Meta async insights job finished with status: ${status}`)
     }
 
+    if (Date.now() >= deadline) {
+      throw new Error('Meta async insights: timed out waiting for Job Completed')
+    }
+
     await sleep(pollIntervalMs)
+    return pollStatus()
   }
 
-  throw new Error('Meta async insights: timed out waiting for Job Completed')
+  return pollStatus()
 }
 
 export async function waitForMetaAsyncInsightsReport(options: {

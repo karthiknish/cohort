@@ -2,23 +2,7 @@ import { EMAIL_REGEX, normalizeEmail, parseAttendeeInput } from '@/lib/meetings/
 
 import type { MeetingProcessingState, MeetingRecord, MeetingStatus, WorkspaceMember, WorkspaceMemberWithEmail } from './types'
 
-const LOCAL_DATE_TIME_FORMATTERS = new Map<string, Intl.DateTimeFormat>()
-
-function getLocalDateTimeFormatter(timezone: string | null | undefined): Intl.DateTimeFormat {
-  const normalizedTimeZone = typeof timezone === 'string' && timezone.trim().length > 0 ? timezone : ''
-  const existingFormatter = LOCAL_DATE_TIME_FORMATTERS.get(normalizedTimeZone)
-  if (existingFormatter) {
-    return existingFormatter
-  }
-
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone: normalizedTimeZone || undefined,
-  })
-  LOCAL_DATE_TIME_FORMATTERS.set(normalizedTimeZone, formatter)
-  return formatter
-}
+import { getLocalDateTimeFormatter } from '@/lib/intl/cached-datetime'
 
 export function hasEmail(member: WorkspaceMember): member is WorkspaceMemberWithEmail {
   return typeof member.email === 'string' && member.email.trim().length > 0

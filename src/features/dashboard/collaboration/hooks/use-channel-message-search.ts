@@ -31,10 +31,13 @@ export function useChannelMessageSearch({
   messageSearchQuery,
   isPreviewMode,
 }: UseChannelMessageSearchOptions) {
-  const [searchResults, setSearchResults] = useState<CollaborationMessage[]>([])
-  const [searchHighlights, setSearchHighlights] = useState<string[]>([])
-  const [searchingMessages, setSearchingMessages] = useState(false)
-  const [searchError, setSearchError] = useState<string | null>(null)
+  const [search, setSearch] = useState({
+    results: [] as CollaborationMessage[],
+    highlights: [] as string[],
+    searching: false,
+    error: null as string | null,
+  })
+  const { results: searchResults, highlights: searchHighlights, searching: searchingMessages, error: searchError } = search
   const [searchRetryNonce, setSearchRetryNonce] = useState(0)
 
   const retrySearch = useCallback(() => {
@@ -47,50 +50,58 @@ export function useChannelMessageSearch({
     [normalizedMessageSearch],
   )
 
-  useEffect(() => {
+  const resolvedSyncSearch = useMemo(() => {
     if (!selectedChannel || !normalizedMessageSearch) {
-      setSearchResults([])
-      setSearchHighlights([])
-      setSearchError(null)
-      setSearchingMessages(false)
-      return
+      return { results: [] as CollaborationMessage[], highlights: [] as string[], searching: false, error: null as string | null }
     }
-
-    setSearchingMessages(true)
-    setSearchError(null)
 
     if (isPreviewMode) {
-      const results = filterChannelMessagesForSearch(
-        messagesByChannel[selectedChannel.id] ?? [],
-        parsedSearch,
-      )
-
-      setSearchResults(results)
-      setSearchHighlights(parsedSearch.highlights)
-      setSearchError(null)
-      setSearchingMessages(false)
-      return
+      return {
+        results: filterChannelMessagesForSearch(
+          messagesByChannel[selectedChannel.id] ?? [],
+          parsedSearch,
+        ),
+        highlights: parsedSearch.highlights,
+        searching: false,
+        error: null,
+      }
     }
 
-    const startMs = parsedSearch.start ? Date.parse(parsedSearch.start) : NaN
-    const endMs = parsedSearch.end ? Date.parse(parsedSearch.end) : NaN
+    return null
+  }, [isPreviewMode, messagesByChannel, normalizedMessageSearch, parsedSearch, selectedChannel])
 
-    void convex
-      .query(collaborationApi.searchChannel, {
-        workspaceId: String(workspaceId),
-        channelId: selectedChannel.isCustom ? selectedChannel.id : null,
-        channelType: selectedChannel.type,
-        clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
-        projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
-        q: parsedSearch.q || null,
-        sender: parsedSearch.sender ?? null,
-        attachment: parsedSearch.attachment ?? null,
-        mention: parsedSearch.mention ?? null,
-        startMs: Number.isFinite(startMs) ? startMs : null,
-        endMs: Number.isFinite(endMs) ? endMs : null,
-        limit: 200,
-      })
-      .then((payload) => {
+  useEffect(() => {
+    if (resolvedSyncSearch === null) return
+    setSearch(resolvedSyncSearch)
+  }, [resolvedSyncSearch])
+
+  const fetchChannelMessageSearch = useCallback(
+    async (isCancelled: () => boolean) => {
+      if (!selectedChannel || !normalizedMessageSearch) return
+
+      const startMs = parsedSearch.start ? Date.parse(parsedSearch.start) : NaN
+      const endMs = parsedSearch.end ? Date.parse(parsedSearch.end) : NaN
+
+      setSearch((prev) => ({ ...prev, searching: true, error: null }))
+
+      try {
+        const payload = await convex.query(collaborationApi.searchChannel, {
+          workspaceId: String(workspaceId),
+          channelId: selectedChannel.isCustom ? selectedChannel.id : null,
+          channelType: selectedChannel.type,
+          clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
+          projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
+          q: parsedSearch.q || null,
+          sender: parsedSearch.sender ?? null,
+          attachment: parsedSearch.attachment ?? null,
+          mention: parsedSearch.mention ?? null,
+          startMs: Number.isFinite(startMs) ? startMs : null,
+          endMs: Number.isFinite(endMs) ? endMs : null,
+          limit: 200,
+        })
+
+        if (isCancelled()) return
+
         const resolvedPayload = (payload ?? {}) as { rows?: unknown[]; highlights?: unknown[] }
         const rows = Array.isArray(resolvedPayload.rows) ? resolvedPayload.rows : []
         const highlights = Array.isArray(resolvedPayload.highlights)
@@ -98,23 +109,42 @@ export function useChannelMessageSearch({
           : parsedSearch.highlights
 
         const mapped = rows
-          .map((row) => mapCollaborationMessageRow(row, { fallbackChannelType: selectedChannel.type }))
-          .filter((message): message is CollaborationMessage => Boolean(message))
+          .flatMap((row) => {
+            const message = mapCollaborationMessageRow(row, { fallbackChannelType: selectedChannel.type })
+            return message ? [message] : []
+          })
           .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
 
-        setSearchResults(mapped)
-        setSearchHighlights(highlights)
-        setSearchError(null)
-      })
-      .catch((error: unknown) => {
+        setSearch({
+          results: mapped,
+          highlights,
+          searching: false,
+          error: null,
+        })
+      } catch (error: unknown) {
+        if (isCancelled()) return
         logError(error, 'useCollaborationData:searchChannel')
-        setSearchError(asErrorMessage(error))
-        setSearchResults([])
-      })
-      .finally(() => {
-        setSearchingMessages(false)
-      })
-  }, [convex, isPreviewMode, messagesByChannel, normalizedMessageSearch, parsedSearch, searchRetryNonce, selectedChannel, workspaceId])
+        setSearch({
+          results: [],
+          highlights: parsedSearch.highlights,
+          searching: false,
+          error: asErrorMessage(error),
+        })
+      }
+    },
+    [convex, normalizedMessageSearch, parsedSearch, selectedChannel, workspaceId],
+  )
+
+  useEffect(() => {
+    if (resolvedSyncSearch !== null) return
+
+    let cancelled = false
+    void fetchChannelMessageSearch(() => cancelled)
+
+    return () => {
+      cancelled = true
+    }
+  }, [fetchChannelMessageSearch, resolvedSyncSearch, searchRetryNonce])
 
   const visibleMessages = useMemo(() => {
     if (normalizedMessageSearch) {

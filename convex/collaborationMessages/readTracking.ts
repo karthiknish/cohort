@@ -76,28 +76,35 @@ export const markMultipleAsRead = zRateLimitedWorkspaceMutation({
     const currentUserId = requireActorUserId(ctx, args.userId)
     let marked = 0
 
-    for (const legacyId of args.legacyIds) {
-      const row = await assertAccessToMessage(
-        ctx,
-        args.workspaceId,
-        await ctx.db
-        .query('collaborationMessages')
-        .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId))
-        .unique(),
-      )
+    const markResults = await Promise.all(
+      args.legacyIds.map(async (legacyId) => {
+        const row = await assertAccessToMessage(
+          ctx,
+          args.workspaceId,
+          await ctx.db
+            .query('collaborationMessages')
+            .withIndex('by_workspace_legacyId', (q) =>
+              q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId),
+            )
+            .unique(),
+        )
 
-      if (row.senderId === currentUserId) continue
+        if (row.senderId === currentUserId) return 0
 
-      const readBy: string[] = Array.isArray(row.readBy) ? row.readBy : []
+        const readBy: string[] = Array.isArray(row.readBy) ? row.readBy : []
 
-      if (!readBy.includes(currentUserId)) {
-        await ctx.db.patch(row._id, {
-          readBy: [...readBy, currentUserId],
-          updatedAtMs: ctx.now,
-        })
-        marked += 1
-      }
-    }
+        if (!readBy.includes(currentUserId)) {
+          await ctx.db.patch(row._id, {
+            readBy: [...readBy, currentUserId],
+            updatedAtMs: ctx.now,
+          })
+          return 1
+        }
+
+        return 0
+      }),
+    )
+    marked = markResults.reduce<number>((sum, value) => sum + value, 0)
 
     return { success: true, marked }
   },
@@ -415,45 +422,53 @@ export const getThreadUnreadCounts = zWorkspaceQuery({
     let scannedMessages = 0
 
     const normalizedThreadRootIds: string[] = (Array.isArray(args.threadRootIds) ? args.threadRootIds : [])
-      .map((id: unknown): string => (typeof id === 'string' ? id.trim() : ''))
-      .filter((id: string) => id.length > 0)
+      .flatMap((id: unknown): string[] => {
+        const normalized = typeof id === 'string' ? id.trim() : ''
+        return normalized.length > 0 ? [normalized] : []
+      })
     const threadRootIds = Array.from(new Set<string>(normalizedThreadRootIds)).slice(0, 200)
 
-    for (const threadRootId of threadRootIds) {
-      const threadCheckpoint = await getReadCheckpoint(ctx, {
-        workspaceId: args.workspaceId,
-        userId: currentUserId,
-        scopeType: 'thread',
-        channelId: scope.channelId,
-        channelType: scope.channelType,
-        clientId: scope.clientId,
-        projectId: scope.projectId,
-        threadRootId,
-      })
-      const checkpoint = pickNewestCheckpoint(threadCheckpoint, channelCheckpoint)
+    const threadResults = await Promise.all(
+      threadRootIds.map(async (threadRootId) => {
+        const threadCheckpoint = await getReadCheckpoint(ctx, {
+          workspaceId: args.workspaceId,
+          userId: currentUserId,
+          scopeType: 'thread',
+          channelId: scope.channelId,
+          channelType: scope.channelType,
+          clientId: scope.clientId,
+          projectId: scope.projectId,
+          threadRootId,
+        })
+        const checkpoint = pickNewestCheckpoint(threadCheckpoint, channelCheckpoint)
 
-      let unreadCount = 0
+        let unreadCount = 0
 
-      const scanResult = await scanChannelRows(
-        () => buildThreadQuery(ctx, args.workspaceId, threadRootId, 'desc'),
-        (message) => {
-          if (message.senderId === currentUserId) return
-          if (message.deleted) return
+        const scanResult = await scanChannelRows(
+          () => buildThreadQuery(ctx, args.workspaceId, threadRootId, 'desc'),
+          (message) => {
+            if (message.senderId === currentUserId) return
+            if (message.deleted) return
 
-          if (checkpoint && !isAfterCheckpoint(message, checkpoint)) {
-            return false
-          }
+            if (checkpoint && !isAfterCheckpoint(message, checkpoint)) {
+              return false
+            }
 
-          const readBy: string[] = Array.isArray(message.readBy) ? message.readBy : []
-          if (!readBy.includes(currentUserId)) {
-            unreadCount += 1
-          }
+            const readBy: string[] = Array.isArray(message.readBy) ? message.readBy : []
+            if (!readBy.includes(currentUserId)) {
+              unreadCount += 1
+            }
 
-          return true
-        },
-        { batchSize: THREAD_SCAN_BATCH_SIZE, maxRows: THREAD_SCAN_MAX_ROWS },
-      )
+            return true
+          },
+          { batchSize: THREAD_SCAN_BATCH_SIZE, maxRows: THREAD_SCAN_MAX_ROWS },
+        )
 
+        return { threadRootId, unreadCount, scanResult }
+      }),
+    )
+
+    for (const { threadRootId, unreadCount, scanResult } of threadResults) {
       countsByThreadRootId[threadRootId] = unreadCount
       scannedMessages += scanResult.scanned
       truncated = truncated || scanResult.truncated
@@ -526,68 +541,96 @@ export const getUnreadCountsByChannel = zWorkspaceQuery({
       .take(200))
       .filter((row) => canAccessCustomChannel(ctx, row))
 
-    for (const channelType of ['team', 'client', 'project']) {
-      const scanResult = await scanChannelRows(
-        () => buildChannelTypeQuery(ctx, args.workspaceId, channelType),
-        (message) => {
-          if (message.senderId === currentUserId) return
-          if (message.deleted) return
-          if (channelType === 'team' && typeof message.channelId === 'string' && message.channelId.length > 0) return
+    const channelTypeResults = await Promise.all(
+      (['team', 'client', 'project'] as const).map(async (channelType) => {
+        const localCounts: Record<string, number> = {}
+        let localUnread = 0
 
-          const channelKey = resolveChannelKey(message)
-          if (!channelKey) return
-
-          const checkpoint = checkpointByChannelKey[channelKey] ?? null
-          if (checkpoint && !isAfterCheckpoint(message, checkpoint)) {
-            // Team has a single channel, so we can stop scanning once we cross its checkpoint.
-            if (channelType === 'team') {
-              return false
+        const scanResult = await scanChannelRows(
+          () => buildChannelTypeQuery(ctx, args.workspaceId, channelType),
+          (message) => {
+            if (message.senderId === currentUserId) return
+            if (message.deleted) return
+            if (channelType === 'team' && typeof message.channelId === 'string' && message.channelId.length > 0) {
+              return
             }
-            return
-          }
 
-          const readBy: string[] = Array.isArray(message.readBy) ? message.readBy : []
-          if (readBy.includes(currentUserId)) return
+            const channelKey = resolveChannelKey(message)
+            if (!channelKey) return
 
-          countsByChannelId[channelKey] = (countsByChannelId[channelKey] ?? 0) + 1
-          totalUnread += 1
+            const checkpoint = checkpointByChannelKey[channelKey] ?? null
+            if (checkpoint && !isAfterCheckpoint(message, checkpoint)) {
+              // Team has a single channel, so we can stop scanning once we cross its checkpoint.
+              if (channelType === 'team') {
+                return false
+              }
+              return
+            }
 
-          return true
-        },
-      )
+            const readBy: string[] = Array.isArray(message.readBy) ? message.readBy : []
+            if (readBy.includes(currentUserId)) return
 
+            localCounts[channelKey] = (localCounts[channelKey] ?? 0) + 1
+            localUnread += 1
+
+            return true
+          },
+        )
+
+        return { scanResult, localCounts, localUnread }
+      }),
+    )
+
+    for (const { scanResult, localCounts, localUnread } of channelTypeResults) {
+      for (const [channelKey, count] of Object.entries(localCounts)) {
+        countsByChannelId[channelKey] = (countsByChannelId[channelKey] ?? 0) + count
+      }
+      totalUnread += localUnread
       totalScanned += scanResult.scanned
       truncated = truncated || scanResult.truncated
     }
 
-    for (const channel of customChannels) {
-      const scanResult = await scanChannelRows(
-        () =>
-          buildListChannelQuery(ctx, {
-            workspaceId: args.workspaceId,
-            channelId: channel.legacyId,
-            channelType: 'team',
-            clientId: null,
-            projectId: null,
-          }),
-        (message) => {
-          if (message.senderId === currentUserId) return
-          if (message.deleted) return
+    const customChannelResults = await Promise.all(
+      customChannels.map(async (channel) => {
+        const localCounts: Record<string, number> = {}
+        let localUnread = 0
 
-          const checkpoint = checkpointByChannelKey[channel.legacyId] ?? null
-          if (checkpoint && !isAfterCheckpoint(message, checkpoint)) {
-            return false
-          }
+        const scanResult = await scanChannelRows(
+          () =>
+            buildListChannelQuery(ctx, {
+              workspaceId: args.workspaceId,
+              channelId: channel.legacyId,
+              channelType: 'team',
+              clientId: null,
+              projectId: null,
+            }),
+          (message) => {
+            if (message.senderId === currentUserId) return
+            if (message.deleted) return
 
-          const readBy: string[] = Array.isArray(message.readBy) ? message.readBy : []
-          if (readBy.includes(currentUserId)) return
+            const checkpoint = checkpointByChannelKey[channel.legacyId] ?? null
+            if (checkpoint && !isAfterCheckpoint(message, checkpoint)) {
+              return false
+            }
 
-          countsByChannelId[channel.legacyId] = (countsByChannelId[channel.legacyId] ?? 0) + 1
-          totalUnread += 1
-          return true
-        },
-      )
+            const readBy: string[] = Array.isArray(message.readBy) ? message.readBy : []
+            if (readBy.includes(currentUserId)) return
 
+            localCounts[channel.legacyId] = (localCounts[channel.legacyId] ?? 0) + 1
+            localUnread += 1
+            return true
+          },
+        )
+
+        return { scanResult, localCounts, localUnread }
+      }),
+    )
+
+    for (const { scanResult, localCounts, localUnread } of customChannelResults) {
+      for (const [channelKey, count] of Object.entries(localCounts)) {
+        countsByChannelId[channelKey] = (countsByChannelId[channelKey] ?? 0) + count
+      }
+      totalUnread += localUnread
       totalScanned += scanResult.scanned
       truncated = truncated || scanResult.truncated
     }

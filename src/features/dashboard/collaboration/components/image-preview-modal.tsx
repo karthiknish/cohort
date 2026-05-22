@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useReducer } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -32,15 +32,90 @@ interface ImagePreviewModalProps {
   onClose: () => void
 }
 
+type ImagePreviewState = {
+  indexOffset: number
+  zoom: number
+  isDragging: boolean
+  position: { x: number; y: number }
+}
+
+type ImagePreviewAction =
+  | { type: 'setIndexOffset'; value: number | ((prev: number) => number) }
+  | { type: 'setZoom'; value: number | ((prev: number) => number) }
+  | { type: 'setIsDragging'; value: boolean }
+  | { type: 'setPosition'; value: { x: number; y: number } }
+  | { type: 'resetView' }
+  | { type: 'navigate'; direction: 'previous' | 'next' }
+  | { type: 'selectThumbnail'; offset: number }
+  | { type: 'zoomIn' }
+  | { type: 'zoomOut' }
+  | { type: 'close' }
+
+function createInitialImagePreviewState(): ImagePreviewState {
+  return {
+    indexOffset: 0,
+    zoom: 1,
+    isDragging: false,
+    position: { x: 0, y: 0 },
+  }
+}
+
+function imagePreviewReducer(state: ImagePreviewState, action: ImagePreviewAction): ImagePreviewState {
+  switch (action.type) {
+    case 'setIndexOffset':
+      return {
+        ...state,
+        indexOffset: typeof action.value === 'function' ? action.value(state.indexOffset) : action.value,
+      }
+    case 'setZoom':
+      return {
+        ...state,
+        zoom: typeof action.value === 'function' ? action.value(state.zoom) : action.value,
+      }
+    case 'setIsDragging':
+      return { ...state, isDragging: action.value }
+    case 'setPosition':
+      return { ...state, position: action.value }
+    case 'resetView':
+      return { ...state, zoom: 1, position: { x: 0, y: 0 } }
+    case 'navigate':
+      return {
+        ...state,
+        indexOffset: action.direction === 'previous' ? state.indexOffset - 1 : state.indexOffset + 1,
+        zoom: 1,
+        position: { x: 0, y: 0 },
+      }
+    case 'selectThumbnail':
+      return {
+        ...state,
+        indexOffset: action.offset,
+        zoom: 1,
+        position: { x: 0, y: 0 },
+      }
+    case 'zoomIn':
+      return { ...state, zoom: Math.min(state.zoom + 0.5, 4) }
+    case 'zoomOut': {
+      const newZoom = Math.max(state.zoom - 0.5, 1)
+      return {
+        ...state,
+        zoom: newZoom,
+        position: newZoom === 1 ? { x: 0, y: 0 } : state.position,
+      }
+    }
+    case 'close':
+      return createInitialImagePreviewState()
+    default:
+      return state
+  }
+}
+
 interface ThumbnailButtonProps {
   image: { url: string; name: string }
   index: number
   initialIndex: number
   normalizedIndex: number
   totalImages: number
-  setIndexOffset: React.Dispatch<React.SetStateAction<number>>
-  setZoom: React.Dispatch<React.SetStateAction<number>>
-  setPosition: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>
+  onSelectThumbnail: (offset: number) => void
 }
 
 function ThumbnailButton({
@@ -49,18 +124,14 @@ function ThumbnailButton({
   initialIndex,
   normalizedIndex,
   totalImages,
-  setIndexOffset,
-  setZoom,
-  setPosition,
+  onSelectThumbnail,
 }: ThumbnailButtonProps) {
-  const handleClick = useCallback(
+  const onSelectThumbnailClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation()
-      setIndexOffset(() => index - initialIndex)
-      setZoom(1)
-      setPosition({ x: 0, y: 0 })
+      onSelectThumbnail(index - initialIndex)
     },
-    [index, initialIndex, setIndexOffset, setZoom, setPosition]
+    [index, initialIndex, onSelectThumbnail]
   )
 
   return (
@@ -70,17 +141,17 @@ function ThumbnailButton({
       aria-label={`Image ${index + 1} of ${totalImages}: ${image.name}`}
       aria-current={index === normalizedIndex || undefined}
       className={cn(
-        "h-14 w-14 overflow-hidden rounded-md border-2 motion-chromatic",
+        "size-14 overflow-hidden rounded-md border-2 motion-chromatic",
         index === normalizedIndex
           ? "border-viewer-chrome opacity-100"
           : "border-transparent opacity-50 hover:opacity-80"
       )}
-      onClick={handleClick}
+      onClick={onSelectThumbnailClick}
     >
       <LazyImage
         src={image.url}
         alt=""
-        className="h-full w-full object-cover"
+        className="size-full object-cover"
       />
     </button>
   )
@@ -92,11 +163,9 @@ export function ImagePreviewModal({
   isOpen,
   onClose,
 }: ImagePreviewModalProps) {
-  const [indexOffset, setIndexOffset] = useState(0)
-  const [zoom, setZoom] = useState(1)
-  const [isDragging, setIsDragging] = useState(false)
-  const [position, setPosition] = useState({ x: 0, y: 0 })
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [state, dispatch] = useReducer(imagePreviewReducer, undefined, createInitialImagePreviewState)
+  const { indexOffset, zoom, isDragging, position } = state
+  const dragStartRef = useRef({ x: 0, y: 0 })
 
   const normalizedIndex =
     images.length > 0
@@ -107,44 +176,35 @@ export function ImagePreviewModal({
   const hasMultipleImages = images.length > 1
 
   const handleClose = useCallback(() => {
-    setIndexOffset(0)
-    setZoom(1)
-    setPosition({ x: 0, y: 0 })
-    setIsDragging(false)
+    dispatch({ type: 'close' })
     onClose()
   }, [onClose])
 
   const handlePrevious = useCallback(() => {
-    setIndexOffset((prev) => prev - 1)
-    setZoom(1)
-    setPosition({ x: 0, y: 0 })
+    dispatch({ type: 'navigate', direction: 'previous' })
   }, [])
 
   const handleNext = useCallback(() => {
-    setIndexOffset((prev) => prev + 1)
-    setZoom(1)
-    setPosition({ x: 0, y: 0 })
+    dispatch({ type: 'navigate', direction: 'next' })
   }, [])
 
   const handleZoomIn = useCallback(() => {
-    setZoom((prev) => Math.min(prev + 0.5, 4))
+    dispatch({ type: 'zoomIn' })
   }, [])
 
   const handleZoomOut = useCallback(() => {
-    setZoom((prev) => {
-      const newZoom = Math.max(prev - 0.5, 1)
-      if (newZoom === 1) {
-        setPosition({ x: 0, y: 0 })
-      }
-      return newZoom
-    })
+    dispatch({ type: 'zoomOut' })
+  }, [])
+
+  const handleSelectThumbnail = useCallback((offset: number) => {
+    dispatch({ type: 'selectThumbnail', offset })
   }, [])
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (zoom > 1) {
-        setIsDragging(true)
-        setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
+        dispatch({ type: 'setIsDragging', value: true })
+        dragStartRef.current = { x: e.clientX - position.x, y: e.clientY - position.y }
       }
     },
     [zoom, position]
@@ -153,17 +213,20 @@ export function ImagePreviewModal({
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
       if (isDragging && zoom > 1) {
-        setPosition({
-          x: e.clientX - dragStart.x,
-          y: e.clientY - dragStart.y,
+        dispatch({
+          type: 'setPosition',
+          value: {
+            x: e.clientX - dragStartRef.current.x,
+            y: e.clientY - dragStartRef.current.y,
+          },
         })
       }
     },
-    [isDragging, dragStart, zoom]
+    [isDragging, zoom]
   )
 
   const handleMouseUp = useCallback(() => {
-    setIsDragging(false)
+    dispatch({ type: 'setIsDragging', value: false })
   }, [])
 
   const handleOnOpenChange = useCallback(
@@ -311,12 +374,12 @@ export function ImagePreviewModal({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10"
+            className="size-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10"
             onClick={handleZoomOutClick}
             disabled={zoom <= 1}
             aria-label="Zoom out"
           >
-            <ZoomOut className="h-5 w-5" aria-hidden />
+            <ZoomOut className="size-5" aria-hidden />
           </Button>
           <span className="min-w-[50px] text-center text-xs text-viewer-chrome/70" aria-live="polite">
             {Math.round(zoom * 100)}%
@@ -325,15 +388,15 @@ export function ImagePreviewModal({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10"
+            className="size-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10"
             onClick={handleZoomInClick}
             disabled={zoom >= 4}
             aria-label="Zoom in"
           >
-            <ZoomIn className="h-5 w-5" aria-hidden />
+            <ZoomIn className="size-5" aria-hidden />
           </Button>
           <div className="mx-2 h-6 w-px bg-viewer-chrome/20" />
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10" asChild>
+          <Button variant="ghost" size="icon" className="size-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10" asChild>
             <a
               href={currentImage.url}
               target="_blank"
@@ -341,17 +404,17 @@ export function ImagePreviewModal({
               onClick={handleStopPropagation}
               aria-label={`Open ${currentImage.name} in new tab`}
             >
-              <ExternalLink className="h-5 w-5" aria-hidden />
+              <ExternalLink className="size-5" aria-hidden />
             </a>
           </Button>
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10" asChild>
+          <Button variant="ghost" size="icon" className="size-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10" asChild>
             <a
               href={currentImage.url}
               download={currentImage.name}
               onClick={handleStopPropagation}
               aria-label={`Download ${currentImage.name}`}
             >
-              <Download className="h-5 w-5" aria-hidden />
+              <Download className="size-5" aria-hidden />
             </a>
           </Button>
           <div className="mx-2 h-6 w-px bg-viewer-chrome/20" />
@@ -359,11 +422,11 @@ export function ImagePreviewModal({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10"
+            className="size-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10"
             onClick={handleCloseClick}
             aria-label="Close preview"
           >
-            <X className="h-5 w-5" aria-hidden />
+            <X className="size-5" aria-hidden />
           </Button>
         </div>
       </div>
@@ -375,21 +438,21 @@ export function ImagePreviewModal({
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/40 text-viewer-chrome hover:bg-black/60"
+            className="absolute left-4 top-1/2 z-10 size-12 -translate-y-1/2 rounded-full bg-black/40 text-viewer-chrome hover:bg-black/60"
             onClick={handlePreviousClick}
             aria-label="Previous image"
           >
-            <ChevronLeft className="h-8 w-8" aria-hidden />
+            <ChevronLeft className="size-8" aria-hidden />
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/40 text-viewer-chrome hover:bg-black/60"
+            className="absolute right-4 top-1/2 z-10 size-12 -translate-y-1/2 rounded-full bg-black/40 text-viewer-chrome hover:bg-black/60"
             onClick={handleNextClick}
             aria-label="Next image"
           >
-            <ChevronRight className="h-8 w-8" aria-hidden />
+            <ChevronRight className="size-8" aria-hidden />
           </Button>
         </>
       )}
@@ -397,7 +460,7 @@ export function ImagePreviewModal({
       {/* Image */}
       <button
         type="button"
-        className="flex h-full w-full items-center justify-center overflow-hidden p-16"
+        className="flex size-full items-center justify-center overflow-hidden p-16"
         onClick={handleStopPropagation}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -431,9 +494,7 @@ export function ImagePreviewModal({
               initialIndex={initialIndex}
               normalizedIndex={normalizedIndex}
               totalImages={images.length}
-              setIndexOffset={setIndexOffset}
-              setZoom={setZoom}
-              setPosition={setPosition}
+              onSelectThumbnail={handleSelectThumbnail}
             />
           ))}
         </div>

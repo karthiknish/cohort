@@ -99,12 +99,12 @@ function getStatusIcon(status: string) {
   switch (status) {
     case 'ok':
     case 'healthy':
-      return <CheckCircle2 className="h-5 w-5 text-success" aria-hidden />
+      return <CheckCircle2 className="size-5 text-success" aria-hidden />
     case 'warning':
     case 'degraded':
-      return <AlertCircle className="h-5 w-5 text-warning" aria-hidden />
+      return <AlertCircle className="size-5 text-warning" aria-hidden />
     default:
-      return <XCircle className="h-5 w-5 text-destructive" aria-hidden />
+      return <XCircle className="size-5 text-destructive" aria-hidden />
   }
 }
 
@@ -125,23 +125,23 @@ function getServiceIcon(name: string) {
   const key = name.toLowerCase()
   switch (key) {
     case 'convex':
-      return <Database className="h-4 w-4" aria-hidden />
+      return <Database className="size-4" aria-hidden />
     case 'betterauth':
-      return <Server className="h-4 w-4" aria-hidden />
+      return <Server className="size-4" aria-hidden />
     case 'gemini':
-      return <Zap className="h-4 w-4" aria-hidden />
+      return <Zap className="size-4" aria-hidden />
     case 'brevo':
-      return <Mail className="h-4 w-4" aria-hidden />
+      return <Mail className="size-4" aria-hidden />
     case 'posthog':
-      return <PieChart className="h-4 w-4" aria-hidden />
+      return <PieChart className="size-4" aria-hidden />
     case 'googleworkspace':
-      return <Activity className="h-4 w-4" aria-hidden />
+      return <Activity className="size-4" aria-hidden />
     case 'livekit':
-      return <Server className="h-4 w-4" aria-hidden />
+      return <Server className="size-4" aria-hidden />
     case 'environment':
-      return <Settings className="h-4 w-4" aria-hidden />
+      return <Settings className="size-4" aria-hidden />
     default:
-      return <Globe className="h-4 w-4" aria-hidden />
+      return <Globe className="size-4" aria-hidden />
   }
 }
 
@@ -179,7 +179,7 @@ function ServiceHealthCard({ name, check, isExpanded, onToggleExpand }: ServiceH
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <div
             className={cn(
-              'flex h-10 w-10 shrink-0 items-center justify-center rounded-md',
+              'flex size-10 shrink-0 items-center justify-center rounded-md',
               check.status === 'ok'
                 ? 'bg-success/10 text-success'
                 : isWarning
@@ -235,9 +235,9 @@ function ServiceHealthCard({ name, check, isExpanded, onToggleExpand }: ServiceH
             >
               <span>{isExpanded ? 'Hide details' : 'Show details'}</span>
               {isExpanded ? (
-                <ChevronUp className="h-4 w-4 shrink-0" aria-hidden />
+                <ChevronUp className="size-4 shrink-0" aria-hidden />
               ) : (
-                <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+                <ChevronDown className="size-4 shrink-0" aria-hidden />
               )}
             </Button>
 
@@ -315,7 +315,7 @@ export function SystemHealthView() {
           <Skeleton className="h-3 w-28" />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
+              <Skeleton className="size-12 shrink-0 rounded-full" />
               <div className="space-y-2">
                 <Skeleton className="h-6 w-48" />
                 <Skeleton className="h-4 w-72 max-w-full" />
@@ -352,8 +352,8 @@ export function SystemHealthView() {
     return (
       <Card className="border-destructive/30 bg-destructive/4 shadow-sm">
         <CardContent className="flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10">
-            <AlertCircle className="h-7 w-7 text-destructive" aria-hidden />
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-destructive/10">
+            <AlertCircle className="size-7 text-destructive" aria-hidden />
           </div>
           <div className="max-w-sm space-y-2">
             <h3 className="text-lg font-semibold tracking-tight text-destructive">Monitoring unavailable</h3>
@@ -383,7 +383,7 @@ export function SystemHealthView() {
           <div className="flex min-w-0 items-start gap-3 sm:items-center">
             <div
               className={cn(
-                'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
+                'flex size-12 shrink-0 items-center justify-center rounded-xl',
                 resolvedData?.status === 'healthy'
                   ? 'bg-success/10'
                   : resolvedData?.status === 'degraded'
@@ -416,7 +416,7 @@ export function SystemHealthView() {
             disabled={refreshing || isPreviewMode}
             title={isPreviewMode ? 'Disabled in preview mode' : 'Runs a fresh health request'}
           >
-            <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} aria-hidden />
+            <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} aria-hidden />
             {refreshing ? 'Checking…' : 'Refresh'}
           </Button>
         </div>
@@ -428,7 +428,7 @@ export function SystemHealthView() {
           <Card className="border-border/80 bg-card shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Response time</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" aria-hidden />
+              <Activity className="size-4 text-muted-foreground" aria-hidden />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold tabular-nums tracking-tight">{resolvedData?.responseTime ?? 0}ms</div>
@@ -438,7 +438,7 @@ export function SystemHealthView() {
           <Card className="border-border/80 bg-card shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Uptime</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" aria-hidden />
+              <Clock className="size-4 text-muted-foreground" aria-hidden />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold tracking-tight">{resolvedData ? formatUptime(resolvedData.uptime) : '0m'}</div>
@@ -448,7 +448,7 @@ export function SystemHealthView() {
           <Card className="border-border/80 bg-card shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Version</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" aria-hidden />
+              <Package className="size-4 text-muted-foreground" aria-hidden />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold tracking-tight">v{resolvedData?.version ?? '0.0.0'}</div>
@@ -480,7 +480,7 @@ export function SystemHealthView() {
       {resolvedError && resolvedData ? (
         <Card className="border-warning/35 bg-warning/6 shadow-sm">
           <CardContent className="flex gap-3 py-4">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden />
+            <AlertCircle className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden />
             <p className="text-pretty text-sm leading-relaxed text-warning">
               Last refresh failed: {resolvedError instanceof Error ? resolvedError.message : 'Unknown error'}. Showing
               cached data.

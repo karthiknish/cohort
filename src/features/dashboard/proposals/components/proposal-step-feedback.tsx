@@ -25,7 +25,7 @@ export function ProposalStepFeedback(props: {
       role="alert"
     >
       <div className="mb-2 flex items-center gap-2 text-sm font-medium text-destructive">
-        <CircleAlert className="h-4 w-4 shrink-0" aria-hidden />
+        <CircleAlert className="size-4 shrink-0" aria-hidden />
         Fix these before continuing
       </div>
       <ProposalStepFeedbackValidationBody hasErrors validationMessages={validationMessages} />

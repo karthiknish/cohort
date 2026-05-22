@@ -101,17 +101,17 @@ function TaskRow({ task, nowMs }: { task: TaskRecord; nowMs: number }) {
     <li>
       <Link
         href={`/dashboard/tasks?taskId=${task.id}`}
-        className="group flex items-start gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/50"
+        className="group flex items-start gap-3 rounded-lg p-2.5 transition-colors hover:bg-muted/50"
       >
         <CheckSquare
-          className={cn('mt-0.5 h-4 w-4 shrink-0', isOverdue ? 'text-destructive' : 'text-muted-foreground')}
+          className={cn('mt-0.5 size-4 shrink-0', isOverdue ? 'text-destructive' : 'text-muted-foreground')}
           aria-hidden
         />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-foreground group-hover:text-primary">{task.title}</p>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
             <span className={cn('inline-flex items-center gap-1', isOverdue && 'font-medium text-destructive')}>
-              <Clock className="h-3 w-3" aria-hidden />
+              <Clock className="size-3" aria-hidden />
               {formatDueDate(task.dueDate, nowMs)}
             </span>
             {task.client ? <span className="truncate">{task.client}</span> : null}
@@ -119,7 +119,7 @@ function TaskRow({ task, nowMs }: { task: TaskRecord; nowMs: number }) {
           </div>
         </div>
         <ArrowUpRight
-          className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+          className="mt-0.5 size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
           aria-hidden
         />
       </Link>
@@ -149,7 +149,7 @@ function TaskGroup({
           {emptyMessage}
         </p>
       ) : (
-        <ul className="divide-y divide-border/50 rounded-lg border border-border/60 bg-card" role="list">
+        <ul className="divide-y divide-border/50 rounded-lg border border-border/60 bg-card">
           {tasks.map((task) => (
             <TaskRow key={task.id} task={task} nowMs={nowMs} />
           ))}

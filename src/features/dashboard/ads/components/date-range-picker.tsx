@@ -103,9 +103,9 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
               !value && 'text-muted-foreground'
             )}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
+            <CalendarIcon className="mr-2 size-4" />
             {formatDateRange(value)}
-            <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+            <ChevronDown className="ml-2 size-4 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="end">

@@ -38,16 +38,16 @@ type SummaryStatIconKey = 'drafts' | 'submitted' | 'sent' | 'average'
 
 function SummaryStatCard({ iconKey, label, toneClassName, value }: { iconKey: SummaryStatIconKey; label: string; toneClassName: string; value: string | number }) {
   const icon =
-    iconKey === 'drafts' ? <FileText className="h-5 w-5 text-primary" /> :
-    iconKey === 'submitted' ? <CircleCheck className="h-5 w-5 text-success" /> :
-    iconKey === 'sent' ? <Send className="h-5 w-5 text-info" /> :
-    <Clock className="h-5 w-5 text-warning" />
+    iconKey === 'drafts' ? <FileText className="size-5 text-primary" /> :
+    iconKey === 'submitted' ? <CircleCheck className="size-5 text-success" /> :
+    iconKey === 'sent' ? <Send className="size-5 text-info" /> :
+    <Clock className="size-5 text-warning" />
 
   return (
     <Card>
       <CardContent className="pt-6">
         <div className="flex items-center gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${toneClassName}`}>
+          <div className={`flex size-10 items-center justify-center rounded-full ${toneClassName}`}>
             {icon}
           </div>
           <div>
@@ -110,7 +110,7 @@ function SuccessRateCard({
           <span className="text-3xl font-bold text-primary">{value}</span>
           {failedCount > 0 ? (
             <Badge variant="destructive" className="gap-1">
-              <CircleX className="h-3 w-3" />
+              <CircleX className="size-3" />
               {failedCount} failed
             </Badge>
           ) : null}
@@ -118,11 +118,11 @@ function SuccessRateCard({
         <Progress value={Number.parseFloat(value)} className="h-2" />
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
-            <CircleCheck className="h-3 w-3 text-success" />
+            <CircleCheck className="size-3 text-success" />
             {succeededCount} succeeded
           </span>
           <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
+            <Clock className="size-3" />
             {averageDuration} avg
           </span>
         </div>
@@ -135,7 +135,7 @@ export function ProposalAnalyticsLoadingCard() {
   return (
     <Card>
       <CardContent className="flex items-center justify-center py-12">
-        <LoaderCircle className="h-6 w-6 animate-spin text-muted-foreground" />
+        <LoaderCircle className="size-6 animate-spin text-muted-foreground" />
       </CardContent>
     </Card>
   )
@@ -176,7 +176,7 @@ export function ProposalAnalyticsHeader({
           </SelectContent>
         </Select>
         <Button variant="outline" size="icon" onClick={onRefresh} disabled={loading} aria-label="Refresh proposal analytics">
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
       </div>
     </div>
@@ -230,7 +230,7 @@ export function ProposalAnalyticsActivityChart({ chartData }: { chartData: Chart
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <BarChart3 className="h-4 w-4" />
+          <BarChart3 className="size-4" />
           Generation Activity
         </CardTitle>
         <CardDescription>AI and deck generations over the last {chartData.points.length} days</CardDescription>
@@ -247,12 +247,12 @@ export function ProposalAnalyticsActivityChart({ chartData }: { chartData: Chart
         </div>
         <div className="mt-3 flex items-center justify-center gap-4 text-xs">
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-accent/40" />
+            <span className="size-2 rounded-full bg-accent/40" />
             Generations ({chartData.totalGenerations})
           </span>
           {chartData.totalFailures > 0 ? (
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-destructive/50" />
+              <span className="size-2 rounded-full bg-destructive/50" />
               Failures ({chartData.totalFailures})
             </span>
           ) : null}
@@ -267,7 +267,7 @@ export function ProposalAnalyticsByClientCard({ byClient }: { byClient: Proposal
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <TrendingUp className="h-4 w-4" />
+          <TrendingUp className="size-4" />
           Proposals by Client
         </CardTitle>
         <CardDescription>Top {Math.min(byClient.length, 10)} clients by proposal count</CardDescription>
@@ -305,7 +305,7 @@ export function ProposalAnalyticsEmptyState() {
     <Card>
       <CardContent className="flex flex-col items-center justify-center py-12 text-center">
         <div className="mb-4 rounded-full bg-muted/30 p-4">
-          <TriangleAlert className="h-8 w-8 text-warning/60" />
+          <TriangleAlert className="size-8 text-warning/60" />
         </div>
         <h3 className="mb-2 text-lg font-semibold">No Analytics Data</h3>
         <p className="max-w-sm text-sm text-muted-foreground">

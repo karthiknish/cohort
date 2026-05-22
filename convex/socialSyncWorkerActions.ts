@@ -122,13 +122,13 @@ export const processAllQueuedJobs = internalAction({
     let processed = 0
     let failed = 0
 
-    for (const workspaceId of workspaceIds) {
-      while (true) {
+    const processWorkspaceJobs = async (workspaceId: string) => {
+      const processNextJob = async (): Promise<void> => {
         const job = await ctx.runMutation(
           internalRef(socialInternal['socialIntegrations/syncJobs'].claimNextSyncJobInternal),
           { workspaceId },
         )
-        if (!job) break
+        if (!job) return
 
         try {
           await ctx.runAction(internalRef(internal.socialSyncWorkerActions.processClaimedJob), {
@@ -176,8 +176,19 @@ export const processAllQueuedJobs = internalAction({
 
           failed++
         }
+
+        await processNextJob()
       }
+
+      await processNextJob()
     }
+
+    const workspaceIdList = workspaceIds as string[]
+    let workspaceChain: Promise<void> = Promise.resolve()
+    for (const workspaceId of workspaceIdList) {
+      workspaceChain = workspaceChain.then(() => processWorkspaceJobs(workspaceId))
+    }
+    await workspaceChain
 
     return { processed, failed }
   },

@@ -75,25 +75,25 @@ export function SwipeableMessage({
         >
           {pendingAction === 'reply' && (
             <>
-              <Reply className="h-5 w-5 text-info" />
+              <Reply className="size-5 text-info" />
               <span className="text-sm font-medium text-info">Reply</span>
               <Button size="sm" variant="ghost" onClick={handleConfirmAction}>
-                <Check className="h-4 w-4" />
+                <Check className="size-4" />
               </Button>
               <Button size="sm" variant="ghost" onClick={handleCancelAction}>
-                <X className="h-4 w-4" />
+                <X className="size-4" />
               </Button>
             </>
           )}
           {pendingAction === 'delete' && (
             <>
-              <Trash2 className="h-5 w-5 text-destructive" />
+              <Trash2 className="size-5 text-destructive" />
               <span className="text-sm font-medium text-destructive">Delete</span>
               <Button size="sm" variant="ghost" onClick={handleConfirmAction}>
-                <Check className="h-4 w-4" />
+                <Check className="size-4" />
               </Button>
               <Button size="sm" variant="ghost" onClick={handleCancelAction}>
-                <X className="h-4 w-4" />
+                <X className="size-4" />
               </Button>
             </>
           )}

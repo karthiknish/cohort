@@ -240,8 +240,8 @@ export function TaskCreationModal({
       <DialogContent className={TASKS_THEME.dialog.content}>
         <DialogHeader className={TASKS_THEME.dialog.header}>
           <div className="flex items-start gap-3">
-            <div className={cn(getIconContainerClasses('medium'), 'h-10 w-10 shrink-0')}>
-              <ListTodo className="h-5 w-5" aria-hidden />
+            <div className={cn(getIconContainerClasses('medium'), 'size-10 shrink-0')}>
+              <ListTodo className="size-5" aria-hidden />
             </div>
             <div className="min-w-0 space-y-1">
               <DialogTitle className="text-left text-lg">Create task</DialogTitle>

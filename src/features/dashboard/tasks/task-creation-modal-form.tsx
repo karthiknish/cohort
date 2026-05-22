@@ -63,7 +63,7 @@ type TaskCreationModalFormFieldsProps = {
 function PrioritySelectItem({ value }: { value: TaskPriority }) {
   return (
     <span className="flex items-center gap-2">
-      <span className={cn('h-2 w-2 shrink-0 rounded-full', priorityAccentColors[value])} aria-hidden />
+      <span className={cn('size-2 shrink-0 rounded-full', priorityAccentColors[value])} aria-hidden />
       {formatPriorityLabel(value)}
     </span>
   )
@@ -183,7 +183,7 @@ export function TaskCreationModalFormFields({
                   disabled={isLoading}
                   aria-label="Due date, open calendar"
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                  <CalendarIcon className="mr-2 size-4 shrink-0" />
                   {dueDate ? format(parseISO(dueDate), 'PPP') : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
@@ -232,7 +232,7 @@ export function TaskCreationModalFormFields({
             disabled={isLoading}
             onClick={handleOpenFileDialog}
           >
-            <Paperclip className="h-3.5 w-3.5" />
+            <Paperclip className="size-3.5" />
             Attach
           </Button>
         </div>

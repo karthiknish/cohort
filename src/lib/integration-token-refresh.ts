@@ -142,7 +142,7 @@ export async function refreshGoogleAccessToken({ userId, clientId, providerId }:
 
   let lastError: Error | null = null
 
-  for (let attempt = 0; attempt < TOKEN_REFRESH_CONFIG.maxRetries; attempt++) {
+  const attemptRefresh = async (attempt: number): Promise<string> => {
     try {
       const response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
         method: 'POST',
@@ -176,7 +176,7 @@ export async function refreshGoogleAccessToken({ userId, clientId, providerId }:
             { isRetryable: true, httpStatus: response.status }
           )
           await sleep(calculateBackoffDelay(attempt))
-          continue
+          return attemptRefresh(attempt + 1)
         }
 
         // Check for specific error types
@@ -245,12 +245,14 @@ export async function refreshGoogleAccessToken({ userId, clientId, providerId }:
       if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
         console.warn(`[Google Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message)
         await sleep(calculateBackoffDelay(attempt))
-        continue
+        return attemptRefresh(attempt + 1)
       }
     }
+
+    throw lastError ?? new IntegrationTokenError('Google token refresh failed after all retries', resolvedProviderId, userId)
   }
 
-  throw lastError ?? new IntegrationTokenError('Google token refresh failed after all retries', resolvedProviderId, userId)
+  return attemptRefresh(0)
 }
 
 export async function refreshTikTokAccessToken({ userId, clientId }: RefreshParams): Promise<string> {
@@ -536,7 +538,7 @@ export async function refreshLinkedInAccessToken({ userId, clientId }: RefreshPa
 
   let lastError: Error | null = null
 
-  for (let attempt = 0; attempt < TOKEN_REFRESH_CONFIG.maxRetries; attempt++) {
+  const attemptRefresh = async (attempt: number): Promise<string> => {
     try {
       console.log(`[LinkedIn Token Refresh] Attempt ${attempt + 1}/${TOKEN_REFRESH_CONFIG.maxRetries} for user ${userId}`)
 
@@ -572,7 +574,7 @@ export async function refreshLinkedInAccessToken({ userId, clientId }: RefreshPa
             { isRetryable: true, httpStatus: response.status }
           )
           await sleep(calculateBackoffDelay(attempt))
-          continue
+          return attemptRefresh(attempt + 1)
         }
 
         // Check for invalid_grant (token revoked or expired)
@@ -631,12 +633,14 @@ export async function refreshLinkedInAccessToken({ userId, clientId }: RefreshPa
       if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
         console.warn(`[LinkedIn Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message)
         await sleep(calculateBackoffDelay(attempt))
-        continue
+        return attemptRefresh(attempt + 1)
       }
     }
+
+    throw lastError ?? new IntegrationTokenError('LinkedIn token refresh failed after all retries', 'linkedin', userId)
   }
 
-  throw lastError ?? new IntegrationTokenError('LinkedIn token refresh failed after all retries', 'linkedin', userId)
+  return attemptRefresh(0)
 }
 
 export async function ensureLinkedInAccessToken({ userId, clientId, forceRefresh }: RefreshParams): Promise<string> {

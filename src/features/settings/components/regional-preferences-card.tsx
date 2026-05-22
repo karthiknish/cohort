@@ -58,7 +58,7 @@ export function RegionalPreferencesCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Globe className="h-5 w-5" />
+          <Globe className="size-5" />
           Regional preferences
         </CardTitle>
         <CardDescription>Set your preferred currency for displaying financial data across the dashboard.</CardDescription>
@@ -94,7 +94,7 @@ export function RegionalPreferencesCard() {
         </div>
         {savingCurrency && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <LoaderCircle className="h-4 w-4 animate-spin" />
+            <LoaderCircle className="size-4 animate-spin" />
             Saving preference…
           </div>
         )}

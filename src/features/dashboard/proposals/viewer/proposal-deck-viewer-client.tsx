@@ -17,7 +17,7 @@ export default function ProposalDeckViewerPageClient({ src = null }: ProposalDec
       <div className="space-y-6">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/dashboard/proposals">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-2 size-4" />
             Back to proposals
           </Link>
         </Button>

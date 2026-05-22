@@ -129,13 +129,13 @@ function InteractiveMetricCard({
 							)}
 						>
 							{metric.changeType === "increase" && (
-								<TrendingUp className="h-3 w-3" />
+								<TrendingUp className="size-3" />
 							)}
 							{metric.changeType === "decrease" && (
-								<TrendingDown className="h-3 w-3" />
+								<TrendingDown className="size-3" />
 							)}
 							{metric.changeType === "neutral" && (
-								<Minus className="h-3 w-3" />
+								<Minus className="size-3" />
 							)}
 							<span className="tabular-nums">
 								{Math.abs(metric.change)}%
@@ -147,7 +147,7 @@ function InteractiveMetricCard({
 				{isClickable && (
 					<div className="mt-2 flex items-center text-[10px] text-primary font-medium opacity-0 group-hover:opacity-100">
 						Click to {onDrillDown ? "drill down" : "view details"}
-						<ChevronRight className="ml-0.5 h-3 w-3" />
+						<ChevronRight className="ml-0.5 size-3" />
 					</div>
 				)}
 			</CardContent>
@@ -181,7 +181,7 @@ export function InteractiveMetricCards({
 		return (
 			<div className={cn("flex items-center gap-2", className)}>
 				<Button variant="outline" size="sm" onClick={onReset} className="gap-1">
-					<ChevronRight className="h-3 w-3 rotate-180" />
+					<ChevronRight className="size-3 rotate-180" />
 					Back to overview
 				</Button>
 				<span className="text-sm font-medium text-muted-foreground">

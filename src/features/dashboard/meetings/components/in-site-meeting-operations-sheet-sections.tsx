@@ -62,7 +62,7 @@ export function MeetingOperationsAttendeesCard({ meetingAttendeeEmails }: { meet
     <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
       <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">People invited</p>
       <div className="mt-3 flex items-center gap-2 text-sm font-medium text-foreground">
-        <Users className="h-4 w-4 text-muted-foreground" />
+        <Users className="size-4 text-muted-foreground" />
         {meetingAttendeeEmails.length} attendee{meetingAttendeeEmails.length === 1 ? '' : 's'}
       </div>
       <div className="mt-3 flex flex-wrap gap-2">

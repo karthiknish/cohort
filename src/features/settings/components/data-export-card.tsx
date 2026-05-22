@@ -73,7 +73,7 @@ export function DataExportCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Download className="h-5 w-5" />
+          <Download className="size-5" />
           Export your data
         </CardTitle>
         <CardDescription>
@@ -95,9 +95,9 @@ export function DataExportCard() {
           disabled={exportingData}
         >
           {exportingData ? (
-            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+            <LoaderCircle className="mr-2 size-4 animate-spin" />
           ) : (
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="mr-2 size-4" />
           )}
           {exportingData ? 'Preparing export...' : 'Download my data'}
         </Button>

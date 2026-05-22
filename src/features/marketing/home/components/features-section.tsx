@@ -220,7 +220,7 @@ function ScrollGroup() {
           key={client.id}
           className="flex items-center gap-3 rounded-[1.1rem] border border-border/50 bg-background/95 px-3 py-2.5 shadow-sm"
         >
-          <Avatar className="h-9 w-9 shrink-0 ring-1 ring-border/60">
+          <Avatar className="size-9 shrink-0 ring-1 ring-border/60">
             <AvatarFallback className={cn('text-[10px] font-semibold text-viewer-chrome', client.color)}>
               {client.initials}
             </AvatarFallback>
@@ -253,7 +253,7 @@ function DotConnector({ direction }: { direction: 'ltr' | 'rtl' }) {
         {HUB_CONNECTOR_DOTS.map((dot, index) => (
           <m.span
             key={dot.id}
-            className="block h-[5px] w-[5px] rounded-full bg-accent/50"
+            className="block size-[5px] rounded-full bg-accent/50"
             initial={prefersReducedMotion ? false : CONNECTOR_DOT_INITIAL}
             animate={prefersReducedMotion ? CONNECTOR_DOT_REDUCED : CONNECTOR_DOT_ANIMATE}
             transition={getConnectorTransition(direction, index)}
@@ -270,8 +270,8 @@ function IntegrationChip({ chip }: { chip: Integration }) {
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="flex h-10 w-fit cursor-pointer items-center gap-2 rounded-lg border border-border/60 bg-background px-3 text-sm font-medium shadow-sm transition-shadow hover:shadow-md">
-            <span className={cn('flex h-6 w-6 items-center justify-center rounded-md', chip.iconBg)}>
-              <PlatformBrandLogo brand={chip.brand} className="h-4 w-4" labeled={false} />
+            <span className={cn('flex size-6 items-center justify-center rounded-md', chip.iconBg)}>
+              <PlatformBrandLogo brand={chip.brand} className="size-4" labeled={false} />
             </span>
             {chip.label}
           </div>
@@ -283,8 +283,8 @@ function IntegrationChip({ chip }: { chip: Integration }) {
         >
           <div className="px-3 pt-3 pb-2">
             <div className="mb-2.5 flex items-center gap-2">
-              <span className={cn('flex h-5 w-5 items-center justify-center rounded', chip.iconBg)}>
-                <PlatformBrandLogo brand={chip.brand} className="h-3.5 w-3.5" labeled={false} />
+              <span className={cn('flex size-5 items-center justify-center rounded', chip.iconBg)}>
+                <PlatformBrandLogo brand={chip.brand} className="size-3.5" labeled={false} />
               </span>
               <span className="text-[11px] font-semibold text-foreground">{chip.label}</span>
               <span className="ml-auto rounded-full bg-success/10 px-1.5 py-0.5 text-[9px] font-semibold text-success">Live</span>
@@ -357,7 +357,7 @@ function ProposalIllustration() {
       <div className="rounded-xl border border-border/60 bg-background p-3.5 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileText className="h-3.5 w-3.5 text-primary/60" />
+            <FileText className="size-3.5 text-primary/60" />
             <span className="text-[11px] font-medium text-muted-foreground">Proposal · NovaTech Q3</span>
           </div>
           <span className="rounded-full border border-success/25 bg-success/10 px-2 py-0.5 text-[9px] font-semibold text-success">
@@ -372,13 +372,13 @@ function ProposalIllustration() {
         </div>
 
         <div className="mt-3 flex items-center gap-1.5 border-t border-border/40 pt-3">
-          <Sparkles className="h-3 w-3 text-accent" />
+          <Sparkles className="size-3 text-accent" />
           <span className="text-[10px] text-muted-foreground">AI generating insights</span>
           <div className="ml-auto flex items-center gap-[3px]">
             {PROPOSAL_BOUNCE_DOTS.map((dot) => (
               <span
                 key={dot.id}
-                className="block h-1.5 w-1.5 animate-subtle-dot-drift rounded-full bg-accent"
+                className="block size-1.5 animate-subtle-dot-drift rounded-full bg-accent"
                 style={dot.style}
               />
             ))}
@@ -441,7 +441,7 @@ function TeamIllustration() {
                 <TooltipTrigger asChild>
                   <Avatar
                     className={cn(
-                      'h-11 w-11 cursor-pointer border-2 border-background shadow-sm transition-transform hover:-translate-y-1 hover:z-20',
+                      'size-11 cursor-pointer border-2 border-background shadow-sm transition-transform hover:-translate-y-1 hover:z-20',
                       index === 2 ? 'z-10 ring-2 ring-accent/40' : '',
                     )}
                   >
@@ -556,7 +556,7 @@ export function FeaturesSection() {
             <div className="flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
               <div className="px-6 pt-6 text-center">
                 <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">
-                  <Sparkles className="h-5 w-5 text-accent" />
+                  <Sparkles className="size-5 text-accent" />
                   AI Proposals
                 </div>
                 <p className="mx-auto mt-2 max-w-[18rem] text-sm text-muted-foreground">
@@ -571,7 +571,7 @@ export function FeaturesSection() {
             <div className="flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
               <div className="px-6 pt-6 text-center">
                 <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">
-                  <Users className="h-5 w-5 text-primary" />
+                  <Users className="size-5 text-primary" />
                   Client Portal
                 </div>
                 <p className="mx-auto mt-2 max-w-[18rem] text-sm text-muted-foreground">
@@ -586,7 +586,7 @@ export function FeaturesSection() {
             <div className="flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm md:col-span-2 lg:col-span-1">
               <div className="px-6 pt-6 text-center">
                 <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">
-                  <Bot className="h-5 w-5 text-primary" />
+                  <Bot className="size-5 text-primary" />
                   Team & Tasks
                 </div>
                 <p className="mx-auto mt-2 max-w-[18rem] text-sm text-muted-foreground">

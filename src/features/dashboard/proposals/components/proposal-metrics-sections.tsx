@@ -52,12 +52,12 @@ export function ProposalMetricCard({ stat }: { stat: ProposalMetricStat }) {
           </div>
           <div
             className={cn(
-              'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/50',
+              'flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/50',
               stat.bg,
               stat.color,
             )}
           >
-            <Icon className="h-5 w-5" aria-hidden />
+            <Icon className="size-5" aria-hidden />
           </div>
         </div>
         <div

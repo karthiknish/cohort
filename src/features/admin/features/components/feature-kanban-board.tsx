@@ -177,11 +177,11 @@ function FeatureKanbanColumn({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7"
+          className="size-7"
           onClick={handleAddClick}
           aria-label={`Add feature to ${FEATURE_STATUS_LABELS[status]} column`}
         >
-          <Plus className="h-4 w-4" aria-hidden />
+          <Plus className="size-4" aria-hidden />
         </Button>
       </div>
 
@@ -212,7 +212,7 @@ function FeatureKanbanColumn({
           className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
           onClick={handleAddClick}
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="size-4" />
           Add feature
         </Button>
       </div>

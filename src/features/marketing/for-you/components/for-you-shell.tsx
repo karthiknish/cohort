@@ -22,13 +22,13 @@ export function ForYouShell() {
             alt=""
             width={80}
             height={80}
-            className="h-14 w-14 sm:h-16 sm:w-16"
+            className="size-14 sm:h-16 sm:w-16"
             priority
           />
         </Link>
         <Button asChild size="sm" variant="outline" className={cn('shadow-sm', getButtonClasses('outline'))}>
           <Link href="/dashboard">
-            <LayoutDashboard aria-hidden="true" className="mr-2 h-4 w-4" />
+            <LayoutDashboard aria-hidden="true" className="mr-2 size-4" />
             Go to Dashboard
           </Link>
         </Button>

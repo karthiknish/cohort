@@ -69,13 +69,13 @@ export function DashboardFilterBar({
   return (
     <div className={cn('flex flex-wrap items-center gap-3 rounded-lg border border-border/60 bg-muted/30 p-3', className)}>
       <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-muted-foreground" />
+        <Filter className="size-4 text-muted-foreground" />
         <span className="text-sm font-semibold text-foreground">Comparison filters</span>
       </div>
       <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
-            <ListFilter className="h-4 w-4" />
+            <ListFilter className="size-4" />
             {selectedLabel}
             {selectedClientIds.length > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs">
@@ -163,7 +163,7 @@ function DashboardFilterClientItem({
     event.preventDefault()
   }, [])
 
-  const handleClick = useCallback(() => {
+  const onToggleClientFilter = useCallback(() => {
     onToggle(client.id)
   }, [client.id, onToggle])
 
@@ -171,9 +171,9 @@ function DashboardFilterClientItem({
     <DropdownMenuItem
       className={cn('gap-2', !canCompare && 'pointer-events-none opacity-60')}
       onSelect={handleSelect}
-      onClick={handleClick}
+      onClick={onToggleClientFilter}
     >
-      <Checkbox checked={checked} aria-label={`Toggle ${client.name}`} className="h-4 w-4" />
+      <Checkbox checked={checked} aria-label={`Toggle ${client.name}`} className="size-4" />
       <span className="text-sm">{client.name}</span>
     </DropdownMenuItem>
   )

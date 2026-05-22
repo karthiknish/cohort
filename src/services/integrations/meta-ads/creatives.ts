@@ -362,10 +362,9 @@ export async function fetchMetaPageActors(options: FetchMetaPageActorsOptions): 
 
   const rows = Array.isArray(payload?.data) ? payload.data : []
 
-  return rows
-    .map((row): MetaPageActor | null => {
+  return rows.flatMap((row): MetaPageActor[] => {
       const id = typeof row?.id === 'string' ? row.id : null
-      if (!id) return null
+      if (!id) return []
 
       const name = typeof row?.name === 'string' && row.name.length > 0 ? row.name : `Page ${id}`
       const tasks = Array.isArray(row?.tasks)
@@ -375,7 +374,7 @@ export async function fetchMetaPageActors(options: FetchMetaPageActorsOptions): 
       const instagram = row?.instagram_business_account
       const instagramId = typeof instagram?.id === 'string' ? instagram.id : null
 
-      return {
+      return [{
         id,
         name,
         tasks,
@@ -386,9 +385,8 @@ export async function fetchMetaPageActors(options: FetchMetaPageActorsOptions): 
               username: typeof instagram?.username === 'string' ? instagram.username : undefined,
             }
           : undefined,
-      }
+      }]
     })
-    .filter((row): row is MetaPageActor => Boolean(row))
 }
 
 // =============================================================================

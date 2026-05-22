@@ -196,9 +196,11 @@ export class IntegrationApiClient {
             let rawBody: string | null = null
             try {
                 const contentType = response.headers.get('content-type') || ''
+                const isJsonResponse =
+                    contentType.split(';')[0]?.trim().toLowerCase() === 'application/json'
                 // Clone the response before consuming to preserve the original for error handling
                 const responseClone = response.clone()
-                if (contentType.includes('application/json')) {
+                if (isJsonResponse) {
                     rawBody = await responseClone.text()
                     const rawBodyPreview = rawBody?.slice(0, 500)
                     console.log(`[${platformLabel} API] Raw response body:`, rawBodyPreview)

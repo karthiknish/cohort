@@ -269,30 +269,31 @@ export async function withRetry<T>(
   const { maxRetries = 3, retryDelay = 1000, shouldRetry = isRateLimitError } = options
   
   let lastError: unknown
-  
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
+
+  const runAttempt = async (attempt: number): Promise<T> => {
     try {
       return await fn()
     } catch (error) {
       lastError = error
-      
-      // Don't retry if it's not a retryable error
+
       if (!shouldRetry(error)) {
         throw error
       }
-      
-      // Don't sleep after the last attempt
-      if (attempt < maxRetries - 1) {
-        const delay = calculateBackoffDelay(attempt, retryDelay)
-        console.warn(`[retry] Attempt ${attempt + 1}/${maxRetries} failed, retrying in ${delay}ms...`)
-        await sleep(delay)
+
+      if (attempt >= maxRetries - 1) {
+        throw lastError instanceof Error
+          ? lastError
+          : new Error(lastError == null ? 'Operation failed after retries' : String(lastError))
       }
+
+      const delay = calculateBackoffDelay(attempt, retryDelay)
+      console.warn(`[retry] Attempt ${attempt + 1}/${maxRetries} failed, retrying in ${delay}ms...`)
+      await sleep(delay)
+      return runAttempt(attempt + 1)
     }
   }
 
-  throw lastError instanceof Error
-    ? lastError
-    : new Error(lastError == null ? 'Operation failed after retries' : String(lastError))
+  return runAttempt(0)
 }
 
 /**

@@ -31,7 +31,7 @@ describe('custom insights card sections', () => {
             label: 'CPA',
             value: 42,
             format: 'currency',
-            icon: <Target className="h-4 w-4" />,
+            icon: <Target className="size-4" />,
             trend: -0.12,
             benchmark: 20,
             invertTrend: true,

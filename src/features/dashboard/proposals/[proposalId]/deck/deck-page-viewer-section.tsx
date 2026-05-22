@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { FileText, Presentation } from 'lucide-react'
 
 import { DeckDocumentViewer } from '@/features/dashboard/proposals/viewer/components/deck-document-viewer'
@@ -26,6 +26,10 @@ export function DeckPageViewerSection({
     return pdfUrl ?? pptxUrl
   }, [pdfUrl, pptxUrl, tab])
 
+  const handleTabChange = useCallback((value: string) => {
+    setTab(value as 'pdf' | 'pptx')
+  }, [])
+
   if (!pdfUrl && !pptxUrl) {
     return (
       <div className="rounded-xl border border-dashed border-border/70 bg-muted/15 px-6 py-12 text-center text-sm text-muted-foreground">
@@ -48,14 +52,14 @@ export function DeckPageViewerSection({
 
   return (
     <div className="space-y-4">
-      <Tabs value={tab} onValueChange={(v) => setTab(v as 'pdf' | 'pptx')}>
+      <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList className="inline-flex h-auto w-full max-w-md gap-1 rounded-xl bg-muted/40 p-1">
           <TabsTrigger
             value="pdf"
             disabled={!pdfUrl}
             className="flex-1 gap-1.5 rounded-lg text-xs sm:text-sm data-[state=active]:shadow-sm"
           >
-            <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <FileText className="size-3.5 shrink-0" aria-hidden />
             PDF
           </TabsTrigger>
           <TabsTrigger
@@ -63,7 +67,7 @@ export function DeckPageViewerSection({
             disabled={!pptxUrl}
             className="flex-1 gap-1.5 rounded-lg text-xs sm:text-sm data-[state=active]:shadow-sm"
           >
-            <Presentation className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <Presentation className="size-3.5 shrink-0" aria-hidden />
             PowerPoint
           </TabsTrigger>
         </TabsList>

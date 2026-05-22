@@ -66,9 +66,11 @@ export function rolesForCapability(capability: DashboardCapability): readonly Au
 
 /** Prefixes that require agency-only capabilities (Ads + Socials). */
 export function agencyOnlyPrefixes(): readonly string[] {
-  return ROUTE_ACCESS.filter(
-    (entry) => entry.capability === 'agency.ads' || entry.capability === 'agency.socials',
-  ).map((entry) => entry.prefix)
+  return ROUTE_ACCESS.flatMap((entry) =>
+    entry.capability === 'agency.ads' || entry.capability === 'agency.socials'
+      ? [entry.prefix]
+      : [],
+  )
 }
 
 function matchesRoutePrefix(pathname: string, prefix: string): boolean {
@@ -89,16 +91,14 @@ export function navItemsForRole(
   groups: NavigationGroup[] = DASHBOARD_NAVIGATION_GROUPS,
 ): NavigationGroup[] {
   const normalized = normalizeAuthRole(role)
-  return groups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => {
-        const capability = item.capability ?? capabilityForHref(item.href)
-        if (!capability) return true
-        return CAPABILITY_ROLES[capability].includes(normalized)
-      }),
-    }))
-    .filter((group) => group.items.length > 0)
+  return groups.flatMap((group) => {
+    const items = group.items.filter((item) => {
+      const capability = item.capability ?? capabilityForHref(item.href)
+      if (!capability) return true
+      return CAPABILITY_ROLES[capability].includes(normalized)
+    })
+    return items.length > 0 ? [{ ...group, items }] : []
+  })
 }
 
 export type AccessDeniedContent = {

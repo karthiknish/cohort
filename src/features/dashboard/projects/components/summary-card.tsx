@@ -22,8 +22,8 @@ export function SummaryCard({ label, value, icon: Icon, description, onClick, ac
       )}
     >
       <CardContent className="flex items-center gap-4 p-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-muted/30 text-primary">
-          <Icon className="h-5 w-5" aria-hidden />
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-muted/30 text-primary">
+          <Icon className="size-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>

@@ -121,8 +121,7 @@ export async function fetchGoogleCampaignInsights(options: {
   })
 
   const series = rows
-    .map((row) => mapSearchRowToSeriesRow(row))
-    .filter((row): row is GoogleCampaignInsightsSeriesRow => Boolean(row))
+    .flatMap((row) => { const value = mapSearchRowToSeriesRow(row); return value ? [value] : [] })
     .sort((a, b) => a.date.localeCompare(b.date))
 
   const totals = series.reduce(

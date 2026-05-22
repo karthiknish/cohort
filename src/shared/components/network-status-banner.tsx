@@ -40,7 +40,7 @@ export function NetworkStatusBanner() {
   return (
     <div className="border-b border-warning/20 bg-warning/10 px-4 py-2 text-warning md:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl items-center gap-2 text-sm font-medium">
-        <WifiOff className="h-4 w-4 shrink-0" />
+        <WifiOff className="size-4 shrink-0" />
         <span>You're offline. Changes will sync when your connection returns.</span>
       </div>
     </div>
@@ -62,12 +62,12 @@ export function SyncStatusBadge({ showLabel = false }: { showLabel?: boolean }) 
     >
       {isOnline ? (
         <>
-          <Cloud className="h-3 w-3" />
+          <Cloud className="size-3" />
           {showLabel ? <span className="text-[10px] font-medium">Synced</span> : null}
         </>
       ) : (
         <>
-          <CloudOff className="h-3 w-3" />
+          <CloudOff className="size-3" />
           {showLabel ? <span className="text-[10px] font-medium">Offline</span> : null}
         </>
       )}

@@ -106,7 +106,7 @@ function StatusChip({
   const Icon = STATUS_ICONS[status]
   const styles = stripStyles[status]
 
-  const handleClick = useCallback(() => {
+  const onSelectStatusSummary = useCallback(() => {
     onSelect?.(status)
   }, [onSelect, status])
 
@@ -130,7 +130,7 @@ function StatusChip({
   const content = (
     <>
       <span className={cn('h-1.5 w-8 shrink-0 rounded-full', styles.accent)} aria-hidden />
-      <Icon className={cn('h-3.5 w-3.5 shrink-0', styles.text)} aria-hidden />
+      <Icon className={cn('size-3.5 shrink-0', styles.text)} aria-hidden />
       <span className="min-w-0 flex-1 truncate font-medium text-foreground">
         {formatStatusLabel(status)}
       </span>
@@ -146,7 +146,7 @@ function StatusChip({
     <button
       type="button"
       className={className}
-      onClick={handleClick}
+      onClick={onSelectStatusSummary}
       onKeyDown={handleKeyDown}
       aria-pressed={isSelected}
       aria-label={`${formatStatusLabel(status)}: ${count} tasks`}

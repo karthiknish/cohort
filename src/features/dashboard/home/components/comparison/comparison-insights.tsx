@@ -34,7 +34,7 @@ export function ComparisonInsights({ insights, loading }: ComparisonInsightsProp
             >
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-background/70 p-2 text-primary">
-                  <Icon className="h-4 w-4" />
+                  <Icon className="size-4" />
                 </span>
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {insight.title}

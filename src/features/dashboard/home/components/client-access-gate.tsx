@@ -44,7 +44,7 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
       >
         <div className="rounded-lg border border-muted/60 bg-background p-6 shadow-sm">
           <div className="flex items-center gap-4">
-            <Skeleton className="h-12 w-12 rounded-md" />
+            <Skeleton className="size-12 rounded-md" />
             <div className="min-w-0 flex-1 space-y-2">
               <Skeleton className="h-5 w-48 max-w-full" />
               <Skeleton className="h-4 w-72 max-w-full" />
@@ -69,13 +69,13 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button onClick={handleRetry} disabled={refreshing} className="gap-2">
-            {refreshing ? <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+            {refreshing ? <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden /> : null}
             Try again
           </Button>
           {canManageClients ? (
             <Button asChild variant="outline" className="gap-2">
               <Link href="/admin/clients">
-                <RefreshCcw className="h-4 w-4" />
+                <RefreshCcw className="size-4" />
                 Manage clients
               </Link>
             </Button>
@@ -89,8 +89,8 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
     return (
       <Card className="mx-auto max-w-2xl overflow-hidden border-muted/60 bg-background shadow-sm">
         <CardHeader>
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-md bg-accent/10 text-primary">
-            <Building2 className="h-6 w-6" aria-hidden />
+          <div className="mb-2 flex size-12 items-center justify-center rounded-md bg-accent/10 text-primary">
+            <Building2 className="size-6" aria-hidden />
           </div>
           <CardTitle className="text-lg">{canManageClients ? 'Create your first client workspace' : 'No client workspace assigned'}</CardTitle>
           <CardDescription>

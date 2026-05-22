@@ -94,8 +94,7 @@ export class GoogleAdsService implements AdPlatform {
       })
 
       return metrics
-        .filter(m => m.campaignId === campaignId)
-        .map(mapToCampaignMetrics)
+        .flatMap(m => m.campaignId === campaignId ? [mapToCampaignMetrics(m)] : [])
     } catch (error) {
       console.error('Failed to fetch Google Ads metrics:', error)
       return []
@@ -146,8 +145,7 @@ export class MetaAdsService implements AdPlatform {
       })
 
       return metrics
-        .filter(m => m.campaignId === campaignId)
-        .map(mapToCampaignMetrics)
+        .flatMap(m => m.campaignId === campaignId ? [mapToCampaignMetrics(m)] : [])
     } catch (error) {
       console.error('Failed to fetch Meta Ads metrics:', error)
       return []
@@ -198,8 +196,7 @@ export class TikTokAdsService implements AdPlatform {
       })
 
       return metrics
-        .filter(m => m.campaignId === campaignId)
-        .map(mapToCampaignMetrics)
+        .flatMap(m => m.campaignId === campaignId ? [mapToCampaignMetrics(m)] : [])
     } catch (error) {
       console.error('Failed to fetch TikTok Ads metrics:', error)
       return []
@@ -252,8 +249,7 @@ export class LinkedInAdsService implements AdPlatform {
       })
 
       return metrics
-        .filter(m => m.campaignId === campaignId)
-        .map(mapToCampaignMetrics)
+        .flatMap(m => m.campaignId === campaignId ? [mapToCampaignMetrics(m)] : [])
     } catch (error) {
       console.error('Failed to fetch LinkedIn Ads metrics:', error)
       return []
@@ -279,31 +275,27 @@ export class AdsManager {
     connectedAccounts: Array<{ platform: string; accountId: string; credentials?: PlatformCredentials }>,
     dateRange: { start: Date; end: Date }
   ): Promise<CampaignMetrics[]> {
-    const allMetrics: CampaignMetrics[] = []
+    const accountMetrics = await Promise.all(
+      connectedAccounts.map(async (account) => {
+        const platform = this.getPlatform(account.platform)
+        if (!platform) return []
 
-    for (const account of connectedAccounts) {
-      const platform = this.getPlatform(account.platform)
-      if (!platform) continue
-
-      try {
-        // We need to fetch campaigns first to get IDs, or we can modify getMetrics to fetch all if no campaignId is provided
-        // But getMetrics signature requires campaignId.
-        // Let's assume we want all metrics for the account.
-        // The underlying fetch...Metrics functions return all metrics for the account.
-        // So we can expose a new method or reuse getMetrics with a dummy ID or modify the interface.
-        // For now, let's iterate campaigns.
-        const campaigns = await platform.getCampaigns(account.accountId, account.credentials)
-
-        for (const campaign of campaigns) {
-          const metrics = await platform.getMetrics(campaign.id, dateRange, account.credentials)
-          allMetrics.push(...metrics)
+        try {
+          const campaigns = await platform.getCampaigns(account.accountId, account.credentials)
+          const metricsByCampaign = await Promise.all(
+            campaigns.map((campaign) =>
+              platform.getMetrics(campaign.id, dateRange, account.credentials),
+            ),
+          )
+          return metricsByCampaign.flat()
+        } catch (error) {
+          console.error(`Failed to fetch metrics for ${account.platform}:`, error)
+          return []
         }
-      } catch (error) {
-        console.error(`Failed to fetch metrics for ${account.platform}:`, error)
-      }
-    }
+      }),
+    )
 
-    return allMetrics
+    return accountMetrics.flat()
   }
 
   async authenticatePlatform(platform: string, credentials: PlatformCredentials): Promise<boolean> {

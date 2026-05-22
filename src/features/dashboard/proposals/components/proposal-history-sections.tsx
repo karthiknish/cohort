@@ -105,7 +105,7 @@ export function ProposalHistoryHeader({
         disabled={isLoading}
         className="h-8 shrink-0 gap-1.5 rounded-full px-3"
       >
-        <RefreshCw className={cn('h-3.5 w-3.5', isLoading && 'animate-spin')} aria-hidden />
+        <RefreshCw className={cn('size-3.5', isLoading && 'animate-spin')} aria-hidden />
         Refresh
       </Button>
     </div>
@@ -127,8 +127,8 @@ export function ProposalHistoryEmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-muted-foreground/25 bg-linear-to-b from-muted/10 to-transparent px-6 py-14 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/15">
-        <FileText className="h-7 w-7 text-primary/80" aria-hidden />
+      <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/15">
+        <FileText className="size-7 text-primary/80" aria-hidden />
       </div>
       <h3 className="mb-2 text-lg font-semibold tracking-tight">No proposals yet</h3>
       <p className="mb-6 max-w-sm text-sm leading-relaxed text-muted-foreground">
@@ -146,7 +146,7 @@ export function ProposalHistoryEmptyState({
           disabled={!canCreate || isCreating || isGenerating}
           className="gap-2 rounded-full shadow-sm"
         >
-          {isCreating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          {isCreating ? <LoaderCircle className="size-4 animate-spin" /> : <Plus className="size-4" />}
           New proposal
         </Button>
       ) : null}
@@ -230,7 +230,7 @@ export function ProposalHistoryRow({
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5" suppressHydrationWarning>
-              <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <Clock className="size-3.5 shrink-0" aria-hidden />
               {updatedLabel}
             </span>
             <span className="hidden h-3 w-px bg-border sm:inline" aria-hidden />
@@ -249,9 +249,9 @@ export function ProposalHistoryRow({
             className="h-9 min-w-[8.5rem] gap-1.5 rounded-full font-medium"
           >
             {resumeDisabled ? (
-              <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
             ) : (
-              <Layout className="h-3.5 w-3.5" aria-hidden />
+              <Layout className="size-3.5" aria-hidden />
             )}
             {resumeLabel}
           </Button>
@@ -260,13 +260,13 @@ export function ProposalHistoryRow({
             <>
               <Button asChild size="sm" variant="outline" className="h-9 rounded-full px-3">
                 <Link href={`/dashboard/proposals/${proposal.id}/deck`} transitionTypes={['nav-forward']}>
-                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                  <ExternalLink className="mr-1.5 size-3.5" aria-hidden />
                   Preview
                 </Link>
               </Button>
               <Button asChild size="sm" variant="ghost" className="h-9 rounded-full px-3">
                 <a href={presentationUrl} target="_blank" rel="noopener noreferrer">
-                  <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                  <Download className="mr-1.5 size-3.5" aria-hidden />
                   PPT
                 </a>
               </Button>
@@ -280,9 +280,9 @@ export function ProposalHistoryRow({
               className="h-9 gap-1.5 rounded-full border-dashed px-3"
             >
               {isDeckPreparing ? (
-                <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
               ) : (
-                <FileText className="h-3.5 w-3.5 text-primary" aria-hidden />
+                <FileText className="size-3.5 text-primary" aria-hidden />
               )}
               {isDeckPreparing ? 'Preparing…' : 'Generate Deck'}
             </Button>
@@ -294,16 +294,16 @@ export function ProposalHistoryRow({
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-9 w-9 rounded-full text-muted-foreground"
+                  className="size-9 rounded-full text-muted-foreground"
                   aria-label={`More actions for ${displayName}`}
                 >
-                  <MoreHorizontal className="h-4 w-4" />
+                  <MoreHorizontal className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 {proposal.status === 'draft' && !isActiveDraft ? (
                   <DropdownMenuItem onClick={handleResumeAsEdit}>
-                    <Pencil className="mr-2 h-4 w-4" />
+                    <Pencil className="mr-2 size-4" />
                     Edit draft
                   </DropdownMenuItem>
                 ) : null}
@@ -314,9 +314,9 @@ export function ProposalHistoryRow({
                   disabled={isDeleting}
                 >
                   {isDeleting ? (
-                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    <LoaderCircle className="mr-2 size-4 animate-spin" />
                   ) : (
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="mr-2 size-4" />
                   )}
                   Delete
                 </DropdownMenuItem>

@@ -58,23 +58,22 @@ export function stepHasVisibleTarget(step: TourStepDefinition): boolean {
 }
 
 export function materializeTourSteps(definitions: TourStepDefinition[]): DriveStep[] {
-  return definitions
-    .filter(stepHasVisibleTarget)
-    .map((step) => {
-      const { requiresAny: _requiresAny, element, ...rest } = step
+  return definitions.flatMap((step) => {
+    if (!stepHasVisibleTarget(step)) return []
+    const { requiresAny: _requiresAny, element, ...rest } = step
 
-      if (typeof element === 'function') {
-        const resolved = element()
-        return resolved ? { ...rest, element: resolved } : { ...rest }
-      }
+    if (typeof element === 'function') {
+      const resolved = element()
+      return [resolved ? { ...rest, element: resolved } : { ...rest }]
+    }
 
-      if (typeof element === 'string') {
-        const resolved = queryVisibleTourElement(element)
-        return resolved ? { ...rest, element: resolved } : { ...rest }
-      }
+    if (typeof element === 'string') {
+      const resolved = queryVisibleTourElement(element)
+      return [resolved ? { ...rest, element: resolved } : { ...rest }]
+    }
 
-      return { ...rest, element }
-    })
+    return [{ ...rest, element }]
+  })
 }
 
 export const DASHBOARD_TOUR_ROUTE = '/dashboard'

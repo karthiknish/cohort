@@ -49,12 +49,12 @@ function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
     >
       {status === 'retrying' ? (
         <>
-          <Loader2 className="h-3 w-3 animate-spin" />
+          <Loader2 className="size-3 animate-spin" />
           <span>Reconnecting…</span>
         </>
       ) : (
         <>
-          <WifiOff className="h-3 w-3" />
+          <WifiOff className="size-3" />
           <span>Offline</span>
         </>
       )}
@@ -73,7 +73,7 @@ export function RateLimitBanner({ countdown, onDismiss }: { countdown: number; o
     className="flex items-center justify-between gap-3 border border-warning/20 bg-warning/10 px-4 py-2.5 text-sm"
   >
       <div className="flex items-center gap-2 text-warning">
-        <Clock className="h-4 w-4 shrink-0" />
+        <Clock className="size-4 shrink-0" />
         <span>Too many requests. Please wait <strong>{countdown}s</strong>…</span>
       </div>
       {onDismiss ? (
@@ -143,14 +143,13 @@ function AgentComposerInput({
 }) {
   const activeMentions = useMemo(() => {
     const seen = new Set<string>()
-    return splitAgentTextWithMentions(value, mentionLabels)
-      .filter((segment) => segment.isMention)
-      .map((segment) => segment.text)
-      .filter((mention) => {
-        if (seen.has(mention.toLowerCase())) return false
-        seen.add(mention.toLowerCase())
-        return true
-      })
+    return splitAgentTextWithMentions(value, mentionLabels).flatMap((segment) => {
+      if (!segment.isMention) return []
+      const key = segment.text.toLowerCase()
+      if (seen.has(key)) return []
+      seen.add(key)
+      return [segment.text]
+    })
   }, [mentionLabels, value])
 
   const remaining = maxLength - value.length
@@ -249,20 +248,20 @@ function SuggestionButton({
   disabled: boolean
   onSuggestionClick: (suggestion: AgentSuggestion) => void
 }) {
-  const handleClick = useCallback(() => {
+  const onApplySuggestion = useCallback(() => {
     onSuggestionClick(suggestion)
   }, [onSuggestionClick, suggestion])
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onApplySuggestion}
       disabled={disabled}
       className="group rounded-xl border border-border/60 bg-card/80 px-3 py-2 text-left text-xs font-medium shadow-sm transition-all hover:border-primary/25 hover:bg-primary/[0.04] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
       title={suggestion.prompt}
     >
       <span className="flex items-center gap-1.5">
-        <Sparkles className="h-3 w-3 text-primary/70 transition-colors group-hover:text-primary" aria-hidden />
+        <Sparkles className="size-3 text-primary/70 transition-colors group-hover:text-primary" aria-hidden />
         {suggestion.label}
       </span>
     </button>
@@ -365,14 +364,14 @@ export function AgentComposerSection({
               size="icon"
               onClick={onOpenFilePicker}
               disabled={disabled}
-              className="h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+              className="size-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
               aria-label="Attach context files"
               title="Attach context files (⌘⇧U)"
             >
               {isExtractingAttachments ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
               ) : (
-                <Paperclip className="h-4 w-4" />
+                <Paperclip className="size-4" />
               )}
             </Button>
 
@@ -380,11 +379,11 @@ export function AgentComposerSection({
               size="icon"
               onClick={onSubmit}
               disabled={!inputValue.trim() || disabled}
-              className="h-9 w-9 shrink-0 rounded-full bg-primary shadow-sm hover:bg-primary/90 disabled:opacity-40"
+              className="size-9 shrink-0 rounded-full bg-primary shadow-sm hover:bg-primary/90 disabled:opacity-40"
               aria-label="Send message"
               title="Send message"
             >
-              <Send className="h-4 w-4" />
+              <Send className="size-4" />
             </Button>
           </div>
         </div>

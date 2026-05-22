@@ -52,28 +52,28 @@ export function DataTableColumnHeader<TData, TValue>({
           >
             <span>{title}</span>
             {column.getIsSorted() === 'desc' ? (
-              <ArrowDown className="ml-2 h-4 w-4" />
+              <ArrowDown className="ml-2 size-4" />
             ) : column.getIsSorted() === 'asc' ? (
-              <ArrowUp className="ml-2 h-4 w-4" />
+              <ArrowUp className="ml-2 size-4" />
             ) : (
-              <ChevronsUpDown className="ml-2 h-4 w-4" />
+              <ChevronsUpDown className="ml-2 size-4" />
             )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
           <DropdownMenuItem onClick={handleSortAscending}>
-            <ArrowUp className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+            <ArrowUp className="mr-2 size-3.5 text-muted-foreground/70" />
             Asc
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleSortDescending}>
-            <ArrowDown className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+            <ArrowDown className="mr-2 size-3.5 text-muted-foreground/70" />
             Desc
           </DropdownMenuItem>
           {column.getCanHide() && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleHideColumn}>
-                <EyeOff className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+                <EyeOff className="mr-2 size-3.5 text-muted-foreground/70" />
                 Hide
               </DropdownMenuItem>
             </>

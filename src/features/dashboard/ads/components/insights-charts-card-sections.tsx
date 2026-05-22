@@ -50,7 +50,7 @@ export function InsightsPanelEmpty({
   return (
     <AdsChartShell>
       <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 px-4 text-center">
-        <BarChart3 className="h-8 w-8 text-muted-foreground/40" aria-hidden />
+        <BarChart3 className="size-8 text-muted-foreground/40" aria-hidden />
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">{title}</p>
           <p className="max-w-sm text-xs text-muted-foreground">{description}</p>

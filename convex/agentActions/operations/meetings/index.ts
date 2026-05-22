@@ -23,31 +23,29 @@ export const meetingOperationHandlers: Record<string, OperationHandler> = {
     })
 
     const meetings = Array.isArray(rawMeetings)
-      ? rawMeetings
-          .map((row) => {
-            if (!row || typeof row !== 'object') return null
-            const record = row as Record<string, unknown>
-            const legacyId = asNonEmptyString(record.legacyId)
-            const title = asNonEmptyString(record.title)
-            const startTimeMs = asNumber(record.startTimeMs)
-            const endTimeMs = asNumber(record.endTimeMs)
-            if (!legacyId || !title || startTimeMs === null || endTimeMs === null) return null
+      ? rawMeetings.flatMap((row) => {
+          if (!row || typeof row !== 'object') return []
+          const record = row as Record<string, unknown>
+          const legacyId = asNonEmptyString(record.legacyId)
+          const title = asNonEmptyString(record.title)
+          const startTimeMs = asNumber(record.startTimeMs)
+          const endTimeMs = asNumber(record.endTimeMs)
+          if (!legacyId || !title || startTimeMs === null || endTimeMs === null) return []
 
-            const notesSummary = asNonEmptyString(record.notesSummary)
-            const transcriptText = asString(record.transcriptText)
-            const status = asNonEmptyString(record.status) ?? 'scheduled'
+          const notesSummary = asNonEmptyString(record.notesSummary)
+          const transcriptText = asString(record.transcriptText)
+          const status = asNonEmptyString(record.status) ?? 'scheduled'
 
-            return {
-              meetingId: legacyId,
-              title,
-              status,
-              when: formatMeetingWhen(startTimeMs, endTimeMs),
-              notesSummary: notesSummary ?? null,
-              hasTranscript: Boolean(transcriptText && transcriptText.trim().length > 0),
-              route: `/dashboard/meetings?meeting=${encodeURIComponent(legacyId)}`,
-            }
-          })
-          .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+          return [{
+            meetingId: legacyId,
+            title,
+            status,
+            when: formatMeetingWhen(startTimeMs, endTimeMs),
+            notesSummary: notesSummary ?? null,
+            hasTranscript: Boolean(transcriptText && transcriptText.trim().length > 0),
+            route: `/dashboard/meetings?meeting=${encodeURIComponent(legacyId)}`,
+          }]
+        })
       : []
 
     const listed = meetings.slice(0, limit)

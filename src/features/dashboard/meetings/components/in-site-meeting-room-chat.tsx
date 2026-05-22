@@ -2,7 +2,7 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, type ChangeEvent, type KeyboardEvent, type MouseEvent } from 'react'
 
 import { useChat, useParticipants } from '@/shared/ui/livekit'
 import { useConvex, useMutation } from 'convex/react'
@@ -30,6 +30,100 @@ type InSiteMeetingRoomChatProps = {
   compact?: boolean
 }
 
+type MeetingChatState = {
+  isOpen: boolean
+  draft: string
+  lastReadAt: number
+  highlightedMentionIndex: number
+  mentionState: MeetingChatMentionState
+  pendingAttachments: PendingAttachment[]
+  uploadingFiles: boolean
+}
+
+type MeetingChatAction =
+  | { type: 'open'; latestTimestamp: number }
+  | { type: 'close'; latestTimestamp: number }
+  | { type: 'setDraft'; value: string }
+  | { type: 'syncMentionState'; value: MeetingChatMentionState }
+  | { type: 'resetMentionState' }
+  | { type: 'setHighlightedMentionIndex'; value: number | ((current: number) => number) }
+  | { type: 'addAttachments'; attachments: PendingAttachment[] }
+  | { type: 'removeAttachment'; attachmentId: string }
+  | { type: 'clearComposer' }
+  | { type: 'setUploadingFiles'; value: boolean }
+
+function createInitialMeetingChatState(): MeetingChatState {
+  return {
+    isOpen: false,
+    draft: '',
+    lastReadAt: 0,
+    highlightedMentionIndex: 0,
+    mentionState: DEFAULT_MEETING_CHAT_MENTION_STATE,
+    pendingAttachments: [],
+    uploadingFiles: false,
+  }
+}
+
+function meetingChatReducer(state: MeetingChatState, action: MeetingChatAction): MeetingChatState {
+  switch (action.type) {
+    case 'open':
+      return {
+        ...state,
+        isOpen: true,
+        lastReadAt: action.latestTimestamp > 0 ? action.latestTimestamp : state.lastReadAt,
+        mentionState: DEFAULT_MEETING_CHAT_MENTION_STATE,
+        highlightedMentionIndex: 0,
+      }
+    case 'close':
+      return {
+        ...state,
+        isOpen: false,
+        lastReadAt: action.latestTimestamp > 0 ? action.latestTimestamp : state.lastReadAt,
+        mentionState: DEFAULT_MEETING_CHAT_MENTION_STATE,
+        highlightedMentionIndex: 0,
+      }
+    case 'setDraft':
+      return { ...state, draft: action.value }
+    case 'syncMentionState':
+      return { ...state, mentionState: action.value, highlightedMentionIndex: 0 }
+    case 'resetMentionState':
+      return {
+        ...state,
+        mentionState: DEFAULT_MEETING_CHAT_MENTION_STATE,
+        highlightedMentionIndex: 0,
+      }
+    case 'setHighlightedMentionIndex':
+      return {
+        ...state,
+        highlightedMentionIndex:
+          typeof action.value === 'function'
+            ? action.value(state.highlightedMentionIndex)
+            : action.value,
+      }
+    case 'addAttachments':
+      return { ...state, pendingAttachments: [...state.pendingAttachments, ...action.attachments] }
+    case 'removeAttachment':
+      return {
+        ...state,
+        pendingAttachments: state.pendingAttachments.filter(
+          (attachment) => attachment.id !== action.attachmentId
+        ),
+      }
+    case 'clearComposer':
+      return {
+        ...state,
+        draft: '',
+        pendingAttachments: [],
+        mentionState: DEFAULT_MEETING_CHAT_MENTION_STATE,
+        highlightedMentionIndex: 0,
+      }
+    case 'setUploadingFiles':
+      return { ...state, uploadingFiles: action.value }
+    default:
+      return state
+  }
+}
+
 export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChatProps) {
   const { user } = useAuth()
   const { toast } = useToast()
@@ -37,13 +131,16 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
   const { chatMessages, send, isSending } = useChat()
   const participants = useParticipants()
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
-  const [isOpen, setIsOpen] = useState(false)
-  const [draft, setDraft] = useState('')
-  const [lastReadAt, setLastReadAt] = useState(0)
-  const [highlightedMentionIndex, setHighlightedMentionIndex] = useState(0)
-  const [mentionState, setMentionState] = useState<MeetingChatMentionState>(DEFAULT_MEETING_CHAT_MENTION_STATE)
-  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
-  const [uploadingFiles, setUploadingFiles] = useState(false)
+  const [chatState, dispatch] = useReducer(meetingChatReducer, undefined, createInitialMeetingChatState)
+  const {
+    isOpen,
+    draft,
+    lastReadAt,
+    highlightedMentionIndex,
+    mentionState,
+    pendingAttachments,
+    uploadingFiles,
+  } = chatState
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const messageEndRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
@@ -101,14 +198,12 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
   }, [mentionCandidates, mentionState.active, mentionState.query])
 
   const resetMentionState = useCallback(() => {
-    setMentionState(DEFAULT_MEETING_CHAT_MENTION_STATE)
-    setHighlightedMentionIndex(0)
+    dispatch({ type: 'resetMentionState' })
   }, [])
 
   const syncMentionStateFromValue = useCallback((nextValue: string, caretPosition: number) => {
     const nextState = detectMeetingChatMentionState(nextValue, caretPosition)
-    setMentionState(nextState)
-    setHighlightedMentionIndex(0)
+    dispatch({ type: 'syncMentionState', value: nextState })
   }, [])
 
   useEffect(() => {
@@ -120,25 +215,17 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
   }, [chatMessages, isOpen])
 
   const handleOpen = useCallback(() => {
-    setIsOpen(true)
     const latestTimestamp = chatMessages[chatMessages.length - 1]?.timestamp ?? 0
-    if (latestTimestamp > 0) {
-      setLastReadAt(latestTimestamp)
-    }
-    resetMentionState()
-  }, [chatMessages, resetMentionState])
+    dispatch({ type: 'open', latestTimestamp })
+  }, [chatMessages])
 
   const handleClose = useCallback(() => {
     const latestTimestamp = chatMessages[chatMessages.length - 1]?.timestamp ?? 0
-    if (latestTimestamp > 0) {
-      setLastReadAt(latestTimestamp)
-    }
-    setIsOpen(false)
-    resetMentionState()
-  }, [chatMessages, resetMentionState])
+    dispatch({ type: 'close', latestTimestamp })
+  }, [chatMessages])
 
   const handleRemoveAttachment = useCallback((attachmentId: string) => {
-    setPendingAttachments((current) => current.filter((attachment) => attachment.id !== attachmentId))
+    dispatch({ type: 'removeAttachment', attachmentId })
   }, [])
 
   const handleAttachmentSelection = useCallback((event: ChangeEvent<HTMLInputElement>) => {
@@ -157,7 +244,7 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
     }
 
     if (result.valid.length > 0) {
-      setPendingAttachments((current) => [...current, ...result.valid])
+      dispatch({ type: 'addAttachments', attachments: result.valid })
     }
 
     event.target.value = ''
@@ -168,46 +255,44 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
       throw new Error('Sign in required to share files in meeting chat.')
     }
 
-    const uploaded: MeetingChatAttachment[] = []
+    return Promise.all(
+      attachments.map(async (attachment) => {
+        const uploadUrlPayload = (await generateUploadUrl({})) as { url?: string }
+        const uploadUrl = uploadUrlPayload?.url
+        if (!uploadUrl) {
+          throw new Error('Unable to create upload URL')
+        }
 
-    for (const attachment of attachments) {
-      const uploadUrlPayload = (await generateUploadUrl({})) as { url?: string }
-      const uploadUrl = uploadUrlPayload?.url
-      if (!uploadUrl) {
-        throw new Error('Unable to create upload URL')
-      }
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': attachment.mimeType || 'application/octet-stream',
+          },
+          body: attachment.file,
+        })
 
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': attachment.mimeType || 'application/octet-stream',
-        },
-        body: attachment.file,
-      })
+        if (!uploadResponse.ok) {
+          throw new Error(`Failed to upload file (${uploadResponse.status})`)
+        }
 
-      if (!uploadResponse.ok) {
-        throw new Error(`Failed to upload file (${uploadResponse.status})`)
-      }
+        const uploadResult = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
+        if (!uploadResult?.storageId) {
+          throw new Error('Upload did not return storageId')
+        }
 
-      const uploadResult = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
-      if (!uploadResult?.storageId) {
-        throw new Error('Upload did not return storageId')
-      }
+        const publicUrl = await convex.query(filesApi.getPublicUrl, { storageId: uploadResult.storageId }) as { url?: string | null }
+        if (!publicUrl?.url) {
+          throw new Error('Unable to resolve uploaded file URL')
+        }
 
-      const publicUrl = await convex.query(filesApi.getPublicUrl, { storageId: uploadResult.storageId }) as { url?: string | null }
-      if (!publicUrl?.url) {
-        throw new Error('Unable to resolve uploaded file URL')
-      }
-
-      uploaded.push({
-        name: attachment.name,
-        size: attachment.sizeLabel,
-        type: attachment.mimeType || 'application/octet-stream',
-        url: publicUrl.url,
-      })
-    }
-
-    return uploaded
+        return {
+          name: attachment.name,
+          size: attachment.sizeLabel,
+          type: attachment.mimeType || 'application/octet-stream',
+          url: publicUrl.url,
+        } satisfies MeetingChatAttachment
+      }),
+    )
   }, [convex, generateUploadUrl, user?.id])
 
   const handleSend = useCallback(async () => {
@@ -217,7 +302,7 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
 
     const hasAttachments = pendingAttachments.length > 0
     if (hasAttachments) {
-      setUploadingFiles(true)
+      dispatch({ type: 'setUploadingFiles', value: true })
     }
 
     try {
@@ -232,9 +317,7 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
       }
 
       await send(messageContent)
-      setDraft('')
-      setPendingAttachments([])
-      resetMentionState()
+      dispatch({ type: 'clearComposer' })
     } catch (error) {
       reportConvexFailure({
         error,
@@ -243,15 +326,15 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
         fallbackMessage: 'Unable to send message.',
       })
       if (hasAttachments) {
-        setUploadingFiles(false)
+        dispatch({ type: 'setUploadingFiles', value: false })
       }
       return
     }
 
     if (hasAttachments) {
-      setUploadingFiles(false)
+      dispatch({ type: 'setUploadingFiles', value: false })
     }
-  }, [canSend, pendingAttachments, resetMentionState, send,  trimmedDraft, uploadPendingMeetingAttachments])
+  }, [canSend, pendingAttachments, send, trimmedDraft, uploadPendingMeetingAttachments])
 
   const insertSelectedMention = useCallback((candidate: MeetingChatMentionCandidate) => {
     const textarea = textareaRef.current
@@ -267,7 +350,7 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
       mentionState,
     })
 
-    setDraft(nextValue)
+    dispatch({ type: 'setDraft', value: nextValue })
     resetMentionState()
 
     requestAnimationFrame(() => {
@@ -279,7 +362,7 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
   const handleDraftChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
     const nextValue = event.target.value
     const caretPosition = event.target.selectionStart ?? nextValue.length
-    setDraft(nextValue)
+    dispatch({ type: 'setDraft', value: nextValue })
     syncMentionStateFromValue(nextValue, caretPosition)
   }, [syncMentionStateFromValue])
 
@@ -295,13 +378,19 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
     if (mentionState.active && mentionResults.length > 0) {
       if (event.key === 'ArrowDown') {
         event.preventDefault()
-        setHighlightedMentionIndex((current) => (current + 1) % mentionResults.length)
+        dispatch({
+          type: 'setHighlightedMentionIndex',
+          value: (current) => (current + 1) % mentionResults.length,
+        })
         return
       }
 
       if (event.key === 'ArrowUp') {
         event.preventDefault()
-        setHighlightedMentionIndex((current) => (current - 1 + mentionResults.length) % mentionResults.length)
+        dispatch({
+          type: 'setHighlightedMentionIndex',
+          value: (current) => (current - 1 + mentionResults.length) % mentionResults.length,
+        })
         return
       }
 

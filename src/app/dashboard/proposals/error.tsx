@@ -47,8 +47,8 @@ export default function ProposalsError({
     <div className="flex min-h-[60vh] items-center justify-center p-4">
       <Card className="max-w-md border-muted/60">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-            <FileText className="h-8 w-8 text-destructive" />
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
+            <FileText className="size-8 text-destructive" />
           </div>
           <CardTitle className="text-xl">Proposals unavailable</CardTitle>
           <CardDescription>
@@ -75,7 +75,7 @@ export default function ProposalsError({
 
           <div className="flex gap-2">
             <Button onClick={handleRetry} className="flex-1 gap-2">
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="size-4" />
               Try again
             </Button>
             <Button
@@ -85,7 +85,7 @@ export default function ProposalsError({
               title="Copy error details"
               aria-label="Copy error details to clipboard"
             >
-              <Copy className="h-4 w-4" aria-hidden />
+              <Copy className="size-4" aria-hidden />
             </Button>
           </div>
         </CardContent>

@@ -22,8 +22,8 @@ export function TaskSheetHeader({
   return (
     <div className={TASKS_THEME.sheet.header}>
       <div className="flex items-start gap-3">
-        <div className={cn(getIconContainerClasses('medium'), 'h-10 w-10 shrink-0')}>
-          <Icon className="h-5 w-5" aria-hidden />
+        <div className={cn(getIconContainerClasses('medium'), 'size-10 shrink-0')}>
+          <Icon className="size-5" aria-hidden />
         </div>
         <div className="min-w-0 space-y-1">
           <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>

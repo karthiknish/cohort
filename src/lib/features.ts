@@ -27,9 +27,9 @@ export function isFeatureEnabled(feature: FeatureName): boolean {
  * Get all enabled features
  */
 export function getEnabledFeatures(): FeatureName[] {
-  return Object.entries(FEATURES)
-    .filter(([, enabled]) => enabled)
-    .map(([name]) => name as FeatureName)
+  return Object.entries(FEATURES).flatMap(([name, enabled]) =>
+    enabled ? [name as FeatureName] : [],
+  )
 }
 
 /**

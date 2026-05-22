@@ -46,8 +46,8 @@ export function ConvexClientProvider({ children, initialToken }: ConvexClientPro
           aria-live="assertive"
           className="w-full max-w-xl rounded-2xl border border-destructive/40 bg-card p-8 text-center shadow-sm"
         >
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="h-7 w-7 text-destructive" aria-hidden />
+          <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-destructive/10">
+            <AlertTriangle className="size-7 text-destructive" aria-hidden />
           </div>
           <h1 className="mt-5 text-xl font-semibold text-foreground">Convex is not configured</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">

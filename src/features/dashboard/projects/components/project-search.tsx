@@ -12,7 +12,7 @@ interface ProjectSearchProps {
 }
 
 export function ProjectSearch({ value, onChange }: ProjectSearchProps) {
-  const handleChange = useCallback(
+  const onSearchQueryChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value),
     [onChange],
   )
@@ -23,12 +23,12 @@ export function ProjectSearch({ value, onChange }: ProjectSearchProps) {
 
   return (
     <div className="relative min-w-0 flex-1">
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         id="project-search"
         placeholder="Search by name, client, or tag…"
         value={value}
-        onChange={handleChange}
+        onChange={onSearchQueryChange}
         className="h-9 border-border/60 bg-background pl-9 pr-20 text-sm shadow-sm"
         aria-label="Search projects"
       />
@@ -42,7 +42,7 @@ export function ProjectSearch({ value, onChange }: ProjectSearchProps) {
           className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           aria-label="Clear search"
         >
-          <X className="h-4 w-4" />
+          <X className="size-4" />
         </button>
       ) : null}
     </div>

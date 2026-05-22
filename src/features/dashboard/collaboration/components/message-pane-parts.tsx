@@ -28,8 +28,8 @@ export function MessagePaneHeader({
     <div className="flex items-center justify-between gap-4 border-b border-muted/40 bg-background/60 p-5 backdrop-blur-md sticky top-0 z-20">
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-primary shrink-0 shadow-sm border border-accent/10">
-            <MessageSquare className="h-5 w-5" />
+          <div className="flex size-10 items-center justify-center rounded-xl bg-accent/10 text-primary shrink-0 shadow-sm border border-accent/10">
+            <MessageSquare className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -68,7 +68,7 @@ export function MessagePaneHeader({
           disabled={messageCount === 0}
           className="h-9 px-3 text-xs font-semibold gap-2 border border-muted/40 hover:bg-muted/60"
         >
-          <Download className="h-4 w-4" />
+          <Download className="size-4" />
           Export
         </Button>
       </div>
@@ -110,7 +110,7 @@ export function MessageSearchBar({
   return (
     <div className="border-b border-muted/40 bg-muted/5 px-3 py-2 sm:px-4">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           ref={inputRef}
           value={value}
@@ -138,11 +138,11 @@ export function MessageSearchBar({
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-2 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-2 top-1/2 size-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             onClick={onClear}
             aria-label="Clear message search"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="size-3.5" />
           </Button>
         ) : null}
         {isActive && (
@@ -164,7 +164,7 @@ export function EmptyChannelState() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground">
       <div className="mb-4 rounded-full bg-muted/30 p-4">
-        <MessageSquare className="h-8 w-8 text-muted-foreground/50" />
+        <MessageSquare className="size-8 text-muted-foreground/50" />
       </div>
       <h3 className="mb-2 text-lg font-semibold text-foreground">No channel selected</h3>
       <p className="max-w-sm text-sm">
@@ -212,7 +212,7 @@ export function MessagesErrorState({ error, onRetry, isRetrying, retryLabel = 'T
             disabled={isRetrying}
             className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
-            {isRetrying ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isRetrying ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
             {retryLabel}
           </Button>
         ) : null}

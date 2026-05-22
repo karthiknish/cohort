@@ -41,7 +41,7 @@ export function TasksHeader({
       <div className="min-w-0 space-y-2">
         <div className="flex items-center gap-3">
           <div className={getIconContainerClasses('medium')}>
-            <ListTodo className="h-6 w-6" aria-hidden />
+            <ListTodo className="size-6" aria-hidden />
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -78,9 +78,9 @@ export function TasksHeader({
           aria-busy={loading}
         >
           {loading ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+            <LoaderCircle className="size-4 animate-spin" aria-hidden />
           ) : (
-            <RefreshCw className="h-4 w-4" aria-hidden />
+            <RefreshCw className="size-4" aria-hidden />
           )}
           <span className="hidden sm:inline">Refresh</span>
         </Button>
@@ -93,7 +93,7 @@ export function TasksHeader({
               onClick={onNewTaskClick}
               disabled={Boolean(newTaskDisabledReason)}
             >
-              <Plus className="h-4 w-4" aria-hidden />
+              <Plus className="size-4" aria-hidden />
               New task
             </Button>
           </TooltipTrigger>

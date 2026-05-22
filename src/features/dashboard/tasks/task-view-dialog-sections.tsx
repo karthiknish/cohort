@@ -60,7 +60,7 @@ function TaskStatusBadge({ status }: { status: TaskStatus }) {
       variant="outline"
       className={cn('gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold', taskViewStatusPill[status])}
     >
-      <Icon className="h-3 w-3 shrink-0" aria-hidden />
+      <Icon className="size-3 shrink-0" aria-hidden />
       {formatStatusLabel(status)}
     </Badge>
   )
@@ -73,12 +73,12 @@ function TaskQuickStatusMenuItem({
   nextStatus: TaskStatus
   onQuickStatusChange: (status: TaskStatus) => void
 }) {
-  const handleClick = useCallback(() => {
+  const onQuickStatusSelect = useCallback(() => {
     onQuickStatusChange(nextStatus)
   }, [nextStatus, onQuickStatusChange])
 
   return (
-    <DropdownMenuItem onClick={handleClick}>
+    <DropdownMenuItem onClick={onQuickStatusSelect}>
       Move to {formatStatusLabel(nextStatus)}
     </DropdownMenuItem>
   )
@@ -90,7 +90,7 @@ function TaskPriorityBadge({ priority }: { priority: TaskPriority }) {
       variant="outline"
       className={cn('gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold', taskViewPriorityPill[priority])}
     >
-      <ChevronUp className="h-3 w-3 shrink-0" aria-hidden />
+      <ChevronUp className="size-3 shrink-0" aria-hidden />
       {formatPriorityLabel(priority)}
     </Badge>
   )
@@ -144,26 +144,30 @@ export function TaskViewDialogHeader({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 shrink-0 text-muted-foreground"
+                className="size-8 shrink-0 text-muted-foreground"
                 aria-label="Task options"
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               {onQuickStatusChange
-                ? TASK_STATUSES.filter((s) => s !== status && s !== 'archived').map((nextStatus) => (
+                ? TASK_STATUSES.flatMap((s) =>
+                    s !== status && s !== 'archived'
+                      ? [(
                     <TaskQuickStatusMenuItem
-                      key={nextStatus}
-                      nextStatus={nextStatus}
+                      key={s}
+                      nextStatus={s}
                       onQuickStatusChange={onQuickStatusChange}
                     />
-                  ))
+                  )]
+                      : [],
+                  )
                 : null}
               {onQuickStatusChange && onEdit ? <DropdownMenuSeparator /> : null}
               {onEdit ? (
                 <DropdownMenuItem onClick={onEdit}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="mr-2 size-4" />
                   Edit task
                 </DropdownMenuItem>
               ) : null}
@@ -186,17 +190,17 @@ export function TaskViewDialogHeader({
         <DialogDescription asChild>
           <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
             <div className="flex min-w-0 items-center gap-1.5">
-              <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+              <User className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
               <dt className="sr-only">Assignee</dt>
               <dd className="truncate text-foreground">{assignee}</dd>
             </div>
             <div className="flex min-w-0 items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+              <Calendar className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
               <dt className="sr-only">Due date</dt>
               <dd className="truncate text-foreground">{formatDate(dueDate)}</dd>
             </div>
             <div className="flex min-w-0 items-center gap-1.5">
-              <Clock4 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+              <Clock4 className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
               <dt className="sr-only">Time spent</dt>
               <dd className="truncate text-foreground">{formatTimeSpent(timeSpentMinutes)}</dd>
             </div>
@@ -253,7 +257,7 @@ export function TaskViewDetailsTab({ task }: { task: TaskRecord }) {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             {task.projectName ? (
               <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
-                <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                <FolderKanban className="size-3.5 text-muted-foreground" aria-hidden />
                 {task.projectName}
               </span>
             ) : null}
@@ -296,7 +300,7 @@ export function TaskViewDetailsTab({ task }: { task: TaskRecord }) {
                   rel="noreferrer"
                   className="inline-flex min-w-0 items-center gap-2 font-medium text-foreground hover:text-primary"
                 >
-                  <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <Paperclip className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="truncate">{attachment.name}</span>
                 </a>
                 <div className="flex items-center gap-3">
@@ -308,7 +312,7 @@ export function TaskViewDetailsTab({ task }: { task: TaskRecord }) {
                     download={attachment.name}
                     className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                   >
-                    <Download className="h-3 w-3" />
+                    <Download className="size-3" />
                     Download
                   </a>
                 </div>
@@ -380,13 +384,13 @@ export function TaskViewDialogFooter({
         </Button>
         {onMarkComplete ? (
           <Button type="button" variant="outline" onClick={onMarkComplete}>
-            <CheckCircle2 className="mr-2 h-4 w-4" />
+            <CheckCircle2 className="mr-2 size-4" />
             Mark complete
           </Button>
         ) : null}
         {onEdit ? (
           <Button onClick={onEdit}>
-            <Pencil className="mr-2 h-4 w-4" />
+            <Pencil className="mr-2 size-4" />
             Edit task
           </Button>
         ) : null}

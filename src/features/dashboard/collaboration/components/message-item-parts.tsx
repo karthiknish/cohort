@@ -33,7 +33,7 @@ function ReactionEmojiButton({
   emoji: string
   onReaction: (emoji: string) => void
 }) {
-  const handleClick = useCallback(() => onReaction(emoji), [emoji, onReaction])
+  const onAddReaction = useCallback(() => onReaction(emoji), [emoji, onReaction])
 
   return (
     <Tooltip key={emoji}>
@@ -42,9 +42,9 @@ function ReactionEmojiButton({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-base"
+          className="size-7 text-base"
           disabled={disableReactionActions}
-          onClick={handleClick}
+          onClick={onAddReaction}
           aria-label={`React with ${emoji}`}
         >
           {emoji}
@@ -158,11 +158,11 @@ export function MessageActionsBar({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="size-7"
                     disabled={disableReactionActions}
                     aria-label="Add reaction"
                   >
-                    <SmilePlus className="h-4 w-4" />
+                    <SmilePlus className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
@@ -193,12 +193,12 @@ export function MessageActionsBar({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={onReply}
               disabled={isUpdating || isDeleting}
               aria-label="Reply in thread"
             >
-              <Reply className="h-4 w-4" />
+              <Reply className="size-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top" className="text-xs">
@@ -216,11 +216,11 @@ export function MessageActionsBar({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="size-7"
                     disabled={isUpdating || isDeleting}
                     aria-label="More actions"
                   >
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreHorizontal className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
@@ -240,7 +240,7 @@ export function MessageActionsBar({
                 disabled={isDeleting || isUpdating}
                 onAction={onDelete}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 size-4" />
                 Delete message
               </MessageActionMenuItem>
             </DropdownMenuContent>
@@ -278,10 +278,10 @@ export function ReplyActionsBar({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-6 w-6 p-0 text-muted-foreground"
+            className="size-6 p-0 text-muted-foreground"
             disabled={isUpdating || isDeleting}
           >
-            <MoreHorizontal className="h-4 w-4" />
+            <MoreHorizontal className="size-4" />
             <span className="sr-only">Message actions</span>
           </Button>
         </DropdownMenuTrigger>
@@ -319,7 +319,7 @@ export function MessageEditForm({
   isUpdating,
   editingPreview,
 }: MessageEditFormProps) {
-  const handleChange = useCallback(
+  const onEditContentChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value),
     [onChange]
   )
@@ -328,7 +328,7 @@ export function MessageEditForm({
     <div className="space-y-2">
       <Textarea
         value={value}
-        onChange={handleChange}
+        onChange={onEditContentChange}
         disabled={isUpdating}
         maxLength={2000}
         className="min-h-[88px]"
@@ -344,7 +344,7 @@ export function MessageEditForm({
           onClick={onConfirm}
           disabled={isUpdating || value.trim().length === 0}
         >
-          {isUpdating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {isUpdating ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
           Save changes
         </Button>
         <Button
@@ -448,8 +448,8 @@ export interface MessageAvatarProps {
 
 export function MessageAvatar({ senderName, isReply = false }: MessageAvatarProps) {
   const avatarClass = isReply
-    ? 'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-[10px] font-medium text-primary ring-2 ring-background'
-    : 'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-medium text-primary ring-2 ring-background'
+    ? 'flex size-6 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-[10px] font-medium text-primary ring-2 ring-background'
+    : 'flex size-9 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-medium text-primary ring-2 ring-background'
 
   return <span className={avatarClass}>{getInitials(senderName)}</span>
 }
@@ -478,7 +478,7 @@ export function DeletingOverlay({ isDeleting }: DeletingOverlayProps) {
   return (
     <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/80 backdrop-blur-sm">
       <div className="flex items-center gap-2 text-xs text-destructive">
-        <LoaderCircle className="h-4 w-4 animate-spin" />
+        <LoaderCircle className="size-4 animate-spin" />
         <span>Removing message…</span>
       </div>
     </div>

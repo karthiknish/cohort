@@ -259,7 +259,7 @@ export function TaskKanban({
   if (error) {
     return (
       <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-8 text-center">
-        <TriangleAlert className="mx-auto h-12 w-12 text-destructive" />
+        <TriangleAlert className="mx-auto size-12 text-destructive" />
         <h3 className="mt-4 text-lg font-semibold text-destructive">Unable to load board</h3>
         <p className="mt-1 text-sm text-destructive/80">{error}</p>
         <Button
@@ -268,7 +268,7 @@ export function TaskKanban({
           className="mt-6 border-destructive/20 hover:bg-destructive/10"
           onClick={onRefresh}
         >
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="mr-2 size-4" />
           Try Again
         </Button>
       </div>
@@ -278,8 +278,8 @@ export function TaskKanban({
   if (tasks.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-10 text-center sm:p-12">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-background shadow-sm ring-1 ring-border/60">
-          <ListTodo className="h-8 w-8 text-muted-foreground" aria-hidden />
+        <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-background shadow-sm ring-1 ring-border/60">
+          <ListTodo className="size-8 text-muted-foreground" aria-hidden />
         </div>
         <h3 className="mt-4 text-xl font-semibold tracking-tight text-foreground">No tasks on the board</h3>
         <p className="mx-auto mt-2 max-w-sm text-pretty text-sm leading-relaxed text-muted-foreground">
@@ -353,7 +353,7 @@ export function TaskKanban({
         <div className="flex justify-center pt-2">
           <Button variant="ghost" className="h-10 gap-2 rounded-xl px-6 font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground" onClick={onLoadMore} disabled={loadingMore || loading}>
             {loadingMore ? (
-              <LoaderCircle className="h-4 w-4 animate-spin text-primary" />
+              <LoaderCircle className="size-4 animate-spin text-primary" />
             ) : null}
             {loadingMore ? 'Loading more tasks…' : 'Load more tasks'}
           </Button>
@@ -451,7 +451,7 @@ function KanbanColumn({
     >
       <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-card/80 px-3.5 py-3 backdrop-blur-sm">
         <div className="flex min-w-0 items-center gap-2">
-          <div className={cn('h-2 w-2 shrink-0 rounded-full', statusLaneColors[column.status])} aria-hidden />
+          <div className={cn('size-2 shrink-0 rounded-full', statusLaneColors[column.status])} aria-hidden />
           <span className="truncate text-sm font-semibold text-foreground">{column.label}</span>
         </div>
         <Badge variant="secondary" className="h-6 shrink-0 rounded-full px-2 text-[11px] tabular-nums">
@@ -469,7 +469,7 @@ function KanbanColumn({
             >
               {draggedTask ? (
                 <>
-                  <GripVertical className="mb-1.5 h-5 w-5 text-muted-foreground" aria-hidden />
+                  <GripVertical className="mb-1.5 size-5 text-muted-foreground" aria-hidden />
                   <p className="text-xs font-medium text-muted-foreground">Drop to move here</p>
                 </>
               ) : (

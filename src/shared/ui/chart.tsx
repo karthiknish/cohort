@@ -197,14 +197,13 @@ function ChartTooltipContent({
     >
       {!nestLabel ? tooltipLabel : null}
       <div className="grid gap-1.5">
-        {payload
-          .filter((item) => item.type !== "none")
-          .map((item, index) => {
+        {payload.flatMap((item, index) => {
+            if (item.type === "none") return []
             const key = `${nameKey || item.name || item.dataKey || "value"}`
             const itemConfig = getPayloadConfigFromPayload(config, item, key)
             const indicatorColor = color || item.payload.fill || item.color
 
-            return (
+            return [(
               <div
                 key={item.dataKey}
                 className={cn(
@@ -224,7 +223,7 @@ function ChartTooltipContent({
                           className={cn(
                             "shrink-0 rounded-[2px] border-(--color-border) bg-(--color-bg)",
                             {
-                              "h-2.5 w-2.5": indicator === "dot",
+                              "size-2.5": indicator === "dot",
                               "w-1": indicator === "line",
                               "w-0 border-[1.5px] border-dashed bg-transparent":
                                 indicator === "dashed",
@@ -258,7 +257,7 @@ function ChartTooltipContent({
                   </>
                 )}
               </div>
-            )
+            )]
           })}
       </div>
     </div>
@@ -294,13 +293,12 @@ function ChartLegendContent({
         className
       )}
     >
-      {payload
-        .filter((item) => item.type !== "none")
-        .map((item) => {
+      {payload.flatMap((item) => {
+          if (item.type === "none") return []
           const key = `${nameKey || item.dataKey || "value"}`
           const itemConfig = getPayloadConfigFromPayload(config, item, key)
 
-          return (
+          return [(
             <div
               key={item.value}
               className={cn(
@@ -311,13 +309,13 @@ function ChartLegendContent({
                 <itemConfig.icon />
               ) : (
                 <div
-                  className="h-2 w-2 shrink-0 rounded-[2px]"
+                  className="size-2 shrink-0 rounded-[2px]"
                   style={getChartLegendMarkerStyle(item.color)}
                 />
               )}
               {itemConfig?.label}
             </div>
-          )
+          )]
         })}
     </div>
   )

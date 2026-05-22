@@ -11,6 +11,34 @@ type TargetingFacet = {
   excluded?: boolean
 }
 
+type IncludeFacetKind =
+  | 'ageRange'
+  | 'gender'
+  | 'industry'
+  | 'companySize'
+  | 'title'
+  | 'function'
+  | 'seniority'
+  | 'skill'
+  | 'location'
+  | 'interest'
+  | 'audience'
+
+function resolveIncludeFacetKind(type: string): IncludeFacetKind | null {
+  if (type.includes('ageRange')) return 'ageRange'
+  if (type.includes('gender')) return 'gender'
+  if (type.includes('industry')) return 'industry'
+  if (type.includes('companySize')) return 'companySize'
+  if (type.includes('title')) return 'title'
+  if (type.includes('function')) return 'function'
+  if (type.includes('seniority')) return 'seniority'
+  if (type.includes('skill')) return 'skill'
+  if (type.includes('location')) return 'location'
+  if (type.includes('interest')) return 'interest'
+  if (type.includes('audience')) return 'audience'
+  return null
+}
+
 // =============================================================================
 // FETCH AUDIENCE TARGETING
 // =============================================================================
@@ -107,35 +135,50 @@ export async function fetchLinkedInAudienceTargeting(options: {
 
       const type = facet.type
       const values = facet.values
+      const facetKind = resolveIncludeFacetKind(type)
 
-      if (type.includes('ageRange')) {
-        targeting.ageRanges.push(...values)
-      } else if (type.includes('gender')) {
-        targeting.genders.push(...values)
-      } else if (type.includes('industry')) {
-        values.forEach(v => targeting.industries.push({ id: v, name: v }))
-      } else if (type.includes('companySize')) {
-        targeting.companySizes.push(...values)
-      } else if (type.includes('title')) {
-        values.forEach(v => targeting.jobTitles.push({ id: v, name: v }))
-      } else if (type.includes('function')) {
-        values.forEach(v => targeting.jobFunctions.push({ id: v, name: v }))
-      } else if (type.includes('seniority')) {
-        targeting.jobSeniorities.push(...values)
-      } else if (type.includes('skill')) {
-        values.forEach(v => targeting.skills.push({ id: v, name: v }))
-      } else if (type.includes('location')) {
-        values.forEach(v => targeting.locations.push({ id: v, name: v, type: 'LOCATION' }))
-      } else if (type.includes('interest')) {
-        values.forEach(v => targeting.memberInterests.push({ id: v, name: v }))
-      } else if (type.includes('audience')) {
-        values.forEach(v => targeting.matchedAudiences.push({ id: v, name: v, type: 'matched' }))
+      switch (facetKind) {
+        case 'ageRange':
+          targeting.ageRanges.push(...values)
+          break
+        case 'gender':
+          targeting.genders.push(...values)
+          break
+        case 'industry':
+          values.forEach(v => targeting.industries.push({ id: v, name: v }))
+          break
+        case 'companySize':
+          targeting.companySizes.push(...values)
+          break
+        case 'title':
+          values.forEach(v => targeting.jobTitles.push({ id: v, name: v }))
+          break
+        case 'function':
+          values.forEach(v => targeting.jobFunctions.push({ id: v, name: v }))
+          break
+        case 'seniority':
+          targeting.jobSeniorities.push(...values)
+          break
+        case 'skill':
+          values.forEach(v => targeting.skills.push({ id: v, name: v }))
+          break
+        case 'location':
+          values.forEach(v => targeting.locations.push({ id: v, name: v, type: 'LOCATION' }))
+          break
+        case 'interest':
+          values.forEach(v => targeting.memberInterests.push({ id: v, name: v }))
+          break
+        case 'audience':
+          values.forEach(v => targeting.matchedAudiences.push({ id: v, name: v, type: 'matched' }))
+          break
+        default:
+          break
       }
     }
 
     // Parse exclude criteria
     const excludeFacet = criteria?.exclude?.or
-    if (excludeFacet?.type?.includes('audience') && excludeFacet?.values) {
+    if (excludeFacet?.type && resolveIncludeFacetKind(excludeFacet.type) === 'audience' && excludeFacet?.values) {
       excludeFacet.values.forEach(v => targeting.excludedAudiences.push({ id: v, name: v }))
     }
 

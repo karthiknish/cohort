@@ -110,20 +110,19 @@ export function mapTasksForDashboard(tasks: TaskRecord[]): DashboardTaskItem[] {
     return []
   }
 
-  const withSortKey = tasks
-    .filter((task) => task.status !== 'completed')
-    .map((task) => {
+  const withSortKey = tasks.flatMap((task) => {
+      if (task.status === 'completed') return []
       const { label, timestamp } = deriveDueMetadata(task.dueDate)
       const rawTitle = typeof task.title === 'string' ? task.title.trim() : ''
       const rawClient = typeof task.client === 'string' ? task.client.trim() : ''
-      return {
+      return [{
         id: task.id,
         title: rawTitle.length > 0 ? rawTitle : 'Untitled task',
         dueLabel: label,
         priority: normalizeTaskPriority(task.priority),
         clientName: rawClient.length > 0 ? rawClient : 'Internal',
         sortValue: timestamp,
-      }
+      }]
     })
 
   withSortKey.sort((a, b) => a.sortValue - b.sortValue)

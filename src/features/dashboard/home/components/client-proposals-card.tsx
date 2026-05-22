@@ -35,14 +35,14 @@ function ClientProposalsCardComponent({ proposals, loading }: ClientProposalsCar
                 <div className="flex items-center justify-between">
                     <div className="space-y-1">
                         <CardTitle className="text-base flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-primary" />
+                            <FileText className="size-4 text-primary" />
                             Proposals
                         </CardTitle>
                         <CardDescription>Track and review your strategy plans</CardDescription>
                     </div>
                     <Link href="/dashboard/proposals">
                         <Button variant="ghost" size="sm" className="h-8 text-xs gap-1">
-                            View all <ArrowRight className="h-3 w-3" />
+                            View all <ArrowRight className="size-3" />
                         </Button>
                     </Link>
                 </div>
@@ -69,7 +69,7 @@ function ClientProposalsCardComponent({ proposals, loading }: ClientProposalsCar
                     <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Most Recent</p>
                     {proposals.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed rounded-lg bg-muted/5">
-                            <FileText className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                            <FileText className="size-8 text-muted-foreground/30 mb-2" />
                             <p className="text-sm text-muted-foreground">No proposals found</p>
                         </div>
                     ) : (
@@ -100,7 +100,7 @@ function ClientProposalsCardComponent({ proposals, loading }: ClientProposalsCar
                                 </div>
                                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                                     <span className="flex items-center gap-1" suppressHydrationWarning>
-                                        <Clock className="h-3 w-3" />
+                                        <Clock className="size-3" />
                                         {proposal.updatedAt ? new Date(proposal.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Recently'}
                                     </span>
                                     <span className="h-2 w-px bg-muted-foreground/20" />

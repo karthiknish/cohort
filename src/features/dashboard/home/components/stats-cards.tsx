@@ -98,7 +98,7 @@ const StatsCard = memo(function StatsCard({
             <span className="flex items-center gap-2">
               {stat.urgency && (
                 <span
-                  className={cn('h-2.5 w-2.5 rounded-full', getUrgencyDotClass(stat.urgency))}
+                  className={cn('size-2.5 rounded-full', getUrgencyDotClass(stat.urgency))}
                   aria-hidden="true"
                   title={`${stat.urgency} urgency`}
                 />
@@ -113,12 +113,12 @@ const StatsCard = memo(function StatsCard({
           {!loading && !linkless && stat.href && stat.featureLabel ? (
             <div className="inline-flex items-center gap-1 text-xs font-medium text-primary">
               {stat.featureLabel}
-              <ArrowRight className="h-3.5 w-3.5" />
+              <ArrowRight className="size-3.5" />
             </div>
           ) : null}
         </div>
         <div className="rounded-full bg-info/10 p-3">
-          <Icon className="h-6 w-6 text-primary" />
+          <Icon className="size-6 text-primary" />
         </div>
       </CardContent>
     </Card>

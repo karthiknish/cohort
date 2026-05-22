@@ -12,7 +12,7 @@ export function ClientsPanel() {
   return (
     <div className="space-y-2.5">
       <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/20 px-3 py-2">
-        <Search className="h-3 w-3 text-muted-foreground/40" />
+        <Search className="size-3 text-muted-foreground/40" />
         <span className="text-[10px] text-muted-foreground/40">Search clients…</span>
         <span className="ml-auto rounded border border-border/40 px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground/50">
           12 accounts
@@ -24,7 +24,7 @@ export function ClientsPanel() {
           <div className="flex items-center gap-2.5">
             <div
               className={cn(
-                'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-viewer-chrome',
+                'flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-viewer-chrome',
                 client.color,
               )}
             >

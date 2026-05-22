@@ -3,7 +3,7 @@
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import { AdminQueryErrorAlert } from '../components/admin-query-error-alert'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useReducer } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
@@ -63,7 +63,7 @@ function AdminIssuesToolbarActions({
 }) {
   return (
     <Button type="button" onClick={onRefresh} variant="outline" size="sm" disabled={loading}>
-      <RefreshCw className={cn('mr-2 h-4 w-4', loading && 'animate-spin')} aria-hidden />
+      <RefreshCw className={cn('mr-2 size-4', loading && 'animate-spin')} aria-hidden />
       Refresh
     </Button>
   )
@@ -159,27 +159,66 @@ function ProblemReportRow({
           variant="ghost"
           size="icon"
           onClick={handleDeleteClick}
-          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
           disabled={deletingId === report.id}
           aria-label={`Delete report ${report.title}`}
         >
-          <Trash2 className="h-4 w-4" aria-hidden />
+          <Trash2 className="size-4" aria-hidden />
         </Button>
       </TableCell>
     </TableRow>
   )
 }
 
+type AdminIssuesState = {
+  statusFilter: string
+  searchTerm: string
+  updatingId: string | null
+  deleteTarget: ProblemReport | null
+  deletingId: string | null
+  previewReports: ProblemReport[]
+}
+
+type AdminIssuesAction =
+  | { type: 'setStatusFilter'; value: string }
+  | { type: 'setSearchTerm'; value: string }
+  | { type: 'setUpdatingId'; value: string | null }
+  | { type: 'setDeleteTarget'; value: ProblemReport | null }
+  | { type: 'setDeletingId'; value: string | null }
+  | { type: 'updatePreviewReports'; updater: (current: ProblemReport[]) => ProblemReport[] }
+
+function adminIssuesReducer(state: AdminIssuesState, action: AdminIssuesAction): AdminIssuesState {
+  switch (action.type) {
+    case 'setStatusFilter':
+      return { ...state, statusFilter: action.value }
+    case 'setSearchTerm':
+      return { ...state, searchTerm: action.value }
+    case 'setUpdatingId':
+      return { ...state, updatingId: action.value }
+    case 'setDeleteTarget':
+      return { ...state, deleteTarget: action.value }
+    case 'setDeletingId':
+      return { ...state, deletingId: action.value }
+    case 'updatePreviewReports':
+      return { ...state, previewReports: action.updater(state.previewReports) }
+    default:
+      return state
+  }
+}
+
 export default function AdminIssuesPage() {
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<ProblemReport | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [previewReports, setPreviewReports] = useState<ProblemReport[]>(() => getPreviewAdminProblemReports())
+  const [state, dispatch] = useReducer(adminIssuesReducer, {
+    statusFilter: 'all',
+    searchTerm: '',
+    updatingId: null,
+    deleteTarget: null,
+    deletingId: null,
+    previewReports: getPreviewAdminProblemReports(),
+  })
+  const { statusFilter, searchTerm, updatingId, deleteTarget, deletingId, previewReports } = state
 
   const reports = useQuery(
     api.problemReports.list,
@@ -206,16 +245,19 @@ export default function AdminIssuesPage() {
 
   const handleStatusUpdate = useCallback((id: string, newStatus: string) => {
     if (isPreviewMode) {
-      setPreviewReports((current) => current.map((report) => (
-        report.id === id
-          ? { ...report, status: newStatus, updatedAt: new Date().toISOString() }
-          : report
-      )))
+      dispatch({
+        type: 'updatePreviewReports',
+        updater: (current) => current.map((report) => (
+          report.id === id
+            ? { ...report, status: newStatus, updatedAt: new Date().toISOString() }
+            : report
+        )),
+      })
       toast({ title: 'Preview mode', description: `Sample issue marked as ${newStatus}.` })
       return
     }
 
-    setUpdatingId(id)
+    dispatch({ type: 'setUpdatingId', value: id })
 
     void updateReport({ legacyId: id, status: newStatus })
       .then(() => {
@@ -230,7 +272,7 @@ export default function AdminIssuesPage() {
         })
       })
       .finally(() => {
-        setUpdatingId(null)
+        dispatch({ type: 'setUpdatingId', value: null })
       })
   }, [isPreviewMode, toast, updateReport])
 
@@ -238,18 +280,21 @@ export default function AdminIssuesPage() {
     if (!deleteTarget || deletingId === deleteTarget.id) return
 
     if (isPreviewMode) {
-      setPreviewReports((current) => current.filter((report) => report.id !== deleteTarget.id))
-      setDeleteTarget(null)
+      dispatch({
+        type: 'updatePreviewReports',
+        updater: (current) => current.filter((report) => report.id !== deleteTarget.id),
+      })
+      dispatch({ type: 'setDeleteTarget', value: null })
       toast({ title: 'Preview mode', description: 'Sample issue removed locally for this session.' })
       return
     }
 
-    setDeletingId(deleteTarget.id)
+    dispatch({ type: 'setDeletingId', value: deleteTarget.id })
 
     void removeReport({ legacyId: deleteTarget.id })
       .then(() => {
         toast({ title: 'Report deleted', description: 'The report has been removed.' })
-        setDeleteTarget(null)
+        dispatch({ type: 'setDeleteTarget', value: null })
       })
       .catch((error) => {
         reportConvexFailure({
@@ -260,36 +305,40 @@ export default function AdminIssuesPage() {
         })
       })
       .finally(() => {
-        setDeletingId(null)
+        dispatch({ type: 'setDeletingId', value: null })
       })
   }, [deleteTarget, deletingId, isPreviewMode, removeReport, toast])
 
   const handleRefresh = useCallback(() => {
     if (isPreviewMode) {
-      setPreviewReports(getPreviewAdminProblemReports())
+      dispatch({ type: 'updatePreviewReports', updater: () => getPreviewAdminProblemReports() })
       toast({ title: 'Preview data refreshed', description: 'Showing sample admin issue reports.' })
     }
   }, [isPreviewMode, toast])
 
   const handleSearchTermChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value)
+    dispatch({ type: 'setSearchTerm', value: event.target.value })
   }, [])
 
   const handleDeleteTargetChange = useCallback((report: ProblemReport) => {
-    setDeleteTarget(report)
+    dispatch({ type: 'setDeleteTarget', value: report })
   }, [])
 
   const handleDeleteDialogOpenChange = useCallback(
     (open: boolean) => {
       if (!open && deletingId !== deleteTarget?.id) {
-        setDeleteTarget(null)
+        dispatch({ type: 'setDeleteTarget', value: null })
       }
     },
     [deleteTarget?.id, deletingId]
   )
 
   const handleCancelDelete = useCallback(() => {
-    setDeleteTarget(null)
+    dispatch({ type: 'setDeleteTarget', value: null })
+  }, [])
+
+  const handleStatusFilterChange = useCallback((value: string) => {
+    dispatch({ type: 'setStatusFilter', value })
   }, [])
 
   const filteredReports = filterProblemReports(resolvedReports, {
@@ -313,7 +362,7 @@ export default function AdminIssuesPage() {
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input
                 placeholder="Search by title, user, or email…"
                 className="pl-9"
@@ -321,7 +370,7 @@ export default function AdminIssuesPage() {
                 onChange={handleSearchTermChange}
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
               <SelectTrigger className="w-full md:w-45">
                 <SelectValue placeholder="Status Filter" />
               </SelectTrigger>
@@ -343,12 +392,12 @@ export default function AdminIssuesPage() {
               aria-live="polite"
               aria-busy="true"
             >
-              <LoaderCircle className="mb-4 h-8 w-8 animate-spin" aria-hidden />
+              <LoaderCircle className="mb-4 size-8 animate-spin" aria-hidden />
               <p>Loading reports…</p>
             </div>
           ) : filteredReports.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border rounded-lg border-dashed">
-              <AlertCircle className="mb-4 h-8 w-8 opacity-20" />
+              <AlertCircle className="mb-4 size-8 opacity-20" />
               <p>
                 {reportsQueryError
                   ? reportsQueryError

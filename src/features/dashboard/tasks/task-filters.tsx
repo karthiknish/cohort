@@ -84,7 +84,7 @@ export function TaskFilters({
     <div className={TASKS_THEME.filterBar}>
       <div className="relative min-w-0 flex-1 sm:max-w-md">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden
         />
         <Input
@@ -110,7 +110,7 @@ export function TaskFilters({
               size="sm"
               className="h-9 gap-1.5 border-border/60 bg-background font-normal shadow-sm"
             >
-              <Filter className="h-3.5 w-3.5" aria-hidden />
+              <Filter className="size-3.5" aria-hidden />
               Filters
               {hasActiveFilters ? (
                 <span
@@ -124,7 +124,7 @@ export function TaskFilters({
           </PopoverTrigger>
           <PopoverContent align="end" className="w-72 space-y-3 p-4">
             <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+              <SlidersHorizontal className="size-3.5" aria-hidden />
               Refine
             </p>
             <Select value={selectedStatus} onValueChange={onStatusChange}>
@@ -171,14 +171,14 @@ export function TaskFilters({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 shrink-0"
+                className="size-9 shrink-0"
                 onClick={onSortDirectionToggle}
                 aria-label={sortDirection === 'asc' ? 'Sort descending' : 'Sort ascending'}
               >
                 {sortDirection === 'asc' ? (
-                  <ArrowUp className="h-4 w-4" />
+                  <ArrowUp className="size-4" />
                 ) : (
-                  <ArrowDown className="h-4 w-4" />
+                  <ArrowDown className="size-4" />
                 )}
               </Button>
             </div>

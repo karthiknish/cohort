@@ -27,7 +27,7 @@ export function ProposalsPanel() {
             className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 px-3 py-2.5"
           >
             <div className="flex min-w-0 items-center gap-2">
-              <FileText className="h-3.5 w-3.5 shrink-0 text-primary/40" />
+              <FileText className="size-3.5 shrink-0 text-primary/40" />
               <span className="truncate text-[11px] font-medium text-foreground/80">{p.title}</span>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -41,7 +41,7 @@ export function ProposalsPanel() {
       </div>
 
       <div className="flex items-center gap-2 rounded-xl border border-accent/20 bg-accent/5 px-3 py-2.5">
-        <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent" />
+        <Sparkles className="size-3.5 shrink-0 text-accent" />
         <span className="flex-1 text-[11px] font-medium text-foreground/70">
           AI generating: NovaTech Digital proposal…
         </span>

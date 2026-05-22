@@ -26,7 +26,7 @@ export function ProposalStepIndicatorRail({
             <span
               title={step.title}
               className={cn(
-                'block h-2.5 w-2.5 rounded-full transition-[background-color,box-shadow,transform] duration-200 motion-reduce:transition-none',
+                'block size-2.5 rounded-full transition-[background-color,box-shadow,transform] duration-200 motion-reduce:transition-none',
                 isComplete && 'bg-success ring-1 ring-success/25',
                 isCurrent && 'scale-110 bg-primary ring-[3px] ring-primary/20',
                 !isComplete && !isCurrent && 'bg-muted-foreground/25',

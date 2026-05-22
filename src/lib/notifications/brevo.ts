@@ -169,7 +169,7 @@ export async function sendTransactionalEmail(options: BrevoSendOptions): Promise
 
   let lastError: Error | null = null
 
-  for (let attempt = 0; attempt < RETRY_CONFIG.maxRetries; attempt++) {
+  const attemptSend = async (attempt: number): Promise<{ success: boolean; messageId?: string; error?: Error }> => {
     try {
       const result = await client.sendTransacEmail(sendSmtpEmail)
       console.log(`[brevo] email sent successfully: ${options.subject}`)
@@ -187,13 +187,15 @@ export async function sendTransactionalEmail(options: BrevoSendOptions): Promise
       if (retryable && attempt < RETRY_CONFIG.maxRetries - 1) {
         console.warn(`[brevo] send failed (${statusCode}), retrying...`)
         await sleep(calculateBackoffDelay(attempt))
-        continue
+        return attemptSend(attempt + 1)
       }
     }
+
+    console.error('[brevo] failed to send email after all retries', lastError)
+    return { success: false, error: lastError ?? undefined }
   }
 
-  console.error('[brevo] failed to send email after all retries', lastError)
-  return { success: false, error: lastError ?? undefined }
+  return attemptSend(0)
 }
 
 const EMAIL_RECIPIENT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -202,8 +204,10 @@ function normalizeNotificationRecipients(recipientEmails: string[]): string[] {
   return Array.from(
     new Set(
       recipientEmails
-        .map((recipientEmail) => recipientEmail.trim().toLowerCase())
-        .filter((recipientEmail) => EMAIL_RECIPIENT_REGEX.test(recipientEmail))
+        .flatMap((recipientEmail) => {
+          const normalized = recipientEmail.trim().toLowerCase()
+          return EMAIL_RECIPIENT_REGEX.test(normalized) ? [normalized] : []
+        })
     )
   )
 }

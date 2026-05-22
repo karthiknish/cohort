@@ -17,7 +17,7 @@ export function MeetingsPageSkeleton() {
       </div>
 
       <div className="flex items-center gap-3 rounded-lg border p-4">
-        <Skeleton className="h-5 w-5 shrink-0 rounded-full" />
+        <Skeleton className="size-5 shrink-0 rounded-full" />
         <Skeleton className="h-4 w-56" />
         <Skeleton className="ml-auto h-8 w-24 rounded-md" />
       </div>
@@ -35,7 +35,7 @@ export function MeetingsPageSkeleton() {
             <div className="flex items-center gap-2">
               <div className="flex -space-x-2">
                 {AVATARS.map((avatarId) => (
-                  <Skeleton key={avatarId} className="h-7 w-7 rounded-full ring-2 ring-background" />
+                  <Skeleton key={avatarId} className="size-7 rounded-full ring-2 ring-background" />
                 ))}
               </div>
               <Skeleton className="h-3 w-20" />

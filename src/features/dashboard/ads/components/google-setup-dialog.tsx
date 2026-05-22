@@ -55,8 +55,8 @@ export function GoogleSetupDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-info/10 text-info">
-              <Chrome className="h-5 w-5" />
+            <span className="flex size-10 items-center justify-center rounded-full bg-info/10 text-info">
+              <Chrome className="size-5" />
             </span>
             <div>
               <DialogTitle>Complete Google Ads setup</DialogTitle>
@@ -70,7 +70,7 @@ export function GoogleSetupDialog({
         <div className="space-y-4 py-2">
           {setupMessage ? (
             <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className="size-4" />
               <AlertTitle>Setup issue</AlertTitle>
               <AlertDescription>{setupMessage}</AlertDescription>
             </Alert>
@@ -111,7 +111,7 @@ export function GoogleSetupDialog({
           >
             {loadingAccounts ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 size-4 animate-spin" />
                 Loading…
               </>
             ) : (
@@ -125,7 +125,7 @@ export function GoogleSetupDialog({
           >
             {initializing ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 size-4 animate-spin" />
                 Finishing…
               </>
             ) : (

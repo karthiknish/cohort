@@ -49,7 +49,7 @@ function ProposalStepNavItem({
   const isCurrent = !submitted && index === currentStep
   const canNavigate = !submitted && index <= currentStep
 
-  const handleClick = useCallback(() => {
+  const onGoToProposalStep = useCallback(() => {
     onGoToStep(index)
   }, [index, onGoToStep])
 
@@ -57,7 +57,7 @@ function ProposalStepNavItem({
     <button
       type="button"
       disabled={!canNavigate}
-      onClick={handleClick}
+      onClick={onGoToProposalStep}
       aria-current={isCurrent ? 'step' : undefined}
       className={cn(
         'relative z-[1] flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-[border-color,background-color,box-shadow]',
@@ -68,13 +68,13 @@ function ProposalStepNavItem({
     >
       <span
         className={cn(
-          'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold',
+          'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold',
           isComplete && 'bg-success/15 text-success',
           isCurrent && 'bg-primary text-primary-foreground',
           !isComplete && !isCurrent && 'bg-muted text-muted-foreground',
         )}
       >
-        {isComplete && !isCurrent ? <Check className="h-3.5 w-3.5" aria-hidden /> : index + 1}
+        {isComplete && !isCurrent ? <Check className="size-3.5" aria-hidden /> : index + 1}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium text-foreground">{step.title}</span>

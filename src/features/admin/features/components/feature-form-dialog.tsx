@@ -2,7 +2,7 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useReducer } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useAction, useConvex, useMutation } from 'convex/react'
 import { api } from '/_generated/api'
@@ -75,11 +75,11 @@ function FeatureReferenceRow({
         type="button"
         variant="ghost"
         size="icon"
-        className="h-6 w-6 shrink-0"
+        className="size-6 shrink-0"
         onClick={handleRemove}
         disabled={loading}
       >
-        <X className="h-3 w-3" />
+        <X className="size-3" />
       </Button>
     </div>
   )
@@ -100,6 +100,106 @@ interface FeatureFormDialogProps {
   }) => Promise<void>
 }
 
+type FeatureFormState = {
+  isSubmitting: boolean
+  isGeneratingTitle: boolean
+  isGeneratingDescription: boolean
+  title: string
+  description: string
+  status: FeatureStatus
+  priority: FeaturePriority
+  imageUrl: string | null
+  references: FeatureReference[]
+  newRefUrl: string
+  newRefLabel: string
+}
+
+type FeatureFormAction =
+  | { type: 'reset'; feature?: FeatureItem | null; defaultStatus: FeatureStatus }
+  | { type: 'setIsSubmitting'; value: boolean }
+  | { type: 'setGeneratingTitle'; value: boolean }
+  | { type: 'setGeneratingDescription'; value: boolean }
+  | { type: 'setTitle'; value: string }
+  | { type: 'setDescription'; value: string }
+  | { type: 'setStatus'; value: FeatureStatus }
+  | { type: 'setPriority'; value: FeaturePriority }
+  | { type: 'setImageUrl'; value: string | null }
+  | { type: 'setReferences'; value: FeatureReference[] }
+  | { type: 'addReference'; reference: FeatureReference }
+  | { type: 'removeReference'; index: number }
+  | { type: 'setNewRefUrl'; value: string }
+  | { type: 'setNewRefLabel'; value: string }
+  | { type: 'clearNewReferenceInputs' }
+
+function createEmptyFeatureFormState(defaultStatus: FeatureStatus): FeatureFormState {
+  return {
+    isSubmitting: false,
+    isGeneratingTitle: false,
+    isGeneratingDescription: false,
+    title: '',
+    description: '',
+    status: defaultStatus,
+    priority: 'medium',
+    imageUrl: null,
+    references: [],
+    newRefUrl: '',
+    newRefLabel: '',
+  }
+}
+
+function featureFormReducer(state: FeatureFormState, action: FeatureFormAction): FeatureFormState {
+  switch (action.type) {
+    case 'reset':
+      if (action.feature) {
+        return {
+          ...createEmptyFeatureFormState(action.defaultStatus),
+          title: action.feature.title,
+          description: action.feature.description,
+          status: action.feature.status,
+          priority: action.feature.priority,
+          imageUrl: action.feature.imageUrl ?? null,
+          references: action.feature.references ?? [],
+        }
+      }
+      return createEmptyFeatureFormState(action.defaultStatus)
+    case 'setIsSubmitting':
+      return { ...state, isSubmitting: action.value }
+    case 'setGeneratingTitle':
+      return { ...state, isGeneratingTitle: action.value }
+    case 'setGeneratingDescription':
+      return { ...state, isGeneratingDescription: action.value }
+    case 'setTitle':
+      return { ...state, title: action.value }
+    case 'setDescription':
+      return { ...state, description: action.value }
+    case 'setStatus':
+      return { ...state, status: action.value }
+    case 'setPriority':
+      return { ...state, priority: action.value }
+    case 'setImageUrl':
+      return { ...state, imageUrl: action.value }
+    case 'setReferences':
+      return { ...state, references: action.value }
+    case 'addReference':
+      return {
+        ...state,
+        references: [...state.references, action.reference],
+        newRefUrl: '',
+        newRefLabel: '',
+      }
+    case 'removeReference':
+      return { ...state, references: state.references.filter((_, i) => i !== action.index) }
+    case 'setNewRefUrl':
+      return { ...state, newRefUrl: action.value }
+    case 'setNewRefLabel':
+      return { ...state, newRefLabel: action.value }
+    case 'clearNewReferenceInputs':
+      return { ...state, newRefUrl: '', newRefLabel: '' }
+    default:
+      return state
+  }
+}
+
 export function FeatureFormDialog({
   open,
   onOpenChange,
@@ -111,21 +211,20 @@ export function FeatureFormDialog({
   const { isPreviewMode } = usePreview()
   useAuth()
   const convex = useConvex()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false)
-  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
-
-  // Form state
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [status, setStatus] = useState<FeatureStatus>('backlog')
-  const [priority, setPriority] = useState<FeaturePriority>('medium')
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
-  const [references, setReferences] = useState<FeatureReference[]>([])
-
-  // Reference input state
-  const [newRefUrl, setNewRefUrl] = useState('')
-  const [newRefLabel, setNewRefLabel] = useState('')
+  const [state, dispatch] = useReducer(featureFormReducer, createEmptyFeatureFormState(defaultStatus))
+  const {
+    isSubmitting,
+    isGeneratingTitle,
+    isGeneratingDescription,
+    title,
+    description,
+    status,
+    priority,
+    imageUrl,
+    references,
+    newRefUrl,
+    newRefLabel,
+  } = state
 
   const generateFeatureAi = useAction(api.adminFeaturesAi.generate)
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
@@ -143,23 +242,7 @@ export function FeatureFormDialog({
     }
 
     const frame = requestAnimationFrame(() => {
-      if (feature) {
-        setTitle(feature.title)
-        setDescription(feature.description)
-        setStatus(feature.status)
-        setPriority(feature.priority)
-        setImageUrl(feature.imageUrl ?? null)
-        setReferences(feature.references ?? [])
-      } else {
-        setTitle('')
-        setDescription('')
-        setStatus(defaultStatus)
-        setPriority('medium')
-        setImageUrl(null)
-        setReferences([])
-      }
-      setNewRefUrl('')
-      setNewRefLabel('')
+      dispatch({ type: 'reset', feature, defaultStatus })
     })
 
     return () => {
@@ -211,9 +294,9 @@ export function FeatureFormDialog({
 
   const handleGenerateAI = useCallback((field: 'title' | 'description') => {
     if (field === 'title') {
-      setIsGeneratingTitle(true)
+      dispatch({ type: 'setGeneratingTitle', value: true })
     } else {
-      setIsGeneratingDescription(true)
+      dispatch({ type: 'setGeneratingDescription', value: true })
     }
 
     if (isPreviewMode) {
@@ -221,9 +304,9 @@ export function FeatureFormDialog({
       const previewDescription = description.trim() || `Sample feature brief: tighten the ${status.replace('_', ' ')} workflow, improve stakeholder clarity, and keep the next release visible in the admin roadmap.`
 
       if (field === 'title') {
-        setTitle(previewTitle)
+        dispatch({ type: 'setTitle', value: previewTitle })
       } else {
-        setDescription(previewDescription)
+        dispatch({ type: 'setDescription', value: previewDescription })
       }
 
       toast({
@@ -231,8 +314,8 @@ export function FeatureFormDialog({
         description: `Sample ${field} generated locally for this feature.`,
       })
 
-      setIsGeneratingTitle(false)
-      setIsGeneratingDescription(false)
+      dispatch({ type: 'setGeneratingTitle', value: false })
+      dispatch({ type: 'setGeneratingDescription', value: false })
       return
     }
 
@@ -248,10 +331,10 @@ export function FeatureFormDialog({
 
       .then((data) => {
         if (field === 'title' && data.title) {
-          setTitle(data.title)
+          dispatch({ type: 'setTitle', value: data.title })
           toast({ title: 'Title generated', description: 'AI has suggested a title for your feature.' })
         } else if (field === 'description' && data.description) {
-          setDescription(data.description)
+          dispatch({ type: 'setDescription', value: data.description })
           toast({ title: 'Description generated', description: 'AI has suggested a description for your feature.' })
         }
       })
@@ -264,8 +347,8 @@ export function FeatureFormDialog({
         })
       })
       .finally(() => {
-        setIsGeneratingTitle(false)
-        setIsGeneratingDescription(false)
+        dispatch({ type: 'setGeneratingTitle', value: false })
+        dispatch({ type: 'setGeneratingDescription', value: false })
       })
   }, [description, generateFeatureAi, isPreviewMode, priority, status, title, toast])
 
@@ -284,37 +367,39 @@ export function FeatureFormDialog({
     const parsedUrl = new URL(trimmedUrl)
     const label = newRefLabel.trim() || parsedUrl.hostname
 
-    setReferences((prev) => [...prev, { url: trimmedUrl, label }])
-    setNewRefUrl('')
-    setNewRefLabel('')
+    dispatch({ type: 'addReference', reference: { url: trimmedUrl, label } })
   }, [newRefUrl, newRefLabel])
 
   const handleRemoveReference = useCallback((index: number) => {
-    setReferences((prev) => prev.filter((_, i) => i !== index))
+    dispatch({ type: 'removeReference', index })
   }, [])
 
   const handleTitleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setTitle(event.target.value)
+    dispatch({ type: 'setTitle', value: event.target.value })
   }, [])
 
   const handleDescriptionChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
-    setDescription(event.target.value)
+    dispatch({ type: 'setDescription', value: event.target.value })
   }, [])
 
   const handleStatusChange = useCallback((value: string) => {
-    setStatus(value as FeatureStatus)
+    dispatch({ type: 'setStatus', value: value as FeatureStatus })
   }, [])
 
   const handlePriorityChange = useCallback((value: string) => {
-    setPriority(value as FeaturePriority)
+    dispatch({ type: 'setPriority', value: value as FeaturePriority })
   }, [])
 
   const handleNewRefUrlChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setNewRefUrl(event.target.value)
+    dispatch({ type: 'setNewRefUrl', value: event.target.value })
   }, [])
 
   const handleNewRefLabelChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setNewRefLabel(event.target.value)
+    dispatch({ type: 'setNewRefLabel', value: event.target.value })
+  }, [])
+
+  const handleImageUrlChange = useCallback((value: string | null) => {
+    dispatch({ type: 'setImageUrl', value })
   }, [])
 
   const handleGenerateTitleClick = useCallback(() => {
@@ -341,7 +426,7 @@ export function FeatureFormDialog({
         return
       }
 
-      setIsSubmitting(true)
+      dispatch({ type: 'setIsSubmitting', value: true })
 
       void onSubmit({
           title: title.trim(),
@@ -364,7 +449,7 @@ export function FeatureFormDialog({
         })
         })
         .finally(() => {
-          setIsSubmitting(false)
+          dispatch({ type: 'setIsSubmitting', value: false })
         })
     },
     [title, description, status, priority, imageUrl, references, onSubmit, onOpenChange]
@@ -395,9 +480,9 @@ export function FeatureFormDialog({
                 disabled={isSubmitting || isGeneratingTitle}
               >
                 {isGeneratingTitle ? (
-                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                  <LoaderCircle className="size-3.5 animate-spin" />
                 ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
+                  <Sparkles className="size-3.5" />
                 )}
                 AI Generate
               </Button>
@@ -424,9 +509,9 @@ export function FeatureFormDialog({
                 disabled={isSubmitting || isGeneratingDescription}
               >
                 {isGeneratingDescription ? (
-                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                  <LoaderCircle className="size-3.5 animate-spin" />
                 ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
+                  <Sparkles className="size-3.5" />
                 )}
                 AI Generate
               </Button>
@@ -481,7 +566,7 @@ export function FeatureFormDialog({
             <Label>Feature Image / Mockup</Label>
             <ImageUploader
               value={imageUrl}
-              onChange={setImageUrl}
+              onChange={handleImageUrlChange}
               onUpload={handleUploadImage}
               placeholder="Upload a mockup or screenshot"
               disabled={isSubmitting}
@@ -533,7 +618,7 @@ export function FeatureFormDialog({
                 onClick={handleAddReference}
                 disabled={isSubmitting || !newRefUrl.trim()}
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
               </Button>
             </div>
           </div>
@@ -548,7 +633,7 @@ export function FeatureFormDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && <LoaderCircle className="mr-2 size-4 animate-spin" />}
               {isEditing ? 'Save Changes' : 'Add Feature'}
             </Button>
           </DialogFooter>

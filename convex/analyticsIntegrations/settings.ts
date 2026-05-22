@@ -245,12 +245,22 @@ export const deleteGoogleAnalyticsSyncJobs = mutation({
   handler: async (ctx, args) => {
     await requireWorkspaceAccess(ctx, args.workspaceId)
     const clientId = normalizeClientId(args.clientId ?? null)
-    for (const status of ['queued', 'running', 'error'] as const) {
-      const jobs = await ctx.db.query('adSyncJobs').withIndex('by_workspace_provider_client_status', (q) =>
-        q.eq('workspaceId', args.workspaceId).eq('providerId', 'google-analytics').eq('clientId', clientId).eq('status', status)
-      ).collect()
-      for (const job of jobs) await ctx.db.delete(job._id)
-    }
+    const jobsByStatus = await Promise.all(
+      (['queued', 'running', 'error'] as const).map((status) =>
+        ctx.db
+          .query('adSyncJobs')
+          .withIndex('by_workspace_provider_client_status', (q) =>
+            q
+              .eq('workspaceId', args.workspaceId)
+              .eq('providerId', 'google-analytics')
+              .eq('clientId', clientId)
+              .eq('status', status),
+          )
+          .collect(),
+      ),
+    )
+    const jobs = jobsByStatus.flat()
+    await Promise.all(jobs.map(async (job) => ctx.db.delete(job._id)))
     return { ok: true }
   },
 })

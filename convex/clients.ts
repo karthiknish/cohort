@@ -172,12 +172,13 @@ export const create = zWorkspaceMutation({
       throw Errors.validation.invalidInput('Account manager is required')
     }
 
-    const normalizedTeamMembers = args.teamMembers
-      .map((member) => ({
+    const normalizedTeamMembers = args.teamMembers.flatMap((member) => {
+      const normalized = {
         name: member.name.trim(),
         role: member.role.trim() || 'Contributor',
-      }))
-      .filter((member) => member.name.length > 0)
+      }
+      return normalized.name.length > 0 ? [normalized] : []
+    })
 
     if (!normalizedTeamMembers.some((member) => member.name.toLowerCase() === normalizedAccountManager.toLowerCase())) {
       normalizedTeamMembers.unshift({ name: normalizedAccountManager, role: 'Account Manager' })
@@ -368,58 +369,61 @@ export const getClientSummaries = zWorkspaceQueryActive({
     const database = ctx.db
     const results = []
 
-    for (const client of clients) {
-      const clientId = client.legacyId
+    const clientSummaries = await Promise.all(
+      clients.map(async (client) => {
+        const clientId = client.legacyId
 
-      // Open tasks: status not in ['completed', 'archived']
-      const allClientTasks = await database
-        .query('tasks')
-        .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
-          q.eq('workspaceId', args.workspaceId).eq('clientId', clientId)
-        )
-        .collect()
+        // Open tasks: status not in ['completed', 'archived']
+        const allClientTasks = await database
+          .query('tasks')
+          .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
+            q.eq('workspaceId', args.workspaceId).eq('clientId', clientId),
+          )
+          .collect()
 
-      const openTaskCount = allClientTasks.filter(
-        (t) => t.status !== 'completed' && t.status !== 'archived' && t.deletedAtMs == null
-      ).length
+        const openTaskCount = allClientTasks.filter(
+          (t) => t.status !== 'completed' && t.status !== 'archived' && t.deletedAtMs == null,
+        ).length
 
-      // Active projects
-      const activeProjects = await database
-        .query('projects')
-        .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
-          q.eq('workspaceId', args.workspaceId).eq('clientId', clientId)
-        )
-        .filter((q) => q.eq(q.field('status'), 'active'))
-        .collect()
+        // Active projects
+        const activeProjects = await database
+          .query('projects')
+          .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
+            q.eq('workspaceId', args.workspaceId).eq('clientId', clientId),
+          )
+          .filter((q) => q.eq(q.field('status'), 'active'))
+          .collect()
 
-      const activeProjectCount = activeProjects.filter((p) => p.deletedAtMs == null).length
+        const activeProjectCount = activeProjects.filter((p) => p.deletedAtMs == null).length
 
-      // Next upcoming meeting (scheduled or in_progress, future startTimeMs)
-      const upcomingMeetings = await database
-        .query('meetings')
-        .withIndex('by_workspace_client_startTimeMs', (q) =>
-          q.eq('workspaceId', args.workspaceId).eq('clientId', clientId).gte('startTimeMs', now)
-        )
-        .order('asc')
-        .take(1)
+        // Next upcoming meeting (scheduled or in_progress, future startTimeMs)
+        const upcomingMeetings = await database
+          .query('meetings')
+          .withIndex('by_workspace_client_startTimeMs', (q) =>
+            q.eq('workspaceId', args.workspaceId).eq('clientId', clientId).gte('startTimeMs', now),
+          )
+          .order('asc')
+          .take(1)
 
-      const firstMeeting = upcomingMeetings[0]
-      const nextMeetingMs =
-        firstMeeting !== undefined &&
-        (firstMeeting.status === 'scheduled' || firstMeeting.status === 'in_progress')
-          ? firstMeeting.startTimeMs
-          : null
+        const firstMeeting = upcomingMeetings[0]
+        const nextMeetingMs =
+          firstMeeting !== undefined &&
+          (firstMeeting.status === 'scheduled' || firstMeeting.status === 'in_progress')
+            ? firstMeeting.startTimeMs
+            : null
 
-      results.push({
-        legacyId: clientId,
-        name: client.name,
-        accountManager: client.accountManager,
-        teamMembersCount: client.teamMembers.length,
-        openTaskCount,
-        activeProjectCount,
-        nextMeetingMs,
-      })
-    }
+        return {
+          legacyId: clientId,
+          name: client.name,
+          accountManager: client.accountManager,
+          teamMembersCount: client.teamMembers.length,
+          openTaskCount,
+          activeProjectCount,
+          nextMeetingMs,
+        }
+      }),
+    )
+    results.push(...clientSummaries)
 
     return results
   },

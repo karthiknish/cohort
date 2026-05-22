@@ -139,7 +139,10 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
     const metricsPayload = asRecord(unwrapConvexResult(metricsRaw)) ?? asRecord(metricsRaw) ?? {}
     const metricsSummary = asRecord(metricsPayload.summary) ?? {}
     const metricsRows = Array.isArray(metricsPayload.metrics)
-      ? metricsPayload.metrics.map((item) => asRecord(item)).filter((item): item is Record<string, unknown> => item !== null)
+      ? metricsPayload.metrics.flatMap((item) => {
+          const record = asRecord(item)
+          return record !== null ? [record] : []
+        })
       : []
 
     const previousSummaryPayload = previousWindow
@@ -155,7 +158,10 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
       : null
     const previousSummary = asRecord(previousSummaryPayload?.summary) ?? {}
     const previousMetricsRows = Array.isArray(previousSummaryPayload?.metrics)
-      ? previousSummaryPayload.metrics.map((item) => asRecord(item)).filter((item): item is Record<string, unknown> => item !== null)
+      ? previousSummaryPayload.metrics.flatMap((item) => {
+          const record = asRecord(item)
+          return record !== null ? [record] : []
+        })
       : []
 
     let campaignCounts: { total: number | null; active: number | null; paused: number | null } = {
@@ -173,7 +179,10 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
         })
 
         return Array.isArray(campaignsRaw)
-          ? campaignsRaw.map((item) => asRecord(item)).filter((item): item is Record<string, unknown> => item !== null)
+          ? campaignsRaw.flatMap((item) => {
+              const record = asRecord(item)
+              return record !== null ? [record] : []
+            })
           : []
       }),
     )
@@ -206,7 +215,9 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
     const matchingCampaigns = normalizedCampaignQuery
       ? allCampaigns.filter((campaign) => matchesCampaignQuery(campaign.name, normalizedCampaignQuery))
       : []
-    const matchingCampaignIds = new Set(matchingCampaigns.map((campaign) => campaign.id).filter((id): id is string => Boolean(id)))
+    const matchingCampaignIds = new Set(
+      matchingCampaigns.flatMap((campaign) => (campaign.id ? [campaign.id] : [])),
+    )
 
     const filteredMetricsRows = normalizedCampaignQuery
       ? metricsRows.filter((row) => {

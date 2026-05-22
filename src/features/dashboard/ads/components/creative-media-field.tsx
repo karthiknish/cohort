@@ -82,6 +82,17 @@ export function CreativeMediaField({
     setShowUrlField((value) => !value)
   }, [])
 
+  const handlePreviewError = useCallback(() => {
+    setPreviewError(true)
+  }, [])
+
+  const handleImageUrlChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onImageUrlChange(event.target.value)
+    },
+    [onImageUrlChange],
+  )
+
   return (
     <div className="space-y-3">
       <input
@@ -103,11 +114,11 @@ export function CreativeMediaField({
               unoptimized
               sizes="(max-width: 640px) 100vw, 480px"
               className="object-cover"
-              onError={() => setPreviewError(true)}
+              onError={handlePreviewError}
             />
             {uploading ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/75 backdrop-blur-sm">
-                <Loader2 className="h-7 w-7 animate-spin text-primary" aria-hidden />
+                <Loader2 className="size-7 animate-spin text-primary" aria-hidden />
                 <p className="text-xs font-medium text-foreground">
                   {isVideo ? 'Uploading video to Meta…' : 'Uploading to Meta…'}
                 </p>
@@ -118,7 +129,7 @@ export function CreativeMediaField({
             <div className="flex items-center gap-2 text-xs">
               {ready ? (
                 <>
-                  <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
+                  <CheckCircle2 className="size-4 text-success" aria-hidden />
                   <span className="font-medium text-foreground">Ready for ad creation</span>
                 </>
               ) : (
@@ -134,12 +145,12 @@ export function CreativeMediaField({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  className="size-8 text-muted-foreground hover:text-destructive"
                   onClick={onClear}
                   disabled={disabled || uploading}
                   aria-label="Remove image"
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden />
+                  <Trash2 className="size-4" aria-hidden />
                 </Button>
               ) : null}
             </div>
@@ -162,10 +173,10 @@ export function CreativeMediaField({
           )}
         >
           {uploading ? (
-            <Loader2 className="h-9 w-9 animate-spin text-primary" aria-hidden />
+            <Loader2 className="size-9 animate-spin text-primary" aria-hidden />
           ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
-              <Upload className="h-6 w-6 text-primary" aria-hidden />
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
+              <Upload className="size-6 text-primary" aria-hidden />
             </div>
           )}
           <div className="space-y-1">
@@ -213,7 +224,7 @@ export function CreativeMediaField({
             type="url"
             placeholder="https://cdn.example.com/hero.jpg"
             value={imageUrl}
-            onChange={(event) => onImageUrlChange(event.target.value)}
+            onChange={handleImageUrlChange}
             disabled={disabled || uploading}
           />
           <p className="text-[11px] text-muted-foreground">

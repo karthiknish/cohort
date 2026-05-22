@@ -60,7 +60,7 @@ function DependencyLink({ task, type, taskId, onRemove, readonly }: {
 
   return (
     <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/40 border border-border group">
-      <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      <Link2 className="size-3.5 text-muted-foreground shrink-0" />
       <span className="text-sm truncate font-medium">{task.title}</span>
       <Badge
         variant="outline"
@@ -75,7 +75,7 @@ function DependencyLink({ task, type, taskId, onRemove, readonly }: {
           onClick={handleRemove}
           className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive motion-chromatic"
         >
-          <Unlink className="h-3 w-3" />
+          <Unlink className="size-3" />
         </button>
       )}
     </div>
@@ -120,10 +120,10 @@ export function TaskDependencyManager({
   )
 
   // Get linked tasks
-  const linkedTasks = (task.dependencies || []).map(dep => {
+  const linkedTasks = (task.dependencies || []).flatMap((dep) => {
     const linkedTask = allTasks.find(t => t.id === dep.taskId)
-    return { ...dep, task: linkedTask }
-  }).filter(dep => dep.task)
+    return linkedTask ? [{ ...dep, task: linkedTask }] : []
+  })
 
   // Available tasks to link (exclude current task and already linked)
   const linkedTaskIds = new Set((task.dependencies || []).map(d => d.taskId))
@@ -158,7 +158,7 @@ export function TaskDependencyManager({
             <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7 gap-1">
-                  <Plus className="h-3 w-3" />
+                  <Plus className="size-3" />
                   Link Task
                 </Button>
               </PopoverTrigger>
@@ -221,7 +221,7 @@ export function TaskDependencyManager({
 
         {hasCircularDependency && (
           <div className="flex items-center gap-2 rounded-md bg-warning/10 px-2 py-1 text-xs text-warning">
-            <AlertTriangle className="h-3.5 w-3.5" />
+            <AlertTriangle className="size-3.5" />
             <span>Circular dependency detected</span>
           </div>
         )}
@@ -253,14 +253,16 @@ export function TaskDependencyManager({
             Dependency Map
           </h5>
           <div className="text-sm space-y-1">
-            {linkedTasks
-              .filter(dep => dep.type === 'child')
-              .map((dep) => dep.task && (
+            {linkedTasks.flatMap((dep) =>
+              dep.type === 'child' && dep.task
+                ? [(
                 <div key={dep.taskId} className="flex items-center gap-1 text-muted-foreground">
-                  <ChevronRight className="h-3 w-3" />
+                  <ChevronRight className="size-3" />
                   <span className="truncate">{dep.task.title}</span>
                 </div>
-              ))}
+              )]
+                : [],
+            )}
           </div>
         </div>
       )}
@@ -307,7 +309,7 @@ export function SubtaskCreator({
         onClick={handleExpand}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
       >
-        <Plus className="h-4 w-4" />
+        <Plus className="size-4" />
         Add subtask
       </button>
     )
@@ -348,12 +350,12 @@ function TaskLinkResultButton({
   className?: string
   children: ReactNode
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectDependencyTask = useCallback(() => {
     onSelect(taskId)
   }, [onSelect, taskId])
 
   return (
-    <button type="button" onClick={handleClick} className={className}>
+    <button type="button" onClick={onSelectDependencyTask} className={className}>
       {children}
     </button>
   )

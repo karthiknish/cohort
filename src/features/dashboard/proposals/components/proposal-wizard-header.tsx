@@ -16,12 +16,12 @@ export function ProposalWizardHeader({ clientName }: ProposalWizardHeaderProps) 
     <FadeIn>
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <div className={cn(DASHBOARD_THEME.icons.container, 'h-11 w-11 shrink-0')}>
-            <ClipboardList className="h-5 w-5" aria-hidden />
+          <div className={cn(DASHBOARD_THEME.icons.container, 'size-11 shrink-0')}>
+            <ClipboardList className="size-5" aria-hidden />
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <Sparkles className="mr-1 inline h-3.5 w-3.5 text-primary" aria-hidden />
+              <Sparkles className="mr-1 inline size-3.5 text-primary" aria-hidden />
               Proposal studio
             </span>
             {clientName ? (

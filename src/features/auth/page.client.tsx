@@ -3,7 +3,7 @@
 import { notifyFailure } from '@/lib/notifications'
 import { LoaderCircle } from 'lucide-react'
 import { useRouter, redirect } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useReducer } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 
 import { AuthCard } from '@/features/auth/components/auth-card'
@@ -48,6 +48,92 @@ function getInitialTab(): 'signin' | 'signup' {
   return stored === 'signup' ? 'signup' : 'signin'
 }
 
+type SignInFormData = { email: string; password: string }
+type SignUpFormData = {
+  email: string
+  password: string
+  confirmPassword: string
+  displayName: string
+}
+
+type AuthPageState = {
+  activeTab: 'signin' | 'signup'
+  showPassword: boolean
+  showConfirmPassword: boolean
+  rememberMe: boolean
+  isSubmitting: boolean
+  emailError: string | null
+  signInData: SignInFormData
+  signUpData: SignUpFormData
+}
+
+type AuthPageAction =
+  | { type: 'hydrate'; activeTab: 'signin' | 'signup'; rememberMe: boolean; signInEmail: string }
+  | { type: 'setActiveTab'; value: 'signin' | 'signup' }
+  | { type: 'toggleShowPassword' }
+  | { type: 'toggleShowConfirmPassword' }
+  | { type: 'setRememberMe'; value: boolean }
+  | { type: 'setIsSubmitting'; value: boolean }
+  | { type: 'setEmailError'; value: string | null }
+  | { type: 'setSignInField'; name: keyof SignInFormData; value: string }
+  | { type: 'setSignUpField'; name: keyof SignUpFormData; value: string }
+
+const initialSignUpData: SignUpFormData = {
+  email: '',
+  password: '',
+  confirmPassword: '',
+  displayName: '',
+}
+
+const initialAuthPageState: AuthPageState = {
+  activeTab: 'signin',
+  showPassword: false,
+  showConfirmPassword: false,
+  rememberMe: false,
+  isSubmitting: false,
+  emailError: null,
+  signInData: { email: '', password: '' },
+  signUpData: initialSignUpData,
+}
+
+function authPageReducer(state: AuthPageState, action: AuthPageAction): AuthPageState {
+  switch (action.type) {
+    case 'hydrate':
+      return {
+        ...state,
+        activeTab: action.activeTab,
+        rememberMe: action.rememberMe,
+        signInData: { email: action.signInEmail, password: '' },
+      }
+    case 'setActiveTab':
+      return { ...state, activeTab: action.value }
+    case 'toggleShowPassword':
+      return { ...state, showPassword: !state.showPassword }
+    case 'toggleShowConfirmPassword':
+      return { ...state, showConfirmPassword: !state.showConfirmPassword }
+    case 'setRememberMe':
+      return { ...state, rememberMe: action.value }
+    case 'setIsSubmitting':
+      return { ...state, isSubmitting: action.value }
+    case 'setEmailError':
+      return { ...state, emailError: action.value }
+    case 'setSignInField':
+      return {
+        ...state,
+        signInData: { ...state.signInData, [action.name]: action.value },
+        emailError: action.name === 'email' ? null : state.emailError,
+      }
+    case 'setSignUpField':
+      return {
+        ...state,
+        signUpData: { ...state.signUpData, [action.name]: action.value },
+        emailError: action.name === 'email' ? null : state.emailError,
+      }
+    default:
+      return state
+  }
+}
+
 function resolveDashboardDestination(): string {
   if (typeof window !== 'undefined') {
     const lastTab = window.localStorage.getItem('cohorts_last_tab')
@@ -63,19 +149,17 @@ function resolveDashboardDestination(): string {
 }
 
 function HomeAuthPageContent() {
-  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin')
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [emailError, setEmailError] = useState<string | null>(null)
-  const [signInData, setSignInData] = useState({ email: '', password: '' })
-  const [signUpData, setSignUpData] = useState(() => ({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    displayName: '',
-  }))
+  const [state, dispatch] = useReducer(authPageReducer, initialAuthPageState)
+  const {
+    activeTab,
+    showPassword,
+    showConfirmPassword,
+    rememberMe,
+    isSubmitting,
+    emailError,
+    signInData,
+    signUpData,
+  } = state
 
   const { data: session, isPending: sessionPending } = authClient.useSession()
   const user = session?.user ?? null
@@ -85,11 +169,11 @@ function HomeAuthPageContent() {
   const { signIn, signUp } = useAuth()
 
   useEffect(() => {
-    setActiveTab(getInitialTab())
-    setRememberMe(Boolean(window.localStorage.getItem(REMEMBER_ME_KEY)))
-    setSignInData({
-      email: window.localStorage.getItem(REMEMBER_ME_KEY) ?? '',
-      password: '',
+    dispatch({
+      type: 'hydrate',
+      activeTab: getInitialTab(),
+      rememberMe: Boolean(window.localStorage.getItem(REMEMBER_ME_KEY)),
+      signInEmail: window.localStorage.getItem(REMEMBER_ME_KEY) ?? '',
     })
   }, [])
 
@@ -140,7 +224,7 @@ function HomeAuthPageContent() {
 
   const handleTabChange = useCallback((value: string) => {
     const nextTab = value === 'signup' ? 'signup' : 'signin'
-    setActiveTab(nextTab)
+    dispatch({ type: 'setActiveTab', value: nextTab })
 
     if (typeof window === 'undefined') {
       return
@@ -165,14 +249,14 @@ function HomeAuthPageContent() {
   const handleSubmit = useCallback(
     (mode: 'signin' | 'signup') => async (event: FormEvent) => {
       event.preventDefault()
-      setIsSubmitting(true)
-      setEmailError(null)
+      dispatch({ type: 'setIsSubmitting', value: true })
+      dispatch({ type: 'setEmailError', value: null })
 
       await Promise.resolve()
         .then(async () => {
           if (mode === 'signup') {
             if (!validateEmail(signUpData.email)) {
-              setEmailError('Please enter a valid email address')
+              dispatch({ type: 'setEmailError', value: 'Please enter a valid email address' })
               return
             }
 
@@ -209,7 +293,7 @@ function HomeAuthPageContent() {
             }
           } else {
             if (!validateEmail(signInData.email)) {
-              setEmailError('Please enter a valid email address')
+              dispatch({ type: 'setEmailError', value: 'Please enter a valid email address' })
               return
             }
 
@@ -241,14 +325,14 @@ function HomeAuthPageContent() {
           })
         })
         .finally(() => {
-          setIsSubmitting(false)
+          dispatch({ type: 'setIsSubmitting', value: false })
         })
     },
     [passwordStrength.score, rememberMe, resolvePostAuthDestination, push, signIn, signInData, signUp, signUpData, toast],
   )
 
   const handleGoogleSignIn = useCallback(async () => {
-    setIsSubmitting(true)
+    dispatch({ type: 'setIsSubmitting', value: true })
 
     try {
       await startGoogleOAuthSignIn(resolvePostAuthDestination())
@@ -258,44 +342,30 @@ function HomeAuthPageContent() {
         title: 'Google sign-in failed',
         description: getFriendlyAuthErrorMessage(error),
       })
-      setIsSubmitting(false)
+      dispatch({ type: 'setIsSubmitting', value: false })
     }
   }, [resolvePostAuthDestination, toast])
 
   const handleSignInChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target
-    setSignInData((previous) => ({
-      ...previous,
-      [name]: value,
-    }))
-
-    if (name === 'email' && emailError) {
-      setEmailError(null)
-    }
-  }, [emailError])
+    dispatch({ type: 'setSignInField', name: name as keyof SignInFormData, value })
+  }, [])
 
   const handleSignUpChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target
-    setSignUpData((previous) => ({
-      ...previous,
-      [name]: value,
-    }))
-
-    if (name === 'email' && emailError) {
-      setEmailError(null)
-    }
-  }, [emailError])
+    dispatch({ type: 'setSignUpField', name: name as keyof SignUpFormData, value })
+  }, [])
 
   const handleRememberMeChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setRememberMe(event.target.checked)
+    dispatch({ type: 'setRememberMe', value: event.target.checked })
   }, [])
 
   const handleToggleShowPassword = useCallback(() => {
-    setShowPassword((previous) => !previous)
+    dispatch({ type: 'toggleShowPassword' })
   }, [])
 
   const handleToggleShowConfirmPassword = useCallback(() => {
-    setShowConfirmPassword((previous) => !previous)
+    dispatch({ type: 'toggleShowConfirmPassword' })
   }, [])
 
   const handleSubmitSignIn = useCallback((event: FormEvent) => {

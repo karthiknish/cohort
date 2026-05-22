@@ -24,7 +24,7 @@ const Progress = ({ className, value, ref, ...props }: ProgressProps) => (
     {...props}
   >
     <ProgressPrimitive.Indicator
-      className={cn('h-full w-full flex-1 bg-primary', interactiveTransitionClass)}
+      className={cn('size-full flex-1 bg-primary', interactiveTransitionClass)}
       style={getProgressTransformStyle(value)}
     />
   </ProgressPrimitive.Root>

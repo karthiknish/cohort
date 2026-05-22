@@ -126,11 +126,17 @@ export const invalidate = internalMutation({
       const deleteEntries = async (entries: Array<{ _id: Id<'serverCache'>; key: string }>) => {
         let nextContinuation: string | null = null
 
-        for (const entry of entries.slice(0, limit)) {
+        const slice = entries.slice(0, limit)
+        const deleteAt = async (index: number): Promise<void> => {
+          const entry = slice[index]
+          if (!entry) return
           await ctx.db.delete(entry._id)
           deleted += 1
           nextContinuation = entry.key
+          await deleteAt(index + 1)
         }
+
+        await deleteAt(0)
 
         return nextContinuation
       }

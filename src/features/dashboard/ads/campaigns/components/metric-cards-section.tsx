@@ -21,6 +21,10 @@ import {
 } from '@/shared/ui/collapsible'
 import { MetricCardPreview } from '@/shared/ui/hover-preview'
 import { normalizeCurrencyCode } from '@/constants/currencies'
+import {
+  EN_US_NUMBER_MAX_2_FORMATTER,
+  formatEnUsCurrencyMaxFractionDigits,
+} from '@/lib/intl/formatters'
 
 interface CalculatedMetrics {
   spend: number
@@ -46,24 +50,11 @@ interface MetricCardsSectionProps {
 }
 
 function formatCurrency(value: number, currency: string = 'USD'): string {
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-    }).format(value)
-  } catch {
-    // Fallback if currency code is invalid
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(value)
-  }
+  return formatEnUsCurrencyMaxFractionDigits(value, currency, 2)
 }
 
 function formatNumber(value: number): string {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value)
+  return EN_US_NUMBER_MAX_2_FORMATTER.format(value)
 }
 
 function formatPercent(value: number): string {
@@ -119,7 +110,7 @@ function MetricCard({
                   : 'bg-primary/10 text-primary ring-primary/15',
             )}
           >
-            <Icon className="h-5 w-5" aria-hidden />
+            <Icon className="size-5" aria-hidden />
           </div>
         </div>
       )}
@@ -244,7 +235,7 @@ export function MetricCardsSection({
             className="w-full gap-1.5 rounded-xl text-muted-foreground hover:text-foreground"
           >
             <ChevronDown
-              className={cn('h-4 w-4 transition-transform', moreOpen && 'rotate-180')}
+              className={cn('size-4 transition-transform', moreOpen && 'rotate-180')}
               aria-hidden
             />
             {moreOpen ? 'Hide additional metrics' : 'Show additional metrics'}

@@ -71,7 +71,7 @@ export function ProposalPageActions(props: {
         disabled={!selectedClientId || isCreatingDraft}
         className={cn(getButtonClasses('primary'), 'w-full shrink-0 shadow-sm sm:w-auto')}
       >
-        <Plus className="mr-2 h-4 w-4" />
+        <Plus className="mr-2 size-4" />
         New proposal
       </Button>
     </div>
@@ -95,7 +95,7 @@ export function ProposalStartStateCard(props: {
     return (
       <Alert className="rounded-2xl border border-dashed border-muted-foreground/25 bg-muted/15">
         <AlertTitle className="flex items-center gap-2 text-base">
-          <FileText className="h-4 w-4 text-primary" aria-hidden />
+          <FileText className="size-4 text-primary" aria-hidden />
           Shared proposals
         </AlertTitle>
         <AlertDescription className="text-sm leading-relaxed">
@@ -108,7 +108,7 @@ export function ProposalStartStateCard(props: {
   return (
     <Alert className="rounded-2xl border border-dashed border-warning/25 bg-warning/5">
       <AlertTitle className="flex items-center gap-2 text-base">
-        <FileText className="h-4 w-4 text-warning" aria-hidden />
+        <FileText className="size-4 text-warning" aria-hidden />
         Select a client to create proposals
       </AlertTitle>
       <AlertDescription className="text-sm leading-relaxed">{blockedHint}</AlertDescription>
@@ -140,7 +140,7 @@ export function ProposalPreviewModeSection(props: {
       <div className="flex items-center justify-between">
         <ProposalWizardHeader />
         <Button disabled className={cn(getButtonClasses('primary'), 'shrink-0 opacity-70')}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 size-4" />
           Preview Mode
         </Button>
       </div>
@@ -262,7 +262,7 @@ export function ProposalBuilderOverlay(props: {
 
   const builderBody = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-linear-to-b from-muted/15 via-background to-background supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border/50 bg-background/90 px-4 py-4 backdrop-blur-md sm:items-center sm:px-6">
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border/50 bg-background/90 p-4 backdrop-blur-md sm:items-center sm:px-6">
           <div className="min-w-0 space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Proposal builder</p>
             <h2 className="text-balance text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
@@ -283,12 +283,12 @@ export function ProposalBuilderOverlay(props: {
             className="shrink-0 gap-2 rounded-full border-muted-foreground/25"
             aria-label={isSubmitting ? 'Close when generation finishes' : 'Close proposal builder'}
           >
-            <X className="h-4 w-4" aria-hidden />
+            <X className="size-4" aria-hidden />
             <span className="hidden sm:inline">Close</span>
             <Kbd className="hidden sm:inline">Esc</Kbd>
           </Button>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:px-6 sm:py-5">
           <div className="mb-4">
             <ProposalBuilderJourneyBar
               isSubmitting={isSubmitting}

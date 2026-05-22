@@ -116,9 +116,9 @@ function ProjectCardComponent({
                     className={cn(STATUS_CLASSES[project.status], 'h-6 gap-1 border px-2 py-0')}
                   >
                     {isPendingUpdate ? (
-                      <LoaderCircle className="h-3 w-3 animate-spin" />
+                      <LoaderCircle className="size-3 animate-spin" />
                     ) : (
-                      <StatusIcon className="h-3 w-3" />
+                      <StatusIcon className="size-3" />
                     )}
                     <span className="text-[10px] font-bold uppercase tracking-wider">
                       {formatStatusLabel(project.status)}
@@ -149,11 +149,11 @@ function ProjectCardComponent({
           {!compact ? (
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5" />
+                <Calendar className="size-3.5" />
                 {formatDateRange(project.startDate, project.endDate)}
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <MessageSquare className="h-3.5 w-3.5" />
+                <MessageSquare className="size-3.5" />
                 {project.recentActivityAt ? formatRelativeTime(project.recentActivityAt) : 'No recent chat'}
               </span>
             </div>

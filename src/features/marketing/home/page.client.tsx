@@ -61,7 +61,7 @@ function HomePageContent() {
         <div className="relative z-10 mx-auto max-w-6xl">
           <div className="mx-auto max-w-4xl">
             <div className="mb-8 inline-flex items-center rounded-full border border-primary/20 bg-primary/[0.08] px-4 py-1.5 text-sm font-medium text-foreground shadow-sm shadow-primary/5 backdrop-blur-md">
-              <span className="mr-2 h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgb(from_var(--primary)_r_g_b_/_0.45)]" aria-hidden="true" />
+              <span className="mr-2 size-2 rounded-full bg-primary shadow-[0_0_8px_rgb(from_var(--primary)_r_g_b_/_0.45)]" aria-hidden="true" />
               Now in public beta
             </div>
 

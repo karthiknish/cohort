@@ -23,13 +23,12 @@ export function parseAttendeeInput(value: string): string[] {
     new Set(
       value
         .split(/[\n,;]/)
-        .map((entry) => {
+        .flatMap((entry) => {
           const trimmed = entry.trim()
           const angleMatch = trimmed.match(/<([^>]+)>/)
           const candidate = normalizeEmail(angleMatch?.[1] ?? trimmed)
-          return EMAIL_REGEX.test(candidate) ? candidate : null
+          return EMAIL_REGEX.test(candidate) ? [candidate] : []
         })
-        .filter((entry): entry is string => Boolean(entry))
     )
   )
 }
@@ -39,10 +38,11 @@ export function sanitizeMeetingParticipantEmails(attendeeEmails: string[], organ
 
   return Array.from(
     new Set(
-      attendeeEmails
-        .map(normalizeEmail)
-        .filter((email) => EMAIL_REGEX.test(email))
-        .filter((email) => email !== organizer)
+      attendeeEmails.flatMap((email) => {
+          const normalized = normalizeEmail(email)
+          if (!EMAIL_REGEX.test(normalized) || normalized === organizer) return []
+          return [normalized]
+        })
     )
   )
 }

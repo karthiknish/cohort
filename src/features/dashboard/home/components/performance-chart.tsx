@@ -14,6 +14,7 @@ import {
 } from '@/shared/ui/tooltip'
 import type { ChartConfig } from '@/shared/ui/chart'
 import { CHART_COLORS } from '@/lib/colors'
+import { formatEnUsCurrencyMaxFractionDigits } from '@/lib/intl/formatters'
 
 interface MetricRecord {
   date: string
@@ -80,35 +81,11 @@ const ADS_CONNECTED_NO_METRICS_COPY = {
 } as const
 
 function formatCurrencyValue(value: number, currency: string = 'USD'): string {
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(value)
-  } catch {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value)
-  }
+  return formatEnUsCurrencyMaxFractionDigits(value, currency, 0)
 }
 
 function formatCurrencyValueFull(value: number, currency: string = 'USD'): string {
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 2,
-    }).format(value)
-  } catch {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(value)
-  }
+  return formatEnUsCurrencyMaxFractionDigits(value, currency, 2)
 }
 
 import {
@@ -214,7 +191,7 @@ export const PerformanceChart = memo(function PerformanceChart({
             <span className="text-sm font-medium text-muted-foreground">Performance Overview</span>
           </div>
         ) : null}
-        <Skeleton className="h-full w-full" />
+        <Skeleton className="size-full" />
       </div>
     )
   }
@@ -249,7 +226,7 @@ export const PerformanceChart = memo(function PerformanceChart({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
+                  <Info className="size-3.5 cursor-help text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p><strong>Revenue:</strong> Total income generated from campaign conversions.</p>
@@ -272,7 +249,7 @@ export const PerformanceChart = memo(function PerformanceChart({
         </div>
       ) : null}
       <div className="min-h-0 flex-1">
-        <ChartContainer config={chartConfig} className="h-full w-full">
+        <ChartContainer config={chartConfig} className="size-full">
           <AreaChart data={chartData} margin={chartMargin}>
             <defs>
               <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">

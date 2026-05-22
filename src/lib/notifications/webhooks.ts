@@ -16,16 +16,17 @@ import type { ContactPayload } from './types'
 // =============================================================================
 
 export async function notifyContactEmail(payload: ContactPayload): Promise<void> {
-  if (!EMAIL_WEBHOOK_URL) {
+  const webhookUrl = EMAIL_WEBHOOK_URL
+  if (!webhookUrl) {
     console.info('[notifications] email webhook not configured, skipping')
     return
   }
 
   let lastError: Error | null = null
 
-  for (let attempt = 0; attempt < RETRY_CONFIG.maxRetries; attempt++) {
+  const attemptNotify = async (attempt: number): Promise<void> => {
     try {
-      const response = await fetchWithTimeout(EMAIL_WEBHOOK_URL, {
+      const response = await fetchWithTimeout(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'contact.created', payload }),
@@ -44,7 +45,7 @@ export async function notifyContactEmail(payload: ContactPayload): Promise<void>
         if (attempt < RETRY_CONFIG.maxRetries - 1) {
           console.warn(`[notifications] email webhook rate limited, retrying in ${delayMs}ms...`)
           await sleep(delayMs)
-          continue
+          return attemptNotify(attempt + 1)
         }
       }
 
@@ -52,7 +53,7 @@ export async function notifyContactEmail(payload: ContactPayload): Promise<void>
       if (response.status >= 500 && attempt < RETRY_CONFIG.maxRetries - 1) {
         console.warn(`[notifications] email webhook failed (${response.status}), retrying...`)
         await sleep(calculateBackoffDelay(attempt))
-        continue
+        return attemptNotify(attempt + 1)
       }
 
       const errorText = await response.text().catch(() => 'Unknown error')
@@ -76,11 +77,13 @@ export async function notifyContactEmail(payload: ContactPayload): Promise<void>
           `[notifications] email webhook ${isAbortError ? 'timed out' : 'network error'}, retrying...`
         )
         await sleep(calculateBackoffDelay(attempt))
-        continue
+        return attemptNotify(attempt + 1)
       }
     }
+
+    console.error('[notifications] email webhook failed after all retries', lastError)
   }
 
-  console.error('[notifications] email webhook failed after all retries', lastError)
+  await attemptNotify(0)
 }
 

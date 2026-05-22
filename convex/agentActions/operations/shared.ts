@@ -148,14 +148,18 @@ export function extractClientLookupRecords(value: unknown): ClientLookupRecord[]
       ? (value as { items: unknown[] }).items
       : []
 
-  return items
-    .map((item) => asRecord(item))
-    .map((item) => ({
-      legacyId: asNonEmptyString(item?.legacyId) ?? '',
-      name: asNonEmptyString(item?.name) ?? '',
-      workspaceId: asNonEmptyString(item?.workspaceId) ?? '',
-    }))
-    .filter((item) => item.legacyId.length > 0 && item.name.length > 0 && item.workspaceId.length > 0)
+  return items.flatMap((item) => {
+    const record = asRecord(item)
+    if (!record) return []
+    const mapped = {
+      legacyId: asNonEmptyString(record.legacyId) ?? '',
+      name: asNonEmptyString(record.name) ?? '',
+      workspaceId: asNonEmptyString(record.workspaceId) ?? '',
+    }
+    return mapped.legacyId.length > 0 && mapped.name.length > 0 && mapped.workspaceId.length > 0
+      ? [mapped]
+      : []
+  })
 }
 
 export function resolveClientLookupMatch(
@@ -202,8 +206,7 @@ export function formatTaskDate(value: number | null): string | null {
 export function formatTaskStatusLabel(value: string): string {
   return value
     .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .flatMap((part) => (part ? [part.charAt(0).toUpperCase() + part.slice(1)] : []))
     .join(' ')
 }
 
@@ -218,19 +221,24 @@ export function extractClientTaskRecords(value: unknown): ClientTaskRecord[] {
       ? (value as { items: unknown[] }).items
       : []
 
-  return items
-    .map((item) => asRecord(item))
-    .map((item) => ({
-      legacyId: asNonEmptyString(item?.legacyId) ?? '',
-      title: asNonEmptyString(item?.title) ?? 'Untitled task',
-      status: asNonEmptyString(item?.status) ?? 'unknown',
-      priority: asNonEmptyString(item?.priority) ?? 'medium',
-      dueDateMs: asNumber(item?.dueDateMs),
-      assignedTo: Array.isArray(item?.assignedTo)
-        ? item.assignedTo.map((entry) => asNonEmptyString(entry)).filter((entry): entry is string => entry !== null)
+  return items.flatMap((item) => {
+    const record = asRecord(item)
+    if (!record) return []
+    const mapped = {
+      legacyId: asNonEmptyString(record.legacyId) ?? '',
+      title: asNonEmptyString(record.title) ?? 'Untitled task',
+      status: asNonEmptyString(record.status) ?? 'unknown',
+      priority: asNonEmptyString(record.priority) ?? 'medium',
+      dueDateMs: asNumber(record.dueDateMs),
+      assignedTo: Array.isArray(record.assignedTo)
+        ? record.assignedTo.flatMap((entry) => {
+            const normalized = asNonEmptyString(entry)
+            return normalized !== null ? [normalized] : []
+          })
         : null,
-    }))
-    .filter((item) => item.legacyId.length > 0)
+    }
+    return mapped.legacyId.length > 0 ? [mapped] : []
+  })
 }
 
 export function buildCampaignRoute(args: {

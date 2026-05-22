@@ -38,7 +38,7 @@ export function ProposalStepFeedbackHeader({
       </div>
       <div className={cn('rounded-xl border px-3 py-2 text-sm', hasErrors ? 'border-destructive/35 bg-destructive/5 text-destructive' : 'border-success/25 bg-success/5 text-success')}>
         <div className="flex items-center gap-2">
-          {hasErrors ? <CircleAlert className="h-4 w-4" /> : <CircleCheck className="h-4 w-4" />}
+          {hasErrors ? <CircleAlert className="size-4" /> : <CircleCheck className="size-4" />}
           <span className="font-medium">{hasErrors ? `${validationMessageCount} required input${validationMessageCount === 1 ? '' : 's'} still needed` : 'Required inputs complete'}</span>
         </div>
       </div>
@@ -68,7 +68,7 @@ export function ProposalStepFeedbackValidationBody({
       <ul className="space-y-1 text-sm text-muted-foreground">
         {validationMessages.map((message) => (
           <li key={message} className="flex items-start gap-2">
-            <CircleAlert className="mt-0.5 h-3.5 w-3.5 text-destructive" />
+            <CircleAlert className="mt-0.5 size-3.5 text-destructive" />
             <span>{message}</span>
           </li>
         ))}

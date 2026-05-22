@@ -22,7 +22,7 @@ export function RetainerSlider() {
   const pct = ((value - MIN) / (MAX - MIN)) * 100
   const fillStyle = useMemo(() => ({ width: `${pct}%` }), [pct])
   const thumbStyle = useMemo(() => ({ left: `calc(${pct}% - 8px)` }), [pct])
-  const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+  const onRetainerChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setValue(Number(event.target.value))
   }, [])
 
@@ -49,8 +49,8 @@ export function RetainerSlider() {
           max={MAX}
           step={STEP}
           value={value}
-          onChange={handleChange}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          onChange={onRetainerChange}
+          className="absolute inset-0 size-full cursor-pointer opacity-0"
           aria-label="Monthly retainer target"
         />
 

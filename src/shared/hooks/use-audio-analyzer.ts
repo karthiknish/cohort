@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useReducer } from 'react'
 
 export interface UseAudioAnalyzerReturn {
     volume: number
@@ -9,11 +9,52 @@ export interface UseAudioAnalyzerReturn {
     error: string | null
 }
 
+type AudioAnalyzerState = {
+    volume: number
+    frequencies: number[]
+    isAnalyzing: boolean
+    error: string | null
+}
+
+type AudioAnalyzerAction =
+    | { type: 'start' }
+    | { type: 'update'; volume: number; frequencies: number[] }
+    | { type: 'error'; message: string }
+    | { type: 'stop' }
+
+const INITIAL_FREQUENCIES = new Array(12).fill(0)
+
+function createInitialAudioAnalyzerState(): AudioAnalyzerState {
+    return {
+        volume: 0,
+        frequencies: INITIAL_FREQUENCIES,
+        isAnalyzing: false,
+        error: null,
+    }
+}
+
+function audioAnalyzerReducer(state: AudioAnalyzerState, action: AudioAnalyzerAction): AudioAnalyzerState {
+    switch (action.type) {
+        case 'start':
+            return { ...state, isAnalyzing: true, error: null }
+        case 'update':
+            return { ...state, volume: action.volume, frequencies: action.frequencies }
+        case 'error':
+            return { ...state, isAnalyzing: false, error: action.message }
+        case 'stop':
+            return {
+                volume: 0,
+                frequencies: INITIAL_FREQUENCIES,
+                isAnalyzing: false,
+                error: null,
+            }
+        default:
+            return state
+    }
+}
+
 export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
-    const [volume, setVolume] = useState(0)
-    const [frequencies, setFrequencies] = useState<number[]>(() => new Array(12).fill(0))
-    const [isAnalyzing, setIsAnalyzing] = useState(false)
-    const [error, setError] = useState<string | null>(null)
+    const [state, dispatch] = useReducer(audioAnalyzerReducer, undefined, createInitialAudioAnalyzerState)
 
     const audioContextRef = useRef<AudioContext | null>(null)
     const analyzerRef = useRef<AnalyserNode | null>(null)
@@ -22,6 +63,30 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
     const streamRef = useRef<MediaStream | null>(null)
 
     useEffect(() => {
+        const stopAnalyzing = () => {
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current)
+                animationFrameRef.current = null
+            }
+
+            if (sourceRef.current) {
+                sourceRef.current.disconnect()
+                sourceRef.current = null
+            }
+
+            if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+                audioContextRef.current.close()
+                audioContextRef.current = null
+            }
+
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop())
+                streamRef.current = null
+            }
+
+            dispatch({ type: 'stop' })
+        }
+
         if (!isActive) {
             stopAnalyzing()
             return
@@ -34,8 +99,7 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
                 }
 
                 if (!navigator?.mediaDevices?.getUserMedia) {
-                    setError('Microphone is not supported in this browser')
-                    setIsAnalyzing(false)
+                    dispatch({ type: 'error', message: 'Microphone is not supported in this browser' })
                     return
                 }
 
@@ -43,8 +107,7 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
                     window.AudioContext ||
                     (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
                 if (!AudioContextCtor) {
-                    setError('Audio analysis is not supported in this browser')
-                    setIsAnalyzing(false)
+                    dispatch({ type: 'error', message: 'Audio analysis is not supported in this browser' })
                     return
                 }
 
@@ -55,7 +118,6 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
                 audioContextRef.current = audioContext
 
                 const analyzer = audioContext.createAnalyser()
-                // Smaller fftSize for snappier updates, specifically for visualization
                 analyzer.fftSize = 128
                 analyzer.smoothingTimeConstant = 0.6
                 analyzerRef.current = analyzer
@@ -64,8 +126,7 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
                 source.connect(analyzer)
                 sourceRef.current = source
 
-                setIsAnalyzing(true)
-                setError(null)
+                dispatch({ type: 'start' })
 
                 const bufferLength = analyzer.frequencyBinCount
                 const dataArray = new Uint8Array(bufferLength)
@@ -75,8 +136,6 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
 
                     analyzerRef.current.getByteFrequencyData(dataArray)
 
-                    // Provide raw frequencies for mapping
-                    // We only take the lower half as voice is typically there
                     const binCount = 12
                     const bins = new Array(binCount).fill(0)
                     const samplesPerBin = Math.floor(bufferLength * 0.7 / binCount)
@@ -88,15 +147,18 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
                         }
                         bins[i] = (sum / samplesPerBin) / 255
                     }
-                    setFrequencies(bins)
 
-                    // Calculate average volume for backward compatibility or simple scale
                     let totalSum = 0
                     for (let i = 0; i < bufferLength; i++) {
                         totalSum += dataArray[i]!
                     }
                     const average = totalSum / bufferLength
-                    setVolume(Math.min(1, average / 128))
+
+                    dispatch({
+                        type: 'update',
+                        volume: Math.min(1, average / 128),
+                        frequencies: bins,
+                    })
 
                     animationFrameRef.current = requestAnimationFrame(updateVolume)
                 }
@@ -104,43 +166,16 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
                 updateVolume()
             } catch (err) {
                 console.error('Error accessing microphone:', err)
-                setError('Failed to access microphone for visualization')
-                setIsAnalyzing(false)
+                dispatch({ type: 'error', message: 'Failed to access microphone for visualization' })
             }
         }
 
-        startAnalyzing()
+        void startAnalyzing()
 
         return () => {
             stopAnalyzing()
         }
     }, [isActive])
 
-    const stopAnalyzing = () => {
-        if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current)
-            animationFrameRef.current = null
-        }
-
-        if (sourceRef.current) {
-            sourceRef.current.disconnect()
-            sourceRef.current = null
-        }
-
-        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-            audioContextRef.current.close()
-            audioContextRef.current = null
-        }
-
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop())
-            streamRef.current = null
-        }
-
-        setVolume(0)
-        setFrequencies(new Array(12).fill(0))
-        setIsAnalyzing(false)
-    }
-
-    return { volume, frequencies, isAnalyzing, error }
+    return state
 }

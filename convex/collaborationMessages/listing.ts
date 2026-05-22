@@ -144,13 +144,13 @@ export const searchChannel = zWorkspaceQueryActive({
     const mentionTerm = mentionTermRaw ? normalizeTerm(mentionTermRaw.replace(/^@/, '')) : null
 
     const scored = filteredByDate
-      .map((row): ScoredMessage | null => {
+      .flatMap((row): ScoredMessage[] => {
         // deleted filter is handled by workspaceQueryActive implicitly if we use fetchChannelRows correctly
         // but here rows are already fetched and hydrated.
 
         const senderName = typeof row?.senderName === 'string' ? row.senderName : ''
         if (senderTerm && !normalizeTerm(senderName).includes(senderTerm)) {
-          return null
+          return []
         }
 
         const mentions = Array.isArray(row?.mentions) ? row.mentions : []
@@ -165,7 +165,7 @@ export const searchChannel = zWorkspaceQueryActive({
               return normalizedMention ? [normalizedMention] : []
             })
           const hasMention = mentionNames.some((name: string) => name.includes(mentionTerm))
-          if (!hasMention) return null
+          if (!hasMention) return []
         }
 
         const attachments = Array.isArray(row?.attachments) ? row.attachments : []
@@ -180,7 +180,7 @@ export const searchChannel = zWorkspaceQueryActive({
               return normalizedAttachment ? [normalizedAttachment] : []
             })
           const hasAttachment = attachmentNames.some((name: string) => name.includes(attachmentTerm))
-          if (!hasAttachment) return null
+          if (!hasAttachment) return []
         }
 
         const highlightSet = new Set<string>()
@@ -208,15 +208,14 @@ export const searchChannel = zWorkspaceQueryActive({
           }
         }
 
-        if (totalScore <= 0) return null
+        if (totalScore <= 0) return []
 
-        return {
+        return [{
           row,
           score: totalScore,
           highlights: Array.from(highlightSet),
-        }
+        }]
       })
-      .filter((item): item is ScoredMessage => item !== null)
 
     scored.sort((a, b) => b.score - a.score)
     const top = scored.slice(0, limit)

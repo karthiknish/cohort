@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAction, useConvexAuth, useMutation, useQuery } from 'convex/react'
 
@@ -189,10 +189,14 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     // normalizeAdsProviderId returns null for analytics-only providers (e.g. 'google-analytics'),
     // but we guard with RAW_ADS_PROVIDER_IDS to ensure only known ads platforms pass.
     const seenProviders = new Set<string>()
-    const statuses = rows
-      .filter((row) => RAW_ADS_PROVIDER_IDS.has(String(row.providerId).trim().toLowerCase()))
-      .map((row) => ({
-        providerId: normalizeAdsProviderId(String(row.providerId)) ?? String(row.providerId).trim().toLowerCase(),
+    const statuses = rows.flatMap((row) => {
+      const rawProviderId = String(row.providerId).trim().toLowerCase()
+      if (!RAW_ADS_PROVIDER_IDS.has(rawProviderId)) return []
+      const providerId = normalizeAdsProviderId(String(row.providerId)) ?? rawProviderId
+      if (!RAW_ADS_PROVIDER_IDS.has(providerId) || seenProviders.has(providerId)) return []
+      seenProviders.add(providerId)
+      return [{
+        providerId,
         status: String(row.lastSyncStatus ?? 'never'),
         message: row.lastSyncMessage ?? null,
         lastSyncedAt: typeof row.lastSyncedAtMs === 'number' ? new Date(row.lastSyncedAtMs).toISOString() : null,
@@ -207,14 +211,8 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         autoSyncEnabled: row.autoSyncEnabled ?? null,
         syncFrequencyMinutes: row.syncFrequencyMinutes ?? null,
         scheduledTimeframeDays: row.scheduledTimeframeDays ?? null,
-      }))
-      .filter((s) => RAW_ADS_PROVIDER_IDS.has(s.providerId))
-      .filter((s) => {
-        // Deduplicate by normalized provider ID, keeping the first entry.
-        if (seenProviders.has(s.providerId)) return false
-        seenProviders.add(s.providerId)
-        return true
-      })
+      }]
+    })
 
     return { statuses }
   }, [convexStatuses, isPreviewMode, canQueryConvex, workspaceId])
@@ -227,7 +225,18 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const [syncingProviders, setSyncingProviders] = useState<Record<string, boolean>>({})
 
   // Setup state
-  const [googleSetupMessage, setGoogleSetupMessage] = useState<string | null>(null)
+  const [googleSetupUi, setGoogleSetupUi] = useState({
+    message: null as string | null,
+    dialogOpen: false,
+  })
+  const googleSetupMessage = googleSetupUi.message
+  const googleSetupDialogOpen = googleSetupUi.dialogOpen
+  const setGoogleSetupMessage = useCallback((message: string | null) => {
+    setGoogleSetupUi((prev) => ({ ...prev, message }))
+  }, [])
+  const setGoogleSetupDialogOpen = useCallback((dialogOpen: boolean) => {
+    setGoogleSetupUi((prev) => ({ ...prev, dialogOpen }))
+  }, [])
   const [metaSetupMessage, setMetaSetupMessage] = useState<string | null>(null)
   const [tiktokSetupMessage, setTiktokSetupMessage] = useState<string | null>(null)
   const [initializingGoogle, setInitializingGoogle] = useState(false)
@@ -236,7 +245,6 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const [googleAccountOptions, setGoogleAccountOptions] = useState<GoogleAdAccountOption[]>([])
   const [selectedGoogleAccountId, setSelectedGoogleAccountId] = useState('')
   const [loadingGoogleAccountOptions, setLoadingGoogleAccountOptions] = useState(false)
-  const [googleSetupDialogOpen, setGoogleSetupDialogOpen] = useState(false)
   const [metaAccountOptions, setMetaAccountOptions] = useState<MetaAdAccountOption[]>([])
   const [selectedMetaAccountId, setSelectedMetaAccountId] = useState('')
   const [loadingMetaAccountOptions, setLoadingMetaAccountOptions] = useState(false)
@@ -554,6 +562,118 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   // URL signaling handler
   const oauthProcessedRef = useRef<Record<string, boolean>>({})
 
+  const processOauthRedirect = useCallback(
+    ({
+      oauthSuccess,
+      oauthError,
+      providerId,
+      message,
+      oauthClientId,
+    }: {
+      oauthSuccess: boolean
+      oauthError: boolean
+      providerId: string
+      message: string | null
+      oauthClientId: string | null
+    }) => {
+      if (oauthSuccess) {
+        console.log(`[useAdsConnections] Detected OAuth success for ${providerId}`)
+        if (providerId === PROVIDER_IDS.FACEBOOK) {
+          setMetaSetupMessage(null)
+          toast({
+            title: SUCCESS_MESSAGES.META_CONNECTED,
+            description: 'Meta connected. Select an ad account to finish setup.',
+          })
+          void loadMetaAdAccounts(oauthClientId)
+            .then(() => {
+              triggerRefresh()
+            })
+            .catch((error) => {
+              reportConvexFailure({
+                error,
+                context: 'useAdsConnections:oauthSuccess:facebook',
+                title: TOAST_TITLES.META_SETUP_FAILED,
+                fallbackMessage: 'Unable to load Meta ad accounts.',
+              })
+              setMetaSetupMessage(convexErrorMessage(error, 'Unable to load Meta ad accounts.'))
+            })
+          return
+        }
+
+        if (providerId === PROVIDER_IDS.TIKTOK) {
+          void initializeTikTokIntegration(oauthClientId)
+          return
+        }
+
+        if (providerId === PROVIDER_IDS.GOOGLE) {
+          setGoogleSetupUi({ message: null, dialogOpen: true })
+          toast({
+            title: SUCCESS_MESSAGES.GOOGLE_CONNECTED,
+            description: 'Google connected. Select an ads account to finish setup.',
+          })
+          void loadGoogleAdAccounts(oauthClientId)
+            .then(() => {
+              triggerRefresh()
+            })
+            .catch((error) => {
+              reportConvexFailure({
+                error,
+                context: 'useAdsConnections:oauthSuccess:google',
+                title: TOAST_TITLES.CONNECTION_FAILED,
+                fallbackMessage: 'Unable to load Google ad accounts.',
+              })
+              setGoogleSetupMessage(convexErrorMessage(error, 'Unable to load Google ad accounts.'))
+            })
+          return
+        }
+
+        if (providerId === PROVIDER_IDS.LINKEDIN) {
+          void initializeLinkedInIntegration()
+            .then(async () => {
+              toast({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, description: 'Syncing your ad data.' })
+              triggerRefresh()
+            })
+            .catch((err) => {
+              reportConvexFailure({
+                error: err,
+                context: 'useAdsConnections:oauthSuccess:linkedin',
+                title: TOAST_TITLES.CONNECTION_FAILED,
+                fallbackMessage: 'Unable to connect LinkedIn Ads.',
+              })
+            })
+          return
+        }
+
+        toast({
+          title: 'Connection successful',
+          description: `${formatProviderName(providerId)} has been linked.`,
+        })
+        triggerRefresh()
+        return
+      }
+
+      if (oauthError) {
+        const displayProvider = formatProviderName(providerId)
+        const errorMessage = message || 'An unknown error occurred during authentication.'
+
+        logError(new Error(errorMessage), `useAdsConnections:oauthError:${providerId}`)
+
+        notifyFailure({ title: `${displayProvider} connection failed`, message: errorMessage })
+
+        setConnectionErrors((prev) => ({ ...prev, [providerId]: errorMessage }))
+      }
+    },
+    [
+      initializeLinkedInIntegration,
+      initializeTikTokIntegration,
+      loadGoogleAdAccounts,
+      loadMetaAdAccounts,
+      setGoogleSetupMessage,
+      toast,
+      triggerRefresh,
+    ],
+  )
+
   useEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -567,12 +687,10 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     if (!oauthSuccess && !oauthError) return
     if (!providerId) return
 
-    // Prevent re-processing if this provider was already handled in this mount cycle
     const processingKey = `${providerId}:${oauthSuccess ? 'success' : 'error'}`
     if (oauthProcessedRef.current[processingKey]) return
     oauthProcessedRef.current[processingKey] = true
 
-    // Clean up URL immediately
     const newUrl = new URL(window.location.href)
     newUrl.searchParams.delete('oauth_success')
     newUrl.searchParams.delete('oauth_error')
@@ -581,79 +699,14 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     newUrl.searchParams.delete('clientId')
     window.history.replaceState({}, '', newUrl.toString())
 
-    if (oauthSuccess) {
-      console.log(`[useAdsConnections] Detected OAuth success for ${providerId}`)
-      if (providerId === PROVIDER_IDS.FACEBOOK) {
-        setMetaSetupMessage(null)
-        toast({
-          title: SUCCESS_MESSAGES.META_CONNECTED,
-          description: 'Meta connected. Select an ad account to finish setup.',
-        })
-        void loadMetaAdAccounts(oauthClientId)
-          .then(() => {
-            triggerRefresh()
-          })
-          .catch((error) => {
-            reportConvexFailure({
-              error,
-              context: 'useAdsConnections:oauthSuccess:facebook',
-              title: TOAST_TITLES.META_SETUP_FAILED,
-              fallbackMessage: 'Unable to load Meta ad accounts.',
-            })
-            setMetaSetupMessage(convexErrorMessage(error, 'Unable to load Meta ad accounts.'))
-          })
-      } else if (providerId === PROVIDER_IDS.TIKTOK) {
-        void initializeTikTokIntegration(oauthClientId)
-      } else if (providerId === PROVIDER_IDS.GOOGLE) {
-        setGoogleSetupMessage(null)
-        setGoogleSetupDialogOpen(true)
-        toast({
-          title: SUCCESS_MESSAGES.GOOGLE_CONNECTED,
-          description: 'Google connected. Select an ads account to finish setup.',
-        })
-        void loadGoogleAdAccounts(oauthClientId)
-          .then(() => {
-            triggerRefresh()
-          })
-          .catch((error) => {
-            reportConvexFailure({
-              error,
-              context: 'useAdsConnections:oauthSuccess:google',
-              title: TOAST_TITLES.CONNECTION_FAILED,
-              fallbackMessage: 'Unable to load Google ad accounts.',
-            })
-            setGoogleSetupMessage(convexErrorMessage(error, 'Unable to load Google ad accounts.'))
-          })
-       } else if (providerId === PROVIDER_IDS.LINKEDIN) {
-        void initializeLinkedInIntegration().then(async () => {
-          toast({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, description: 'Syncing your ad data.' })
-          triggerRefresh()
-        }).catch((err) => {
-          reportConvexFailure({
-            error: err,
-            context: 'useAdsConnections:oauthSuccess:linkedin',
-            title: TOAST_TITLES.CONNECTION_FAILED,
-            fallbackMessage: 'Unable to connect LinkedIn Ads.',
-          })
-        })
-      } else {
-        toast({
-          title: 'Connection successful',
-          description: `${formatProviderName(providerId)} has been linked.`
-        })
-        triggerRefresh()
-      }
-    } else if (oauthError) {
-      const displayProvider = formatProviderName(providerId)
-      const errorMessage = message || 'An unknown error occurred during authentication.'
-
-      logError(new Error(errorMessage), `useAdsConnections:oauthError:${providerId}`)
-
-      notifyFailure({ title: `${displayProvider} connection failed`, message: errorMessage })
-
-      setConnectionErrors((prev) => ({ ...prev, [providerId]: errorMessage }))
-    }
-  }, [initializeLinkedInIntegration, initializeTikTokIntegration, loadGoogleAdAccounts, loadMetaAdAccounts, toast, triggerRefresh])
+    processOauthRedirect({
+      oauthSuccess,
+      oauthError: Boolean(oauthError),
+      providerId,
+      message,
+      oauthClientId,
+    })
+  }, [processOauthRedirect])
 
   useEffect(() => {
     if (!googleNeedsAccountSelection) {

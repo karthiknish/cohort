@@ -57,7 +57,7 @@ describe('problem report view helpers', () => {
   it('maps status display metadata', () => {
     expect(getProblemReportStatusDisplay('resolved')).toEqual({
       icon: 'resolved',
-      className: 'h-4 w-4 text-success',
+      className: 'size-4 text-success',
     })
     expect(getProblemReportStatusDisplay('other')).toEqual({ icon: null })
   })

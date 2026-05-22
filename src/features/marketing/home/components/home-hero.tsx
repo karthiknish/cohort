@@ -19,7 +19,7 @@ export function HomeHero({ headline, subhead, highlights }: HomeHeroProps) {
     <FadeIn as="section" className="flex w-full max-w-2xl flex-col justify-center space-y-10 lg:py-12">
       <div className="space-y-6">
         <div className="inline-flex items-center rounded-full border bg-background px-3 py-1 text-sm font-medium shadow-sm">
-          <span className="flex h-2 w-2 rounded-full bg-success mr-2" aria-hidden="true"></span>
+          <span className="flex size-2 rounded-full bg-success mr-2" aria-hidden="true"></span>
           Now in public beta
         </div>
         <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl xl:text-6xl">
@@ -35,8 +35,8 @@ export function HomeHero({ headline, subhead, highlights }: HomeHeroProps) {
             as="div"
             className="group flex gap-4 rounded-2xl border border-border/50 bg-background/50 p-5 shadow-sm motion-chromatic hover:border-accent/20 hover:bg-background hover:shadow-md"
           >
-            <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-              <CircleCheck className="h-5 w-5" />
+            <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+              <CircleCheck className="size-5" />
             </div>
             <div className="space-y-1">
               <p className="font-semibold text-foreground">{item.title}</p>

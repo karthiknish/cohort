@@ -38,7 +38,7 @@ export function ImageUploader({
 
   const maxSizeBytes = maxSizeMB * 1024 * 1024
 
-  const handleClick = useCallback(() => {
+  const onOpenFilePicker = useCallback(() => {
     if (!disabled && !isUploading) {
       inputRef.current?.click()
     }
@@ -161,11 +161,11 @@ export function ImageUploader({
             <LazyImage
               src={previewUrl}
               alt="Feature preview"
-              className="h-full w-full object-cover"
+              className="size-full object-cover"
             />
             {isUploading && (
               <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+                <LoaderCircle className="size-8 animate-spin text-primary" />
               </div>
             )}
           </div>
@@ -174,30 +174,30 @@ export function ImageUploader({
               type="button"
               variant="secondary"
               size="icon"
-              className="h-8 w-8 bg-background/90 hover:bg-background"
-              onClick={handleClick}
+              className="size-8 bg-background/90 hover:bg-background"
+              onClick={onOpenFilePicker}
               disabled={disabled || isUploading}
               aria-label="Replace image"
             >
-              <ImagePlus className="h-4 w-4" aria-hidden />
+              <ImagePlus className="size-4" aria-hidden />
             </Button>
             <Button
               type="button"
               variant="destructive"
               size="icon"
-              className="h-8 w-8"
+              className="size-8"
               onClick={handleRemove}
               disabled={disabled || isUploading}
               aria-label="Remove image"
             >
-              <Trash2 className="h-4 w-4" aria-hidden />
+              <Trash2 className="size-4" aria-hidden />
             </Button>
           </div>
         </div>
       ) : (
         <button
           type="button"
-          onClick={handleClick}
+          onClick={onOpenFilePicker}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -212,9 +212,9 @@ export function ImageUploader({
           )}
         >
           {isUploading ? (
-            <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />
+            <LoaderCircle className="size-8 animate-spin text-muted-foreground" />
           ) : (
-            <Upload className="h-8 w-8 text-muted-foreground" />
+            <Upload className="size-8 text-muted-foreground" />
           )}
           <div className="text-center">
             <p className="text-sm font-medium text-foreground">

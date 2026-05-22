@@ -1,7 +1,7 @@
 'use client'
 
 import { useAction } from 'convex/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useReducer } from 'react'
 
 import { presentationDeckApi } from '@/lib/convex-api'
 import {
@@ -16,18 +16,51 @@ type ThemeRow = {
   thumbnailUrl?: string
 }
 
+type PresentationThemesState = {
+  themes: PresentationThemeOption[]
+  isLoading: boolean
+  loadError: string | null
+}
+
+type PresentationThemesAction =
+  | { type: 'beginLoad' }
+  | { type: 'loadSuccess'; themes: PresentationThemeOption[] }
+  | {
+      type: 'loadFailure'
+      themes: PresentationThemeOption[]
+      loadError: string
+    }
+
+function presentationThemesReducer(
+  state: PresentationThemesState,
+  action: PresentationThemesAction,
+): PresentationThemesState {
+  switch (action.type) {
+    case 'beginLoad':
+      return { ...state, isLoading: true, loadError: null }
+    case 'loadSuccess':
+      return { themes: action.themes, isLoading: false, loadError: null }
+    case 'loadFailure':
+      return { themes: action.themes, isLoading: false, loadError: action.loadError }
+    default:
+      return state
+  }
+}
+
 export function usePresentationThemes() {
   const listThemes = useAction(presentationDeckApi.listThemes)
-  const [themes, setThemes] = useState<PresentationThemeOption[]>(FALLBACK_PRESENTATION_THEMES)
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [state, dispatch] = useReducer(presentationThemesReducer, {
+    themes: FALLBACK_PRESENTATION_THEMES,
+    isLoading: true,
+    loadError: null,
+  })
+  const { themes, isLoading, loadError } = state
 
   useEffect(() => {
     let cancelled = false
 
     const load = async () => {
-      setIsLoading(true)
-      setLoadError(null)
+      dispatch({ type: 'beginLoad' })
       try {
         const result = await listThemes({ limit: 50 })
         if (cancelled) return
@@ -42,15 +75,18 @@ export function usePresentationThemes() {
           thumbnailUrl: theme.thumbnailUrl ?? null,
         }))
 
-        setThemes(mapped.length > 0 ? mapped : FALLBACK_PRESENTATION_THEMES)
+        dispatch({
+          type: 'loadSuccess',
+          themes: mapped.length > 0 ? mapped : FALLBACK_PRESENTATION_THEMES,
+        })
       } catch {
         if (!cancelled) {
-          setThemes(FALLBACK_PRESENTATION_THEMES)
-          setLoadError('Showing default styles — live theme catalog will load when the engine is connected.')
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
+          dispatch({
+            type: 'loadFailure',
+            themes: FALLBACK_PRESENTATION_THEMES,
+            loadError:
+              'Showing default styles — live theme catalog will load when the engine is connected.',
+          })
         }
       }
     }

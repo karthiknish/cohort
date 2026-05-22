@@ -53,8 +53,8 @@ export function NotificationsInboxPanel({
       <div className={HEADER_DROPDOWN_THEME.header}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2.5">
-            <div className={cn(getIconContainerClasses('medium'), 'h-9 w-9 shrink-0')}>
-              <Bell className="h-4 w-4" aria-hidden />
+            <div className={cn(getIconContainerClasses('medium'), 'size-9 shrink-0')}>
+              <Bell className="size-4" aria-hidden />
             </div>
             <div className="min-w-0">
               <p className={HEADER_DROPDOWN_THEME.headerTitle}>Notifications</p>
@@ -72,7 +72,7 @@ export function NotificationsInboxPanel({
             onClick={onMarkAllRead}
             disabled={unreadCount === 0 || ackInFlight}
           >
-            <Check className="h-3.5 w-3.5" aria-hidden />
+            <Check className="size-3.5" aria-hidden />
             Mark read
           </Button>
         </div>
@@ -82,7 +82,7 @@ export function NotificationsInboxPanel({
         <div className={HEADER_DROPDOWN_THEME.inboxBody}>
           {isLoadingInitial ? (
             <div className="flex items-center justify-center gap-2 px-3 py-12 text-sm text-muted-foreground">
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+              <LoaderCircle className="size-4 animate-spin" aria-hidden />
               Loading…
             </div>
           ) : notifications.length === 0 ? (
@@ -108,20 +108,20 @@ export function NotificationsInboxPanel({
           disabled={isFetchingNextPage || !hasNextPage}
         >
           {isFetchingNextPage ? (
-            <LoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />
+            <LoaderCircle className="mr-1.5 size-3.5 animate-spin" aria-hidden />
           ) : null}
           {hasNextPage ? 'Load more' : 'End of list'}
         </Button>
         <div className="flex items-center gap-0.5">
           <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs" asChild>
             <Link href="/settings?tab=notifications">
-              <Settings2 className="h-3.5 w-3.5" aria-hidden />
+              <Settings2 className="size-3.5" aria-hidden />
               Settings
             </Link>
           </Button>
           <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs" asChild>
             <Link href="/dashboard/notifications">
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              <ExternalLink className="size-3.5" aria-hidden />
               View all
             </Link>
           </Button>

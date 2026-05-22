@@ -63,14 +63,14 @@ export const run = httpAction(async (ctx, request) => {
   let failedJobs = 0
   const jobResults: Array<{ jobId: string; providerId: string; status: string; error?: string }> = []
 
-  for (let i = 0; i < maxJobs; i++) {
+  const processNextJob = async (): Promise<void> => {
+    if (processedJobs >= maxJobs) return
+
     const job = await ctx.runMutation(internal.adsIntegrations.claimNextSyncJobInternal, {
       workspaceId,
     })
 
-    if (!job) {
-      break
-    }
+    if (!job) return
 
     processedJobs++
 
@@ -133,7 +133,11 @@ export const run = httpAction(async (ctx, request) => {
         })
       }
     }
+
+    await processNextJob()
   }
+
+  await processNextJob()
 
   return jsonResponse({
     processedJobs,

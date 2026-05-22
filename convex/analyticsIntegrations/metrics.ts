@@ -47,38 +47,43 @@ export const writeAnalyticsMetricsBatchInternal = internalMutation({
     let dailyInserted = 0
     let breakdownInserted = 0
 
-    for (const row of args.daily) {
-      await ctx.db.insert('analyticsMetricsDaily', {
-        workspaceId: args.workspaceId,
-        clientId,
-        propertyId: row.propertyId,
-        date: row.date,
-        users: row.users,
-        sessions: row.sessions,
-        conversions: row.conversions,
-        revenue: row.revenue,
-        currency: row.currency ?? args.currency,
-        createdAtMs: timestamp,
-      })
-      dailyInserted += 1
-    }
+    await Promise.all(
+      args.daily.map(async (row) => {
+        await ctx.db.insert('analyticsMetricsDaily', {
+          workspaceId: args.workspaceId,
+          clientId,
+          propertyId: row.propertyId,
+          date: row.date,
+          users: row.users,
+          sessions: row.sessions,
+          conversions: row.conversions,
+          revenue: row.revenue,
+          currency: row.currency ?? args.currency,
+          createdAtMs: timestamp,
+        })
+      }),
+    )
+    dailyInserted = args.daily.length
 
-    for (const row of args.breakdowns ?? []) {
-      await ctx.db.insert('analyticsMetricsBreakdown', {
-        workspaceId: args.workspaceId,
-        clientId,
-        propertyId: row.propertyId,
-        date: row.date,
-        dimension: row.dimension,
-        dimensionValue: row.dimensionValue,
-        users: row.users,
-        sessions: row.sessions,
-        conversions: row.conversions,
-        revenue: row.revenue,
-        createdAtMs: timestamp,
-      })
-      breakdownInserted += 1
-    }
+    const breakdowns = args.breakdowns ?? []
+    await Promise.all(
+      breakdowns.map(async (row) => {
+        await ctx.db.insert('analyticsMetricsBreakdown', {
+          workspaceId: args.workspaceId,
+          clientId,
+          propertyId: row.propertyId,
+          date: row.date,
+          dimension: row.dimension,
+          dimensionValue: row.dimensionValue,
+          users: row.users,
+          sessions: row.sessions,
+          conversions: row.conversions,
+          revenue: row.revenue,
+          createdAtMs: timestamp,
+        })
+      }),
+    )
+    breakdownInserted = breakdowns.length
 
     return { ok: true, dailyInserted, breakdownInserted }
   },
@@ -200,21 +205,18 @@ export const deleteGoogleAnalyticsMetricsDataInternal = internalMutation({
       .query('analyticsMetricsDaily')
       .withIndex('by_workspace_date', (q) => q.eq('workspaceId', args.workspaceId))
       .collect()
-    for (const row of daily) {
-      if (clientId === null ? row.clientId === null : row.clientId === clientId) {
-        await ctx.db.delete(row._id)
-        deleted += 1
-      }
-    }
+    const dailyToDelete = daily.filter((row) =>
+      clientId === null ? row.clientId === null : row.clientId === clientId,
+    )
+    await Promise.all(dailyToDelete.map(async (row) => ctx.db.delete(row._id)))
+    deleted += dailyToDelete.length
 
     const breakdowns = await ctx.db
       .query('analyticsMetricsBreakdown')
       .withIndex('by_workspace_client_date', (q) => q.eq('workspaceId', args.workspaceId).eq('clientId', clientId))
       .collect()
-    for (const row of breakdowns) {
-      await ctx.db.delete(row._id)
-      deleted += 1
-    }
+    await Promise.all(breakdowns.map(async (row) => ctx.db.delete(row._id)))
+    deleted += breakdowns.length
 
     const legacy = await ctx.db
       .query('adMetrics')
@@ -222,12 +224,11 @@ export const deleteGoogleAnalyticsMetricsDataInternal = internalMutation({
         q.eq('workspaceId', args.workspaceId).eq('providerId', 'google-analytics'),
       )
       .collect()
-    for (const row of legacy) {
-      if (clientId === null ? row.clientId === null : row.clientId === clientId) {
-        await ctx.db.delete(row._id)
-        deleted += 1
-      }
-    }
+    const legacyToDelete = legacy.filter((row) =>
+      clientId === null ? row.clientId === null : row.clientId === clientId,
+    )
+    await Promise.all(legacyToDelete.map(async (row) => ctx.db.delete(row._id)))
+    deleted += legacyToDelete.length
 
     return { ok: true, deleted }
   },

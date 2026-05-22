@@ -47,7 +47,7 @@ export function AnalyticsCreativesSection({
             <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-primary" />
+                        <div className="size-2 rounded-full bg-primary" />
                         <div>
                             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Meta creative performance</CardTitle>
                             <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Top-performing ads from Meta based on spend distribution</CardDescription>
@@ -59,7 +59,7 @@ export function AnalyticsCreativesSection({
                         disabled={isMetricsLoading || metricsRefreshing}
                         className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm motion-chromatic hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
                     >
-                        <RefreshCw className={`h-3 w-3 transition-transform duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:rotate-180 ${metricsRefreshing ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`size-3 transition-transform duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:rotate-180 ${metricsRefreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </button>
                 </div>
@@ -94,7 +94,7 @@ export function AnalyticsCreativesSection({
                                             <TooltipProvider>
                                                 <Tooltip>
                                                     <TooltipTrigger className="cursor-help">
-                                                        <Info className="h-3 w-3 transition-colors hover:text-primary" />
+                                                        <Info className="size-3 transition-colors hover:text-primary" />
                                                     </TooltipTrigger>
                                                     <TooltipContent className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md p-2">
                                                         <p className="text-[10px] font-bold">Amount spent on this creative</p>
@@ -109,7 +109,7 @@ export function AnalyticsCreativesSection({
                                             <TooltipProvider>
                                                 <Tooltip>
                                                     <TooltipTrigger className="cursor-help">
-                                                        <Info className="h-3 w-3 transition-colors hover:text-primary" />
+                                                        <Info className="size-3 transition-colors hover:text-primary" />
                                                     </TooltipTrigger>
                                                     <TooltipContent className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md p-2">
                                                         <p className="text-[10px] font-bold">Total click volume</p>
@@ -124,7 +124,7 @@ export function AnalyticsCreativesSection({
                                             <TooltipProvider>
                                                 <Tooltip>
                                                     <TooltipTrigger className="cursor-help">
-                                                        <Info className="h-3 w-3 transition-colors hover:text-primary" />
+                                                        <Info className="size-3 transition-colors hover:text-primary" />
                                                     </TooltipTrigger>
                                                     <TooltipContent className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md p-2">
                                                         <p className="text-[10px] font-bold">Attributed conversions</p>
@@ -139,7 +139,7 @@ export function AnalyticsCreativesSection({
                                             <TooltipProvider>
                                                 <Tooltip>
                                                     <TooltipTrigger className="cursor-help">
-                                                        <Info className="h-3 w-3 transition-colors hover:text-primary" />
+                                                        <Info className="size-3 transition-colors hover:text-primary" />
                                                     </TooltipTrigger>
                                                     <TooltipContent className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md p-2">
                                                         <p className="text-[10px] font-bold">Gross revenue generated</p>

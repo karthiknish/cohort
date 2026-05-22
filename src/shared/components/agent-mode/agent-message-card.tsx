@@ -55,12 +55,12 @@ function AgentAvatar({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/15',
+        'flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/15',
         className,
       )}
       aria-hidden
     >
-      <Sparkles className="h-4 w-4 text-primary" />
+      <Sparkles className="size-4 text-primary" />
     </div>
   )
 }
@@ -93,13 +93,13 @@ function getActionLabel(action?: string, operation?: string): string {
 function getActionIcon(action?: string) {
   switch (action) {
     case 'navigate':
-      return <Navigation className="h-4 w-4" />
+      return <Navigation className="size-4" />
     case 'execute':
-      return <Zap className="h-4 w-4" />
+      return <Zap className="size-4" />
     case 'clarify':
-      return <HelpCircle className="h-4 w-4" />
+      return <HelpCircle className="size-4" />
     default:
-      return <Sparkles className="h-4 w-4" />
+      return <Sparkles className="size-4" />
   }
 }
 
@@ -237,15 +237,15 @@ function toneAccentClasses(tone: PresentationTone): { icon: string; title: strin
 
 function StatusGlyph({ tone }: { tone: PresentationTone }) {
   if (tone === 'success') {
-    return <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+    return <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden />
   }
   if (tone === 'error') {
-    return <AlertCircle className="h-4 w-4 shrink-0 text-destructive" aria-hidden />
+    return <AlertCircle className="size-4 shrink-0 text-destructive" aria-hidden />
   }
   if (tone === 'warning') {
-    return <AlertTriangle className="h-4 w-4 shrink-0 text-warning" aria-hidden />
+    return <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden />
   }
-  return <Info className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+  return <Info className="size-4 shrink-0 text-muted-foreground" aria-hidden />
 }
 
 function isRetryableData(data: Record<string, unknown> | undefined): boolean {
@@ -293,7 +293,7 @@ function UserMessageStatus({
   if (lifecycle === 'sending') {
     return (
       <span className="mt-1 flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
-        <LoaderCircle className="h-3 w-3 animate-spin" aria-hidden />
+        <LoaderCircle className="size-3 animate-spin" aria-hidden />
         Sending…
       </span>
     )
@@ -304,7 +304,7 @@ function UserMessageStatus({
       <div className="mt-1 flex items-center justify-end gap-2">
         <span className="text-[11px] text-destructive">Failed to send</span>
         <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onResend}>
-          <RefreshCw className="mr-1 h-3 w-3" />
+          <RefreshCw className="mr-1 size-3" />
           Resend
         </Button>
       </div>
@@ -346,7 +346,7 @@ function AgentConfirmationPanel({
   }
 
   return (
-    <div className="mt-3 rounded-lg border border-warning/35 bg-warning/5 px-3 py-3 text-xs">
+    <div className="mt-3 rounded-lg border border-warning/35 bg-warning/5 p-3 text-xs">
       <p className="font-medium text-foreground">Confirm before running</p>
       <p className="mt-1 leading-relaxed text-muted-foreground">{confirmation.summary}</p>
 
@@ -552,7 +552,7 @@ export function AgentMessageCard({
                     <li key={step.id} className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span
                         className={cn(
-                          'h-1.5 w-1.5 shrink-0 rounded-full',
+                          'size-1.5 shrink-0 rounded-full',
                           step.status === 'completed' && 'bg-primary',
                           step.status === 'failed' && 'bg-destructive',
                           step.status === 'active' && 'bg-primary animate-pulse',
@@ -580,7 +580,7 @@ export function AgentMessageCard({
                     className="gap-2"
                     onClick={handleUndo}
                   >
-                    <RefreshCw className="h-3.5 w-3.5" />
+                    <RefreshCw className="size-3.5" />
                     Undo {metadata.undoHint.label.toLowerCase()}
                   </Button>
                 </div>
@@ -598,7 +598,7 @@ export function AgentMessageCard({
                   <Button asChild size="sm" variant="outline" className="gap-2">
                     <Link href={route!}>
                       {routeLinkLabel(operation)}
-                      <ArrowRight className="h-3 w-3" />
+                      <ArrowRight className="size-3" />
                     </Link>
                   </Button>
                 </div>
@@ -607,7 +607,7 @@ export function AgentMessageCard({
               {showRetryButton ? (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Button type="button" size="sm" variant="outline" className="gap-2" onClick={onRetryLastUserTurn}>
-                    <RefreshCw className="h-3.5 w-3.5" />
+                    <RefreshCw className="size-3.5" />
                     Try again
                   </Button>
                   <span className="text-xs text-muted-foreground">Resends your last request.</span>

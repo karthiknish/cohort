@@ -21,8 +21,8 @@ export function NotificationEmptyState({ filterLabel, className }: NotificationE
         className,
       )}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border/60 bg-muted/25 text-muted-foreground shadow-sm">
-        <BellOff className="h-6 w-6" aria-hidden />
+      <div className="flex size-12 items-center justify-center rounded-xl border border-border/60 bg-muted/25 text-muted-foreground shadow-sm">
+        <BellOff className="size-6" aria-hidden />
       </div>
       <div className="space-y-1.5">
         <p className="text-base font-medium text-foreground">{title}</p>
@@ -32,7 +32,7 @@ export function NotificationEmptyState({ filterLabel, className }: NotificationE
       </div>
       <Button variant="outline" size="sm" asChild>
         <Link href="/settings?tab=notifications">
-          <Settings2 className="mr-2 h-4 w-4" aria-hidden />
+          <Settings2 className="mr-2 size-4" aria-hidden />
           Notification settings
         </Link>
       </Button>

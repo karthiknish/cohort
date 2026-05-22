@@ -605,22 +605,24 @@ export const duplicateConversation = action({
         messageCount: msgs.messages.length,
       })
 
-      for (const message of msgs.messages) {
-        await ctx.runMutation(api.agentMessages.upsert, {
-          workspaceId: args.workspaceId,
-          conversationLegacyId: newConversationId,
-          legacyId: crypto.randomUUID(),
-          type: message.type,
-          content: message.content,
-          createdAt: message.createdAt,
-          userId: message.type === 'user' ? identity.subject : null,
-          action: message.action,
-          route: message.route,
-          operation: message.operation,
-          params: (message.params ?? null) as JsonRecord | null,
-          executeResult: (message.executeResult ?? null) as JsonRecord | null,
-        })
-      }
+      await Promise.all(
+        msgs.messages.map(async (message) =>
+          ctx.runMutation(api.agentMessages.upsert, {
+            workspaceId: args.workspaceId,
+            conversationLegacyId: newConversationId,
+            legacyId: crypto.randomUUID(),
+            type: message.type,
+            content: message.content,
+            createdAt: message.createdAt,
+            userId: message.type === 'user' ? identity.subject : null,
+            action: message.action,
+            route: message.route,
+            operation: message.operation,
+            params: (message.params ?? null) as JsonRecord | null,
+            executeResult: (message.executeResult ?? null) as JsonRecord | null,
+          }),
+        ),
+      )
 
       const lastMessage = msgs.messages[msgs.messages.length - 1]
       if (lastMessage) {

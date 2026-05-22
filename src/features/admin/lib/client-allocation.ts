@@ -76,13 +76,12 @@ export function dedupeClientTeamMembers(
 ) {
 	const deduped = new Map<string, { name: string; role?: string }>()
 
-	;[{ name: accountManager, role: 'Account Manager' }, ...teamMembers]
-		.filter((member) => member.name.trim().length > 0)
-		.forEach((member) => {
-			const key = normalizeAllocationValue(member.name)
-			if (!key || deduped.has(key)) return
-			deduped.set(key, { name: member.name.trim(), role: member.role?.trim() || undefined })
-		})
+	for (const member of [{ name: accountManager, role: 'Account Manager' }, ...teamMembers]) {
+		if (member.name.trim().length === 0) continue
+		const key = normalizeAllocationValue(member.name)
+		if (!key || deduped.has(key)) continue
+		deduped.set(key, { name: member.name.trim(), role: member.role?.trim() || undefined })
+	}
 
 	return Array.from(deduped.values())
 }

@@ -138,15 +138,15 @@ export function ActivityItem({
       {/* Pinned indicator */}
       {activity.isPinned && (
         <div className="absolute left-[-52px] sm:left-[-58px] top-4 text-warning">
-          <Pin className="h-4 w-4" />
+          <Pin className="size-4" />
         </div>
       )}
 
       {/* Activity icon */}
       <div
-        className={`absolute -left-[26px] sm:left-[-31px] flex h-8 w-8 items-center justify-center rounded-full border-2 border-background ${colorClass}`}
+        className={`absolute -left-[26px] sm:left-[-31px] flex size-8 items-center justify-center rounded-full border-2 border-background ${colorClass}`}
       >
-        <Icon className="h-4 w-4" />
+        <Icon className="size-4" />
       </div>
 
       {/* Activity content */}
@@ -210,7 +210,7 @@ export function ActivityItem({
             {/* Comments count */}
             {typeof activity.comments === 'number' && activity.comments > 0 && (
               <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                <MessageCircle aria-hidden="true" className="h-3 w-3" />
+                <MessageCircle aria-hidden="true" className="size-3" />
                 <span>{activity.comments} comment{activity.comments !== 1 ? 's' : ''}</span>
               </div>
             )}
@@ -235,11 +235,11 @@ export function ActivityItem({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="size-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={handleStopPropagation}
                   aria-label="Add reaction"
                 >
-                  <Heart className="h-4 w-4" />
+                  <Heart className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="top">
@@ -258,14 +258,14 @@ export function ActivityItem({
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="size-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={createTogglePinClickHandler()}
               aria-label={activity.isPinned ? 'Unpin activity' : 'Pin activity'}
             >
               {activity.isPinned ? (
-                <PinOff aria-hidden="true" className="h-4 w-4 text-warning" />
+                <PinOff aria-hidden="true" className="size-4 text-warning" />
               ) : (
-                <Pin aria-hidden="true" className="h-4 w-4" />
+                <Pin aria-hidden="true" className="size-4" />
               )}
             </Button>
 
@@ -274,11 +274,11 @@ export function ActivityItem({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="size-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={createMarkAsReadClickHandler()}
                 aria-label="Mark as read"
               >
-                <Check aria-hidden="true" className="h-4 w-4" />
+                <Check aria-hidden="true" className="size-4" />
               </Button>
             )}
 
@@ -288,11 +288,11 @@ export function ActivityItem({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="size-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={handleStopPropagation}
                   aria-label="More activity actions"
                 >
-                  <MoreHorizontal className="h-4 w-4" />
+                  <MoreHorizontal className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -301,12 +301,12 @@ export function ActivityItem({
                 >
                   {activity.isPinned ? (
                     <>
-                      <PinOff className="h-4 w-4 mr-2" />
+                      <PinOff className="size-4 mr-2" />
                       Unpin
                     </>
                   ) : (
                     <>
-                      <Pin className="h-4 w-4 mr-2" />
+                      <Pin className="size-4 mr-2" />
                       Pin
                     </>
                   )}
@@ -315,7 +315,7 @@ export function ActivityItem({
                   <DropdownMenuItem
                     onClick={createMarkAsReadClickHandler()}
                   >
-                    <Check className="h-4 w-4 mr-2" />
+                    <Check className="size-4 mr-2" />
                     Mark as read
                   </DropdownMenuItem>
                 )}
@@ -325,7 +325,7 @@ export function ActivityItem({
                 {activity.navigationUrl && (
                   <DropdownMenuItem asChild>
                     <Link href={activity.navigationUrl}>
-                      <ArrowUpRight className="h-4 w-4 mr-2" />
+                      <ArrowUpRight className="size-4 mr-2" />
                       Go to {activity.entityName}
                     </Link>
                   </DropdownMenuItem>

@@ -65,9 +65,10 @@ function slugify(value: string): string {
 function normalizeEmails(values: string[]): string[] {
   return Array.from(
     new Set(
-      values
-        .map((value) => value.trim().toLowerCase())
-        .filter((value) => value.length > 0)
+      values.flatMap((value) => {
+        const normalized = value.trim().toLowerCase()
+        return normalized.length > 0 ? [normalized] : []
+      })
     )
   )
 }

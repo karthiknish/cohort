@@ -7,7 +7,7 @@ export const CHANNEL_INFO_THEME = {
     'bg-linear-to-br from-primary/[0.08] via-card to-info/[0.04]',
   ),
   heroGlow:
-    'pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-primary/15 blur-3xl',
+    'pointer-events-none absolute -right-8 -top-10 size-36 rounded-full bg-primary/15 blur-3xl',
   heroTitle: 'text-xl font-semibold tracking-tight text-foreground',
   heroSubtitle: 'text-sm text-muted-foreground',
   statChip: cn(
@@ -22,7 +22,7 @@ export const CHANNEL_INFO_THEME = {
   ),
   sectionEyebrow: 'text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/75',
   memberRow: cn(
-    'flex items-center gap-3 rounded-xl border border-transparent px-2 py-2.5',
+    'flex items-center gap-3 rounded-xl border border-transparent p-2.5',
     'transition-[border-color,background-color] hover:border-border/50 hover:bg-muted/30',
     'motion-reduce:transition-none',
   ),

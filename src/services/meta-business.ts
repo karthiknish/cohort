@@ -128,7 +128,7 @@ export async function completeMetaOAuthFlow(options: {
   let expiresIn: number | undefined = tokenResponse.expires_in
   let finalExchangeError: MetaOAuthError | null = null
 
-  for (let attempt = 0; attempt < OAUTH_RETRY_CONFIG.maxRetries; attempt++) {
+  const attemptExchange = async (attempt: number): Promise<void> => {
     try {
       logger.debug('[Meta OAuth Flow] Attempting long-lived token exchange', { userId, attempt: attempt + 1 })
       
@@ -163,7 +163,7 @@ export async function completeMetaOAuthFlow(options: {
           const delayMs = calculateBackoffDelay(attempt)
           logger.info('[Meta OAuth Flow] Retrying long-lived token exchange', { userId, delayMs })
           await sleep(delayMs)
-          continue
+          return attemptExchange(attempt + 1)
         }
 
         throw new MetaOAuthError(
@@ -182,8 +182,6 @@ export async function completeMetaOAuthFlow(options: {
       longLivedToken = extended.access_token
       expiresIn = extended.expires_in
       logger.info('[Meta OAuth Flow] Long-lived token obtained successfully', { userId, expiresIn })
-
-      break
     } catch (exchangeError) {
       const message = exchangeError instanceof Error ? exchangeError.message : 'Long-lived token exchange failed'
       const isRetryable = exchangeError instanceof MetaOAuthError
@@ -200,15 +198,16 @@ export async function completeMetaOAuthFlow(options: {
       if (isRetryable && attempt < OAUTH_RETRY_CONFIG.maxRetries - 1) {
         const delayMs = calculateBackoffDelay(attempt)
         await sleep(delayMs)
-        continue
+        return attemptExchange(attempt + 1)
       }
 
       finalExchangeError = exchangeError instanceof MetaOAuthError
         ? exchangeError
         : new MetaOAuthError(message)
-      break
     }
   }
+
+  await attemptExchange(0)
 
   if (!longLivedToken) {
     throw finalExchangeError ?? new MetaOAuthError('Failed to exchange long-lived Meta token')

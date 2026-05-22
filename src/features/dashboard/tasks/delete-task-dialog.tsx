@@ -47,7 +47,7 @@ export function DeleteTaskDialog({
           >
             {deleting ? (
               <span className="inline-flex items-center gap-2">
-                <LoaderCircle className="h-4 w-4 animate-spin" /> Deleting…
+                <LoaderCircle className="size-4 animate-spin" /> Deleting…
               </span>
             ) : (
               'Delete'

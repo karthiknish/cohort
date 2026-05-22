@@ -104,15 +104,15 @@ export function ResponsiveOverlay({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute right-3 top-3 h-8 w-8"
+                className="absolute right-3 top-3 size-8"
                 onClick={handleClose}
                 aria-label="Close"
               >
-                <X className="h-4 w-4" aria-hidden />
+                <X className="size-4" aria-hidden />
               </Button>
             ) : null}
           </DrawerHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-4">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4">{children}</div>
           {footer ? <DrawerFooter className="shrink-0">{footer}</DrawerFooter> : null}
         </DrawerContent>
       </Drawer>

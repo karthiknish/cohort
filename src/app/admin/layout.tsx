@@ -75,7 +75,7 @@ function AdminNav() {
     <nav className="mx-auto flex w-full max-w-7xl flex-nowrap items-center gap-1 px-4 py-2 sm:px-6 lg:px-8">
       <Button asChild variant="ghost" size="sm" className="shrink-0 gap-2">
         <Link href="/dashboard">
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="size-4" />
           <span className="hidden sm:inline">Dashboard</span>
         </Link>
       </Button>
@@ -96,7 +96,7 @@ function AdminNav() {
               )}
             >
               <Link href={item.href} className="whitespace-nowrap">
-                <item.icon className="h-4 w-4 shrink-0" />
+                <item.icon className="size-4 shrink-0" />
                 <span>{item.title}</span>
               </Link>
             </Button>
@@ -147,7 +147,7 @@ function AdminBreadcrumb() {
             </BreadcrumbItem>
             {index < breadcrumbs.length - 1 && (
               <BreadcrumbSeparator>
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="size-4" />
               </BreadcrumbSeparator>
             )}
           </React.Fragment>

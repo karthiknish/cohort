@@ -65,7 +65,7 @@ export function UpcomingMeetingItemCard({
         <div className="flex flex-wrap items-center justify-end gap-2">
           {postCallProcessing ? (
             <Badge variant="info">
-              <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+              <LoaderCircle className="mr-1 size-3 animate-spin" />
               Post-call processing
             </Badge>
           ) : null}
@@ -76,7 +76,7 @@ export function UpcomingMeetingItemCard({
       <div className="mt-3 flex flex-wrap gap-2">
         {meeting.status !== 'cancelled' ? (
           <Button size="sm" className={getButtonClasses('primary')} onClick={handleOpenInSiteMeeting}>
-            <Video className="mr-1 h-3.5 w-3.5" />
+            <Video className="mr-1 size-3.5" />
             Join Room
           </Button>
         ) : null}
@@ -84,7 +84,7 @@ export function UpcomingMeetingItemCard({
         {meeting.meetLink ? (
           <Button asChild size="sm" variant="outline">
             <a href={meeting.meetLink} target="_blank" rel="noreferrer">
-              <Link2 className="mr-1 h-3.5 w-3.5" />
+              <Link2 className="mr-1 size-3.5" />
               Open Share Link
             </a>
           </Button>
@@ -113,7 +113,7 @@ export function UpcomingMeetingItemCard({
       <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
         {transcriptProcessingState === 'processing' ? (
           <Badge variant="info">
-            <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+            <LoaderCircle className="mr-1 size-3 animate-spin" />
             Finalizing transcript
           </Badge>
         ) : transcriptProcessingState === 'failed' ? (
@@ -128,7 +128,7 @@ export function UpcomingMeetingItemCard({
 
         {notesProcessingState === 'processing' ? (
           <Badge variant="info">
-            <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+            <LoaderCircle className="mr-1 size-3 animate-spin" />
             Generating AI notes
           </Badge>
         ) : notesProcessingState === 'failed' ? (

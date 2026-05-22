@@ -62,7 +62,7 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
       >
-        <CircleAlert className="h-3.5 w-3.5 text-muted-foreground" />
+        <CircleAlert className="size-3.5 text-muted-foreground" />
         {fileName}
       </a>
     )
@@ -83,7 +83,7 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
         <div className="relative overflow-hidden">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-muted/20">
-              <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
+              <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
             </div>
           )}
           <LazyImage
@@ -99,7 +99,7 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
             <div className="flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-viewer-chrome opacity-0 transition-opacity group-hover:opacity-100">
-              <ZoomIn className="h-4 w-4" />
+              <ZoomIn className="size-4" />
               <span className="text-xs font-medium">Preview</span>
             </div>
           </div>

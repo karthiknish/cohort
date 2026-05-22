@@ -183,7 +183,7 @@ export function InteractiveChartHeader({
 
         {showRefresh && onRefresh ? (
           <Button variant="outline" size="icon" onClick={onRefresh} disabled={isRefreshing} aria-label="Refresh chart data">
-            <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
+            <RefreshCw className={cn('size-4', isRefreshing && 'animate-spin')} />
           </Button>
         ) : null}
 
@@ -191,7 +191,7 @@ export function InteractiveChartHeader({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon" aria-label="Export chart">
-                <Download className="h-4 w-4" />
+                <Download className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

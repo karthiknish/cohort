@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useReducer } from 'react'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { useConvexAuth, useConvex } from 'convex/react'
@@ -15,6 +15,10 @@ import { formatCurrency } from '@/lib/utils'
 import { Trophy, ArrowUpRight, TriangleAlert } from 'lucide-react'
 import type { ClientRecord } from '@/types/clients'
 import { adsMetricsApi } from '@/lib/convex-api'
+import {
+    comparisonDataReducer,
+    createInitialComparisonDataState,
+} from './use-comparison-data-reducer'
 
 function isAuthError(error: unknown): boolean {
     const code = extractErrorCode(error)
@@ -58,9 +62,12 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
     // Don't run queries until Convex auth is ready
     const canQueryConvex = isConvexAuthenticated && !isConvexLoading && !!user?.id
 
-    const [comparisonSummaries, setComparisonSummaries] = useState<ClientComparisonSummary[]>([])
-    const [comparisonLoading, setComparisonLoading] = useState(false)
-    const [comparisonError, setComparisonError] = useState<string | null>(null)
+    const [comparisonState, dispatchComparison] = useReducer(
+        comparisonDataReducer,
+        undefined,
+        createInitialComparisonDataState,
+    )
+    const { summaries: comparisonSummaries, loading: comparisonLoading, error: comparisonError } = comparisonState
 
     const comparisonTargets = useMemo(() => {
         return comparisonClientIds.length > 0
@@ -76,9 +83,7 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
         let isCancelled = false
 
         if (!user?.id) {
-            setComparisonSummaries([])
-            setComparisonError(null)
-            setComparisonLoading(false)
+            dispatchComparison({ type: 'reset' })
             return () => {
                 isCancelled = true
             }
@@ -88,16 +93,13 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
             const targets = comparisonClientIds.length > 0 ? comparisonClientIds : selectedClientId ? [selectedClientId] : []
 
             if (targets.length === 0) {
-                setComparisonSummaries([])
-                setComparisonError(null)
-                setComparisonLoading(false)
+                dispatchComparison({ type: 'reset' })
                 return () => {
                     isCancelled = true
                 }
             }
 
-            setComparisonLoading(true)
-            setComparisonError(null)
+            dispatchComparison({ type: 'begin' })
 
             try {
                 const summaries = targets.map((clientId) => {
@@ -111,15 +113,12 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
                 })
 
                 if (!isCancelled) {
-                    setComparisonSummaries(summaries)
-                     setComparisonLoading(false)
+                    dispatchComparison({ type: 'success', summaries })
                  }
              } catch (error) {
                  if (!isCancelled) {
                      logError(error, 'useComparisonData:loadPreview')
-                     setComparisonSummaries([])
-                     setComparisonError(asErrorMessage(error))
-                     setComparisonLoading(false)
+                     dispatchComparison({ type: 'failure', error: asErrorMessage(error) })
                  }
              }
 
@@ -131,21 +130,18 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
         const targets = comparisonClientIds.length > 0 ? comparisonClientIds : selectedClientId ? [selectedClientId] : []
 
         if (targets.length === 0) {
-            setComparisonSummaries([])
-            setComparisonError(null)
-            setComparisonLoading(false)
+            dispatchComparison({ type: 'reset' })
             return () => {
                 isCancelled = true
             }
         }
 
         const loadComparison = async () => {
-            setComparisonLoading(true)
-            setComparisonError(null)
+            dispatchComparison({ type: 'begin' })
             try {
                 // Wait for Convex auth to be ready
                 if (!canQueryConvex) {
-                    setComparisonLoading(false)
+                    dispatchComparison({ type: 'setLoading', value: false })
                     return
                 }
 
@@ -179,23 +175,17 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
                         }
                         return b.totalRevenue - a.totalRevenue
                     })
-                     setComparisonSummaries(ordered)
+                    dispatchComparison({ type: 'success', summaries: ordered })
                  }
               } catch (error) {
                   if (!isCancelled) {
                       logError(error, 'useComparisonData:loadComparison')
-                      setComparisonSummaries([])
                       const message = isAuthError(error)
                          ? 'Your session is not ready yet. Please refresh, or sign in again.'
                          : asErrorMessage(error)
-                     setComparisonError(message)
+                     dispatchComparison({ type: 'failure', error: message })
                  }
-             } finally {
-
-                if (!isCancelled) {
-                    setComparisonLoading(false)
-                }
-            }
+             }
         }
 
         void loadComparison()

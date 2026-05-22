@@ -88,7 +88,7 @@ export function SharedPlatformBadges({ platforms }: { platforms?: Array<'email'>
           <Tooltip>
             <TooltipTrigger>
               <Badge variant="outline" className="h-4 px-1 py-0 text-[10px]">
-                <Mail className="h-3 w-3" />
+                <Mail className="size-3" />
               </Badge>
             </TooltipTrigger>
             <TooltipContent>
@@ -150,11 +150,11 @@ export function UnifiedMessageActionBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 transition-transform hover:scale-105"
+                className="size-6 transition-transform hover:scale-105"
                 disabled={isBusy}
                 onClick={handleReplyClick}
               >
-                <Reply className="h-3 w-3" />
+                <Reply className="size-3" />
                 <span className="sr-only">Reply in thread</span>
               </Button>
             </TooltipTrigger>
@@ -172,11 +172,11 @@ export function UnifiedMessageActionBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 transition-transform hover:scale-105"
+                className="size-6 transition-transform hover:scale-105"
                 disabled={isBusy}
                 onClick={handleEditClick}
               >
-                <Pencil className="h-3 w-3" />
+                <Pencil className="size-3" />
                 <span className="sr-only">Edit message</span>
               </Button>
             </TooltipTrigger>
@@ -194,11 +194,11 @@ export function UnifiedMessageActionBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-destructive transition-transform hover:scale-105 hover:text-destructive"
+                className="size-6 text-destructive transition-transform hover:scale-105 hover:text-destructive"
                 disabled={isBusy}
                 onClick={handleDeleteClick}
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash2 className="size-3" />
                 <span className="sr-only">Delete message</span>
               </Button>
             </TooltipTrigger>
@@ -215,16 +215,16 @@ export function UnifiedMessageActionBar({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 transition-transform hover:scale-105"
+              className="size-6 transition-transform hover:scale-105"
               disabled={isBusy}
               aria-label={`Share message from ${message.senderName ?? 'sender'}`}
             >
-              <Share2 className="h-3 w-3" aria-hidden />
+              <Share2 className="size-3" aria-hidden />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem onClick={handleShareEmailClick} disabled={sharingTo === `${message.id}-email`}>
-              <Mail className="mr-2 h-4 w-4" />
+              <Mail className="mr-2 size-4" />
               Share via Email
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -347,12 +347,12 @@ export function UnifiedThreadReplyCard({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 transition-transform hover:scale-105"
+                    className="size-6 transition-transform hover:scale-105"
                     disabled={isDeleting || isUpdating}
                     onClick={handleEditReply}
                     aria-label="Edit reply"
                   >
-                    <Pencil className="h-3.5 w-3.5" aria-hidden />
+                    <Pencil className="size-3.5" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -369,12 +369,12 @@ export function UnifiedThreadReplyCard({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 text-destructive transition-transform hover:scale-105 hover:text-destructive"
+                    className="size-6 text-destructive transition-transform hover:scale-105 hover:text-destructive"
                     disabled={isDeleting || isUpdating}
                     onClick={handleDeleteReply}
                     aria-label="Delete reply"
                   >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    <Trash2 className="size-3.5" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -477,19 +477,19 @@ export function UnifiedConversationHeader({
               type="button"
               variant="ghost"
               size="icon"
-              className="mt-0.5 h-9 w-9 shrink-0 lg:hidden"
+              className="mt-0.5 size-9 shrink-0 lg:hidden"
               onClick={header.onBack}
               aria-label="Back to inbox"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="size-4" />
             </Button>
           ) : null}
           {header.type === 'channel' && header.channelInfo ? (
-            <ChannelAvatar channel={header.channelInfo.channel} className="mt-0.5 h-9 w-9 ring-1 ring-border/60" />
+            <ChannelAvatar channel={header.channelInfo.channel} className="mt-0.5 size-9 ring-1 ring-border/60" />
           ) : (
             <Avatar className="mt-0.5 ring-1 ring-border/60">
               <AvatarFallback className={cn(header.type === 'channel' ? 'bg-muted' : 'bg-accent/10 text-primary')}>
-                {header.type === 'channel' ? <Hash className="h-4 w-4" /> : getInitials(header.name)}
+                {header.type === 'channel' ? <Hash className="size-4" /> : getInitials(header.name)}
               </AvatarFallback>
             </Avatar>
           )}
@@ -530,12 +530,12 @@ export function UnifiedConversationHeader({
               type="button"
               variant={messageSearchOpen ? 'secondary' : 'outline'}
               size="icon"
-              className="h-8 w-8"
+              className="size-8"
               onClick={onToggleMessageSearch}
               aria-label={messageSearchOpen ? 'Hide message search' : 'Search messages'}
               aria-pressed={messageSearchOpen}
             >
-              {messageSearchOpen ? <X className="h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
+              {messageSearchOpen ? <X className="size-3.5" /> : <Search className="size-3.5" />}
             </Button>
           ) : null}
           {header.channelInfo ? (
@@ -544,11 +544,11 @@ export function UnifiedConversationHeader({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="size-8"
                 aria-label="Channel details"
                 onClick={handleOpenChannelInfo}
               >
-                <Info className="h-3.5 w-3.5" />
+                <Info className="size-3.5" />
               </Button>
               <ChannelInfoDialog
                 open={channelInfoOpen}
@@ -575,7 +575,7 @@ export function UnifiedConversationHeader({
                     onClick={handleCopyShareLink}
                     aria-label="Copy conversation link"
                   >
-                    {linkCopied ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
+                    {linkCopied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
                     <span className="hidden sm:inline">{linkCopied ? 'Copied' : 'Copy link'}</span>
                   </Button>
                 </TooltipTrigger>
@@ -602,9 +602,9 @@ export function UnifiedConversationHeader({
                     aria-label="Mark channel as read"
                   >
                     {header.markChannelReadPending ? (
-                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                      <LoaderCircle className="size-3.5 animate-spin" />
                     ) : (
-                      <CheckCheck className="h-3.5 w-3.5" />
+                      <CheckCheck className="size-3.5" />
                     )}
                     <span className="hidden sm:inline">Mark read</span>
                     <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
@@ -620,19 +620,19 @@ export function UnifiedConversationHeader({
           ) : null}
           {header.primaryActionLabel && header.onPrimaryAction ? (
             <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={header.onPrimaryAction} aria-label={header.primaryActionLabel}>
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="size-3.5" />
               <span className="hidden sm:inline">{header.primaryActionLabel}</span>
             </Button>
           ) : null}
           {header.isArchived ? (
             <Badge variant="secondary" className="text-xs">
-              <Archive className="mr-1 h-3 w-3" />
+              <Archive className="mr-1 size-3" />
               Archived
             </Badge>
           ) : null}
           {header.isMuted ? (
             <Badge variant="secondary" className="text-xs">
-              <BellOff className="mr-1 h-3 w-3" />
+              <BellOff className="mr-1 size-3" />
               Muted
             </Badge>
           ) : null}
@@ -640,8 +640,8 @@ export function UnifiedConversationHeader({
           {header.onArchive || header.onMute || header.onExport ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Conversation actions">
-                  <MoreVertical className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="size-8" aria-label="Conversation actions">
+                  <MoreVertical className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -649,12 +649,12 @@ export function UnifiedConversationHeader({
                   <DropdownMenuItem onClick={handleArchiveToggle}>
                     {header.isArchived ? (
                       <>
-                        <ArchiveRestore className="mr-2 h-4 w-4" />
+                        <ArchiveRestore className="mr-2 size-4" />
                         Unarchive
                       </>
                     ) : (
                       <>
-                        <Archive className="mr-2 h-4 w-4" />
+                        <Archive className="mr-2 size-4" />
                         Archive
                       </>
                     )}
@@ -664,12 +664,12 @@ export function UnifiedConversationHeader({
                   <DropdownMenuItem onClick={handleMuteToggle}>
                     {header.isMuted ? (
                       <>
-                        <Bell className="mr-2 h-4 w-4" />
+                        <Bell className="mr-2 size-4" />
                         Unmute
                       </>
                     ) : (
                       <>
-                        <BellOff className="mr-2 h-4 w-4" />
+                        <BellOff className="mr-2 size-4" />
                         Mute
                       </>
                     )}
@@ -677,7 +677,7 @@ export function UnifiedConversationHeader({
                 ) : null}
                 {header.onExport ? (
                   <DropdownMenuItem onClick={header.onExport}>
-                    <Share2 className="mr-2 h-4 w-4" />
+                    <Share2 className="mr-2 size-4" />
                     Export messages
                   </DropdownMenuItem>
                 ) : null}
@@ -796,9 +796,9 @@ export function UnifiedComposerSection({
           className={cn(chromaticTransitionClass, 'hover:-translate-y-0.5 active:translate-y-0')}
         >
           {isSending || uploadingAttachments ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" />
+            <LoaderCircle className="size-4 animate-spin" />
           ) : (
-            <Send className="h-4 w-4" />
+            <Send className="size-4" />
           )}
           <span className="ml-2">{uploadingAttachments ? 'Uploading…' : isSending ? 'Sending…' : 'Send'}</span>
         </Button>

@@ -786,6 +786,8 @@ export function parseGoogleScopeList(scopeValue: string | undefined): string[] {
   if (!scopeValue) return []
   return scopeValue
     .split(' ')
-    .map((scope) => scope.trim())
-    .filter((scope) => scope.length > 0)
+    .flatMap((scope) => {
+      const trimmed = scope.trim()
+      return trimmed.length > 0 ? [trimmed] : []
+    })
 }

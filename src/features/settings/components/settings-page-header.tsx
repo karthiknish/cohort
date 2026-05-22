@@ -21,8 +21,8 @@ export function SettingsPageHeader({ isPreviewMode, className, children }: Setti
       )}
     >
       <div className="flex min-w-0 items-start gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent/20 bg-accent/10 text-primary shadow-sm">
-          <Settings2 className="h-5 w-5" aria-hidden />
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-accent/20 bg-accent/10 text-primary shadow-sm">
+          <Settings2 className="size-5" aria-hidden />
         </div>
         <div className="min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">

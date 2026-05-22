@@ -927,7 +927,7 @@ export function CollaborationMessageViewport({
       <div className="space-y-4 p-4">
         {isLoading ? (
           <div className="flex justify-center py-6 text-muted-foreground">
-            <LoaderCircle className="h-5 w-5 animate-spin" />
+            <LoaderCircle className="size-5 animate-spin" />
           </div>
         ) : null}
 
@@ -940,7 +940,7 @@ export function CollaborationMessageViewport({
         {!isLoading && !messagesError && !isSearchActive && canLoadMore && onLoadMore ? (
           <div className="flex justify-center">
             <Button type="button" variant="ghost" size="sm" onClick={onLoadMore} disabled={loadingMore} className="inline-flex items-center gap-2 text-xs">
-              <RefreshCw className={loadingMore ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
+              <RefreshCw className={loadingMore ? 'size-3.5 animate-spin' : 'size-3.5'} />
               {loadingMore ? 'Loading older messages…' : 'Load older messages'}
             </Button>
           </div>

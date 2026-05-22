@@ -24,9 +24,9 @@ export function UserPresenceIndicator({
   size = 'md',
 }: UserPresenceIndicatorProps) {
   const sizeClasses = {
-    sm: 'h-2 w-2',
-    md: 'h-3 w-3',
-    lg: 'h-4 w-4',
+    sm: 'size-2',
+    md: 'size-3',
+    lg: 'size-4',
   }
 
   const statusClasses: Record<PresenceStatus, string> = {
@@ -82,15 +82,15 @@ export function UserAvatarWithPresence({
   onClick,
 }: UserAvatarWithPresenceProps) {
   const sizeClasses = {
-    sm: 'h-8 w-8',
-    md: 'h-10 w-10',
-    lg: 'h-12 w-12',
+    sm: 'size-8',
+    md: 'size-10',
+    lg: 'size-12',
   }
 
   const indicatorSizes = {
-    sm: 'h-2.5 w-2.5',
-    md: 'h-3 w-3',
-    lg: 'h-3.5 w-3.5',
+    sm: 'size-2.5',
+    md: 'size-3',
+    lg: 'size-3.5',
   }
 
   const indicatorPositions = {
@@ -189,13 +189,13 @@ export function ChannelPresenceList({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="relative">
-                  <Avatar className="h-7 w-7 rounded-full bg-accent/10 text-[10px] font-medium text-primary ring-2 ring-background">
+                  <Avatar className="size-7 rounded-full bg-accent/10 text-[10px] font-medium text-primary ring-2 ring-background">
                     {member.avatarUrl ? <AvatarImage src={member.avatarUrl} alt={member.name} className="object-cover" /> : null}
                     <AvatarFallback>{member.name.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <span
                     className={cn(
-                      'absolute bottom-0 right-0 h-2 w-2 rounded-full ring-1 ring-background',
+                      'absolute bottom-0 right-0 size-2 rounded-full ring-1 ring-background',
                       member.status === 'online' && 'bg-success',
                       member.status === 'away' && 'bg-warning',
                       member.status === 'busy' && 'bg-destructive'

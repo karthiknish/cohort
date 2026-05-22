@@ -44,7 +44,7 @@ export function PageHeader({
       {backHref && (
         <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground">
           <Link href={backHref}>
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="size-4" />
             {backLabel}
           </Link>
         </Button>
@@ -54,8 +54,8 @@ export function PageHeader({
         <div className="space-y-1.5">
           <div className="flex items-center gap-3">
             {Icon && (
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-primary">
-                <Icon className="h-5 w-5" />
+              <span className="flex size-10 items-center justify-center rounded-lg bg-accent/10 text-primary">
+                <Icon className="size-5" />
               </span>
             )}
             <div>
@@ -71,7 +71,7 @@ export function PageHeader({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground">
-                          <CircleHelp className="h-4 w-4" />
+                          <CircleHelp className="size-4" />
                           <span className="sr-only">Help</span>
                         </button>
                       </TooltipTrigger>

@@ -2,7 +2,7 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { useAction } from 'convex/react'
 import { Plus } from 'lucide-react'
 
@@ -77,6 +77,179 @@ function generateCreativeIdempotencyKey(): string {
   return `creative_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 }
 
+type CreateCreativeDialogState = {
+  open: boolean
+  loading: boolean
+  uploadingImage: boolean
+  uploadingVideo: boolean
+  videoPreviewUrl: string | null
+  loadingPageActors: boolean
+  metaPageActors: MetaPageActorOption[]
+  selectedAdSetId: string | undefined
+  name: string
+  objectType: CreativeObjectType
+  title: string
+  body: string
+  description: string
+  callToActionType: string
+  linkUrl: string
+  imageUrl: string
+  imageHash: string
+  imagePreviewUrl: string | null
+  videoId: string
+  pageId: string
+  instagramActorId: string
+  status: CreativeStatus
+}
+
+type CreateCreativeDialogAction =
+  | { type: 'setOpen'; value: boolean }
+  | { type: 'setLoading'; value: boolean }
+  | { type: 'setUploadingImage'; value: boolean }
+  | { type: 'setUploadingVideo'; value: boolean }
+  | { type: 'setVideoPreviewUrl'; value: string | null }
+  | { type: 'setLoadingPageActors'; value: boolean }
+  | { type: 'setMetaPageActors'; value: MetaPageActorOption[] }
+  | { type: 'setSelectedAdSetId'; value: string | undefined }
+  | { type: 'setName'; value: string }
+  | { type: 'setObjectType'; value: CreativeObjectType }
+  | { type: 'setTitle'; value: string }
+  | { type: 'setBody'; value: string }
+  | { type: 'setDescription'; value: string }
+  | { type: 'setCallToActionType'; value: string }
+  | { type: 'setLinkUrl'; value: string }
+  | { type: 'setImageUrl'; value: string }
+  | { type: 'setImageHash'; value: string }
+  | { type: 'setImagePreviewUrl'; value: string | null }
+  | { type: 'setVideoId'; value: string }
+  | { type: 'setPageId'; value: string }
+  | { type: 'setInstagramActorId'; value: string }
+  | { type: 'setStatus'; value: CreativeStatus }
+  | { type: 'selectPage'; pageId: string; instagramActorId: string }
+  | { type: 'clearImage' }
+  | { type: 'clearVideo' }
+  | { type: 'reset'; selectedAdSetId: string | undefined }
+  | { type: 'applyMetaPageActors'; actors: MetaPageActorOption[] }
+  | { type: 'clearMetaPageActorsOnError' }
+
+function createInitialCreateCreativeDialogState(
+  selectedAdSetId: string | undefined,
+): CreateCreativeDialogState {
+  return {
+    open: false,
+    loading: false,
+    uploadingImage: false,
+    uploadingVideo: false,
+    videoPreviewUrl: null,
+    loadingPageActors: false,
+    metaPageActors: [],
+    selectedAdSetId,
+    name: '',
+    objectType: 'IMAGE',
+    title: '',
+    body: '',
+    description: '',
+    callToActionType: '',
+    linkUrl: '',
+    imageUrl: '',
+    imageHash: '',
+    imagePreviewUrl: null,
+    videoId: '',
+    pageId: '',
+    instagramActorId: '',
+    status: 'PAUSED',
+  }
+}
+
+function createCreativeDialogReducer(
+  state: CreateCreativeDialogState,
+  action: CreateCreativeDialogAction,
+): CreateCreativeDialogState {
+  switch (action.type) {
+    case 'setOpen':
+      return { ...state, open: action.value }
+    case 'setLoading':
+      return { ...state, loading: action.value }
+    case 'setUploadingImage':
+      return { ...state, uploadingImage: action.value }
+    case 'setUploadingVideo':
+      return { ...state, uploadingVideo: action.value }
+    case 'setVideoPreviewUrl':
+      return { ...state, videoPreviewUrl: action.value }
+    case 'setLoadingPageActors':
+      return { ...state, loadingPageActors: action.value }
+    case 'setMetaPageActors':
+      return { ...state, metaPageActors: action.value }
+    case 'setSelectedAdSetId':
+      return { ...state, selectedAdSetId: action.value }
+    case 'setName':
+      return { ...state, name: action.value }
+    case 'setObjectType':
+      return { ...state, objectType: action.value }
+    case 'setTitle':
+      return { ...state, title: action.value }
+    case 'setBody':
+      return { ...state, body: action.value }
+    case 'setDescription':
+      return { ...state, description: action.value }
+    case 'setCallToActionType':
+      return { ...state, callToActionType: action.value }
+    case 'setLinkUrl':
+      return { ...state, linkUrl: action.value }
+    case 'setImageUrl':
+      return { ...state, imageUrl: action.value }
+    case 'setImageHash':
+      return { ...state, imageHash: action.value }
+    case 'setImagePreviewUrl':
+      return { ...state, imagePreviewUrl: action.value }
+    case 'setVideoId':
+      return { ...state, videoId: action.value }
+    case 'setPageId':
+      return { ...state, pageId: action.value }
+    case 'setInstagramActorId':
+      return { ...state, instagramActorId: action.value }
+    case 'setStatus':
+      return { ...state, status: action.value }
+    case 'selectPage':
+      return { ...state, pageId: action.pageId, instagramActorId: action.instagramActorId }
+    case 'clearImage':
+      return { ...state, imagePreviewUrl: null, imageUrl: '', imageHash: '' }
+    case 'clearVideo':
+      return { ...state, videoPreviewUrl: null, videoId: '' }
+    case 'reset':
+      return createInitialCreateCreativeDialogState(action.selectedAdSetId)
+    case 'applyMetaPageActors': {
+      const normalizedActors = action.actors
+      const currentPageId = state.pageId
+      const nextPageId =
+        currentPageId && normalizedActors.some((actor) => actor.id === currentPageId)
+          ? currentPageId
+          : (normalizedActors[0]?.id ?? '')
+
+      if (!nextPageId) {
+        return {
+          ...state,
+          metaPageActors: normalizedActors,
+          pageId: '',
+          instagramActorId: '',
+        }
+      }
+
+      const pageActor = normalizedActors.find((actor) => actor.id === nextPageId)
+      return {
+        ...state,
+        metaPageActors: normalizedActors,
+        pageId: nextPageId,
+        instagramActorId: pageActor?.instagramBusinessAccountId ?? '',
+      }
+    }
+    case 'clearMetaPageActorsOnError':
+      return { ...state, metaPageActors: [], pageId: '', instagramActorId: '' }
+    default:
+      return state
+  }
+}
+
 export function CreateCreativeDialog({
   workspaceId,
   providerId,
@@ -88,64 +261,56 @@ export function CreateCreativeDialog({
 }: Props) {
   const isMeta = providerId === 'facebook'
 
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [uploadingImage, setUploadingImage] = useState(false)
-  const [uploadingVideo, setUploadingVideo] = useState(false)
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null)
+  const [state, dispatch] = useReducer(
+    createCreativeDialogReducer,
+    propAdSetId,
+    createInitialCreateCreativeDialogState,
+  )
+  const {
+    open,
+    loading,
+    uploadingImage,
+    uploadingVideo,
+    videoPreviewUrl,
+    loadingPageActors,
+    metaPageActors,
+    selectedAdSetId,
+    name,
+    objectType,
+    title,
+    body,
+    description,
+    callToActionType,
+    linkUrl,
+    imageUrl,
+    imageHash,
+    imagePreviewUrl,
+    videoId,
+    pageId,
+    instagramActorId,
+    status,
+  } = state
+
   const videoPreviewRef = useRef<string | null>(null)
-  const [loadingPageActors, setLoadingPageActors] = useState(false)
-  const [metaPageActors, setMetaPageActors] = useState<MetaPageActorOption[]>([])
-  const [selectedAdSetId, setSelectedAdSetId] = useState<string | undefined>(() => propAdSetId)
   const previousPropAdSetIdRef = useRef(propAdSetId)
   if (previousPropAdSetIdRef.current !== propAdSetId) {
     previousPropAdSetIdRef.current = propAdSetId
-    setSelectedAdSetId(propAdSetId)
+    dispatch({ type: 'setSelectedAdSetId', value: propAdSetId })
   }
 
   const listMetaPageActors = useAction(adsCreativesApi.listMetaPageActors)
   const createCreative = useAction(adsCreativesApi.createCreative)
   const uploadMedia = useAction(adsCreativesApi.uploadMedia)
 
-  // Form state
-  const [name, setName] = useState('')
-  const [objectType, setObjectType] = useState<CreativeObjectType>('IMAGE')
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
-  const [description, setDescription] = useState('')
-  const [callToActionType, setCallToActionType] = useState('')
-  const [linkUrl, setLinkUrl] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
-  const [imageHash, setImageHash] = useState('')
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
   const imagePreviewRef = useRef<string | null>(null)
-  const [videoId, setVideoId] = useState('')
-  const [pageId, setPageId] = useState('')
-  const [instagramActorId, setInstagramActorId] = useState('')
-  const [status, setStatus] = useState<CreativeStatus>('PAUSED')
   const submissionRef = useRef<{ fingerprint: string; key: string } | null>(null)
 
   const resetForm = useCallback(() => {
-    setName('')
-    setObjectType('IMAGE')
-    setTitle('')
-    setBody('')
-    setDescription('')
-    setCallToActionType('')
-    setLinkUrl('')
-    setImageUrl('')
-    setImageHash('')
     revokeBlobPreview(imagePreviewRef.current)
     imagePreviewRef.current = null
-    setImagePreviewUrl(null)
     revokeBlobPreview(videoPreviewRef.current)
     videoPreviewRef.current = null
-    setVideoPreviewUrl(null)
-    setVideoId('')
-    setPageId('')
-    setInstagramActorId('')
-    setStatus('PAUSED')
-    setSelectedAdSetId(propAdSetId)
+    dispatch({ type: 'reset', selectedAdSetId: propAdSetId })
     submissionRef.current = null
   }, [propAdSetId])
 
@@ -209,22 +374,38 @@ export function CreateCreativeDialog({
 
   const handleSelectPage = useCallback(
     (nextPageId: string) => {
-      setPageId(nextPageId)
       const actor = metaPageActors.find((row) => row.id === nextPageId)
-      setInstagramActorId(actor?.instagramBusinessAccountId ?? '')
+      dispatch({
+        type: 'selectPage',
+        pageId: nextPageId,
+        instagramActorId: actor?.instagramBusinessAccountId ?? '',
+      })
     },
     [metaPageActors]
   )
+
+  const handleOpenChange = useCallback((value: boolean) => {
+    dispatch({ type: 'setOpen', value })
+  }, [])
+
+  const setBody = useCallback((value: string) => dispatch({ type: 'setBody', value }), [])
+  const setCallToActionType = useCallback((value: string) => dispatch({ type: 'setCallToActionType', value }), [])
+  const setDescription = useCallback((value: string) => dispatch({ type: 'setDescription', value }), [])
+  const setImageUrl = useCallback((value: string) => dispatch({ type: 'setImageUrl', value }), [])
+  const setInstagramActorId = useCallback((value: string) => dispatch({ type: 'setInstagramActorId', value }), [])
+  const setLinkUrl = useCallback((value: string) => dispatch({ type: 'setLinkUrl', value }), [])
+  const setName = useCallback((value: string) => dispatch({ type: 'setName', value }), [])
+  const setObjectType = useCallback((value: CreativeObjectType) => dispatch({ type: 'setObjectType', value }), [])
+  const setSelectedAdSetId = useCallback((value: string | undefined) => dispatch({ type: 'setSelectedAdSetId', value }), [])
+  const setStatus = useCallback((value: CreativeStatus) => dispatch({ type: 'setStatus', value }), [])
+  const setTitle = useCallback((value: string) => dispatch({ type: 'setTitle', value }), [])
+  const setVideoId = useCallback((value: string) => dispatch({ type: 'setVideoId', value }), [])
 
   useEffect(() => {
     if (!open || !isMeta || !workspaceId) return
 
     let cancelled = false
-    const loadingFrame = window.requestAnimationFrame(() => {
-      if (!cancelled) {
-        setLoadingPageActors(true)
-      }
-    })
+    dispatch({ type: 'setLoadingPageActors', value: true })
 
     void listMetaPageActors({
       workspaceId,
@@ -238,29 +419,15 @@ export function CreateCreativeDialog({
           ? (actors as MetaPageActorOption[])
           : []
 
-        setMetaPageActors(normalizedActors)
-        setPageId((currentPageId) => {
-          const nextPageId =
-            currentPageId && normalizedActors.some((actor) => actor.id === currentPageId)
-              ? currentPageId
-              : (normalizedActors[0]?.id ?? '')
-
-          if (!nextPageId) {
-            setInstagramActorId('')
-            return ''
-          }
-
-          const pageActor = normalizedActors.find((actor) => actor.id === nextPageId)
-          setInstagramActorId(pageActor?.instagramBusinessAccountId ?? '')
-          return nextPageId
+        dispatch({
+          type: 'applyMetaPageActors',
+          actors: normalizedActors,
         })
       })
       .catch((error) => {
         if (cancelled) return
         logError(error, 'CreateCreativeDialog:loadMetaPageActors')
-        setMetaPageActors([])
-        setPageId('')
-        setInstagramActorId('')
+        dispatch({ type: 'clearMetaPageActorsOnError' })
         reportConvexFailure({
         error: error,
         context: 'create-creative-dialog.tsx:catch',
@@ -270,29 +437,25 @@ export function CreateCreativeDialog({
       })
       .finally(() => {
         if (!cancelled) {
-          setLoadingPageActors(false)
+          dispatch({ type: 'setLoadingPageActors', value: false })
         }
       })
 
     return () => {
       cancelled = true
-      window.cancelAnimationFrame(loadingFrame)
     }
   }, [open, isMeta, workspaceId, clientId, listMetaPageActors])
 
   const handleClearImage = useCallback(() => {
     revokeBlobPreview(imagePreviewRef.current)
     imagePreviewRef.current = null
-    setImagePreviewUrl(null)
-    setImageUrl('')
-    setImageHash('')
+    dispatch({ type: 'clearImage' })
   }, [])
 
   const handleClearVideo = useCallback(() => {
     revokeBlobPreview(videoPreviewRef.current)
     videoPreviewRef.current = null
-    setVideoPreviewUrl(null)
-    setVideoId('')
+    dispatch({ type: 'clearVideo' })
   }, [])
 
   const handleImageUpload = useCallback(
@@ -312,16 +475,16 @@ export function CreateCreativeDialog({
       revokeBlobPreview(imagePreviewRef.current)
       const blobUrl = URL.createObjectURL(file)
       imagePreviewRef.current = blobUrl
-      setImagePreviewUrl(blobUrl)
+      dispatch({ type: 'setImagePreviewUrl', value: blobUrl })
 
-      setUploadingImage(true)
+      dispatch({ type: 'setUploadingImage', value: true })
 
       if (!workspaceId) {
         notifyFailure({
         title: 'Upload failed',
         message: 'Sign in required',
       })
-        setUploadingImage(false)
+        dispatch({ type: 'setUploadingImage', value: false })
         return
       }
 
@@ -343,7 +506,7 @@ export function CreateCreativeDialog({
           if (result.creativeSpec) {
             const hash = parseImageHashFromCreativeSpec(String(result.creativeSpec))
             if (hash) {
-              setImageHash(hash)
+              dispatch({ type: 'setImageHash', value: hash })
               toast({
                 title: 'Image uploaded',
                 description: 'Your image is ready to use in this creative.',
@@ -363,7 +526,7 @@ export function CreateCreativeDialog({
         })
         })
         .finally(() => {
-          setUploadingImage(false)
+          dispatch({ type: 'setUploadingImage', value: false })
         })
     },
     [clientId, providerId, uploadMedia, workspaceId]
@@ -386,12 +549,12 @@ export function CreateCreativeDialog({
       revokeBlobPreview(videoPreviewRef.current)
       const blobUrl = URL.createObjectURL(file)
       videoPreviewRef.current = blobUrl
-      setVideoPreviewUrl(blobUrl)
-      setUploadingVideo(true)
+      dispatch({ type: 'setVideoPreviewUrl', value: blobUrl })
+      dispatch({ type: 'setUploadingVideo', value: true })
 
       if (!workspaceId) {
         notifyFailure({ title: 'Upload failed', message: 'Sign in required' })
-        setUploadingVideo(false)
+        dispatch({ type: 'setUploadingVideo', value: false })
         return
       }
 
@@ -408,7 +571,7 @@ export function CreateCreativeDialog({
         .then((result) => {
           if (!result.success) throw new Error('Failed to upload media')
           if (result.videoId) {
-            setVideoId(result.videoId)
+            dispatch({ type: 'setVideoId', value: result.videoId })
             toast({
               title: 'Video uploaded',
               description: 'Your video is ready to use in this creative.',
@@ -426,7 +589,7 @@ export function CreateCreativeDialog({
           })
         })
         .finally(() => {
-          setUploadingVideo(false)
+          dispatch({ type: 'setUploadingVideo', value: false })
         })
     },
     [clientId, providerId, uploadMedia, workspaceId],
@@ -505,7 +668,7 @@ export function CreateCreativeDialog({
         key: effectiveIdempotencyKey,
       }
 
-      setLoading(true)
+      dispatch({ type: 'setLoading', value: true })
 
       await createCreative({
         workspaceId,
@@ -534,7 +697,7 @@ export function CreateCreativeDialog({
             description: `Your ad creative "${name}" has been created successfully.`,
           })
 
-          setOpen(false)
+          dispatch({ type: 'setOpen', value: false })
           resetForm()
           onSuccess?.()
         })
@@ -547,7 +710,7 @@ export function CreateCreativeDialog({
         })
         })
         .finally(() => {
-          setLoading(false)
+          dispatch({ type: 'setLoading', value: false })
         })
     },
     [
@@ -578,14 +741,14 @@ export function CreateCreativeDialog({
   )
 
   const handleClose = useCallback(() => {
-    setOpen(false)
+    dispatch({ type: 'setOpen', value: false })
   }, [])
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm" disabled={!isMeta || !selectedAdSetId}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 size-4" />
           Create Ad
         </Button>
       </DialogTrigger>

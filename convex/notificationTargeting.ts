@@ -198,9 +198,11 @@ export async function resolveTaskNotificationRecipientUserIds(
 
   const [project, commentRows] = await Promise.all([projectPromise, commentRowsPromise])
 
-  const commentAuthorIds = commentRows
-    .filter((row) => row.deleted !== true && typeof row.authorId === 'string' && row.authorId.length > 0)
-    .map((row) => row.authorId as string)
+  const commentAuthorIds = commentRows.flatMap((row) =>
+    row.deleted !== true && typeof row.authorId === 'string' && row.authorId.length > 0
+      ? [row.authorId as string]
+      : [],
+  )
 
   return resolveWorkspaceUserIds(ctx, options.workspaceId, {
     userIds: [

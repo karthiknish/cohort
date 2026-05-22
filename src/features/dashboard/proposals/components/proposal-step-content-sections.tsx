@@ -53,7 +53,7 @@ const animatedStepClassName = ['space-y-6', listItemEnterClass].join(' ')
 const interactiveCardClassName =
   'motion-chromatic hover:shadow-sm active:scale-[0.98]'
 
-const LABEL_ICON_CLASS = 'h-4 w-4 text-primary/70'
+const LABEL_ICON_CLASS = 'size-4 text-primary/70'
 
 const companyNameLabelPrefix = <Building2 className={LABEL_ICON_CLASS} aria-hidden />
 const websiteLabelPrefix = <Globe className={LABEL_ICON_CLASS} aria-hidden />
@@ -66,32 +66,32 @@ function SelectionIndicator({ selected }: { selected: boolean }) {
     <span
       aria-hidden="true"
       className={cn(
-        'flex h-5 w-5 items-center justify-center rounded-md border motion-chromatic',
+        'flex size-5 items-center justify-center rounded-md border motion-chromatic',
         selected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/30 bg-background/80',
       )}
     >
-      {selected ? <CircleCheck className="h-3.5 w-3.5" /> : null}
+      {selected ? <CircleCheck className="size-3.5" /> : null}
     </span>
   )
 }
 
 function socialHandleIcon(handle: (typeof socialHandles)[number]) {
   if (handle === 'Facebook') {
-    return <Facebook className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+    return <Facebook className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
   }
   if (handle === 'Instagram') {
-    return <Instagram className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+    return <Instagram className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
   }
   if (handle === 'LinkedIn') {
-    return <Linkedin className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+    return <Linkedin className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
   }
   if (handle === 'X / Twitter') {
-    return <Twitter className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+    return <Twitter className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
   }
   if (handle === 'YouTube') {
-    return <Youtube className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+    return <Youtube className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
   }
-  return <Globe className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+  return <Globe className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
 }
 
 export function ProposalCompanyStepSection({ formState, validationErrors, onUpdateField }: ProposalStepSectionProps) {
@@ -216,14 +216,14 @@ function MarketingPlatformButton({
   isSelected: boolean
   onToggleArrayValue: ProposalStepSectionProps['onToggleArrayValue']
 }) {
-  const handleClick = useCallback(
+  const onTogglePlatform = useCallback(
     () => onToggleArrayValue?.(['marketing', 'platforms'], platform),
     [onToggleArrayValue, platform],
   )
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onTogglePlatform}
       aria-pressed={isSelected}
       className={cn(
         `flex cursor-pointer items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
@@ -247,7 +247,7 @@ function SocialHandleInput({
   value: string
   onChangeSocialHandle: ProposalStepSectionProps['onChangeSocialHandle']
 }) {
-  const handleChange = useCallback(
+  const onSocialHandleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => onChangeSocialHandle?.(handle, event.target.value),
     [onChangeSocialHandle, handle],
   )
@@ -263,7 +263,7 @@ function SocialHandleInput({
           name={`social-${handle}`}
           placeholder="@company"
           value={value}
-          onChange={handleChange}
+          onChange={onSocialHandleChange}
           className="h-8 border-muted/40 bg-transparent text-xs motion-chromatic focus:bg-background"
         />
       </FormField>
@@ -347,14 +347,14 @@ function GoalOptionButton({
   isSelected: boolean
   onToggleArrayValue: ProposalStepSectionProps['onToggleArrayValue']
 }) {
-  const handleClick = useCallback(
+  const onToggleGoal = useCallback(
     () => onToggleArrayValue?.(['goals', 'objectives'], goal),
     [onToggleArrayValue, goal],
   )
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onToggleGoal}
       aria-pressed={isSelected}
       className={cn(
         `flex cursor-pointer items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
@@ -378,14 +378,14 @@ function ChallengeButton({
   isSelected: boolean
   onToggleArrayValue: ProposalStepSectionProps['onToggleArrayValue']
 }) {
-  const handleClick = useCallback(
+  const onToggleChallenge = useCallback(
     () => onToggleArrayValue?.(['goals', 'challenges'], challenge),
     [onToggleArrayValue, challenge],
   )
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onToggleChallenge}
       className={cn(
         'rounded-full border px-4 py-2 text-xs font-semibold motion-chromatic',
         isSelected
@@ -478,7 +478,7 @@ function ScopeServiceButton({
   isSelected: boolean
   onToggleArrayValue: ProposalStepSectionProps['onToggleArrayValue']
 }) {
-  const handleClick = useCallback(
+  const onToggleService = useCallback(
     () => onToggleArrayValue?.(['scope', 'services'], service),
     [onToggleArrayValue, service],
   )
@@ -491,7 +491,7 @@ function ScopeServiceButton({
           ? 'border-primary bg-accent/[0.03] ring-1 ring-primary/20 shadow-sm'
           : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/10',
       )}
-      onClick={handleClick}
+      onClick={onToggleService}
       aria-pressed={isSelected}
     >
       <div className="space-y-0.5">
@@ -554,14 +554,14 @@ function TimelineOptionButton({
   isSelected: boolean
   onUpdateField: ProposalStepSectionProps['onUpdateField']
 }) {
-  const handleClick = useCallback(
+  const onSelectStartTime = useCallback(
     () => onUpdateField(['timelines', 'startTime'], option),
     [onUpdateField, option],
   )
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectStartTime}
       className={cn(
         `flex items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
         isSelected
@@ -570,7 +570,7 @@ function TimelineOptionButton({
       )}
     >
       <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{option}</span>
-      {isSelected ? <CircleCheck className="h-5 w-5 text-primary" /> : null}
+      {isSelected ? <CircleCheck className="size-5 text-primary" /> : null}
     </button>
   )
 }
@@ -623,14 +623,14 @@ function ProposalValueButton({
   isSelected: boolean
   onUpdateField: ProposalStepSectionProps['onUpdateField']
 }) {
-  const handleClick = useCallback(
+  const onSelectProposalSize = useCallback(
     () => onUpdateField(['value', 'proposalSize'], option),
     [onUpdateField, option],
   )
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectProposalSize}
       className={cn(
         'flex flex-col items-center justify-center gap-2 rounded-2xl border p-6 motion-chromatic-lg',
         isSelected
@@ -653,14 +653,14 @@ function EngagementTypeButton({
   isSelected: boolean
   onUpdateField: ProposalStepSectionProps['onUpdateField']
 }) {
-  const handleClick = useCallback(
+  const onSelectEngagementType = useCallback(
     () => onUpdateField(['value', 'engagementType'], option),
     [onUpdateField, option],
   )
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectEngagementType}
       className={cn(
         `flex items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
         isSelected
@@ -669,7 +669,7 @@ function EngagementTypeButton({
       )}
     >
       <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{option}</span>
-      {isSelected ? <CircleCheck className="h-5 w-5 text-primary" /> : null}
+      {isSelected ? <CircleCheck className="size-5 text-primary" /> : null}
     </button>
   )
 }
@@ -683,14 +683,14 @@ function PresentationThemeButton({
   isSelected: boolean
   onUpdateField: ProposalStepSectionProps['onUpdateField']
 }) {
-  const handleClick = useCallback(
+  const onSelectPresentationTheme = useCallback(
     () => onUpdateField(['value', 'presentationTheme'], theme.id),
     [onUpdateField, theme.id],
   )
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectPresentationTheme}
       className={cn(
         'group relative flex flex-col gap-2 rounded-xl border p-4 motion-chromatic-lg',
         isSelected
@@ -700,7 +700,7 @@ function PresentationThemeButton({
     >
       <div className="flex w-full items-center justify-between">
         <span className={cn('text-sm font-bold', isSelected ? 'text-primary' : 'text-foreground')}>{theme.name}</span>
-        {isSelected ? <CircleCheck className="h-4 w-4 text-primary" /> : null}
+        {isSelected ? <CircleCheck className="size-4 text-primary" /> : null}
       </div>
       <p className="text-left text-[10px] text-muted-foreground">{theme.description}</p>
     </button>

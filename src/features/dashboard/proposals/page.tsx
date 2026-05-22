@@ -349,11 +349,11 @@ function ProposalsPageContent() {
           )}
         >
           <div
-            className="pointer-events-none absolute -left-8 top-0 h-32 w-32 rounded-full bg-primary/10 blur-3xl"
+            className="pointer-events-none absolute -left-8 top-0 size-32 rounded-full bg-primary/10 blur-3xl"
             aria-hidden
           />
           <div
-            className="pointer-events-none absolute -right-10 -bottom-8 h-36 w-36 rounded-full bg-info/10 blur-3xl"
+            className="pointer-events-none absolute -right-10 -bottom-8 size-36 rounded-full bg-info/10 blur-3xl"
             aria-hidden
           />
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">

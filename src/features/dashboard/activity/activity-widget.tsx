@@ -66,7 +66,7 @@ function ActivityItem({ activity }: ActivityItemProps) {
   return (
     <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
       <div className={`mt-0.5 ${colorClass}`}>
-        <Icon className="h-4 w-4" />
+        <Icon className="size-4" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-muted-foreground line-clamp-2">
@@ -190,7 +190,7 @@ export function ActivityWidget() {
       <Card className="shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-muted-foreground" />
+            <Clock className="size-5 text-muted-foreground" />
             <CardTitle className="text-lg">Recent Activity</CardTitle>
           </div>
         </CardHeader>
@@ -211,9 +211,9 @@ export function ActivityWidget() {
         <div className="flex items-center gap-2">
           <CardTitle className="text-base">Recent Activity</CardTitle>
           {isRealTime && (
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success/60 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+            <span className="relative flex size-2">
+              <span className="animate-ping absolute inline-flex size-full rounded-full bg-success/60 opacity-75"></span>
+              <span className="relative inline-flex rounded-full size-2 bg-success"></span>
             </span>
           )}
         </div>
@@ -222,7 +222,7 @@ export function ActivityWidget() {
         <div className="flex items-center gap-1">
           <Select value={activityType} onValueChange={handleActivityTypeChange}>
             <SelectTrigger className="h-7 w-[28px] px-0 border-0 hover:bg-muted focus:ring-0 data-[state=open]:bg-muted">
-              <Filter className="h-4 w-4 text-muted-foreground mx-auto" />
+              <Filter className="size-4 text-muted-foreground mx-auto" />
               <span className="sr-only">Filter type</span>
             </SelectTrigger>
             <SelectContent align="end">
@@ -253,7 +253,7 @@ export function ActivityWidget() {
           <div className="space-y-4">
             {Array.from({ length: 5 }, (_, index) => `activity-${index + 1}`).map((slot) => (
               <div key={slot} className="flex gap-3 p-2">
-                <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
+                <Skeleton className="size-8 rounded-full flex-shrink-0" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-3 w-20" />
@@ -271,7 +271,7 @@ export function ActivityWidget() {
         ) : filteredActivities.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center py-8 text-center">
             <div className="rounded-full bg-muted/50 p-3 mb-3">
-              <Clock className="h-5 w-5 text-muted-foreground" />
+              <Clock className="size-5 text-muted-foreground" />
             </div>
             <p className="text-sm font-medium text-foreground">No activity found</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-[180px]">

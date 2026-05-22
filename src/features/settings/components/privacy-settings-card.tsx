@@ -12,7 +12,7 @@ export function PrivacySettingsCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Shield className="h-5 w-5" />
+          <Shield className="size-5" />
           Privacy & Terms
         </CardTitle>
         <CardDescription>

@@ -74,13 +74,13 @@ export function CampaignHeader({
     switch (campaign.providerId) {
       case 'facebook':
       case 'meta':
-        return <Facebook className={cn('h-3 w-3', colorClass)} aria-hidden />
+        return <Facebook className={cn('size-3', colorClass)} aria-hidden />
       case 'google':
-        return <Chrome className={cn('h-3 w-3', colorClass)} aria-hidden />
+        return <Chrome className={cn('size-3', colorClass)} aria-hidden />
       case 'tiktok':
-        return <Music4 className={cn('h-3 w-3', colorClass)} aria-hidden />
+        return <Music4 className={cn('size-3', colorClass)} aria-hidden />
       case 'linkedin':
-        return <Linkedin className={cn('h-3 w-3', colorClass)} aria-hidden />
+        return <Linkedin className={cn('size-3', colorClass)} aria-hidden />
       default:
         return null
     }
@@ -99,7 +99,7 @@ export function CampaignHeader({
           <div className="min-w-0 flex-1 space-y-3">
             {loading ? (
               <div className="space-y-3">
-                <Skeleton className="h-10 w-10 rounded-xl" />
+                <Skeleton className="size-10 rounded-xl" />
                 <Skeleton className="h-8 w-72 max-w-full rounded-lg" />
                 <Skeleton className="h-4 w-48 rounded-lg" />
               </div>
@@ -107,10 +107,10 @@ export function CampaignHeader({
               <>
                 <div className="flex flex-wrap items-center gap-2">
                   <div className={getIconContainerClasses('medium')}>
-                    <Megaphone className="h-6 w-6 text-primary" aria-hidden />
+                    <Megaphone className="size-6 text-primary" aria-hidden />
                   </div>
                   {campaign?.accountLogoUrl ? (
-                    <Avatar className="h-8 w-8 ring-1 ring-border/60">
+                    <Avatar className="size-8 ring-1 ring-border/60">
                       <AvatarImage src={campaign.accountLogoUrl} alt={campaign.accountName} />
                       <AvatarFallback className="text-[10px]">
                         {campaign.accountName?.[0] || '?'}
@@ -179,7 +179,7 @@ export function CampaignHeader({
               disabled={refreshing}
               aria-busy={refreshing}
             >
-              <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} aria-hidden />
+              <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} aria-hidden />
               <span className="hidden sm:inline">{refreshing ? 'Refreshing…' : 'Refresh metrics'}</span>
               <span className="sm:hidden">{refreshing ? '…' : 'Refresh'}</span>
             </Button>

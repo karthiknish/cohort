@@ -41,10 +41,8 @@ export async function fetchGoogleAnalyticsProperties(options: {
   const { accessToken, pageSize = DEFAULT_PAGE_SIZE, maxPages = MAX_PROPERTY_LIST_PAGES } = options
 
   const unique = new Map<string, GoogleAnalyticsPropertyOption>()
-  let nextPageToken: string | undefined
-  let page = 0
 
-  do {
+  const fetchPage = async (page: number, nextPageToken?: string): Promise<void> => {
     const url = new URL('https://analyticsadmin.googleapis.com/v1beta/accountSummaries')
     url.searchParams.set('pageSize', String(pageSize))
     if (typeof nextPageToken === 'string' && nextPageToken.length > 0) {
@@ -80,9 +78,13 @@ export async function fetchGoogleAnalyticsProperties(options: {
       }
     }
 
-    nextPageToken = payload.nextPageToken
-    page += 1
-  } while (nextPageToken && page < maxPages)
+    const token = payload.nextPageToken
+    if (token && page + 1 < maxPages) {
+      await fetchPage(page + 1, token)
+    }
+  }
+
+  await fetchPage(0)
 
   return Array.from(unique.values()).toSorted((a, b) => a.name.localeCompare(b.name))
 }

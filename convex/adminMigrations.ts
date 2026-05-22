@@ -69,63 +69,64 @@ export const backfillAdMetricsCurrency = adminMutation({
     const wsAccountMap = new Map<string, Map<string, string>>()
     const wsProviderMap = new Map<string, Map<string, string>>()
 
-    for (const workspaceId of workspaceIds) {
-      const integrations = await ctx.db
-        .query('adIntegrations')
-        .withIndex('by_workspace_provider', (q) => q.eq('workspaceId', workspaceId))
-        .collect()
+    await Promise.all(
+      [...workspaceIds].map(async (workspaceId) => {
+        const integrations = await ctx.db
+          .query('adIntegrations')
+          .withIndex('by_workspace_provider', (q) => q.eq('workspaceId', workspaceId))
+          .collect()
 
-      const accountMap = new Map<string, string>()
-      const providerMap = new Map<string, string>()
+        const accountMap = new Map<string, string>()
+        const providerMap = new Map<string, string>()
 
-      for (const integration of integrations) {
-        if (!integration.currency?.trim()) continue
-        const key = buildAccountKey(integration.providerId, integration.accountId)
-        const providerKey =
-          normalizeAdsProviderId(integration.providerId) ??
-          String(integration.providerId ?? '').trim().toLowerCase()
-        accountMap.set(key, integration.currency)
-        if (!providerMap.has(providerKey)) {
-          providerMap.set(providerKey, integration.currency)
+        for (const integration of integrations) {
+          if (!integration.currency?.trim()) continue
+          const key = buildAccountKey(integration.providerId, integration.accountId)
+          const providerKey =
+            normalizeAdsProviderId(integration.providerId) ??
+            String(integration.providerId ?? '').trim().toLowerCase()
+          accountMap.set(key, integration.currency)
+          if (!providerMap.has(providerKey)) {
+            providerMap.set(providerKey, integration.currency)
+          }
         }
-      }
 
-      wsAccountMap.set(workspaceId, accountMap)
-      wsProviderMap.set(workspaceId, providerMap)
-    }
+        wsAccountMap.set(workspaceId, accountMap)
+        wsProviderMap.set(workspaceId, providerMap)
+      }),
+    )
 
     let patched = 0
 
-    for (const row of result.page) {
-      // Skip rows already stamped (currency field present, even if null).
-      if (row.currency !== undefined) continue
+    const rowsToPatch = result.page.filter((row) => row.currency === undefined)
+    await Promise.all(
+      rowsToPatch.map(async (row) => {
+        const accountMap = wsAccountMap.get(row.workspaceId) ?? new Map<string, string>()
+        const providerMap = wsProviderMap.get(row.workspaceId) ?? new Map<string, string>()
 
-      const accountMap = wsAccountMap.get(row.workspaceId) ?? new Map<string, string>()
-      const providerMap = wsProviderMap.get(row.workspaceId) ?? new Map<string, string>()
+        // Resolve currency from integration data only (no metric-level currency for legacy rows).
+        const integrationCurrency =
+          accountMap.get(buildAccountKey(row.providerId, row.accountId)) ??
+          providerMap.get(normalizeAdsProviderId(row.providerId) ?? '') ??
+          null
 
-      // Resolve currency from integration data only (no metric-level currency for legacy rows).
-      const integrationCurrency =
-        accountMap.get(buildAccountKey(row.providerId, row.accountId)) ??
-        providerMap.get(normalizeAdsProviderId(row.providerId) ?? '') ??
-        null
+        const resolved = resolveMetricCurrency({
+          metricCurrency: null,
+          integrationCurrency,
+          providerDefaultCurrency: null,
+        })
 
-      const resolved = resolveMetricCurrency({
-        metricCurrency: null,
-        integrationCurrency,
-        providerDefaultCurrency: null,
-      })
+        // Derive surfaceId from the legacy publisherPlatform field.
+        const surfaceId = normalizeSurfaceId(row.providerId, row.publisherPlatform ?? null)
 
-      // Derive surfaceId from the legacy publisherPlatform field.
-      const surfaceId = normalizeSurfaceId(row.providerId, row.publisherPlatform ?? null)
-
-      await ctx.db.patch(row._id, {
-        currency: resolved.currency,
-        currencySource: resolved.source,
-        surfaceId,
-      })
-
-      patched++
-    }
+        await ctx.db.patch(row._id, {
+          currency: resolved.currency,
+          currencySource: resolved.source,
+          surfaceId,
+        })
+      }),
+    )
+    patched = rowsToPatch.length
 
     return {
       processed: result.page.length,

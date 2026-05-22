@@ -51,13 +51,13 @@ function DashboardExportMenuOption({
   isExporting: boolean
   onSelect: (format: ExportFormat) => void
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectExportFormat = useCallback(() => {
     onSelect(option.value)
   }, [onSelect, option.value])
 
   return (
-    <DropdownMenuItem onClick={handleClick} disabled={isExporting}>
-      <option.icon className="mr-2 h-4 w-4" />
+    <DropdownMenuItem onClick={onSelectExportFormat} disabled={isExporting}>
+      <option.icon className="mr-2 size-4" />
       <div>
         <div className="font-medium">{option.label}</div>
         <div className="text-xs text-muted-foreground">{option.description}</div>
@@ -75,7 +75,7 @@ function DashboardExportGridOption({
   isExporting: boolean
   onSelect: (format: ExportFormat) => void
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectExportFormat = useCallback(() => {
     onSelect(option.value)
   }, [onSelect, option.value])
   const Icon = option.icon
@@ -83,19 +83,19 @@ function DashboardExportGridOption({
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectExportFormat}
       disabled={isExporting}
       className={cn(
         'flex items-center gap-2 rounded-lg border p-3 text-left transition-colors hover:bg-accent',
         isExporting && 'pointer-events-none opacity-50'
       )}
     >
-      <Icon className="h-5 w-5 text-muted-foreground" />
+      <Icon className="size-5 text-muted-foreground" />
       <div>
         <p className="font-medium">{option.label}</p>
         <p className="text-xs text-muted-foreground">{option.description}</p>
       </div>
-      {isExporting && <LoaderCircle className="ml-auto h-4 w-4 animate-spin" />}
+      {isExporting && <LoaderCircle className="ml-auto size-4 animate-spin" />}
     </button>
   )
 }
@@ -206,7 +206,7 @@ export function DashboardExport({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant={buttonVariant} size={buttonSize} className={className}>
-          <Download className="h-4 w-4" />
+          <Download className="size-4" />
           Export
         </Button>
       </DropdownMenuTrigger>
@@ -226,7 +226,7 @@ export function DashboardExport({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Download className="h-5 w-5" />
+              <Download className="size-5" />
               Export Dashboard Data
             </DialogTitle>
             <DialogDescription>
@@ -371,9 +371,9 @@ export function QuickExportButton({
       className="gap-1.5"
     >
       {isExporting ? (
-        <LoaderCircle className="h-4 w-4 animate-spin" />
+        <LoaderCircle className="size-4 animate-spin" />
       ) : Icon ? (
-        <Icon className="h-4 w-4" />
+        <Icon className="size-4" />
       ) : null}
       {isExporting ? 'Exporting...' : format.toUpperCase()}
     </Button>
@@ -449,7 +449,7 @@ export function ScheduledExportDialog({
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" size="sm" className="gap-2">
-            <Download className="h-4 w-4" />
+            <Download className="size-4" />
             Schedule Export
           </Button>
         )}

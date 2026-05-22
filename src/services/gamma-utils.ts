@@ -47,16 +47,13 @@ export function parseGammaDeckPayload(value: unknown): GammaDeckPayload | null {
     pptxUrl: typeof record.pptxUrl === 'string' ? record.pptxUrl : null,
     pdfUrl: typeof record.pdfUrl === 'string' ? record.pdfUrl : null,
     generatedFiles: Array.isArray(record.generatedFiles)
-      ? record.generatedFiles
-          .map((entry) => {
+      ? record.generatedFiles.flatMap((entry) => {
             const fileRecord = entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : null
-            return {
-              fileType:
-                typeof fileRecord?.fileType === 'string' ? normalizeGammaFileType(fileRecord.fileType) : '',
-              fileUrl: typeof fileRecord?.fileUrl === 'string' ? fileRecord.fileUrl : '',
-            }
+            const fileType =
+              typeof fileRecord?.fileType === 'string' ? normalizeGammaFileType(fileRecord.fileType) : ''
+            const fileUrl = typeof fileRecord?.fileUrl === 'string' ? fileRecord.fileUrl : ''
+            return fileType && fileUrl ? [{ fileType, fileUrl }] : []
           })
-          .filter((entry) => entry.fileType && entry.fileUrl)
       : [],
     pptStorageId: typeof record.pptStorageId === 'string' ? record.pptStorageId : null,
     pdfStorageId: typeof record.pdfStorageId === 'string' ? record.pdfStorageId : null,

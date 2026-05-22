@@ -78,7 +78,7 @@ export function VoiceInputButton({
           onClick={toggleListening}
           disabled={disabled}
           className={cn(
-            'h-7 w-7 p-0',
+            'size-7 p-0',
             interactiveTransitionClass,
             isListening && 'animate-pulse'
           )}
@@ -89,7 +89,7 @@ export function VoiceInputButton({
               : 'Start voice input'
           }
         >
-          <Mic className="h-3.5 w-3.5" />
+          <Mic className="size-3.5" />
         </Button>
       </div>
     )
@@ -128,7 +128,7 @@ export function VoiceInputButton({
         onClick={toggleListening}
         disabled={disabled}
         className={cn(
-          'h-10 w-10 shrink-0 rounded-full',
+          'size-10 shrink-0 rounded-full',
           interactiveTransitionClass,
           isListening && 'animate-pulse ring-2 ring-destructive/50'
         )}
@@ -139,7 +139,7 @@ export function VoiceInputButton({
             : 'Start voice input'
         }
       >
-        {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        {isListening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
       </Button>
     </div>
   )

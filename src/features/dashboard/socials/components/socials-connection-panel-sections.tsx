@@ -85,12 +85,12 @@ export function SocialsMetaSetupCard(props: {
 
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onReloadSources} disabled={loadingSources}>
-            {loadingSources ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            {loadingSources ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}
             Reload sources
           </Button>
           {!sourceSelectionRequired ? (
             <Button type="button" variant="outline" size="sm" onClick={onRetryDiscovery}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 size-4" />
               Retry discovery
             </Button>
           ) : null}
@@ -101,7 +101,7 @@ export function SocialsMetaSetupCard(props: {
         <div className="rounded-2xl border border-muted/50 bg-background p-3">
           <p className={DASHBOARD_THEME.stats.label}>Meta source</p>
           <div className="mt-2 flex items-center gap-2 text-sm text-foreground">
-            {sourceSelectionRequired ? <AlertTriangle className="h-4 w-4 text-warning" /> : <CheckCircle2 className="h-4 w-4 text-success" />}
+            {sourceSelectionRequired ? <AlertTriangle className="size-4 text-warning" /> : <CheckCircle2 className="size-4 text-success" />}
             <span>{sourceSelectionRequired ? 'Selection still required' : selectedSourceLabel ?? 'Source selected'}</span>
           </div>
         </div>
@@ -124,7 +124,7 @@ export function SocialsMetaSetupCard(props: {
       {setupState.switchSourceRecommended && setupState.switchSourceMessage ? (
         <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/5 px-4 py-3 text-sm text-foreground">
           <div className="flex items-start gap-3">
-            <ArrowRightLeft className="mt-0.5 h-4 w-4 text-warning" />
+            <ArrowRightLeft className="mt-0.5 size-4 text-warning" />
             <div className="space-y-1">
               <p className="font-medium">This may be the wrong Meta source for this workspace.</p>
               <p className="text-muted-foreground">{setupState.switchSourceMessage}</p>
@@ -188,7 +188,7 @@ export function SocialsMetaSourceSwitcherCard(props: {
           </div>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={onReloadAccounts} disabled={loadingMetaAccountOptions}>
-          {loadingMetaAccountOptions ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+          {loadingMetaAccountOptions ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}
           Reload sources
         </Button>
       </div>
@@ -212,7 +212,7 @@ export function SocialsMetaSourceSwitcherCard(props: {
         </Select>
 
         <Button type="button" size="sm" onClick={onConfirmSource} disabled={initializingMeta || !selectedMetaAccountId}>
-          {initializingMeta ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRightLeft className="mr-2 h-4 w-4" />}
+          {initializingMeta ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <ArrowRightLeft className="mr-2 size-4" />}
           {confirmationLabel}
         </Button>
       </div>

@@ -101,7 +101,7 @@ function LegacyToastItem({ dismiss, toast }: { dismiss: (toastId?: string) => vo
     [dismiss, id, onOpenChange]
   )
 
-  const handleClick = useCallback(
+  const onToastNavigate = useCallback(
     (event: React.MouseEvent<HTMLLIElement>) => {
       const target = event.target as HTMLElement | null
       if (target?.closest('[data-toast-action="true"]')) return
@@ -155,7 +155,7 @@ function LegacyToastItem({ dismiss, toast }: { dismiss: (toastId?: string) => vo
       {...(restProps as Omit<typeof restProps, 'variant'> & { variant?: 'default' | 'success' | 'destructive' | 'warning' })}
       duration={duration ?? (persistent ? 0 : 5000)}
       onOpenChange={handleOpenChange}
-      onClick={handleClick}
+      onClick={onToastNavigate}
       role={onNavigate || href ? 'button' : restProps.role}
       tabIndex={onNavigate || href ? 0 : restProps.tabIndex}
       onKeyDown={handleKeyDown}

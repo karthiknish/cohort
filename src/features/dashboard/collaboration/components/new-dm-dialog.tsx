@@ -58,13 +58,16 @@ export function NewDMDialog({
   const filteredUsers = useMemo(() => {
     const participants = isPreviewMode
       ? getPreviewCollaborationParticipants()
-          .filter((participant) => participant.id !== currentUserId)
-          .map((participant) => ({
-            id: participant.id,
-            name: participant.name,
-            email: participant.email,
-            role: participant.role,
-          }))
+          .flatMap((participant) =>
+            participant.id !== currentUserId
+              ? [{
+                  id: participant.id,
+                  name: participant.name,
+                  email: participant.email,
+                  role: participant.role,
+                }]
+              : [],
+          )
       : (Array.isArray(dmParticipants) ? (dmParticipants as DmParticipant[]) : [])
 
     return participants
@@ -123,7 +126,7 @@ export function NewDMDialog({
         </DialogHeader>
 
         <div className="relative mt-2">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQuery}
             onChange={handleSearchChange}
@@ -135,7 +138,7 @@ export function NewDMDialog({
         <ScrollArea className="h-[300px] mt-4">
           {filteredUsers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <User className="h-12 w-12 text-muted-foreground/40 mb-3" />
+              <User className="size-12 text-muted-foreground/40 mb-3" />
               <p className="text-sm text-muted-foreground">
                 {searchQuery ? 'No teammates match your search.' : 'No teammates available.'}
               </p>
@@ -150,7 +153,7 @@ export function NewDMDialog({
                   disabled={isCreating}
                   className="w-full flex items-center gap-3 p-3 rounded-lg text-left motion-chromatic hover:bg-muted/50 disabled:opacity-50"
                 >
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="size-10">
                     <AvatarFallback className="bg-accent/10 text-primary text-sm">
                       {getInitials(user.name)}
                     </AvatarFallback>
@@ -169,7 +172,7 @@ export function NewDMDialog({
                     </Badge>
                   )}
                   {isCreating && (
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <Loader2 className="size-4 animate-spin text-muted-foreground" />
                   )}
                 </button>
               ))}

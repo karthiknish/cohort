@@ -315,7 +315,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
       <DialogTrigger asChild>
         {trigger ?? (
           <Button id="create-project-trigger" type="button" className="gap-2 shadow-sm transition-shadow hover:shadow-md">
-            <Plus className="h-4 w-4" aria-hidden />
+            <Plus className="size-4" aria-hidden />
             New project
           </Button>
         )}
@@ -353,7 +353,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !formState.name.trim()}>
-              {loading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+              {loading && <LoaderCircle className="mr-2 size-4 animate-spin" />}
               Create project
             </Button>
           </DialogFooter>

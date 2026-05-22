@@ -349,8 +349,10 @@ export function UnifiedInbox({
     }
 
     const names = typingParticipants
-      .map((participant) => participant.name)
-      .filter((name) => typeof name === 'string' && name.trim().length > 0)
+      .flatMap((participant) => {
+        const name = participant.name
+        return typeof name === 'string' && name.trim().length > 0 ? [name] : []
+      })
 
     if (names.length === 0) {
       return undefined

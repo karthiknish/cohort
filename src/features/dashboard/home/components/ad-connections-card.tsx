@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useReducer } from 'react'
 import { RefreshCw, Check, Clock, AlertTriangle, Loader2, Unlink, Link2 } from 'lucide-react'
 
 import {
@@ -129,6 +129,75 @@ function getStatusLabel(
 }
 
 // =============================================================================
+// DIALOG STATE
+// =============================================================================
+
+type AdConnectionsDialogState = {
+  connectDialogOpen: boolean
+  disconnectDialogOpen: boolean
+  selectedProvider: ProviderConfig | null
+  connectionStep: ConnectionStep
+  isDisconnecting: boolean
+}
+
+type AdConnectionsDialogAction =
+  | { type: 'openConnectDialog'; provider: ProviderConfig }
+  | { type: 'openDisconnectDialog'; provider: ProviderConfig }
+  | { type: 'setConnectDialogOpen'; value: boolean }
+  | { type: 'setDisconnectDialogOpen'; value: boolean }
+  | { type: 'setConnectionStep'; value: ConnectionStep }
+  | { type: 'startDisconnect' }
+  | { type: 'finishDisconnect' }
+
+function createInitialDialogState(): AdConnectionsDialogState {
+  return {
+    connectDialogOpen: false,
+    disconnectDialogOpen: false,
+    selectedProvider: null,
+    connectionStep: 'idle',
+    isDisconnecting: false,
+  }
+}
+
+function adConnectionsDialogReducer(
+  state: AdConnectionsDialogState,
+  action: AdConnectionsDialogAction,
+): AdConnectionsDialogState {
+  switch (action.type) {
+    case 'openConnectDialog':
+      return {
+        ...state,
+        selectedProvider: action.provider,
+        connectionStep: 'idle',
+        connectDialogOpen: true,
+      }
+    case 'openDisconnectDialog':
+      return {
+        ...state,
+        selectedProvider: action.provider,
+        disconnectDialogOpen: true,
+      }
+    case 'setConnectDialogOpen':
+      return { ...state, connectDialogOpen: action.value }
+    case 'setDisconnectDialogOpen':
+      return { ...state, disconnectDialogOpen: action.value }
+    case 'setConnectionStep':
+      return { ...state, connectionStep: action.value }
+    case 'startDisconnect':
+      return { ...state, isDisconnecting: true }
+    case 'finishDisconnect':
+      return {
+        ...state,
+        isDisconnecting: false,
+        disconnectDialogOpen: false,
+        selectedProvider: null,
+      }
+    default:
+      return state
+  }
+}
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -149,12 +218,14 @@ export function AdConnectionsCard({
   totalProviders,
   pendingSetupCount = 0,
 }: AdConnectionsCardProps) {
-  // Dialog state
-  const [connectDialogOpen, setConnectDialogOpen] = useState(false)
-  const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false)
-  const [selectedProvider, setSelectedProvider] = useState<ProviderConfig | null>(null)
-  const [connectionStep, setConnectionStep] = useState<ConnectionStep>('idle')
-  const [isDisconnecting, setIsDisconnecting] = useState(false)
+  const [dialogState, dispatch] = useReducer(adConnectionsDialogReducer, undefined, createInitialDialogState)
+  const {
+    connectDialogOpen,
+    disconnectDialogOpen,
+    selectedProvider,
+    connectionStep,
+    isDisconnecting,
+  } = dialogState
 
   const providerStates = useMemo(
     () =>
@@ -171,23 +242,20 @@ export function AdConnectionsCard({
 
   // Handle opening connection dialog
   const handleOpenConnectDialog = useCallback((provider: ProviderConfig) => {
-    setSelectedProvider(provider)
-    setConnectionStep('idle')
-    setConnectDialogOpen(true)
+    dispatch({ type: 'openConnectDialog', provider })
   }, [])
 
-  // Handle connection from dialog
   const handleDialogConnect = useCallback((): Promise<void> => {
     if (!selectedProvider) return Promise.resolve()
 
-    setConnectionStep('redirecting')
+    dispatch({ type: 'setConnectionStep', value: 'redirecting' })
 
     if (selectedProvider.mode === 'oauth') {
       // For OAuth redirect flow, we just need to start the redirect.
       return Promise.resolve(onOauthRedirect?.(selectedProvider.id))
         .catch(() => {
           // Error will be shown in the dialog via connectionErrors prop.
-          setConnectionStep('error')
+          dispatch({ type: 'setConnectionStep', value: 'error' })
         })
     }
 
@@ -196,45 +264,47 @@ export function AdConnectionsCard({
     }
 
     // For popup flow, show progress through steps.
-    setConnectionStep('authenticating')
+    dispatch({ type: 'setConnectionStep', value: 'authenticating' })
     return Promise.resolve(onConnect(selectedProvider.id, selectedProvider.connect))
       .then(() => {
-        setConnectionStep('fetching')
+        dispatch({ type: 'setConnectionStep', value: 'fetching' })
         return new Promise<void>((resolve) => setTimeout(resolve, 500))
       })
       .then(() => {
-        setConnectionStep('complete')
+        dispatch({ type: 'setConnectionStep', value: 'complete' })
       })
       .catch(() => {
         // Error will be shown in the dialog via connectionErrors prop.
-        setConnectionStep('error')
+        dispatch({ type: 'setConnectionStep', value: 'error' })
       })
   }, [selectedProvider, onConnect, onOauthRedirect])
 
-  // Handle retry
   const handleRetry = useCallback(() => {
-    setConnectionStep('idle')
+    dispatch({ type: 'setConnectionStep', value: 'idle' })
   }, [])
 
-  // Handle opening disconnect dialog
   const handleOpenDisconnectDialog = useCallback((provider: ProviderConfig) => {
-    setSelectedProvider(provider)
-    setDisconnectDialogOpen(true)
+    dispatch({ type: 'openDisconnectDialog', provider })
   }, [])
 
-  // Handle disconnect confirmation
   const handleConfirmDisconnect = useCallback((options: { clearHistoricalData: boolean }): Promise<void> => {
     if (!selectedProvider) return Promise.resolve()
 
-    setIsDisconnecting(true)
+    dispatch({ type: 'startDisconnect' })
 
     return Promise.resolve(onDisconnect(selectedProvider.id, options))
       .finally(() => {
-        setIsDisconnecting(false)
-        setDisconnectDialogOpen(false)
-        setSelectedProvider(null)
+        dispatch({ type: 'finishDisconnect' })
       })
   }, [selectedProvider, onDisconnect])
+
+  const handleConnectDialogOpenChange = useCallback((value: boolean) => {
+    dispatch({ type: 'setConnectDialogOpen', value })
+  }, [])
+
+  const handleDisconnectDialogOpenChange = useCallback((value: boolean) => {
+    dispatch({ type: 'setDisconnectDialogOpen', value })
+  }, [])
 
   // Handle quick reconnect (no dialog)
   const handleQuickReconnect = useCallback(
@@ -274,7 +344,7 @@ export function AdConnectionsCard({
             disabled={refreshing}
             className="inline-flex h-10 items-center gap-2 rounded-xl border-border/70"
           >
-            <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+            <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} />
             Refresh
           </Button>
         </CardHeader>
@@ -283,7 +353,7 @@ export function AdConnectionsCard({
             <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] p-4 ring-1 ring-primary/10">
               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Link2 className="h-4 w-4 text-primary" aria-hidden />
+                  <Link2 className="size-4 text-primary" aria-hidden />
                   <span>
                     {connectedCount} of {totalProviders} platforms connected
                   </span>
@@ -335,7 +405,7 @@ export function AdConnectionsCard({
       {/* Connection Dialog */}
       <ConnectionDialog
         open={connectDialogOpen}
-        onOpenChange={setConnectDialogOpen}
+        onOpenChange={handleConnectDialogOpenChange}
         providerId={selectedProvider?.id ?? null}
         providerIcon={selectedProvider?.icon}
         onConnect={handleDialogConnect}
@@ -348,7 +418,7 @@ export function AdConnectionsCard({
       {/* Disconnect Confirmation Dialog */}
       <DisconnectDialog
         open={disconnectDialogOpen}
-        onOpenChange={setDisconnectDialogOpen}
+        onOpenChange={handleDisconnectDialogOpenChange}
         providerName={selectedProvider?.name ?? ''}
         onConfirm={handleConfirmDisconnect}
         isDisconnecting={isDisconnecting}
@@ -440,14 +510,14 @@ const ProviderCard = memo(function ProviderCard({
       <CardHeader className="space-y-3 pb-3">
         <div className="flex items-start justify-between">
           <span className={cn(
-            'flex h-12 w-12 items-center justify-center rounded-xl motion-chromatic shadow-sm',
+            'flex size-12 items-center justify-center rounded-xl motion-chromatic shadow-sm',
             theme?.bg || (isConnected ? 'bg-accent/10' : 'bg-muted'),
             theme?.color || (isConnected ? 'text-primary' : 'text-muted-foreground')
           )}>
-            <Icon className="h-6 w-6" />
+            <Icon className="size-6" />
           </span>
           {isConnecting && (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
           )}
         </div>
         <div>
@@ -463,13 +533,13 @@ const ProviderCard = memo(function ProviderCard({
         <div className="flex items-center justify-between">
           <Badge variant={statusVariant} className="rounded-full text-xs">
             {statusInfo?.status === 'pending' && !stale && (
-              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              <Loader2 className="mr-1 size-3 animate-spin" />
             )}
             {(statusInfo?.status === 'error' || stale) && (
-              <AlertTriangle className="mr-1 h-3 w-3" />
+              <AlertTriangle className="mr-1 size-3" />
             )}
             {isConnected && statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && !stale && (
-              <Check className="mr-1 h-3 w-3" />
+              <Check className="mr-1 size-3" />
             )}
             {statusLabel}
           </Badge>
@@ -478,7 +548,7 @@ const ProviderCard = memo(function ProviderCard({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
+                    <Clock className="size-3" />
                     {lastSyncLabel}
                   </span>
                 </TooltipTrigger>
@@ -493,7 +563,7 @@ const ProviderCard = memo(function ProviderCard({
         {/* Error message */}
         {error && (
           <Alert variant="destructive" className="py-2">
-            <AlertTriangle className="h-3 w-3" />
+            <AlertTriangle className="size-3" />
             <AlertDescription className="text-xs">{error}</AlertDescription>
           </Alert>
         )}
@@ -509,7 +579,7 @@ const ProviderCard = memo(function ProviderCard({
         {/* Sync error message from status */}
         {statusInfo?.status === 'error' && !error && (
           <Alert variant="destructive" className="py-2">
-            <AlertTriangle className="h-3 w-3" />
+            <AlertTriangle className="size-3" />
             <AlertDescription className="text-xs">
               Last sync failed. Click reconnect to retry.
             </AlertDescription>
@@ -519,7 +589,7 @@ const ProviderCard = memo(function ProviderCard({
         {/* Stale sync alert */}
         {stale && (
           <Alert variant="destructive" className="py-2">
-            <AlertTriangle className="h-3 w-3" />
+            <AlertTriangle className="size-3" />
             <AlertDescription className="text-xs">
               Sync is taking longer than expected.
             </AlertDescription>
@@ -538,7 +608,7 @@ const ProviderCard = memo(function ProviderCard({
             >
               {isConnecting ? (
                 <>
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  <Loader2 className="mr-2 size-3 animate-spin" />
                   Connecting…
                 </>
               ) : (
@@ -558,7 +628,7 @@ const ProviderCard = memo(function ProviderCard({
                 >
                   {isSyncingNow ? (
                     <>
-                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      <Loader2 className="mr-2 size-3 animate-spin" />
                       Syncing…
                     </>
                   ) : (
@@ -576,7 +646,7 @@ const ProviderCard = memo(function ProviderCard({
                 >
                   {isConnecting ? (
                     <>
-                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      <Loader2 className="mr-2 size-3 animate-spin" />
                       Connecting…
                     </>
                   ) : (
@@ -591,11 +661,11 @@ const ProviderCard = memo(function ProviderCard({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      className="size-8 text-muted-foreground hover:text-destructive"
                       disabled={isConnecting}
                       onClick={handleDisconnectClick}
                     >
-                      <Unlink className="h-4 w-4" />
+                      <Unlink className="size-4" />
                       <span className="sr-only">Disconnect</span>
                     </Button>
                   </TooltipTrigger>

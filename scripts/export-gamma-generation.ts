@@ -131,10 +131,8 @@ function normalizeFiles(files: Array<{ fileType: string; fileUrl: string }>): No
 
 async function pollForExport(options: CliOptions): Promise<NormalizedFile> {
   const startedAt = Date.now()
-  let attempt = 0
 
-  while (true) {
-    attempt += 1
+  const pollOnce = async (attempt: number): Promise<NormalizedFile> => {
     console.log(`[GammaExport] Poll attempt ${attempt} for generation ${options.generationId}`)
 
     const status = await gammaService.getGeneration(options.generationId)
@@ -163,7 +161,10 @@ async function pollForExport(options: CliOptions): Promise<NormalizedFile> {
 
     console.log(`[GammaExport] Waiting ${options.intervalMs}ms before retry...`)
     await new Promise((resolve) => setTimeout(resolve, options.intervalMs))
+    return pollOnce(attempt + 1)
   }
+
+  return pollOnce(1)
 }
 
 async function ensureOutputDirectory(filePath: string): Promise<void> {

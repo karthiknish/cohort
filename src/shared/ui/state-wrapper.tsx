@@ -72,8 +72,8 @@ interface ErrorStateProps {
 function ErrorState({ title, description, onRetry, className }: ErrorStateProps) {
   return (
     <div role="alert" aria-live="assertive" className={cn('flex flex-col items-center justify-center py-12 px-4', className)}>
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 ring-4 ring-destructive/5 mb-4">
-        <AlertCircle className="h-7 w-7 text-destructive" />
+      <div className="flex size-14 items-center justify-center rounded-full bg-destructive/10 ring-4 ring-destructive/5 mb-4">
+        <AlertCircle className="size-7 text-destructive" />
       </div>
       <h3 className="text-base font-semibold text-foreground">{title || 'Something went wrong'}</h3>
       {description && (
@@ -81,7 +81,7 @@ function ErrorState({ title, description, onRetry, className }: ErrorStateProps)
       )}
       {onRetry && (
         <Button onClick={onRetry} size="sm" variant="outline" className="mt-5">
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="mr-2 size-4" />
           Try again
         </Button>
       )}

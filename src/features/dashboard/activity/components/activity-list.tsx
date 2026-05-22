@@ -271,7 +271,7 @@ export function ActivityList({
                   <div className="space-y-4 pl-4 border-l-2 border-muted">
                     {[1, 2].map((itemSlot) => (
                       <div key={`activity-item-skeleton-${groupSlot}-${itemSlot}`} className="flex gap-4">
-                        <Skeleton className="h-10 w-10 rounded-full" />
+                        <Skeleton className="size-10 rounded-full" />
                         <div className="space-y-2 flex-1">
                           <Skeleton className="h-4 w-3/4" />
                           <Skeleton className="h-3 w-1/2" />
@@ -284,22 +284,22 @@ export function ActivityList({
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 mb-4">
-                <X className="h-8 w-8 text-destructive" />
+              <div className="flex size-16 items-center justify-center rounded-full bg-destructive/10 mb-4">
+                <X className="size-8 text-destructive" />
               </div>
               <h3 className="text-lg font-semibold mb-2">Failed to load activities</h3>
               <p className="text-muted-foreground mb-4">{error}</p>
               <div className="flex gap-2">
                 <Button onClick={onRetry}>
-                  <RefreshCw className="h-4 w-4 mr-1" />
+                  <RefreshCw className="size-4 mr-1" />
                   Try Again
                 </Button>
               </div>
             </div>
           ) : sortedActivities.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-4">
-                <Search className="h-10 w-10 text-muted-foreground" />
+              <div className="flex size-20 items-center justify-center rounded-full bg-muted mb-4">
+                <Search className="size-10 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-semibold mb-1">No activities found</h3>
               <p className="text-sm text-muted-foreground mb-4">
@@ -330,7 +330,7 @@ export function ActivityList({
                       className="absolute left-0 top-0 w-full border-b bg-background/95 py-2 pr-2 backdrop-blur"
                     >
                       <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
+                        <Calendar className="size-4" />
                         {row.dateLabel}
                         <Badge variant="secondary" className="ml-1 rounded-full">
                           {row.count}
@@ -376,7 +376,7 @@ export function ActivityList({
                 <div key={dateGroup} className="relative">
                   <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-2 border-b">
                     <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
+                      <Calendar className="size-4" />
                       {dateGroup}
                       <Badge variant="secondary" className="ml-1 rounded-full">
                         {dateGroupActivities.length}
@@ -412,7 +412,7 @@ export function ActivityList({
             <div ref={observerTargetRef} className="py-8 text-center">
               {loading ? (
                 <div className="flex justify-center">
-                  <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <RefreshCw className="size-6 animate-spin text-muted-foreground" />
                 </div>
               ) : (
                 <Button variant="outline" size="sm" onClick={onLoadMore}>

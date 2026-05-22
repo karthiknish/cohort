@@ -78,14 +78,14 @@ export function ProposalVersionHistoryTrigger({
   return (
     <DropdownMenuTrigger asChild>
       <Button variant="outline" size="sm" disabled={disabled || !proposalId} className="gap-2">
-        <History className="h-4 w-4" />
+        <History className="size-4" />
         <span className="hidden sm:inline">History</span>
         {versionSummary && open ? (
           <Badge variant="secondary" className="ml-1 text-xs">
             {versionCount}
           </Badge>
         ) : null}
-        <ChevronDown className="h-3 w-3 opacity-50" />
+        <ChevronDown className="size-3 opacity-50" />
       </Button>
     </DropdownMenuTrigger>
   )
@@ -122,21 +122,21 @@ function ProposalVersionHistoryRow({
           <span className="text-xs text-muted-foreground">{formatRelativeTime(version.createdAt)}</span>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handlePreview} aria-label={`Preview version ${version.versionNumber}`}>
-            <Eye className="h-3 w-3" />
+          <Button variant="ghost" size="icon" className="size-6" onClick={handlePreview} aria-label={`Preview version ${version.versionNumber}`}>
+            <Eye className="size-3" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" disabled={restoring} onClick={handleRestore} aria-label={`Restore version ${version.versionNumber}`}>
-            <RotateCcw className="h-3 w-3" />
+          <Button variant="ghost" size="icon" className="size-6" disabled={restoring} onClick={handleRestore} aria-label={`Restore version ${version.versionNumber}`}>
+            <RotateCcw className="size-3" />
           </Button>
         </div>
       </div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Clock className="h-3 w-3" />
+        <Clock className="size-3" />
         <span>{formatFullDate(version.createdAt)}</span>
         {version.createdBy ? (
           <>
             <span className="text-muted-foreground/40">·</span>
-            <User className="h-3 w-3" />
+            <User className="size-3" />
             <span>{version.createdBy}</span>
           </>
         ) : null}
@@ -171,7 +171,7 @@ export function ProposalVersionHistoryMenuContent({
       <div className="flex items-center justify-between px-2 py-1.5">
         <span className="text-sm font-medium">Version History</span>
         <Button variant="ghost" size="sm" onClick={handleSaveVersion} disabled={saving || !proposalId} className="h-7 gap-1 text-xs">
-          {saving ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+          {saving ? <LoaderCircle className="size-3 animate-spin" /> : <Save className="size-3" />}
           Save Point
         </Button>
       </div>
@@ -179,7 +179,7 @@ export function ProposalVersionHistoryMenuContent({
 
       {loading ? (
         <div className="flex items-center justify-center py-6">
-          <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
+          <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
         </div>
       ) : versions.length === 0 ? (
         <div className="px-2 py-6 text-center text-sm text-muted-foreground">
@@ -223,7 +223,7 @@ export function ProposalVersionPreviewDialog({
     <DialogContent className="max-w-xl">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          <Eye className="h-4 w-4" /> Version {previewVersion?.versionNumber}
+          <Eye className="size-4" /> Version {previewVersion?.versionNumber}
         </DialogTitle>
         <DialogDescription>Saved {formatFullDate(previewVersion?.createdAt ?? null)}</DialogDescription>
       </DialogHeader>
@@ -255,7 +255,7 @@ export function ProposalVersionRestoreDialog({
       <AlertDialogContent className="max-w-md border-destructive/25">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-            <CircleAlert className="h-4 w-4 shrink-0" aria-hidden />
+            <CircleAlert className="size-4 shrink-0" aria-hidden />
             Replace form with this version?
           </AlertDialogTitle>
           <AlertDialogDescription className="text-left text-foreground/90">
@@ -275,7 +275,7 @@ export function ProposalVersionRestoreDialog({
             disabled={restoring}
             className="gap-2"
           >
-            {restoring ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <RotateCcw className="h-4 w-4" aria-hidden />}
+            {restoring ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : <RotateCcw className="size-4" aria-hidden />}
             Yes, restore this version
           </Button>
         </AlertDialogFooter>

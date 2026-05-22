@@ -98,6 +98,7 @@ export function useLongPressRef(
 ) {
   const threshold = options.threshold ?? DEFAULT_THRESHOLD
   const [isLongPressed, setIsLongPressed] = useState(false)
+  const isLongPressedRef = useRef(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const startPosRef = useRef({ x: 0, y: 0 })
   
@@ -106,6 +107,11 @@ export function useLongPressRef(
       clearTimeout(timeoutRef.current)
       timeoutRef.current = null
     }
+  }, [])
+
+  const updateLongPressed = useCallback((value: boolean) => {
+    isLongPressedRef.current = value
+    setIsLongPressed(value)
   }, [])
 
   useEffect(() => {
@@ -128,7 +134,7 @@ export function useLongPressRef(
       options.onStart?.()
       
       timeoutRef.current = setTimeout(() => {
-        setIsLongPressed(true)
+        updateLongPressed(true)
         callback()
         options.onFinish?.()
       }, threshold)
@@ -136,10 +142,10 @@ export function useLongPressRef(
 
     const handleEnd = () => {
       clear()
-      if (!isLongPressed) {
+      if (!isLongPressedRef.current) {
         options.onCancel?.()
       }
-      setIsLongPressed(false)
+      updateLongPressed(false)
     }
 
     const handleMove = (e: TouchEvent | MouseEvent) => {
@@ -159,7 +165,7 @@ export function useLongPressRef(
       
       if (dx > 10 || dy > 10) {
         clear()
-        setIsLongPressed(false)
+        updateLongPressed(false)
       }
     }
 
@@ -181,7 +187,7 @@ export function useLongPressRef(
       element.removeEventListener('mousemove', handleMove)
       clear()
     }
-  }, [ref, callback, threshold, clear, isLongPressed, options])
+  }, [ref, callback, threshold, clear, options, updateLongPressed])
 
   return isLongPressed
 }

@@ -255,7 +255,7 @@ function AutomationProviderCard({
         )}
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" variant="outline" className="inline-flex items-center gap-2" onClick={handleSave} disabled={saving}>
-            {saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            {saving ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
             {saving ? 'Saving…' : 'Save automation'}
           </Button>
           <Button
@@ -265,7 +265,7 @@ function AutomationProviderCard({
             onClick={handleRunSync}
             disabled={syncingProvider === status.providerId}
           >
-            <RefreshCw className={cn('h-4 w-4', syncingProvider === status.providerId && 'animate-spin')} />
+            <RefreshCw className={cn('size-4', syncingProvider === status.providerId && 'animate-spin')} />
             {syncingProvider === status.providerId ? 'Syncing…' : 'Run sync now'}
           </Button>
         </div>

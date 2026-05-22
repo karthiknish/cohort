@@ -25,7 +25,7 @@ export function AdminActionErrorAlert({
 
   return (
     <Alert variant="destructive">
-      <CircleAlert className="h-4 w-4" />
+      <CircleAlert className="size-4" />
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <span>{error}</span>

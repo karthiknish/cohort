@@ -27,10 +27,10 @@ async function unsetOtherDefaults(ctx: Pick<MutationCtx, 'db'>, workspaceId: str
     .withIndex('by_workspace_isDefault', (q) => q.eq('workspaceId', workspaceId).eq('isDefault', true))
     .collect()
 
-  for (const row of defaults) {
-    if (excludeLegacyId && row.legacyId === excludeLegacyId) continue
-    await ctx.db.patch(row._id, { isDefault: false, updatedAtMs: Date.now() })
-  }
+  const rowsToUnset = defaults.filter((row) => !excludeLegacyId || row.legacyId !== excludeLegacyId)
+  await Promise.all(
+    rowsToUnset.map(async (row) => ctx.db.patch(row._id, { isDefault: false, updatedAtMs: Date.now() })),
+  )
 }
 
 export const list = workspaceQuery({

@@ -181,7 +181,7 @@ export function DashboardMainColumn({
                     </div>
                     <Link href="/dashboard/projects">
                       <Button variant="outline" size="sm">
-                        View All Projects <ArrowUpRight className="ml-1 h-3 w-3" />
+                        View All Projects <ArrowUpRight className="ml-1 size-3" />
                       </Button>
                     </Link>
                   </div>

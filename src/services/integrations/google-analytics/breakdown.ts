@@ -73,8 +73,7 @@ async function runBreakdownReport(options: {
 
     if (typeof payload.rowCount === 'number') rowCount = payload.rowCount
 
-    const pageRows = (payload.rows ?? [])
-      .map((row) => {
+    const pageRows = (payload.rows ?? []).flatMap((row) => {
         const rawDate = row.dimensionValues?.[0]?.value ?? ''
         const dimensionValue = row.dimensionValues?.[1]?.value?.trim() || '(not set)'
         const metricValues = row.metricValues ?? []
@@ -83,8 +82,8 @@ async function runBreakdownReport(options: {
         const conversions = Number(metricValues[2]?.value ?? 0)
         const revenue = Number(metricValues[3]?.value ?? 0)
         const date = formatGaDate(rawDate)
-        if (!date) return null
-        return {
+        if (!date) return []
+        return [{
           date,
           dimension: options.dimension,
           dimensionValue,
@@ -92,9 +91,8 @@ async function runBreakdownReport(options: {
           sessions: Number.isFinite(sessions) ? sessions : 0,
           conversions: Number.isFinite(conversions) ? conversions : 0,
           revenue: Number.isFinite(revenue) ? revenue : 0,
-        }
+        }]
       })
-      .filter((row): row is GoogleAnalyticsBreakdownRow => Boolean(row))
 
     rows.push(...pageRows)
     if (pageRows.length === 0) break

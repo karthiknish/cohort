@@ -55,7 +55,7 @@ export function AnalyticsDeepDiveSection({
           ].map((item) => (
             <div key={item.key} className={HIGHLIGHT_CARD}>
               <div className={HIGHLIGHT_LABEL}>
-                <item.icon className="h-3.5 w-3.5" />
+                <item.icon className="size-3.5" />
                 {item.label}
               </div>
               <p className="text-sm font-semibold text-foreground">
@@ -81,7 +81,7 @@ export function AnalyticsDeepDiveSection({
           <div className="grid gap-3 sm:grid-cols-3">
             <div className={HIGHLIGHT_CARD}>
               <div className={HIGHLIGHT_LABEL}>
-                <CalendarRange className="h-3.5 w-3.5" />
+                <CalendarRange className="size-3.5" />
                 Coverage
               </div>
               <p className="text-lg font-semibold text-foreground">{Math.round(story.coverageRatio * 100)}%</p>
@@ -89,7 +89,7 @@ export function AnalyticsDeepDiveSection({
             </div>
             <div className={HIGHLIGHT_CARD}>
               <div className={HIGHLIGHT_LABEL}>
-                <ArrowUpRight className="h-3.5 w-3.5" />
+                <ArrowUpRight className="size-3.5" />
                 Peak sessions
               </div>
               <p className="text-lg font-semibold text-foreground">
@@ -99,7 +99,7 @@ export function AnalyticsDeepDiveSection({
             </div>
             <div className={HIGHLIGHT_CARD}>
               <div className={HIGHLIGHT_LABEL}>
-                <Sparkles className="h-3.5 w-3.5" />
+                <Sparkles className="size-3.5" />
                 Peak revenue
               </div>
               <p className="text-lg font-semibold text-foreground">

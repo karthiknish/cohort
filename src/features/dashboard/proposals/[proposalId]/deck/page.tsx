@@ -126,7 +126,7 @@ export default function ProposalDeckPage() {
   const getSlideIcon = (index: number) => {
     const icons = [Presentation, Target, Lightbulb, Users, Sparkles, Layers, BarChart3, Wallet, Calendar, Rocket]
     const Icon = icons[index % icons.length] ?? Presentation
-    return <Icon className="h-4 w-4" />
+    return <Icon className="size-4" />
   }
 
   const proposalDisplayName = proposal?.clientName ?? 'Strategy Proposal'
@@ -155,7 +155,7 @@ export default function ProposalDeckPage() {
       {isLoading ? (
         <div className="flex min-h-[60vh] items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-muted-foreground">
-            <LoaderCircle className="h-6 w-6 animate-spin" />
+            <LoaderCircle className="size-6 animate-spin" />
             <p>Loading proposal deck…</p>
           </div>
         </div>
@@ -185,7 +185,7 @@ export default function ProposalDeckPage() {
                 <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                   {lastUpdated && (
                     <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/50 border border-muted/20 text-[11px] font-medium">
-                      <Clock className="h-3 w-3" />
+                      <Clock className="size-3" />
                       Updated: {lastUpdated}
                     </span>
                   )}
@@ -220,7 +220,7 @@ export default function ProposalDeckPage() {
                             <ul className="space-y-2">
                               {slide.points.map((point) => (
                                 <li key={`${slide.id}-${point}`} className="flex gap-2 text-[12px] leading-relaxed text-muted-foreground">
-                                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent/40" />
+                                  <span className="mt-1.5 size-1 shrink-0 rounded-full bg-accent/40" />
                                   {point}
                                 </li>
                               ))}
@@ -237,7 +237,7 @@ export default function ProposalDeckPage() {
                 {pdfDownloadUrl ? (
                   <Button variant="outline" asChild>
                     <a href={pdfDownloadUrl} target="_blank" rel="noreferrer">
-                      <Download className="mr-2 h-4 w-4" />
+                      <Download className="mr-2 size-4" />
                       Download PDF
                     </a>
                   </Button>
@@ -245,7 +245,7 @@ export default function ProposalDeckPage() {
                 {pptxViewerUrl ? (
                   <Button variant="outline" asChild>
                     <a href={pptxViewerUrl} target="_blank" rel="noreferrer">
-                      <Download className="mr-2 h-4 w-4" />
+                      <Download className="mr-2 size-4" />
                       Download PowerPoint
                     </a>
                   </Button>

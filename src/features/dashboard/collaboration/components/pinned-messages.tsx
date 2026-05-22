@@ -47,7 +47,7 @@ export function PinnedMessages({
     return showEmptyState ? (
       <div className={cn('overflow-hidden', className)}>
         <div className="flex items-center gap-2 border-b border-muted/20 px-4 py-3">
-          <Pin className="h-4 w-4 text-primary" />
+          <Pin className="size-4 text-primary" />
           <h3 className="text-sm font-medium">Pinned Messages</h3>
         </div>
         <div className="p-3">
@@ -66,7 +66,7 @@ export function PinnedMessages({
   return (
     <div className={cn('overflow-hidden border-b bg-muted/30', className)}>
       <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2">
-        <Pin className="h-4 w-4 text-primary" />
+        <Pin className="size-4 text-primary" />
         <h3 className="text-sm font-medium">
           Pinned Messages ({pinnedMessages.length})
         </h3>
@@ -128,7 +128,7 @@ function PinnedMessageItem({ message, workspaceId, onClick }: PinnedMessageItemP
     [workspaceId, message.id, unpinMessage, isUnpinning, toast]
   )
 
-  const handleClick = useCallback(() => {
+  const onOpenPinnedMessage = useCallback(() => {
     onClick?.(message.id)
   }, [message.id, onClick])
 
@@ -137,10 +137,10 @@ function PinnedMessageItem({ message, workspaceId, onClick }: PinnedMessageItemP
       <button
         type="button"
         className="flex min-w-0 flex-1 items-start gap-3 text-left"
-        onClick={handleClick}
+        onClick={onOpenPinnedMessage}
         aria-label={`Open pinned message from ${message.senderName}`}
       >
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-medium text-primary ring-2 ring-background">
+        <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-medium text-primary ring-2 ring-background">
           {message.senderName.charAt(0).toUpperCase()}
         </div>
 
@@ -167,15 +167,15 @@ function PinnedMessageItem({ message, workspaceId, onClick }: PinnedMessageItemP
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                  className="size-7 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                   onClick={handleUnpin}
                   disabled={isUnpinning || !workspaceId}
                   aria-label="Unpin message"
                 >
                   {isUnpinning ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                    <LoaderCircle className="size-4 animate-spin" aria-hidden />
                   ) : (
-                    <PinOff className="h-4 w-4" aria-hidden />
+                    <PinOff className="size-4" aria-hidden />
                   )}
                 </Button>
               </TooltipTrigger>
@@ -266,11 +266,11 @@ export function PinMessageButton({
         className={cn('gap-2', className)}
       >
         {isPending ? (
-          <LoaderCircle className="h-4 w-4 animate-spin" />
+          <LoaderCircle className="size-4 animate-spin" />
         ) : isPinned ? (
-          <PinOff className="h-4 w-4" />
+          <PinOff className="size-4" />
         ) : (
-          <Pin className="h-4 w-4" />
+          <Pin className="size-4" />
         )}
         {isPinned ? 'Unpin' : 'Pin'}
       </Button>
@@ -285,17 +285,17 @@ export function PinMessageButton({
             type="button"
             variant="ghost"
             size="icon"
-            className={cn('h-7 w-7', isPinned && 'text-primary', className)}
+            className={cn('size-7', isPinned && 'text-primary', className)}
           onClick={handleTogglePin}
           disabled={isPending}
           aria-label={isPinned ? 'Unpin message' : 'Pin message'}
         >
           {isPending ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+            <LoaderCircle className="size-4 animate-spin" aria-hidden />
           ) : isPinned ? (
-            <Pin className="h-4 w-4 fill-primary" aria-hidden />
+            <Pin className="size-4 fill-primary" aria-hidden />
           ) : (
-            <Pin className="h-4 w-4" aria-hidden />
+            <Pin className="size-4" aria-hidden />
           )}
           </Button>
         </TooltipTrigger>
@@ -318,7 +318,7 @@ export function PinnedMessageBadge({ className }: { className?: string }) {
         className
       )}
     >
-      <Pin className="h-3 w-3" />
+      <Pin className="size-3" />
       <span>Pinned</span>
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useReducer, useMemo, useCallback, useRef } from 'react'
 import type { ChangeEvent } from 'react'
 import { LoaderCircle, Plus, Trash, Building2, Users } from 'lucide-react'
 
@@ -33,6 +33,64 @@ type ClientWorkspaceSelectorProps = {
   className?: string
 }
 
+type ClientWorkspaceFormState = {
+  isSheetOpen: boolean
+  newClientName: string
+  accountManagerInput: string
+  teamInput: string
+  saving: boolean
+  removingId: string | null
+  errorMessage: string | null
+}
+
+type ClientWorkspaceFormAction =
+  | { type: 'setSheetOpen'; value: boolean }
+  | { type: 'resetForm' }
+  | { type: 'setNewClientName'; value: string }
+  | { type: 'setAccountManagerInput'; value: string }
+  | { type: 'setTeamInput'; value: string }
+  | { type: 'setSaving'; value: boolean }
+  | { type: 'setRemovingId'; value: string | null }
+  | { type: 'setErrorMessage'; value: string | null }
+
+function createInitialWorkspaceFormState(): ClientWorkspaceFormState {
+  return {
+    isSheetOpen: false,
+    newClientName: '',
+    accountManagerInput: '',
+    teamInput: '',
+    saving: false,
+    removingId: null,
+    errorMessage: null,
+  }
+}
+
+function clientWorkspaceFormReducer(
+  state: ClientWorkspaceFormState,
+  action: ClientWorkspaceFormAction,
+): ClientWorkspaceFormState {
+  switch (action.type) {
+    case 'setSheetOpen':
+      return action.value ? { ...state, isSheetOpen: true } : { ...createInitialWorkspaceFormState() }
+    case 'resetForm':
+      return { ...createInitialWorkspaceFormState(), isSheetOpen: state.isSheetOpen }
+    case 'setNewClientName':
+      return { ...state, newClientName: action.value }
+    case 'setAccountManagerInput':
+      return { ...state, accountManagerInput: action.value }
+    case 'setTeamInput':
+      return { ...state, teamInput: action.value }
+    case 'setSaving':
+      return { ...state, saving: action.value }
+    case 'setRemovingId':
+      return { ...state, removingId: action.value }
+    case 'setErrorMessage':
+      return { ...state, errorMessage: action.value }
+    default:
+      return state
+  }
+}
+
 function normalizeMentionInputValue(input: string): string {
   return input.replace(/@\[(.*?)\]/g, '$1').trim()
 }
@@ -49,19 +107,17 @@ function parseTeamMembers(input: string): ClientTeamMember[] {
     .split(',')
     .flatMap((member) => {
       const entry = member.trim()
-      if (!entry) {
-        return []
-      }
+      if (!entry) return []
 
       const parts = entry.split(':')
       const name = parts[0]?.trim() ?? ''
+      if (!name.length) return []
       const role = parts[1]
       return [{
         name,
         role: role ? role.trim() : 'Contributor',
       }]
     })
-    .filter((member) => member.name.length > 0)
 }
 
 function WorkspaceRow({
@@ -78,8 +134,8 @@ function WorkspaceRow({
   return (
     <div className="flex items-center justify-between rounded-lg border border-muted/60 bg-muted/30 px-4 py-3 text-sm transition-colors hover:bg-muted/50">
       <div className="flex items-center gap-3">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-accent/10 text-primary">
-          <Building2 className="h-3.5 w-3.5" />
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-accent/10 text-primary">
+          <Building2 className="size-3.5" />
         </div>
         <span className="font-medium">{client.name}</span>
       </div>
@@ -87,12 +143,12 @@ function WorkspaceRow({
         type="button"
         size="icon"
         variant="ghost"
-        className="h-8 w-8 rounded-full text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
+        className="size-8 rounded-full text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
         onClick={handleRemove}
         disabled={disabled}
         aria-label={`Remove ${client.name} workspace`}
       >
-        <Trash className="h-4 w-4" aria-hidden />
+        <Trash className="size-4" aria-hidden />
       </Button>
     </div>
   )
@@ -105,15 +161,18 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
   const isAdmin = user?.role === 'admin'
   const hasClients = clients.length > 0
 
-  const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [newClientName, setNewClientName] = useState('')
-  const [accountManagerInput, setAccountManagerInput] = useState('')
-  const [accountManagerMentions, setAccountManagerMentions] = useState<MentionableUser[]>([])
-  const [teamInput, setTeamInput] = useState('')
-  const [teamMentions, setTeamMentions] = useState<MentionableUser[]>([])
-  const [saving, setSaving] = useState(false)
-  const [removingId, setRemovingId] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [formState, dispatch] = useReducer(clientWorkspaceFormReducer, undefined, createInitialWorkspaceFormState)
+  const {
+    isSheetOpen,
+    newClientName,
+    accountManagerInput,
+    teamInput,
+    saving,
+    removingId,
+    errorMessage,
+  } = formState
+  const accountManagerMentionsRef = useRef<MentionableUser[]>([])
+  const teamMentionsRef = useRef<MentionableUser[]>([])
 
   const allUsers = useQuery(
     api.users.listAllUsers,
@@ -130,34 +189,24 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
     }))
   }, [allUsers])
 
-  const resetForm = useCallback(() => {
-    setNewClientName('')
-    setAccountManagerInput('')
-    setAccountManagerMentions([])
-    setTeamInput('')
-    setTeamMentions([])
-    setSaving(false)
-    setRemovingId(null)
-    setErrorMessage(null)
-  }, [])
-
   const handleSheetChange = useCallback((open: boolean) => {
-    setIsSheetOpen(open)
+    dispatch({ type: 'setSheetOpen', value: open })
     if (!open) {
-      resetForm()
+      accountManagerMentionsRef.current = []
+      teamMentionsRef.current = []
     }
-  }, [resetForm])
+  }, [])
 
   const handleCreateClient = useCallback(async () => {
     const name = newClientName.trim()
-    const accountManager = accountManagerMentions[0]?.name ?? parseSinglePerson(accountManagerInput)
+    const accountManager = accountManagerMentionsRef.current[0]?.name ?? parseSinglePerson(accountManagerInput)
 
     if (!name || !accountManager) {
-      setErrorMessage('Client name and account manager are required')
+      dispatch({ type: 'setErrorMessage', value: 'Client name and account manager are required' })
       return
     }
 
-    const mentionTeamMembers: ClientTeamMember[] = teamMentions.map((user) => ({
+    const mentionTeamMembers: ClientTeamMember[] = teamMentionsRef.current.map((user) => ({
       name: user.name,
       role: user.role ?? 'Contributor',
     }))
@@ -174,8 +223,8 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
       ).values()
     )
 
-    setSaving(true)
-    setErrorMessage(null)
+    dispatch({ type: 'setSaving', value: true })
+    dispatch({ type: 'setErrorMessage', value: null })
 
     await createClient({
       name,
@@ -190,16 +239,16 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
           createError instanceof Error && createError.message
             ? createError.message
             : 'Unable to create client'
-        setErrorMessage(message)
+        dispatch({ type: 'setErrorMessage', value: message })
       })
       .finally(() => {
-        setSaving(false)
+        dispatch({ type: 'setSaving', value: false })
       })
-  }, [accountManagerInput, accountManagerMentions, createClient, handleSheetChange, newClientName, teamInput, teamMentions])
+  }, [accountManagerInput, createClient, handleSheetChange, newClientName, teamInput])
 
   const handleRemoveClient = useCallback(async (clientId: string) => {
-    setRemovingId(clientId)
-    setErrorMessage(null)
+    dispatch({ type: 'setRemovingId', value: clientId })
+    dispatch({ type: 'setErrorMessage', value: null })
 
     await removeClient(clientId)
       .catch((removeError: unknown) => {
@@ -207,28 +256,28 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
           removeError instanceof Error && removeError.message
             ? removeError.message
             : 'Unable to remove client'
-        setErrorMessage(message)
+        dispatch({ type: 'setErrorMessage', value: message })
       })
       .finally(() => {
-        setRemovingId(null)
+        dispatch({ type: 'setRemovingId', value: null })
       })
   }, [removeClient])
 
   const handleClientNameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setNewClientName(event.target.value)
+    dispatch({ type: 'setNewClientName', value: event.target.value })
   }, [])
 
   const handleAccountManagerChange = useCallback(
     (value: string, mentions: MentionableUser[]) => {
-      setAccountManagerInput(value)
-      setAccountManagerMentions(mentions.slice(0, 1))
+      dispatch({ type: 'setAccountManagerInput', value })
+      accountManagerMentionsRef.current = mentions.slice(0, 1)
     },
     []
   )
 
   const handleTeamChange = useCallback((value: string, mentions: MentionableUser[]) => {
-    setTeamInput(value)
-    setTeamMentions(mentions)
+    dispatch({ type: 'setTeamInput', value })
+    teamMentionsRef.current = mentions
   }, [])
 
   const handleOpenSheet = useCallback(() => {
@@ -275,8 +324,8 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
             )}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-primary">
-                <Building2 className="h-3.5 w-3.5" />
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-primary">
+                <Building2 className="size-3.5" />
               </div>
               <SelectValue placeholder={placeholder}>
                 {selectedLabel}
@@ -289,7 +338,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
             sideOffset={4}
           >
             <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-muted-foreground border-b border-border/50 mb-1">
-              <Users className="h-3 w-3" />
+              <Users className="size-3" />
               <span>Your Workspaces</span>
             </div>
             {clients.map((client) => (
@@ -300,8 +349,8 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                   className="cursor-pointer rounded-md mx-1 my-0.5 px-3 py-2.5 text-popover-foreground transition-colors hover:bg-muted focus:bg-muted focus:text-foreground data-[highlighted]:bg-muted data-[highlighted]:text-foreground data-[state=checked]:bg-accent/10 data-[state=checked]:font-medium data-[state=checked]:text-foreground"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                      <Building2 className="h-3 w-3" />
+                    <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                      <Building2 className="size-3" />
                     </div>
                     <TruncatedTextPreview text={client.name} />
                   </div>
@@ -317,9 +366,9 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
             size="icon"
             variant="outline"
             onClick={handleOpenSheet}
-            className="h-11 w-11 rounded-xl border-input bg-background/50 backdrop-blur-sm hover:bg-background hover:border-accent/30 hover:shadow-sm motion-chromatic shrink-0"
+            className="size-11 rounded-xl border-input bg-background/50 backdrop-blur-sm hover:bg-background hover:border-accent/30 hover:shadow-sm motion-chromatic shrink-0"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4" />
             <span className="sr-only">Manage clients</span>
           </Button>
 
@@ -399,7 +448,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                     className="rounded-lg"
                     onClick={handleSaveClientClick}
                   >
-                    {saving && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                    {saving && <LoaderCircle className="mr-2 size-4 animate-spin" />}
                     Save client
                   </Button>
                 </div>

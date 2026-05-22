@@ -44,9 +44,9 @@ export type DeckDocumentViewerProps = {
 
 function ViewerLoadingState({ label }: { label: string }) {
   return (
-    <div className="flex min-h-[min(60dvh,560px)] flex-1 items-center justify-center rounded-xl border border-border/60 bg-zinc-950/80">
+    <div className="flex min-h-[min(60dvh,560px)] flex-1 items-center justify-center rounded-xl border border-border/60 bg-black/80">
       <div className="flex flex-col items-center gap-3 text-viewer-chrome/70">
-        <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
+        <Loader2 className="size-8 animate-spin" aria-hidden />
         <p className="text-sm">{label}</p>
       </div>
     </div>
@@ -55,12 +55,12 @@ function ViewerLoadingState({ label }: { label: string }) {
 
 function FormatIcon({ kind }: { kind: DocumentKind }) {
   if (kind === 'pdf') {
-    return <FileText className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+    return <FileText className="size-4 shrink-0 text-primary" aria-hidden />
   }
   if (kind === 'pptx') {
-    return <Presentation className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+    return <Presentation className="size-4 shrink-0 text-primary" aria-hidden />
   }
-  return <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+  return <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
 }
 
 export function DeckDocumentViewer({
@@ -84,13 +84,13 @@ export function DeckDocumentViewer({
     <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
       <Button variant="outline" size="sm" asChild>
         <a href={src} target="_blank" rel="noreferrer">
-          <ExternalLink className="mr-2 h-4 w-4" />
+          <ExternalLink className="mr-2 size-4" />
           Open file
         </a>
       </Button>
       <Button size="sm" asChild>
         <a href={src} download={fileName} target="_blank" rel="noreferrer">
-          <Download className="mr-2 h-4 w-4" />
+          <Download className="mr-2 size-4" />
           Download
         </a>
       </Button>
@@ -117,11 +117,11 @@ export function DeckDocumentViewer({
           {toolbar}
         </div>
       ) : (
-        <header className="flex flex-col gap-4 rounded-2xl border border-border/50 bg-card/80 px-4 py-4 shadow-sm backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <header className="flex flex-col gap-4 rounded-2xl border border-border/50 bg-card/80 p-4 shadow-sm backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div className="flex min-w-0 flex-1 items-start gap-3">
             <Button variant="ghost" size="sm" className="mt-0.5 shrink-0" asChild>
               <Link href={backHref}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
+                <ArrowLeft className="mr-2 size-4" />
                 {backLabel}
               </Link>
             </Button>
@@ -157,7 +157,7 @@ export function DeckDocumentViewer({
             </p>
             <Button asChild>
               <a href={src} target="_blank" rel="noreferrer">
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="mr-2 size-4" />
                 Download file
               </a>
             </Button>

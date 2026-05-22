@@ -179,7 +179,7 @@ export function PullToRefreshIndicator({ state, threshold = DEFAULT_THRESHOLD }:
         style={getPullToRefreshSpinnerStyle(progress)}
       >
         <svg
-          className="w-6 h-6 text-primary"
+          className="size-6 text-primary"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"

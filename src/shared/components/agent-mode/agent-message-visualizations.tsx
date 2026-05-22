@@ -5,20 +5,22 @@ import { useMemo } from 'react'
 import { ArrowRight, BarChart3 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import {
+  AGENT_CHART_CURRENCY_FORMATTER,
+  AGENT_CHART_WHOLE_NUMBER_FORMATTER,
+} from '@/lib/intl/formatters'
 import type { AgentChartSeries, AgentDataSection, MetricItem } from './agent-message-data'
 import { getAgentChartFill } from './agent-message-data'
 
 function formatChartValue(value: number, format: AgentChartSeries['valueFormat']): string {
   if (format === 'currency') {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
-      Math.abs(value),
-    )
+    return AGENT_CHART_CURRENCY_FORMATTER.format(Math.abs(value))
   }
   if (format === 'percent') {
     const signed = value > 0 ? '+' : ''
     return `${signed}${value.toFixed(1)}%`
   }
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.abs(value))
+  return AGENT_CHART_WHOLE_NUMBER_FORMATTER.format(Math.abs(value))
 }
 
 function AgentChartBarFill({ width, fill }: { width: number; fill: string }) {
@@ -38,13 +40,13 @@ export function AgentMessageBarChart({ series }: { series: AgentChartSeries }) {
   return (
     <div className="rounded-xl border border-border/50 bg-background/90 p-3 shadow-sm">
       <div className="mb-3 flex items-start gap-2">
-        <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+        <BarChart3 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
         <div className="min-w-0">
           <p className="text-xs font-semibold text-foreground">{series.title}</p>
           {series.subtitle ? <p className="text-[11px] text-muted-foreground">{series.subtitle}</p> : null}
         </div>
       </div>
-      <ul className="space-y-2.5" role="list" aria-label={series.title}>
+      <ul className="space-y-2.5" aria-label={series.title}>
         {series.points.map((point, index) => {
           const width = Math.max((Math.abs(point.value) / maxValue) * 100, point.value !== 0 ? 8 : 0)
           const fill = getAgentChartFill(index)
@@ -211,7 +213,7 @@ export function AgentListSection({
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
               {item.delta ? <DeltaPill delta={item.delta} tone={item.deltaTone} /> : null}
-              {item.href ? <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden /> : null}
+              {item.href ? <ArrowRight className="size-3.5 text-muted-foreground" aria-hidden /> : null}
             </div>
           </div>
         )

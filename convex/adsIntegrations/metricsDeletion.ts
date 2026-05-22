@@ -70,34 +70,36 @@ export const writeMetricsBatchInternal = internalMutation({
   },
   handler: async (ctx, args): Promise<{ ok: boolean; inserted: number }> => {
     const timestamp = nowMs()
-    for (const metric of args.metrics) {
-      // surfaceId is canonical; publisherPlatform is the legacy alias.
-      // Accept both for backward compat, preferring surfaceId when present.
-      const surfaceId = metric.surfaceId ?? metric.publisherPlatform ?? null
-      const publisherPlatform = metric.publisherPlatform ?? metric.surfaceId ?? null
+    await Promise.all(
+      args.metrics.map(async (metric) => {
+        // surfaceId is canonical; publisherPlatform is the legacy alias.
+        // Accept both for backward compat, preferring surfaceId when present.
+        const surfaceId = metric.surfaceId ?? metric.publisherPlatform ?? null
+        const publisherPlatform = metric.publisherPlatform ?? metric.surfaceId ?? null
 
-      await ctx.db.insert('adMetrics', {
-        workspaceId: args.workspaceId,
-        providerId: metric.providerId,
-        clientId: normalizeClientId(metric.clientId ?? null),
-        accountId: normalizeClientId(metric.accountId ?? null),
-        surfaceId: normalizeClientId(surfaceId),
-        publisherPlatform: normalizeClientId(publisherPlatform),
-        currency: typeof metric.currency === 'string' ? metric.currency.trim().toUpperCase() : null,
-        currencySource: metric.currencySource ?? null,
-        date: metric.date,
-        spend: metric.spend,
-        impressions: metric.impressions,
-        clicks: metric.clicks,
-        conversions: metric.conversions,
-        revenue: metric.revenue ?? null,
-        campaignId: typeof metric.campaignId === 'string' ? metric.campaignId : null,
-        campaignName: typeof metric.campaignName === 'string' ? metric.campaignName : null,
-        creatives: Array.isArray(metric.creatives) ? metric.creatives : null,
-        rawPayload: metric.rawPayload,
-        createdAtMs: timestamp,
-      })
-    }
+        await ctx.db.insert('adMetrics', {
+          workspaceId: args.workspaceId,
+          providerId: metric.providerId,
+          clientId: normalizeClientId(metric.clientId ?? null),
+          accountId: normalizeClientId(metric.accountId ?? null),
+          surfaceId: normalizeClientId(surfaceId),
+          publisherPlatform: normalizeClientId(publisherPlatform),
+          currency: typeof metric.currency === 'string' ? metric.currency.trim().toUpperCase() : null,
+          currencySource: metric.currencySource ?? null,
+          date: metric.date,
+          spend: metric.spend,
+          impressions: metric.impressions,
+          clicks: metric.clicks,
+          conversions: metric.conversions,
+          revenue: metric.revenue ?? null,
+          campaignId: typeof metric.campaignId === 'string' ? metric.campaignId : null,
+          campaignName: typeof metric.campaignName === 'string' ? metric.campaignName : null,
+          creatives: Array.isArray(metric.creatives) ? metric.creatives : null,
+          rawPayload: metric.rawPayload,
+          createdAtMs: timestamp,
+        })
+      }),
+    )
 
     return { ok: true, inserted: args.metrics.length }
   },
@@ -167,21 +169,21 @@ export const deleteSyncJobs = mutation({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    for (const status of ['queued', 'running', 'error'] as const) {
-      const jobs = await ctx.db
-        .query('adSyncJobs')
-        .withIndex('by_workspace_provider_client_status', (q) =>
-          q.eq('workspaceId', args.workspaceId)
-            .eq('providerId', args.providerId)
-            .eq('clientId', clientId)
-            .eq('status', status)
-        )
-        .collect()
-
-      for (const job of jobs) {
-        await ctx.db.delete(job._id)
-      }
-    }
+    const jobsByStatus = await Promise.all(
+      (['queued', 'running', 'error'] as const).map((status) =>
+        ctx.db
+          .query('adSyncJobs')
+          .withIndex('by_workspace_provider_client_status', (q) =>
+            q.eq('workspaceId', args.workspaceId)
+              .eq('providerId', args.providerId)
+              .eq('clientId', clientId)
+              .eq('status', status),
+          )
+          .collect(),
+      ),
+    )
+    const jobs = jobsByStatus.flat()
+    await Promise.all(jobs.map(async (job) => ctx.db.delete(job._id)))
 
     return { ok: true }
   },
@@ -208,13 +210,11 @@ export const deleteProviderMetrics = mutation({
       )
       .collect()
 
-    let deleted = 0
-    for (const row of rows) {
-      if ((clientId === null ? row.clientId === null : row.clientId === clientId)) {
-        await ctx.db.delete(row._id)
-        deleted += 1
-      }
-    }
+    const rowsToDelete = rows.filter((row) =>
+      clientId === null ? row.clientId === null : row.clientId === clientId,
+    )
+    await Promise.all(rowsToDelete.map(async (row) => ctx.db.delete(row._id)))
+    const deleted = rowsToDelete.length
 
     return { ok: true, deleted }
   },

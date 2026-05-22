@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer } from 'react'
 
 import {
     Card,
@@ -46,6 +46,63 @@ const EXAMPLE_FORMULAS = [
     { name: 'Return on Ad Spend', formula: 'revenue / spend', output: 'roas' },
 ]
 
+type FormulaBuilderState = {
+    dialogOpen: boolean
+    formulaName: string
+    formulaExpression: string
+    outputMetric: string
+    savingFormula: boolean
+}
+
+type FormulaBuilderAction =
+    | { type: 'setDialogOpen'; value: boolean }
+    | { type: 'setFormulaName'; value: string }
+    | { type: 'setFormulaExpression'; value: string | ((prev: string) => string) }
+    | { type: 'setOutputMetric'; value: string }
+    | { type: 'setSavingFormula'; value: boolean }
+    | { type: 'resetForm' }
+    | { type: 'applyExample'; name: string; formula: string; output: string }
+
+function createInitialFormulaBuilderState(): FormulaBuilderState {
+    return {
+        dialogOpen: false,
+        formulaName: '',
+        formulaExpression: '',
+        outputMetric: '',
+        savingFormula: false,
+    }
+}
+
+function formulaBuilderReducer(state: FormulaBuilderState, action: FormulaBuilderAction): FormulaBuilderState {
+    switch (action.type) {
+        case 'setDialogOpen':
+            return { ...state, dialogOpen: action.value }
+        case 'setFormulaName':
+            return { ...state, formulaName: action.value }
+        case 'setFormulaExpression':
+            return {
+                ...state,
+                formulaExpression:
+                    typeof action.value === 'function' ? action.value(state.formulaExpression) : action.value,
+            }
+        case 'setOutputMetric':
+            return { ...state, outputMetric: action.value }
+        case 'setSavingFormula':
+            return { ...state, savingFormula: action.value }
+        case 'resetForm':
+            return { ...state, formulaName: '', formulaExpression: '', outputMetric: '', dialogOpen: false }
+        case 'applyExample':
+            return {
+                ...state,
+                formulaName: action.name,
+                formulaExpression: action.formula,
+                outputMetric: action.output,
+            }
+        default:
+            return state
+    }
+}
+
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -65,11 +122,8 @@ export function FormulaBuilderCard({
         executeFormula,
     } = formulaEditor
 
-    const [dialogOpen, setDialogOpen] = useState(false)
-    const [formulaName, setFormulaName] = useState('')
-    const [formulaExpression, setFormulaExpression] = useState('')
-    const [outputMetric, setOutputMetric] = useState('')
-    const [savingFormula, setSavingFormula] = useState(false)
+    const [state, dispatch] = useReducer(formulaBuilderReducer, undefined, createInitialFormulaBuilderState)
+    const { dialogOpen, formulaName, formulaExpression, outputMetric, savingFormula } = state
 
     // Load formulas on mount
     useEffect(() => {
@@ -103,7 +157,7 @@ export function FormulaBuilderCard({
     const handleSave = useCallback(async () => {
         if (savingFormula || !validation?.valid || !formulaName.trim() || !outputMetric.trim()) return
 
-        setSavingFormula(true)
+        dispatch({ type: 'setSavingFormula', value: true })
 
         try {
             const created = await createFormula({
@@ -118,39 +172,49 @@ export function FormulaBuilderCard({
             }
 
             // Reset form only after a confirmed successful save.
-            setFormulaName('')
-            setFormulaExpression('')
-            setOutputMetric('')
-            setDialogOpen(false)
+            dispatch({ type: 'resetForm' })
         } finally {
-            setSavingFormula(false)
+            dispatch({ type: 'setSavingFormula', value: false })
         }
     }, [createFormula, formulaExpression, formulaName, outputMetric, savingFormula, validation])
 
     const handleInsertMetric = useCallback((metricName: string) => {
-        setFormulaExpression((prev) => (prev ? `${prev} ${metricName}` : metricName))
+        dispatch({
+            type: 'setFormulaExpression',
+            value: (prev) => (prev ? `${prev} ${metricName}` : metricName),
+        })
     }, [])
 
     const handleUseExample = useCallback((example: typeof EXAMPLE_FORMULAS[0]) => {
-        setFormulaName(example.name)
-        setFormulaExpression(example.formula)
-        setOutputMetric(example.output)
+        dispatch({
+            type: 'applyExample',
+            name: example.name,
+            formula: example.formula,
+            output: example.output,
+        })
     }, [])
 
     const handleExpressionChange = useCallback(
-        (event: React.ChangeEvent<HTMLInputElement>) => setFormulaExpression(event.target.value),
+        (event: React.ChangeEvent<HTMLInputElement>) =>
+            dispatch({ type: 'setFormulaExpression', value: event.target.value }),
         []
     )
 
     const handleFormulaNameChange = useCallback(
-        (event: React.ChangeEvent<HTMLInputElement>) => setFormulaName(event.target.value),
+        (event: React.ChangeEvent<HTMLInputElement>) =>
+            dispatch({ type: 'setFormulaName', value: event.target.value }),
         []
     )
 
     const handleOutputMetricChange = useCallback(
-        (event: React.ChangeEvent<HTMLInputElement>) => setOutputMetric(event.target.value),
+        (event: React.ChangeEvent<HTMLInputElement>) =>
+            dispatch({ type: 'setOutputMetric', value: event.target.value }),
         []
     )
+
+    const handleDialogOpenChange = useCallback((open: boolean) => {
+        dispatch({ type: 'setDialogOpen', value: open })
+    }, [])
 
     const handleDeleteFormula = useCallback(
         (formulaId: string) => {
@@ -185,7 +249,7 @@ export function FormulaBuilderCard({
                     exampleFormulas={EXAMPLE_FORMULAS}
                     formulaExpression={formulaExpression}
                     formulaName={formulaName}
-                    onDialogOpenChange={setDialogOpen}
+                    onDialogOpenChange={handleDialogOpenChange}
                     onExpressionChange={handleExpressionChange}
                     onInsertMetric={handleInsertMetric}
                     onFormulaNameChange={handleFormulaNameChange}

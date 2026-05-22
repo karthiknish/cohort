@@ -30,9 +30,10 @@ export const searchTargetingInterests = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
-
-      const { searchMetaAdInterests } = await import('@/services/integrations/meta-ads/targeting-search')
+      const [accessToken, { searchMetaAdInterests }] = await Promise.all([
+        resolveFacebookAccessToken(args.workspaceId, integration, clientId),
+        import('@/services/integrations/meta-ads/targeting-search'),
+      ])
       return searchMetaAdInterests({
         accessToken,
         query: args.query,
@@ -55,9 +56,10 @@ export const searchTargetingGeolocations = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
-
-      const { searchMetaAdGeolocations } = await import('@/services/integrations/meta-ads/targeting-search')
+      const [accessToken, { searchMetaAdGeolocations }] = await Promise.all([
+        resolveFacebookAccessToken(args.workspaceId, integration, clientId),
+        import('@/services/integrations/meta-ads/targeting-search'),
+      ])
       return searchMetaAdGeolocations({
         accessToken,
         query: args.query,
@@ -79,9 +81,10 @@ export const listLeadgenForms = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
-
-      const { listMetaLeadgenForms } = await import('@/services/integrations/meta-ads/leadgen-forms')
+      const [accessToken, { listMetaLeadgenForms }] = await Promise.all([
+        resolveFacebookAccessToken(args.workspaceId, integration, clientId),
+        import('@/services/integrations/meta-ads/leadgen-forms'),
+      ])
       return listMetaLeadgenForms({ accessToken, pageId: args.pageId })
     }, 'adsMetaTools:listLeadgenForms'),
 })
@@ -102,9 +105,10 @@ export const createLeadgenForm = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
-
-      const { createMetaLeadgenForm } = await import('@/services/integrations/meta-ads/leadgen-forms')
+      const [accessToken, { createMetaLeadgenForm }] = await Promise.all([
+        resolveFacebookAccessToken(args.workspaceId, integration, clientId),
+        import('@/services/integrations/meta-ads/leadgen-forms'),
+      ])
       const result = await createMetaLeadgenForm({
         accessToken,
         pageId: args.pageId,

@@ -2,7 +2,7 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useReducer, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/shared/ui/button'
@@ -221,6 +221,128 @@ function buildPreviewCopySuggestions(kind: 'headlines' | 'captions', creative: C
   ]
 }
 
+type CreativeDetailPageState = {
+  creative: Creative | null
+  loading: boolean
+  copiedField: string | null
+  isEditing: boolean
+  editedHeadlines: string[]
+  editedDescriptions: string[]
+  editedCta: string
+  editedLandingPage: string
+  previewHeadlineIndex: number
+  previewDescriptionIndex: number
+  isSaving: boolean
+  generatingHeadlines: boolean
+  generatingDescriptions: boolean
+  days: string
+  creativeMetrics: NormalizedAdMetric[] | null
+}
+
+type CreativeDetailPageAction =
+  | { type: 'setCreative'; value: Creative | null }
+  | { type: 'patchCreative'; updater: (prev: Creative | null) => Creative | null }
+  | { type: 'setLoading'; value: boolean }
+  | { type: 'setCopiedField'; value: string | null }
+  | { type: 'setIsEditing'; value: boolean }
+  | { type: 'setEditedHeadlines'; value: string[] }
+  | { type: 'updateEditedHeadlines'; updater: (prev: string[]) => string[] }
+  | { type: 'setEditedDescriptions'; value: string[] }
+  | { type: 'updateEditedDescriptions'; updater: (prev: string[]) => string[] }
+  | { type: 'setEditedCta'; value: string }
+  | { type: 'setEditedLandingPage'; value: string }
+  | { type: 'setPreviewHeadlineIndex'; value: number }
+  | { type: 'updatePreviewHeadlineIndex'; updater: (prev: number) => number }
+  | { type: 'setPreviewDescriptionIndex'; value: number }
+  | { type: 'updatePreviewDescriptionIndex'; updater: (prev: number) => number }
+  | { type: 'setIsSaving'; value: boolean }
+  | { type: 'setGeneratingHeadlines'; value: boolean }
+  | { type: 'setGeneratingDescriptions'; value: boolean }
+  | { type: 'setDays'; value: string }
+  | { type: 'setCreativeMetrics'; value: NormalizedAdMetric[] | null }
+  | { type: 'syncFromCreative'; creative: Creative }
+
+function createInitialCreativeDetailPageState(): CreativeDetailPageState {
+  return {
+    creative: null,
+    loading: true,
+    copiedField: null,
+    isEditing: true,
+    editedHeadlines: [],
+    editedDescriptions: [],
+    editedCta: '',
+    editedLandingPage: '',
+    previewHeadlineIndex: 0,
+    previewDescriptionIndex: 0,
+    isSaving: false,
+    generatingHeadlines: false,
+    generatingDescriptions: false,
+    days: '7',
+    creativeMetrics: null,
+  }
+}
+
+function creativeDetailPageReducer(
+  state: CreativeDetailPageState,
+  action: CreativeDetailPageAction,
+): CreativeDetailPageState {
+  switch (action.type) {
+    case 'setCreative':
+      return { ...state, creative: action.value }
+    case 'patchCreative':
+      return { ...state, creative: action.updater(state.creative) }
+    case 'setLoading':
+      return { ...state, loading: action.value }
+    case 'setCopiedField':
+      return { ...state, copiedField: action.value }
+    case 'setIsEditing':
+      return { ...state, isEditing: action.value }
+    case 'setEditedHeadlines':
+      return { ...state, editedHeadlines: action.value }
+    case 'updateEditedHeadlines':
+      return { ...state, editedHeadlines: action.updater(state.editedHeadlines) }
+    case 'setEditedDescriptions':
+      return { ...state, editedDescriptions: action.value }
+    case 'updateEditedDescriptions':
+      return { ...state, editedDescriptions: action.updater(state.editedDescriptions) }
+    case 'setEditedCta':
+      return { ...state, editedCta: action.value }
+    case 'setEditedLandingPage':
+      return { ...state, editedLandingPage: action.value }
+    case 'setPreviewHeadlineIndex':
+      return { ...state, previewHeadlineIndex: action.value }
+    case 'updatePreviewHeadlineIndex':
+      return { ...state, previewHeadlineIndex: action.updater(state.previewHeadlineIndex) }
+    case 'setPreviewDescriptionIndex':
+      return { ...state, previewDescriptionIndex: action.value }
+    case 'updatePreviewDescriptionIndex':
+      return { ...state, previewDescriptionIndex: action.updater(state.previewDescriptionIndex) }
+    case 'setIsSaving':
+      return { ...state, isSaving: action.value }
+    case 'setGeneratingHeadlines':
+      return { ...state, generatingHeadlines: action.value }
+    case 'setGeneratingDescriptions':
+      return { ...state, generatingDescriptions: action.value }
+    case 'setDays':
+      return { ...state, days: action.value }
+    case 'setCreativeMetrics':
+      return { ...state, creativeMetrics: action.value }
+    case 'syncFromCreative':
+      return {
+        ...state,
+        editedHeadlines: action.creative.headlines ?? [],
+        editedDescriptions: action.creative.descriptions ?? [],
+        editedCta: normalizeCreativeCtaValue(action.creative.callToAction),
+        editedLandingPage: action.creative.landingPageUrl ?? '',
+        previewHeadlineIndex: 0,
+        previewDescriptionIndex: 0,
+        isEditing: true,
+      }
+    default:
+      return state
+  }
+}
+
 type CreativeDetailPageClientProps = {
   campaignName?: string | null
   currency?: string | null
@@ -243,25 +365,44 @@ export default function CreativeDetailPageClient({
   const listAdMetrics = useAction(adsAdMetricsApi.listAdMetrics)
   const generateCopyAction = useAction(creativesCopyApi.generateCopy)
 
-  const [creative, setCreative] = useState<Creative | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [copiedField, setCopiedField] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState(true)
-  const [editedHeadlines, setEditedHeadlines] = useState<string[]>([])
-  const [editedDescriptions, setEditedDescriptions] = useState<string[]>([])
-  const [editedCta, setEditedCta] = useState('')
-  const [editedLandingPage, setEditedLandingPage] = useState('')
-  const [previewHeadlineIndex, setPreviewHeadlineIndex] = useState(0)
-  const [previewDescriptionIndex, setPreviewDescriptionIndex] = useState(0)
-  const [isSaving, setIsSaving] = useState(false)
+  const [state, dispatch] = useReducer(
+    creativeDetailPageReducer,
+    undefined,
+    createInitialCreativeDetailPageState,
+  )
+  const {
+    creative,
+    loading,
+    copiedField,
+    isEditing,
+    editedHeadlines,
+    editedDescriptions,
+    editedCta,
+    editedLandingPage,
+    previewHeadlineIndex,
+    previewDescriptionIndex,
+    isSaving,
+    generatingHeadlines,
+    generatingDescriptions,
+    days,
+    creativeMetrics,
+  } = state
 
-  const [generatingHeadlines, setGeneratingHeadlines] = useState(false)
-  const [generatingDescriptions, setGeneratingDescriptions] = useState(false)
+  const metricsLoadingRef = useRef(false)
+  const metricsErrorRef = useRef<string | null>(null)
 
-  const [days, setDays] = useState('7')
-  const [metricsLoading, setMetricsLoading] = useState(false)
-  const [metricsError, setMetricsError] = useState<string | null>(null)
-  const [creativeMetrics, setCreativeMetrics] = useState<NormalizedAdMetric[] | null>(null)
+  const setPreviewHeadlineIndex = useCallback((value: number) => {
+    dispatch({ type: 'setPreviewHeadlineIndex', value })
+  }, [])
+  const setPreviewDescriptionIndex = useCallback((value: number) => {
+    dispatch({ type: 'setPreviewDescriptionIndex', value })
+  }, [])
+  const setEditedCta = useCallback((value: string) => {
+    dispatch({ type: 'setEditedCta', value })
+  }, [])
+  const setEditedLandingPage = useCallback((value: string) => {
+    dispatch({ type: 'setEditedLandingPage', value })
+  }, [])
 
   const campaignName = initialCampaignName || 'Campaign'
   const displayCurrency = normalizeCurrencyCode(currency ?? null)
@@ -271,10 +412,10 @@ export default function CreativeDetailPageClient({
   )
 
   const fetchCreative = useCallback(async () => {
-    setLoading(true)
+    dispatch({ type: 'setLoading', value: true })
 
     if (!convexProviderId) {
-      setLoading(false)
+      dispatch({ type: 'setLoading', value: false })
       notifyFailure({
         title: 'Unsupported provider',
         message: 'This provider is not supported in the creative detail view.',
@@ -283,13 +424,16 @@ export default function CreativeDetailPageClient({
     }
 
     if (isPreviewMode) {
-      setCreative(buildPreviewCreative(convexProviderId, params.campaignId, params.creativeId, campaignName))
-      setLoading(false)
+      dispatch({
+        type: 'setCreative',
+        value: buildPreviewCreative(convexProviderId, params.campaignId, params.creativeId, campaignName),
+      })
+      dispatch({ type: 'setLoading', value: false })
       return
     }
 
     if (!workspaceId) {
-      setLoading(false)
+      dispatch({ type: 'setLoading', value: false })
       return
     }
 
@@ -314,7 +458,7 @@ export default function CreativeDetailPageClient({
           throw new Error('Creative not found')
         }
 
-        setCreative(match)
+        dispatch({ type: 'setCreative', value: match })
       })
       .catch((error) => {
         reportConvexFailure({
@@ -325,34 +469,37 @@ export default function CreativeDetailPageClient({
         })
       })
       .finally(() => {
-        setLoading(false)
+        dispatch({ type: 'setLoading', value: false })
       })
   }, [campaignName, convexProviderId, isPreviewMode, listCreatives, params.campaignId, params.creativeId, selectedClientId, workspaceId])
 
   const fetchMetrics = useCallback(async () => {
     if (!convexProviderId) {
-      setCreativeMetrics(null)
-      setMetricsError('Unsupported provider')
-      setMetricsLoading(false)
+      dispatch({ type: 'setCreativeMetrics', value: null })
+      metricsErrorRef.current = 'Unsupported provider'
+      metricsLoadingRef.current = false
       return
     }
 
     if (isPreviewMode) {
-      setMetricsLoading(true)
-      setMetricsError(null)
-      setCreativeMetrics(buildPreviewCreativeMetrics(convexProviderId, params.creativeId, params.campaignId, days))
-      setMetricsLoading(false)
+      metricsLoadingRef.current = true
+      metricsErrorRef.current = null
+      dispatch({
+        type: 'setCreativeMetrics',
+        value: buildPreviewCreativeMetrics(convexProviderId, params.creativeId, params.campaignId, days),
+      })
+      metricsLoadingRef.current = false
       return
     }
 
-    setMetricsLoading(true)
-    setMetricsError(null)
+    metricsLoadingRef.current = true
+    metricsErrorRef.current = null
 
 
     if (!workspaceId) {
-      setCreativeMetrics(null)
-      setMetricsError('Sign in required')
-      setMetricsLoading(false)
+      dispatch({ type: 'setCreativeMetrics', value: null })
+      metricsErrorRef.current = 'Sign in required'
+      metricsLoadingRef.current = false
       return
     }
 
@@ -370,15 +517,15 @@ export default function CreativeDetailPageClient({
         const allMetrics = Array.isArray(record?.metrics) ? (record.metrics as NormalizedAdMetric[]) : []
         const metricTargetId = creative?.adId ?? params.creativeId
         const filtered = allMetrics.filter((m) => m.adId === metricTargetId)
-        setCreativeMetrics(filtered)
+        dispatch({ type: 'setCreativeMetrics', value: filtered })
       })
       .catch((error) => {
         logError(error, 'CreativeDetailPage:fetchMetrics')
-        setCreativeMetrics(null)
-        setMetricsError(asErrorMessage(error))
+        dispatch({ type: 'setCreativeMetrics', value: null })
+        metricsErrorRef.current = asErrorMessage(error)
       })
       .finally(() => {
-        setMetricsLoading(false)
+        metricsLoadingRef.current = false
       })
   }, [convexProviderId, days, isPreviewMode, listAdMetrics, params.campaignId, params.creativeId, selectedClientId, creative?.adGroupId, creative?.adId, workspaceId])
 
@@ -395,13 +542,7 @@ export default function CreativeDetailPageClient({
   useEffect(() => {
     if (!creative) return
 
-    setEditedHeadlines(creative.headlines ?? [])
-    setEditedDescriptions(creative.descriptions ?? [])
-    setEditedCta(normalizeCreativeCtaValue(creative.callToAction))
-    setEditedLandingPage(creative.landingPageUrl ?? '')
-    setPreviewHeadlineIndex(0)
-    setPreviewDescriptionIndex(0)
-    setIsEditing(true)
+    dispatch({ type: 'syncFromCreative', creative })
   }, [creative])
 
   const runMetricsFetch = useEffectEvent(() => {
@@ -449,12 +590,12 @@ export default function CreativeDetailPageClient({
 
     void copyPromise
       .then(() => {
-        setCopiedField(field)
+        dispatch({ type: 'setCopiedField', value: field })
         toast({
           title: "Copied to clipboard",
           description: "Text has been copied successfully.",
         })
-        setTimeout(() => setCopiedField(null), 2000)
+        setTimeout(() => dispatch({ type: 'setCopiedField', value: null }), 2000)
       })
       .catch((err) => {
         reportConvexFailure({
@@ -518,52 +659,55 @@ export default function CreativeDetailPageClient({
 
   const cancelEditing = useCallback(() => {
     if (!creative) return
-    setEditedHeadlines(creative.headlines ?? [])
-    setEditedDescriptions(creative.descriptions ?? [])
-    setEditedCta(normalizeCreativeCtaValue(creative.callToAction))
-    setEditedLandingPage(creative.landingPageUrl ?? '')
-    setPreviewHeadlineIndex(0)
-    setPreviewDescriptionIndex(0)
-    setIsEditing(true)
+    dispatch({ type: 'syncFromCreative', creative })
   }, [creative])
 
   const generateCopy = useCallback(async (kind: 'headlines' | 'captions') => {
     if (!creative) return
 
-    const setLoading = kind === 'headlines' ? setGeneratingHeadlines : setGeneratingDescriptions
+    const setGenerating =
+      kind === 'headlines'
+        ? (value: boolean) => dispatch({ type: 'setGeneratingHeadlines', value })
+        : (value: boolean) => dispatch({ type: 'setGeneratingDescriptions', value })
 
     if (isPreviewMode) {
-      setLoading(true)
+      setGenerating(true)
 
       const additions = buildPreviewCopySuggestions(kind, creative, campaignName)
 
       if (kind === 'headlines') {
-        setEditedHeadlines((prev) => {
-          const base = prev.length > 0 ? prev : (creative.headlines ?? [])
-          const seen = new Set(base.flatMap((value) => { const v = value.trim().toLowerCase(); return v ? [v] : [] }))
-          const uniqueAdditions = additions.filter((value) => {
-            const key = value.trim().toLowerCase()
-            if (!key || seen.has(key)) {
-              return false
-            }
-            seen.add(key)
-            return true
-          })
-          return [...base, ...uniqueAdditions]
+        dispatch({
+          type: 'updateEditedHeadlines',
+          updater: (prev) => {
+            const base = prev.length > 0 ? prev : (creative.headlines ?? [])
+            const seen = new Set(base.flatMap((value) => { const v = value.trim().toLowerCase(); return v ? [v] : [] }))
+            const uniqueAdditions = additions.filter((value) => {
+              const key = value.trim().toLowerCase()
+              if (!key || seen.has(key)) {
+                return false
+              }
+              seen.add(key)
+              return true
+            })
+            return [...base, ...uniqueAdditions]
+          },
         })
       } else {
-        setEditedDescriptions((prev) => {
-          const base = prev.length > 0 ? prev : (creative.descriptions ?? [])
-          const seen = new Set(base.flatMap((value) => { const v = value.trim().toLowerCase(); return v ? [v] : [] }))
-          const uniqueAdditions = additions.filter((value) => {
-            const key = value.trim().toLowerCase()
-            if (!key || seen.has(key)) {
-              return false
-            }
-            seen.add(key)
-            return true
-          })
-          return [...base, ...uniqueAdditions]
+        dispatch({
+          type: 'updateEditedDescriptions',
+          updater: (prev) => {
+            const base = prev.length > 0 ? prev : (creative.descriptions ?? [])
+            const seen = new Set(base.flatMap((value) => { const v = value.trim().toLowerCase(); return v ? [v] : [] }))
+            const uniqueAdditions = additions.filter((value) => {
+              const key = value.trim().toLowerCase()
+              if (!key || seen.has(key)) {
+                return false
+              }
+              seen.add(key)
+              return true
+            })
+            return [...base, ...uniqueAdditions]
+          },
         })
       }
 
@@ -571,14 +715,14 @@ export default function CreativeDetailPageClient({
         title: kind === 'headlines' ? 'Sample headlines added' : 'Sample captions added',
         description: 'Preview mode generated local-only sample variants for this session.',
       })
-      setLoading(false)
+      setGenerating(false)
       return
     }
 
-    setLoading(true)
+    setGenerating(true)
 
     if (!convexProviderId) {
-      setLoading(false)
+      setGenerating(false)
       notifyFailure({
         title: 'Unsupported provider',
         message: 'AI copy generation is not available for this ad platform.',
@@ -587,7 +731,7 @@ export default function CreativeDetailPageClient({
     }
 
     if (!workspaceId) {
-      setLoading(false)
+      setGenerating(false)
       notifyFailure({
         title: 'Sign in required',
         message: 'You need to be signed in to generate AI copy.',
@@ -625,17 +769,20 @@ export default function CreativeDetailPageClient({
             toast({ title: 'No new headlines', description: 'Try again with different inputs.' })
             return
           }
-          setEditedHeadlines((prev) => {
-            const base = prev.length ? prev : []
-            const existing = new Set(base.flatMap((s) => { const v = s.trim().toLowerCase(); return v ? [v] : [] }))
-            const additions = headlines.filter((h: string) => {
-              const key = h.trim().toLowerCase()
-              if (!key) return false
-              if (existing.has(key)) return false
-              existing.add(key)
-              return true
-            })
-            return [...base, ...additions]
+          dispatch({
+            type: 'updateEditedHeadlines',
+            updater: (prev) => {
+              const base = prev.length ? prev : []
+              const existing = new Set(base.flatMap((s) => { const v = s.trim().toLowerCase(); return v ? [v] : [] }))
+              const additions = headlines.filter((h: string) => {
+                const key = h.trim().toLowerCase()
+                if (!key) return false
+                if (existing.has(key)) return false
+                existing.add(key)
+                return true
+              })
+              return [...base, ...additions]
+            },
           })
           toast({ title: 'Generated headlines', description: `Added ${headlines.length} new variant(s).` })
           return
@@ -646,17 +793,20 @@ export default function CreativeDetailPageClient({
           return
         }
 
-        setEditedDescriptions((prev) => {
-          const base = prev.length ? prev : []
+        dispatch({
+          type: 'updateEditedDescriptions',
+          updater: (prev) => {
+            const base = prev.length ? prev : []
             const existing = new Set(base.flatMap((s) => { const v = s.trim().toLowerCase(); return v ? [v] : [] }))
-          const additions = captions.filter((c: string) => {
-            const key = c.trim().toLowerCase()
-            if (!key) return false
-            if (existing.has(key)) return false
-            existing.add(key)
-            return true
-          })
-          return [...base, ...additions]
+            const additions = captions.filter((c: string) => {
+              const key = c.trim().toLowerCase()
+              if (!key) return false
+              if (existing.has(key)) return false
+              existing.add(key)
+              return true
+            })
+            return [...base, ...additions]
+          },
         })
         toast({ title: 'Generated captions', description: `Added ${captions.length} new variant(s).` })
       })
@@ -669,7 +819,7 @@ export default function CreativeDetailPageClient({
         })
       })
       .finally(() => {
-        setLoading(false)
+        setGenerating(false)
       })
   }, [campaignName, convexProviderId, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isPreviewMode, params.campaignId, params.creativeId, selectedClientId, generateCopyAction, workspaceId])
 
@@ -684,20 +834,23 @@ export default function CreativeDetailPageClient({
       const normalizedCta = editedCta.trim()
       const normalizedLandingPage = editedLandingPage.trim()
 
-          setCreative((previousCreative) => {
-            if (!previousCreative) {
-              return previousCreative
-            }
+          dispatch({
+            type: 'patchCreative',
+            updater: (previousCreative) => {
+              if (!previousCreative) {
+                return previousCreative
+              }
 
-            return {
-              ...previousCreative,
-              headlines: normalizedHeadlines,
-              descriptions: normalizedDescriptions,
-              callToAction: normalizedCta,
-              landingPageUrl: normalizedLandingPage,
-            }
+              return {
+                ...previousCreative,
+                headlines: normalizedHeadlines,
+                descriptions: normalizedDescriptions,
+                callToAction: normalizedCta,
+                landingPageUrl: normalizedLandingPage,
+              }
+            },
           })
-      setIsEditing(false)
+      dispatch({ type: 'setIsEditing', value: false })
       toast({
         title: 'Sample creative updated',
         description: 'Preview mode applied your edits locally for this session only.',
@@ -729,7 +882,7 @@ export default function CreativeDetailPageClient({
       return
     }
 
-    setIsSaving(true)
+    dispatch({ type: 'setIsSaving', value: true })
 
     const normalizedHeadlines = normalizeStringList(editedHeadlines)
     const normalizedDescriptions = normalizeStringList(editedDescriptions)
@@ -770,19 +923,22 @@ export default function CreativeDetailPageClient({
     })
       .then((result) => {
         if (creative) {
-          setCreative((previousCreative) => {
-            if (!previousCreative) {
-              return previousCreative
-            }
+          dispatch({
+            type: 'patchCreative',
+            updater: (previousCreative) => {
+              if (!previousCreative) {
+                return previousCreative
+              }
 
-            return {
-              ...previousCreative,
-              platformCreativeId: (result as { creativeId?: string } | undefined)?.creativeId ?? previousCreative.platformCreativeId,
-              headlines: normalizedHeadlines,
-              descriptions: normalizedDescriptions,
-              callToAction: normalizedCta,
-              landingPageUrl: normalizedLandingPage,
-            }
+              return {
+                ...previousCreative,
+                platformCreativeId: (result as { creativeId?: string } | undefined)?.creativeId ?? previousCreative.platformCreativeId,
+                headlines: normalizedHeadlines,
+                descriptions: normalizedDescriptions,
+                callToAction: normalizedCta,
+                landingPageUrl: normalizedLandingPage,
+              }
+            },
           })
         }
 
@@ -792,7 +948,7 @@ export default function CreativeDetailPageClient({
           title: 'Changes saved',
           description: 'Your creative has been updated successfully.',
         })
-        setIsEditing(false)
+        dispatch({ type: 'setIsEditing', value: false })
       })
       .catch((error) => {
         reportConvexFailure({
@@ -803,49 +959,61 @@ export default function CreativeDetailPageClient({
         })
       })
       .finally(() => {
-        setIsSaving(false)
+        dispatch({ type: 'setIsSaving', value: false })
       })
   }, [convexProviderId, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, fetchCreative, isPreviewMode, selectedClientId, updateCreative, workspaceId])
 
   const addHeadline = useCallback(() => {
-    setEditedHeadlines((current) => [...current, ''])
+    dispatch({ type: 'updateEditedHeadlines', updater: (current) => [...current, ''] })
   }, [])
 
   const removeHeadline = useCallback((index: number) => {
-    setEditedHeadlines((current) => current.filter((_, currentIndex) => currentIndex !== index))
-    setPreviewHeadlineIndex((current) => {
-      if (index < current) return current - 1
-      if (index === current) return Math.max(0, current - 1)
-      return current
+    dispatch({ type: 'updateEditedHeadlines', updater: (current) => current.filter((_, currentIndex) => currentIndex !== index) })
+    dispatch({
+      type: 'updatePreviewHeadlineIndex',
+      updater: (current) => {
+        if (index < current) return current - 1
+        if (index === current) return Math.max(0, current - 1)
+        return current
+      },
     })
   }, [])
 
   const updateHeadline = useCallback((index: number, value: string) => {
-    setEditedHeadlines((current) => {
-      const updated = [...current]
-      updated[index] = value
-      return updated
+    dispatch({
+      type: 'updateEditedHeadlines',
+      updater: (current) => {
+        const updated = [...current]
+        updated[index] = value
+        return updated
+      },
     })
   }, [])
 
   const addDescription = useCallback(() => {
-    setEditedDescriptions((current) => [...current, ''])
+    dispatch({ type: 'updateEditedDescriptions', updater: (current) => [...current, ''] })
   }, [])
 
   const removeDescription = useCallback((index: number) => {
-    setEditedDescriptions((current) => current.filter((_, currentIndex) => currentIndex !== index))
-    setPreviewDescriptionIndex((current) => {
-      if (index < current) return current - 1
-      if (index === current) return Math.max(0, current - 1)
-      return current
+    dispatch({ type: 'updateEditedDescriptions', updater: (current) => current.filter((_, currentIndex) => currentIndex !== index) })
+    dispatch({
+      type: 'updatePreviewDescriptionIndex',
+      updater: (current) => {
+        if (index < current) return current - 1
+        if (index === current) return Math.max(0, current - 1)
+        return current
+      },
     })
   }, [])
 
   const updateDescription = useCallback((index: number, value: string) => {
-    setEditedDescriptions((current) => {
-      const updated = [...current]
-      updated[index] = value
-      return updated
+    dispatch({
+      type: 'updateEditedDescriptions',
+      updater: (current) => {
+        const updated = [...current]
+        updated[index] = value
+        return updated
+      },
     })
   }, [])
 
@@ -929,7 +1097,7 @@ export default function CreativeDetailPageClient({
     return (
       <div className={ADS_PAGE_THEME.innerContainer}>
         <div className={cn(ADS_PAGE_THEME.innerHero, 'space-y-4')}>
-          <Skeleton className="h-10 w-10 rounded-xl" />
+          <Skeleton className="size-10 rounded-xl" />
           <Skeleton className="h-8 w-64 max-w-full rounded-lg" />
         </div>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">

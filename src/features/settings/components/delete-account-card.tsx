@@ -38,7 +38,7 @@ export function DeleteAccountCard({ embedded = false }: DeleteAccountCardProps) 
     <>
       <CardHeader className={embedded ? 'px-0 pt-0' : undefined}>
         <CardTitle className="flex items-center gap-2 text-destructive">
-          <Trash2 className="h-5 w-5" aria-hidden />
+          <Trash2 className="size-5" aria-hidden />
           Delete account
         </CardTitle>
         <CardDescription>
@@ -59,7 +59,7 @@ export function DeleteAccountCard({ embedded = false }: DeleteAccountCardProps) 
       </CardContent>
       <CardFooter className={embedded ? 'flex justify-end px-0 pb-0' : 'flex justify-end'}>
         <Button variant="destructive" onClick={handleOpenDeleteDialog}>
-          <Trash2 className="mr-2 h-4 w-4" aria-hidden />
+          <Trash2 className="mr-2 size-4" aria-hidden />
           Delete account
         </Button>
       </CardFooter>
@@ -93,16 +93,18 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
   const { toast } = useToast()
   const router = useRouter()
 
-  const [deleteConfirm, setDeleteConfirm] = useState('')
-  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null)
-  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false)
+  const [deleteDialogState, setDeleteDialogState] = useState({
+    confirm: '',
+    error: null as string | null,
+    loading: false,
+  })
+  const { confirm: deleteConfirm, error: deleteAccountError, loading: deleteAccountLoading } = deleteDialogState
+
   useEffect(() => {
     if (open) return
 
     const frame = requestAnimationFrame(() => {
-      setDeleteConfirm('')
-      setDeleteAccountError(null)
-      setDeleteAccountLoading(false)
+      setDeleteDialogState({ confirm: '', error: null, loading: false })
     })
 
     return () => {
@@ -129,17 +131,16 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
     }
 
     if (!user) {
-      setDeleteAccountError('You must be signed in to delete your account.')
+      setDeleteDialogState((prev) => ({ ...prev, error: 'You must be signed in to delete your account.' }))
       return
     }
 
     if (deleteConfirm.trim().toLowerCase() !== 'delete') {
-      setDeleteAccountError('Type DELETE to confirm this action.')
+      setDeleteDialogState((prev) => ({ ...prev, error: 'Type DELETE to confirm this action.' }))
       return
     }
 
-    setDeleteAccountLoading(true)
-    setDeleteAccountError(null)
+    setDeleteDialogState((prev) => ({ ...prev, loading: true, error: null }))
 
     // Clear all localStorage data before deleting account
     const keysToRemove = Object.keys(localStorage).filter(
@@ -157,20 +158,19 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       })
       .catch((accountError) => {
         const message = accountError instanceof Error ? accountError.message : 'Failed to delete account'
-        setDeleteAccountError(message)
+        setDeleteDialogState((prev) => ({ ...prev, error: message }))
         notifyFailure({
         title: 'Account deletion failed',
         message: message,
       })
       })
       .finally(() => {
-        setDeleteAccountLoading(false)
+        setDeleteDialogState((prev) => ({ ...prev, loading: false }))
       })
   }, [deleteAccount, deleteConfirm, isPreviewMode, onOpenChange, router, toast, user])
 
   const handleDeleteConfirmChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setDeleteConfirm(event.target.value)
-    setDeleteAccountError(null)
+    setDeleteDialogState((prev) => ({ ...prev, confirm: event.target.value, error: null }))
   }, [])
 
   return (
@@ -218,7 +218,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
             onClick={handleAccountDeletion}
             disabled={deleteConfirm.trim().toLowerCase() !== 'delete' || deleteAccountLoading}
           >
-            {deleteAccountLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {deleteAccountLoading ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
             Delete account
           </Button>
         </DialogFooter>

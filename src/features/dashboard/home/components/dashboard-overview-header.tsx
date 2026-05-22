@@ -44,18 +44,18 @@ export function DashboardOverviewHeader({
         )}
       >
         <div
-          className="pointer-events-none absolute -left-6 top-0 h-28 w-28 rounded-full bg-primary/10 blur-3xl"
+          className="pointer-events-none absolute -left-6 top-0 size-28 rounded-full bg-primary/10 blur-3xl"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute -right-10 -bottom-6 h-36 w-36 rounded-full bg-info/10 blur-3xl"
+          className="pointer-events-none absolute -right-10 -bottom-6 size-36 rounded-full bg-info/10 blur-3xl"
           aria-hidden
         />
 
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 gap-4">
             <div className={cn(DASHBOARD_THEME.icons.container, 'bg-primary/10 text-primary border-primary/20')}>
-              <LayoutDashboard className="h-6 w-6" aria-hidden />
+              <LayoutDashboard className="size-6" aria-hidden />
             </div>
             <div className="min-w-0 space-y-2">
               <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80">
@@ -89,7 +89,7 @@ export function DashboardOverviewHeader({
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   {teamMembersCount > 0 ? (
                     <span className="inline-flex items-center gap-1.5">
-                      <Users className="h-4 w-4 shrink-0" aria-hidden />
+                      <Users className="size-4 shrink-0" aria-hidden />
                       {teamMembersCount} team {teamMembersCount === 1 ? 'member' : 'members'}
                     </span>
                   ) : null}
@@ -108,9 +108,9 @@ export function DashboardOverviewHeader({
             disabled={isRefreshing}
           >
             {isRefreshing ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+              <LoaderCircle className="size-4 animate-spin" aria-hidden />
             ) : (
-              <RefreshCw className="h-4 w-4" aria-hidden />
+              <RefreshCw className="size-4" aria-hidden />
             )}
             Refresh data
           </Button>

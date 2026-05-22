@@ -27,6 +27,7 @@ import { StatsCards } from '@/features/dashboard/home/components/stats-cards'
 import { useDashboardData, useDashboardStats } from '@/features/dashboard/home/hooks'
 import { analyticsIntegrationsApi, projectsApi } from '@/lib/convex-api'
 import { getPreviewProjects } from '@/lib/preview-data'
+import { EN_US_COMPACT_NUMBER_FORMATTER } from '@/lib/intl/formatters'
 import { formatCurrency, getWorkspaceId } from '@/lib/utils'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
@@ -72,10 +73,7 @@ function normalizeTaskStatus(value: string | undefined): TaskStatus | null {
 }
 
 function formatCompactNumber(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(value)
+  return EN_US_COMPACT_NUMBER_FORMATTER.format(value)
 }
 
 export function DashboardOverviewPage() {
@@ -341,7 +339,7 @@ export function DashboardOverviewPage() {
                     onClick={handleRefreshClick}
                     disabled={isRefreshing}
                   >
-                    {isRefreshing ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {isRefreshing ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
                     Try again
                   </Button>
                 </div>
@@ -366,14 +364,14 @@ export function DashboardOverviewPage() {
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
-                            <TrendingUp className="h-4 w-4" aria-hidden />
+                          <span className="inline-flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
+                            <TrendingUp className="size-4" aria-hidden />
                           </span>
                           <CardTitle className="text-lg tracking-tight">Spend & revenue</CardTitle>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Info className="h-4 w-4 cursor-help text-muted-foreground" />
+                                <Info className="size-4 cursor-help text-muted-foreground" />
                               </TooltipTrigger>
                               <TooltipContent className="max-w-xs">
                                 Daily ad spend and revenue from synced platforms for the current client.

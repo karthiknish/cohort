@@ -11,11 +11,11 @@ export interface SpinnerProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const sizeClasses = {
-  xs: 'h-3 w-3',
-  sm: 'h-4 w-4',
-  md: 'h-6 w-6',
-  lg: 'h-8 w-8',
-  xl: 'h-12 w-12',
+  xs: 'size-3',
+  sm: 'size-4',
+  md: 'size-6',
+  lg: 'size-8',
+  xl: 'size-12',
 }
 
 const variantClasses = {
@@ -85,7 +85,7 @@ export function LoadingContent({
   if (isLoading) {
     return (
       <>
-        <LoaderCircle className="h-4 w-4 animate-spin" />
+        <LoaderCircle className="size-4 animate-spin" />
         <span>{loadingText}</span>
       </>
     )

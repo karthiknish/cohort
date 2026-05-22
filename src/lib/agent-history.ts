@@ -74,9 +74,10 @@ export function groupAgentHistory(
     buckets.get(group)?.push(conversation)
   }
 
-  return GROUP_ORDER.map((group) => ({
-    group,
-    label: GROUP_LABELS[group],
-    conversations: buckets.get(group) ?? [],
-  })).filter((entry) => entry.conversations.length > 0)
+  return GROUP_ORDER.flatMap((group) => {
+    const conversations = buckets.get(group) ?? []
+    return conversations.length > 0
+      ? [{ group, label: GROUP_LABELS[group], conversations }]
+      : []
+  })
 }

@@ -80,10 +80,10 @@ export function normalizeTerm(term: string) {
 }
 
 export function tokenize(input: string) {
-  return input
-    .split(/\s+/)
-    .map(normalizeTerm)
-    .filter((token) => token.length > 0)
+  return input.split(/\s+/).flatMap((token) => {
+    const normalized = normalizeTerm(token)
+    return normalized.length > 0 ? [normalized] : []
+  })
 }
 
 export function levenshtein(a: string, b: string): number {
@@ -481,18 +481,26 @@ export async function scanChannelRows(
       break
     }
 
-    for (const row of result.items) {
+    const visitBatchRows = async (index: number): Promise<void> => {
+      if (index >= result.items.length || stoppedEarly) return
+
+      const row = result.items[index]
+      if (!row) return
       const shouldContinue = await visitor(row)
       scanned += 1
       if (shouldContinue === false) {
         stoppedEarly = true
-        break
+        return
       }
       if (scanned >= maxRows) {
         truncated = Boolean(result.nextCursor)
-        break
+        return
       }
+
+      await visitBatchRows(index + 1)
     }
+
+    await visitBatchRows(0)
 
     if (stoppedEarly || !result.nextCursor || scanned >= maxRows) {
       break

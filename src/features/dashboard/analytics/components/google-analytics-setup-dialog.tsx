@@ -55,8 +55,8 @@ export function GoogleAnalyticsSetupDialog({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <span className={cn(getIconContainerClasses('small'), 'h-10 w-10 rounded-full')}>
-              <BarChart3 className="h-5 w-5" />
+            <span className={cn(getIconContainerClasses('small'), 'size-10 rounded-full')}>
+              <BarChart3 className="size-5" />
             </span>
             <div>
               <DialogTitle>Select Google Analytics property</DialogTitle>
@@ -70,7 +70,7 @@ export function GoogleAnalyticsSetupDialog({
         <div className="space-y-4 py-2">
           {setupMessage ? (
             <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className="size-4" />
               <AlertTitle>Setup issue</AlertTitle>
               <AlertDescription>{setupMessage}</AlertDescription>
             </Alert>
@@ -122,7 +122,7 @@ export function GoogleAnalyticsSetupDialog({
           >
             {loadingProperties ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 size-4 animate-spin" />
                 Loading…
               </>
             ) : (
@@ -136,7 +136,7 @@ export function GoogleAnalyticsSetupDialog({
           >
             {initializing ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 size-4 animate-spin" />
                 Saving…
               </>
             ) : (

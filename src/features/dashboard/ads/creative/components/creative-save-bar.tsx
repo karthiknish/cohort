@@ -44,7 +44,7 @@ export function CreativeSaveBar(props: {
             disabled={isSaving}
             className="h-9"
           >
-            <X className="mr-1.5 h-3.5 w-3.5" />
+            <X className="mr-1.5 size-3.5" />
             Discard
           </Button>
           <Button
@@ -55,9 +55,9 @@ export function CreativeSaveBar(props: {
             className="h-9 min-w-[140px] shadow-md shadow-primary/15"
           >
             {isSaving ? (
-              <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              <RefreshCw className="mr-1.5 size-3.5 animate-spin" />
             ) : (
-              <Save className="mr-1.5 h-3.5 w-3.5" />
+              <Save className="mr-1.5 size-3.5" />
             )}
             {isSaving ? 'Saving…' : 'Save to Meta'}
           </Button>

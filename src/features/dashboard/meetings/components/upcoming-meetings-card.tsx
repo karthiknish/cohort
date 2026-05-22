@@ -44,8 +44,8 @@ export function UpcomingMeetingsCard(props: UpcomingMeetingsCardProps) {
       <CardHeader className="space-y-3 border-b border-muted/40 pb-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-start gap-3">
-            <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 shrink-0 rounded-lg')}>
-              <Clock3 className="h-5 w-5" aria-hidden />
+            <div className={cn(DASHBOARD_THEME.icons.container, 'size-10 shrink-0 rounded-lg')}>
+              <Clock3 className="size-5" aria-hidden />
             </div>
             <div className="min-w-0 flex-1 space-y-1">
               <CardTitle className="text-base leading-tight">Upcoming meetings</CardTitle>

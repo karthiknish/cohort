@@ -96,7 +96,10 @@ function FieldError({
   const content = useMemo(() => {
     if (children) return children
     if (!errors?.length) return null
-    const messages = errors.map((error) => error?.message).filter(Boolean)
+    const messages = errors.flatMap((error) => {
+      const message = error?.message
+      return message ? [message] : []
+    })
     if (messages.length === 0) return null
     if (messages.length === 1) return messages[0]
     return (

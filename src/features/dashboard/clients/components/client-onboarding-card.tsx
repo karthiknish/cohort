@@ -29,7 +29,7 @@ export function ClientOnboardingChecklist({ items }: { items: ClientChecklistIte
     <Card className="overflow-hidden border-muted/40 bg-card shadow-sm motion-chromatic hover:shadow-md">
       <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-primary" />
+          <div className="size-2 rounded-full bg-primary" />
           <div>
             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Onboarding Objectives</CardTitle>
             <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
@@ -61,12 +61,12 @@ export function ClientOnboardingChecklist({ items }: { items: ClientChecklistIte
                 )}
               >
                 <div className={cn(
-                  "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors",
+                  "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full transition-colors",
                   item.done ? "bg-accent/10 text-primary" : "bg-muted/20 text-muted-foreground/70"
                 )}>
                   <Icon
                     className={cn(
-                      "h-3 w-3",
+                      "size-3",
                       item.loading && "animate-spin"
                     )}
                   />

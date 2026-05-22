@@ -57,7 +57,7 @@ export function ChannelInfoHero({
         <div className="relative shrink-0">
           <ChannelAvatar
             channel={channel}
-            className="h-20 w-20 ring-2 ring-background/80 shadow-md"
+            className="size-20 ring-2 ring-background/80 shadow-md"
             fallbackClassName="bg-primary/10 text-primary"
           />
           {isAdmin ? (
@@ -65,15 +65,15 @@ export function ChannelInfoHero({
               type="button"
               variant="secondary"
               size="icon"
-              className="absolute -bottom-0.5 -right-0.5 h-9 w-9 rounded-full border border-border/60 shadow-md"
+              className="absolute -bottom-0.5 -right-0.5 size-9 rounded-full border border-border/60 shadow-md"
               onClick={onPickPhoto}
               disabled={uploading || removing}
               aria-label="Change channel photo"
             >
               {uploading ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                <LoaderCircle className="size-4 animate-spin" aria-hidden />
               ) : (
-                <Camera className="h-4 w-4" aria-hidden />
+                <Camera className="size-4" aria-hidden />
               )}
             </Button>
           ) : null}
@@ -90,21 +90,21 @@ export function ChannelInfoHero({
 
           <div className="flex flex-wrap gap-2">
             <span className={CHANNEL_INFO_THEME.statChip}>
-              <Users className="h-3 w-3 text-primary/80" aria-hidden />
+              <Users className="size-3 text-primary/80" aria-hidden />
               {memberCount} {memberCount === 1 ? 'member' : 'members'}
             </span>
             {channel.isCustom ? (
               <span className={CHANNEL_INFO_THEME.statChip}>
                 {channel.visibility === 'private' ? (
-                  <Lock className="h-3 w-3" aria-hidden />
+                  <Lock className="size-3" aria-hidden />
                 ) : (
-                  <Users className="h-3 w-3" aria-hidden />
+                  <Users className="size-3" aria-hidden />
                 )}
                 {channel.visibility === 'private' ? 'Private' : 'Public'}
               </span>
             ) : (
               <span className={CHANNEL_INFO_THEME.statChip}>
-                <Hash className="h-3 w-3" aria-hidden />
+                <Hash className="size-3" aria-hidden />
                 {channel.type} channel
               </span>
             )}
@@ -127,9 +127,9 @@ export function ChannelInfoHero({
                   disabled={uploading || removing}
                 >
                   {removing ? (
-                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
                   ) : (
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    <Trash2 className="size-3.5" aria-hidden />
                   )}
                   Remove photo
                 </Button>
@@ -161,7 +161,7 @@ export function ChannelInfoMembersPanel({
           className="w-full gap-2 rounded-xl border-dashed"
           onClick={onManageMembers}
         >
-          <Settings2 className="h-4 w-4" aria-hidden />
+          <Settings2 className="size-4" aria-hidden />
           Manage members
         </Button>
       ) : null}
@@ -178,7 +178,7 @@ export function ChannelInfoMembersPanel({
         <ul className="space-y-0.5" aria-label="Channel members">
           {channelParticipants.map((participant) => (
             <li key={participant.name} className={CHANNEL_INFO_THEME.memberRow}>
-              <Avatar className="h-10 w-10 shrink-0 ring-1 ring-border/50">
+              <Avatar className="size-10 shrink-0 ring-1 ring-border/50">
                 <AvatarFallback className="bg-primary/8 text-xs font-bold text-primary">
                   {getInitials(participant.name)}
                 </AvatarFallback>
@@ -240,8 +240,8 @@ export function ChannelInfoAboutPanel({
     <div className="space-y-4 px-1">
       <div className={CHANNEL_INFO_THEME.settingsCard}>
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
-            <Info className="h-5 w-5" aria-hidden />
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+            <Info className="size-5" aria-hidden />
           </div>
           <div className="min-w-0 flex-1 space-y-2">
             <p className={CHANNEL_INFO_THEME.sectionEyebrow}>About</p>
@@ -257,9 +257,9 @@ export function ChannelInfoAboutPanel({
               {channel.isCustom && channel.visibility ? (
                 <Badge variant="outline" className="gap-1 text-[10px] font-semibold uppercase tracking-wide">
                   {channel.visibility === 'private' ? (
-                    <Lock className="h-3 w-3" aria-hidden />
+                    <Lock className="size-3" aria-hidden />
                   ) : (
-                    <Users className="h-3 w-3" aria-hidden />
+                    <Users className="size-3" aria-hidden />
                   )}
                   {channel.visibility}
                 </Badge>
@@ -276,7 +276,7 @@ export function ChannelInfoAboutPanel({
             className="mt-4 w-full gap-2 rounded-xl"
             onClick={onManageMembers}
           >
-            <Settings2 className="h-4 w-4" aria-hidden />
+            <Settings2 className="size-4" aria-hidden />
             Manage channel members
           </Button>
         ) : null}
@@ -284,8 +284,8 @@ export function ChannelInfoAboutPanel({
 
       <div className={CHANNEL_INFO_THEME.settingsCard}>
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary ring-1 ring-accent/20">
-            <Bell className="h-5 w-5" aria-hidden />
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary ring-1 ring-accent/20">
+            <Bell className="size-5" aria-hidden />
           </div>
           <div className="min-w-0 flex-1">
             <p className={CHANNEL_INFO_THEME.sectionEyebrow}>Notifications</p>

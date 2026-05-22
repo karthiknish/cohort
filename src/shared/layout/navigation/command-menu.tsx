@@ -100,7 +100,7 @@ function CommandMenuRouteItem({
 
   return (
     <CommandItem onSelect={handleSelect} className="gap-2">
-      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+      <Icon className="size-4 shrink-0" aria-hidden />
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <span className="min-w-0 max-w-[45%] truncate text-xs text-muted-foreground">{description}</span>
     </CommandItem>
@@ -124,7 +124,7 @@ function CommandMenuActionItem({
 
   return (
     <CommandItem onSelect={handleSelect} className="gap-2">
-      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+      <Icon className="size-4 shrink-0" aria-hidden />
       <span className="min-w-0 flex-1">{label}</span>
       {children}
     </CommandItem>
@@ -285,57 +285,65 @@ export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
     }
 
     const clientResults = limitResults(
-      (Array.isArray(clientRows) ? clientRows : [])
-        .filter((client) => includesQuery(client.name, normalizedQuery))
-        .map((client) => ({
-          id: `client-${client.legacyId}`,
-          href: '/admin/clients',
-          label: client.name,
-          description: 'Client workspace',
-          icon: Users,
-          group: 'Clients' as const,
-        }))
+      (Array.isArray(clientRows) ? clientRows : []).flatMap((client) =>
+        includesQuery(client.name, normalizedQuery)
+          ? [{
+              id: `client-${client.legacyId}`,
+              href: '/admin/clients',
+              label: client.name,
+              description: 'Client workspace',
+              icon: Users,
+              group: 'Clients' as const,
+            }]
+          : [],
+      )
     )
 
     const taskResults = limitResults(
-      (Array.isArray(taskRows) ? taskRows : [])
-        .filter((task) => includesQuery(task.title, normalizedQuery) || includesQuery(task.projectName, normalizedQuery))
-        .map((task) => ({
-          id: `task-${task.legacyId}`,
-          href: task.projectName
-            ? `/dashboard/tasks?projectName=${encodeURIComponent(task.projectName)}`
-            : '/dashboard/tasks',
-          label: task.title,
-          description: task.projectName || task.status || 'Task',
-          icon: CheckSquare,
-          group: 'Tasks' as const,
-        }))
+      (Array.isArray(taskRows) ? taskRows : []).flatMap((task) =>
+        includesQuery(task.title, normalizedQuery) || includesQuery(task.projectName, normalizedQuery)
+          ? [{
+              id: `task-${task.legacyId}`,
+              href: task.projectName
+                ? `/dashboard/tasks?projectName=${encodeURIComponent(task.projectName)}`
+                : '/dashboard/tasks',
+              label: task.title,
+              description: task.projectName || task.status || 'Task',
+              icon: CheckSquare,
+              group: 'Tasks' as const,
+            }]
+          : [],
+      )
     )
 
     const projectResults = limitResults(
-      (Array.isArray(projectRows) ? projectRows : [])
-        .filter((project) => includesQuery(project.name, normalizedQuery))
-        .map((project) => ({
-          id: `project-${project.legacyId}`,
-          href: `/dashboard/projects?projectId=${encodeURIComponent(project.legacyId)}&projectName=${encodeURIComponent(project.name)}`,
-          label: project.name,
-          description: project.status || 'Project',
-          icon: Briefcase,
-          group: 'Projects' as const,
-        }))
+      (Array.isArray(projectRows) ? projectRows : []).flatMap((project) =>
+        includesQuery(project.name, normalizedQuery)
+          ? [{
+              id: `project-${project.legacyId}`,
+              href: `/dashboard/projects?projectId=${encodeURIComponent(project.legacyId)}&projectName=${encodeURIComponent(project.name)}`,
+              label: project.name,
+              description: project.status || 'Project',
+              icon: Briefcase,
+              group: 'Projects' as const,
+            }]
+          : [],
+      )
     )
 
     const proposalResults = limitResults(
-      (Array.isArray(proposalRows) ? proposalRows : [])
-        .filter((proposal) => includesQuery(proposal.clientName, normalizedQuery) || includesQuery(proposal.legacyId, normalizedQuery))
-        .map((proposal) => ({
-          id: `proposal-${proposal.legacyId}`,
-          href: `/dashboard/proposals/${encodeURIComponent(proposal.legacyId)}/deck`,
-          label: proposal.clientName || 'Proposal deck',
-          description: proposal.status || proposal.legacyId,
-          icon: FileText,
-          group: 'Proposals' as const,
-        }))
+      (Array.isArray(proposalRows) ? proposalRows : []).flatMap((proposal) =>
+        includesQuery(proposal.clientName, normalizedQuery) || includesQuery(proposal.legacyId, normalizedQuery)
+          ? [{
+              id: `proposal-${proposal.legacyId}`,
+              href: `/dashboard/proposals/${encodeURIComponent(proposal.legacyId)}/deck`,
+              label: proposal.clientName || 'Proposal deck',
+              description: proposal.status || proposal.legacyId,
+              icon: FileText,
+              group: 'Proposals' as const,
+            }]
+          : [],
+      )
     )
 
     return [...clientResults, ...taskResults, ...projectResults, ...proposalResults]
@@ -443,7 +451,7 @@ export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
         aria-haspopup="dialog"
         type="button"
       >
-        <Search className="h-4 w-4 shrink-0" aria-hidden />
+        <Search className="size-4 shrink-0" aria-hidden />
       </button>
 
       {/* Desktop: full button with text */}
@@ -456,7 +464,7 @@ export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
         aria-haspopup="dialog"
         className="hidden sm:inline-flex w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
       >
-        <Search className="h-4 w-4 shrink-0" aria-hidden />
+        <Search className="size-4 shrink-0" aria-hidden />
         <span className="flex-1 text-left truncate">Quick navigation…</span>
         <KeyboardShortcutBadge combo="mod+k" />
       </button>

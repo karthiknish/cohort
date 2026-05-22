@@ -77,7 +77,7 @@ export function CreativeFullPreviewDialog(props: {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <FileText className="h-16 w-16 mb-2" />
+              <FileText className="size-16 mb-2" />
               <p className="text-sm">No preview available</p>
             </div>
           )}

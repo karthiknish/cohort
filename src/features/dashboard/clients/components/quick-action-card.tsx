@@ -23,7 +23,7 @@ export function QuickActionCard({
       <Card className="border-muted/60 bg-card motion-chromatic hover:border-accent/30 hover:shadow-md">
         <CardContent className="flex items-center gap-3 p-4">
           <div className="rounded-lg p-2 transition-colors text-muted-foreground group-hover:bg-muted group-hover:text-foreground">
-            <Icon className="h-5 w-5" />
+            <Icon className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-medium text-foreground">{title}</p>

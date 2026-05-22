@@ -84,16 +84,18 @@ function isPersistableAttachment(
 export function serializeAgentAttachmentsForStorage(
   attachments: AgentAttachmentContext[],
 ): AgentStoredAttachment[] {
-  return attachments.filter(isPersistableAttachment).map((attachment) => ({
-    id: attachment.id,
-    name: attachment.name,
-    mimeType: attachment.mimeType,
-    sizeLabel: attachment.sizeLabel,
-    excerpt: attachment.excerpt,
-    extractedText: attachment.extractedText,
-    extractionStatus: attachment.extractionStatus,
-    errorMessage: attachment.errorMessage,
-  }))
+  return attachments.flatMap((attachment) => isPersistableAttachment(attachment)
+    ? [{
+        id: attachment.id,
+        name: attachment.name,
+        mimeType: attachment.mimeType,
+        sizeLabel: attachment.sizeLabel,
+        excerpt: attachment.excerpt,
+        extractedText: attachment.extractedText,
+        extractionStatus: attachment.extractionStatus,
+        errorMessage: attachment.errorMessage,
+      }]
+    : [])
 }
 
 export function toAgentRequestAttachmentContext(
@@ -107,15 +109,17 @@ export function toAgentRequestAttachmentContext(
   extractionStatus: AgentStoredAttachment['extractionStatus']
   errorMessage?: string
 }> {
-  return attachments.filter(isPersistableAttachment).map((attachment) => ({
-    name: attachment.name,
-    mimeType: attachment.mimeType,
-    sizeLabel: attachment.sizeLabel,
-    excerpt: attachment.excerpt,
-    extractedText: attachment.extractedText,
-    extractionStatus: attachment.extractionStatus,
-    errorMessage: attachment.errorMessage,
-  }))
+  return attachments.flatMap((attachment) => isPersistableAttachment(attachment)
+    ? [{
+        name: attachment.name,
+        mimeType: attachment.mimeType,
+        sizeLabel: attachment.sizeLabel,
+        excerpt: attachment.excerpt,
+        extractedText: attachment.extractedText,
+        extractionStatus: attachment.extractionStatus,
+        errorMessage: attachment.errorMessage,
+      }]
+    : [])
 }
 
 export function parseAgentAttachmentsFromStored(value: unknown): AgentAttachmentContext[] | undefined {
@@ -192,16 +196,24 @@ async function readZipDocumentAttachment(file: File, extension: string): Promise
     .filter((name) => entryPatterns.some((pattern) => pattern.test(name)))
     .sort()
 
-  const parts: string[] = []
-  for (const entryName of matchingNames) {
+  const collectParts = async (index: number, parts: string[]): Promise<string[]> => {
+    if (index >= matchingNames.length) return parts
+    if (parts.join(' ').length >= MAX_ATTACHMENT_TEXT_LENGTH) return parts
+
+    const entryName = matchingNames[index]
+    if (!entryName) return collectParts(index + 1, parts)
+
     const entry = zip.file(entryName)
-    if (!entry) continue
+    if (!entry) return collectParts(index + 1, parts)
+
     const raw = await entry.async('text')
     const cleaned = stripXmlLikeMarkup(raw)
-    if (!cleaned) continue
-    parts.push(cleaned)
-    if (parts.join(' ').length >= MAX_ATTACHMENT_TEXT_LENGTH) break
+    if (!cleaned) return collectParts(index + 1, parts)
+
+    return collectParts(index + 1, [...parts, cleaned])
   }
+
+  const parts = await collectParts(0, [])
 
   return truncateText(normalizeWhitespace(parts.join(' ')), MAX_ATTACHMENT_TEXT_LENGTH)
 }

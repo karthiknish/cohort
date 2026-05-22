@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Lock, Shield, Check, X, LoaderCircle, CircleCheck } from 'lucide-react'
@@ -83,9 +83,9 @@ function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
   return (
     <div className="flex items-center gap-2 text-xs">
       {met ? (
-        <Check className="h-3 w-3 text-success" />
+        <Check className="size-3 text-success" />
       ) : (
-        <X className="h-3 w-3 text-muted-foreground" />
+        <X className="size-3 text-muted-foreground" />
       )}
       <span className={cn(met ? "text-success" : "text-muted-foreground")}>{label}</span>
     </div>
@@ -157,7 +157,7 @@ function ResetPasswordFixture() {
               readOnly
             />
             <p className="flex items-center gap-1 text-xs text-success">
-              <Check className="h-3 w-3" />
+              <Check className="size-3" />
               Passwords match
             </p>
           </FadeInItem>
@@ -172,6 +172,57 @@ function ResetPasswordFixture() {
       </AuthPanel>
     </AuthShell>
   )
+}
+
+type ResetPasswordFormState = {
+  newPassword: string
+  confirmPassword: string
+  showPassword: boolean
+  showConfirmPassword: boolean
+  formError: string | null
+  submitting: boolean
+}
+
+type ResetPasswordFormAction =
+  | { type: 'setNewPassword'; value: string }
+  | { type: 'setConfirmPassword'; value: string }
+  | { type: 'toggleShowPassword' }
+  | { type: 'toggleShowConfirmPassword' }
+  | { type: 'setFormError'; value: string | null }
+  | { type: 'setSubmitting'; value: boolean }
+  | { type: 'startSubmit' }
+
+const initialResetPasswordFormState: ResetPasswordFormState = {
+  newPassword: '',
+  confirmPassword: '',
+  showPassword: false,
+  showConfirmPassword: false,
+  formError: null,
+  submitting: false,
+}
+
+function resetPasswordFormReducer(
+  state: ResetPasswordFormState,
+  action: ResetPasswordFormAction,
+): ResetPasswordFormState {
+  switch (action.type) {
+    case 'setNewPassword':
+      return { ...state, newPassword: action.value }
+    case 'setConfirmPassword':
+      return { ...state, confirmPassword: action.value }
+    case 'toggleShowPassword':
+      return { ...state, showPassword: !state.showPassword }
+    case 'toggleShowConfirmPassword':
+      return { ...state, showConfirmPassword: !state.showConfirmPassword }
+    case 'setFormError':
+      return { ...state, formError: action.value }
+    case 'setSubmitting':
+      return { ...state, submitting: action.value }
+    case 'startSubmit':
+      return { ...state, submitting: true, formError: null }
+    default:
+      return state
+  }
 }
 
 function verificationReducer(state: VerificationState, action: VerificationAction): VerificationState {
@@ -209,12 +260,8 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
   const { toast } = useToast()
   const { verifyPasswordResetCode, confirmPasswordReset } = useAuth()
   const [verificationState, dispatchVerification] = useReducer(verificationReducer, initialVerificationState)
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [formState, dispatchForm] = useReducer(resetPasswordFormReducer, initialResetPasswordFormState)
+  const { newPassword, confirmPassword, showPassword, showConfirmPassword, formError, submitting } = formState
 
   // Calculate password strength
   const passwordStrength = calculatePasswordStrength(newPassword)
@@ -253,19 +300,19 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
   }, [push])
 
   const handleNewPasswordChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setNewPassword(event.target.value)
+    dispatchForm({ type: 'setNewPassword', value: event.target.value })
   }, [])
 
   const handleConfirmPasswordChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setConfirmPassword(event.target.value)
+    dispatchForm({ type: 'setConfirmPassword', value: event.target.value })
   }, [])
 
   const handleToggleShowPassword = useCallback(() => {
-    setShowPassword((prev) => !prev)
+    dispatchForm({ type: 'toggleShowPassword' })
   }, [])
 
   const handleToggleShowConfirmPassword = useCallback(() => {
-    setShowConfirmPassword((prev) => !prev)
+    dispatchForm({ type: 'toggleShowConfirmPassword' })
   }, [])
 
   const handleSubmit = useCallback(
@@ -278,17 +325,16 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
 
       // Validate password strength
       if (passwordStrength.score < 2) {
-        setFormError('Please create a stronger password with at least 8 characters.')
+        dispatchForm({ type: 'setFormError', value: 'Please create a stronger password with at least 8 characters.' })
         return
       }
 
       if (newPassword !== confirmPassword) {
-        setFormError('Passwords do not match.')
+        dispatchForm({ type: 'setFormError', value: 'Passwords do not match.' })
         return
       }
 
-      setSubmitting(true)
-      setFormError(null)
+      dispatchForm({ type: 'startSubmit' })
 
       void confirmPasswordReset(oobCode, newPassword)
         .then(() => {
@@ -299,10 +345,10 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
           })
         })
         .catch((error: unknown) => {
-          setFormError(getFriendlyAuthErrorMessage(error))
+          dispatchForm({ type: 'setFormError', value: getFriendlyAuthErrorMessage(error) })
         })
         .finally(() => {
-          setSubmitting(false)
+          dispatchForm({ type: 'setSubmitting', value: false })
         })
     },
     [confirmPassword, confirmPasswordReset, newPassword, oobCode, passwordStrength.score, submitting, toast],
@@ -325,7 +371,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
         >
       {status === 'loading' && (
         <div className="flex flex-col items-center gap-4 py-8">
-          <LoaderCircle className="h-8 w-8 animate-spin text-primary" aria-hidden />
+          <LoaderCircle className="size-8 animate-spin text-primary" aria-hidden />
           <p className="text-sm text-muted-foreground">Verifying your reset link…</p>
         </div>
       )}
@@ -382,7 +428,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   disabled={submitting}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+                  {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
                 </Button>
               </AuthField>
 
@@ -390,7 +436,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                 <div className="mt-3 space-y-2 rounded-2xl border border-border/50 bg-muted/25 p-3.5">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1.5">
-                      <Shield className="h-3 w-3 text-muted-foreground" />
+                      <Shield className="size-3 text-muted-foreground" />
                       <span className="text-muted-foreground">Password strength:</span>
                     </div>
                     <span className={cn(
@@ -453,7 +499,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                   disabled={submitting}
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+                  {showConfirmPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
                 </Button>
               </AuthField>
               {confirmPassword.length > 0 && (
@@ -465,12 +511,12 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                 >
                   {passwordsMatch ? (
                     <>
-                      <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      <Check className="size-3.5 shrink-0" aria-hidden />
                       Passwords match
                     </>
                   ) : (
                     <>
-                      <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      <X className="size-3.5 shrink-0" aria-hidden />
                       Passwords do not match
                     </>
                   )}
@@ -491,7 +537,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
               <Button type="submit" className={primaryButtonClassName} disabled={submitting}>
                 {submitting ? (
                   <>
-                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    <LoaderCircle className="mr-2 size-4 animate-spin" />
                     Updating password…
                   </>
                 ) : (
@@ -506,8 +552,8 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
       {status === 'success' && (
         <FadeIn as="div" className="space-y-5">
           <div className="rounded-2xl border border-success/20 bg-success/10 p-6 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-success/15 text-success">
-              <CircleCheck className="h-6 w-6" aria-hidden />
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-success/15 text-success">
+              <CircleCheck className="size-6" aria-hidden />
             </div>
             <h3 className="mb-1 font-semibold text-foreground">Password reset successful</h3>
             <p className="text-sm text-muted-foreground">

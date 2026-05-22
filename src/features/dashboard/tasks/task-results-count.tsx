@@ -21,7 +21,7 @@ export function TaskResultsCount({ sortedCount, totalCount, loading }: TaskResul
       </span>
       {loading ? (
         <span className="inline-flex items-center gap-1.5">
-          <LoaderCircle className="h-3 w-3 animate-spin" aria-hidden />
+          <LoaderCircle className="size-3 animate-spin" aria-hidden />
           Updating…
         </span>
       ) : null}

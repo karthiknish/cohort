@@ -44,21 +44,21 @@ export function useActivityNotifications(activities: Activity[]) {
         if (config.showProjectUpdates) {
           shouldNotify = true
           message = `Project "${activity.entityName}" was updated`
-          icon = <Folder className="h-4 w-4" />
+          icon = <Folder className="size-4" />
         }
         break
       case 'task_activity':
         if (config.showTaskCompletions) {
           shouldNotify = true
           message = `Task "${activity.entityName}" was completed`
-          icon = <CircleCheck className="h-4 w-4" />
+          icon = <CircleCheck className="size-4" />
         }
         break
       case 'message_posted':
         if (config.showNewMessages) {
           shouldNotify = true
           message = `New message in ${activity.entityName}`
-          icon = <MessageSquare className="h-4 w-4" />
+          icon = <MessageSquare className="size-4" />
         }
         break
     }
@@ -171,7 +171,7 @@ export function useActivityNotifications(activities: Activity[]) {
           }
 
           toast.success(message, {
-            icon: <Bell className="h-4 w-4" />,
+            icon: <Bell className="size-4" />,
             duration: 4000,
           })
 

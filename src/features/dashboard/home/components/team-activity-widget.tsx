@@ -101,7 +101,7 @@ export function TeamActivityWidget({
     <Card className={cn('shadow-sm', className)}>
       <CardHeader className="flex flex-row items-center justify-between py-3">
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <Users className="size-4 text-muted-foreground" />
           <CardTitle className="text-sm">Team Activity</CardTitle>
         </div>
         {onViewAllClick && (
@@ -115,25 +115,25 @@ export function TeamActivityWidget({
         {/* Summary stats */}
         <div className="flex items-center gap-4 text-sm">
         <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-success" />
+            <div className="size-2 rounded-full bg-success" />
             <span className="text-muted-foreground">
               {stats.onlineCount} online
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-warning" />
+            <div className="size-2 rounded-full bg-warning" />
             <span className="text-muted-foreground">
               {stats.awayCount} away
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-destructive" />
+            <div className="size-2 rounded-full bg-destructive" />
             <span className="text-muted-foreground">
               {stats.busyCount} busy
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-muted-foreground/50" />
+            <div className="size-2 rounded-full bg-muted-foreground/50" />
             <span className="text-muted-foreground">
               {stats.offlineCount} offline
             </span>
@@ -143,7 +143,7 @@ export function TeamActivityWidget({
         {/* Top performer badge */}
         {!compact && stats.topPerformer && (
           <div className="flex items-center gap-2 rounded-lg bg-warning/10 p-2">
-            <TrendingUp className="h-4 w-4 text-warning" />
+            <TrendingUp className="size-4 text-warning" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-warning">
                 Top Performer
@@ -203,7 +203,7 @@ interface TeamMemberItemProps {
 }
 
 function TeamMemberItem({ member, onClick }: TeamMemberItemProps) {
-  const handleClick = useCallback(() => {
+  const onSelectTeamMember = useCallback(() => {
     onClick?.(member.id)
   }, [member.id, onClick])
 
@@ -217,20 +217,20 @@ function TeamMemberItem({ member, onClick }: TeamMemberItemProps) {
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectTeamMember}
       className="w-full text-left flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
     >
       {/* Status indicator */}
       <div
         className={cn(
-          'h-2.5 w-2.5 rounded-full',
+          'size-2.5 rounded-full',
           'flex-shrink-0',
           statusColors[member.status]
         )}
       />
 
       {/* Avatar */}
-      <Avatar className="h-8 w-8">
+      <Avatar className="size-8">
         {member.avatarUrl ? (
           <AvatarImage src={member.avatarUrl} alt={member.name} />
         ) : (
@@ -303,7 +303,7 @@ export function TeamPresenceStrip({
       {displayMembers.map((member) => (
         <Avatar
           key={member.id}
-          className="h-7 w-7 border-2 border-background"
+          className="size-7 border-2 border-background"
           title={`${member.name} - ${member.status}`}
         >
           {member.avatarUrl ? (
@@ -316,7 +316,7 @@ export function TeamPresenceStrip({
         </Avatar>
       ))}
       {remainingCount > 0 && (
-        <div className="h-7 w-7 rounded-full border-2 border-background flex items-center justify-center bg-muted text-[10px] font-medium">
+        <div className="size-7 rounded-full border-2 border-background flex items-center justify-center bg-muted text-[10px] font-medium">
           +{remainingCount}
         </div>
       )}

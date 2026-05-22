@@ -101,16 +101,16 @@ export function CollaborationDashboardProvider({ children }: { children: ReactNo
   const selectedCustomChannel = collab.selectedChannel?.isCustom ? collab.selectedChannel : null
   const workspaceMembers = useMemo(
     () =>
-      (workspaceMembersResult ?? [])
-        .filter((member): member is { id: string; name: string; email?: string; role?: string } =>
-          typeof member?.id === 'string' && typeof member?.name === 'string',
-        )
-        .map((member) => ({
-          id: member.id,
-          name: member.name,
-          email: typeof member.email === 'string' ? member.email : undefined,
-          role: typeof member.role === 'string' ? member.role : undefined,
-        })),
+      (workspaceMembersResult ?? []).flatMap((member) =>
+        typeof member?.id === 'string' && typeof member?.name === 'string'
+          ? [{
+              id: member.id,
+              name: member.name,
+              email: typeof member.email === 'string' ? member.email : undefined,
+              role: typeof member.role === 'string' ? member.role : undefined,
+            }]
+          : [],
+      ),
     [workspaceMembersResult],
   )
 

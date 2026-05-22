@@ -87,23 +87,21 @@ export const clientOperationHandlers: Record<string, OperationHandler> = {
 
     const accountManager = asNonEmptyString(input.params.accountManager) ?? 'Unassigned'
     const rawTeamMembers = Array.isArray(input.params.teamMembers) ? input.params.teamMembers : []
-    const teamMembers = rawTeamMembers
-      .map((member) => {
-        const memberRecord = asRecord(member)
-        if (!memberRecord) {
-          const nameFromString = asNonEmptyString(member)
-          return nameFromString ? { name: nameFromString, role: 'Contributor' } : null
-        }
+    const teamMembers = rawTeamMembers.flatMap((member) => {
+      const memberRecord = asRecord(member)
+      if (!memberRecord) {
+        const nameFromString = asNonEmptyString(member)
+        return nameFromString ? [{ name: nameFromString, role: 'Contributor' }] : []
+      }
 
-        const memberName = asNonEmptyString(memberRecord.name)
-        if (!memberName) return null
+      const memberName = asNonEmptyString(memberRecord.name)
+      if (!memberName) return []
 
-        return {
-          name: memberName,
-          role: asNonEmptyString(memberRecord.role) ?? 'Contributor',
-        }
-      })
-      .filter((member): member is { name: string; role: string } => member !== null)
+      return [{
+        name: memberName,
+        role: asNonEmptyString(memberRecord.role) ?? 'Contributor',
+      }]
+    })
 
     const rawResult = await ctx.runMutation(api.clients.create, {
       workspaceId: input.workspaceId,

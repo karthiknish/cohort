@@ -24,6 +24,22 @@ import { useChannelMessagesQuery } from './use-channel-messages-query'
 import { useChannelReadReceipts } from './use-channel-read-receipts'
 import type { ChannelSummary, MessagesByChannelState, PendingAttachment } from './types'
 
+type ChannelMessagesSlice = {
+  messagesByChannel: MessagesByChannelState
+  nextCursorByChannel: Record<string, string | null>
+  loadingChannelId: string | null
+  messagesError: string | null
+}
+
+function createInitialChannelMessagesSlice(): ChannelMessagesSlice {
+  return {
+    messagesByChannel: {},
+    nextCursorByChannel: {},
+    loadingChannelId: null,
+    messagesError: null,
+  }
+}
+
 interface UseMessagesDataOptions {
   workspaceId: string | null
   currentUserId: string | null
@@ -53,11 +69,117 @@ export function useMessagesData({
 }: UseMessagesDataOptions) {
   const { isPreviewMode } = usePreview()
   const convex = useConvex()
-  const [messagesByChannel, setMessagesByChannel] = useState<MessagesByChannelState>({})
-  const [nextCursorByChannel, setNextCursorByChannel] = useState<Record<string, string | null>>({})
+  const [channelMessagesState, setChannelMessagesState] = useState<ChannelMessagesSlice>(
+    createInitialChannelMessagesSlice,
+  )
+  const {
+    messagesByChannel,
+    nextCursorByChannel,
+    loadingChannelId,
+    messagesError,
+  } = channelMessagesState
   const [loadingMoreChannelId, setLoadingMoreChannelId] = useState<string | null>(null)
-  const [loadingChannelId, setLoadingChannelId] = useState<string | null>(null)
-  const [messagesError, setMessagesError] = useState<string | null>(null)
+
+  const setMessagesByChannel = useCallback(
+    (action: React.SetStateAction<MessagesByChannelState>) => {
+      setChannelMessagesState((prev) => ({
+        ...prev,
+        messagesByChannel:
+          typeof action === 'function' ? action(prev.messagesByChannel) : action,
+      }))
+    },
+    [],
+  )
+
+  const setNextCursorByChannel = useCallback(
+    (action: React.SetStateAction<Record<string, string | null>>) => {
+      setChannelMessagesState((prev) => ({
+        ...prev,
+        nextCursorByChannel:
+          typeof action === 'function' ? action(prev.nextCursorByChannel) : action,
+      }))
+    },
+    [],
+  )
+
+  const applyRealtimeChannelLoading = useCallback((channelId: string) => {
+    setChannelMessagesState((prev) => ({
+      ...prev,
+      loadingChannelId: channelId,
+      messagesError: null,
+    }))
+  }, [])
+
+  const applyRealtimeChannelSuccess = useCallback(
+    (
+      channelId: string,
+      messages: CollaborationMessage[],
+      nextCursor: string | null,
+    ) => {
+      setChannelMessagesState((prev) => {
+        const existing = prev.messagesByChannel[channelId] ?? []
+        const serverMessageIds = new Set(messages.map((message) => message.id))
+        const localOnlyMessages = existing.filter((message) => !serverMessageIds.has(message.id))
+        const merged = [...messages, ...localOnlyMessages].sort(
+          (a, b) =>
+            new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime(),
+        )
+
+        return {
+          ...prev,
+          messagesByChannel: {
+            ...prev.messagesByChannel,
+            [channelId]: merged,
+          },
+          nextCursorByChannel: {
+            ...prev.nextCursorByChannel,
+            [channelId]: nextCursor,
+          },
+          loadingChannelId: prev.loadingChannelId === channelId ? null : prev.loadingChannelId,
+          messagesError: null,
+        }
+      })
+    },
+    [],
+  )
+
+  const applyRealtimeChannelError = useCallback((channelId: string, errorMessage: string) => {
+    setChannelMessagesState((prev) => ({
+      ...prev,
+      loadingChannelId: prev.loadingChannelId === channelId ? null : prev.loadingChannelId,
+      messagesError: errorMessage,
+    }))
+  }, [])
+
+  const applyRealtimePreviewChannel = useCallback(
+    (channelId: string, previewMessages: CollaborationMessage[]) => {
+      setChannelMessagesState((prev) => {
+        const existing = prev.messagesByChannel[channelId]
+        const messagesByChannel = Array.isArray(existing)
+          ? prev.messagesByChannel
+          : {
+              ...prev.messagesByChannel,
+              [channelId]: previewMessages,
+            }
+
+        const nextCursorByChannel =
+          prev.nextCursorByChannel[channelId] === null
+            ? prev.nextCursorByChannel
+            : {
+                ...prev.nextCursorByChannel,
+                [channelId]: null,
+              }
+
+        return {
+          messagesByChannel,
+          nextCursorByChannel,
+          loadingChannelId: null,
+          messagesError: null,
+        }
+      })
+    },
+    [],
+  )
   const [channelListRetryNonce, setChannelListRetryNonce] = useState(0)
   const [messageInput, setMessageInputState] = useState('')
   const [messageSearchQuery, setMessageSearchQuery] = useState('')
@@ -194,12 +316,13 @@ export function useMessagesData({
       return
     }
 
-    setMessagesError(null)
     if (selectedChannel) {
-      setLoadingChannelId(selectedChannel.id)
+      applyRealtimeChannelLoading(selectedChannel.id)
+    } else {
+      setChannelMessagesState((prev) => ({ ...prev, messagesError: null }))
     }
     setChannelListRetryNonce((n) => n + 1)
-  }, [isSearchActive, retrySearch, selectedChannel])
+  }, [applyRealtimeChannelLoading, isSearchActive, retrySearch, selectedChannel])
 
   useEffect(() => {
     setChannelListRetryNonce(0)
@@ -347,10 +470,10 @@ export function useMessagesData({
     selectedChannel,
     currentUserId,
     channelListRetryNonce,
-    setMessagesByChannel,
-    setNextCursorByChannel,
-    setLoadingChannelId,
-    setMessagesError,
+    applyRealtimeChannelLoading,
+    applyRealtimeChannelSuccess,
+    applyRealtimeChannelError,
+    applyRealtimePreviewChannel,
     onError: handleRealtimeMessagesError,
   })
 

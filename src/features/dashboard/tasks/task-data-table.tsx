@@ -76,7 +76,7 @@ function PriorityIndicator({ priority }: { priority: TaskPriority }) {
   if (priority === 'urgent') {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
-        <ArrowUp className="h-3.5 w-3.5" aria-hidden />
+        <ArrowUp className="size-3.5" aria-hidden />
         Highest
       </span>
     )
@@ -84,7 +84,7 @@ function PriorityIndicator({ priority }: { priority: TaskPriority }) {
   if (priority === 'high') {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-warning">
-        <ArrowUp className="h-3.5 w-3.5" aria-hidden />
+        <ArrowUp className="size-3.5" aria-hidden />
         High
       </span>
     )
@@ -92,14 +92,14 @@ function PriorityIndicator({ priority }: { priority: TaskPriority }) {
   if (priority === 'low') {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-info">
-        <ArrowDown className="h-3.5 w-3.5" aria-hidden />
+        <ArrowDown className="size-3.5" aria-hidden />
         Low
       </span>
     )
   }
   return (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
-      <Minus className="h-3.5 w-3.5" aria-hidden />
+      <Minus className="size-3.5" aria-hidden />
       {formatPriorityLabel(priority)}
     </span>
   )
@@ -127,7 +127,7 @@ function TaskSelectCell({ row }: CellContext<TaskRecord, unknown>) {
         checked={selectedTaskIds?.has(task.id) ?? false}
         onCheckedChange={handleChange}
         aria-label={`Select ${task.title}`}
-        className="h-4 w-4 rounded border-border"
+        className="size-4 rounded border-border"
       />
     </div>
   )
@@ -163,7 +163,7 @@ function TaskSummaryCell({ row }: CellContext<TaskRecord, unknown>) {
         {task.title}
       </span>
       {isPending ? (
-        <LoaderCircle className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
+        <LoaderCircle className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
       ) : null}
     </div>
   )
@@ -200,7 +200,7 @@ function TaskAssigneeCell({ row }: CellContext<TaskRecord, unknown>) {
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <Avatar className="h-6 w-6 shrink-0 border border-border/60">
+      <Avatar className="size-6 shrink-0 border border-border/60">
         <AvatarFallback className="bg-muted text-[10px] font-medium text-muted-foreground">
           {assigneeInitials(assignee)}
         </AvatarFallback>
@@ -255,15 +255,15 @@ function TaskStatusMenuItem({
   status: TaskStatus
   onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
 }) {
-  const handleClick = useCallback(() => {
+  const onQuickStatusSelect = useCallback(() => {
     onQuickStatusChange(task, status)
   }, [onQuickStatusChange, status, task])
 
   const NextStatusIcon = STATUS_ICONS[status]
 
   return (
-    <DropdownMenuItem onClick={handleClick}>
-      <NextStatusIcon className="mr-2 h-4 w-4" />
+    <DropdownMenuItem onClick={onQuickStatusSelect}>
+      <NextStatusIcon className="mr-2 size-4" />
       {formatStatusLabel(status)}
     </DropdownMenuItem>
   )
@@ -288,28 +288,32 @@ function TaskActionsCell({ row }: CellContext<TaskRecord, unknown>) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-muted-foreground"
+            className="size-7 text-muted-foreground"
             aria-label={`Actions for ${task.title}`}
           >
-            <MoreHorizontal className="h-4 w-4" />
+            <MoreHorizontal className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
-          {TASK_STATUSES.filter((status) => status !== task.status).map((status) => (
+          {TASK_STATUSES.flatMap((status) =>
+            status !== task.status
+              ? [(
             <TaskStatusMenuItem
               key={status}
               task={task}
               status={status}
               onQuickStatusChange={onQuickStatusChange}
             />
-          ))}
+          )]
+              : [],
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleEdit}>
-            <Pencil className="mr-2 h-4 w-4" />
+            <Pencil className="mr-2 size-4" />
             Edit
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
-            <Trash2 className="mr-2 h-4 w-4" />
+            <Trash2 className="mr-2 size-4" />
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>

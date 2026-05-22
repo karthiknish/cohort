@@ -8,6 +8,8 @@ import {
 import { z } from 'zod/v4'
 import { internal } from '/_generated/api'
 
+import { getDayKeyFormatter } from '@/lib/intl/cached-datetime'
+
 import { Errors } from './errors'
 import { resolveTaskNotificationRecipientUserIds } from './notificationTargeting'
 
@@ -45,25 +47,6 @@ type TaskAttachmentInput = {
   url?: unknown
   type?: unknown
   size?: unknown
-}
-
-const DAY_KEY_FORMATTERS = new Map<string, Intl.DateTimeFormat>()
-
-function getDayKeyFormatter(timeZone?: string | null): Intl.DateTimeFormat {
-  const normalizedTimeZone = typeof timeZone === 'string' && timeZone.trim().length > 0 ? timeZone : ''
-  const existingFormatter = DAY_KEY_FORMATTERS.get(normalizedTimeZone)
-  if (existingFormatter) {
-    return existingFormatter
-  }
-
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: normalizedTimeZone || undefined,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
-  DAY_KEY_FORMATTERS.set(normalizedTimeZone, formatter)
-  return formatter
 }
 
 function normalizeTaskAttachments(raw: unknown): Array<z.infer<typeof taskAttachmentZ>> {
@@ -456,14 +439,16 @@ export const bulkPatchTasks = zAuthenticatedMutation({
 
     const updates = rows.filter((row) => idSet.has(row.legacyId))
 
-    for (const row of updates) {
-      const patch: Record<string, unknown> = { updatedAtMs: ctx.now }
-      if (args.update.status !== undefined) patch.status = args.update.status
-      if (args.update.priority !== undefined) patch.priority = args.update.priority
-      if (args.update.assignedTo !== undefined) patch.assignedTo = args.update.assignedTo
-      if (args.update.dueDateMs !== undefined) patch.dueDateMs = args.update.dueDateMs
-      await ctx.db.patch(row._id, patch)
-    }
+    await Promise.all(
+      updates.map(async (row) => {
+        const patch: Record<string, unknown> = { updatedAtMs: ctx.now }
+        if (args.update.status !== undefined) patch.status = args.update.status
+        if (args.update.priority !== undefined) patch.priority = args.update.priority
+        if (args.update.assignedTo !== undefined) patch.assignedTo = args.update.assignedTo
+        if (args.update.dueDateMs !== undefined) patch.dueDateMs = args.update.dueDateMs
+        await ctx.db.patch(row._id, patch)
+      }),
+    )
 
     return { ok: true, updated: updates.length }
   },
@@ -499,9 +484,9 @@ export const bulkSoftDeleteTasks = zAuthenticatedMutation({
 
     const updates = rows.filter((row) => idSet.has(row.legacyId))
 
-    for (const row of updates) {
-      await ctx.db.patch(row._id, { deletedAtMs: ctx.now, updatedAtMs: ctx.now })
-    }
+    await Promise.all(
+      updates.map(async (row) => ctx.db.patch(row._id, { deletedAtMs: ctx.now, updatedAtMs: ctx.now })),
+    )
 
     return { ok: true, deleted: updates.length }
   },

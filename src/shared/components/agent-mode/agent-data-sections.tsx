@@ -67,7 +67,7 @@ export function AgentDataSections({ sections, operation, data, accentClass }: Ag
           <div
             key={section.title}
             className={cn(
-              'rounded-xl border border-border/60 bg-background/85 px-3 py-3 shadow-sm',
+              'rounded-xl border border-border/60 bg-background/85 p-3 shadow-sm',
               accentClass,
             )}
           >
@@ -89,25 +89,22 @@ export function AgentDataSections({ sections, operation, data, accentClass }: Ag
               <AgentListSection section={section} accentClass={accentClass} />
             )}
 
-            {extraCharts
-              .filter((chart) => !usedChartIds.has(chart.id))
-              .map((chart) => {
-                usedChartIds.add(chart.id)
-                return (
-                  <div key={chart.id} className="mt-3">
-                    <AgentMessageBarChart series={chart} />
-                  </div>
-                )
-              })}
+            {extraCharts.flatMap((chart) => {
+              if (usedChartIds.has(chart.id)) return []
+              usedChartIds.add(chart.id)
+              return [(
+                <div key={chart.id} className="mt-3">
+                  <AgentMessageBarChart series={chart} />
+                </div>
+              )]
+            })}
           </div>
         )
       })}
 
-      {charts
-        .filter((chart) => !usedChartIds.has(chart.id))
-        .map((chart) => (
-          <AgentMessageBarChart key={chart.id} series={chart} />
-        ))}
+      {charts.flatMap((chart) =>
+        !usedChartIds.has(chart.id) ? [<AgentMessageBarChart key={chart.id} series={chart} />] : [],
+      )}
     </div>
   )
 }

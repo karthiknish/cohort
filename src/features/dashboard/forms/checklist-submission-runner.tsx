@@ -28,7 +28,7 @@ function ChecklistFieldInput({
   error?: string
   onFieldChange: (fieldId: string, value: string) => void
 }) {
-  const handleChange = useCallback(
+  const onFieldInputChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       onFieldChange(field.id, event.target.value)
     },
@@ -47,7 +47,7 @@ function ChecklistFieldInput({
           type="number"
           className="rounded-xl"
           value={value}
-          onChange={handleChange}
+          onChange={onFieldInputChange}
           disabled={disabled || pending}
         />
       ) : field.type === 'checklist' ? (
@@ -56,7 +56,7 @@ function ChecklistFieldInput({
           placeholder="Done / notes"
           className="rounded-xl"
           value={value}
-          onChange={handleChange}
+          onChange={onFieldInputChange}
           disabled={disabled || pending}
         />
       ) : (
@@ -64,7 +64,7 @@ function ChecklistFieldInput({
           id={`f-${field.id}`}
           className="rounded-xl"
           value={value}
-          onChange={handleChange}
+          onChange={onFieldInputChange}
           disabled={disabled || pending}
         />
       )}
@@ -184,7 +184,7 @@ export function ChecklistSubmissionRunner({
           onClick={handleSendClick}
           disabled={disabled || pending || isPreviewMode}
         >
-          {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          {pending ? <LoaderCircle className="size-4 animate-spin" /> : <Send className="size-4" />}
           {isPreviewMode ? 'Preview: submission disabled' : 'Submit checklist'}
         </Button>
       </CardContent>

@@ -16,7 +16,7 @@ export function ComparisonSummaryTile({ label, value, helper, tooltip }: Compari
         {tooltip && (
           <Tooltip>
             <TooltipTrigger>
-              <Info className="h-3 w-3 text-muted-foreground/70" />
+              <Info className="size-3 text-muted-foreground/70" />
             </TooltipTrigger>
             <TooltipContent>
               <p>{tooltip}</p>

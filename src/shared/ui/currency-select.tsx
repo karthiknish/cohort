@@ -87,9 +87,9 @@ export function CurrencySelect({
             </div>
           </>
         )}
-        {allOptions
-          .filter((opt) => !showPopular || !POPULAR_CURRENCIES.includes(opt.value))
-          .map((opt) => (
+        {allOptions.flatMap((opt) =>
+          !showPopular || !POPULAR_CURRENCIES.includes(opt.value)
+            ? [(
             <SelectItem key={opt.value} value={opt.value}>
               <span className="flex items-center gap-2">
                 <span className="w-6 font-medium">{opt.symbol}</span>
@@ -99,7 +99,9 @@ export function CurrencySelect({
                 </span>
               </span>
             </SelectItem>
-          ))}
+          )]
+            : [],
+        )}
       </SelectContent>
     </Select>
   )

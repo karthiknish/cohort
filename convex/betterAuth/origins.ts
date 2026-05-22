@@ -114,7 +114,12 @@ export function buildTrustedOrigins(): string[] {
 }
 
 const normalizedAllowedOrigins = (): Set<string> => {
-  return new Set(buildTrustedOrigins().map((o) => normalizeOrigin(o)).filter(Boolean) as string[])
+  return new Set(
+    buildTrustedOrigins().flatMap((origin) => {
+      const normalized = normalizeOrigin(origin)
+      return normalized ? [normalized] : []
+    }),
+  )
 }
 
 /**

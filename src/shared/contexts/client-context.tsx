@@ -50,7 +50,7 @@ function isConvexClientRow(value: unknown): value is ConvexClientRow {
 
 // Helper function to map convex rows to ClientRecord
 function mapClients(rows: unknown[]): ClientRecord[] {
-  const list = rows.filter(isConvexClientRow).map((row) => ({
+  const list = rows.flatMap((row) => isConvexClientRow(row) ? [{
     id: row.legacyId,
     workspaceId: typeof row.workspaceId === 'string' ? row.workspaceId : null,
     name: row.name,
@@ -58,7 +58,7 @@ function mapClients(rows: unknown[]): ClientRecord[] {
     teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
     createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
     updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
-  }))
+  }] : [])
 
   list.sort((a, b) => a.name.localeCompare(b.name))
   return list
@@ -157,8 +157,6 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     undefined,
     createInitialClientProviderState,
   )
-  const [retryKey, setRetryKey] = useState(0)
-
   const [previewEnabled, setPreviewEnabled] = useState(() => isPreviewModeEnabled())
   const selectionBeforePreviewRef = useRef<string | null>(null)
 
@@ -242,82 +240,84 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     }
   }, []) // Empty deps - uses ref to access selectedClientId
 
-  // Single effect for data loading, error handling, and client selection
-  useEffect(() => {
-    void retryKey
-
-    const frame = requestAnimationFrame(() => {
-      // Handle preview mode
-      if (previewEnabled) {
-        dispatch({
-          type: 'syncState',
-          selectedClientId: selectedClientIdRef.current,
-          loading: false,
-          error: null,
-        })
-        return
-      }
-
-      // Wait for auth
-      if (authLoading || isSyncing) {
-        return
-      }
-
-      // No workspace
-      if (!workspaceId) {
-        dispatch({
-          type: 'syncState',
-          selectedClientId: null,
-          loading: false,
-          error: null,
-        })
-        return
-      }
-
-      // Loading state
-      if (convexClients === undefined) {
-        dispatch({
-          type: 'syncState',
-          selectedClientId: selectedClientIdRef.current,
-          loading: true,
-          error: null,
-        })
-        return
-      }
-
-      const rows = extractRows(convexClients)
-
-      if (rows.length === 0) {
-        dispatch({
-          type: 'syncState',
-          selectedClientId: null,
-          loading: false,
-          error: 'No clients found for this workspace',
-        })
-        return
-      }
-
-      // Sync selected client - use ref to avoid infinite loop
-      const clients = mapClients(rows)
-      const currentSelection = selectedClientIdRef.current
-      const stored = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null
-      const targetId = resolveSelectedClientId(clients, currentSelection, stored)
-
-      // Mark as initialized so the persistence effect can safely remove entries
-      hasInitializedRef.current = true
-
+  const applyClientSelectionSync = useCallback(() => {
+    // Handle preview mode
+    if (previewEnabled) {
       dispatch({
         type: 'syncState',
-        selectedClientId: targetId,
+        selectedClientId: selectedClientIdRef.current,
         loading: false,
         error: null,
       })
+      return
+    }
+
+    // Wait for auth
+    if (authLoading || isSyncing) {
+      return
+    }
+
+    // No workspace
+    if (!workspaceId) {
+      dispatch({
+        type: 'syncState',
+        selectedClientId: null,
+        loading: false,
+        error: null,
+      })
+      return
+    }
+
+    // Loading state
+    if (convexClients === undefined) {
+      dispatch({
+        type: 'syncState',
+        selectedClientId: selectedClientIdRef.current,
+        loading: true,
+        error: null,
+      })
+      return
+    }
+
+    const rows = extractRows(convexClients)
+
+    if (rows.length === 0) {
+      dispatch({
+        type: 'syncState',
+        selectedClientId: null,
+        loading: false,
+        error: 'No clients found for this workspace',
+      })
+      return
+    }
+
+    // Sync selected client - use ref to avoid infinite loop
+    const clients = mapClients(rows)
+    const currentSelection = selectedClientIdRef.current
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null
+    const targetId = resolveSelectedClientId(clients, currentSelection, stored)
+
+    // Mark as initialized so the persistence effect can safely remove entries
+    hasInitializedRef.current = true
+
+    dispatch({
+      type: 'syncState',
+      selectedClientId: targetId,
+      loading: false,
+      error: null,
+    })
+  }, [previewEnabled, authLoading, isSyncing, workspaceId, convexClients, storageKey])
+
+  // Single effect for data loading, error handling, and client selection
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      applyClientSelectionSync()
     })
 
     return () => {
       cancelAnimationFrame(frame)
     }
-  }, [previewEnabled, authLoading, isSyncing, workspaceId, convexClients, storageKey, retryKey])
+  }, [applyClientSelectionSync])
 
   // Effect for persisting selection to localStorage
   useEffect(() => {
@@ -380,8 +380,10 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
   const retryClients = useCallback(() => {
     dispatch({ type: 'setError', error: null })
-    setRetryKey((current) => current + 1)
-  }, [])
+    requestAnimationFrame(() => {
+      applyClientSelectionSync()
+    })
+  }, [applyClientSelectionSync])
 
   const selectClient = useCallback((clientId: string | null) => {
     dispatch({ type: 'setSelectedClientId', selectedClientId: clientId })
@@ -400,12 +402,13 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Client name and account manager are required')
     }
 
-    const teamMembers = input.teamMembers
-      .map((member) => ({
+    const teamMembers = input.teamMembers.flatMap((member) => {
+      const normalized = {
         name: member.name.trim(),
         role: typeof member.role === 'string' ? member.role.trim() : '',
-      }))
-      .filter((member) => member.name.length > 0)
+      }
+      return normalized.name.length > 0 ? [normalized] : []
+    })
 
     if (!teamMembers.some((member) => member.name.toLowerCase() === accountManager.toLowerCase())) {
       teamMembers.unshift({ name: accountManager, role: 'Account Manager' })

@@ -53,10 +53,10 @@ export function ProjectFilters({
             variant="outline"
             size="icon"
             onClick={onToggleSortDirection}
-            className="h-9 w-9 shrink-0 border-border/60 shadow-sm"
+            className="size-9 shrink-0 border-border/60 shadow-sm"
             aria-label={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
           >
-            {sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+            {sortDirection === 'asc' ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>

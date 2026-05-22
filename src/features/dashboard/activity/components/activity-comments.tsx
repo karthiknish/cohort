@@ -71,7 +71,7 @@ export function ActivityComments({
           isOpen && 'text-foreground'
         )}
       >
-        <MessageCircle className="h-3 w-3" />
+        <MessageCircle className="size-3" />
         {comments.length > 0 && <span>{comments.length}</span>}
         {isOpen ? 'Hide' : 'Show'} comments
       </button>
@@ -83,7 +83,7 @@ export function ActivityComments({
             <div className="space-y-3">
               {comments.map((comment) => (
                 <div key={comment.id} className="flex gap-2">
-                  <Avatar className="h-6 w-6 shrink-0">
+                  <Avatar className="size-6 shrink-0">
                     <AvatarFallback className="text-[10px]">
                       {comment.userName.charAt(0).toUpperCase()}
                     </AvatarFallback>
@@ -126,23 +126,23 @@ export function ActivityComments({
               <Button
                 type="button"
                 size="icon"
-                className="h-8 w-8 shrink-0"
+                className="size-8 shrink-0"
                 onClick={handleSubmit}
                 disabled={!newComment.trim()}
                 aria-label="Send comment"
               >
-                <Send className="h-4 w-4" aria-hidden />
+                <Send className="size-4" aria-hidden />
               </Button>
               {newComment && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 shrink-0"
+                  className="size-8 shrink-0"
                   onClick={handleClearComment}
                   aria-label="Clear comment"
                 >
-                  <X className="h-4 w-4" aria-hidden />
+                  <X className="size-4" aria-hidden />
                 </Button>
               )}
             </div>

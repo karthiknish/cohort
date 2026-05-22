@@ -135,7 +135,7 @@ export function QuickActions({ compact }: QuickActionsProps) {
                 return (
                   <Button key={action.href} asChild variant="outline" size="sm" className="gap-1.5">
                     <Link href={action.href}>
-                      <Plus className="h-3.5 w-3.5" />
+                      <Plus className="size-3.5" />
                       {action.label}
                     </Link>
                   </Button>
@@ -154,7 +154,7 @@ export function QuickActions({ compact }: QuickActionsProps) {
               return (
                 <Button key={action.href} asChild variant="outline" size="sm" className="justify-start gap-2">
                   <Link href={action.href}>
-                    <Icon className="h-4 w-4" />
+                    <Icon className="size-4" />
                     {action.label}
                     <span className="ml-auto text-xs text-muted-foreground">{action.description}</span>
                   </Link>
@@ -175,8 +175,8 @@ export function QuickActions({ compact }: QuickActionsProps) {
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-accent/10 text-primary">
-                      <Icon className="h-4 w-4" />
+                    <span className="inline-flex size-9 items-center justify-center rounded-full bg-accent/10 text-primary">
+                      <Icon className="size-4" />
                     </span>
                     {link.badge && (
                       <Badge variant="secondary" className="text-xs">{link.badge}</Badge>

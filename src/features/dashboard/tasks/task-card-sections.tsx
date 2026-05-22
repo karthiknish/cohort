@@ -66,13 +66,13 @@ function TaskStatusMenuItem({
 }) {
   const NextStatusIcon = STATUS_ICONS[status]
 
-  const handleClick = useCallback(() => {
+  const onQuickStatusSelect = useCallback(() => {
     onQuickStatusChange(task, status)
   }, [onQuickStatusChange, status, task])
 
   return (
-    <DropdownMenuItem onClick={handleClick}>
-      <NextStatusIcon className="mr-2 h-4 w-4" />
+    <DropdownMenuItem onClick={onQuickStatusSelect}>
+      <NextStatusIcon className="mr-2 size-4" />
       Move to {formatStatusLabel(status)}
     </DropdownMenuItem>
   )
@@ -133,7 +133,7 @@ export function TaskCardHeaderSection({
         >
           {highlightMatch(task.title, searchQuery)}
         </h3>
-        {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
+        {isPendingUpdate ? <LoaderCircle className="mt-0.5 size-4 shrink-0 animate-spin text-primary" /> : null}
       </div>
     </button>
   ) : (
@@ -146,7 +146,7 @@ export function TaskCardHeaderSection({
       >
         {highlightMatch(task.title, searchQuery)}
       </h3>
-      {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
+      {isPendingUpdate ? <LoaderCircle className="mt-0.5 size-4 shrink-0 animate-spin text-primary" /> : null}
     </div>
   )
 
@@ -202,12 +202,12 @@ function TaskCardContextPills({ task }: { task: TaskRecord }) {
             taskPillColors.client
           )}
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-current/55" />
+          <span className="size-1.5 rounded-full bg-current/55" />
           {task.client}
         </Link>
       ) : task.client ? (
         <p className={cn('inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold', taskPillColors.client)}>
-          <span className="h-1.5 w-1.5 rounded-full bg-current/55" />
+          <span className="size-1.5 rounded-full bg-current/55" />
           {task.client}
         </p>
       ) : null}
@@ -220,12 +220,12 @@ function TaskCardContextPills({ task }: { task: TaskRecord }) {
             taskPillColors.project,
           )}
         >
-          <FolderKanban className="h-3 w-3" />
+          <FolderKanban className="size-3" />
           {task.projectName ?? task.projectId}
         </Link>
       ) : task.projectName ? (
         <p className={cn('inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold', taskPillColors.project)}>
-          <FolderKanban className="h-3 w-3" />
+          <FolderKanban className="size-3" />
           {task.projectName}
         </p>
       ) : null}
@@ -241,7 +241,7 @@ function TaskCardIndicators({ task, compact = false }: { task: TaskRecord; compa
           <Tooltip>
             <TooltipTrigger asChild>
               <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.subtask)}>
-                {task.parentId ? <ChevronRight className="h-2.5 w-2.5" /> : <ListTodo className="h-2.5 w-2.5" />}
+                {task.parentId ? <ChevronRight className="size-2.5" /> : <ListTodo className="size-2.5" />}
                 {task.parentId ? 'Subtask' : task.subtaskCount}
               </Badge>
             </TooltipTrigger>
@@ -257,7 +257,7 @@ function TaskCardIndicators({ task, compact = false }: { task: TaskRecord; compa
           <Tooltip>
             <TooltipTrigger asChild>
               <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.comments)}>
-                <MessageCircle className="h-2.5 w-2.5" />
+                <MessageCircle className="size-2.5" />
                 {task.commentCount}
               </Badge>
             </TooltipTrigger>
@@ -271,7 +271,7 @@ function TaskCardIndicators({ task, compact = false }: { task: TaskRecord; compa
           <Tooltip>
             <TooltipTrigger asChild>
               <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.attachments)}>
-                <Paperclip className="h-2.5 w-2.5" />
+                <Paperclip className="size-2.5" />
                 {task.attachments?.length}
               </Badge>
             </TooltipTrigger>
@@ -287,7 +287,7 @@ function TaskCardIndicators({ task, compact = false }: { task: TaskRecord; compa
           <Tooltip>
             <TooltipTrigger asChild>
               <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.time)}>
-                <Clock4 className="h-2.5 w-2.5" />
+                <Clock4 className="size-2.5" />
                 {formatTimeSpent(task.timeSpentMinutes)}
               </Badge>
             </TooltipTrigger>
@@ -301,7 +301,7 @@ function TaskCardIndicators({ task, compact = false }: { task: TaskRecord; compa
           <Tooltip>
             <TooltipTrigger asChild>
               <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.recurring)}>
-                <Repeat className="h-2.5 w-2.5" />
+                <Repeat className="size-2.5" />
               </Badge>
             </TooltipTrigger>
             <TooltipContent>Recurring: {task.recurrenceRule}</TooltipContent>
@@ -314,7 +314,7 @@ function TaskCardIndicators({ task, compact = false }: { task: TaskRecord; compa
           <Tooltip>
             <TooltipTrigger asChild>
               <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.shared)}>
-                <Link2 className="h-2.5 w-2.5" />
+                <Link2 className="size-2.5" />
                 {task.sharedWith?.length}
               </Badge>
             </TooltipTrigger>
@@ -364,36 +364,38 @@ function TaskCardActionsMenu({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground"
+            className="size-8 rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground"
             aria-label="Task actions"
           >
-            <MoreHorizontal className="h-4 w-4" />
+            <MoreHorizontal className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {TASK_STATUSES.filter((status) => status !== task.status && status !== 'archived').map((status) => {
-            return <TaskStatusMenuItem key={status} onQuickStatusChange={onQuickStatusChange} status={status} task={task} />
-          })}
+          {TASK_STATUSES.flatMap((status) =>
+            status !== task.status && status !== 'archived'
+              ? [<TaskStatusMenuItem key={status} onQuickStatusChange={onQuickStatusChange} status={status} task={task} />]
+              : [],
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleEditClick}>
-            <Pencil className="mr-2 h-4 w-4" />
+            <Pencil className="mr-2 size-4" />
             Edit task
           </DropdownMenuItem>
           {onClone ? (
             <DropdownMenuItem onClick={handleCloneClick}>
-              <Copy className="mr-2 h-4 w-4" />
+              <Copy className="mr-2 size-4" />
               Duplicate task
             </DropdownMenuItem>
           ) : null}
           {onShare ? (
             <DropdownMenuItem onClick={handleShareClick}>
-              <Link2 className="mr-2 h-4 w-4" />
+              <Link2 className="mr-2 size-4" />
               Share task
             </DropdownMenuItem>
           ) : null}
           {(onClone || onShare) ? <DropdownMenuSeparator /> : null}
           <DropdownMenuItem onClick={handleDeleteClick} className="text-destructive focus:text-destructive">
-            <Trash2 className="mr-2 h-4 w-4" />
+            <Trash2 className="mr-2 size-4" />
             Delete task
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -410,7 +412,7 @@ export function TaskCardStatusBadge({ status }: { status: TaskStatus }) {
       variant="outline"
       className={cn('gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold', taskViewStatusPill[status])}
     >
-      <Icon className="h-3 w-3 shrink-0" aria-hidden />
+      <Icon className="size-3 shrink-0" aria-hidden />
       {formatStatusLabel(status)}
     </Badge>
   )
@@ -422,7 +424,7 @@ export function TaskCardPriorityBadge({ priority }: { priority: TaskRecord['prio
       variant="outline"
       className={cn('gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold', taskViewPriorityPill[priority])}
     >
-      <ChevronUp className="h-3 w-3 shrink-0" aria-hidden />
+      <ChevronUp className="size-3 shrink-0" aria-hidden />
       {formatPriorityLabel(priority)}
     </Badge>
   )
@@ -450,7 +452,7 @@ export function TaskCardCompactMeta({
       )}
     >
       <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
-        <User className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+        <User className="size-3.5 shrink-0 opacity-70" aria-hidden />
         <span className="truncate font-medium text-foreground">{assignee}</span>
       </span>
       <span
@@ -460,12 +462,12 @@ export function TaskCardCompactMeta({
           dueSoon && !overdue && 'font-medium text-warning',
         )}
       >
-        <Calendar className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+        <Calendar className="size-3.5 shrink-0 opacity-70" aria-hidden />
         {task.dueDate ? formatDate(task.dueDate) : 'No due date'}
       </span>
       {!compact ? (
         <span className="inline-flex items-center gap-1.5">
-          <Clock4 className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+          <Clock4 className="size-3.5 shrink-0 opacity-70" aria-hidden />
           {formatTimeSpent(task.timeSpentMinutes)}
         </span>
       ) : null}
@@ -476,7 +478,7 @@ export function TaskCardCompactMeta({
 export function TaskCardOverdueBanner() {
   return (
     <div className="absolute right-0 top-0 flex items-center gap-1 rounded-bl-lg rounded-tr-lg bg-destructive px-2 py-0.5 text-destructive-foreground">
-      <CalendarX2 className="h-3 w-3" />
+      <CalendarX2 className="size-3" />
       <span className="text-[9px] font-bold uppercase">Overdue</span>
     </div>
   )

@@ -241,7 +241,7 @@ function PlacementGroup({
   return (
     <div className="space-y-2">
       <div className={cn('flex items-center gap-2', toneClass)}>
-        <Icon className="h-4 w-4" aria-hidden />
+        <Icon className="size-4" aria-hidden />
         <span className="text-xs font-semibold uppercase tracking-wider">{label}</span>
       </div>
       <div className="flex flex-wrap gap-1.5 pl-1">

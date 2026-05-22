@@ -73,19 +73,19 @@ export function LinkPreviewCard({ url }: LinkPreviewCardProps) {
           aria-hidden={!imageUrl}
         >
           {isLoading ? (
-            <div className="flex h-full w-full items-center justify-center">
-              <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
+            <div className="flex size-full items-center justify-center">
+              <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
             </div>
           ) : imageUrl ? (
             <LazyImage
               src={imageUrl}
               alt={title}
-              className="h-full w-full object-cover"
+              className="size-full object-cover"
               onError={handleImageError}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-              <ImageIcon className="h-5 w-5" />
+            <div className="flex size-full items-center justify-center text-muted-foreground">
+              <ImageIcon className="size-5" />
             </div>
           )}
         </div>
@@ -114,10 +114,10 @@ export function LinkPreviewCard({ url }: LinkPreviewCardProps) {
             href={url}
             target="_blank"
             rel="noreferrer noopener"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:text-primary"
+            className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition hover:text-primary"
             aria-label="Open link"
           >
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="size-4" />
           </a>
         </div>
       </CardContent>

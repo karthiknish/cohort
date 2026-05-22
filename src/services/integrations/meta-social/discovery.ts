@@ -49,16 +49,15 @@ export async function discoverMetaPages(options: {
 
   const rows = Array.isArray(payload?.data) ? payload.data : []
 
-  return rows
-    .map((row): MetaSocialPage | null => {
+  return rows.flatMap((row): MetaSocialPage[] => {
       const id = typeof row?.id === 'string' ? row.id : null
-      if (!id) return null
+      if (!id) return []
 
       const name = typeof row?.name === 'string' && row.name.length > 0 ? row.name : `Page ${id}`
       const instagram = row?.instagram_business_account
       const instagramId = typeof instagram?.id === 'string' ? instagram.id : null
 
-      return {
+      return [{
         id,
         name,
         instagramBusinessAccount: instagramId
@@ -68,7 +67,6 @@ export async function discoverMetaPages(options: {
               username: typeof instagram?.username === 'string' ? instagram.username : undefined,
             }
           : undefined,
-      }
+      }]
     })
-    .filter((row): row is MetaSocialPage => row !== null)
 }

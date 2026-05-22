@@ -147,6 +147,28 @@ export function useSwipeable(ref: React.RefObject<HTMLElement | null>, handlers:
     const element = ref.current
     if (!element) return
 
+    const gesture: SwipeState = {
+      startX: 0,
+      startY: 0,
+      currentX: 0,
+      currentY: 0,
+      isSwiping: false,
+      direction: null,
+      distance: 0,
+    }
+
+    const publishGesture = () => {
+      setState({
+        startX: gesture.startX,
+        startY: gesture.startY,
+        currentX: gesture.currentX,
+        currentY: gesture.currentY,
+        isSwiping: gesture.isSwiping,
+        direction: gesture.direction,
+        distance: gesture.distance,
+      })
+    }
+
     const handleTouchStart = (e: globalThis.TouchEvent) => {
       if (e.touches.length !== 1) return
       
@@ -156,25 +178,24 @@ export function useSwipeable(ref: React.RefObject<HTMLElement | null>, handlers:
       touchIdRef.current = touch.identifier
       startTimeRef.current = Date.now()
       
-      setState({
-        startX: touch.clientX,
-        startY: touch.clientY,
-        currentX: touch.clientX,
-        currentY: touch.clientY,
-        isSwiping: true,
-        direction: null,
-        distance: 0,
-      })
+      gesture.startX = touch.clientX
+      gesture.startY = touch.clientY
+      gesture.currentX = touch.clientX
+      gesture.currentY = touch.clientY
+      gesture.isSwiping = true
+      gesture.direction = null
+      gesture.distance = 0
+      publishGesture()
     }
 
     const handleTouchMove = (e: globalThis.TouchEvent) => {
-      if (!state.isSwiping) return
+      if (!gesture.isSwiping) return
       
       const touch = Array.from(e.touches).find(t => t.identifier === touchIdRef.current)
       if (!touch) return
       
-      const deltaX = touch.clientX - state.startX
-      const deltaY = touch.clientY - state.startY
+      const deltaX = touch.clientX - gesture.startX
+      const deltaY = touch.clientY - gesture.startY
       const absX = Math.abs(deltaX)
       const absY = Math.abs(deltaY)
       
@@ -187,23 +208,21 @@ export function useSwipeable(ref: React.RefObject<HTMLElement | null>, handlers:
         }
       }
       
-      setState(prev => ({
-        ...prev,
-        currentX: touch.clientX,
-        currentY: touch.clientY,
-        direction,
-        distance: Math.max(absX, absY),
-      }))
+      gesture.currentX = touch.clientX
+      gesture.currentY = touch.clientY
+      gesture.direction = direction
+      gesture.distance = Math.max(absX, absY)
+      publishGesture()
     }
 
     const handleTouchEnd = () => {
-      if (!state.isSwiping) return
+      if (!gesture.isSwiping) return
       
       const duration = Date.now() - startTimeRef.current
-      const velocity = state.distance / duration
+      const velocity = gesture.distance / duration
       
-      if (state.distance > threshold && velocity > SWIPE_VELOCITY_THRESHOLD) {
-        switch (state.direction) {
+      if (gesture.distance > threshold && velocity > SWIPE_VELOCITY_THRESHOLD) {
+        switch (gesture.direction) {
           case 'left':
             handlers.onSwipeLeft?.()
             break
@@ -219,7 +238,9 @@ export function useSwipeable(ref: React.RefObject<HTMLElement | null>, handlers:
         }
       }
       
-      setState(prev => ({ ...prev, isSwiping: false, direction: null }))
+      gesture.isSwiping = false
+      gesture.direction = null
+      publishGesture()
       touchIdRef.current = null
     }
 
@@ -232,7 +253,7 @@ export function useSwipeable(ref: React.RefObject<HTMLElement | null>, handlers:
       element.removeEventListener('touchmove', handleTouchMove)
       element.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [ref, threshold, state.isSwiping, state.startX, state.startY, state.distance, state.direction, handlers])
+  }, [ref, threshold, handlers])
   
   return state
 }

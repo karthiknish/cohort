@@ -48,10 +48,10 @@ export function formatDeckInputWithSlideBreaks(
   instructions: string,
 ): string {
   const header = buildDeckInputText(formData, instructions)
-  const slideBlocks = instructions
-    .split(/\n(?=Slide\s+\d+)/i)
-    .map((block) => block.trim())
-    .filter(Boolean)
+  const slideBlocks = instructions.split(/\n(?=Slide\s+\d+)/i).flatMap((block) => {
+    const trimmed = block.trim()
+    return trimmed ? [trimmed] : []
+  })
 
   if (slideBlocks.length > 1) {
     return [header, ...slideBlocks].join('\n---\n')

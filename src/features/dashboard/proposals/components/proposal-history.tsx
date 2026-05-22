@@ -120,8 +120,8 @@ function ProposalHistoryComponent({
       <MotionCard className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden')}>
         <CardHeader className={DASHBOARD_THEME.cards.header}>
           <div className="flex items-start gap-3">
-            <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 shrink-0')}>
-              <History className="h-5 w-5" aria-hidden />
+            <div className={cn(DASHBOARD_THEME.icons.container, 'size-10 shrink-0')}>
+              <History className="size-5" aria-hidden />
             </div>
             <div className="min-w-0 space-y-1">
               <CardTitle className="text-lg font-semibold tracking-tight">Proposal history</CardTitle>

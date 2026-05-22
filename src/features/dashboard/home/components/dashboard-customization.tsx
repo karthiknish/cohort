@@ -244,7 +244,7 @@ export function DashboardCustomization({
       <LiveRegion message={layoutAnnouncement} />
       <CardHeader className="flex flex-row items-center justify-between py-3">
         <div className="flex items-center gap-2">
-          <Settings2 className="h-4 w-4 text-muted-foreground" />
+          <Settings2 className="size-4 text-muted-foreground" />
           <CardTitle className="text-sm">Dashboard Widgets</CardTitle>
         </div>
         <div className="flex items-center gap-1">
@@ -345,7 +345,7 @@ export function DraggableWidget({
       {/* Drag handle for editing mode */}
       {isEditing && (
         <div className="absolute left-2 top-2 z-10 flex items-center gap-1">
-          <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+          <GripVertical className="size-4 text-muted-foreground cursor-grab" />
         </div>
       )}
 
@@ -454,23 +454,23 @@ function DashboardWidgetRow({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-5 w-5 p-0"
+          className="size-5 p-0"
           onClick={handleMoveUp}
           disabled={index === 0}
           aria-label={`Move ${widget.title} up`}
         >
-          <ChevronUp className="h-3 w-3" aria-hidden />
+          <ChevronUp className="size-3" aria-hidden />
         </Button>
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-5 w-5 p-0"
+          className="size-5 p-0"
           onClick={handleMoveDown}
           disabled={index === total - 1}
           aria-label={`Move ${widget.title} down`}
         >
-          <ChevronDown className="h-3 w-3" aria-hidden />
+          <ChevronDown className="size-3" aria-hidden />
         </Button>
       </div>
 
@@ -488,12 +488,12 @@ function DashboardWidgetRow({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="size-7"
                   onClick={handleCollapse}
                   aria-expanded={!widget.collapsed}
                   aria-label={widget.collapsed ? `Expand ${widget.title}` : `Collapse ${widget.title}`}
                 >
-                  {widget.collapsed ? <Eye className="h-3.5 w-3.5" aria-hidden /> : <EyeOff className="h-3.5 w-3.5" aria-hidden />}
+                  {widget.collapsed ? <Eye className="size-3.5" aria-hidden /> : <EyeOff className="size-3.5" aria-hidden />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{widget.collapsed ? 'Expand widget' : 'Collapse widget'}</TooltipContent>
@@ -508,11 +508,11 @@ function DashboardWidgetRow({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="size-7"
                 onClick={handleHide}
                 aria-label={`Hide ${widget.title}`}
               >
-                <X className="h-3.5 w-3.5" aria-hidden />
+                <X className="size-3.5" aria-hidden />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Hide widget</TooltipContent>
@@ -547,11 +547,11 @@ function HiddenDashboardWidgetRow({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={handleShow}
               aria-label={`Show ${widget.title}`}
             >
-              <Eye className="h-3.5 w-3.5" aria-hidden />
+              <Eye className="size-3.5" aria-hidden />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Show widget</TooltipContent>
@@ -572,19 +572,19 @@ function WidgetSizeButton({
   disabled?: boolean
   onSizeChange: (size: 'small' | 'medium' | 'large') => void
 }) {
-  const handleClick = useCallback(() => {
+  const onSelectWidgetSize = useCallback(() => {
     onSizeChange(size.value)
   }, [onSizeChange, size.value])
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectWidgetSize}
       disabled={disabled}
       aria-pressed={currentSize === size.value}
       aria-label={`${size.label} width${currentSize === size.value ? ', selected' : ''}. ${size.width}`}
       className={cn(
-        'flex h-6 w-6 items-center justify-center rounded text-xs font-medium transition-colors',
+        'flex size-6 items-center justify-center rounded text-xs font-medium transition-colors',
         currentSize === size.value
           ? 'bg-primary text-primary-foreground'
           : 'bg-muted text-muted-foreground hover:bg-muted/70',

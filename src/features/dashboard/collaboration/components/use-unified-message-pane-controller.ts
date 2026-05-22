@@ -75,13 +75,23 @@ export function useUnifiedMessagePaneController({
   uploadingAttachments,
 }: UseUnifiedMessagePaneControllerArgs) {
   const [sharingTo, setSharingTo] = useState<string | null>(null)
-  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null)
-  const [confirmingDeleteMessageId, setConfirmingDeleteMessageId] = useState<string | null>(null)
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
-  const [editingValue, setEditingValue] = useState('')
-  const [editingPreview, setEditingPreview] = useState('')
+  const [paneUi, setPaneUi] = useState({
+    deletingMessageId: null as string | null,
+    confirmingDeleteMessageId: null as string | null,
+    editingMessageId: null as string | null,
+    editingValue: '',
+    editingPreview: '',
+    isComposerFocused: false,
+  })
+  const {
+    deletingMessageId,
+    confirmingDeleteMessageId,
+    editingMessageId,
+    editingValue,
+    editingPreview,
+    isComposerFocused,
+  } = paneUi
   const [expandedThreadIds, setExpandedThreadIds] = useState<Record<string, boolean>>({})
-  const [isComposerFocused, setIsComposerFocused] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const lastAutoOpenedThreadRef = useRef<string | null>(null)
   const lastConversationKeyRef = useRef<string | null>(null)
@@ -130,12 +140,14 @@ export function useUnifiedMessagePaneController({
     lastConversationKeyRef.current = conversationKey
 
     const frame = window.requestAnimationFrame(() => {
-      setEditingMessageId(null)
-      setEditingValue('')
-      setEditingPreview('')
-      setConfirmingDeleteMessageId(null)
-      setDeletingMessageId(null)
-      setIsComposerFocused(false)
+      setPaneUi({
+        deletingMessageId: null,
+        confirmingDeleteMessageId: null,
+        editingMessageId: null,
+        editingValue: '',
+        editingPreview: '',
+        isComposerFocused: false,
+      })
     })
 
     return () => window.cancelAnimationFrame(frame)
@@ -151,28 +163,28 @@ export function useUnifiedMessagePaneController({
 
   const handleDelete = useCallback(async (messageId: string) => {
     if (!onDeleteMessage) return
-    setDeletingMessageId(messageId)
+    setPaneUi((prev) => ({ ...prev, deletingMessageId: messageId }))
     try {
       await onDeleteMessage(messageId)
     } finally {
-      setDeletingMessageId(null)
+      setPaneUi((prev) => ({ ...prev, deletingMessageId: null }))
     }
   }, [onDeleteMessage])
 
   const handleRequestDelete = useCallback((messageId: string) => {
-    setConfirmingDeleteMessageId(messageId)
+    setPaneUi((prev) => ({ ...prev, confirmingDeleteMessageId: messageId }))
   }, [])
 
   const handleCancelDelete = useCallback(() => {
     if (activeDeletingMessageId) return
-    setConfirmingDeleteMessageId(null)
+    setPaneUi((prev) => ({ ...prev, confirmingDeleteMessageId: null }))
   }, [activeDeletingMessageId])
 
   const handleConfirmDelete = useCallback(async () => {
     if (!confirmingDeleteMessageId) return
     try {
       await handleDelete(confirmingDeleteMessageId)
-      setConfirmingDeleteMessageId(null)
+      setPaneUi((prev) => ({ ...prev, confirmingDeleteMessageId: null }))
     } catch {
       // Error toast comes from message actions; leave dialog open for retry.
     }
@@ -180,16 +192,22 @@ export function useUnifiedMessagePaneController({
 
   const handleStartEdit = useCallback((message: UnifiedMessage) => {
     if (!onEditMessage || message.deleted) return
-    setEditingMessageId(message.id)
-    setEditingValue(message.content ?? '')
-    setEditingPreview((message.content ?? '').trim().slice(0, 120))
+    setPaneUi((prev) => ({
+      ...prev,
+      editingMessageId: message.id,
+      editingValue: message.content ?? '',
+      editingPreview: (message.content ?? '').trim().slice(0, 120),
+    }))
   }, [onEditMessage])
 
   const handleCancelEdit = useCallback(() => {
     if (messageUpdatingId) return
-    setEditingMessageId(null)
-    setEditingValue('')
-    setEditingPreview('')
+    setPaneUi((prev) => ({
+      ...prev,
+      editingMessageId: null,
+      editingValue: '',
+      editingPreview: '',
+    }))
   }, [messageUpdatingId])
 
   const handleConfirmEdit = useCallback(async () => {
@@ -204,9 +222,12 @@ export function useUnifiedMessagePaneController({
     }
     try {
       await onEditMessage(editingMessageId, trimmedValue)
-      setEditingMessageId(null)
-      setEditingValue('')
-      setEditingPreview('')
+      setPaneUi((prev) => ({
+        ...prev,
+        editingMessageId: null,
+        editingValue: '',
+        editingPreview: '',
+      }))
     } catch {
       // Error toast comes from message actions; keep editor open.
     }
@@ -238,12 +259,12 @@ export function useUnifiedMessagePaneController({
   }, [hasPendingAttachments, isSending, messageInput, onSendMessage, uploadingAttachments])
 
   const handleComposerFocusInternal = useCallback(() => {
-    setIsComposerFocused(true)
+    setPaneUi((prev) => ({ ...prev, isComposerFocused: true }))
     onComposerFocus?.()
   }, [onComposerFocus])
 
   const handleComposerBlurInternal = useCallback(() => {
-    setIsComposerFocused(false)
+    setPaneUi((prev) => ({ ...prev, isComposerFocused: false }))
     onComposerBlur?.()
   }, [onComposerBlur])
 
@@ -376,7 +397,7 @@ export function useUnifiedMessagePaneController({
     handleThreadToggle,
     hasPendingAttachments,
     isComposerFocused,
-    setEditingValue,
+    setEditingValue: (value: string) => setPaneUi((prev) => ({ ...prev, editingValue: value })),
     sharingTo,
     resolveThreadRootId,
   }

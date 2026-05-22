@@ -87,11 +87,9 @@ export async function googleAdsSearch(options: {
     onRateLimitHit,
   } = options
 
-  let pageToken: string | undefined
-  const results: GoogleAdsResult[] = []
   let currentAccessToken = accessToken
 
-  for (let page = 0; page < maxPages; page += 1) {
+  const fetchPage = async (page: number, pageToken?: string): Promise<GoogleAdsResult[]> => {
     const url = `${GOOGLE_API_BASE}/customers/${customerId}/googleAds:search`
     const headers: Record<string, string> = {
       Authorization: `Bearer ${currentAccessToken}`,
@@ -130,15 +128,15 @@ export async function googleAdsSearch(options: {
       onRateLimitHit,
     })
 
-    if (Array.isArray(payload.results)) {
-      results.push(...payload.results)
+    const pageResults = Array.isArray(payload.results) ? payload.results : []
+    const nextPageToken = payload.nextPageToken ?? undefined
+    if (!nextPageToken || page + 1 >= maxPages) {
+      return pageResults
     }
 
-    pageToken = payload.nextPageToken ?? undefined
-    if (!pageToken) {
-      break
-    }
+    const nextPageResults = await fetchPage(page + 1, nextPageToken)
+    return [...pageResults, ...nextPageResults]
   }
 
-  return results
+  return fetchPage(0)
 }

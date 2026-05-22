@@ -124,12 +124,13 @@ function uniqStrings(values: string[]): string[] {
 }
 
 function clampLength(values: string[], maxLen: number): string[] {
-  return values
-    .flatMap((value) => {
-      const trimmedValue = value.trim()
-      return trimmedValue ? [trimmedValue] : []
-    })
-    .map((v) => (v.length > maxLen ? v.slice(0, maxLen - 1).trimEnd() + '…' : v))
+  return values.flatMap((value) => {
+    const trimmedValue = value.trim()
+    if (!trimmedValue) return []
+    const normalized =
+      trimmedValue.length > maxLen ? trimmedValue.slice(0, maxLen - 1).trimEnd() + '…' : trimmedValue
+    return [normalized]
+  })
 }
 
 interface GenerateCopyInput {
@@ -294,14 +295,13 @@ export const generateCopy = action({
       const headlines = requestedHeadlines
         ? uniqStrings(
             clampLength(
-              validated.headlines
-                .flatMap((headline) => {
-                  const cleanedHeadline = cleanSuggestion(headline)
-                  return cleanedHeadline ? [cleanedHeadline] : []
-                })
-                .filter(
-                  (s: string) => !existingHeadlines.some((e) => e.toLowerCase() === s.toLowerCase())
-                ),
+              validated.headlines.flatMap((headline) => {
+                const cleanedHeadline = cleanSuggestion(headline)
+                if (!cleanedHeadline) return []
+                return existingHeadlines.some((e) => e.toLowerCase() === cleanedHeadline.toLowerCase())
+                  ? []
+                  : [cleanedHeadline]
+              }),
               40
             )
           ).slice(0, count)
@@ -310,14 +310,13 @@ export const generateCopy = action({
       const captions = requestedCaptions
         ? uniqStrings(
             clampLength(
-              validated.captions
-                .flatMap((caption) => {
-                  const cleanedCaption = cleanSuggestion(caption)
-                  return cleanedCaption ? [cleanedCaption] : []
-                })
-                .filter(
-                  (s: string) => !existingCaptions.some((e) => e.toLowerCase() === s.toLowerCase())
-                ),
+              validated.captions.flatMap((caption) => {
+                const cleanedCaption = cleanSuggestion(caption)
+                if (!cleanedCaption) return []
+                return existingCaptions.some((e) => e.toLowerCase() === cleanedCaption.toLowerCase())
+                  ? []
+                  : [cleanedCaption]
+              }),
               180
             )
           ).slice(0, count)

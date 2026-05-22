@@ -21,27 +21,27 @@ type AnalyticsAction = NonNullable<Props['action']>
 
 const variantConfig = {
   'no-data': {
-    defaultIcon: <FileX className="h-10 w-10" />,
+    defaultIcon: <FileX className="size-10" />,
     defaultTitle: 'No Data Available',
     defaultDescription: 'There is no data to display for the current selection.',
   },
   'no-filters': {
-    defaultIcon: <BarChart3 className="h-10 w-10" />,
+    defaultIcon: <BarChart3 className="size-10" />,
     defaultTitle: 'No Matching Data',
     defaultDescription: 'Try adjusting your filters to see results.',
   },
   'no-integration': {
-    defaultIcon: <TrendingUp className="h-10 w-10" />,
+    defaultIcon: <TrendingUp className="size-10" />,
     defaultTitle: 'Connect Your Account',
     defaultDescription: 'Connect your ad platform to start seeing analytics data.',
   },
   'no-metrics': {
-    defaultIcon: <AlertCircle className="h-10 w-10" />,
+    defaultIcon: <AlertCircle className="size-10" />,
     defaultTitle: 'Metrics Not Available',
     defaultDescription: 'The requested metrics are not available for this platform.',
   },
   'error': {
-    defaultIcon: <AlertCircle className="h-10 w-10" />,
+    defaultIcon: <AlertCircle className="size-10" />,
     defaultTitle: 'Unable to Load Data',
     defaultDescription: 'There was a problem loading the analytics data.',
   },
@@ -86,7 +86,7 @@ export function AnalyticsEmptyState({
         className
       )}
     >
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4 text-muted-foreground">
+      <div className="flex size-16 items-center justify-center rounded-full bg-muted mb-4 text-muted-foreground">
         {icon || config.defaultIcon}
       </div>
       <h3 className="text-lg font-semibold mb-2">{title || config.defaultTitle}</h3>

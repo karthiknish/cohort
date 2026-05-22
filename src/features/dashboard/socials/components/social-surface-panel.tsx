@@ -147,8 +147,8 @@ function SocialInsightCards({ insights }: { insights: InsightMetric[] }) {
                   <p className={DASHBOARD_THEME.stats.label}>{insight.title}</p>
                   <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-foreground">{insight.value}</p>
                 </div>
-                <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 shrink-0')}>
-                  <Icon className="h-5 w-5" aria-hidden />
+                <div className={cn(DASHBOARD_THEME.icons.container, 'size-10 shrink-0')}>
+                  <Icon className="size-5" aria-hidden />
                 </div>
               </div>
               <p className="text-xs leading-relaxed text-muted-foreground md:text-sm">{insight.detail}</p>
@@ -333,11 +333,11 @@ export function SocialSurfacePanel({
               <div
                 className={cn(
                   DASHBOARD_THEME.icons.container,
-                  'h-12 w-12 shadow-sm',
+                  'size-12 shadow-sm',
                   surface === 'facebook' ? 'bg-info/10 text-info border-info/25' : 'bg-accent/10 text-accent border-accent/25',
                 )}
               >
-                <SurfaceIcon className="h-6 w-6" aria-hidden />
+                <SurfaceIcon className="size-6" aria-hidden />
               </div>
               <div className="max-w-2xl space-y-1.5">
                 <CardTitle className="text-balance text-xl md:text-2xl">{copy.summaryTitle}</CardTitle>
@@ -394,7 +394,7 @@ export function SocialSurfacePanel({
 
               <div className="space-y-3">
                 <div className="flex items-center gap-2 border-b border-muted/30 pb-2">
-                  <MessageSquareMore className="h-4 w-4 text-primary" aria-hidden />
+                  <MessageSquareMore className="size-4 text-primary" aria-hidden />
                   <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Derived signals</h3>
                 </div>
                 <SocialInsightCards insights={insightCards} />

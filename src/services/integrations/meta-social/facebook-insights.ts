@@ -75,7 +75,7 @@ export async function fetchFacebookPageDailyInsights(options: {
 
   const rows: OrganicSocialDailyMetric[] = []
 
-  for (const date of [...dates].sort()) {
+  for (const date of [...dates].toSorted()) {
     const impressions = getMetricValue(byName, 'page_impressions', date)
     const reach = getMetricValue(byName, 'page_impressions_unique', date)
     const engagedUsers = getMetricValue(byName, 'page_post_engagements', date)

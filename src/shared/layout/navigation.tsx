@@ -88,7 +88,7 @@ function NavItemLink({
     prefetchRoute(item.href)
   }, [prefetchRoute, item.href])
 
-  const handleClick = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
+  const onNavItemClick = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
     onClick?.(event)
 
     if (!event.defaultPrevented) {
@@ -101,7 +101,7 @@ function NavItemLink({
       ref={ref}
       href={item.href}
       prefetch
-      onClick={handleClick}
+      onClick={onNavItemClick}
       onMouseEnter={handleMouseEnter}
       onPointerDown={handlePointerDown}
       className={linkClasses}
@@ -110,7 +110,7 @@ function NavItemLink({
       title={collapsed ? item.name : undefined}
       {...linkProps}
     >
-      <item.icon className="h-4 w-4 shrink-0" />
+      <item.icon className="size-4 shrink-0" />
       {!collapsed && <span className="truncate">{item.name}</span>}
     </Link>
   )
@@ -218,7 +218,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                     onMouseEnter={prefetchAdmin}
                     className="flex h-9 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80"
                   >
-                    <Shield className="h-4 w-4" />
+                    <Shield className="size-4" />
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">
@@ -232,7 +232,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                 onMouseEnter={prefetchAdmin}
                 className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80"
               >
-                <Shield className="h-4 w-4" />
+                <Shield className="size-4" />
                 <span>Admin Panel</span>
               </Link>
             )
@@ -247,7 +247,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                   onMouseEnter={prefetchSettings}
                   className="flex h-9 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80"
                 >
-                  <Settings className="h-4 w-4" />
+                  <Settings className="size-4" />
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="right">
@@ -261,7 +261,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
               onMouseEnter={prefetchSettings}
               className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80"
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="size-4" />
               <span>Settings</span>
             </Link>
           )}
@@ -320,16 +320,16 @@ export function Sidebar() {
         type="button"
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         className={cn(
-          'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground hover:border-accent/40 hover:text-primary hover:bg-muted/50',
+          'mb-6 inline-flex size-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground hover:border-accent/40 hover:text-primary hover:bg-muted/50',
           chromaticTransitionClass,
           collapsed && 'mt-2'
         )}
         onClick={toggleCollapsed}
       >
         {collapsed ? (
-          <ChevronRight className="h-4 w-4 transition-transform" />
+          <ChevronRight className="size-4 transition-transform" />
         ) : (
-          <ChevronLeft className="h-4 w-4 transition-transform" />
+          <ChevronLeft className="size-4 transition-transform" />
         )}
       </button>
       <div className={cn('min-h-0 flex-1', collapsed ? 'w-full' : '')}>
@@ -461,7 +461,7 @@ export function Header() {
                   className="shrink-0"
                   aria-label="Open navigation menu"
                 >
-                  <Menu className="h-5 w-5" />
+                  <Menu className="size-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-70 p-0">
@@ -476,7 +476,7 @@ export function Header() {
                     className="mt-6 w-full justify-start gap-2 text-sm font-medium"
                     onClick={handleSignOut}
                   >
-                    <LogOut className="h-4 w-4 shrink-0" />
+                    <LogOut className="size-4 shrink-0" />
                     Sign Out
                   </Button>
                 </div>
@@ -512,7 +512,7 @@ export function Header() {
                     className="hidden sm:inline-flex"
                     aria-label="Show keyboard shortcuts"
                   >
-                    <Keyboard className="h-4 w-4" />
+                    <Keyboard className="size-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -532,7 +532,7 @@ export function Header() {
                     className="hidden sm:inline-flex"
                     aria-label="Report a problem"
                   >
-                    <AlertCircle className="h-4 w-4" />
+                    <AlertCircle className="size-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -552,7 +552,7 @@ export function Header() {
                     className="inline-flex"
                     aria-label="Show onboarding tour"
                   >
-                    <Rocket className="h-4 w-4" />
+                    <Rocket className="size-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>

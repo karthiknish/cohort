@@ -68,10 +68,11 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
   const statusUpdateHandlers = useMemo(
     () =>
       Object.fromEntries(
-        PROJECT_STATUSES.filter((status) => status !== project.status).map((status) => [
-          status,
-          () => onUpdateStatus(project, status),
-        ]),
+        PROJECT_STATUSES.flatMap((status) =>
+          status !== project.status
+            ? [[status, () => onUpdateStatus(project, status)] as const]
+            : [],
+        ),
       ) as Partial<Record<ProjectStatus, () => void>>,
     [onUpdateStatus, project],
   )
@@ -121,9 +122,9 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
                     )}
                   >
                     {isPendingUpdate ? (
-                      <LoaderCircle className="h-3 w-3 animate-spin" />
+                      <LoaderCircle className="size-3 animate-spin" />
                     ) : (
-                      <StatusIcon className="h-3 w-3" />
+                      <StatusIcon className="size-3" />
                     )}
                     <span className="text-[10px] font-bold uppercase tracking-wider leading-none">
                       {formatStatusLabel(project.status)}
@@ -136,12 +137,16 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
                       Update status
                     </span>
                   </div>
-                  {PROJECT_STATUSES.filter((status) => status !== project.status).map((status) => (
+                  {PROJECT_STATUSES.flatMap((status) =>
+                    status !== project.status
+                      ? [(
                     <DropdownMenuItem key={status} onClick={statusUpdateHandlers[status]} className="gap-2">
-                      <div className="h-2 w-2 rounded-full" style={statusAccentStyles[status]} />
+                      <div className="size-2 rounded-full" style={statusAccentStyles[status]} />
                       <span>{formatStatusLabel(status)}</span>
                     </DropdownMenuItem>
-                  ))}
+                  )]
+                      : [],
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -170,11 +175,11 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
 
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5" />
+                <Calendar className="size-3.5" />
                 {formatDateRange(project.startDate, project.endDate)}
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <MessageSquare className="h-3.5 w-3.5" />
+                <MessageSquare className="size-3.5" />
                 {project.recentActivityAt ? `Active ${formatRelativeTime(project.recentActivityAt)}` : 'No recent chat'}
               </span>
             </div>
@@ -187,7 +192,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
                     variant="secondary"
                     className="inline-flex h-5 items-center gap-1 px-2 text-[10px] font-medium"
                   >
-                    <Tag className="h-2.5 w-2.5" />
+                    <Tag className="size-2.5" />
                     {tag}
                   </Badge>
                 ))}
@@ -202,7 +207,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
             </div>
             <div className="flex flex-wrap justify-end gap-2">
               <Button size="sm" variant="outline" className="h-8 gap-2 text-xs" onClick={handleEdit}>
-                <Pencil className="h-3.5 w-3.5" />
+                <Pencil className="size-3.5" />
                 Edit
               </Button>
               <Button asChild size="sm" variant="default" className="h-8 text-xs">

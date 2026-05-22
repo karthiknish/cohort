@@ -23,7 +23,7 @@ export function AgentTabPanel() {
               <div className="flex items-center gap-2">
                 <span
                   className={cn(
-                    'h-1.5 w-1.5 rounded-full',
+                    'size-1.5 rounded-full',
                     flow.tone === 'success'
                       ? 'animate-pulse bg-success'
                       : flow.tone === 'accent'
@@ -51,7 +51,7 @@ export function AgentTabPanel() {
               key={item.id}
               className="flex items-start gap-2 rounded-lg border border-border/30 bg-background/60 px-2.5 py-2"
             >
-              <Bot className="mt-0.5 h-3 w-3 shrink-0 text-accent/70" />
+              <Bot className="mt-0.5 size-3 shrink-0 text-accent/70" />
               <span className="flex-1 text-[11px] font-medium text-foreground/80">{item.text}</span>
               <span className="shrink-0 text-[9px] text-muted-foreground/50">{item.time}</span>
             </div>

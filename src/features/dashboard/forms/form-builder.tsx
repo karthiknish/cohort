@@ -36,7 +36,7 @@ export function FormBuilder({ fields, pending, onCreateTemplate }: FormBuilderPr
           </div>
         ))}
         <Button variant="outline" className="w-full gap-2 rounded-xl" onClick={onCreateTemplate} disabled={pending}>
-          {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          {pending ? <LoaderCircle className="size-4 animate-spin" /> : <Plus className="size-4" />}
           Create checklist template
         </Button>
       </CardContent>

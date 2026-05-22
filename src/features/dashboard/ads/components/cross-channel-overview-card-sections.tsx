@@ -47,7 +47,7 @@ function ProviderFilterOption({
       onCheckedChange={handleCheckedChange}
     >
       <span className="flex items-center gap-2">
-        {ProviderIcon ? <ProviderIcon className="h-4 w-4" /> : null}
+        {ProviderIcon ? <ProviderIcon className="size-4" /> : null}
         {formatProviderName(providerId)}
       </span>
     </DropdownMenuCheckboxItem>
@@ -74,7 +74,7 @@ function SelectedProviderChip({
         className="ml-0.5 rounded-full p-0.5 hover:bg-muted hover:text-foreground"
         aria-label={`Remove ${formatProviderName(providerId)} filter`}
       >
-        <X className="h-3 w-3" aria-hidden />
+        <X className="size-3" aria-hidden />
       </button>
     </Badge>
   )
@@ -116,7 +116,7 @@ export function CrossChannelOverviewHeader({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2 rounded-xl border-border/70">
-                  <Filter className="h-4 w-4" aria-hidden />
+                  <Filter className="size-4" aria-hidden />
                   Providers
                   {hasProviderFilter ? (
                     <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-xs">
@@ -149,7 +149,7 @@ export function CrossChannelOverviewHeader({
                 disabled={!hasMetricData}
                 aria-label="Export metrics as CSV"
               >
-                <Download className="h-4 w-4" />
+                <Download className="size-4" />
               </Button>
             </>
           ) : null}
@@ -208,7 +208,7 @@ function SummaryCardTile({ card }: { card: SummaryCard }) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger aria-label={`Metric information: ${card.helper}`}>
-                <Info className="h-3.5 w-3.5 text-muted-foreground/70" aria-hidden />
+                <Info className="size-3.5 text-muted-foreground/70" aria-hidden />
               </TooltipTrigger>
               <TooltipContent>
                 <p>{card.helper}</p>

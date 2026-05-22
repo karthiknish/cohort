@@ -1,7 +1,7 @@
 'use client'
 
 import { notifyFailure } from '@/lib/notifications'
-import { type ChangeEvent, type FormEvent, useCallback, useMemo, useRef, useState, useEffect } from 'react'
+import { type ChangeEvent, type FormEvent, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { LoaderCircle, ImagePlus, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useConvex } from 'convex/react'
 
@@ -25,13 +25,77 @@ function isPhoneValid(phone: string): boolean {
   return /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]{6,14}$/.test(trimmed)
 }
 
-interface ProfileCardProps {
-  onPhoneChange?: (phone: string) => void
+type ProfileEditState = {
+  profileNameDraft: string | null
+  profilePhoneDraft: string | null
+  profileError: string | null
+  phoneError: string | null
+  savingProfile: boolean
+  avatarPreviewOverride: string | null | undefined
+  avatarError: string | null
+  avatarUploading: boolean
 }
 
-export function ProfileCard({
-  onPhoneChange,
-}: ProfileCardProps) {
+type ProfileEditAction =
+  | { type: 'setProfileNameDraft'; value: string }
+  | { type: 'setProfilePhoneDraft'; value: string }
+  | { type: 'setProfileError'; value: string | null }
+  | { type: 'setPhoneError'; value: string | null }
+  | { type: 'setSavingProfile'; value: boolean }
+  | { type: 'setAvatarPreviewOverride'; value: string | null | undefined }
+  | { type: 'setAvatarError'; value: string | null }
+  | { type: 'setAvatarUploading'; value: boolean }
+  | { type: 'clearProfileErrors' }
+  | { type: 'clearPhoneErrors' }
+  | { type: 'commitProfileDraft'; name: string; phone: string }
+
+function createInitialProfileEditState(): ProfileEditState {
+  return {
+    profileNameDraft: null,
+    profilePhoneDraft: null,
+    profileError: null,
+    phoneError: null,
+    savingProfile: false,
+    avatarPreviewOverride: undefined,
+    avatarError: null,
+    avatarUploading: false,
+  }
+}
+
+function profileEditReducer(state: ProfileEditState, action: ProfileEditAction): ProfileEditState {
+  switch (action.type) {
+    case 'setProfileNameDraft':
+      return { ...state, profileNameDraft: action.value, profileError: null }
+    case 'setProfilePhoneDraft':
+      return { ...state, profilePhoneDraft: action.value, phoneError: null, profileError: null }
+    case 'setProfileError':
+      return { ...state, profileError: action.value }
+    case 'setPhoneError':
+      return { ...state, phoneError: action.value }
+    case 'setSavingProfile':
+      return { ...state, savingProfile: action.value }
+    case 'setAvatarPreviewOverride':
+      return { ...state, avatarPreviewOverride: action.value }
+    case 'setAvatarError':
+      return { ...state, avatarError: action.value }
+    case 'setAvatarUploading':
+      return { ...state, avatarUploading: action.value }
+    case 'clearProfileErrors':
+      return { ...state, profileError: null }
+    case 'clearPhoneErrors':
+      return { ...state, phoneError: null }
+    case 'commitProfileDraft':
+      return {
+        ...state,
+        profileNameDraft: action.name,
+        profilePhoneDraft: action.phone,
+      }
+    default:
+      return state
+  }
+}
+
+export function ProfileCard() {
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
   const convex = useConvex()
@@ -39,17 +103,20 @@ export function ProfileCard({
   const updateMyProfile = useMutation(settingsApi.updateMyProfile)
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
   const [previewUser, setPreviewUser] = useState(() => getPreviewSettingsProfile())
+  const [editState, dispatch] = useReducer(profileEditReducer, undefined, createInitialProfileEditState)
 
   const user = isPreviewMode ? previewUser : profile
 
-  const [profileNameDraft, setProfileNameDraft] = useState<string | null>(null)
-  const [profilePhoneDraft, setProfilePhoneDraft] = useState<string | null>(null)
-  const [profileError, setProfileError] = useState<string | null>(null)
-  const [phoneError, setPhoneError] = useState<string | null>(null)
-  const [savingProfile, setSavingProfile] = useState(false)
-  const [avatarPreviewOverride, setAvatarPreviewOverride] = useState<string | null | undefined>(undefined)
-  const [avatarError, setAvatarError] = useState<string | null>(null)
-  const [avatarUploading, setAvatarUploading] = useState(false)
+  const {
+    profileNameDraft,
+    profilePhoneDraft,
+    profileError,
+    phoneError,
+    savingProfile,
+    avatarPreviewOverride,
+    avatarError,
+    avatarUploading,
+  } = editState
 
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
   const tempAvatarUrlRef = useRef<string | null>(null)
@@ -66,11 +133,6 @@ export function ProfileCard({
       }
     }
   }, [])
-
-  // Notify parent of phone changes
-  useEffect(() => {
-    onPhoneChange?.(profilePhone)
-  }, [profilePhone, onPhoneChange])
 
   const hasProfileChanges = useMemo(() => {
     const originalName = user?.name ?? ''
@@ -89,7 +151,7 @@ export function ProfileCard({
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault()
       if (!user && !isPreviewMode) {
-        setProfileError('You must be signed in to update your profile.')
+        dispatch({ type: 'setProfileError', value: 'You must be signed in to update your profile.' })
         return
       }
 
@@ -97,17 +159,17 @@ export function ProfileCard({
       const nextPhone = profilePhone.trim()
 
       if (nextName.length < 2) {
-        setProfileError('Enter a name with at least two characters.')
+        dispatch({ type: 'setProfileError', value: 'Enter a name with at least two characters.' })
         return
       }
 
       if (!isPhoneValid(nextPhone)) {
-        setPhoneError('Enter a valid phone number (e.g. +1 555 000 1234).')
+        dispatch({ type: 'setPhoneError', value: 'Enter a valid phone number (e.g. +1 555 000 1234).' })
         return
       }
 
-      setSavingProfile(true)
-      setProfileError(null)
+      dispatch({ type: 'setSavingProfile', value: true })
+      dispatch({ type: 'clearProfileErrors' })
 
       if (isPreviewMode) {
         setPreviewUser((current) => ({
@@ -115,9 +177,8 @@ export function ProfileCard({
           name: nextName,
           phoneNumber: nextPhone.length ? nextPhone : null,
         }))
-        setProfileNameDraft(nextName)
-        setProfilePhoneDraft(nextPhone)
-        setSavingProfile(false)
+        dispatch({ type: 'commitProfileDraft', name: nextName, phone: nextPhone })
+        dispatch({ type: 'setSavingProfile', value: false })
         toast({
           title: 'Preview mode',
           description: 'Profile changes were applied locally for this session.',
@@ -130,20 +191,19 @@ export function ProfileCard({
         phoneNumber: nextPhone.length ? nextPhone : null,
       })
         .then(() => {
-          setProfileNameDraft(nextName)
-          setProfilePhoneDraft(nextPhone)
+          dispatch({ type: 'commitProfileDraft', name: nextName, phone: nextPhone })
           toast({ title: 'Profile updated', description: 'Your changes were saved.' })
         })
         .catch((submitError) => {
           const message = submitError instanceof Error ? submitError.message : 'Failed to update profile'
-          setProfileError(message)
+          dispatch({ type: 'setProfileError', value: message })
           notifyFailure({
         title: 'Profile update failed',
         message: message,
       })
         })
         .finally(() => {
-          setSavingProfile(false)
+          dispatch({ type: 'setSavingProfile', value: false })
         })
     },
     [isPreviewMode, profileName, profilePhone, toast, updateMyProfile, user],
@@ -155,7 +215,7 @@ export function ProfileCard({
         URL.revokeObjectURL(tempAvatarUrlRef.current)
         tempAvatarUrlRef.current = null
       }
-      setAvatarPreviewOverride(null)
+      dispatch({ type: 'setAvatarPreviewOverride', value: null })
       setPreviewUser((current) => ({ ...current, photoUrl: null }))
       toast({
         title: 'Preview mode',
@@ -165,12 +225,12 @@ export function ProfileCard({
     }
 
     if (!user) {
-      setAvatarError('You must be signed in to update your avatar.')
+      dispatch({ type: 'setAvatarError', value: 'You must be signed in to update your avatar.' })
       return
     }
 
-    setAvatarUploading(true)
-    setAvatarError(null)
+    dispatch({ type: 'setAvatarUploading', value: true })
+    dispatch({ type: 'setAvatarError', value: null })
 
     if (tempAvatarUrlRef.current) {
       URL.revokeObjectURL(tempAvatarUrlRef.current)
@@ -179,25 +239,25 @@ export function ProfileCard({
 
     await updateMyProfile({ photoUrl: null })
       .then(() => {
-        setAvatarPreviewOverride(null)
+        dispatch({ type: 'setAvatarPreviewOverride', value: null })
         toast({ title: 'Profile photo removed', description: 'We removed your avatar.' })
       })
       .catch((removeError) => {
         logError(removeError, 'ProfileCard:removeAvatar')
         const msg = asErrorMessage(removeError)
-        setAvatarError(msg)
+        dispatch({ type: 'setAvatarError', value: msg })
         notifyFailure({
         title: 'Remove failed',
         message: msg,
       })
       })
       .finally(() => {
-        setAvatarUploading(false)
+        dispatch({ type: 'setAvatarUploading', value: false })
       })
   }, [isPreviewMode, toast, updateMyProfile, user])
 
   const handleAvatarButtonClick = useCallback(() => {
-    setAvatarError(null)
+    dispatch({ type: 'setAvatarError', value: null })
     avatarInputRef.current?.click()
   }, [])
 
@@ -236,7 +296,7 @@ export function ProfileCard({
       if (!file) return
 
       if (!user && !isPreviewMode) {
-        setAvatarError('You must be signed in to update your avatar.')
+        dispatch({ type: 'setAvatarError', value: 'You must be signed in to update your avatar.' })
         event.target.value = ''
         return
       }
@@ -247,7 +307,7 @@ export function ProfileCard({
       })
 
       if (!validation.valid) {
-        setAvatarError(validation.error || 'Invalid image file.')
+        dispatch({ type: 'setAvatarError', value: validation.error || 'Invalid image file.' })
         event.target.value = ''
         return
       }
@@ -262,7 +322,7 @@ export function ProfileCard({
 
         const objectUrl = URL.createObjectURL(file)
         tempAvatarUrlRef.current = objectUrl
-        setAvatarPreviewOverride(objectUrl)
+        dispatch({ type: 'setAvatarPreviewOverride', value: objectUrl })
         setPreviewUser((current) => ({ ...current, photoUrl: objectUrl }))
         toast({
           title: 'Preview mode',
@@ -272,8 +332,8 @@ export function ProfileCard({
         return
       }
 
-      setAvatarUploading(true)
-      setAvatarError(null)
+      dispatch({ type: 'setAvatarUploading', value: true })
+      dispatch({ type: 'setAvatarError', value: null })
 
       if (tempAvatarUrlRef.current) {
         URL.revokeObjectURL(tempAvatarUrlRef.current)
@@ -282,26 +342,26 @@ export function ProfileCard({
 
       const objectUrl = URL.createObjectURL(file)
       tempAvatarUrlRef.current = objectUrl
-      setAvatarPreviewOverride(objectUrl)
+      dispatch({ type: 'setAvatarPreviewOverride', value: objectUrl })
 
       await uploadAvatarImage(file)
         .then(async (photoUrl) => {
           await updateMyProfile({ photoUrl })
-          setAvatarPreviewOverride(photoUrl)
+          dispatch({ type: 'setAvatarPreviewOverride', value: photoUrl })
           toast({ title: 'Photo uploaded', description: 'Your profile photo has been updated.' })
         })
         .catch((uploadError) => {
           logError(uploadError, 'ProfileCard:uploadAvatar')
           const msg = asErrorMessage(uploadError)
-          setAvatarError(msg)
-          setAvatarPreviewOverride(previousUrl ?? null)
+          dispatch({ type: 'setAvatarError', value: msg })
+          dispatch({ type: 'setAvatarPreviewOverride', value: previousUrl ?? null })
           notifyFailure({
         title: 'Upload failed',
         message: msg,
       })
         })
         .finally(() => {
-          setAvatarUploading(false)
+          dispatch({ type: 'setAvatarUploading', value: false })
           if (tempAvatarUrlRef.current) {
             URL.revokeObjectURL(tempAvatarUrlRef.current)
             tempAvatarUrlRef.current = null
@@ -313,21 +373,18 @@ export function ProfileCard({
   )
 
   const handleProfileNameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setProfileNameDraft(event.target.value)
-    setProfileError(null)
+    dispatch({ type: 'setProfileNameDraft', value: event.target.value })
   }, [])
 
   const handleProfilePhoneChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setProfilePhoneDraft(event.target.value)
-    setPhoneError(null)
-    setProfileError(null)
+    dispatch({ type: 'setProfilePhoneDraft', value: event.target.value })
   }, [])
 
   const handleProfilePhoneBlur = useCallback(() => {
     if (profilePhone.trim() && !isPhoneValid(profilePhone)) {
-      setPhoneError('Enter a valid phone number (e.g. +1 555 000 1234).')
+      dispatch({ type: 'setPhoneError', value: 'Enter a valid phone number (e.g. +1 555 000 1234).' })
     } else {
-      setPhoneError(null)
+      dispatch({ type: 'clearPhoneErrors' })
     }
   }, [profilePhone])
 
@@ -344,7 +401,7 @@ export function ProfileCard({
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
-            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+            <LoaderCircle className="size-4 animate-spin" aria-hidden />
             Loading profile…
           </div>
         </CardContent>
@@ -368,7 +425,7 @@ export function ProfileCard({
             onChange={handleAvatarFileChange}
           />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <Avatar className="h-16 w-16">
+            <Avatar className="size-16">
               {avatarPreview ? (
                 <AvatarImage src={avatarPreview} alt="Profile photo" />
               ) : (
@@ -384,9 +441,9 @@ export function ProfileCard({
                   disabled={avatarUploading}
                 >
                   {avatarUploading ? (
-                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    <LoaderCircle className="mr-2 size-4 animate-spin" />
                   ) : (
-                    <ImagePlus className="mr-2 h-4 w-4" />
+                    <ImagePlus className="mr-2 size-4" />
                   )}
                   {avatarUploading ? 'Uploading…' : avatarPreview ? 'Change photo' : 'Upload photo'}
                 </Button>
@@ -397,7 +454,7 @@ export function ProfileCard({
                     onClick={handleAvatarRemoveClick}
                     disabled={avatarUploading}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="mr-2 size-4" />
                     Remove
                   </Button>
                 ) : null}
@@ -445,7 +502,7 @@ export function ProfileCard({
               We use this information across proposals and automated notifications.
             </p>
             <Button type="submit" disabled={!canSaveProfile}>
-              {savingProfile ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {savingProfile ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
               Save changes
             </Button>
           </div>

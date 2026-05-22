@@ -41,7 +41,7 @@ export function ProposalBuilderJourneyBar({
         aria-live="polite"
       >
         <div className="flex min-w-0 items-center gap-3">
-          <LoaderCircle className="h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden />
+          <LoaderCircle className="size-5 shrink-0 animate-spin text-primary" aria-hidden />
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground">
               {isRecheckingDeck ? 'Checking deck status…' : 'Generating your proposal deck'}
@@ -60,7 +60,7 @@ export function ProposalBuilderJourneyBar({
     return (
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-success/25 bg-success/5 px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden />
+          <CheckCircle2 className="size-5 shrink-0 text-success" aria-hidden />
           <div>
             <p className="text-sm font-medium text-foreground">Deck is ready</p>
             <p className="text-xs text-muted-foreground">Open the presentation or download a copy.</p>
@@ -70,7 +70,7 @@ export function ProposalBuilderJourneyBar({
           {deckHref ? (
             <Button size="sm" asChild>
               <Link href={deckHref}>
-                <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                <ExternalLink className="mr-1.5 size-3.5" aria-hidden />
                 View deck
               </Link>
             </Button>
@@ -94,7 +94,7 @@ export function ProposalBuilderJourneyBar({
         role="status"
         aria-live="polite"
       >
-        <Sparkles className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+        <Sparkles className="size-5 shrink-0 text-primary" aria-hidden />
         <p className="text-sm text-muted-foreground">
           Submission received. We&apos;re finishing your deck—check back here or in proposal history.
         </p>

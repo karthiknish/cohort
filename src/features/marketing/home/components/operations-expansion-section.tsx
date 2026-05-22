@@ -76,7 +76,7 @@ export function OperationsExpansionSection() {
                 className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-foreground underline-offset-4 transition-colors hover:underline"
               >
                 Open Ads workspace
-                <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden />
+                <ArrowUpRight className="size-4 shrink-0" aria-hidden />
               </Link>
             </div>
           </div>
@@ -85,7 +85,7 @@ export function OperationsExpansionSection() {
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
           <FadeIn>
             <div className="relative overflow-hidden rounded-[2rem] border border-border/60 bg-card p-6 text-foreground shadow-xl shadow-black/[0.06] sm:p-8">
-              <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-muted/40 blur-2xl" aria-hidden />
+              <div className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-muted/40 blur-2xl" aria-hidden />
               <div className="relative space-y-5">
                 <Badge variant="secondary" className="rounded-full border-border/60 bg-muted/50 font-medium text-foreground">
                   New operating system layer
@@ -109,15 +109,15 @@ export function OperationsExpansionSection() {
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-background ring-1 ring-border/60">
-                        <pillar.icon className="h-4 w-4 text-foreground" aria-hidden />
+                      <span className="flex size-9 items-center justify-center rounded-xl bg-background ring-1 ring-border/60">
+                        <pillar.icon className="size-4 text-foreground" aria-hidden />
                       </span>
                       <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{pillar.badge}</span>
                     </div>
                     <p className="mt-4 font-medium text-foreground">{pillar.title}</p>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">{pillar.description}</p>
                     <ArrowUpRight
-                      className="absolute right-3 top-3 h-4 w-4 text-muted-foreground opacity-0 transition-all motion-reduce:transition-none group-hover:opacity-100"
+                      className="absolute right-3 top-3 size-4 text-muted-foreground opacity-0 transition-all motion-reduce:transition-none group-hover:opacity-100"
                       aria-hidden
                     />
                   </Link>
@@ -133,8 +133,8 @@ export function OperationsExpansionSection() {
                 <ul className="mt-4 space-y-3">
                   {WHAT_CHANGED.map((line) => (
                     <li key={line} className="flex gap-3 text-sm leading-6 text-muted-foreground">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-                        <Check className="h-3 w-3" strokeWidth={2.5} aria-hidden />
+                      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+                        <Check className="size-3" strokeWidth={2.5} aria-hidden />
                       </span>
                       <span>{line}</span>
                     </li>
@@ -153,7 +153,7 @@ export function OperationsExpansionSection() {
                           aria-hidden
                         />
                       ) : null}
-                      <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold text-foreground">
+                      <span className="relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold text-foreground">
                         {item.step}
                       </span>
                       <div className="min-w-0 pt-0.5">

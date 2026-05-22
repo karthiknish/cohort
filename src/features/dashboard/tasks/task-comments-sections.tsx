@@ -38,7 +38,7 @@ function formatCommentTimestamp(comment: TaskComment): string {
 }
 
 function sortCommentsChronologically(items: TaskComment[]): TaskComment[] {
-  return [...items].sort((a, b) => {
+  return items.toSorted((a, b) => {
     const aMs = new Date(a.createdAt ?? 0).getTime()
     const bMs = new Date(b.createdAt ?? 0).getTime()
     return aMs - bMs
@@ -90,14 +90,14 @@ function TaskCommentThreadItem({
     <div key={comment.id} className="space-y-3">
       <div
         className={cn(
-          'rounded-lg border border-border/70 px-3 py-3 transition-colors',
+          'rounded-lg border border-border/70 p-3 transition-colors',
           depth > 0 && 'bg-muted/20',
           isActiveReply && 'border-primary/30 bg-primary/5',
           isBeingEdited && 'border-primary/30 bg-primary/5 opacity-90',
         )}
       >
         <div className="flex items-start gap-3">
-          <Avatar className="mt-0.5 h-10 w-10 border border-border/60 bg-background shadow-sm">
+          <Avatar className="mt-0.5 size-10 border border-border/60 bg-background shadow-sm">
             <AvatarFallback className="bg-muted text-[11px] font-semibold text-muted-foreground">
               {getInitials(comment.authorName)}
             </AvatarFallback>
@@ -127,28 +127,28 @@ function TaskCommentThreadItem({
                 {canManageComment(comment) ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground" aria-label="Comment actions">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" className="size-8 rounded-full text-muted-foreground" aria-label="Comment actions">
+                        <MoreHorizontal className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-44 rounded-xl">
                       <DropdownMenuItem onSelect={handleStartReplyClick}>
-                        <Reply className="h-4 w-4" />
+                        <Reply className="size-4" />
                         Reply
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={handleStartEditClick}>
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="size-4" />
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuItem variant="destructive" onSelect={handleRequestDeleteClick}>
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="size-4" />
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
                   <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-muted-foreground" onClick={handleStartReplyClick}>
-                    <Reply className="mr-1.5 h-3.5 w-3.5" />
+                    <Reply className="mr-1.5 size-3.5" />
                     Reply
                   </Button>
                 )}
@@ -174,12 +174,12 @@ function TaskCommentThreadItem({
                   className="h-8 rounded-lg px-2.5 text-muted-foreground hover:text-foreground"
                   onClick={handleStartReplyClick}
                 >
-                  <Reply className="mr-1.5 h-3.5 w-3.5" />
+                  <Reply className="mr-1.5 size-3.5" />
                   Reply
                 </Button>
                 {isBusy ? (
                   <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                    <LoaderCircle className="size-3.5 animate-spin" />
                     Updating…
                   </span>
                 ) : null}
@@ -274,7 +274,7 @@ export function TaskCommentsThreadList({
     <div className="space-y-3">
       {loading ? (
         <p className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-          <LoaderCircle className="h-4 w-4 animate-spin text-primary" />
+          <LoaderCircle className="size-4 animate-spin text-primary" />
           Loading conversation…
         </p>
       ) : sortedRoots.length === 0 ? (
@@ -368,7 +368,7 @@ export function TaskCommentsComposerSection({
             onClick={onReset}
             aria-label="Cancel reply or edit"
           >
-            <X className="mr-1 h-3.5 w-3.5" />
+            <X className="mr-1 size-3.5" />
             Cancel
           </Button>
         ) : null}
@@ -414,10 +414,10 @@ export function TaskCommentsComposerSection({
             onClick={onAttachClick}
             disabled={isSubmitting || Boolean(editingCommentId)}
             title={editingCommentId ? 'Attachments cannot be changed while editing' : 'Attach files'}
-            className="h-10 w-10 rounded-2xl border-border/60 bg-background"
+            className="size-10 rounded-2xl border-border/60 bg-background"
             aria-label={editingCommentId ? 'Attachments cannot be changed while editing' : 'Attach files'}
           >
-            <Paperclip className="h-4 w-4" />
+            <Paperclip className="size-4" />
           </Button>
           <Button
             type="button"
@@ -425,15 +425,15 @@ export function TaskCommentsComposerSection({
             onClick={onSubmit}
             disabled={isSubmitting || composerValue.trim().length === 0}
             title={editingCommentId ? 'Save changes' : 'Post comment'}
-            className={cn(editingCommentId ? 'h-10 rounded-lg px-4' : 'h-10 w-10 rounded-xl')}
+            className={cn(editingCommentId ? 'h-10 rounded-lg px-4' : 'size-10 rounded-xl')}
             aria-label={editingCommentId ? 'Save changes' : 'Post comment'}
           >
             {isSubmitting ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" />
+              <LoaderCircle className="size-4 animate-spin" />
             ) : editingCommentId ? (
               'Save'
             ) : (
-              <Send className="h-4 w-4" />
+              <Send className="size-4" />
             )}
           </Button>
         </div>

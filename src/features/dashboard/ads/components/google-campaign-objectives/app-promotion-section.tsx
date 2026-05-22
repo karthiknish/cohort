@@ -51,7 +51,7 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Smartphone className="w-4 h-4 text-secondary" />
+            <Smartphone className="size-4 text-secondary" />
             App Information
           </CardTitle>
           <CardDescription>
@@ -75,9 +75,9 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
                   <SelectItem key={store.value} value={store.value}>
                     <div className="flex items-center gap-2">
                       {store.value === 'GOOGLE_PLAY' ? (
-                        <Play className="w-4 h-4" />
+                        <Play className="size-4" />
                       ) : (
-                        <Store className="w-4 h-4" />
+                        <Store className="size-4" />
                       )}
                       <div className="flex flex-col items-start">
                         <span>{store.label}</span>
@@ -181,7 +181,7 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
       <Card className="border-secondary/20 bg-secondary/5">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <Smartphone className="w-5 h-5 text-secondary flex-shrink-0 mt-0.5" />
+            <Smartphone className="size-5 text-secondary flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <h4 className="font-medium text-sm">App Campaign Best Practices</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">

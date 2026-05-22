@@ -66,7 +66,7 @@ export function UserSearchPicker({ id, value, onChange, options, placeholder, se
           className={cn('w-full justify-between font-normal', !selectedLabel && 'text-muted-foreground')}
         >
           <span className="truncate">{selectedLabel || placeholder}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -84,7 +84,7 @@ export function UserSearchPicker({ id, value, onChange, options, placeholder, se
                     value={`${option.name} ${option.email ?? ''}`}
                     onSelect={selectHandlers[option.id]}
                   >
-                    <Check className={cn('mr-2 h-4 w-4', isSelected ? 'opacity-100' : 'opacity-0')} />
+                    <Check className={cn('mr-2 size-4', isSelected ? 'opacity-100' : 'opacity-0')} />
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate">{option.name}</span>
                       {option.email ? <span className="text-xs text-muted-foreground">{option.email}</span> : null}

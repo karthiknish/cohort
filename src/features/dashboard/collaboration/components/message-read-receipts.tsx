@@ -59,11 +59,11 @@ export function MessageReadReceipts({
       <Tooltip>
         <TooltipTrigger asChild>
           <span className={cn('flex items-center gap-0.5 text-muted-foreground', className)}>
-            {status === 'sent' && <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
-            {status === 'delivered' && <Check className="h-3.5 w-3.5 text-muted-foreground" />}
-            {status === 'read' && <CheckCheck className="h-3.5 w-3.5 text-muted-foreground" />}
+            {status === 'sent' && <Clock className="size-3.5 text-muted-foreground" />}
+            {status === 'delivered' && <Check className="size-3.5 text-muted-foreground" />}
+            {status === 'read' && <CheckCheck className="size-3.5 text-muted-foreground" />}
             {status === 'read_by_all' && (
-              <CheckCheck className="h-3.5 w-3.5 text-primary fill-primary" />
+              <CheckCheck className="size-3.5 text-primary fill-primary" />
             )}
             {readCount > 0 && (
               <span className="text-xs text-muted-foreground">{readCount}</span>
@@ -128,7 +128,7 @@ export function CompactReadReceipt({
         className
       )}
     >
-      <CheckCheck className="h-3 w-3" />
+      <CheckCheck className="size-3" />
       <span>{readBy.length}</span>
     </span>
   )
@@ -185,19 +185,18 @@ export function ReadReceiptDetail({
             Delivered but not read ({deliveredTo.length - readBy.length})
           </p>
           <div className="flex flex-wrap gap-1">
-            {deliveredTo
-              .filter((id) => !readBy.includes(id))
-              .map((userId) => {
-                const member = channelMembers?.find((m) => m.id === userId)
-                return (
-                  <span
-                    key={userId}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-muted-foreground text-xs"
-                  >
-                    {member?.name || userId}
-                  </span>
-                )
-              })}
+            {deliveredTo.flatMap((userId) => {
+              if (readBy.includes(userId)) return []
+              const member = channelMembers?.find((m) => m.id === userId)
+              return [(
+                <span
+                  key={userId}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-muted-foreground text-xs"
+                >
+                  {member?.name || userId}
+                </span>
+              )]
+            })}
           </div>
         </div>
       )}
@@ -257,12 +256,12 @@ export function MessageDeliveryStatus({
       <Tooltip>
         <TooltipTrigger asChild>
           <span className={cn('flex items-center gap-0.5 text-muted-foreground', className)}>
-            {status === 'sent' && <Check className="h-3.5 w-3.5 text-muted-foreground" />}
+            {status === 'sent' && <Check className="size-3.5 text-muted-foreground" />}
             {status === 'delivered' && (
-              <CheckCheck className="h-3.5 w-3.5 text-muted-foreground" />
+              <CheckCheck className="size-3.5 text-muted-foreground" />
             )}
             {status === 'read' && (
-              <CheckCheck className="h-3.5 w-3.5 text-primary fill-primary" />
+              <CheckCheck className="size-3.5 text-primary fill-primary" />
             )}
             {(readCount > 0 || deliveredCount > 0) && (
               <span className="text-xs text-muted-foreground">

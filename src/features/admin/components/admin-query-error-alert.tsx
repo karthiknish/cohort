@@ -22,7 +22,7 @@ export function AdminQueryErrorAlert({
 
   return (
     <Alert variant="destructive">
-      <CircleAlert className="h-4 w-4" />
+      <CircleAlert className="size-4" />
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription>{error}</AlertDescription>
     </Alert>

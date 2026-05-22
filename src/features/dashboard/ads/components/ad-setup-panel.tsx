@@ -65,12 +65,12 @@ function SetupTaskRow({
       <div className="flex gap-3">
         <span
           className={cn(
-            'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+            'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full',
             done ? 'bg-success/15 text-success' : 'bg-primary/10 text-primary',
           )}
           aria-hidden
         >
-          {done ? <CheckCircle2 className="h-4 w-4" /> : <CircleAlert className="h-4 w-4" />}
+          {done ? <CheckCircle2 className="size-4" /> : <CircleAlert className="size-4" />}
         </span>
         <div className="space-y-1">
           <p className="text-sm font-semibold text-foreground">{title}</p>
@@ -132,7 +132,7 @@ export function AdSetupPanel({
       <Button size="sm" onClick={onInitializeTikTok} disabled={initializingTikTok}>
         {initializingTikTok ? (
           <>
-            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+            <Loader2 className="mr-2 size-3 animate-spin" />
             Finishing…
           </>
         ) : (
@@ -155,7 +155,7 @@ export function AdSetupPanel({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <PlugZap className="h-4 w-4 text-primary" aria-hidden />
+              <PlugZap className="size-4 text-primary" aria-hidden />
               <CardTitle className="text-base">Finish ad account setup</CardTitle>
               {pendingTasks > 0 ? (
                 <Badge variant="secondary" className="font-normal">
@@ -181,7 +181,7 @@ export function AdSetupPanel({
       <CardContent className="space-y-4">
         {(initializingMeta || initializingTikTok || initializingGoogle) && !googleNeedsAccountSelection && !metaNeedsAccountSelection && !tiktokNeedsAccountSelection ? (
           <Alert className="border-accent/40 bg-accent/5">
-            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <Loader2 className="size-4 animate-spin text-primary" />
             <AlertTitle className="text-sm font-semibold">Completing setup…</AlertTitle>
             <AlertDescription className="text-xs text-muted-foreground">
               Linking your ad account and queuing the first sync. This usually takes a few seconds.
@@ -191,7 +191,7 @@ export function AdSetupPanel({
 
         {googleSetupMessage ? (
           <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className="size-4" />
             <AlertTitle className="text-sm">Google Ads setup issue</AlertTitle>
             <AlertDescription className="text-xs">{googleSetupMessage}</AlertDescription>
             <Button size="sm" variant="outline" className="mt-2" onClick={onOpenGoogleSetup}>
@@ -211,7 +211,7 @@ export function AdSetupPanel({
 
         {metaSetupMessage ? (
           <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className="size-4" />
             <AlertTitle className="text-sm">Meta Ads setup issue</AlertTitle>
             <AlertDescription className="text-xs">{metaSetupMessage}</AlertDescription>
             <Button size="sm" variant="outline" className="mt-2" onClick={onInitializeMeta}>
@@ -263,7 +263,7 @@ export function AdSetupPanel({
                 >
                   {initializingMeta ? (
                     <>
-                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      <Loader2 className="mr-2 size-3 animate-spin" />
                       Finishing…
                     </>
                   ) : (
@@ -283,7 +283,7 @@ export function AdSetupPanel({
 
         {tiktokSetupMessage ? (
           <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className="size-4" />
             <AlertTitle className="text-sm">TikTok Ads setup issue</AlertTitle>
             <AlertDescription className="text-xs">{tiktokSetupMessage}</AlertDescription>
             <Button size="sm" variant="outline" className="mt-2" onClick={onInitializeTikTok}>

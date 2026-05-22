@@ -72,8 +72,10 @@ export function useChannelMessagesQuery({
         const trimmedRows = hasMore ? pageRows.slice(0, 50) : pageRows
 
         const mapped: CollaborationMessage[] = trimmedRows
-          .map((row) => mapCollaborationMessageRow(row, { fallbackChannelType: channel.type }))
-          .filter((message): message is CollaborationMessage => Boolean(message))
+          .flatMap((row) => {
+            const message = mapCollaborationMessageRow(row, { fallbackChannelType: channel.type })
+            return message ? [message] : []
+          })
           .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
 
         const oldestRow = trimmedRows.length ? trimmedRows[trimmedRows.length - 1] : null

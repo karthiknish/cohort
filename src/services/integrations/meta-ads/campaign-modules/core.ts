@@ -366,7 +366,7 @@ export async function updateMetaCampaignBidding(options: UpdateCampaignBiddingOp
   // 2. Update each ad set's bid amount
   // Meta uses "bid_amount" in cents (like budgets) if the strategy allows it.
   // Note: Some bidding strategies don't support manual bids.
-  const updatePromises = adSets.map(async (adSet) => {
+  const updateAdSetBid = async (adSet: (typeof adSets)[number]) => {
     const updateParams = new URLSearchParams()
     updateParams.set('bid_amount', String(Math.round(biddingValue * 100)))
     await appendMetaAuthParams({ params: updateParams, accessToken, appSecret: process.env.META_APP_SECRET })
@@ -384,9 +384,9 @@ export async function updateMetaCampaignBidding(options: UpdateCampaignBiddingOp
     } catch {
       return { success: false, adSetId: adSet.id }
     }
-  })
+  }
 
-  const results = await Promise.all(updatePromises)
+  const results = await Promise.all(adSets.map(updateAdSetBid))
   const allSucceeded = results.every((r) => r.success)
 
   return { success: allSucceeded }

@@ -41,8 +41,10 @@ export const listAdSets = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
-      const adAccountId = await requireFacebookAdAccount(integration)
+      const [accessToken, adAccountId] = await Promise.all([
+        resolveFacebookAccessToken(args.workspaceId, integration, clientId),
+        requireFacebookAdAccount(integration),
+      ])
 
       const { listMetaAdSets } = await import('@/services/integrations/meta-ads/campaign-modules/adsets')
       const adSets = await listMetaAdSets({
@@ -86,8 +88,10 @@ export const createAdSet = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
-      const adAccountId = await requireFacebookAdAccount(integration)
+      const [accessToken, adAccountId] = await Promise.all([
+        resolveFacebookAccessToken(args.workspaceId, integration, clientId),
+        requireFacebookAdAccount(integration),
+      ])
 
       const { createMetaAdSet } = await import('@/services/integrations/meta-ads/campaign-modules/adsets')
       const result = await createMetaAdSet({

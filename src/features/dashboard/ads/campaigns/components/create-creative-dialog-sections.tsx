@@ -59,6 +59,10 @@ function createTextChangeHandler(onChange: (value: string) => void) {
   }
 }
 
+function noopImageUrlChange(_value: string) {
+  // Video creatives do not use image URL input.
+}
+
 function createSelectChangeHandler<T extends string>(onChange: (value: T) => void) {
   return (value: string) => {
     onChange(value as T)
@@ -217,7 +221,7 @@ export function CreateCreativeDialogForm({
 
       {isMeta && !selectedAdSetId && !availableAdSets?.length ? (
         <div className="flex items-start gap-2 rounded-md border border-warning/20 bg-warning/10 p-3">
-          <AlertCircle className="mt-0.5 h-4 w-4 text-warning" aria-hidden />
+          <AlertCircle className="mt-0.5 size-4 text-warning" aria-hidden />
           <div className="flex-1">
             <p className="text-sm font-medium text-warning">No Ad Set Available</p>
             <p className="text-xs text-warning/80">You need to create an ad set before creating ads. Please create an ad set first.</p>
@@ -279,7 +283,7 @@ export function CreateCreativeDialogForm({
             videoId={videoId}
             uploading={uploadingVideo}
             disabled={loading}
-            onImageUrlChange={() => {}}
+            onImageUrlChange={noopImageUrlChange}
             onFileSelect={onVideoUpload}
             onClear={onClearVideo}
           />
@@ -349,7 +353,7 @@ export function CreateCreativeDialogForm({
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
-        <Button type="submit" disabled={loading || !name.trim()}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{loading ? 'Creating…' : 'Create Ad'}</Button>
+        <Button type="submit" disabled={loading || !name.trim()}>{loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}{loading ? 'Creating…' : 'Create Ad'}</Button>
       </DialogFooter>
     </form>
   )

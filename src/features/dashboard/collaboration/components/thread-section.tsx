@@ -43,13 +43,13 @@ export function ThreadToggleButton({
       aria-expanded={isOpen}
     >
       {isLoading && !isOpen && !hasRepliesLoaded ? (
-        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+        <LoaderCircle className="size-3.5 animate-spin" />
       ) : isOpen ? (
-        <ChevronDown className="h-3.5 w-3.5" />
+        <ChevronDown className="size-3.5" />
       ) : (
-        <ChevronRight className="h-3.5 w-3.5" />
+        <ChevronRight className="size-3.5" />
       )}
-      <MessageSquare className="h-3.5 w-3.5" />
+      <MessageSquare className="size-3.5" />
       <span className="font-medium">
         {replyCount === 1 ? '1 reply' : `${replyCount} replies`}
       </span>
@@ -83,7 +83,7 @@ export function ThreadError({ error, isLoading, onRetry }: ThreadErrorProps) {
         onClick={onRetry}
         disabled={isLoading}
       >
-        <RefreshCw className={cn('mr-1 h-3 w-3', isLoading && 'animate-spin')} />
+        <RefreshCw className={cn('mr-1 size-3', isLoading && 'animate-spin')} />
         Retry
       </Button>
     </div>
@@ -97,7 +97,7 @@ export interface ThreadLoadingProps {
 export function ThreadLoading({ hasReplies }: ThreadLoadingProps) {
   return (
     <div aria-live="polite" aria-busy="true" className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
-      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+      <LoaderCircle className="size-3.5 animate-spin" />
       <span>{hasReplies ? 'Loading more replies…' : 'Loading replies…'}</span>
     </div>
   )
@@ -130,7 +130,7 @@ export function ThreadLoadMoreButton({ isLoading, onLoadMore }: ThreadLoadMoreBu
       onClick={onLoadMore}
       disabled={isLoading}
     >
-      <RefreshCw className={cn('h-3.5 w-3.5', isLoading && 'animate-spin')} />
+      <RefreshCw className={cn('size-3.5', isLoading && 'animate-spin')} />
       {isLoading ? 'Loading…' : 'Load older replies'}
     </Button>
   )
@@ -150,7 +150,7 @@ export function ThreadReplyButton({ onReply }: ThreadReplyButtonProps) {
         className="h-9 w-full justify-start text-xs text-muted-foreground hover:text-foreground"
         onClick={onReply}
       >
-        <Reply className="mr-2 h-3.5 w-3.5" />
+        <Reply className="mr-2 size-3.5" />
         Reply to thread…
       </Button>
     </div>
@@ -170,7 +170,7 @@ export function StartThreadButton({ onReply }: StartThreadButtonProps) {
       className="inline-flex items-center gap-2 text-xs text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
       onClick={onReply}
     >
-      <Reply className="h-3.5 w-3.5" />
+      <Reply className="size-3.5" />
       <span>Reply</span>
     </Button>
   )
@@ -191,7 +191,7 @@ export function ThreadRetryButton({ isLoading, onRetry }: ThreadRetryButtonProps
       onClick={onRetry}
       disabled={isLoading}
     >
-      <RefreshCw className={cn('mr-1 h-3 w-3', isLoading && 'animate-spin')} />
+      <RefreshCw className={cn('mr-1 size-3', isLoading && 'animate-spin')} />
       {isLoading ? 'Retrying…' : 'Retry'}
     </Button>
   )

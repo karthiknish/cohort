@@ -36,7 +36,7 @@ function ReactionButton({
   const isPendingReaction = pendingEmoji === reaction.emoji
   const isActive = Boolean(currentUserId && reaction.userIds.includes(currentUserId))
 
-  const handleClick = useCallback(() => {
+  const onToggleReaction = useCallback(() => {
     onToggle(reaction.emoji)
   }, [onToggle, reaction.emoji])
 
@@ -53,11 +53,11 @@ function ReactionButton({
           )}
           disabled={disabled}
           aria-pressed={isActive}
-          onClick={handleClick}
+          onClick={onToggleReaction}
         >
           <span className="flex items-center gap-1.5">
             {isPendingReaction ? (
-              <LoaderCircle className="h-3 w-3 animate-spin" />
+              <LoaderCircle className="size-3 animate-spin" />
             ) : (
               <span className="text-base leading-none">{reaction.emoji}</span>
             )}

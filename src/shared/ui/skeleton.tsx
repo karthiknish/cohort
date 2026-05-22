@@ -120,7 +120,7 @@ export function SkeletonList({
     <div className={cn('space-y-4', className)} {...props}>
       {Array.from({ length: items }, (_, item) => `list-item-${item + 1}`).map((itemKey) => (
         <div key={itemKey} className="flex items-center gap-3">
-          {showAvatar && <Skeleton className="h-10 w-10 shrink-0 rounded-full" />}
+          {showAvatar && <Skeleton className="size-10 shrink-0 rounded-full" />}
           <div className="flex-1 space-y-2">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-3 w-1/2" />
@@ -140,12 +140,12 @@ export function SkeletonDashboardCard({ className, ...props }: SkeletonProps) {
     <div className={cn('space-y-4 rounded-lg border bg-card p-6', className)} {...props}>
       <div className="flex items-center justify-between">
         <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-8 w-8 rounded-full" />
+        <Skeleton className="size-8 rounded-full" />
       </div>
       <Skeleton className="h-8 w-24" />
       <Skeleton className="h-2 w-full" />
       <div className="flex items-center gap-2">
-        <Skeleton className="h-3 w-3 rounded-full" />
+        <Skeleton className="size-3 rounded-full" />
         <Skeleton className="h-3 w-20" />
       </div>
     </div>

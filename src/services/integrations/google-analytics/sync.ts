@@ -78,23 +78,23 @@ export async function runGaReport(options: {
       rowCount = payload.rowCount
     }
 
-    const pageRows = (payload.rows ?? [])
-      .map((row) => {
+    const pageRows = (payload.rows ?? []).flatMap((row) => {
         const rawDate = row.dimensionValues?.[0]?.value ?? ''
         const metricValues = row.metricValues ?? []
         const totalUsers = Number(metricValues[0]?.value ?? 0)
         const sessions = Number(metricValues[1]?.value ?? 0)
         const conversions = Number(metricValues[2]?.value ?? 0)
         const totalRevenue = Number(metricValues[3]?.value ?? 0)
-        return {
-          date: formatGaDate(rawDate),
+        const date = formatGaDate(rawDate)
+        if (typeof date !== 'string' || date.length < 8) return []
+        return [{
+          date,
           totalUsers: Number.isFinite(totalUsers) ? totalUsers : 0,
           sessions: Number.isFinite(sessions) ? sessions : 0,
           conversions: Number.isFinite(conversions) ? conversions : 0,
           totalRevenue: Number.isFinite(totalRevenue) ? totalRevenue : 0,
-        }
+        }]
       })
-      .filter((row) => typeof row.date === 'string' && row.date.length >= 8)
 
     allRows.push(...pageRows)
 

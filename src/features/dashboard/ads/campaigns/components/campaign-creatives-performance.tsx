@@ -4,6 +4,7 @@ import { useCallback, useMemo } from 'react'
 import { BarChart3, MousePointerClick, Percent, Sparkles, Target, TrendingUp, Wallet } from 'lucide-react'
 
 import { cn, formatCurrency } from '@/lib/utils'
+import { EN_US_COMPACT_NUMBER_FORMATTER } from '@/lib/intl/formatters'
 import { Badge } from '@/shared/ui/badge'
 import {
   Select,
@@ -40,7 +41,7 @@ function formatPercent(value: number): string {
 }
 
 function formatCompactNumber(value: number): string {
-  return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
+  return EN_US_COMPACT_NUMBER_FORMATTER.format(value)
 }
 
 function KpiTile({
@@ -57,7 +58,7 @@ function KpiTile({
   return (
     <div className="flex min-w-[7.5rem] flex-1 flex-col gap-1 rounded-xl border border-border/60 bg-background/80 px-3 py-2.5 shadow-sm">
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        <Icon className="h-3 w-3 shrink-0" aria-hidden />
+        <Icon className="size-3 shrink-0" aria-hidden />
         {label}
       </div>
       <p className="text-sm font-semibold tabular-nums tracking-tight text-foreground">{value}</p>
@@ -98,7 +99,7 @@ export function CampaignCreativesPerformanceStrip({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-primary" aria-hidden />
+            <BarChart3 className="size-4 text-primary" aria-hidden />
             <h3 className="text-sm font-semibold text-foreground">
               {isMeta ? 'Meta ad performance' : 'Ad performance'}
             </h3>

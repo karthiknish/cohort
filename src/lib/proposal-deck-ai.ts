@@ -127,8 +127,10 @@ ${summary ?? 'Not available'}`
 
     const lines = cleaned
       .split(/\r?\n+/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
+      .flatMap((line) => {
+        const trimmed = line.trim()
+        return trimmed.length > 0 ? [trimmed] : []
+      })
 
     if (!lines.length) {
       return cleaned

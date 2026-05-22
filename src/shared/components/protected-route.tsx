@@ -138,7 +138,7 @@ function AccessOverlay({
         ) : null}
         {showSpinner ? (
           <div className="mb-4 flex justify-center">
-            <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
+            <LoaderCircle className="size-6 animate-spin text-primary" />
           </div>
         ) : null}
         <h2 className="mb-2 text-lg font-semibold text-foreground">{title}</h2>

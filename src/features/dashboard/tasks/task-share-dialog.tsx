@@ -107,7 +107,7 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="ghost" size="sm" className="h-8 gap-1">
-            <Share2 className="h-3.5 w-3.5" />
+            <Share2 className="size-3.5" />
             Share
           </Button>
         )}
@@ -115,7 +115,7 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5" />
+            <Share2 className="size-5" />
             Share Task
           </DialogTitle>
           <DialogDescription>
@@ -147,12 +147,12 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
                 >
                   {copied ? (
                     <>
-                      <Check className="h-4 w-4" />
+                      <Check className="size-4" />
                       Copied
                     </>
                   ) : (
                     <>
-                      <Copy className="h-4 w-4" />
+                      <Copy className="size-4" />
                       Copy
                     </>
                   )}
@@ -192,7 +192,7 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
                   disabled={!emailInput}
                   className="shrink-0"
                 >
-                  <Link2 className="h-4 w-4" />
+                  <Link2 className="size-4" />
                 </Button>
               </div>
             </div>
@@ -208,7 +208,7 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
                 size="sm"
                 className="gap-1.5"
               >
-                <Mail className="h-4 w-4" />
+                <Mail className="size-4" />
                 Open Email
               </Button>
             </div>

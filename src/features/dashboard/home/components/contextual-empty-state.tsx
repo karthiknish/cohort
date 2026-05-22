@@ -40,8 +40,8 @@ export function ContextualEmptyState({
   return (
     <Card className={cn('border-dashed', className)}>
       <CardContent className="flex flex-col items-center justify-center py-12 px-6 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/10 text-primary mb-4">
-          <Icon className="h-8 w-8" />
+        <div className="flex size-16 items-center justify-center rounded-full bg-accent/10 text-primary mb-4">
+          <Icon className="size-8" />
         </div>
         
         <h3 className="text-lg font-semibold text-foreground">{title}</h3>
@@ -51,7 +51,7 @@ export function ContextualEmptyState({
           <Button asChild>
             <Link href={actionHref}>
               {actionLabel}
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ml-2 size-4" />
             </Link>
           </Button>
           
@@ -67,13 +67,13 @@ export function ContextualEmptyState({
         {tipItems.length > 0 && (
           <div className="mt-8 w-full max-w-md">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-3">
-              <Sparkles className="h-3 w-3" />
+              <Sparkles className="size-3" />
               <span>Quick tips</span>
             </div>
             <ul className="space-y-2 text-left">
               {tipItems.map((tipItem) => (
                 <li key={tipItem.id} className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                  <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
                     {tipItem.order}
                   </span>
                   {tipItem.tip}

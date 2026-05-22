@@ -24,7 +24,7 @@ const Textarea = ({ className, autoGrow, onChange, ref, ...props }: TextareaProp
     }
   }, [ref])
 
-  const handleChange = React.useCallback(
+  const onTextareaChange = React.useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       if (autoGrow && internalRef.current) {
         internalRef.current.style.height = 'auto'
@@ -47,7 +47,7 @@ const Textarea = ({ className, autoGrow, onChange, ref, ...props }: TextareaProp
         interactiveTransitionClass,
         className
       )}
-      onChange={handleChange}
+      onChange={onTextareaChange}
       {...props}
     />
   )

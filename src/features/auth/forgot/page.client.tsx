@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useReducer } from 'react'
 import Link from 'next/link'
 import { CircleCheck, LoaderCircle } from 'lucide-react'
 
@@ -20,14 +20,63 @@ import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
 
 const primaryButtonClassName = 'h-11 w-full rounded-full text-sm font-semibold shadow-sm'
 
+type ForgotPasswordState = {
+  email: string
+  submitting: boolean
+  success: boolean
+  error: string | null
+  emailError: string | null
+}
+
+type ForgotPasswordAction =
+  | { type: 'setEmail'; value: string }
+  | { type: 'setSubmitting'; value: boolean }
+  | { type: 'setSuccess'; value: boolean }
+  | { type: 'setError'; value: string | null }
+  | { type: 'setEmailError'; value: string | null }
+  | { type: 'startSubmit' }
+  | { type: 'submitSuccess' }
+  | { type: 'submitFailed'; error: string }
+  | { type: 'resetSuccess' }
+
+const initialForgotPasswordState: ForgotPasswordState = {
+  email: '',
+  submitting: false,
+  success: false,
+  error: null,
+  emailError: null,
+}
+
+function forgotPasswordReducer(state: ForgotPasswordState, action: ForgotPasswordAction): ForgotPasswordState {
+  switch (action.type) {
+    case 'setEmail':
+      return { ...state, email: action.value, emailError: null }
+    case 'setSubmitting':
+      return { ...state, submitting: action.value }
+    case 'setSuccess':
+      return { ...state, success: action.value }
+    case 'setError':
+      return { ...state, error: action.value }
+    case 'setEmailError':
+      return { ...state, emailError: action.value }
+    case 'startSubmit':
+      return { ...state, submitting: true, success: false, error: null, emailError: null }
+    case 'submitSuccess':
+      return { ...state, submitting: false, success: true }
+    case 'submitFailed':
+      return { ...state, submitting: false, error: action.error }
+    case 'resetSuccess':
+      return { ...state, success: false }
+    default:
+      return state
+  }
+}
+
 export default function ForgotPasswordPage() {
   const { resetPassword } = useAuth()
   const { toast } = useToast()
-  const [email, setEmail] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [emailError, setEmailError] = useState<string | null>(null)
+  const [state, dispatch] = useReducer(forgotPasswordReducer, initialForgotPasswordState)
+  const { email, submitting, success, error, emailError } = state
 
   const validateEmail = useCallback((email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -36,42 +85,34 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setEmailError(null)
-
     if (!validateEmail(email)) {
-      setEmailError('Please enter a valid email address')
+      dispatch({ type: 'setEmailError', value: 'Please enter a valid email address' })
       return
     }
 
     if (submitting) return
 
-    setSubmitting(true)
-    setSuccess(false)
-    setError(null)
+    dispatch({ type: 'startSubmit' })
 
     void resetPassword(email)
       .then(() => {
-        setSuccess(true)
+        dispatch({ type: 'submitSuccess' })
         toast({
           title: 'Check your inbox',
           description: 'If an account exists for this email, we sent password reset instructions.',
         })
       })
       .catch((err: unknown) => {
-        setError(getFriendlyAuthErrorMessage(err))
-      })
-      .finally(() => {
-        setSubmitting(false)
+        dispatch({ type: 'submitFailed', error: getFriendlyAuthErrorMessage(err) })
       })
   }, [email, resetPassword, submitting, toast, validateEmail])
 
   const handleEmailChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setEmail(event.target.value)
-    setEmailError(null)
+    dispatch({ type: 'setEmail', value: event.target.value })
   }, [])
 
   const handleResetAnotherEmail = useCallback(() => {
-    setSuccess(false)
+    dispatch({ type: 'resetSuccess' })
   }, [])
 
   const handleOpenEmailApp = useCallback(() => {
@@ -125,7 +166,7 @@ export default function ForgotPasswordPage() {
                   <Button type="submit" className={primaryButtonClassName} disabled={submitting}>
                     {submitting ? (
                       <>
-                        <LoaderCircle className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                        <LoaderCircle className="mr-2 size-4 animate-spin" aria-hidden />
                         Sending reset link…
                       </>
                     ) : (
@@ -138,8 +179,8 @@ export default function ForgotPasswordPage() {
           ) : (
             <FadeIn as="div" className="space-y-5">
               <div className="rounded-2xl border border-border/60 bg-muted/30 p-6 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
-                  <CircleCheck className="h-6 w-6" aria-hidden />
+                <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
+                  <CircleCheck className="size-6" aria-hidden />
                 </div>
                 <h3 className="mb-1 font-semibold text-foreground">Check your email</h3>
                 <p className="mb-4 text-sm text-muted-foreground">

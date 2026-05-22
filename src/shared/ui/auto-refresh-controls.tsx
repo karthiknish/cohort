@@ -96,12 +96,12 @@ export function AutoRefreshControls({
       <Button
         variant="outline"
         size="icon"
-        className="h-8 w-8"
+        className="size-8"
         onClick={handleManualRefresh}
         disabled={disabled || isRefreshing}
         aria-label={isRefreshing ? 'Refreshing' : 'Refresh now'}
       >
-        <RotateCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} aria-hidden />
+        <RotateCw className={cn('size-4', isRefreshing && 'animate-spin')} aria-hidden />
       </Button>
     </div>
   )

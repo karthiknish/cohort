@@ -139,12 +139,12 @@ function HubCluster({
               <div className="flex items-start justify-between gap-2">
                 <span
                   className={cn(
-                    'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary ring-1 ring-primary/10',
+                    'inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary ring-1 ring-primary/10',
                   )}
                 >
-                  <Icon className="h-5 w-5" aria-hidden />
+                  <Icon className="size-5" aria-hidden />
                 </span>
-                <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" aria-hidden />
+                <ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" aria-hidden />
               </div>
               <p className="mt-3 text-sm font-semibold text-foreground">{tile.title}</p>
               <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{tile.description}</p>

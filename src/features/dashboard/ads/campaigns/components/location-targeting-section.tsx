@@ -66,6 +66,16 @@ export function LocationTargetingSection({
     })
   }, [])
 
+  const handleGeoSelect = useCallback(
+    (item: { id: string; name: string }) => {
+      toast({
+        title: 'Geo target found',
+        description: `${item.name} (${item.id}) — add via Meta Ads Manager or ad set creation. Map pins here are for planning only.`,
+      })
+    },
+    [],
+  )
+
   const locationSelectHandlers = useMemo(
     () =>
       Object.fromEntries(
@@ -101,8 +111,8 @@ export function LocationTargetingSection({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-info/10 ring-1 ring-info/20">
-            <Globe className="h-4 w-4 text-info" aria-hidden />
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-info/10 ring-1 ring-info/20">
+            <Globe className="size-4 text-info" aria-hidden />
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold tracking-tight text-foreground">Geography</p>
@@ -142,7 +152,7 @@ export function LocationTargetingSection({
                 aria-pressed={isEditing}
                 aria-label="Edit locations"
               >
-                <Edit2 className="h-3.5 w-3.5" aria-hidden />
+                <Edit2 className="size-3.5" aria-hidden />
                 {isEditing ? 'Done' : 'Edit'}
               </Button>
             </TooltipTrigger>
@@ -159,12 +169,7 @@ export function LocationTargetingSection({
           clientId={clientId}
           mode="geolocations"
           placeholder="Search Meta geo targets (reference for Ads Manager)…"
-          onSelect={(item) => {
-            toast({
-              title: 'Geo target found',
-              description: `${item.name} (${item.id}) — add via Meta Ads Manager or ad set creation. Map pins here are for planning only.`,
-            })
-          }}
+          onSelect={handleGeoSelect}
         />
       ) : null}
 
@@ -190,7 +195,7 @@ export function LocationTargetingSection({
               )}
               onClick={locationSelectHandlers[loc.id]}
             >
-              <MapPin className="mr-1 h-3 w-3 shrink-0" aria-hidden />
+              <MapPin className="mr-1 size-3 shrink-0" aria-hidden />
               {loc.name}
               {isEditing ? (
                 <button
@@ -199,7 +204,7 @@ export function LocationTargetingSection({
                   className="ml-1 rounded-sm p-0.5 hover:bg-destructive/15 hover:text-destructive"
                   aria-label={`Remove ${loc.name}`}
                 >
-                  <X className="h-3 w-3" aria-hidden />
+                  <X className="size-3" aria-hidden />
                 </button>
               ) : null}
             </Badge>

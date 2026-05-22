@@ -63,9 +63,7 @@ export const deleteConversation = authenticatedMutation({
       .withIndex('by_workspace_conversation_createdAt', (q) => q.eq('workspaceId', args.workspaceId).eq('conversationLegacyId', args.conversationId))
       .collect()
 
-    for (const msg of messages) {
-      await ctx.db.delete(msg._id)
-    }
+    await Promise.all(messages.map(async (msg) => ctx.db.delete(msg._id)))
 
     await ctx.db.delete(existing._id)
     return { ok: true as const, deletedMessages: messages.length }

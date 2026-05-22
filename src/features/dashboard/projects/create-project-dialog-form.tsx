@@ -63,7 +63,7 @@ function ProjectTagChip({
 
   return (
     <Badge key={tag} variant="secondary" className="gap-1 pr-1">
-      <Tag className="h-3 w-3" />
+      <Tag className="size-3" />
       {tag}
       <button
         type="button"
@@ -72,7 +72,7 @@ function ProjectTagChip({
         disabled={disabled}
         aria-label={`Remove tag ${tag}`}
       >
-        <X className="h-3 w-3" />
+        <X className="size-3" />
       </button>
     </Badge>
   )
@@ -107,7 +107,7 @@ function ProjectDateField({
             disabled={disabled}
             aria-label={`${label} — open calendar`}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" aria-hidden />
+            <CalendarIcon className="mr-2 size-4" aria-hidden />
             {selected ? format(selected, 'PPP') : <span>Pick a date</span>}
           </Button>
         </PopoverTrigger>
@@ -279,7 +279,7 @@ export function CreateProjectFormFields({
             disabled={loading || !state.tagInput.trim() || state.tags.length >= 10}
             aria-label="Add tag"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4" />
           </Button>
         </div>
         {state.tags.length > 0 ? (

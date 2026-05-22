@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Edit2, Heart, Plus, X } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
@@ -91,24 +91,40 @@ export function AudienceEditorSection({
     })
   }, [onRemoveInterest])
 
-  const editButton = (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={isEditing ? 'default' : 'ghost'}
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleEditInterests}
-            aria-pressed={isEditing}
-            aria-label="Edit interests"
-          >
-            <Edit2 className="h-3.5 w-3.5" aria-hidden />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{isEditing ? 'Exit interest editing' : 'Edit interests'}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+  const handleMetaInterestSelect = useCallback(
+    (item: { id: string; name: string }) => {
+      if (onAddInterest) {
+        onAddInterest({ id: item.id, name: item.name })
+      }
+    },
+    [onAddInterest],
+  )
+
+  const handleSaveTargetingClick = useCallback(() => {
+    void onSaveTargeting?.()
+  }, [onSaveTargeting])
+
+  const editButton = useMemo(
+    () => (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={isEditing ? 'default' : 'ghost'}
+              size="icon"
+              className="size-8"
+              onClick={handleEditInterests}
+              aria-pressed={isEditing}
+              aria-label="Edit interests"
+            >
+              <Edit2 className="size-3.5" aria-hidden />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{isEditing ? 'Exit interest editing' : 'Edit interests'}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    ),
+    [handleEditInterests, isEditing],
   )
 
   return (
@@ -129,11 +145,7 @@ export function AudienceEditorSection({
               clientId={clientId}
               mode="interests"
               disabled={savingTargeting}
-              onSelect={(item) => {
-                if (onAddInterest) {
-                  onAddInterest({ id: item.id, name: item.name })
-                }
-              }}
+              onSelect={handleMetaInterestSelect}
             />
           ) : (
             <div className="flex gap-2">
@@ -144,7 +156,7 @@ export function AudienceEditorSection({
                 className="h-9 flex-1 text-sm"
               />
               <Button size="sm" className="h-9 shrink-0 px-3" onClick={handleAddInterest}>
-                <Plus className="h-4 w-4" aria-hidden />
+                <Plus className="size-4" aria-hidden />
                 <span className="sr-only">Add interest</span>
               </Button>
             </div>
@@ -174,7 +186,7 @@ export function AudienceEditorSection({
               size="sm"
               className="w-full sm:w-auto"
               disabled={savingTargeting}
-              onClick={() => void onSaveTargeting()}
+              onClick={handleSaveTargetingClick}
             >
               {savingTargeting ? 'Saving…' : 'Save to ad set'}
             </Button>
@@ -263,7 +275,7 @@ function AudienceInterestBadge({
 
   return (
     <Badge variant="outline" className="group text-xs">
-      <Heart className="mr-1 h-3 w-3 text-accent" aria-hidden />
+      <Heart className="mr-1 size-3 text-accent" aria-hidden />
       {name}
       {removable ? (
         <button
@@ -272,7 +284,7 @@ function AudienceInterestBadge({
           className="ml-1 rounded-sm opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
           aria-label={`Remove ${name}`}
         >
-          <X className="h-3 w-3" aria-hidden />
+          <X className="size-3" aria-hidden />
         </button>
       ) : null}
     </Badge>

@@ -18,10 +18,15 @@ import { formatProviderName } from '@/lib/themes'
 import { normalizeAdsProviderId } from '@/domain/ads/provider'
 import { listItemEnterClass } from '@/lib/motion'
 import { MotionCard } from '@/shared/ui/motion-primitives'
+import { EN_US_NUMBER_FORMATTER } from '@/lib/intl/formatters'
 import { cn, formatCurrency } from '@/lib/utils'
 
 import type { ProviderSummary } from './types'
 import { PROVIDER_ICON_MAP } from '../constants'
+
+function formatNumber(value: number): string {
+  return EN_US_NUMBER_FORMATTER.format(value)
+}
 
 interface PerformanceSummaryCardProps {
   providerSummaries: Record<string, ProviderSummary>
@@ -58,16 +63,14 @@ export function PerformanceSummaryCard({
   emptyCtaHref = '#connect-ad-platforms',
   showActions = true,
 }: PerformanceSummaryCardProps) {
-  const formatNumber = (value: number): string => new Intl.NumberFormat('en-US').format(value)
-
   return (
     <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
       <CardHeader className="flex flex-col gap-4 border-b border-border/50 pb-5 md:flex-row md:items-start md:justify-between">
         <div className="flex flex-col gap-2">
           <p className={ADS_PAGE_THEME.sectionEyebrow}>By platform</p>
           <CardTitle className="flex items-center gap-3 text-lg font-semibold tracking-tight">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/10">
-              <BarChart3 className="h-5 w-5 text-primary" aria-hidden />
+            <div className="flex size-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/10">
+              <BarChart3 className="size-5 text-primary" aria-hidden />
             </div>
             {title}
           </CardTitle>
@@ -85,7 +88,7 @@ export function PerformanceSummaryCard({
               disabled={metricsLoading}
               className="h-10 px-4 inline-flex items-center gap-2 motion-chromatic hover:shadow-md"
             >
-              <RefreshCw className={cn('h-4 w-4', metricsLoading && 'animate-spin')} />
+              <RefreshCw className={cn('size-4', metricsLoading && 'animate-spin')} />
               Refresh
             </Button>
             <Button
@@ -95,7 +98,7 @@ export function PerformanceSummaryCard({
               onClick={onExport}
               className="h-10 px-4 inline-flex items-center gap-2 motion-chromatic hover:shadow-md"
             >
-              <Download className="h-4 w-4" />
+              <Download className="size-4" />
               Export CSV
             </Button>
           </div>
@@ -115,8 +118,8 @@ export function PerformanceSummaryCard({
           </Alert>
         ) : !hasMetrics ? (
           <div className={ADS_PAGE_THEME.emptyState}>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/50 ring-1 ring-border/50">
-              <BarChart3 className="h-6 w-6 text-muted-foreground/60" aria-hidden />
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-muted/50 ring-1 ring-border/50">
+              <BarChart3 className="size-6 text-muted-foreground/60" aria-hidden />
             </div>
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">{emptyMessage}</p>
             <Button asChild size="sm" variant="outline" className="rounded-full">
@@ -152,11 +155,11 @@ export function PerformanceSummaryCard({
                   <Card className={cn(ADS_PAGE_THEME.providerTile, 'motion-chromatic-lg')}>
                     <CardHeader className="border-b border-border/40 pb-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/15 bg-primary/10">
+                        <div className="flex size-9 items-center justify-center rounded-xl border border-primary/15 bg-primary/10">
                           {ProviderIcon ? (
-                            <ProviderIcon className="h-4 w-4 text-primary" aria-hidden />
+                            <ProviderIcon className="size-4 text-primary" aria-hidden />
                           ) : (
-                            <BarChart3 className="h-4 w-4 text-primary" aria-hidden />
+                            <BarChart3 className="size-4 text-primary" aria-hidden />
                           )}
                         </div>
                         <div>

@@ -75,7 +75,7 @@ function TrapezoidSegment({
   return (
     <div className="relative flex w-full justify-center" style={containerStyle}>
       <svg
-        className="h-full w-full max-w-md"
+        className="size-full max-w-md"
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
         aria-hidden
@@ -148,7 +148,7 @@ export function InsightsProportionalFunnel({
               />
               {index < layoutStages.length - 1 ? (
                 <ArrowDown
-                  className="mx-auto h-3.5 w-3.5 text-muted-foreground/35"
+                  className="mx-auto size-3.5 text-muted-foreground/35"
                   aria-hidden
                 />
               ) : null}

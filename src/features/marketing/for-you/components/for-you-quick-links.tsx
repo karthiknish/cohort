@@ -53,8 +53,8 @@ function QuickLinkCard({ link }: { link: QuickLink }) {
       href={link.href}
       className="group flex min-w-0 flex-1 flex-col gap-3 rounded-xl border border-border/60 bg-card p-4 shadow-sm transition-[border-color,box-shadow] hover:border-border hover:shadow-md"
     >
-      <div className={cn('flex h-9 w-9 items-center justify-center rounded-lg', link.iconClass)}>
-        <Icon className="h-[18px] w-[18px]" aria-hidden />
+      <div className={cn('flex size-9 items-center justify-center rounded-lg', link.iconClass)}>
+        <Icon className="size-[18px]" aria-hidden />
       </div>
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary">{link.name}</p>

@@ -1,7 +1,7 @@
 'use client'
 
 import { notifyFailure } from '@/lib/notifications'
-import { useState, useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useReducer } from 'react'
 import { Filter, X, Save } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -65,6 +65,67 @@ const EMPTY_AVAILABLE_FILTERS: Array<{
 
 const EMPTY_SAVED_FILTERS: FilterConfig[] = []
 
+type AdvancedFilterState = {
+  open: boolean
+  currentFilters: FilterMap
+  filterName: string
+  sortBy: string
+  sortOrder: 'asc' | 'desc'
+}
+
+type AdvancedFilterAction =
+  | { type: 'setOpen'; value: boolean }
+  | { type: 'setCurrentFilters'; value: FilterMap | ((prev: FilterMap) => FilterMap) }
+  | { type: 'setFilterName'; value: string }
+  | { type: 'setSortBy'; value: string }
+  | { type: 'setSortOrder'; value: 'asc' | 'desc' }
+  | { type: 'loadSavedFilter'; filters: FilterMap; sortBy: string; sortOrder: 'asc' | 'desc' }
+  | { type: 'clearFilters' }
+  | { type: 'resetFilterName' }
+
+function createInitialAdvancedFilterState(): AdvancedFilterState {
+  return {
+    open: false,
+    currentFilters: {},
+    filterName: '',
+    sortBy: '',
+    sortOrder: 'desc',
+  }
+}
+
+function advancedFilterReducer(state: AdvancedFilterState, action: AdvancedFilterAction): AdvancedFilterState {
+  switch (action.type) {
+    case 'setOpen':
+      return { ...state, open: action.value }
+    case 'setCurrentFilters':
+      return {
+        ...state,
+        currentFilters:
+          typeof action.value === 'function' ? action.value(state.currentFilters) : action.value,
+      }
+    case 'setFilterName':
+      return { ...state, filterName: action.value }
+    case 'setSortBy':
+      return { ...state, sortBy: action.value }
+    case 'setSortOrder':
+      return { ...state, sortOrder: action.value }
+    case 'loadSavedFilter':
+      return {
+        ...state,
+        currentFilters: action.filters,
+        sortBy: action.sortBy,
+        sortOrder: action.sortOrder,
+        open: false,
+      }
+    case 'clearFilters':
+      return { ...state, currentFilters: {} }
+    case 'resetFilterName':
+      return { ...state, filterName: '' }
+    default:
+      return state
+  }
+}
+
 /**
  * Advanced filtering panel with saved configurations
  */
@@ -79,28 +140,28 @@ export function AdvancedFilter({
   className,
 }: AdvancedFilterProps) {
   const { toast } = useToast()
-  const [open, setOpen] = useState(false)
-  const [currentFilters, setCurrentFilters] = useState<FilterMap>({})
-  const [filterName, setFilterName] = useState('')
-  const [sortBy, setSortBy] = useState('')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [state, dispatch] = useReducer(advancedFilterReducer, undefined, createInitialAdvancedFilterState)
+  const { open, currentFilters, filterName, sortBy, sortOrder } = state
 
   const activeFilterCount = Object.keys(currentFilters).length + activeFiltersCount
 
   const applyFilter = useCallback((key: string, value: FilterValue) => {
-    setCurrentFilters((prev) => {
-      const newFilters = { ...prev }
-      if (value === null || value === '' || (Array.isArray(value) && value.length === 0)) {
-        delete newFilters[key]
-      } else {
-        newFilters[key] = value
-      }
-      return newFilters
+    dispatch({
+      type: 'setCurrentFilters',
+      value: (prev) => {
+        const newFilters = { ...prev }
+        if (value === null || value === '' || (Array.isArray(value) && value.length === 0)) {
+          delete newFilters[key]
+        } else {
+          newFilters[key] = value
+        }
+        return newFilters
+      },
     })
   }, [])
 
   const clearAllFilters = useCallback(() => {
-    setCurrentFilters({})
+    dispatch({ type: 'clearFilters' })
     onFilterChange({})
   }, [onFilterChange])
 
@@ -109,31 +170,36 @@ export function AdvancedFilter({
     if (onSortChange && sortBy) {
       onSortChange(sortBy, sortOrder)
     }
-    setOpen(false)
+    dispatch({ type: 'setOpen', value: false })
   }, [currentFilters, sortBy, sortOrder, onFilterChange, onSortChange])
 
   const handleLoadSavedFilter = useCallback(
     (config: FilterConfig) => {
-      setCurrentFilters(config.filters)
-      setSortBy(config.sortBy ?? '')
-      setSortOrder(config.sortOrder ?? 'desc')
+      dispatch({
+        type: 'loadSavedFilter',
+        filters: config.filters,
+        sortBy: config.sortBy ?? '',
+        sortOrder: config.sortOrder ?? 'desc',
+      })
       onFilterChange(config.filters)
 
       if (onSortChange && config.sortBy) {
         onSortChange(config.sortBy, config.sortOrder ?? 'desc')
       }
-
-      setOpen(false)
     },
     [onFilterChange, onSortChange]
   )
 
   const handleFilterNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilterName(e.target.value)
+    dispatch({ type: 'setFilterName', value: e.target.value })
   }, [])
 
   const handleSortOrderChange = useCallback((value: string) => {
-    setSortOrder(value as 'asc' | 'desc')
+    dispatch({ type: 'setSortOrder', value: value as 'asc' | 'desc' })
+  }, [])
+
+  const handleSortByChange = useCallback((value: string) => {
+    dispatch({ type: 'setSortBy', value })
   }, [])
 
   const handleDeleteSavedFilter = useCallback(
@@ -161,7 +227,7 @@ export function AdvancedFilter({
     }
 
     onSaveFilter?.(config)
-    setFilterName('')
+    dispatch({ type: 'resetFilterName' })
     toast({
       title: 'Filter saved',
       description: `Your filter "${filterName}" has been saved.`,
@@ -169,7 +235,11 @@ export function AdvancedFilter({
   }, [currentFilters, filterName, sortBy, sortOrder, onSaveFilter, toast])
 
   const handleOpenFilters = useCallback(() => {
-    setOpen(true)
+    dispatch({ type: 'setOpen', value: true })
+  }, [])
+
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    dispatch({ type: 'setOpen', value: nextOpen })
   }, [])
 
   const filterFooter = useMemo(
@@ -198,7 +268,7 @@ export function AdvancedFilter({
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <Button variant="outline" size="sm" className="gap-2" onClick={handleOpenFilters}>
-        <Filter className="h-4 w-4" aria-hidden />
+        <Filter className="size-4" aria-hidden />
         Filter
         {activeFilterCount > 0 ? (
           <Badge variant="secondary" className="ml-1">
@@ -209,7 +279,7 @@ export function AdvancedFilter({
 
       <ResponsiveOverlay
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={handleOpenChange}
         title="Advanced Filters"
         description="Configure multiple filters to find exactly what you need."
         dialogClassName="sm:max-w-md"
@@ -261,7 +331,7 @@ export function AdvancedFilter({
               <div className="space-y-2">
                 <Label>Sort By</Label>
                 <div className="flex gap-2">
-                  <Select value={sortBy} onValueChange={setSortBy}>
+                  <Select value={sortBy} onValueChange={handleSortByChange}>
                     <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Sort by…" />
                     </SelectTrigger>
@@ -368,7 +438,7 @@ function AdvancedFilterFooter({
               className="w-40"
             />
             <Button type="button" size="sm" onClick={saveCurrentConfig} disabled={!filterName.trim()}>
-              <Save className="mr-1 h-4 w-4" aria-hidden />
+              <Save className="mr-1 size-4" aria-hidden />
               Save
             </Button>
           </div>
@@ -389,7 +459,7 @@ interface SavedFilterButtonProps {
 }
 
 function SavedFilterButton({ filter, onApply, children }: SavedFilterButtonProps) {
-  const handleClick = useCallback(() => {
+  const onApplySavedFilter = useCallback(() => {
     onApply(filter)
   }, [filter, onApply])
 
@@ -399,7 +469,7 @@ function SavedFilterButton({ filter, onApply, children }: SavedFilterButtonProps
       variant="outline"
       size="sm"
       className="h-6 rounded-full px-2 text-xs"
-      onClick={handleClick}
+      onClick={onApplySavedFilter}
     >
       {children}
     </Button>
@@ -412,13 +482,13 @@ interface SavedFilterDeleteButtonProps {
 }
 
 function SavedFilterDeleteButton({ filterId, onDelete }: SavedFilterDeleteButtonProps) {
-  const handleClick = useCallback(() => {
+  const onDeleteSavedFilter = useCallback(() => {
     onDelete(filterId)
   }, [filterId, onDelete])
 
   return (
-    <Button type="button" variant="ghost" size="sm" onClick={handleClick}>
-      <X className="h-3 w-3" />
+    <Button type="button" variant="ghost" size="sm" onClick={onDeleteSavedFilter}>
+      <X className="size-3" />
     </Button>
   )
 }
@@ -551,7 +621,7 @@ function ActiveFilterBadge({ filterKey, value, onRemove }: ActiveFilterBadgeProp
         className="rounded p-0.5 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={`Remove ${filterKey} filter`}
       >
-        <X className="h-3 w-3" />
+        <X className="size-3" />
       </button>
     </Badge>
   )

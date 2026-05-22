@@ -7,7 +7,7 @@ export default function SocialsLoading() {
       <div className="rounded-2xl border border-muted/40 p-5 sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex gap-4">
-            <Skeleton className="h-12 w-12 shrink-0 rounded-2xl" />
+            <Skeleton className="size-12 shrink-0 rounded-2xl" />
             <div className="space-y-2">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="h-8 w-40" />

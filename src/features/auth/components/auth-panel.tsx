@@ -35,7 +35,7 @@ export function AuthBackLink({
         className,
       )}
     >
-      <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+      <ArrowLeft className="size-4 shrink-0" aria-hidden />
       {label}
     </Link>
   )
@@ -58,7 +58,7 @@ export function AuthPanel({
           <AuthBackLink href={backHref} label={backLabel} className="mb-5" />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
             {icon ? (
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
                 {icon}
               </span>
             ) : null}
@@ -70,7 +70,7 @@ export function AuthPanel({
             </div>
           </div>
         </div>
-        <div className="space-y-6 px-6 py-6 sm:px-8 sm:py-7">{children}</div>
+        <div className="space-y-6 p-6 sm:px-8 sm:py-7">{children}</div>
         {footer ? (
           <div className="border-t border-border/50 bg-muted/20 px-6 py-4 text-center text-xs text-muted-foreground sm:px-8">
             {footer}

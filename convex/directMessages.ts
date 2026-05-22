@@ -443,17 +443,19 @@ export const markAsRead = zWorkspaceMutation({
       .collect()
 
     const now2 = Date.now()
-    for (const msg of unreadMessages) {
-      const readBy = Array.isArray(msg.readBy) ? msg.readBy : []
-      const readBySet = new Set(readBy)
-      if (!readBySet.has(currentUserId)) {
-        await ctx.db.patch(msg._id, {
-          readBy: [...readBy, currentUserId],
-          readAtMs: msg.readAtMs ?? now2,
-          updatedAtMs: now2,
-        })
-      }
-    }
+    await Promise.all(
+      unreadMessages.map(async (msg) => {
+        const readBy = Array.isArray(msg.readBy) ? msg.readBy : []
+        const readBySet = new Set(readBy)
+        if (!readBySet.has(currentUserId)) {
+          await ctx.db.patch(msg._id, {
+            readBy: [...readBy, currentUserId],
+            readAtMs: msg.readAtMs ?? now2,
+            updatedAtMs: now2,
+          })
+        }
+      }),
+    )
 
     return { success: true }
   },
@@ -572,14 +574,14 @@ export const toggleReaction = zWorkspaceMutation({
 
     const reactions = Array.isArray(message.reactions)
       ? message.reactions
-          .filter(
-            (reaction): reaction is { emoji: string; count: number; userIds: string[] } =>
-              Boolean(reaction) &&
-              typeof reaction.emoji === 'string' &&
-              typeof reaction.count === 'number' &&
-              Array.isArray(reaction.userIds),
+          .flatMap((reaction) =>
+            Boolean(reaction) &&
+            typeof reaction.emoji === 'string' &&
+            typeof reaction.count === 'number' &&
+            Array.isArray(reaction.userIds)
+              ? [{ ...reaction, userIds: [...reaction.userIds] }]
+              : [],
           )
-          .map((reaction) => ({ ...reaction, userIds: [...reaction.userIds] }))
       : []
     const existingIndex = reactions.findIndex((r) => r.emoji === args.emoji)
     const now = Date.now()

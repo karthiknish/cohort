@@ -69,7 +69,7 @@ export function DashboardSkeleton({ showStepIndicator = false }: DashboardSkelet
           {sectionSlots.map((slot) => (
             <div key={slot} className="flex h-full flex-col justify-between rounded-lg border border-muted/60 bg-muted/10 p-4">
               <div className="space-y-3">
-                <Skeleton className="h-9 w-9 rounded-full" />
+                <Skeleton className="size-9 rounded-full" />
                 <Skeleton className="h-4 w-40" />
                 <Skeleton className="h-3 w-56" />
               </div>
@@ -112,7 +112,7 @@ export function DashboardSkeleton({ showStepIndicator = false }: DashboardSkelet
           <CardContent className="space-y-3">
             {activitySlots.map((slot) => (
               <div key={slot} className="flex items-center gap-3 rounded-md border border-muted/60 bg-muted/10 p-3">
-                <Skeleton className="h-10 w-10 rounded-full" />
+                <Skeleton className="size-10 rounded-full" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-40" />
                   <Skeleton className="h-3 w-28" />

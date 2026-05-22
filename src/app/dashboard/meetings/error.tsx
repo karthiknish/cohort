@@ -47,8 +47,8 @@ export default function MeetingsError({
     <div className="flex min-h-[60vh] items-center justify-center p-4">
       <Card className="max-w-md border-muted/60">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-            <Video className="h-8 w-8 text-destructive" />
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
+            <Video className="size-8 text-destructive" />
           </div>
           <CardTitle className="text-xl">Meetings unavailable</CardTitle>
           <CardDescription>
@@ -75,11 +75,11 @@ export default function MeetingsError({
 
           <div className="flex gap-2">
             <Button onClick={handleRetry} className="flex-1 gap-2">
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="size-4" />
               Try again
             </Button>
             <Button variant="outline" size="icon" onClick={copyErrorDetails} title="Copy error details">
-              <Copy className="h-4 w-4" />
+              <Copy className="size-4" />
             </Button>
           </div>
         </CardContent>

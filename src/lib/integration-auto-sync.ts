@@ -189,8 +189,8 @@ export async function scheduleSyncsForUser(options: {
     )
 
     return {
-      scheduled: results.filter((result) => result.scheduled).map((result) => result.providerId),
-      skipped: results.filter((result) => !result.scheduled).map((result) => result.providerId),
+      scheduled: results.flatMap((result) => (result.scheduled ? [result.providerId] : [])),
+      skipped: results.flatMap((result) => (!result.scheduled ? [result.providerId] : [])),
     }
   }
 
@@ -207,8 +207,8 @@ export async function scheduleSyncsForUser(options: {
   )
 
   return {
-    scheduled: results.filter((result) => result.scheduled).map((result) => result.providerId),
-    skipped: results.filter((result) => !result.scheduled).map((result) => result.providerId),
+    scheduled: results.flatMap((result) => (result.scheduled ? [result.providerId] : [])),
+    skipped: results.flatMap((result) => (!result.scheduled ? [result.providerId] : [])),
   }
 }
 

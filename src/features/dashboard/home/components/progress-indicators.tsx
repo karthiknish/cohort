@@ -124,7 +124,7 @@ export function ProgressIndicators({
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between py-3 px-4">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+              <div className="size-2 animate-pulse rounded-full bg-primary" />
               <CardTitle className="text-sm">
                 {activeOperations.length} operation{activeOperations.length !== 1 ? 's' : ''} in progress
               </CardTitle>
@@ -133,15 +133,15 @@ export function ProgressIndicators({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="size-7"
                 onClick={handleToggleExpanded}
                 aria-expanded={isExpanded}
                 aria-label={isExpanded ? 'Collapse progress panel' : 'Expand progress panel'}
               >
                 {isExpanded ? (
-                  <Minimize2 className="h-4 w-4" aria-hidden />
+                  <Minimize2 className="size-4" aria-hidden />
                 ) : (
-                  <Maximize2 className="h-4 w-4" aria-hidden />
+                  <Maximize2 className="size-4" aria-hidden />
                 )}
               </Button>
               {onDismissAll && activeOperations.length > 1 && (
@@ -229,62 +229,62 @@ function OperationItem({
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={operation.onPause}
               title="Pause"
               aria-label={`Pause ${operation.name}`}
             >
-              <Pause className="h-3.5 w-3.5" aria-hidden />
+              <Pause className="size-3.5" aria-hidden />
             </Button>
           )}
           {operation.status === 'paused' && operation.onResume && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={operation.onResume}
               title="Resume"
               aria-label={`Resume ${operation.name}`}
             >
-              <Play className="h-3.5 w-3.5" aria-hidden />
+              <Play className="size-3.5" aria-hidden />
             </Button>
           )}
           {operation.status === 'failed' && operation.onRetry && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={operation.onRetry}
               title="Retry"
               aria-label={`Retry ${operation.name}`}
             >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+              <RotateCcw className="size-3.5" aria-hidden />
             </Button>
           )}
           {operation.onCancel && ['running', 'pending', 'paused'].includes(operation.status) && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={operation.onCancel}
               title="Cancel"
               aria-label={`Cancel ${operation.name}`}
             >
-              <X className="h-3.5 w-3.5" aria-hidden />
+              <X className="size-3.5" aria-hidden />
             </Button>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="size-7"
             onClick={onToggleCollapse}
             aria-expanded={!isCollapsed}
             aria-label={isCollapsed ? `Expand details for ${operation.name}` : `Collapse details for ${operation.name}`}
           >
             {isCollapsed ? (
-              <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+              <Maximize2 className="size-3.5" aria-hidden />
             ) : (
-              <Minimize2 className="h-3.5 w-3.5" aria-hidden />
+              <Minimize2 className="size-3.5" aria-hidden />
             )}
           </Button>
         </div>
@@ -386,11 +386,11 @@ function CompletedOperationItem({ operation, onDismiss }: CompletedOperationItem
       <Button
         variant="ghost"
         size="icon"
-        className="h-7 w-7 shrink-0"
+        className="size-7 shrink-0"
         onClick={onDismiss}
         aria-label={`Dismiss ${operation.name}`}
       >
-        <X className="h-3.5 w-3.5" aria-hidden />
+        <X className="size-3.5" aria-hidden />
       </Button>
     </div>
   )
@@ -404,15 +404,15 @@ function MinimalProgressIndicator({ operation }: MinimalProgressIndicatorProps) 
   return (
     <div className="flex items-center gap-3 px-4 py-2 bg-background rounded-lg shadow-lg border">
       {operation.status === 'running' && (
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       )}
       {operation.status === 'completed' && (
-        <div className="h-4 w-4 rounded-full bg-success flex items-center justify-center">
+        <div className="size-4 rounded-full bg-success flex items-center justify-center">
           <span className="text-success-foreground text-xs">✓</span>
         </div>
       )}
       {operation.status === 'failed' && (
-        <div className="h-4 w-4 rounded-full bg-destructive flex items-center justify-center">
+        <div className="size-4 rounded-full bg-destructive flex items-center justify-center">
           <span className="text-destructive-foreground text-xs">✕</span>
         </div>
       )}
@@ -436,7 +436,7 @@ function StepIndicator({ status }: { status: 'pending' | 'running' | 'completed'
   }
 
   return (
-    <div className={cn('h-3.5 w-3.5 rounded-full', config[status])}>
+    <div className={cn('size-3.5 rounded-full', config[status])}>
       {status === 'completed' && (
         <span className="flex items-center justify-center text-success-foreground text-[8px]">✓</span>
       )}
@@ -553,7 +553,7 @@ export function StepProgress({
           {/* Step circle */}
           <div
             className={cn(
-              'h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium shrink-0',
+              'size-8 rounded-full flex items-center justify-center text-sm font-medium shrink-0',
               idx < currentStep
                 ? 'bg-primary text-primary-foreground'
                 : idx === currentStep

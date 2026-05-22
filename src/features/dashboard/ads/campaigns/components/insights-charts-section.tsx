@@ -219,7 +219,7 @@ export function InsightsChartsSection({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 cursor-help text-muted-foreground" />
+                  <Info className="size-4 cursor-help text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p>
@@ -254,7 +254,7 @@ export function InsightsChartsSection({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  <Info className="size-4 text-muted-foreground cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p><strong>Clicks:</strong> Total number of times users clicked on your ad.</p>
@@ -267,13 +267,13 @@ export function InsightsChartsSection({
         </CardHeader>
         <CardContent className="h-[300px] pt-2">
           {insightsLoading ? (
-            <Skeleton className="h-full w-full" />
+            <Skeleton className="size-full" />
           ) : engagementChartData.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               No engagement data available
             </div>
           ) : (
-            <ChartContainer config={engagementChartConfig} className="h-full w-full">
+            <ChartContainer config={engagementChartConfig} className="size-full">
               <AreaChart data={engagementChartData} margin={CHART_MARGIN}>
                 <defs>
                   <linearGradient id="fillClicks" x1="0" y1="0" x2="0" y2="1">
@@ -323,7 +323,7 @@ export function InsightsChartsSection({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  <Info className="size-4 text-muted-foreground cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p><strong>Conversions:</strong> Number of desired actions completed (purchases, sign-ups, etc.) attributed to your campaign.</p>
@@ -336,13 +336,13 @@ export function InsightsChartsSection({
         </CardHeader>
         <CardContent className="h-[300px] pt-2">
           {insightsLoading ? (
-            <Skeleton className="h-full w-full" />
+            <Skeleton className="size-full" />
           ) : conversionsChartData.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               No conversion data available
             </div>
           ) : (
-            <ChartContainer config={conversionsChartConfig} className="h-full w-full">
+            <ChartContainer config={conversionsChartConfig} className="size-full">
               <AreaChart data={conversionsChartData} margin={CHART_MARGIN}>
                 <defs>
                   <linearGradient id="fillConversions" x1="0" y1="0" x2="0" y2="1">
@@ -393,7 +393,7 @@ export function InsightsChartsSection({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  <Info className="size-4 text-muted-foreground cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p><strong>CPC (Cost Per Click):</strong> Average amount spent for each click. Lower CPC means more efficient ad spend.</p>
@@ -406,13 +406,13 @@ export function InsightsChartsSection({
         </CardHeader>
         <CardContent className="h-[300px] pt-2">
           {insightsLoading ? (
-            <Skeleton className="h-full w-full" />
+            <Skeleton className="size-full" />
           ) : conversionsChartData.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               No cost efficiency data available
             </div>
           ) : (
-            <ChartContainer config={costChartConfig} className="h-full w-full">
+            <ChartContainer config={costChartConfig} className="size-full">
               <BarChart data={conversionsChartData} margin={CHART_MARGIN}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
@@ -459,7 +459,7 @@ export function InsightsChartsSection({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    <Info className="size-4 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     <p><strong>Reach:</strong> The number of unique people who saw your ads at least once.</p>
@@ -472,7 +472,7 @@ export function InsightsChartsSection({
             <CardDescription>Unique reach compared to total impressions</CardDescription>
           </CardHeader>
           <CardContent className="h-[350px]">
-            <ChartContainer config={reachChartConfig} className="h-full w-full">
+            <ChartContainer config={reachChartConfig} className="size-full">
               <BarChart data={reachChartData} margin={CHART_MARGIN}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis

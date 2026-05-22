@@ -91,24 +91,22 @@ export async function fetchMetaAdAccounts(options: {
 
     const accounts = Array.isArray(payload?.data) ? payload.data : []
 
-    const parsedAccounts = accounts
-      .map((candidate): MetaAdAccount | null => {
+    const parsedAccounts = accounts.flatMap((candidate): MetaAdAccount[] => {
         const id = typeof candidate?.id === 'string' ? candidate.id : null
         const name = typeof candidate?.name === 'string' ? candidate.name : 'Meta ad account'
         const accountStatusRaw = candidate?.account_status
         const accountStatus = typeof accountStatusRaw === 'number' ? accountStatusRaw : Number(accountStatusRaw)
         const currency = typeof candidate?.currency === 'string' ? candidate.currency : undefined
 
-        if (!id) return null
+        if (!id) return []
 
-        return {
+        return [{
           id,
           name,
           account_status: Number.isFinite(accountStatus) ? Number(accountStatus) : undefined,
           currency,
-        } satisfies MetaAdAccount
+        } satisfies MetaAdAccount]
       })
-      .filter((account): account is MetaAdAccount => Boolean(account))
 
     allAccounts.push(...parsedAccounts)
 
@@ -224,13 +222,11 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
   }
 
   const timeRange = buildTimeRange(timeframeDays)
-  let paging: MetaPagingState | undefined
   let activeAccessToken = accessToken
   let tokenRefreshAttempted = false
-  const metrics: NormalizedMetric[] = []
   const appSecret = process.env.META_APP_SECRET
 
-  for (let page = 0; page < maxPages; page += 1) {
+  const fetchPage = async (page: number, paging?: MetaPagingState): Promise<NormalizedMetric[]> => {
     const params = new URLSearchParams({
       level: 'campaign',
       fields: [
@@ -258,7 +254,7 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
     }
 
     const url = `${META_API_BASE}/${adAccountId}/insights?${params.toString()}`
-    
+
     const { payload } = await metaAdsClient.executeRequest<MetaInsightsResponse>({
       url,
       operation: `fetchInsights:page${page}`,
@@ -276,16 +272,21 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
     })
 
     const rows: MetaInsightsRow[] = Array.isArray(payload?.data) ? payload.data : []
-    metrics.push(...metaInsightRowsToNormalizedMetrics(adAccountId, rows))
+    const pageMetrics = metaInsightRowsToNormalizedMetrics(adAccountId, rows)
 
     const nextCursor = payload?.paging?.cursors?.after ?? null
     const nextLink = payload?.paging?.next ?? null
-    paging = nextCursor ? { after: nextCursor, next: nextLink ?? undefined } : undefined
+    const nextPaging = nextCursor ? { after: nextCursor, next: nextLink ?? undefined } : undefined
 
-    if (!paging?.after) break
+    if (!nextPaging?.after || page + 1 >= maxPages) {
+      return pageMetrics
+    }
+
+    const nextPageMetrics = await fetchPage(page + 1, nextPaging)
+    return [...pageMetrics, ...nextPageMetrics]
   }
 
-  return metrics
+  return fetchPage(0)
 }
 
 export const fetchMetaAdsMetrics = cache(fetchMetaAdsMetricsInternal)

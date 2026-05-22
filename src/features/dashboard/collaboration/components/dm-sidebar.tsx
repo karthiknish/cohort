@@ -79,11 +79,11 @@ export function DMSidebar({
   )
 
   return (
-    <div className="flex h-full w-full flex-col border-b border-muted/40 lg:h-[640px] lg:w-80 lg:border-b-0 lg:border-r">
+    <div className="flex size-full flex-col border-b border-muted/40 lg:h-[640px] lg:w-80 lg:border-b-0 lg:border-r">
       <div className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MessageCircle className="h-4 w-4 text-primary" />
+            <MessageCircle className="size-4 text-primary" />
             <h3 className="text-sm font-semibold">Direct Messages</h3>
             {unreadCount > 0 && (
               <Badge variant="default" className="h-5 px-1.5 text-xs">
@@ -94,16 +94,16 @@ export function DMSidebar({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="size-8"
             onClick={onNewDM}
             title="New message"
             aria-label="Start new direct message"
           >
-            <Plus className="h-4 w-4" aria-hidden />
+            <Plus className="size-4" aria-hidden />
           </Button>
         </div>
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQuery}
             onChange={handleSearchChange}
@@ -118,7 +118,7 @@ export function DMSidebar({
           <div className="p-4 space-y-3">
             {['dm-skeleton-1', 'dm-skeleton-2', 'dm-skeleton-3'].map((slotKey) => (
               <div key={slotKey} className="flex items-center gap-3 p-3">
-                <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+                <div className="size-10 rounded-full bg-muted animate-pulse" />
                 <div className="flex-1 space-y-2">
                   <div className="h-4 w-24 bg-muted animate-pulse rounded" />
                   <div className="h-3 w-32 bg-muted animate-pulse rounded" />
@@ -128,12 +128,12 @@ export function DMSidebar({
           </div>
         ) : filteredConversations.length === 0 ? (
           <div className="p-4 text-center">
-            <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+            <MessageCircle className="size-12 mx-auto text-muted-foreground/40 mb-3" />
             <p className="text-sm text-muted-foreground">
               {searchQuery ? 'No conversations match your search.' : 'No direct messages yet.'}
             </p>
             <Button variant="outline" size="sm" className="mt-3" onClick={onNewDM}>
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="size-4 mr-1" />
               Start a conversation
             </Button>
           </div>
@@ -156,7 +156,7 @@ export function DMSidebar({
                     hasUnread && !isSelected && 'bg-muted/30'
                   )}
                 >
-                  <Avatar className="h-10 w-10 shrink-0">
+                  <Avatar className="size-10 shrink-0">
                     <AvatarFallback className={cn(
                       'text-xs font-medium',
                       hasUnread && 'bg-accent/10 text-primary'
@@ -182,10 +182,10 @@ export function DMSidebar({
                     </div>
                     <div className="flex items-center gap-1 mt-0.5">
                       {conversation.isArchived && (
-                        <Archive className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <Archive className="size-3 text-muted-foreground shrink-0" />
                       )}
                       {conversation.isMuted && (
-                        <BellOff className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <BellOff className="size-3 text-muted-foreground shrink-0" />
                       )}
                       <p
                         className={cn(
@@ -202,7 +202,7 @@ export function DMSidebar({
                   </div>
 
                   {hasUnread && (
-                    <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
+                    <div className="size-2 rounded-full bg-primary shrink-0" />
                   )}
                 </button>
               )

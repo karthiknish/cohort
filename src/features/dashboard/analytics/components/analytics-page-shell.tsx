@@ -57,7 +57,7 @@ function AnalyticsHeaderSection() {
       <div>
         <div className="mb-2 flex items-center gap-3">
           <div className={getIconContainerClasses('medium')}>
-            <BarChart3 className="h-6 w-6" />
+            <BarChart3 className="size-6" />
           </div>
           <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.analytics?.title ?? 'Analytics'}</h1>
         </div>
@@ -131,13 +131,13 @@ function GoogleAnalyticsConnectionSection() {
           <span className={cn('inline-flex items-center', statusBadgeClass)}>
             {gaConnected ? (
               <>
-                <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
+                <CheckCircle2 className="mr-1 inline size-3.5" />
                 {gaStatusLabel}
                 {gaAccountLabel ? ` · ${gaAccountLabel}` : ''}
               </>
             ) : (
               <>
-                <Link2 className="mr-1 inline h-3.5 w-3.5" />
+                <Link2 className="mr-1 inline size-3.5" />
                 Not connected
               </>
             )}
@@ -154,7 +154,7 @@ function GoogleAnalyticsConnectionSection() {
                 disabled={gaLoading}
                 className={getButtonClasses('outline')}
               >
-                {gaLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
+                {gaLoading ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <Link2 className="mr-2 size-4" />}
                 {gaConnected ? 'Reconnect' : 'Connect Google'}
               </Button>
               {gaConnected ? (
@@ -177,7 +177,7 @@ function GoogleAnalyticsConnectionSection() {
                   onClick={handleDisconnectClick}
                   className={cn(getButtonClasses('outline'), 'text-destructive hover:text-destructive')}
                 >
-                  <Unlink className="mr-2 h-4 w-4" />
+                  <Unlink className="mr-2 size-4" />
                   Disconnect
                 </Button>
               ) : null}
@@ -188,7 +188,7 @@ function GoogleAnalyticsConnectionSection() {
                 disabled={isSyncPending || gaLoading || !gaConnected || gaNeedsPropertySelection}
                 className={getButtonClasses('primary')}
               >
-                {isSyncPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
+                {isSyncPending ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <RotateCw className="mr-2 size-4" />}
                 Sync data
               </Button>
             </>
@@ -316,8 +316,8 @@ function AnalyticsEmptyState() {
   return (
     <Card className={DASHBOARD_THEME.cards.base}>
       <CardContent className="flex flex-col items-center px-6 py-16 text-center">
-        <div className={cn(getIconContainerClasses('large'), 'mb-6 h-20 w-20 rounded-full')}>
-          <GoogleAnalyticsIcon className="h-10 w-10" />
+        <div className={cn(getIconContainerClasses('large'), 'mb-6 size-20 rounded-full')}>
+          <GoogleAnalyticsIcon className="size-10" />
         </div>
         <h3 className="mb-2 text-base font-semibold text-foreground">No analytics data yet</h3>
         <p className="mb-6 max-w-md text-sm text-muted-foreground">
@@ -333,7 +333,7 @@ function AnalyticsEmptyState() {
               disabled={gaLoading}
               className={getButtonClasses('outline')}
             >
-              {gaLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
+              {gaLoading ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <Link2 className="mr-2 size-4" />}
               Link Google Analytics
             </Button>
           ) : gaNeedsPropertySelection ? (
@@ -348,7 +348,7 @@ function AnalyticsEmptyState() {
               disabled={isSyncPending || gaLoading || !gaConnected}
               className={getButtonClasses('primary')}
             >
-              {isSyncPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
+              {isSyncPending ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <RotateCw className="mr-2 size-4" />}
               Sync data now
             </Button>
           )}
@@ -362,8 +362,8 @@ function AnalyticsSyncingState() {
   return (
     <Card className={DASHBOARD_THEME.cards.base}>
       <CardContent className="flex flex-col items-center px-6 py-16 text-center">
-        <div className={cn(getIconContainerClasses('large'), 'mb-6 h-20 w-20 rounded-full')}>
-          <LoaderCircle className="h-10 w-10 animate-spin" />
+        <div className={cn(getIconContainerClasses('large'), 'mb-6 size-20 rounded-full')}>
+          <LoaderCircle className="size-10 animate-spin" />
         </div>
         <h3 className="mb-2 text-base font-semibold text-foreground">Syncing analytics data</h3>
         <p className="max-w-md text-sm text-muted-foreground">
@@ -420,12 +420,12 @@ function AnalyticsPerformanceSection() {
             >
               {metricsLoadingMore ? (
                 <>
-                  <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  <LoaderCircle className="mr-2 size-3.5 animate-spin" />
                   Loading
                 </>
               ) : (
                 <>
-                  <RotateCw className="mr-2 h-3.5 w-3.5" />
+                  <RotateCw className="mr-2 size-3.5" />
                   Load older data
                 </>
               )}
@@ -440,7 +440,7 @@ function AnalyticsPerformanceSection() {
             className={getButtonClasses('outline')}
             aria-label="Refresh metrics"
           >
-            <RotateCw className={cn('mr-2 h-3.5 w-3.5', metricsRefreshing && 'animate-spin')} />
+            <RotateCw className={cn('mr-2 size-3.5', metricsRefreshing && 'animate-spin')} />
             Refresh
           </Button>
           <AnalyticsExportButton metrics={filteredMetrics} disabled={isPreviewMode} />
@@ -482,9 +482,9 @@ function AnalyticsPerformanceSection() {
   )
 }
 
-function GoogleAnalyticsIcon({ className = 'h-8 w-8' }: { className?: string }) {
+function GoogleAnalyticsIcon({ className = 'size-8' }: { className?: string }) {
   return (
-    <div className={cn(getIconContainerClasses('small'), 'h-10 w-10 shrink-0 rounded-full')}>
+    <div className={cn(getIconContainerClasses('small'), 'size-10 shrink-0 rounded-full')}>
       <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
         <path
           d="M21.805 10.023H12v4.042h5.615c-.242 1.304-.967 2.409-2.056 3.147v2.617h3.33c1.948-1.793 3.076-4.434 3.076-7.564 0-.739-.067-1.449-.16-2.242Z"

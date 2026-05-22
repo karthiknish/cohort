@@ -100,7 +100,10 @@ function summarizeParamValue(value: unknown): string | null {
   if (typeof value === 'string') return value.trim() || null
   if (typeof value === 'number' || typeof value === 'boolean') return String(value)
   if (Array.isArray(value)) {
-    const parts = value.map((entry) => summarizeParamValue(entry)).filter(Boolean) as string[]
+    const parts = value.flatMap((entry) => {
+      const summary = summarizeParamValue(entry)
+      return summary ? [summary] : []
+    })
     return parts.length > 0 ? parts.join(', ') : null
   }
   if (typeof value === 'object') return JSON.stringify(value)

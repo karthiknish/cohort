@@ -43,8 +43,8 @@ export function MeetingsHeader(props: MeetingsHeaderProps) {
   return (
     <header className={cn(DASHBOARD_THEME.layout.header, 'border-b border-border/60 pb-6')}>
       <div className="flex min-w-0 flex-1 items-start gap-3">
-        <div className={cn(DASHBOARD_THEME.icons.container, 'h-11 w-11 shrink-0 rounded-xl')}>
-          <Video className="h-6 w-6" aria-hidden />
+        <div className={cn(DASHBOARD_THEME.icons.container, 'size-11 shrink-0 rounded-xl')}>
+          <Video className="size-6" aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-2">
           <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.meetings?.title ?? 'Meetings'}</h1>
@@ -58,7 +58,7 @@ export function MeetingsHeader(props: MeetingsHeaderProps) {
       <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
         {googleWorkspaceStatusLoading ? (
           <Button type="button" variant="outline" className={cn(getButtonClasses('outline'), 'w-full sm:w-auto')} disabled>
-            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+            <LoaderCircle className="mr-2 size-4 animate-spin" />
             Checking Workspace…
           </Button>
         ) : googleWorkspaceConnected ? (
@@ -73,7 +73,7 @@ export function MeetingsHeader(props: MeetingsHeaderProps) {
               disabled={!canSchedule}
               onClick={onManageGoogleWorkspace}
             >
-              <GoogleWorkspaceIcon className="mr-2 h-4 w-4" />
+              <GoogleWorkspaceIcon className="mr-2 size-4" />
               Manage
             </Button>
           </div>
@@ -85,7 +85,7 @@ export function MeetingsHeader(props: MeetingsHeaderProps) {
             disabled={!canSchedule}
             onClick={onConnectGoogleWorkspace}
           >
-            <GoogleWorkspaceIcon className="mr-2 h-4 w-4" />
+            <GoogleWorkspaceIcon className="mr-2 size-4" />
             Connect Google Workspace
           </Button>
         )}
@@ -97,7 +97,7 @@ export function MeetingsHeader(props: MeetingsHeaderProps) {
           onClick={onStartQuickMeet}
           title={quickMeetDisabledReason}
         >
-          {quickStarting ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Video className="mr-2 h-4 w-4" />}
+          {quickStarting ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <Video className="mr-2 size-4" />}
           {googleWorkspaceStatusLoading ? 'Checking…' : 'Quick Meet'}
         </Button>
       </div>

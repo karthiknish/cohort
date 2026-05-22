@@ -77,12 +77,12 @@ function MetricHintTrigger({ description, label, className }: MetricHintTriggerP
     <button
       type="button"
       className={cn(
-        'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'inline-flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
       aria-label={label ?? description}
     >
-      <Info className="h-3 w-3" aria-hidden />
+      <Info className="size-3" aria-hidden />
     </button>
   )
 }

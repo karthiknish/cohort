@@ -72,7 +72,7 @@ export function getAttachmentKind(attachment: ChatMediaAttachment): AttachmentKi
 }
 
 export function AttachmentKindIcon({ kind, className }: { kind: AttachmentKind; className?: string }) {
-  const iconClass = cn('h-5 w-5', className)
+  const iconClass = cn('size-5', className)
   switch (kind) {
     case 'image':
       return <ImageIcon className={iconClass} aria-hidden />
@@ -142,8 +142,8 @@ function MediaTile({
       >
         <div className="flex items-center justify-between gap-2 border-b border-border/50 px-3 py-2">
           <div className="flex min-w-0 items-center gap-2 text-sm">
-            <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-1', KIND_SURFACE.video)}>
-              <AttachmentKindIcon kind="video" className="h-4 w-4" />
+            <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-xl ring-1', KIND_SURFACE.video)}>
+              <AttachmentKindIcon kind="video" className="size-4" />
             </span>
             <AttachmentName name={attachment.name} highlightTerms={highlightTerms} />
             {attachment.size ? (
@@ -154,7 +154,7 @@ function MediaTile({
           </div>
           <Button asChild variant="ghost" size="sm" className="h-8 shrink-0 gap-1 rounded-lg">
             <a href={attachment.url} target="_blank" rel="noopener noreferrer" download>
-              <Download className="h-3.5 w-3.5" aria-hidden />
+              <Download className="size-3.5" aria-hidden />
               <span className="sr-only">Download</span>
             </a>
           </Button>
@@ -183,7 +183,7 @@ function MediaTile({
       >
         <span
           className={cn(
-            'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1',
+            'flex size-11 shrink-0 items-center justify-center rounded-xl ring-1',
             KIND_SURFACE.pdf,
           )}
         >
@@ -198,13 +198,13 @@ function MediaTile({
         <div className="flex shrink-0 items-center gap-1">
           {onOpenPdf ? (
             <Button type="button" variant="outline" size="sm" className="h-8 gap-1 rounded-lg" onClick={handleOpenPdf}>
-              <MonitorPlay className="h-3.5 w-3.5" aria-hidden />
+              <MonitorPlay className="size-3.5" aria-hidden />
               Preview
             </Button>
           ) : null}
-          <Button asChild variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+          <Button asChild variant="ghost" size="icon" className="size-8 rounded-lg">
             <a href={attachment.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${attachment.name}`}>
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="size-4" />
             </a>
           </Button>
         </div>
@@ -224,7 +224,7 @@ function MediaTile({
     >
       <span
         className={cn(
-          'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1',
+          'flex size-11 shrink-0 items-center justify-center rounded-xl ring-1',
           KIND_SURFACE[kind],
         )}
       >
@@ -234,7 +234,7 @@ function MediaTile({
         <AttachmentName name={attachment.name} highlightTerms={highlightTerms} />
         {attachment.size ? <p className="text-xs text-muted-foreground">{attachment.size}</p> : null}
       </div>
-      <Download className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-foreground" aria-hidden />
+      <Download className="size-4 shrink-0 text-muted-foreground transition group-hover:text-foreground" aria-hidden />
     </a>
   )
 }
@@ -307,7 +307,7 @@ export function ChatMediaGallery({
             onClick={handleDownloadAll}
             disabled={downloadable.length === 0}
           >
-            <Download className="h-3.5 w-3.5" aria-hidden />
+            <Download className="size-3.5" aria-hidden />
             Download all
           </Button>
         </div>
@@ -359,8 +359,8 @@ export function ChatMediaGallery({
           key={`${attachment.name}-pending`}
           className="flex items-center gap-3 rounded-2xl border border-dashed border-border/70 bg-muted/15 p-3 text-sm"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/50 ring-1 ring-border/50">
-            <FileText className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted/50 ring-1 ring-border/50">
+            <FileText className="size-4 text-muted-foreground" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
             <AttachmentName name={attachment.name} highlightTerms={highlightTerms} />
@@ -393,7 +393,7 @@ export function ChatMediaGallery({
               <div className="flex justify-end gap-2 border-t border-border/50 px-4 py-3">
                 <Button asChild variant="outline" size="sm" className="rounded-lg">
                   <a href={activePdf.url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                    <ExternalLink className="mr-1.5 size-3.5" aria-hidden />
                     Open in tab
                   </a>
                 </Button>

@@ -45,7 +45,7 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
 
   return (
     <div className="group flex items-center gap-4 rounded-xl border border-muted/30 bg-muted/5 p-4 motion-chromatic hover:bg-muted/10">
-      <Avatar className="h-10 w-10 border border-muted/20">
+      <Avatar className="size-10 border border-muted/20">
         <AvatarFallback className={cn(
           'text-xs font-bold uppercase tracking-wider',
           isManager ? 'bg-accent/10 text-primary' : 'bg-muted/30 text-muted-foreground'
@@ -74,8 +74,8 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
 function EmptyTeamState() {
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-muted/30 bg-muted/5 py-12 px-6 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/10 text-muted-foreground/50">
-        <UsersIcon className="h-7 w-7" />
+      <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted/10 text-muted-foreground/50">
+        <UsersIcon className="size-7" />
       </div>
       <p className="text-sm font-bold tracking-tight text-foreground">No team members assigned</p>
       <p className="mt-1 max-w-xs text-xs font-medium leading-relaxed text-muted-foreground">
@@ -83,7 +83,7 @@ function EmptyTeamState() {
       </p>
       <Button asChild variant="outline" className="mt-6 h-9 rounded-xl border-muted/30 px-6 text-[10px] font-bold uppercase tracking-widest shadow-sm motion-chromatic hover:bg-muted/5 active:scale-[0.98]">
         <Link href="/admin/clients">
-          <UserPlus className="mr-2 h-3.5 w-3.5" />
+          <UserPlus className="mr-2 size-3.5" />
           Manage Team
         </Link>
       </Button>
@@ -113,7 +113,7 @@ export function TeamMembersCard({
       <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-primary" />
+            <div className="size-2 rounded-full bg-primary" />
             <div>
               <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Team Members</CardTitle>
               <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
@@ -123,7 +123,7 @@ export function TeamMembersCard({
           </div>
           <div className="flex items-center gap-3">
             <div className="relative flex-1 lg:flex-none">
-              <Search className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70" />
+              <Search className="absolute left-3.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/70" />
               <Input
                 placeholder="Search team…"
                 value={teamSearch}
@@ -134,16 +134,16 @@ export function TeamMembersCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 rounded-lg p-0 text-muted-foreground/70 hover:text-foreground"
+                  className="absolute right-1 top-1/2 size-7 -translate-y-1/2 rounded-lg p-0 text-muted-foreground/70 hover:text-foreground"
                   onClick={handleClearTeamSearch}
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="size-3.5" />
                 </Button>
               )}
             </div>
             <Button asChild variant="outline" size="sm" className="h-9 rounded-xl border-muted/30 bg-card px-4 text-[10px] font-bold uppercase tracking-widest shadow-sm motion-chromatic hover:bg-muted/5 active:scale-[0.98]">
               <Link href="/admin/clients">
-                <UserPlus className="mr-2 h-3.5 w-3.5" />
+                <UserPlus className="mr-2 size-3.5" />
                 Add
               </Link>
             </Button>
@@ -155,7 +155,7 @@ export function TeamMembersCard({
           <EmptyTeamState />
         ) : filteredTeamMembers.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-muted/30 bg-muted/5 py-12 text-center">
-            <Search className="mb-4 h-10 w-10 text-muted-foreground/50" />
+            <Search className="mb-4 size-10 text-muted-foreground/50" />
             <p className="text-sm font-bold text-foreground">No matching members</p>
             <p className="mt-1 text-xs font-medium text-muted-foreground">
               Try refining your search criteria

@@ -104,11 +104,9 @@ function findPptFile(files: NormalizedFile[]): NormalizedFile | undefined {
 }
 
 async function runCheck(options: CliOptions) {
-  let attempts = 0
   const startedAt = Date.now()
 
-  while (true) {
-    attempts += 1
+  const pollOnce = async (attempts: number): Promise<void> => {
     console.log(`[GammaCheck] Attempt ${attempts} for generation ${options.generationId}`)
 
     const status = await gammaService.getGeneration(options.generationId)
@@ -154,7 +152,10 @@ async function runCheck(options: CliOptions) {
 
     console.log(`[GammaCheck] Waiting ${options.intervalMs}ms before retry...`)
     await new Promise((resolve) => setTimeout(resolve, options.intervalMs))
+    return pollOnce(attempts + 1)
   }
+
+  await pollOnce(1)
 }
 
 function printHelp() {

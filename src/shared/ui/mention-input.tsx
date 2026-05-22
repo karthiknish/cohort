@@ -29,10 +29,10 @@ function MentionUserHoverPreview({ user }: { user: MentionableUser }) {
   return (
     <HoverPreview trigger={trigger} className="w-56">
       <div className="flex items-center gap-3">
-        <Avatar className="h-9 w-9 shrink-0">
+        <Avatar className="size-9 shrink-0">
           {user.avatar ? <AvatarImage src={user.avatar} alt="" className="object-cover" /> : null}
           <AvatarFallback className="bg-muted">
-            <User className="h-4 w-4 text-muted-foreground" />
+            <User className="size-4 text-muted-foreground" />
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0 space-y-0.5">
@@ -463,7 +463,7 @@ export function MentionInput(
                 key={mention.id}
                 className="inline-flex items-center gap-1.5 rounded-md border border-accent/20 bg-accent/10 px-2 py-1 text-sm text-primary"
               >
-                <User className="h-3 w-3" />
+                <User className="size-3" />
                 <span>{mention.name}</span>
                 <button
                   type="button"
@@ -472,7 +472,7 @@ export function MentionInput(
                   disabled={disabled}
                   aria-label={`Remove ${mention.name}`}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="size-3" />
                 </button>
               </div>
             ))}
@@ -540,10 +540,10 @@ export function MentionInput(
                             : 'hover:bg-muted'
                         )}
                       >
-                        <Avatar className="h-7 w-7 shrink-0">
+                        <Avatar className="size-7 shrink-0">
                           {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} className="object-cover" /> : null}
                           <AvatarFallback className="bg-muted">
-                            <User className="h-4 w-4 text-muted-foreground" />
+                            <User className="size-4 text-muted-foreground" />
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">

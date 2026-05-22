@@ -39,7 +39,7 @@ export function SurfaceTabStatusBadge({ status }: { status: SocialsSurfaceStatus
 
   return (
     <Badge variant="outline" className={cn('ml-2 gap-1 border-0 px-2 py-0 text-[10px] font-semibold normal-case tracking-normal', className)}>
-      <Icon className={cn('h-3 w-3', spinning && 'animate-spin')} aria-hidden />
+      <Icon className={cn('size-3', spinning && 'animate-spin')} aria-hidden />
       {label}
     </Badge>
   )

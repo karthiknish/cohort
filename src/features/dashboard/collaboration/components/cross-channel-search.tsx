@@ -173,7 +173,7 @@ function useCrossChannelSearchController({
 function SearchTriggerButton({ trigger }: { trigger?: React.ReactNode }) {
   return trigger || (
     <Button variant="outline" size="sm" className="gap-2">
-      <Search className="h-4 w-4" />
+      <Search className="size-4" />
       Search
     </Button>
   )
@@ -195,7 +195,7 @@ function CrossChannelSearchBar({
   return (
     <div className="flex gap-2">
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search messages…"
           value={query}
@@ -250,7 +250,7 @@ function CrossChannelSearchFilters({
         onClick={onToggleAttachment}
         className="gap-1"
       >
-        <Paperclip className="h-3 w-3" />
+        <Paperclip className="size-3" />
         Has attachment
       </Button>
 
@@ -272,7 +272,7 @@ function CrossChannelSearchFilters({
           onClick={onClear}
           className="gap-1 text-muted-foreground"
         >
-          <X className="h-3 w-3" />
+          <X className="size-3" />
           Clear
         </Button>
       ) : null}
@@ -297,12 +297,12 @@ function CrossChannelSearchFilterButton({
   className,
   children,
 }: CrossChannelSearchFilterButtonProps) {
-  const handleClick = useCallback(() => {
+  const onSelectFilter = useCallback(() => {
     onSelect(value)
   }, [onSelect, value])
 
   return (
-    <Button type="button" variant={variant} size={size} onClick={handleClick} className={className}>
+    <Button type="button" variant={variant} size={size} onClick={onSelectFilter} className={className}>
       {children}
     </Button>
   )
@@ -323,7 +323,7 @@ function CrossChannelSearchResults({
     <div className="flex-1 overflow-y-auto -mx-6 px-6">
       {results.length === 0 && query && !isSearching ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Search className="mb-4 h-12 w-12 text-muted-foreground/50" />
+          <Search className="mb-4 size-12 text-muted-foreground/50" />
           <p className="text-muted-foreground">No messages found</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Try adjusting your search or filters
@@ -333,7 +333,7 @@ function CrossChannelSearchResults({
 
       {results.length === 0 && !query ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <FileText className="mb-4 h-12 w-12 text-muted-foreground/50" />
+          <FileText className="mb-4 size-12 text-muted-foreground/50" />
           <p className="text-muted-foreground">Search across all channels</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Type a message content, sender name, or use filters
@@ -448,19 +448,19 @@ interface SearchResultItemProps {
 
 function SearchResultItem({ result, onSelect }: SearchResultItemProps) {
   const { message, channel, highlights } = result
-  const handleClick = useCallback(() => {
+  const onSelectSearchResult = useCallback(() => {
     onSelect(result)
   }, [onSelect, result])
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectSearchResult}
       className="w-full text-left p-3 hover:bg-muted/50 rounded-lg transition-colors group"
     >
       <div className="flex items-start gap-3">
         {/* Avatar */}
-        <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center text-xs font-medium text-primary flex-shrink-0">
+        <div className="size-8 rounded-full bg-accent/10 flex items-center justify-center text-xs font-medium text-primary flex-shrink-0">
           {message.senderName.charAt(0).toUpperCase()}
         </div>
 
@@ -485,13 +485,13 @@ function SearchResultItem({ result, onSelect }: SearchResultItemProps) {
           <div className="flex items-center gap-3 mt-1.5">
             {message.attachments && message.attachments.length > 0 && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Paperclip className="h-3 w-3" />
+                <Paperclip className="size-3" />
                 {message.attachments.length}
               </span>
             )}
             {message.mentions && message.mentions.length > 0 && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <AtSign className="h-3 w-3" />
+                <AtSign className="size-3" />
                 {message.mentions.length}
               </span>
             )}
@@ -518,7 +518,7 @@ function SearchResultItem({ result, onSelect }: SearchResultItemProps) {
         </div>
 
         {/* Chevron */}
-        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-1" />
+        <ChevronRight className="size-4 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-1" />
       </div>
     </button>
   )
@@ -538,7 +538,7 @@ export function QuickSearchInput({
 }) {
   const [value, setValue] = useState('')
 
-  const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const onQuickSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setValue(event.target.value)
   }, [])
 
@@ -558,11 +558,11 @@ export function QuickSearchInput({
 
   return (
     <form onSubmit={handleSubmit} className={cn('relative', className)}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
       <Input
         placeholder={placeholder}
         value={value}
-        onChange={handleChange}
+        onChange={onQuickSearchChange}
         className="pl-9"
       />
       {value && (
@@ -571,7 +571,7 @@ export function QuickSearchInput({
           onClick={handleClear}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
         >
-          <X className="h-4 w-4" />
+          <X className="size-4" />
         </button>
       )}
     </form>

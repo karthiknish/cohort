@@ -118,8 +118,8 @@ export class CacheManager {
 }
 
 export function workspaceCacheKey(workspaceId: string, ...parts: Array<string | number | null | undefined>): string {
-  const safeParts = parts
-    .filter((part): part is string | number => part !== null && part !== undefined)
-    .map((part) => encodeURIComponent(String(part)))
+  const safeParts = parts.flatMap((part) =>
+    part !== null && part !== undefined ? [encodeURIComponent(String(part))] : [],
+  )
   return `w:${encodeURIComponent(workspaceId)}:${safeParts.join(':')}`
 }

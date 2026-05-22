@@ -70,16 +70,16 @@ export function ProposalSubmittedHero({
   return (
     <m.div initial="hidden" animate="visible" variants={fadeInUpVariants} className="relative overflow-hidden rounded-[2rem] border border-accent/20 bg-background p-10 shadow-2xl shadow-primary/5">
       <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-40">
-        <m.div animate="animate" variants={blobVariants} className="absolute -right-[10%] -top-[20%] h-[300px] w-[300px] rounded-full bg-accent/10 blur-[100px]" />
-        <m.div animate="animate" variants={blobVariantsSlow} className="absolute -bottom-[20%] -left-[5%] h-[400px] w-[400px] rounded-full bg-accent/5 blur-[120px]" />
-        <div className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(circle_at_center,transparent_0%,rgb(from_var(--background)_r_g_b_/_0.75)_100%)]" />
+        <m.div animate="animate" variants={blobVariants} className="absolute -right-[10%] -top-[20%] size-[300px] rounded-full bg-accent/10 blur-[100px]" />
+        <m.div animate="animate" variants={blobVariantsSlow} className="absolute -bottom-[20%] -left-[5%] size-[400px] rounded-full bg-accent/5 blur-[120px]" />
+        <div className="absolute left-1/2 top-1/2 size-full -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(circle_at_center,transparent_0%,rgb(from_var(--background)_r_g_b_/_0.75)_100%)]" />
       </div>
 
       <div className="relative flex flex-col items-center gap-10 md:flex-row">
         <div className="relative shrink-0">
           <m.div initial="initial" animate="animate" variants={subtlePulseVariants} className="absolute inset-0 rounded-3xl bg-primary" />
-          <div className="relative flex h-24 w-24 items-center justify-center rounded-3xl bg-primary shadow-2xl shadow-primary/30">
-            <CircleCheck className="h-12 w-12 stroke-[2.5px] text-primary-foreground" />
+          <div className="relative flex size-24 items-center justify-center rounded-3xl bg-primary shadow-2xl shadow-primary/30">
+            <CircleCheck className="size-12 stroke-[2.5px] text-primary-foreground" />
           </div>
         </div>
 
@@ -94,14 +94,14 @@ export function ProposalSubmittedHero({
             {deckDownloadUrl && presentationHref ? (
               <Button size="lg" className="h-14 rounded-2xl bg-primary px-8 text-base font-bold shadow-xl shadow-primary/25 motion-chromatic hover:scale-105 hover:bg-accent/90 active:scale-95" asChild>
                 <Link href={presentationHref} transitionTypes={['nav-forward']}>
-                  <Presentation className="mr-3 h-6 w-6" />
+                  <Presentation className="mr-3 size-6" />
                   View Presentation
                 </Link>
               </Button>
             ) : null}
             {canResumeSubmission ? (
               <Button size="lg" variant="outline" className="h-14 rounded-2xl border-muted/60 px-8 text-base font-bold backdrop-blur-sm motion-chromatic hover:bg-muted/10" onClick={onResumeSubmission} disabled={isSubmitting}>
-                <Pencil className="mr-3 h-5 w-5" />
+                <Pencil className="mr-3 size-5" />
                 Edit Responses
               </Button>
             ) : null}
@@ -120,12 +120,12 @@ export function ProposalStrategyBriefCard({ onCopySummary, summary }: { onCopySu
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="rounded-lg bg-accent/10 p-1.5 text-primary">
-                <FileText className="h-4 w-4" />
+                <FileText className="size-4" />
               </div>
               <CardTitle className="text-sm font-bold uppercase tracking-wider">Strategy Brief</CardTitle>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full transition-colors hover:bg-accent/10 hover:text-primary" onClick={onCopySummary} aria-label="Copy strategy brief">
-              <Copy className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="size-8 rounded-full transition-colors hover:bg-accent/10 hover:text-primary" onClick={onCopySummary} aria-label="Copy strategy brief">
+              <Copy className="size-4" />
             </Button>
           </div>
         </CardHeader>
@@ -135,7 +135,7 @@ export function ProposalStrategyBriefCard({ onCopySummary, summary }: { onCopySu
               <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Target Client</p>
               <div className="flex items-center gap-2.5">
                 <div className="rounded-xl bg-muted p-2 text-foreground ring-1 ring-muted-foreground/10">
-                  <Layout className="h-3.5 w-3.5" />
+                  <Layout className="size-3.5" />
                 </div>
                 <div>
                   <p className="text-sm font-bold tracking-tight">{summary.company.name || 'Unnamed Client'}</p>
@@ -165,7 +165,7 @@ export function ProposalStrategyBriefCard({ onCopySummary, summary }: { onCopySu
             <div className="space-y-1.5">
               <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Proposed Timeline</p>
               <p className="flex items-center gap-2 text-xs font-bold text-foreground">
-                <RefreshCw className="h-3 w-3 text-primary" />
+                <RefreshCw className="size-3 text-primary" />
                 {summary.timelines.startTime || 'Not scheduled'}
               </p>
             </div>
@@ -205,7 +205,7 @@ function ProposalDeckReadyState({
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgb(from_var(--primary)_r_g_b_/_0.05)_0%,transparent_70%)]" />
           <div className="absolute inset-4 space-y-3">
             <div className="h-2 w-1/3 rounded-full bg-accent/20" />
-            <div className="h-3 w-3/4 rounded-full bg-accent/10" />
+            <div className="size-3/4 rounded-full bg-accent/10" />
             <div className="grid grid-cols-2 gap-2 pt-4">
               <div className="aspect-video rounded-lg bg-muted-foreground/10" />
               <div className="aspect-video rounded-lg bg-muted-foreground/10" />
@@ -213,7 +213,7 @@ function ProposalDeckReadyState({
           </div>
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/20 p-4 opacity-0 backdrop-blur-[2px] transition-opacity group-hover:opacity-100">
             <div className="scale-0 rounded-full bg-primary p-4 shadow-2xl shadow-primary/40 transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-100">
-              <Presentation className="h-8 w-8 text-primary-foreground" />
+              <Presentation className="size-8 text-primary-foreground" />
             </div>
             <p className="mt-4 text-xs font-black uppercase tracking-widest text-foreground">Open deck preview</p>
           </div>
@@ -227,7 +227,7 @@ function ProposalDeckReadyState({
               <Button variant="outline" className="group h-14 w-full justify-start rounded-2xl border-muted/60 motion-chromatic hover:border-accent/30 hover:bg-accent/[0.03]" asChild>
                 <a href={presentationDeck.storageUrl || presentationDeck.pptxUrl || '#'} target="_blank" rel="noreferrer">
                   <div className="mr-4 rounded-xl bg-muted p-2 transition-colors group-hover:bg-accent/10">
-                    <Download className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                    <Download className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
                   </div>
                   <div className="text-left">
                     <p className="text-[13px] font-bold tracking-tight">PowerPoint (PPTX)</p>
@@ -241,7 +241,7 @@ function ProposalDeckReadyState({
               <Button variant="outline" className="group h-14 w-full justify-start rounded-2xl border-muted/60 motion-chromatic hover:border-accent/30 hover:bg-accent/[0.03]" asChild>
                 <Link href={viewerHref}>
                   <div className="mr-4 rounded-xl bg-muted p-2 transition-colors group-hover:bg-accent/10">
-                    <ExternalLink className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                    <ExternalLink className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
                   </div>
                   <div className="text-left">
                     <p className="text-[13px] font-bold tracking-tight">In-app preview</p>
@@ -252,7 +252,7 @@ function ProposalDeckReadyState({
             ) : null}
 
             <Button variant="ghost" className="h-10 w-full justify-center rounded-xl text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground motion-chromatic hover:bg-accent/5 hover:text-primary" onClick={onCopyShareLink}>
-              <Copy className="mr-2 h-3.5 w-3.5" />
+              <Copy className="mr-2 size-3.5" />
               Copy Share Link
             </Button>
           </div>
@@ -261,12 +261,12 @@ function ProposalDeckReadyState({
 
       <div className="mt-auto flex items-center justify-between border-t border-muted/40 pt-6">
         <div className="flex items-center gap-2 text-[11px] font-bold text-muted-foreground">
-          <div className="h-2 w-2 rounded-full bg-success shadow-[0_0_8px_rgb(from_var(--success)_r_g_b_/_0.45)]" />
+          <div className="size-2 rounded-full bg-success shadow-[0_0_8px_rgb(from_var(--success)_r_g_b_/_0.45)]" />
           AUTHENTICATED & VERIFIED
         </div>
         {onRecheckDeck && (presentationDeck.status === 'pending' || presentationDeck.status === 'processing') ? (
           <Button variant="ghost" size="sm" onClick={onRecheckDeck} disabled={isRecheckingDeck} className="h-8 rounded-xl border border-accent/10 px-4 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-accent/5">
-            {isRecheckingDeck ? <LoaderCircle className="mr-2 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-2 h-3 w-3" />}
+            {isRecheckingDeck ? <LoaderCircle className="mr-2 size-3 animate-spin" /> : <RefreshCw className="mr-2 size-3" />}
             Sync
           </Button>
         ) : null}
@@ -285,7 +285,7 @@ function ProposalDeckGeneratingState() {
           className="absolute inset-0 rounded-full bg-accent/20 blur-2xl"
         />
         <div className="relative rounded-[2rem] border border-muted bg-muted/40 p-6 ring-1 ring-muted-foreground/10">
-          <LoaderCircle className="h-12 w-12 animate-spin text-primary/40" />
+          <LoaderCircle className="size-12 animate-spin text-primary/40" />
         </div>
       </div>
       <h4 className="mb-2 text-xl font-extrabold tracking-tight">Architecting Your Deck</h4>
@@ -321,7 +321,7 @@ export function ProposalAssetDeliveryCard({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="rounded-lg bg-accent/10 p-1.5 text-primary">
-                <Presentation className="h-4 w-4" />
+                <Presentation className="size-4" />
               </div>
               <CardTitle className="text-sm font-bold uppercase tracking-wider">Asset Delivery</CardTitle>
             </div>

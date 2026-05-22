@@ -56,15 +56,18 @@ export const notificationOperationHandlers: Record<string, OperationHandler> = {
       }
     }
 
-    for (let offset = 0; offset < ids.length; offset += ACK_CHUNK) {
-      const chunk = ids.slice(offset, offset + ACK_CHUNK)
-      await ctx.runMutation(api.notifications.ack, {
-        workspaceId: input.workspaceId,
-        ids: chunk,
-        action: 'read',
-        ...(clientId ? { clientId } : {}),
-      })
-    }
+    const chunkCount = Math.ceil(ids.length / ACK_CHUNK)
+    await Promise.all(
+      Array.from({ length: chunkCount }, (_, index) => {
+        const chunk = ids.slice(index * ACK_CHUNK, (index + 1) * ACK_CHUNK)
+        return ctx.runMutation(api.notifications.ack, {
+          workspaceId: input.workspaceId,
+          ids: chunk,
+          action: 'read',
+          ...(clientId ? { clientId } : {}),
+        })
+      }),
+    )
 
     return {
       success: true,

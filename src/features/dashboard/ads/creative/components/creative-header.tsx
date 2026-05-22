@@ -89,9 +89,9 @@ export function CreativeHeader(props: {
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-4">
             <Link href={backUrl} className="group shrink-0">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-background/80 transition-colors group-hover:border-primary/25 group-hover:bg-primary/10">
+              <div className="flex size-10 items-center justify-center rounded-xl border border-border/60 bg-background/80 transition-colors group-hover:border-primary/25 group-hover:bg-primary/10">
                 <ArrowLeft
-                  className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary"
+                  className="size-5 text-muted-foreground transition-colors group-hover:text-primary"
                   aria-hidden
                 />
               </div>
@@ -100,9 +100,9 @@ export function CreativeHeader(props: {
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80">
-                  <Sparkles className="h-3 w-3 text-primary" aria-hidden />
+                  <Sparkles className="size-3 text-primary" aria-hidden />
                   Creative
-                  <ChevronRight className="h-3 w-3 opacity-50" aria-hidden />
+                  <ChevronRight className="size-3 opacity-50" aria-hidden />
                   {creative.providerId}
                 </span>
                 <div
@@ -115,7 +115,7 @@ export function CreativeHeader(props: {
                 </div>
                 {isDirty ? (
                   <Badge variant="secondary" className="h-5 gap-1 rounded-full px-2 text-[10px] font-semibold">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                    <span className="size-1.5 rounded-full bg-primary" aria-hidden />
                     Unsaved
                   </Badge>
                 ) : null}
@@ -130,11 +130,11 @@ export function CreativeHeader(props: {
                     href={socialPermalink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 text-muted-foreground hover:border-primary/30 hover:text-primary"
+                    className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/60 text-muted-foreground hover:border-primary/30 hover:text-primary"
                     title="Open post on Instagram or Facebook"
                     aria-label="Open social permalink"
                   >
-                    <ExternalLink className="h-4 w-4" aria-hidden />
+                    <ExternalLink className="size-4" aria-hidden />
                   </a>
                 ) : null}
               </h1>
@@ -157,7 +157,7 @@ export function CreativeHeader(props: {
                   disabled={isSaving}
                   className="h-10 rounded-xl border-border/70"
                 >
-                  <X className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                  <X className="mr-1.5 size-3.5" aria-hidden />
                   Discard
                 </Button>
                 <Button
@@ -168,9 +168,9 @@ export function CreativeHeader(props: {
                   className="h-10 rounded-full px-5 text-sm font-semibold shadow-sm"
                 >
                   {isSaving ? (
-                    <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />
+                    <RefreshCw className="mr-1.5 size-3.5 animate-spin" aria-hidden />
                   ) : (
-                    <Save className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                    <Save className="mr-1.5 size-3.5" aria-hidden />
                   )}
                   {isSaving ? 'Saving…' : 'Save changes'}
                 </Button>
@@ -183,7 +183,7 @@ export function CreativeHeader(props: {
                   size="sm"
                   className="h-10 rounded-xl border border-transparent px-3 text-xs font-medium text-muted-foreground hover:border-border/60 hover:bg-muted/40"
                 >
-                  <Share className="mr-2 h-4 w-4" aria-hidden />
+                  <Share className="mr-2 size-4" aria-hidden />
                   Export
                 </Button>
               </div>
@@ -195,10 +195,10 @@ export function CreativeHeader(props: {
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="h-10 w-10 rounded-xl border-border/70"
+                  className="size-10 rounded-xl border-border/70"
                   aria-label="Creative actions"
                 >
-                  <MoreHorizontal className="h-5 w-5" aria-hidden />
+                  <MoreHorizontal className="size-5" aria-hidden />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -206,8 +206,8 @@ export function CreativeHeader(props: {
                 className="w-60 rounded-2xl border-border/60 p-2 shadow-xl"
               >
                 <DropdownMenuItem onClick={onRefreshCreative} className="cursor-pointer gap-3 rounded-xl py-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/50">
-                    <RefreshCw className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-muted/50">
+                    <RefreshCw className="size-4 text-muted-foreground" aria-hidden />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-semibold">Sync from Meta</span>
@@ -215,8 +215,8 @@ export function CreativeHeader(props: {
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onRefreshPerformance} className="cursor-pointer gap-3 rounded-xl py-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/50">
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-muted/50">
+                    <TrendingUp className="size-4 text-muted-foreground" aria-hidden />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-semibold">Update metrics</span>
@@ -225,8 +225,8 @@ export function CreativeHeader(props: {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="my-2" />
                 <DropdownMenuItem className="cursor-pointer gap-3 rounded-xl py-2.5 text-destructive focus:bg-destructive/10 focus:text-destructive">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-destructive/10">
-                    <Trash2 className="h-4 w-4 text-destructive" aria-hidden />
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-destructive/10">
+                    <Trash2 className="size-4 text-destructive" aria-hidden />
                   </div>
                   <span className="text-sm font-semibold">Delete asset</span>
                 </DropdownMenuItem>

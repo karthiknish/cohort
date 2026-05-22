@@ -13,7 +13,7 @@ export function ProjectsPageSkeleton() {
     <div className={PROJECTS_THEME.page}>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
-          <Skeleton className="h-12 w-12 shrink-0 rounded-2xl" />
+          <Skeleton className="size-12 shrink-0 rounded-2xl" />
           <div className="space-y-2">
             <Skeleton className="h-8 w-40" />
             <Skeleton className="h-4 w-64" />
@@ -49,7 +49,7 @@ export function ProjectsPageSkeleton() {
           <div className="flex w-full max-w-xl gap-2">
             <Skeleton className="h-9 flex-1 rounded-md" />
             <Skeleton className="h-9 w-36 rounded-md" />
-            <Skeleton className="h-9 w-9 rounded-md" />
+            <Skeleton className="size-9 rounded-md" />
           </div>
         </div>
         <div className="space-y-3 p-4">

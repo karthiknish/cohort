@@ -93,18 +93,23 @@ export const list = workspaceQuery({
 
     const messageMatchIds = new Set<string>()
     if (search) {
-      for (const row of rows.slice(0, 60)) {
-        const messages = await ctx.db
-          .query('agentMessages')
-          .withIndex('by_workspace_conversation_createdAt', (q) =>
-            q.eq('workspaceId', args.workspaceId).eq('conversationLegacyId', row.legacyId),
-          )
-          .order('desc')
-          .take(80)
+      const searchMatches = await Promise.all(
+        rows.slice(0, 60).map(async (row) => {
+          const messages = await ctx.db
+            .query('agentMessages')
+            .withIndex('by_workspace_conversation_createdAt', (q) =>
+              q.eq('workspaceId', args.workspaceId).eq('conversationLegacyId', row.legacyId),
+            )
+            .order('desc')
+            .take(80)
 
-        if (messages.some((message) => message.content.toLowerCase().includes(search))) {
-          messageMatchIds.add(row.legacyId)
-        }
+          return messages.some((message) => message.content.toLowerCase().includes(search))
+            ? row.legacyId
+            : null
+        }),
+      )
+      for (const legacyId of searchMatches) {
+        if (legacyId) messageMatchIds.add(legacyId)
       }
     }
 
@@ -121,7 +126,7 @@ export const list = workspaceQuery({
       )
     })
 
-    const sorted = [...filtered].sort((a, b) => {
+    const sorted = filtered.toSorted((a, b) => {
       const aPinned = a.pinnedAt ?? 0
       const bPinned = b.pinnedAt ?? 0
       if (aPinned !== bPinned) return bPinned - aPinned

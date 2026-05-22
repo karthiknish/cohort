@@ -36,7 +36,7 @@ export function CampaignControlHeader({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-3.5">
             <div className={ADS_PAGE_THEME.controlHeaderIcon}>
-              <Icon className="h-5 w-5 text-primary" aria-hidden />
+              <Icon className="size-5 text-primary" aria-hidden />
             </div>
             <div className="min-w-0 space-y-1">
               <p className={ADS_PAGE_THEME.sectionEyebrow}>{eyebrow}</p>

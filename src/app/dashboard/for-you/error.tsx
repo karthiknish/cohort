@@ -40,8 +40,8 @@ export default function DashboardForYouError({
         aria-atomic="true"
       >
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="h-8 w-8 text-destructive" />
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
+            <AlertTriangle className="size-8 text-destructive" />
           </div>
           <CardTitle className="text-xl">For You failed to load</CardTitle>
           <CardDescription>
@@ -50,12 +50,12 @@ export default function DashboardForYouError({
         </CardHeader>
         <CardContent className="space-y-3">
           <Button className="w-full" onClick={handleRetry} type="button">
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="mr-2 size-4" />
             Try again
           </Button>
           <Button variant="outline" asChild className="w-full">
             <Link href="/">
-              <Home className="mr-2 h-4 w-4" />
+              <Home className="mr-2 size-4" />
               Go to home
             </Link>
           </Button>

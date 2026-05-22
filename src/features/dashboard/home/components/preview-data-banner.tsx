@@ -38,16 +38,16 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
         <div className="flex items-center gap-3">
           <div
             className={cn(
-              'flex h-9 w-9 items-center justify-center rounded-full transition-colors',
+              'flex size-9 items-center justify-center rounded-full transition-colors',
               isPreviewMode
                 ? 'bg-warning/15 text-warning'
                 : 'bg-warning/10 text-warning'
             )}
           >
             {isPreviewMode ? (
-              <Eye className="h-4 w-4" aria-hidden />
+              <Eye className="size-4" aria-hidden />
             ) : (
-              <Database className="h-4 w-4" aria-hidden />
+              <Database className="size-4" aria-hidden />
             )}
           </div>
           <div>
@@ -74,7 +74,7 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
                 : 'border-warning/30 bg-warning text-warning-foreground hover:bg-warning/90'
             )}
           >
-            <Eye className="h-3.5 w-3.5" aria-hidden />
+            <Eye className="size-3.5" aria-hidden />
             {isPreviewMode ? 'Exit Preview' : 'Preview with Data'}
           </Button>
         </div>

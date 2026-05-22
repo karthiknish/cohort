@@ -68,11 +68,9 @@ async function runProposalGeneration(ctx: ActionCtx, input: OperationInput, prop
 }
 
 function findConversationProposal(records: unknown[], conversationId: string) {
-  return records
-    .map((record) => asRecord(record))
-    .filter((record): record is Record<string, unknown> => Boolean(record))
-    .filter((record) => asString(record.agentConversationId) === conversationId)
-    .reduce<Record<string, unknown> | null>((latest, record) => {
+  return records.reduce<Record<string, unknown> | null>((latest, rawRecord) => {
+      const record = asRecord(rawRecord)
+      if (!record || asString(record.agentConversationId) !== conversationId) return latest
       if (latest === null) {
         return record
       }
@@ -121,31 +119,29 @@ export const proposalOperationHandlers: Record<string, OperationHandler> = {
     })
 
     const proposals = Array.isArray(rawProposals)
-      ? rawProposals
-          .map((row) => {
-            if (!row || typeof row !== 'object') return null
-            const record = row as Record<string, unknown>
-            const legacyId = asNonEmptyString(record.legacyId)
-            const proposalStatus = asNonEmptyString(record.status)
-            if (!legacyId || !proposalStatus) return null
+      ? rawProposals.flatMap((row) => {
+          if (!row || typeof row !== 'object') return []
+          const record = row as Record<string, unknown>
+          const legacyId = asNonEmptyString(record.legacyId)
+          const proposalStatus = asNonEmptyString(record.status)
+          if (!legacyId || !proposalStatus) return []
 
-            const formData = asRecord(record.formData)
-            const title =
-              asNonEmptyString(formData?.title) ??
-              asNonEmptyString(formData?.projectName) ??
-              asNonEmptyString(record.clientName) ??
-              'Untitled proposal'
+          const formData = asRecord(record.formData)
+          const title =
+            asNonEmptyString(formData?.title) ??
+            asNonEmptyString(formData?.projectName) ??
+            asNonEmptyString(record.clientName) ??
+            'Untitled proposal'
 
-            return {
-              proposalId: legacyId,
-              title,
-              status: proposalStatus,
-              clientName: asNonEmptyString(record.clientName) ?? null,
-              stepProgress: asNumber(record.stepProgress) ?? 0,
-              route: `/dashboard/proposals/${encodeURIComponent(legacyId)}/deck`,
-            }
-          })
-          .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+          return [{
+            proposalId: legacyId,
+            title,
+            status: proposalStatus,
+            clientName: asNonEmptyString(record.clientName) ?? null,
+            stepProgress: asNumber(record.stepProgress) ?? 0,
+            route: `/dashboard/proposals/${encodeURIComponent(legacyId)}/deck`,
+          }]
+        })
       : []
 
     const listed = proposals.slice(0, limit)

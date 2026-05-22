@@ -28,7 +28,7 @@ export function NotificationSettings({ trigger }: NotificationSettingsProps) {
       <DialogTrigger asChild>
         {trigger ?? (
           <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs">
-            <Bell className="h-3.5 w-3.5" aria-hidden />
+            <Bell className="size-3.5" aria-hidden />
             Notifications
           </Button>
         )}

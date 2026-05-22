@@ -31,14 +31,14 @@ type ComposerButtonProps = {
 }
 
 function ComposerButton({ icon: Icon, label, onClick, disabled }: ComposerButtonProps) {
-  const handleClick = useCallback(() => {
+  const onComposerAction = useCallback(() => {
     if (disabled) return
     onClick()
   }, [disabled, onClick])
 
   return (
-    <Button type="button" size="icon" variant="ghost" onClick={handleClick} disabled={disabled} className="h-7 w-7 hover:bg-background/50" aria-label={label}>
-      <Icon className="h-3.5 w-3.5" />
+    <Button type="button" size="icon" variant="ghost" onClick={onComposerAction} disabled={disabled} className="size-7 hover:bg-background/50" aria-label={label}>
+      <Icon className="size-3.5" />
       <span className="sr-only">{label}</span>
     </Button>
   )
@@ -55,7 +55,7 @@ function RichComposerMentionOption({
   mentionMouseDown: (event: MouseEvent<HTMLButtonElement>) => void
   participant: ClientTeamMember
 }) {
-  const handleClick = useCallback(() => {
+  const onMentionParticipant = useCallback(() => {
     mentionClick(participant)
   }, [mentionClick, participant])
 
@@ -64,7 +64,7 @@ function RichComposerMentionOption({
       key={participant.name}
       type="button"
       onMouseDown={mentionMouseDown}
-      onClick={handleClick}
+      onClick={onMentionParticipant}
       className={cn(
         'flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-sm transition',
         isActive ? 'bg-accent/10 text-primary' : 'hover:bg-muted'
@@ -116,15 +116,15 @@ export function RichComposerToolbar({
           disabled={disabled}
           className={cn('h-7 gap-1.5 px-2 text-xs hover:bg-background/50', hasAttachments && 'bg-accent/10 text-primary hover:bg-accent/20')}
         >
-          <Paperclip className="h-3.5 w-3.5" />
+          <Paperclip className="size-3.5" />
           <span className="hidden sm:inline">Attach</span>
         </Button>
       ) : null}
       <div className="mx-1 h-4 w-px bg-muted/60" />
       <Popover open={emojiPickerOpen} onOpenChange={onOpenEmojiChange}>
         <PopoverTrigger asChild>
-          <Button type="button" size="icon" variant="ghost" disabled={disabled} className="h-7 w-7" aria-label="Open emoji picker">
-            <Smile className="h-4 w-4" />
+          <Button type="button" size="icon" variant="ghost" disabled={disabled} className="size-7" aria-label="Open emoji picker">
+            <Smile className="size-4" />
             <span className="sr-only">Open emoji picker</span>
           </Button>
         </PopoverTrigger>
@@ -190,7 +190,7 @@ export function RichComposerTextareaShell({
       {isDraggingOver ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-b-lg bg-accent/10">
           <div className="flex flex-col items-center gap-2 text-primary">
-            <Upload className="h-8 w-8" />
+            <Upload className="size-8" />
             <span className="text-sm font-medium">Drop files here to attach</span>
           </div>
         </div>

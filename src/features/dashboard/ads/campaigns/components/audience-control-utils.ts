@@ -60,6 +60,36 @@ export const LOCATION_COORDINATES: Record<string, { lat: number; lng: number }> 
   'birmingham': { lat: 52.4862, lng: -1.8904 },
 }
 
+const LOCATION_KEYS_BY_LENGTH = Object.keys(LOCATION_COORDINATES).sort(
+  (a, b) => b.length - a.length,
+)
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function containsLocationTerm(text: string, term: string): boolean {
+  return new RegExp(escapeRegExp(term)).test(text)
+}
+
+function findFuzzyLocationCoordinates(
+  normalizedName: string,
+): { lat: number; lng: number } | null {
+  for (const key of LOCATION_KEYS_BY_LENGTH) {
+    if (!containsLocationTerm(normalizedName, key)) continue
+    const coords = LOCATION_COORDINATES[key]
+    if (coords) return coords
+  }
+
+  for (const key of LOCATION_KEYS_BY_LENGTH) {
+    if (!containsLocationTerm(key, normalizedName)) continue
+    const coords = LOCATION_COORDINATES[key]
+    if (coords) return coords
+  }
+
+  return null
+}
+
 export function findLocationCoordinates(name: string): { lat: number; lng: number } | null {
   const normalizedName = name.toLowerCase().trim()
 
@@ -82,11 +112,5 @@ export function findLocationCoordinates(name: string): { lat: number; lng: numbe
     return LOCATION_COORDINATES[mapped]
   }
 
-  for (const [key, coords] of Object.entries(LOCATION_COORDINATES)) {
-    if (normalizedName.includes(key) || key.includes(normalizedName)) {
-      return coords
-    }
-  }
-
-  return null
+  return findFuzzyLocationCoordinates(normalizedName)
 }

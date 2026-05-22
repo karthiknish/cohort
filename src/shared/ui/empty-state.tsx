@@ -63,8 +63,8 @@ export function EmptyState({
         )}
         {...props}
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
-          <Icon className="h-5 w-5 text-muted-foreground" />
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+          <Icon className="size-5 text-muted-foreground" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">{title}</p>
@@ -74,7 +74,7 @@ export function EmptyState({
         </div>
         {action && (
           <Button onClick={action.onClick} size="sm" variant="outline">
-            <ActionIcon className="mr-1.5 h-3.5 w-3.5" />
+            <ActionIcon className="mr-1.5 size-3.5" />
             {action.label}
           </Button>
         )}
@@ -93,8 +93,8 @@ export function EmptyState({
       )}
       {...props}
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted/80 ring-4 ring-muted/40 mb-4">
-        <Icon className="h-7 w-7 text-muted-foreground" />
+      <div className="flex size-14 items-center justify-center rounded-full bg-muted/80 ring-4 ring-muted/40 mb-4">
+        <Icon className="size-7 text-muted-foreground" />
       </div>
       <h3 className="text-base font-semibold text-foreground">{title}</h3>
       {description && (
@@ -104,7 +104,7 @@ export function EmptyState({
         <div className="mt-5 flex items-center gap-3">
           {action && (
             <Button onClick={action.onClick} size="sm">
-              <ActionIcon className="mr-1.5 h-4 w-4" />
+              <ActionIcon className="mr-1.5 size-4" />
               {action.label}
             </Button>
           )}

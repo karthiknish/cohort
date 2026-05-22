@@ -104,7 +104,7 @@ export function CodeBlock({
       {/* Header bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b bg-muted">
         <div className="flex items-center gap-2">
-          <Code className="h-4 w-4 text-muted-foreground" />
+          <Code className="size-4 text-muted-foreground" />
           {filename ? (
             <span className="text-sm font-medium">{filename}</span>
           ) : (
@@ -112,7 +112,7 @@ export function CodeBlock({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
                   {language}
-                  <ChevronDown className="h-3 w-3 ml-1" />
+                  <ChevronDown className="size-3 ml-1" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="max-h-60 overflow-y-auto">
@@ -135,14 +135,14 @@ export function CodeBlock({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={handleToggleExpanded}
               aria-label={isExpanded ? 'Collapse code block' : 'Expand code block'}
             >
               {isExpanded ? (
-                <ChevronUp className="h-4 w-4" />
+                <ChevronUp className="size-4" />
               ) : (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="size-4" />
               )}
               <span className="sr-only">
                 {isExpanded ? 'Collapse' : 'Expand'}
@@ -155,14 +155,14 @@ export function CodeBlock({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="size-7"
             onClick={handleCopy}
             aria-label={copied ? 'Code copied' : 'Copy code'}
           >
             {copied ? (
-              <Check className="h-4 w-4 text-primary" />
+              <Check className="size-4 text-primary" />
             ) : (
-              <Copy className="h-4 w-4" />
+              <Copy className="size-4" />
             )}
             <span className="sr-only">Copy code</span>
           </Button>

@@ -11,7 +11,7 @@ export function TasksPageSkeleton() {
     <div className={TASKS_THEME.page}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Skeleton className="h-12 w-12 rounded-2xl" />
+          <Skeleton className="size-12 rounded-2xl" />
           <div className="space-y-2">
             <Skeleton className="h-8 w-28" />
             <Skeleton className="h-4 w-64 max-w-full" />
@@ -45,9 +45,9 @@ export function TasksPageSkeleton() {
                 {taskCardSlots.map((slot) => (
                   <div key={slot} className="space-y-2 rounded-xl border border-border/50 bg-card p-3">
                     <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="size-3/4" />
                     <div className="flex items-center justify-between pt-2">
-                      <Skeleton className="h-6 w-6 rounded-full" />
+                      <Skeleton className="size-6 rounded-full" />
                       <Skeleton className="h-5 w-14 rounded-full" />
                     </div>
                   </div>

@@ -45,7 +45,7 @@ export function AttentionSummaryCard({ taskSummary, proposals, integrationSummar
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <CardTitle className="text-base flex items-center gap-2">
-              <TriangleAlert className="h-4 w-4 text-primary" />
+              <TriangleAlert className="size-4 text-primary" />
               What needs attention today
             </CardTitle>
             <CardDescription>Across tasks, proposals, and integrations.</CardDescription>
@@ -68,9 +68,9 @@ export function AttentionSummaryCard({ taskSummary, proposals, integrationSummar
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tasks</p>
             {urgentTasks > 0 ? (
-              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <AlertTriangle className="size-4 text-destructive" />
             ) : (
-              <CheckCircle2 className="h-4 w-4 text-success" />
+              <CheckCircle2 className="size-4 text-success" />
             )}
           </div>
           <div className="mt-2 space-y-1">
@@ -82,7 +82,7 @@ export function AttentionSummaryCard({ taskSummary, proposals, integrationSummar
           <div className="mt-3">
             <Link href="/dashboard/tasks">
               <Button variant="ghost" size="sm" className="h-8 px-2 text-xs gap-1">
-                View tasks <ArrowRight className="h-3 w-3" />
+                View tasks <ArrowRight className="size-3" />
               </Button>
             </Link>
           </div>
@@ -92,7 +92,7 @@ export function AttentionSummaryCard({ taskSummary, proposals, integrationSummar
         <div className="rounded-xl border bg-card p-3">
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Proposals</p>
-            <FileText className={cn('h-4 w-4', proposalCounts.total > 0 ? 'text-primary' : 'text-muted-foreground')} />
+            <FileText className={cn('size-4', proposalCounts.total > 0 ? 'text-primary' : 'text-muted-foreground')} />
           </div>
           <div className="mt-2 space-y-1">
             <div className="text-xl font-semibold tabular-nums">
@@ -105,7 +105,7 @@ export function AttentionSummaryCard({ taskSummary, proposals, integrationSummar
           <div className="mt-3">
             <Link href="/dashboard/proposals">
               <Button variant="ghost" size="sm" className="h-8 px-2 text-xs gap-1">
-                View proposals <ArrowRight className="h-3 w-3" />
+                View proposals <ArrowRight className="size-3" />
               </Button>
             </Link>
           </div>
@@ -115,7 +115,7 @@ export function AttentionSummaryCard({ taskSummary, proposals, integrationSummar
         <div className="rounded-xl border bg-card p-3">
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Integrations</p>
-            <PlugZap className={cn('h-4 w-4', (integrationSummary?.failedCount ?? 0) > 0 ? 'text-destructive' : 'text-muted-foreground')} />
+            <PlugZap className={cn('size-4', (integrationSummary?.failedCount ?? 0) > 0 ? 'text-destructive' : 'text-muted-foreground')} />
           </div>
           <div className="mt-2 space-y-1">
             <div className="text-xl font-semibold tabular-nums">
@@ -134,7 +134,7 @@ export function AttentionSummaryCard({ taskSummary, proposals, integrationSummar
           <div className="mt-3">
             <Link href="/dashboard/ads">
               <Button variant="ghost" size="sm" className="h-8 px-2 text-xs gap-1">
-                View connections <ArrowRight className="h-3 w-3" />
+                View connections <ArrowRight className="size-3" />
               </Button>
             </Link>
           </div>

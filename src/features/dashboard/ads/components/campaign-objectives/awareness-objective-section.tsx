@@ -47,7 +47,7 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Eye className="w-4 h-4 text-info" />
+            <Eye className="size-4 text-info" />
             Awareness Strategy
           </CardTitle>
           <CardDescription>
@@ -145,7 +145,7 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
       <Card className="border-info/20 bg-info/10">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <Eye className="w-5 h-5 text-info flex-shrink-0 mt-0.5" />
+            <Eye className="size-5 text-info flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Awareness Campaign Tips</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
@@ -188,7 +188,7 @@ function OptimizationGoalButton({
         active ? 'border-info/20 bg-info/10' : 'border-border hover:border-info/50'
       }`}
     >
-      <Icon className="mt-0.5 h-5 w-5 text-info" />
+      <Icon className="mt-0.5 size-5 text-info" />
       <div>
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-muted-foreground">{description}</p>

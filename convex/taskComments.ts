@@ -158,42 +158,45 @@ export const create = workspaceMutation({
     }
 
     const mentions = args.mentions ?? []
-    for (const mention of mentions) {
-      if (!mention || typeof mention.slug !== 'string' || !mention.slug) continue
+    await Promise.all(
+      mentions.map(async (mention) => {
+        if (!mention || typeof mention.slug !== 'string' || !mention.slug) return
 
-      const recipientUserIds = (await resolveMentionRecipientUserIds(ctx, args.workspaceId, [mention]))
-        .filter((id) => id !== currentUserId)
-      if (recipientUserIds.length === 0) continue
+        const recipientUserIds = (await resolveMentionRecipientUserIds(ctx, args.workspaceId, [mention])).filter(
+          (id) => id !== currentUserId,
+        )
+        if (recipientUserIds.length === 0) return
 
-      const mentionSnippet = content.length > 150 ? `${content.slice(0, 147)}…` : content
-      const senderName = currentUserName ?? 'Someone'
+        const mentionSnippet = content.length > 150 ? `${content.slice(0, 147)}…` : content
+        const senderName = currentUserName ?? 'Someone'
 
-      await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
-        workspaceId: args.workspaceId,
-        legacyId: `task:mention:${args.legacyId}:${mention.slug}`,
-        kind: 'task.mention',
-        title: `${senderName} mentioned you`,
-        body: mentionSnippet || '(no content)',
-        actorId: currentUserId,
-        actorName: senderName,
-        resourceType: 'task',
-        resourceId: args.taskLegacyId,
-        recipientRoles: ['admin', 'team', 'client'],
-        recipientClientId: taskClientId,
-        recipientClientIds: taskClientId ? [taskClientId] : undefined,
-        recipientUserIds,
-        metadata: {
-          taskId: args.taskLegacyId,
-          taskTitle,
-          commentId: args.legacyId,
-          mentionedName: mention.name,
-          mentionSlug: mention.slug,
-          clientId: taskClientId,
-        },
-        createdAtMs: timestamp,
-        updatedAtMs: timestamp,
-      })
-    }
+        await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+          workspaceId: args.workspaceId,
+          legacyId: `task:mention:${args.legacyId}:${mention.slug}`,
+          kind: 'task.mention',
+          title: `${senderName} mentioned you`,
+          body: mentionSnippet || '(no content)',
+          actorId: currentUserId,
+          actorName: senderName,
+          resourceType: 'task',
+          resourceId: args.taskLegacyId,
+          recipientRoles: ['admin', 'team', 'client'],
+          recipientClientId: taskClientId,
+          recipientClientIds: taskClientId ? [taskClientId] : undefined,
+          recipientUserIds,
+          metadata: {
+            taskId: args.taskLegacyId,
+            taskTitle,
+            commentId: args.legacyId,
+            mentionedName: mention.name,
+            mentionSlug: mention.slug,
+            clientId: taskClientId,
+          },
+          createdAtMs: timestamp,
+          updatedAtMs: timestamp,
+        })
+      }),
+    )
 
     return { ok: true } as const
   },

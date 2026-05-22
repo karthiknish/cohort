@@ -40,7 +40,7 @@ export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveC
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <AppWindow className="w-4 h-4 text-secondary" />
+            <AppWindow className="size-4 text-secondary" />
             App Configuration
           </CardTitle>
           <CardDescription>
@@ -62,13 +62,13 @@ export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveC
               <SelectContent>
                 <SelectItem value="APP_STORE">
                   <div className="flex items-center gap-2">
-                    <Store className="w-4 h-4" />
+                    <Store className="size-4" />
                     <span>Apple App Store</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="GOOGLE_PLAY">
                   <div className="flex items-center gap-2">
-                    <Play className="w-4 h-4" />
+                    <Play className="size-4" />
                     <span>Google Play Store</span>
                   </div>
                 </SelectItem>
@@ -169,7 +169,7 @@ export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveC
       <Card className="border-secondary/20 bg-secondary/5">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <Smartphone className="w-5 h-5 text-secondary flex-shrink-0 mt-0.5" />
+            <Smartphone className="size-5 text-secondary flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <h4 className="font-medium text-sm">App Promotion Tips</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">

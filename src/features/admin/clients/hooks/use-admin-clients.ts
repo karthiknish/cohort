@@ -483,13 +483,15 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         const teamMembers = dedupeClientTeamMembers(
             accountManager,
-            teamMemberFields
-            .map((member) => ({
-                name: member.name.trim(),
-                role: member.role.trim(),
-            }))
-            .filter((member) => member.name.length > 0)
-            .map((member) => ({ ...member, role: member.role || 'Contributor' }))
+            teamMemberFields.flatMap((member) => {
+                const normalized = {
+                    name: member.name.trim(),
+                    role: member.role.trim(),
+                }
+                return normalized.name.length > 0
+                    ? [{ ...normalized, role: normalized.role || 'Contributor' }]
+                    : []
+            })
         )
 
         setClientSaving(true)

@@ -49,15 +49,15 @@ function HelpStepActionLink({
   label: string
   onClose: () => void
 }) {
-  const handleClick = useCallback(() => {
+  const onCloseHelpModal = useCallback(() => {
     onClose()
   }, [onClose])
 
   return (
     <Button asChild size="sm" variant="ghost" className="shrink-0">
-      <Link href={href} onClick={handleClick}>
+      <Link href={href} onClick={onCloseHelpModal}>
         {label}
-        <ArrowRight className="ml-1 h-3 w-3" />
+        <ArrowRight className="ml-1 size-3" />
       </Link>
     </Button>
   )
@@ -74,23 +74,23 @@ function HelpNavigationLink({
   item: { name: string; description: string }
   onClose: () => void
 }) {
-  const handleClick = useCallback(() => {
+  const onCloseHelpModal = useCallback(() => {
     onClose()
   }, [onClose])
 
   return (
     <Link
       href={href}
-      onClick={handleClick}
+      onClick={onCloseHelpModal}
       className="group flex items-start gap-3 rounded-lg border border-muted/60 p-3 transition hover:border-accent/40 hover:bg-muted/30"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-primary">
-        <Icon className="h-4 w-4" />
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-primary">
+        <Icon className="size-4" />
       </span>
       <div className="flex-1 space-y-1">
         <div className="flex items-center gap-2">
           <h4 className="font-medium text-foreground group-hover:text-primary">{item.name}</h4>
-          <ArrowRight className="h-3 w-3 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
+          <ArrowRight className="size-3 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
         </div>
         <p className="text-sm text-muted-foreground">{item.description}</p>
       </div>
@@ -244,7 +244,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
       <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden p-0 z-[1100]">
         <DialogHeader className="px-6 pt-6">
           <DialogTitle className="flex items-center gap-2">
-            <CircleHelp className="h-5 w-5 text-primary" />
+            <CircleHelp className="size-5 text-primary" />
             {showWelcome ? 'Welcome to Cohorts' : 'Help & Navigation'}
           </DialogTitle>
           <DialogDescription>
@@ -272,7 +272,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                     onClick={handleLaunchTour}
                     className="w-full bg-gradient-to-r from-primary to-primary/80"
                   >
-                    <Sparkles className="mr-2 h-4 w-4" />
+                    <Sparkles className="mr-2 size-4" />
                     Launch Interactive Tour
                   </Button>
                   <Button
@@ -286,8 +286,8 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
 
                 <div className="rounded-lg border border-accent/20 bg-accent/5 p-4">
                   <div className="flex items-start gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-primary">
-                      <Sparkles className="h-4 w-4" />
+                    <span className="flex size-8 items-center justify-center rounded-full bg-accent/20 text-primary">
+                      <Sparkles className="size-4" />
                     </span>
                     <div>
                       <h4 className="font-semibold text-foreground">Quick tip</h4>
@@ -336,7 +336,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
             <TabsContent value="shortcuts" className="mt-4 space-y-4">
               <div className="rounded-lg border border-muted/60 p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Keyboard className="h-4 w-4" />
+                  <Keyboard className="size-4" />
                   Keyboard Shortcuts
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">

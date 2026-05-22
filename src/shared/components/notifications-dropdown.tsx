@@ -72,7 +72,7 @@ export function NotificationsDropdown() {
       aria-label={hasUnread ? `${unreadCount} unread notifications` : 'View notifications'}
       onClick={isMobile ? handleMobileOpen : undefined}
     >
-      <Bell className={cn('h-[1.125rem] w-[1.125rem]', hasUnread && 'motion-safe:animate-pulse')} />
+      <Bell className={cn('size-[1.125rem]', hasUnread && 'motion-safe:animate-pulse')} />
       {hasUnread ? (
         <span className={HEADER_DROPDOWN_THEME.badge} aria-hidden>
           {unreadCount > 9 ? '9+' : unreadCount}

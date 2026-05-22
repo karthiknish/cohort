@@ -7,17 +7,17 @@ export const TASKS_THEME = {
   rail: DASHBOARD_WORKSPACE_THEME.workspaceRail,
   segmented: DASHBOARD_WORKSPACE_THEME.segmentedList,
   sheet: {
-    content: 'flex h-full w-full flex-col border-l border-border/70 bg-card p-0 shadow-xl sm:max-w-md',
+    content: 'flex size-full flex-col border-l border-border/70 bg-card p-0 shadow-xl sm:max-w-md',
     header:
-      'shrink-0 space-y-1 border-b border-border/60 bg-gradient-to-br from-card via-card to-muted/25 px-5 py-5 pr-12',
-    body: 'flex-1 space-y-5 overflow-y-auto px-5 py-5',
+      'shrink-0 space-y-1 border-b border-border/60 bg-gradient-to-br from-card via-card to-muted/25 p-5 pr-12',
+    body: 'flex-1 space-y-5 overflow-y-auto p-5',
     footer: 'shrink-0 flex flex-col-reverse gap-2 border-t border-border/60 bg-muted/15 px-5 py-4 sm:flex-row sm:justify-end',
   },
   dialog: {
     content: 'gap-0 overflow-hidden p-0 sm:max-w-[32rem]',
     header:
       'space-y-1 border-b border-border/60 bg-gradient-to-br from-card via-card to-muted/25 px-5 pb-4 pt-5 pr-12 text-left',
-    body: 'space-y-5 px-5 py-5',
+    body: 'space-y-5 p-5',
     footer: 'flex flex-col-reverse gap-2 border-t border-border/60 bg-muted/15 px-5 py-4 sm:flex-row sm:justify-end',
   },
   viewDialog: {

@@ -86,7 +86,7 @@ export function TaskKanbanBulkToolbar({
           onClick={onSelectAll}
           className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          <CheckSquare className="h-3.5 w-3.5" />
+          <CheckSquare className="size-3.5" />
           Select all visible
         </button>
         <span className="text-xs text-muted-foreground">
@@ -101,7 +101,7 @@ export function TaskKanbanBulkToolbar({
       <div className="flex items-center gap-3">
         {bulkActive ? (
           <div className="flex items-center gap-2 text-sm">
-            <LoaderCircle className="h-4 w-4 animate-spin text-primary" />
+            <LoaderCircle className="size-4 animate-spin text-primary" />
             <span className="font-medium">{bulkLabel}...</span>
             <Badge variant="outline" className="h-5">
               {bulkProgress}%
@@ -110,7 +110,7 @@ export function TaskKanbanBulkToolbar({
         ) : (
           <>
             <div className="flex items-center gap-2">
-              <CheckSquare className="h-4 w-4 text-primary" />
+              <CheckSquare className="size-4 text-primary" />
               <span className="text-sm font-medium">
                 {selectedCount} {selectedCount === 1 ? 'task' : 'tasks'} selected
               </span>
@@ -130,7 +130,7 @@ export function TaskKanbanBulkToolbar({
               onClick={onClearSelection}
               className="h-7 text-xs"
             >
-              <X className="h-3 w-3 mr-1" />
+              <X className="size-3 mr-1" />
               Clear
             </Button>
           </>
@@ -148,13 +148,13 @@ export function TaskKanbanBulkToolbar({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-40 p-1" align="end">
-                {TASK_STATUSES.filter(s => s !== 'archived').map((status) => (
+                {TASK_STATUSES.flatMap((status) => status !== 'archived' ? [(
                   <BulkStatusOption
                     key={status}
                     status={status}
                     onSelect={onBulkStatusChange}
                   />
-                ))}
+                )] : [])}
               </PopoverContent>
             </Popover>
           )}
@@ -164,7 +164,7 @@ export function TaskKanbanBulkToolbar({
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                  <User className="h-3 w-3" />
+                  <User className="size-3" />
                   Assign
                 </Button>
               </PopoverTrigger>
@@ -196,7 +196,7 @@ export function TaskKanbanBulkToolbar({
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                  <Calendar className="h-3 w-3" />
+                  <Calendar className="size-3" />
                   Due Date
                 </Button>
               </PopoverTrigger>
@@ -237,7 +237,7 @@ export function TaskKanbanBulkToolbar({
               onClick={onBulkDelete}
               className="h-7 text-xs text-destructive hover:text-destructive gap-1"
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="size-3" />
               Delete
             </Button>
           )}
@@ -253,14 +253,14 @@ interface BulkStatusOptionProps {
 }
 
 function BulkStatusOption({ status, onSelect }: BulkStatusOptionProps) {
-  const handleClick = useCallback(() => {
+  const onSelectBulkStatus = useCallback(() => {
     onSelect?.(status)
   }, [onSelect, status])
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onSelectBulkStatus}
       className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
     >
       {formatStatusLabel(status)}

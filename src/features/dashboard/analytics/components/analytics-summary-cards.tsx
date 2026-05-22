@@ -56,7 +56,7 @@ function DeltaBadge({ delta }: { delta: MetricDelta }) {
         !isUp && !isDown && 'text-muted-foreground',
       )}
     >
-      <Icon className="h-3.5 w-3.5" aria-hidden />
+      <Icon className="size-3.5" aria-hidden />
       {label}
       <span className="font-normal text-muted-foreground">vs previous period</span>
     </span>
@@ -86,7 +86,7 @@ function SummaryStatCard({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
-                <Info className="h-3.5 w-3.5 text-muted-foreground/60 transition-colors hover:text-primary" />
+                <Info className="size-3.5 text-muted-foreground/60 transition-colors hover:text-primary" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 <p className="text-xs">{tooltip}</p>
@@ -94,8 +94,8 @@ function SummaryStatCard({
             </Tooltip>
           </TooltipProvider>
         </div>
-        <div className={cn(getIconContainerClasses('small'), 'h-9 w-9 rounded-lg')}>
-          <Icon className="h-4 w-4" />
+        <div className={cn(getIconContainerClasses('small'), 'size-9 rounded-lg')}>
+          <Icon className="size-4" />
         </div>
       </CardHeader>
       <CardContent className="space-y-2">

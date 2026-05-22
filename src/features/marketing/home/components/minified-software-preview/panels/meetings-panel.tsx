@@ -11,7 +11,7 @@ export function MeetingsPanel() {
   return (
     <div className="space-y-2.5">
       <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/20 px-3 py-2">
-        <CalendarClock className="h-3.5 w-3.5 text-primary/50" />
+        <CalendarClock className="size-3.5 text-primary/50" />
         <span className="text-[11px] font-semibold text-foreground/70">Today, 3 meetings scheduled</span>
         <span className="ml-auto rounded-full border border-info/30 bg-info/10 px-2 py-0.5 text-[9px] font-semibold text-info">
           Wed
@@ -43,7 +43,7 @@ export function MeetingsPanel() {
                     <div
                       key={att}
                       className={cn(
-                        'flex h-4 w-4 items-center justify-center rounded-full border border-background text-[7px] font-bold text-viewer-chrome',
+                        'flex size-4 items-center justify-center rounded-full border border-background text-[7px] font-bold text-viewer-chrome',
                         ATTENDEE_COLORS[att] ?? 'bg-muted-foreground',
                       )}
                     >
@@ -51,7 +51,7 @@ export function MeetingsPanel() {
                     </div>
                   ))}
                   {meeting.attendees.length > 3 ? (
-                    <div className="flex h-4 w-4 items-center justify-center rounded-full border border-background bg-muted text-[7px] font-bold text-muted-foreground">
+                    <div className="flex size-4 items-center justify-center rounded-full border border-background bg-muted text-[7px] font-bold text-muted-foreground">
                       +{meeting.attendees.length - 3}
                     </div>
                   ) : null}
@@ -66,9 +66,9 @@ export function MeetingsPanel() {
                         : 'text-muted-foreground/50',
                   )}
                 >
-                  {meeting.noteStatus === 'ready' ? <CheckCircle2 className="h-2.5 w-2.5" /> : null}
-                  {meeting.noteStatus === 'active' ? <Sparkles className="h-2.5 w-2.5" /> : null}
-                  {meeting.noteStatus === 'upcoming' ? <Clock className="h-2.5 w-2.5" /> : null}
+                  {meeting.noteStatus === 'ready' ? <CheckCircle2 className="size-2.5" /> : null}
+                  {meeting.noteStatus === 'active' ? <Sparkles className="size-2.5" /> : null}
+                  {meeting.noteStatus === 'upcoming' ? <Clock className="size-2.5" /> : null}
                   {meeting.note}
                 </div>
               </div>

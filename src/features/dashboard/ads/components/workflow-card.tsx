@@ -39,7 +39,7 @@ export function WorkflowCard({
       <CardHeader className="flex flex-col gap-4 border-b border-border/50 pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex items-center gap-2">
-            <Link2 className="h-4 w-4 text-primary" aria-hidden />
+            <Link2 className="size-4 text-primary" aria-hidden />
             <CardTitle className="text-base leading-tight">Get paid media connected</CardTitle>
           </div>
           <CardDescription className="max-w-xl text-pretty leading-relaxed">
@@ -70,7 +70,7 @@ export function WorkflowCard({
               >
                 {done ? (
                   <span className="inline-flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" aria-hidden />
+                    <CheckCircle2 className="size-3" aria-hidden />
                     Done
                   </span>
                 ) : (

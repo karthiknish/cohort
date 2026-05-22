@@ -1,7 +1,7 @@
 'use client'
 
 import { useAction } from 'convex/react'
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type ChangeEvent } from 'react'
 
 import { adsAdSetsApi } from '@/lib/convex-api'
 import { asErrorMessage } from '@/lib/convex-errors'
@@ -75,6 +75,22 @@ export function CreateMetaAdSetDialog({ open, onOpenChange, campaignId, campaign
     }
   }, [campaignId, campaignObjective, createAdSet, dailyBudget, name, onCreated, onOpenChange, selectedClientId, workspaceId])
 
+  const handleNameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setName(event.target.value)
+  }, [])
+
+  const handleDailyBudgetChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setDailyBudget(event.target.value)
+  }, [])
+
+  const handleCancel = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
+
+  const handleSubmitClick = useCallback(() => {
+    void handleSubmit()
+  }, [handleSubmit])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -89,7 +105,7 @@ export function CreateMetaAdSetDialog({ open, onOpenChange, campaignId, campaign
             <Input
               id="meta-adset-name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={handleNameChange}
               placeholder="US — Broad"
             />
           </FormField>
@@ -99,15 +115,15 @@ export function CreateMetaAdSetDialog({ open, onOpenChange, campaignId, campaign
               type="number"
               min={1}
               value={dailyBudget}
-              onChange={(e) => setDailyBudget(e.target.value)}
+              onChange={handleDailyBudgetChange}
             />
           </FormField>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <Button variant="outline" onClick={handleCancel} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={() => void handleSubmit()} disabled={loading || !name.trim()}>
+          <Button onClick={handleSubmitClick} disabled={loading || !name.trim()}>
             {loading ? 'Creating…' : 'Create ad set'}
           </Button>
         </DialogFooter>

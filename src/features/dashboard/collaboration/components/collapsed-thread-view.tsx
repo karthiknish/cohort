@@ -131,15 +131,15 @@ function ThreadCard({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-6 w-6 flex-shrink-0 mt-0.5"
+            className="size-6 flex-shrink-0 mt-0.5"
             onClick={handleToggleExpandClick}
             aria-expanded={isExpanded}
             aria-label={isExpanded ? 'Collapse thread' : 'Expand thread'}
           >
             {isExpanded ? (
-              <ChevronDown className="h-4 w-4" aria-hidden />
+              <ChevronDown className="size-4" aria-hidden />
             ) : (
-              <ChevronRight className="h-4 w-4" aria-hidden />
+              <ChevronRight className="size-4" aria-hidden />
             )}
           </Button>
 
@@ -152,7 +152,7 @@ function ThreadCard({
             aria-label={`Open thread: ${rootMessage.content.slice(0, 80)}${rootMessage.content.length > 80 ? '…' : ''}`}
           >
             <div className="flex-shrink-0">
-              <MessageSquare className="h-5 w-5 text-muted-foreground" />
+              <MessageSquare className="size-5 text-muted-foreground" />
             </div>
 
             <div className="min-w-0 flex-1">
@@ -162,18 +162,18 @@ function ThreadCard({
 
               <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <MessageSquare className="h-3 w-3" />
+                  <MessageSquare className="size-3" />
                   {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
                 </span>
 
                 <span className="flex items-center gap-1">
-                  <Users className="h-3 w-3" />
+                  <Users className="size-3" />
                   {participants.length} {participants.length === 1 ? 'person' : 'people'}
                 </span>
 
                 {lastReplyAt && (
                   <span className="flex items-center gap-1" suppressHydrationWarning>
-                    <Clock className="h-3 w-3" />
+                    <Clock className="size-3" />
                     {formatRelativeTime(new Date(lastReplyAt))}
                   </span>
                 )}
@@ -189,7 +189,7 @@ function ThreadCard({
                 {participants.slice(0, 4).map((name, i) => (
                   <Avatar
                     key={name}
-                    className="h-6 w-6 border-2 border-background"
+                    className="size-6 border-2 border-background"
                   >
                     <AvatarFallback className="text-[10px]">
                       {name.charAt(0).toUpperCase()}
@@ -197,7 +197,7 @@ function ThreadCard({
                   </Avatar>
                 ))}
                 {participants.length > 4 && (
-                  <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] text-muted-foreground">
+                  <div className="size-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] text-muted-foreground">
                     +{participants.length - 4}
                   </div>
                 )}
@@ -244,7 +244,7 @@ export function ThreadBadge({
         className
       )}
     >
-      <MessageSquare className="h-3 w-3" />
+      <MessageSquare className="size-3" />
       <span>{replyCount}</span>
       {unreadCount && unreadCount > 0 && (
         <span className="font-medium">({unreadCount} new)</span>
@@ -284,7 +284,7 @@ export function ThreadPreview({
       <div className="space-y-2">
         {recentReplies.map((reply) => (
           <div key={reply.id} className="flex items-start gap-2 text-sm">
-            <Avatar className="h-5 w-5 flex-shrink-0">
+            <Avatar className="size-5 flex-shrink-0">
               <AvatarFallback className="text-[9px]">
                 {reply.senderName.charAt(0).toUpperCase()}
               </AvatarFallback>

@@ -2,7 +2,7 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 import { useAction } from 'convex/react'
 import NextImage from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -96,6 +96,99 @@ type Props = {
 type ViewMode = 'grid' | 'list'
 type SupportedProviderId = 'google' | 'tiktok' | 'linkedin' | 'facebook'
 
+type CampaignAdsSectionState = {
+  adSets: Array<{ id: string; name: string }>
+  adSetDialogOpen: boolean
+  ads: CampaignAd[]
+  loading: boolean
+  summary: Summary | null
+  searchQuery: string
+  typeFilter: string
+  statusFilter: string
+  hasLoaded: boolean
+  viewMode: ViewMode
+  adMetrics: Record<string, CreativePerformanceMetrics | undefined>
+  metricsLoading: boolean
+  periodDays: string
+  sortKey: CreativeSortKey
+}
+
+type CampaignAdsSectionAction =
+  | { type: 'setAdSets'; value: Array<{ id: string; name: string }> }
+  | { type: 'setAdSetDialogOpen'; value: boolean }
+  | { type: 'setAds'; value: CampaignAd[] }
+  | { type: 'setLoading'; value: boolean }
+  | { type: 'setSummary'; value: Summary | null }
+  | { type: 'setSearchQuery'; value: string }
+  | { type: 'setTypeFilter'; value: string }
+  | { type: 'setStatusFilter'; value: string }
+  | { type: 'setHasLoaded'; value: boolean }
+  | { type: 'setViewMode'; value: ViewMode }
+  | { type: 'setAdMetrics'; value: Record<string, CreativePerformanceMetrics | undefined> }
+  | { type: 'setMetricsLoading'; value: boolean }
+  | { type: 'setPeriodDays'; value: string }
+  | { type: 'setSortKey'; value: CreativeSortKey }
+  | { type: 'clearFilters' }
+
+function createInitialCampaignAdsSectionState(): CampaignAdsSectionState {
+  return {
+    adSets: [],
+    adSetDialogOpen: false,
+    ads: [],
+    loading: true,
+    summary: null,
+    searchQuery: '',
+    typeFilter: 'all',
+    statusFilter: 'all',
+    hasLoaded: false,
+    viewMode: 'grid',
+    adMetrics: {},
+    metricsLoading: false,
+    periodDays: '30',
+    sortKey: 'spend',
+  }
+}
+
+function campaignAdsSectionReducer(
+  state: CampaignAdsSectionState,
+  action: CampaignAdsSectionAction,
+): CampaignAdsSectionState {
+  switch (action.type) {
+    case 'setAdSets':
+      return { ...state, adSets: action.value }
+    case 'setAdSetDialogOpen':
+      return { ...state, adSetDialogOpen: action.value }
+    case 'setAds':
+      return { ...state, ads: action.value }
+    case 'setLoading':
+      return { ...state, loading: action.value }
+    case 'setSummary':
+      return { ...state, summary: action.value }
+    case 'setSearchQuery':
+      return { ...state, searchQuery: action.value }
+    case 'setTypeFilter':
+      return { ...state, typeFilter: action.value }
+    case 'setStatusFilter':
+      return { ...state, statusFilter: action.value }
+    case 'setHasLoaded':
+      return { ...state, hasLoaded: action.value }
+    case 'setViewMode':
+      return { ...state, viewMode: action.value }
+    case 'setAdMetrics':
+      return { ...state, adMetrics: action.value }
+    case 'setMetricsLoading':
+      return { ...state, metricsLoading: action.value }
+    case 'setPeriodDays':
+      return { ...state, periodDays: action.value }
+    case 'setSortKey':
+      return { ...state, sortKey: action.value }
+    case 'clearFilters':
+      return { ...state, searchQuery: '', typeFilter: 'all', statusFilter: 'all' }
+    default:
+      return state
+  }
+}
+
 
 type AdMetricRow = {
   adId?: string
@@ -108,16 +201,16 @@ type AdMetricRow = {
 
 function getCreativeTypeIcon(type: string, className?: string) {
   const lowerType = type.toLowerCase()
-  if (lowerType.includes('boosted') || lowerType.includes('page_post')) return <Link2 className={className || "h-4 w-4"} />
-  if (lowerType.includes('video_responsive')) return <Video className={className || "h-4 w-4"} />
-  if (lowerType.includes('shopping')) return <Layers className={className || "h-4 w-4"} />
-  if (lowerType.includes('carousel') || lowerType.includes('product_ad')) return <Layers className={className || "h-4 w-4"} />
-  if (lowerType.includes('video')) return <Video className={className || "h-4 w-4"} />
-  if (lowerType.includes('image') || lowerType.includes('photo') || lowerType.includes('sponsored_status_update')) return <ImageIcon className={className || "h-4 w-4"} />
-  if (lowerType.includes('text') || lowerType.includes('search')) return <FileText className={className || "h-4 w-4"} />
-  if (lowerType.includes('app') || lowerType.includes('call') || lowerType.includes('sponsored_inmails')) return <Smartphone className={className || "h-4 w-4"} />
-  if (lowerType.includes('hotel')) return <MapPin className={className || "h-4 w-4"} />
-  return <Layers className={className || "h-4 w-4 text-muted-foreground/50"} />
+  if (lowerType.includes('boosted') || lowerType.includes('page_post')) return <Link2 className={className || "size-4"} />
+  if (lowerType.includes('video_responsive')) return <Video className={className || "size-4"} />
+  if (lowerType.includes('shopping')) return <Layers className={className || "size-4"} />
+  if (lowerType.includes('carousel') || lowerType.includes('product_ad')) return <Layers className={className || "size-4"} />
+  if (lowerType.includes('video')) return <Video className={className || "size-4"} />
+  if (lowerType.includes('image') || lowerType.includes('photo') || lowerType.includes('sponsored_status_update')) return <ImageIcon className={className || "size-4"} />
+  if (lowerType.includes('text') || lowerType.includes('search')) return <FileText className={className || "size-4"} />
+  if (lowerType.includes('app') || lowerType.includes('call') || lowerType.includes('sponsored_inmails')) return <Smartphone className={className || "size-4"} />
+  if (lowerType.includes('hotel')) return <MapPin className={className || "size-4"} />
+  return <Layers className={className || "size-4 text-muted-foreground/50"} />
 }
 
 function getStatusVariant(status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
@@ -213,8 +306,8 @@ function CampaignAdsHeader({
     <CardHeader className="border-b border-border/50 pb-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/15">
-            <Layers className="h-5 w-5 text-primary" aria-hidden />
+          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/15">
+            <Layers className="size-5 text-primary" aria-hidden />
           </div>
           <div className="space-y-0.5">
             <p className={ADS_PAGE_THEME.sectionEyebrow}>Creative library</p>
@@ -250,20 +343,20 @@ function CampaignAdsHeader({
             <Button
               variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={handleSetGridView}
               aria-label="Grid view"
             >
-              <Grid3X3 className="h-4 w-4" />
+              <Grid3X3 className="size-4" />
             </Button>
             <Button
               variant={viewMode === 'list' ? 'secondary' : 'ghost'}
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               onClick={handleSetListView}
               aria-label="List view"
             >
-              <List className="h-4 w-4" />
+              <List className="size-4" />
             </Button>
           </div>
           <Button
@@ -273,7 +366,7 @@ function CampaignAdsHeader({
             disabled={!canLoad || loading}
             aria-label="Refresh creatives"
           >
-            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+            <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
           </Button>
         </div>
       </div>
@@ -307,7 +400,7 @@ function CampaignAdsFilters({
   return (
     <div className="flex flex-col gap-2 sm:flex-row">
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search creatives…"
           value={searchQuery}
@@ -317,7 +410,7 @@ function CampaignAdsFilters({
       </div>
       <Select value={typeFilter} onValueChange={setTypeFilter}>
         <SelectTrigger className="w-full sm:w-[140px]">
-          <Filter className="mr-2 h-4 w-4" />
+          <Filter className="mr-2 size-4" />
           <SelectValue placeholder="Type" />
         </SelectTrigger>
         <SelectContent>
@@ -365,7 +458,7 @@ function AdGridItem({
   onToggleStatus: (ad: CampaignAd, nextStatus: string) => void
   providerId: string
 }) {
-  const handleClick = useCallback(() => onCreativeClick(ad), [onCreativeClick, ad])
+  const onOpenCreative = useCallback(() => onCreativeClick(ad), [onCreativeClick, ad])
   const handleToggleStatus = useCallback((nextStatus: string) => onToggleStatus(ad, nextStatus), [onToggleStatus, ad])
   const metrics = getMetricsForAd(ad, adMetrics)
   const spendShare = metrics && maxSpend > 0 ? (metrics.spend / maxSpend) * 100 : 0
@@ -378,7 +471,7 @@ function AdGridItem({
     >
       <button
         type="button"
-        onClick={handleClick}
+        onClick={onOpenCreative}
         className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
       >
         <div className="relative aspect-square overflow-hidden bg-muted">
@@ -394,25 +487,25 @@ function AdGridItem({
             />
           ) : ad.imageUrl && imageFailed ? (
             <div className="flex h-full flex-col items-center justify-center gap-1.5 px-3 text-center text-muted-foreground">
-              <ImageIcon className="h-8 w-8 opacity-40" aria-hidden />
+              <ImageIcon className="size-8 opacity-40" aria-hidden />
               <span className="text-[10px] font-medium">Preview unavailable</span>
             </div>
           ) : ad.videoUrl ? (
             <div className="flex h-full items-center justify-center bg-muted">
               <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                <Play className="h-10 w-10" />
+                <Play className="size-10" />
               </div>
             </div>
           ) : (
             <div className="flex h-full items-center justify-center">
-              <Layers className="h-10 w-10 text-muted-foreground/30" />
+              <Layers className="size-10 text-muted-foreground/30" />
             </div>
           )}
 
           {ad.videoUrl && ad.imageUrl ? (
             <div className="absolute inset-0 flex items-center justify-center bg-black/35">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-card/95 shadow-sm ring-1 ring-border/50">
-                <Play className="ml-0.5 h-6 w-6 text-foreground" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-card/95 shadow-sm ring-1 ring-border/50">
+                <Play className="ml-0.5 size-6 text-foreground" />
               </div>
             </div>
           ) : null}
@@ -518,7 +611,7 @@ function AdListRow({
   providerId: string
 }) {
   const [listImageFailed, setListImageFailed] = useState(false)
-  const handleClick = useCallback(() => onCreativeClick(ad), [onCreativeClick, ad])
+  const onOpenCreative = useCallback(() => onCreativeClick(ad), [onCreativeClick, ad])
   const handleStopPropagation = useCallback((event: React.MouseEvent) => event.stopPropagation(), [])
   const handleToggleStatus = useCallback((nextStatus: string) => onToggleStatus(ad, nextStatus), [onToggleStatus, ad])
   const handleListImageError = useCallback(() => setListImageFailed(true), [])
@@ -534,10 +627,10 @@ function AdListRow({
   return (
     <TableRow
       className="cursor-pointer hover:bg-muted/50"
-      onClick={handleClick}
+      onClick={onOpenCreative}
     >
       <TableCell>
-        <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border bg-muted">
+        <div className="relative flex size-14 items-center justify-center overflow-hidden rounded-lg border bg-muted">
           {ad.imageUrl && !listImageFailed ? (
             <NextImage
               src={ad.imageUrl}
@@ -549,11 +642,11 @@ function AdListRow({
               onError={handleListImageError}
             />
           ) : ad.imageUrl && listImageFailed ? (
-            <ImageIcon className="h-5 w-5 text-muted-foreground/50" aria-hidden />
+            <ImageIcon className="size-5 text-muted-foreground/50" aria-hidden />
           ) : ad.videoUrl ? (
-            <Play className="h-5 w-5 text-muted-foreground" />
+            <Play className="size-5 text-muted-foreground" />
           ) : (
-            getCreativeTypeIcon(ad.type, 'h-5 w-5 text-muted-foreground')
+            getCreativeTypeIcon(ad.type, 'size-5 text-muted-foreground')
           )}
         </div>
       </TableCell>
@@ -619,14 +712,14 @@ function AdListRow({
             title="Open Instagram or Facebook post"
             aria-label="Open social permalink"
           >
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="size-4" />
           </a>
         ) : (
           <span className="text-muted-foreground">Unavailable</span>
         )}
       </TableCell>
       <TableCell>
-        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        <ChevronRight className="size-4 text-muted-foreground" />
       </TableCell>
     </TableRow>
   )
@@ -699,33 +792,62 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
   const listAdSets = useAction(adsAdSetsApi.listAdSets)
   const updateCreativeStatus = useAction(adsCreativesApi.updateCreativeStatus)
   const listAdMetrics = useAction(adsAdMetricsApi.listAdMetrics)
-  const [adSets, setAdSets] = useState<Array<{ id: string; name: string }>>([])
-  const [adSetDialogOpen, setAdSetDialogOpen] = useState(false)
-  const [ads, setAds] = useState<CampaignAd[]>([])
-  const [loading, setLoading] = useState(true)
-  const [summary, setSummary] = useState<Summary | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [hasLoaded, setHasLoaded] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const [adMetrics, setAdMetrics] = useState<Record<string, CreativePerformanceMetrics | undefined>>({})
-  const [metricsLoading, setMetricsLoading] = useState(false)
-  const [periodDays, setPeriodDays] = useState('30')
-  const [sortKey, setSortKey] = useState<CreativeSortKey>('spend')
+  const [state, dispatch] = useReducer(
+    campaignAdsSectionReducer,
+    undefined,
+    createInitialCampaignAdsSectionState,
+  )
+  const {
+    adSets,
+    adSetDialogOpen,
+    ads,
+    loading,
+    summary,
+    searchQuery,
+    typeFilter,
+    statusFilter,
+    hasLoaded,
+    viewMode,
+    adMetrics,
+    metricsLoading,
+    periodDays,
+    sortKey,
+  } = state
+
+  const setViewMode = useCallback((value: ViewMode) => {
+    dispatch({ type: 'setViewMode', value })
+  }, [])
+  const setSearchQuery = useCallback((value: string) => {
+    dispatch({ type: 'setSearchQuery', value })
+  }, [])
+  const setStatusFilter = useCallback((value: string) => {
+    dispatch({ type: 'setStatusFilter', value })
+  }, [])
+  const setTypeFilter = useCallback((value: string) => {
+    dispatch({ type: 'setTypeFilter', value })
+  }, [])
+  const setPeriodDays = useCallback((value: string) => {
+    dispatch({ type: 'setPeriodDays', value })
+  }, [])
+  const setSortKey = useCallback((value: CreativeSortKey) => {
+    dispatch({ type: 'setSortKey', value })
+  }, [])
+  const handleAdSetDialogOpenChange = useCallback((value: boolean) => {
+    dispatch({ type: 'setAdSetDialogOpen', value })
+  }, [])
 
   const canLoad = !isPreviewMode
 
   const fetchAds = useCallback(async () => {
     if (!canLoad) {
-      setLoading(false)
+      dispatch({ type: 'setLoading', value: false })
       return
     }
 
-    setLoading(true)
+    dispatch({ type: 'setLoading', value: true })
 
     if (!workspaceId) {
-      setLoading(false)
+      dispatch({ type: 'setLoading', value: false })
       return
     }
 
@@ -739,9 +861,9 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
     })
       .then((creatives) => {
         const mapped = creatives as CampaignAd[]
-        setAds(Array.isArray(mapped) ? mapped : [])
-        setSummary(null)
-        setHasLoaded(true)
+        dispatch({ type: 'setAds', value: Array.isArray(mapped) ? mapped : [] })
+        dispatch({ type: 'setSummary', value: null })
+        dispatch({ type: 'setHasLoaded', value: true })
       })
       .catch((error) => {
         reportConvexFailure({
@@ -752,7 +874,7 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
         })
       })
       .finally(() => {
-        setLoading(false)
+        dispatch({ type: 'setLoading', value: false })
       })
   }, [canLoad, campaignId, clientId, convexProviderId, listCreatives, workspaceId])
 
@@ -765,11 +887,12 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
       campaignId,
     })
       .then((rows) => {
-        setAdSets(
-          Array.isArray(rows)
+        dispatch({
+          type: 'setAdSets',
+          value: Array.isArray(rows)
             ? rows.map((row) => ({ id: row.id, name: row.name || row.id }))
             : [],
-        )
+        })
       })
       .catch((error) => {
         logError(error, 'CampaignAdsSection:fetchAdSets')
@@ -778,10 +901,10 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
 
   const fetchMetrics = useCallback(async () => {
     if (!canLoad) return
-    setMetricsLoading(true)
+    dispatch({ type: 'setMetricsLoading', value: true })
 
     if (!workspaceId) {
-      setMetricsLoading(false)
+      dispatch({ type: 'setMetricsLoading', value: false })
       return
     }
 
@@ -818,13 +941,13 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
           current.revenue += m.revenue ?? 0
           aggregated[m.adId] = deriveCreativeMetrics(current) ?? current
         })
-        setAdMetrics(aggregated)
+        dispatch({ type: 'setAdMetrics', value: aggregated })
       })
       .catch((error) => {
         logError(error, 'CampaignAdsSection:fetchMetrics')
       })
       .finally(() => {
-        setMetricsLoading(false)
+        dispatch({ type: 'setMetricsLoading', value: false })
       })
   }, [canLoad, campaignId, clientId, convexProviderId, listAdMetrics, periodDays, workspaceId])
 
@@ -917,12 +1040,13 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
   const toggleAdStatus = useCallback((ad: CampaignAd, newStatus: string) => {
     // Optimistic update
     const previousAds = [...ads]
-    setAds(currentAds =>
-      currentAds.map(a => a.creativeId === ad.creativeId ? { ...a, status: newStatus } : a)
-    )
+    dispatch({
+      type: 'setAds',
+      value: ads.map((a) => (a.creativeId === ad.creativeId ? { ...a, status: newStatus } : a)),
+    })
 
     if (!workspaceId) {
-      setAds(previousAds)
+      dispatch({ type: 'setAds', value: previousAds })
       notifyFailure({
         title: 'Error',
         message: 'Sign in required',
@@ -947,7 +1071,7 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
       })
       .catch((error) => {
         // Revert on error
-        setAds(previousAds)
+        dispatch({ type: 'setAds', value: previousAds })
         reportConvexFailure({
         error: error,
         context: 'CampaignAdsSection:toggleAdStatus',
@@ -973,9 +1097,7 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
   }, [ads, hasLoaded, summary])
 
   const handleClearFilters = useCallback(() => {
-    setSearchQuery('')
-    setTypeFilter('all')
-    setStatusFilter('all')
+    dispatch({ type: 'clearFilters' })
   }, [])
 
   const handleRefreshAll = useCallback(async () => {
@@ -985,6 +1107,10 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
   const handleAdSetCreated = useCallback(() => {
     void fetchAdSets()
   }, [fetchAdSets])
+
+  const handleOpenAdSetDialog = useCallback(() => {
+    dispatch({ type: 'setAdSetDialogOpen', value: true })
+  }, [])
 
   return (
     <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
@@ -999,7 +1125,7 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
         isMeta={isMeta}
         isPreviewMode={isPreviewMode}
         loading={loading}
-        onCreateAdSet={() => setAdSetDialogOpen(true)}
+        onCreateAdSet={handleOpenAdSetDialog}
         setViewMode={setViewMode}
         summaryStats={summaryStats}
         viewMode={viewMode}
@@ -1008,7 +1134,7 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
       {isMeta ? (
         <CreateMetaAdSetDialog
           open={adSetDialogOpen}
-          onOpenChange={setAdSetDialogOpen}
+          onOpenChange={handleAdSetDialogOpenChange}
           campaignId={campaignId}
           campaignObjective={campaignObjective}
           onCreated={handleAdSetCreated}
@@ -1034,16 +1160,16 @@ export function CampaignAdsSection({ providerId, campaignId, campaignObjective, 
           </div>
         ) : !canLoad ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Layers className="h-6 w-6 text-muted-foreground" />
+            <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-muted">
+              <Layers className="size-6 text-muted-foreground" />
             </div>
             <p className="text-sm font-medium">Preview Mode</p>
             <p className="mt-1 text-xs text-muted-foreground">Enable live mode to view ad creatives</p>
           </div>
         ) : ads.length === 0 && hasLoaded ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <FileText className="h-6 w-6 text-muted-foreground" />
+            <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-muted">
+              <FileText className="size-6 text-muted-foreground" />
             </div>
             <p className="text-sm font-medium">No Creatives Found</p>
             <p className="mt-1 text-xs text-muted-foreground">This campaign doesn&apos;t have ad creatives yet</p>

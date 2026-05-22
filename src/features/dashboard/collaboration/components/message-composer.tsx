@@ -38,9 +38,9 @@ function PendingAttachmentRow({
     >
       <div className="flex min-w-0 items-center gap-2">
         {isImageType ? (
-          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+          <ImageIcon className="size-4 text-muted-foreground" />
         ) : (
-          <FileText className="h-4 w-4 text-muted-foreground" />
+          <FileText className="size-4 text-muted-foreground" />
         )}
         <span className="truncate" title={attachment.name}>
           {attachment.name}
@@ -53,9 +53,9 @@ function PendingAttachmentRow({
         size="icon"
         onClick={handleRemove}
         disabled={disabled}
-        className="h-7 w-7"
+        className="size-7"
       >
-        <X className="h-4 w-4" />
+        <X className="size-4" />
         <span className="sr-only">Remove {attachment.name}</span>
       </Button>
     </div>
@@ -83,7 +83,7 @@ export function PendingAttachmentsList({
         <span>{attachments.length} attachment{attachments.length === 1 ? '' : 's'} ready to send</span>
         {uploading && (
           <span className="inline-flex items-center gap-1">
-            <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Uploading…
+            <LoaderCircle className="size-3.5 animate-spin" /> Uploading…
           </span>
         )}
       </div>
@@ -110,8 +110,8 @@ export function ReplyIndicator({ message, onCancel }: ReplyIndicatorProps) {
   return (
     <div className={cn('flex items-center justify-between rounded-t-lg border-b border-muted/40 bg-muted/20 px-3 py-2 text-xs', listItemEnterClass)}>
       <div className="flex items-center gap-2">
-        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/10">
-          <Reply className="h-3 w-3 text-primary" />
+        <div className="flex size-5 items-center justify-center rounded-full bg-accent/10">
+          <Reply className="size-3 text-primary" />
         </div>
         <div className="flex flex-col">
           <span className="text-muted-foreground">Replying to thread</span>
@@ -127,11 +127,11 @@ export function ReplyIndicator({ message, onCancel }: ReplyIndicatorProps) {
       <Button
         variant="ghost"
         size="icon"
-        className="h-5 w-5 rounded-full hover:bg-muted/50"
+        className="size-5 rounded-full hover:bg-muted/50"
         onClick={onCancel}
         aria-label="Cancel reply"
       >
-        <X className="h-3 w-3" aria-hidden />
+        <X className="size-3" aria-hidden />
       </Button>
     </div>
   )
@@ -224,9 +224,9 @@ export function MessageComposer({
               className="inline-flex h-8 items-center gap-2 text-xs motion-chromatic duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
             >
               {sending ? (
-                <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                <LoaderCircle className="size-3.5 animate-spin" />
               ) : (
-                <Send className="h-3.5 w-3.5" />
+                <Send className="size-3.5" />
               )}
               Send Message
             </Button>

@@ -50,8 +50,8 @@ export function RelatedPages({ title = 'Related pages', description, pages, clas
                 href={page.href}
                 className="group flex items-center gap-3 rounded-lg border border-muted/40 p-3 motion-chromatic hover:border-accent/40 hover:bg-muted/30"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent/10 text-primary">
-                  <Icon className="h-4 w-4" />
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent/10 text-primary">
+                  <Icon className="size-4" />
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground group-hover:text-primary truncate">
@@ -61,7 +61,7 @@ export function RelatedPages({ title = 'Related pages', description, pages, clas
                     {page.description}
                   </p>
                 </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
+                <ArrowRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
               </Link>
             )
           })}

@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, createElement, useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { useAction } from 'convex/react'
 import { useParams } from 'next/navigation'
 
@@ -131,6 +131,95 @@ function isProviderId(value: string): value is ProviderId {
   return value === 'google' || value === 'tiktok' || value === 'linkedin' || value === 'facebook'
 }
 
+type CampaignInsightsPageState = {
+  dateRange: DateRange
+  campaignLoading: boolean
+  campaignError: string | null
+  campaign: Campaign | null
+  insightsLoading: boolean
+  insightsError: string | null
+  insights: CampaignInsightsResponse | null
+}
+
+type CampaignInsightsPageAction =
+  | { type: 'setDateRange'; value: DateRange }
+  | { type: 'setCampaignLoading'; value: boolean }
+  | { type: 'setCampaignError'; value: string | null }
+  | { type: 'setCampaign'; value: Campaign | null }
+  | { type: 'patchCampaign'; updater: (prev: Campaign | null) => Campaign | null }
+  | { type: 'setInsightsLoading'; value: boolean }
+  | { type: 'setInsightsError'; value: string | null }
+  | { type: 'setInsights'; value: CampaignInsightsResponse | null }
+
+function campaignInsightsPageReducer(
+  state: CampaignInsightsPageState,
+  action: CampaignInsightsPageAction,
+): CampaignInsightsPageState {
+  switch (action.type) {
+    case 'setDateRange':
+      return { ...state, dateRange: action.value }
+    case 'setCampaignLoading':
+      return { ...state, campaignLoading: action.value }
+    case 'setCampaignError':
+      return { ...state, campaignError: action.value }
+    case 'setCampaign':
+      return { ...state, campaign: action.value }
+    case 'patchCampaign':
+      return { ...state, campaign: action.updater(state.campaign) }
+    case 'setInsightsLoading':
+      return { ...state, insightsLoading: action.value }
+    case 'setInsightsError':
+      return { ...state, insightsError: action.value }
+    case 'setInsights':
+      return { ...state, insights: action.value }
+    default:
+      return state
+  }
+}
+
+function createInitialDateRange(
+  _searchParams: URLSearchParams,
+  campaignStartFromUrl: Date | null,
+  campaignStopFromUrl: Date | null,
+  initialStart: Date | null,
+  initialEnd: Date | null,
+): DateRange {
+  if (campaignStartFromUrl || campaignStopFromUrl) {
+    const now = new Date()
+    const end = campaignStopFromUrl && campaignStopFromUrl <= now ? campaignStopFromUrl : now
+    const start = campaignStartFromUrl ?? new Date(new Date(end).setDate(end.getDate() - 30))
+    return clampDateRange({ start, end })
+  }
+
+  if (initialStart || initialEnd) {
+    const end = initialEnd ?? (initialStart ? new Date(new Date(initialStart).setDate(initialStart.getDate() + 6)) : new Date())
+    const start = initialStart ?? new Date(new Date(end).setDate(end.getDate() - 6))
+    return clampDateRange({ start, end })
+  }
+
+  const end = new Date()
+  const start = new Date(new Date(end).setDate(end.getDate() - 30))
+  return { start, end }
+}
+
+function createInitialCampaign(
+  searchParams: URLSearchParams,
+  campaignId: string,
+  providerId: string,
+): Campaign | null {
+  const name = searchParams.get('campaignName')
+  if (!name) return null
+
+  return {
+    id: campaignId,
+    providerId,
+    name,
+    status: 'UNKNOWN',
+    startTime: searchParams.get('campaignStartTime') ?? undefined,
+    stopTime: searchParams.get('campaignStopTime') ?? undefined,
+  }
+}
+
 // ============================================================================
 // MAIN PAGE COMPONENT
 // ============================================================================
@@ -159,54 +248,35 @@ function CampaignInsightsPageContent() {
 
   const dateRangeTouchedRef = useRef(false)
 
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    // 1. PRIORITIZE campaign start/stop times if available (show full campaign duration by default)
-    if (campaignStartFromUrl || campaignStopFromUrl) {
-      const now = new Date()
-      // If campaign has ended, use the stop date; otherwise use today
-      const end = campaignStopFromUrl && campaignStopFromUrl <= now ? campaignStopFromUrl : now
-      // Always prefer campaign start if available
-      const start = campaignStartFromUrl ?? new Date(new Date(end).setDate(end.getDate() - 30))
-      return clampDateRange({ start, end })
-    }
-
-    // 2. Fall back to explicit startDate/endDate from URL if no campaign times
-    if (initialStart || initialEnd) {
-      const end = initialEnd ?? (initialStart ? new Date(new Date(initialStart).setDate(initialStart.getDate() + 6)) : new Date())
-      const start = initialStart ?? new Date(new Date(end).setDate(end.getDate() - 6))
-      return clampDateRange({ start, end })
-    }
-
-    // 3. Default to last 30 days from "now"
-    const end = new Date()
-    const start = new Date(new Date(end).setDate(end.getDate() - 30))
-    return { start, end }
+  const [state, dispatch] = useReducer(campaignInsightsPageReducer, {
+    dateRange: createInitialDateRange(
+      searchParams,
+      campaignStartFromUrl,
+      campaignStopFromUrl,
+      initialStart,
+      initialEnd,
+    ),
+    campaignLoading: false,
+    campaignError: null,
+    campaign: createInitialCampaign(searchParams, campaignId, providerId),
+    insightsLoading: false,
+    insightsError: null,
+    insights: null,
   })
+  const {
+    dateRange,
+    campaignLoading,
+    campaignError,
+    campaign,
+    insightsLoading,
+    insightsError,
+    insights,
+  } = state
 
   const handleDateRangeChange = useCallback((next: DateRange) => {
     dateRangeTouchedRef.current = true
-    setDateRange(next)
+    dispatch({ type: 'setDateRange', value: next })
   }, [])
-
-  const [campaignLoading, setCampaignLoading] = useState(false)
-  const [campaignError, setCampaignError] = useState<string | null>(null)
-  const [campaign, setCampaign] = useState<Campaign | null>(() => {
-    const name = searchParams.get('campaignName')
-    if (!name) return null
-
-    return {
-      id: campaignId,
-      providerId,
-      name,
-      status: 'UNKNOWN',
-      startTime: searchParams.get('campaignStartTime') ?? undefined,
-      stopTime: searchParams.get('campaignStopTime') ?? undefined,
-    }
-  })
-
-  const [insightsLoading, setInsightsLoading] = useState(false)
-  const [insightsError, setInsightsError] = useState<string | null>(null)
-  const [insights, setInsights] = useState<CampaignInsightsResponse | null>(null)
 
   const formulaEditor = useFormulaEditor({ isPreviewMode })
 
@@ -227,7 +297,7 @@ function CampaignInsightsPageContent() {
     const start = campaignStart ?? new Date(new Date(end).setDate(end.getDate() - 30))
 
     const frameId = requestAnimationFrame(() => {
-      setDateRange(clampDateRange({ start, end }))
+      dispatch({ type: 'setDateRange', value: clampDateRange({ start, end }) })
     })
 
     return () => {
@@ -236,8 +306,8 @@ function CampaignInsightsPageContent() {
   }, [campaign?.startTime, campaign?.stopTime])
 
   const loadCampaign = useCallback(async () => {
-    setCampaignLoading(true)
-    setCampaignError(null)
+    dispatch({ type: 'setCampaignLoading', value: true })
+    dispatch({ type: 'setCampaignError', value: null })
 
     // Use preview data when in preview mode
     if (isPreviewMode) {
@@ -245,24 +315,24 @@ function CampaignInsightsPageContent() {
       const match = previewCampaigns.find((c) => c.id === campaignId) ?? previewCampaigns[0] ?? null
 
       if (!match) {
-        setCampaignError('Campaign not found')
-        setCampaignLoading(false)
+        dispatch({ type: 'setCampaignError', value: 'Campaign not found' })
+        dispatch({ type: 'setCampaignLoading', value: false })
         return
       }
 
-      setCampaign(match as Campaign)
-      setCampaignLoading(false)
+      dispatch({ type: 'setCampaign', value: match as Campaign })
+      dispatch({ type: 'setCampaignLoading', value: false })
       return
     }
 
     if (!workspaceId) {
-      setCampaignLoading(false)
+      dispatch({ type: 'setCampaignLoading', value: false })
       return
     }
 
     if (!isProviderId(providerId)) {
-      setCampaignError('Unsupported provider')
-      setCampaignLoading(false)
+      dispatch({ type: 'setCampaignError', value: 'Unsupported provider' })
+      dispatch({ type: 'setCampaignLoading', value: false })
       return
     }
 
@@ -279,27 +349,27 @@ function CampaignInsightsPageContent() {
           throw new Error('Campaign not found')
         }
 
-        setCampaign(match)
+        dispatch({ type: 'setCampaign', value: match })
       })
       .catch((err) => {
         logError(err, 'CampaignInsights:loadCampaign')
-        setCampaignError(asErrorMessage(err))
+        dispatch({ type: 'setCampaignError', value: asErrorMessage(err) })
       })
       .finally(() => {
-        setCampaignLoading(false)
+        dispatch({ type: 'setCampaignLoading', value: false })
       })
   }, [campaignId, isPreviewMode, listCampaigns, providerId, selectedClientId, workspaceId])
 
   const loadInsights = useCallback(async () => {
     // In preview mode, allow all providers to show preview data
     if (!isPreviewMode && providerId !== 'facebook') {
-      setInsightsError('Detailed insights are currently only supported for Meta (facebook).')
-      setInsights(null)
+      dispatch({ type: 'setInsightsError', value: 'Detailed insights are currently only supported for Meta (facebook).' })
+      dispatch({ type: 'setInsights', value: null })
       return
     }
 
-    setInsightsLoading(true)
-    setInsightsError(null)
+    dispatch({ type: 'setInsightsLoading', value: true })
+    dispatch({ type: 'setInsightsError', value: null })
 
     const startDate = toIsoDateOnly(dateRange.start)
     const endDate = toIsoDateOnly(dateRange.end)
@@ -307,19 +377,19 @@ function CampaignInsightsPageContent() {
     // Use preview data when in preview mode
     if (isPreviewMode) {
       const previewInsights = getPreviewCampaignInsights(providerId, campaignId, startDate, endDate)
-      setInsights(previewInsights as CampaignInsightsResponse)
-      setInsightsLoading(false)
+      dispatch({ type: 'setInsights', value: previewInsights as CampaignInsightsResponse })
+      dispatch({ type: 'setInsightsLoading', value: false })
       return
     }
 
     if (!workspaceId) {
-      setInsightsLoading(false)
+      dispatch({ type: 'setInsightsLoading', value: false })
       return
     }
 
     if (!isProviderId(providerId)) {
-      setInsightsError('Unsupported provider')
-      setInsightsLoading(false)
+      dispatch({ type: 'setInsightsError', value: 'Unsupported provider' })
+      dispatch({ type: 'setInsightsLoading', value: false })
       return
     }
 
@@ -333,22 +403,30 @@ function CampaignInsightsPageContent() {
     })
       .then((rawData) => {
         const data = rawData as CampaignInsightsResponse
-        setInsights(data)
+        dispatch({ type: 'setInsights', value: data })
 
         // Update campaign currency if we have it and it's missing or defaulting to USD
-        if (data.currency && (!campaign?.currency || campaign.currency === 'USD')) {
-          setCampaign((prev) => (prev ? { ...prev, currency: data.currency } : null))
+        if (data.currency) {
+          dispatch({
+            type: 'patchCampaign',
+            updater: (prev) => {
+              if (!prev || (prev.currency && prev.currency !== 'USD')) {
+                return prev
+              }
+              return { ...prev, currency: data.currency }
+            },
+          })
         }
       })
       .catch((err) => {
         logError(err, 'CampaignInsights:loadInsights')
-        setInsightsError(asErrorMessage(err))
-        setInsights(null)
+        dispatch({ type: 'setInsightsError', value: asErrorMessage(err) })
+        dispatch({ type: 'setInsights', value: null })
       })
       .finally(() => {
-        setInsightsLoading(false)
+        dispatch({ type: 'setInsightsLoading', value: false })
       })
-  }, [campaign, campaignId, dateRange, getCampaignInsights, isPreviewMode, providerId, selectedClientId, workspaceId])
+  }, [campaignId, dateRange, getCampaignInsights, isPreviewMode, providerId, selectedClientId, workspaceId])
 
   useEffect(() => {
     const frameId = requestAnimationFrame(() => {

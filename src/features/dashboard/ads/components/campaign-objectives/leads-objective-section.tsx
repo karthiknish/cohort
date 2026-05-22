@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useReducer, type ChangeEvent } from 'react'
 import { useAction } from 'convex/react'
 import { CheckCircle, FileText, Loader2, Plus, Users } from 'lucide-react'
 
@@ -24,6 +24,63 @@ type LeadFormRow = {
   leadsCount?: number
 }
 
+type LeadsObjectiveState = {
+  showCreateForm: boolean
+  newFormName: string
+  privacyPolicyUrl: string
+  forms: LeadFormRow[]
+  loadingForms: boolean
+  creatingForm: boolean
+}
+
+type LeadsObjectiveAction =
+  | { type: 'setShowCreateForm'; value: boolean | ((prev: boolean) => boolean) }
+  | { type: 'setNewFormName'; value: string }
+  | { type: 'setPrivacyPolicyUrl'; value: string }
+  | { type: 'setFormsState'; value: { forms: LeadFormRow[]; loading: boolean } }
+  | { type: 'setFormsLoading'; value: boolean }
+  | { type: 'prependForm'; value: LeadFormRow }
+  | { type: 'setCreatingForm'; value: boolean }
+  | { type: 'resetCreateForm' }
+
+function createInitialLeadsObjectiveState(): LeadsObjectiveState {
+  return {
+    showCreateForm: false,
+    newFormName: '',
+    privacyPolicyUrl: '',
+    forms: [],
+    loadingForms: false,
+    creatingForm: false,
+  }
+}
+
+function leadsObjectiveReducer(state: LeadsObjectiveState, action: LeadsObjectiveAction): LeadsObjectiveState {
+  switch (action.type) {
+    case 'setShowCreateForm':
+      return {
+        ...state,
+        showCreateForm:
+          typeof action.value === 'function' ? action.value(state.showCreateForm) : action.value,
+      }
+    case 'setNewFormName':
+      return { ...state, newFormName: action.value }
+    case 'setPrivacyPolicyUrl':
+      return { ...state, privacyPolicyUrl: action.value }
+    case 'setFormsState':
+      return { ...state, forms: action.value.forms, loadingForms: action.value.loading }
+    case 'setFormsLoading':
+      return { ...state, loadingForms: action.value }
+    case 'prependForm':
+      return { ...state, forms: [action.value, ...state.forms] }
+    case 'setCreatingForm':
+      return { ...state, creatingForm: action.value }
+    case 'resetCreateForm':
+      return { ...state, showCreateForm: false, newFormName: '', privacyPolicyUrl: '' }
+    default:
+      return state
+  }
+}
+
 export function LeadsObjectiveSection({
   formData,
   onChange,
@@ -31,12 +88,8 @@ export function LeadsObjectiveSection({
   providerId,
   metaContext,
 }: ObjectiveComponentProps) {
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [newFormName, setNewFormName] = useState('')
-  const [privacyPolicyUrl, setPrivacyPolicyUrl] = useState('')
-  const [forms, setForms] = useState<LeadFormRow[]>([])
-  const [loadingForms, setLoadingForms] = useState(false)
-  const [creatingForm, setCreatingForm] = useState(false)
+  const [state, dispatch] = useReducer(leadsObjectiveReducer, undefined, createInitialLeadsObjectiveState)
+  const { showCreateForm, newFormName, privacyPolicyUrl, forms, loadingForms, creatingForm } = state
 
   const listLeadgenForms = useAction(adsMetaToolsApi.listLeadgenForms)
   const createLeadgenForm = useAction(adsMetaToolsApi.createLeadgenForm)
@@ -47,13 +100,13 @@ export function LeadsObjectiveSection({
   )
 
   useEffect(() => {
-    if (!canUseMetaApi || !metaContext?.workspaceId || !metaContext.pageId) {
-      setForms([])
+    if (!canUseMetaApi || !metaContext?.workspaceId || !metaContext?.pageId) {
+      dispatch({ type: 'setFormsState', value: { forms: [], loading: false } })
       return
     }
 
     let cancelled = false
-    setLoadingForms(true)
+    dispatch({ type: 'setFormsLoading', value: true })
 
     void listLeadgenForms({
       workspaceId: metaContext.workspaceId,
@@ -62,16 +115,20 @@ export function LeadsObjectiveSection({
     })
       .then((rows) => {
         if (cancelled) return
-        setForms(
-          Array.isArray(rows)
-            ? rows.map((row) => ({
-                id: String(row.id),
-                name: String(row.name),
-                status: row.status as string | undefined,
-                leadsCount: row.leadsCount as number | undefined,
-              }))
-            : [],
-        )
+        dispatch({
+          type: 'setFormsState',
+          value: {
+            forms: Array.isArray(rows)
+              ? rows.map((row) => ({
+                  id: String(row.id),
+                  name: String(row.name),
+                  status: row.status as string | undefined,
+                  leadsCount: row.leadsCount as number | undefined,
+                }))
+              : [],
+            loading: false,
+          },
+        })
       })
       .catch((error) => {
         if (cancelled) return
@@ -81,9 +138,7 @@ export function LeadsObjectiveSection({
           title: 'Could not load lead forms',
           fallbackMessage: 'Could not load lead forms',
         })
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingForms(false)
+        dispatch({ type: 'setFormsLoading', value: false })
       })
 
     return () => {
@@ -112,7 +167,7 @@ export function LeadsObjectiveSection({
       return
     }
 
-    setCreatingForm(true)
+    dispatch({ type: 'setCreatingForm', value: true })
     try {
       const result = await createLeadgenForm({
         workspaceId: metaContext.workspaceId,
@@ -123,15 +178,13 @@ export function LeadsObjectiveSection({
       })
       if (result.formId) {
         onChange({ leadFormId: result.formId })
-        setForms((prev) => [
-          { id: result.formId!, name: newFormName.trim(), status: 'ACTIVE' },
-          ...prev,
-        ])
+        dispatch({
+          type: 'prependForm',
+          value: { id: result.formId, name: newFormName.trim(), status: 'ACTIVE' },
+        })
         toast({ title: 'Lead form created', description: `"${newFormName.trim()}" is ready to use.` })
       }
-      setShowCreateForm(false)
-      setNewFormName('')
-      setPrivacyPolicyUrl('')
+      dispatch({ type: 'resetCreateForm' })
     } catch (error) {
       reportConvexFailure({
         error,
@@ -140,7 +193,7 @@ export function LeadsObjectiveSection({
         fallbackMessage: 'Could not create lead form',
       })
     } finally {
-      setCreatingForm(false)
+      dispatch({ type: 'setCreatingForm', value: false })
     }
   }, [
     canUseMetaApi,
@@ -153,12 +206,32 @@ export function LeadsObjectiveSection({
     privacyPolicyUrl,
   ])
 
+  const handleToggleCreateForm = useCallback(() => {
+    dispatch({ type: 'setShowCreateForm', value: (value) => !value })
+  }, [])
+
+  const handleCancelCreateForm = useCallback(() => {
+    dispatch({ type: 'setShowCreateForm', value: false })
+  }, [])
+
+  const handleNewFormNameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    dispatch({ type: 'setNewFormName', value: event.target.value })
+  }, [])
+
+  const handlePrivacyPolicyUrlChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    dispatch({ type: 'setPrivacyPolicyUrl', value: event.target.value })
+  }, [])
+
+  const handleCreateFormClick = useCallback(() => {
+    void handleCreateForm()
+  }, [handleCreateForm])
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="h-4 w-4 text-info" aria-hidden />
+            <Users className="size-4 text-info" aria-hidden />
             Lead Form
           </CardTitle>
           <CardDescription>
@@ -201,7 +274,7 @@ export function LeadsObjectiveSection({
                 <Label>Select form</Label>
                 {loadingForms ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
                     Loading forms…
                   </div>
                 ) : forms.length > 0 ? (
@@ -225,10 +298,10 @@ export function LeadsObjectiveSection({
                     type="button"
                     variant="outline"
                     className="w-full"
-                    onClick={() => setShowCreateForm((value) => !value)}
+                    onClick={handleToggleCreateForm}
                     disabled={disabled}
                   >
-                    <Plus className="mr-2 h-4 w-4" aria-hidden />
+                    <Plus className="mr-2 size-4" aria-hidden />
                     Create new form
                   </Button>
                 ) : null}
@@ -242,7 +315,7 @@ export function LeadsObjectiveSection({
                     <Input
                       id="form-name"
                       value={newFormName}
-                      onChange={(e) => setNewFormName(e.target.value)}
+                      onChange={handleNewFormNameChange}
                       placeholder="Free consultation"
                       disabled={disabled || creatingForm}
                     />
@@ -253,7 +326,7 @@ export function LeadsObjectiveSection({
                       id="privacy-url"
                       type="url"
                       value={privacyPolicyUrl}
-                      onChange={(e) => setPrivacyPolicyUrl(e.target.value)}
+                      onChange={handlePrivacyPolicyUrlChange}
                       placeholder="https://yoursite.com/privacy"
                       disabled={disabled || creatingForm}
                     />
@@ -262,13 +335,13 @@ export function LeadsObjectiveSection({
                     <Button
                       type="button"
                       size="sm"
-                      onClick={() => void handleCreateForm()}
+                      onClick={handleCreateFormClick}
                       disabled={disabled || creatingForm || !newFormName.trim() || !privacyPolicyUrl.trim()}
                     >
-                      {creatingForm ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      {creatingForm ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
                       Create form
                     </Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setShowCreateForm(false)}>
+                    <Button type="button" size="sm" variant="ghost" onClick={handleCancelCreateForm}>
                       Cancel
                     </Button>
                   </div>
@@ -293,17 +366,21 @@ function LeadFormOptionButton({
   isSelected: boolean
   onSelect: (leadFormId: string) => void
 }) {
+  const handleSelect = useCallback(() => {
+    onSelect(form.id)
+  }, [form.id, onSelect])
+
   return (
     <button
       type="button"
-      onClick={() => onSelect(form.id)}
+      onClick={handleSelect}
       disabled={disabled}
       className={`flex items-center justify-between rounded-lg border p-3 text-left motion-chromatic ${
         isSelected ? 'border-info/20 bg-info/10' : 'border-border hover:border-info/50'
       }`}
     >
       <div className="flex items-center gap-3">
-        <FileText className="h-5 w-5 text-muted-foreground" aria-hidden />
+        <FileText className="size-5 text-muted-foreground" aria-hidden />
         <div>
           <p className="text-sm font-medium">{form.name}</p>
           <p className="text-xs text-muted-foreground">
@@ -312,7 +389,7 @@ function LeadFormOptionButton({
           </p>
         </div>
       </div>
-      {isSelected ? <CheckCircle className="h-5 w-5 text-info" aria-hidden /> : null}
+      {isSelected ? <CheckCircle className="size-5 text-info" aria-hidden /> : null}
     </button>
   )
 }

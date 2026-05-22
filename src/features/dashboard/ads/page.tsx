@@ -193,10 +193,10 @@ export default function AdsPage() {
   )
 
   const connectedProviderIds = useMemo(() => {
-    const fromPlatforms = adPlatforms.filter((p) => connectedProviders[p.id]).map((p) => p.id)
-    const fromStatuses = Object.entries(connectedProviders)
-      .filter(([, connected]) => connected)
-      .map(([providerId]) => providerId)
+    const fromPlatforms = adPlatforms.flatMap((p) => (connectedProviders[p.id] ? [p.id] : []))
+    const fromStatuses = Object.entries(connectedProviders).flatMap(([providerId, connected]) =>
+      connected ? [providerId] : [],
+    )
     return [...new Set([...fromPlatforms, ...fromStatuses])]
   }, [adPlatforms, connectedProviders])
 
@@ -317,9 +317,9 @@ export default function AdsPage() {
             </div>
             <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
               <div className="flex w-full flex-col gap-4">
-                {adPlatforms
-                  .filter((p) => connectedProviders[p.id])
-                  .map((platform) => (
+                {adPlatforms.flatMap((platform) =>
+                  connectedProviders[platform.id]
+                    ? [(
                     <CampaignManagementCard
                       key={platform.id}
                       providerId={platform.id}
@@ -360,8 +360,9 @@ export default function AdsPage() {
                               ? handleInitializeTikTok
                               : undefined
                       }
-                    />
-                  ))}
+                    />)]
+                    : [],
+                )}
               </div>
             </AdsSuspenseReveal>
           </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { notifyFailure } from '@/lib/notifications'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer } from 'react'
 import { AlertTriangle, MapPin, RefreshCw, Sparkles, Target, Users, Plus } from 'lucide-react'
 
 import { useAction } from 'convex/react'
@@ -63,6 +63,115 @@ type AudienceTargetingResponse = {
   insights?: Insights | null
 }
 
+type AudienceControlSectionState = {
+  targeting: TargetingData[]
+  insights: Insights | null
+  loading: boolean
+  expandedSections: Set<string>
+  builderOpen: boolean
+  hasLoaded: boolean
+  editingSection: string | null
+  selectedTargetingId: string
+  draftInterests: Array<{ id: string; name: string }> | null
+  savingTargeting: boolean
+}
+
+type AudienceControlSectionAction =
+  | { type: 'setTargeting'; value: TargetingData[] }
+  | { type: 'setInsights'; value: Insights | null }
+  | { type: 'setLoading'; value: boolean }
+  | { type: 'setExpandedSections'; value: Set<string> }
+  | { type: 'toggleSection'; section: string }
+  | { type: 'setBuilderOpen'; value: boolean }
+  | { type: 'setHasLoaded'; value: boolean }
+  | { type: 'setEditingSection'; value: string | null }
+  | { type: 'toggleEditing'; section: string }
+  | { type: 'setSelectedTargetingId'; value: string }
+  | { type: 'setDraftInterests'; value: Array<{ id: string; name: string }> | null }
+  | { type: 'updateDraftInterests'; updater: (prev: Array<{ id: string; name: string }> | null) => Array<{ id: string; name: string }> | null }
+  | { type: 'setSavingTargeting'; value: boolean }
+  | { type: 'applyTargetingFetch'; targeting: TargetingData[]; insights: Insights | null }
+
+const DEFAULT_EXPANDED_SECTIONS = new Set(['demographics', 'locations', 'interests', 'placements'])
+
+function createInitialAudienceControlSectionState(): AudienceControlSectionState {
+  return {
+    targeting: [],
+    insights: null,
+    loading: true,
+    expandedSections: DEFAULT_EXPANDED_SECTIONS,
+    builderOpen: false,
+    hasLoaded: false,
+    editingSection: null,
+    selectedTargetingId: 'all',
+    draftInterests: null,
+    savingTargeting: false,
+  }
+}
+
+function audienceControlSectionReducer(
+  state: AudienceControlSectionState,
+  action: AudienceControlSectionAction,
+): AudienceControlSectionState {
+  switch (action.type) {
+    case 'setTargeting':
+      return { ...state, targeting: action.value }
+    case 'setInsights':
+      return { ...state, insights: action.value }
+    case 'setLoading':
+      return { ...state, loading: action.value }
+    case 'setExpandedSections':
+      return { ...state, expandedSections: action.value }
+    case 'toggleSection': {
+      const next = new Set(state.expandedSections)
+      if (next.has(action.section)) {
+        next.delete(action.section)
+      } else {
+        next.add(action.section)
+      }
+      return { ...state, expandedSections: next }
+    }
+    case 'setBuilderOpen':
+      return { ...state, builderOpen: action.value }
+    case 'setHasLoaded':
+      return { ...state, hasLoaded: action.value }
+    case 'setEditingSection':
+      return { ...state, editingSection: action.value }
+    case 'toggleEditing':
+      return {
+        ...state,
+        editingSection: state.editingSection === action.section ? null : action.section,
+      }
+    case 'setSelectedTargetingId':
+      return { ...state, selectedTargetingId: action.value }
+    case 'setDraftInterests':
+      return { ...state, draftInterests: action.value }
+    case 'updateDraftInterests':
+      return { ...state, draftInterests: action.updater(state.draftInterests) }
+    case 'setSavingTargeting':
+      return { ...state, savingTargeting: action.value }
+    case 'applyTargetingFetch': {
+      const nextTargeting = action.targeting
+      let selectedTargetingId = state.selectedTargetingId
+      if (nextTargeting.length <= 1) {
+        selectedTargetingId = 'all'
+      } else if (selectedTargetingId === 'all') {
+        const firstId = typeof nextTargeting[0]?.entityId === 'string' ? nextTargeting[0].entityId : null
+        selectedTargetingId = firstId ?? selectedTargetingId
+      }
+      return {
+        ...state,
+        targeting: nextTargeting,
+        insights: action.insights,
+        hasLoaded: true,
+        selectedTargetingId,
+      }
+    }
+    default:
+      return state
+  }
+}
+
 export function AudienceControlSection({ providerId, campaignId, clientId, isPreviewMode }: Props) {
   const { user } = useAuth()
 
@@ -71,16 +180,23 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   const convexProviderId = toAdsProviderId(providerId)
   const canEditMetaTargeting = convexProviderId === 'facebook' && !isPreviewMode
 
-  const [targeting, setTargeting] = useState<TargetingData[]>([])
-  const [insights, setInsights] = useState<Insights | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['demographics', 'locations', 'interests', 'placements']))
-  const [builderOpen, setBuilderOpen] = useState(false)
-  const [hasLoaded, setHasLoaded] = useState(false)
-  const [editingSection, setEditingSection] = useState<string | null>(null)
-  const [selectedTargetingId, setSelectedTargetingId] = useState<string>('all')
-  const [draftInterests, setDraftInterests] = useState<Array<{ id: string; name: string }> | null>(null)
-  const [savingTargeting, setSavingTargeting] = useState(false)
+  const [state, dispatch] = useReducer(
+    audienceControlSectionReducer,
+    undefined,
+    createInitialAudienceControlSectionState,
+  )
+  const {
+    targeting,
+    insights,
+    loading,
+    expandedSections,
+    builderOpen,
+    hasLoaded,
+    editingSection,
+    selectedTargetingId,
+    draftInterests,
+    savingTargeting,
+  } = state
 
   const canLoad = !isPreviewMode
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
@@ -112,7 +228,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
 
   const fetchTargeting = useCallback(async () => {
     if (!canLoad) {
-      setLoading(false)
+      dispatch({ type: 'setLoading', value: false })
       return
     }
 
@@ -121,11 +237,11 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         title: 'Error',
         message: 'Missing workspace id',
       })
-      setLoading(false)
+      dispatch({ type: 'setLoading', value: false })
       return
     }
 
-    setLoading(true)
+    dispatch({ type: 'setLoading', value: true })
 
     void getTargeting({
         workspaceId,
@@ -138,19 +254,10 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         const payload = data as AudienceTargetingResponse | null | undefined
         const nextTargetingRaw = payload?.targeting
         const nextTargeting = Array.isArray(nextTargetingRaw) ? nextTargetingRaw : []
-        setTargeting(nextTargeting)
-        setInsights(payload?.insights ?? null)
-        setHasLoaded(true)
-
-        setSelectedTargetingId((current) => {
-          if (nextTargeting.length <= 1) {
-            return 'all'
-          }
-          if (current === 'all') {
-            const firstId = typeof nextTargeting[0]?.entityId === 'string' ? nextTargeting[0].entityId : null
-            return firstId ?? current
-          }
-          return current
+        dispatch({
+          type: 'applyTargetingFetch',
+          targeting: nextTargeting,
+          insights: payload?.insights ?? null,
         })
       })
       .catch((error) => {
@@ -167,7 +274,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         }
       })
       .finally(() => {
-        setLoading(false)
+        dispatch({ type: 'setLoading', value: false })
       })
   }, [campaignId, canLoad, clientId, getTargeting, providerId, workspaceId])
 
@@ -182,21 +289,23 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   }, [fetchTargeting])
 
   const toggleSection = useCallback((section: string) => {
-    const next = new Set(expandedSections)
-    if (next.has(section)) {
-      next.delete(section)
-    } else {
-      next.add(section)
-    }
-    setExpandedSections(next)
-  }, [expandedSections])
+    dispatch({ type: 'toggleSection', section })
+  }, [])
 
   const handleOpenBuilder = useCallback(() => {
-    setBuilderOpen(true)
+    dispatch({ type: 'setBuilderOpen', value: true })
   }, [])
 
   const handleToggleEditing = useCallback((section: string) => {
-    setEditingSection((current) => (current === section ? null : section))
+    dispatch({ type: 'toggleEditing', section })
+  }, [])
+
+  const handleBuilderOpenChange = useCallback((value: boolean) => {
+    dispatch({ type: 'setBuilderOpen', value })
+  }, [])
+
+  const handleSelectedTargetingIdChange = useCallback((value: string) => {
+    dispatch({ type: 'setSelectedTargetingId', value })
   }, [])
 
    const visibleTargeting = useMemo(() => {
@@ -314,7 +423,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     }
 
     const nextInterests = draftInterests ?? aggregatedData.interests
-    setSavingTargeting(true)
+    dispatch({ type: 'setSavingTargeting', value: true })
     try {
       const payload = buildMetaTargetingFromNormalized({
         demographics: aggregatedData.demographics,
@@ -336,14 +445,14 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         targeting: payload,
       })
       toast({ title: 'Targeting saved', description: 'Interests updated on the ad set in Meta.' })
-      setDraftInterests(null)
-      setEditingSection(null)
+      dispatch({ type: 'setDraftInterests', value: null })
+      dispatch({ type: 'setEditingSection', value: null })
       await fetchTargeting()
     } catch (error) {
       logError(error, 'AudienceControlSection:saveTargeting')
       notifyFailure({ title: 'Could not save targeting', message: 'Check Meta permissions and try again.' })
     } finally {
-      setSavingTargeting(false)
+      dispatch({ type: 'setSavingTargeting', value: false })
     }
   }, [
     activeAdSetId,
@@ -359,25 +468,36 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   ])
 
   const handleAddInterestDraft = useCallback((interest: { id: string; name: string }) => {
-    setDraftInterests((prev) => {
-      const base = prev ?? aggregatedData.interests
-      if (base.some((item) => item.id === interest.id || item.name === interest.name)) return base
-      return [...base, interest]
+    dispatch({
+      type: 'updateDraftInterests',
+      updater: (prev) => {
+        const base = prev ?? aggregatedData.interests
+        if (base.some((item) => item.id === interest.id || item.name === interest.name)) return base
+        return [...base, interest]
+      },
     })
   }, [aggregatedData.interests])
 
   const handleRemoveInterestDraft = useCallback((interestName: string) => {
-    setDraftInterests((prev) => {
-      const base = prev ?? aggregatedData.interests
-      return base.filter((item) => item.name !== interestName)
+    dispatch({
+      type: 'updateDraftInterests',
+      updater: (prev) => {
+        const base = prev ?? aggregatedData.interests
+        return base.filter((item) => item.name !== interestName)
+      },
     })
   }, [aggregatedData.interests])
 
   const displayInterests = draftInterests ?? aggregatedData.interests
 
+  const editorAggregatedData = useMemo(
+    () => ({ ...aggregatedData, interests: displayInterests }),
+    [aggregatedData, displayInterests],
+  )
+
   const audienceEditorSection = useMemo(() => (
     <AudienceEditorSection
-      aggregatedData={{ ...aggregatedData, interests: displayInterests }}
+      aggregatedData={editorAggregatedData}
       expandedSections={expandedSections}
       toggleSection={toggleSection}
       editingSection={editingSection}
@@ -391,10 +511,9 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
       savingTargeting={savingTargeting}
     />
   ), [
-    aggregatedData,
+    editorAggregatedData,
     canEditMetaTargeting,
     clientId,
-    displayInterests,
     editingSection,
     expandedSections,
     handleAddInterestDraft,
@@ -437,18 +556,18 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   const headerActions = (
     <>
       <Button variant="outline" size="sm" className="gap-1.5" onClick={handleOpenBuilder}>
-        <Plus className="h-4 w-4" aria-hidden />
+        <Plus className="size-4" aria-hidden />
         Create audience
       </Button>
       <Button
         variant="ghost"
         size="icon"
-        className="h-9 w-9"
+        className="size-9"
         onClick={fetchTargeting}
         disabled={loading}
         aria-label="Refresh audience targeting"
       >
-        <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} aria-hidden />
+        <RefreshCw className={cn('size-4', loading && 'animate-spin')} aria-hidden />
       </Button>
     </>
   )
@@ -482,7 +601,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         <CardContent className="pt-2">
           <div className={cn(ADS_PAGE_THEME.emptyState, 'py-14')}>
             <div className={ADS_PAGE_THEME.controlHeaderIcon}>
-              <Sparkles className="h-5 w-5 text-muted-foreground" aria-hidden />
+              <Sparkles className="size-5 text-muted-foreground" aria-hidden />
             </div>
             <p className="text-sm font-medium">Preview mode</p>
             <p className="max-w-sm text-xs text-muted-foreground">
@@ -506,7 +625,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         <CardContent className="pt-2">
           <div className={cn(ADS_PAGE_THEME.emptyState, 'py-14')}>
             <div className={ADS_PAGE_THEME.controlHeaderIcon}>
-              <Users className="h-5 w-5 text-primary" aria-hidden />
+              <Users className="size-5 text-primary" aria-hidden />
             </div>
             <p className="text-sm font-medium">No targeting configured</p>
             <p className="max-w-sm text-xs text-muted-foreground">
@@ -514,7 +633,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
               platform.
             </p>
           </div>
-          <AudienceBuilderDialog isOpen={builderOpen} onOpenChange={setBuilderOpen} providerId={providerId} />
+          <AudienceBuilderDialog isOpen={builderOpen} onOpenChange={handleBuilderOpenChange} providerId={providerId} />
         </CardContent>
       </MotionCard>
     )
@@ -539,7 +658,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
       <CardContent className="space-y-6 pt-6">
         {geocodeFailedNames.length > 0 ? (
           <Alert variant="default" className="border-amber-500/40 bg-amber-500/10">
-            <AlertTriangle className="h-4 w-4 text-warning" />
+            <AlertTriangle className="size-4 text-warning" />
             <AlertTitle>Some locations could not be placed on the map</AlertTitle>
             <AlertDescription>
               The map may be incomplete for: {geocodeFailedNames.join(', ')}. Check spelling or try a broader place
@@ -554,7 +673,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
             aggregatedData={aggregatedData}
             locationMarkers={locationMarkers}
             selectedTargetingId={selectedTargetingId}
-            onTargetingChange={setSelectedTargetingId}
+            onTargetingChange={handleSelectedTargetingIdChange}
             editingSection={editingSection}
               onToggleEditing={handleToggleEditing}
               workspaceId={workspaceId}
@@ -582,7 +701,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         {aggregatedData.locations.excluded.length > 0 ? (
           <div className="rounded-2xl border border-destructive/20 bg-destructive/[0.04] px-5 py-4">
             <div className="mb-3 flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-destructive" aria-hidden />
+              <MapPin className="size-4 text-destructive" aria-hidden />
               <span className="text-sm font-medium text-foreground">Excluded locations</span>
               <Badge variant="outline" className="border-destructive/30 text-xs text-destructive">
                 {aggregatedData.locations.excluded.length}
@@ -599,7 +718,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         ) : null}
       </CardContent>
 
-      <AudienceBuilderDialog isOpen={builderOpen} onOpenChange={setBuilderOpen} providerId={providerId} />
+      <AudienceBuilderDialog isOpen={builderOpen} onOpenChange={handleBuilderOpenChange} providerId={providerId} />
     </MotionCard>
   )
 }

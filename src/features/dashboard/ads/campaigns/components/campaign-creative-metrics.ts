@@ -171,9 +171,10 @@ export function resolveCreativeInsights(
   adMetrics: Record<string, CreativePerformanceMetrics | undefined>,
 ): Map<string, CreativeInsightKind> {
   const insights = new Map<string, CreativeInsightKind>()
-  const withMetrics = ads
-    .map((ad) => ({ ad, metrics: getMetricsForAd(ad, adMetrics) }))
-    .filter((entry): entry is { ad: CampaignAd; metrics: CreativePerformanceMetrics } => Boolean(entry.metrics))
+  const withMetrics = ads.flatMap((ad) => {
+    const metrics = getMetricsForAd(ad, adMetrics)
+    return metrics ? [{ ad, metrics }] : []
+  })
 
   if (withMetrics.length === 0) return insights
 

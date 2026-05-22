@@ -161,7 +161,7 @@ function SelectedEmailBadge({
         className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
         aria-label={`Remove ${email}`}
       >
-        <X className="h-3 w-3" />
+        <X className="size-3" />
       </button>
     </Badge>
   )
@@ -188,7 +188,7 @@ function SuggestedEmailButton({
       className="flex min-w-[9.5rem] shrink-0 items-center gap-2.5 rounded-lg border border-muted/60 bg-background px-3 py-2 text-left transition-colors hover:border-primary/30 hover:bg-muted/30 disabled:cursor-not-allowed disabled:opacity-50"
     >
       <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${attendeeAvatarColor(member.email)}`}
+        className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${attendeeAvatarColor(member.email)}`}
       >
         {attendeeInitials(member.name)}
       </span>

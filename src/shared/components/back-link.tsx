@@ -24,7 +24,7 @@ export function BackLink({ label, href, onClick, className, transitionTypes }: B
     return (
       <Button variant="ghost" size="sm" asChild className={sharedClasses}>
         <Link href={href} transitionTypes={transitionTypes} onClick={onClick}>
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="size-4" />
           {label}
         </Link>
       </Button>
@@ -33,7 +33,7 @@ export function BackLink({ label, href, onClick, className, transitionTypes }: B
 
   return (
     <Button variant="ghost" size="sm" type="button" className={sharedClasses} onClick={onClick}>
-      <ArrowLeft className="h-4 w-4" />
+      <ArrowLeft className="size-4" />
       {label}
     </Button>
   )

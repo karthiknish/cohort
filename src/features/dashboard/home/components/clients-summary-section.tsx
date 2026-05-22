@@ -93,7 +93,7 @@ function ClientSummaryCard({ client }: { client: ClientSummary }) {
       <div className="flex items-start gap-3 p-4 pb-3">
         <div
           className={cn(
-            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-md ring-1 ring-foreground/10',
+            'flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-md ring-1 ring-foreground/10',
             avatarColor(client.name)
           )}
         >
@@ -115,25 +115,25 @@ function ClientSummaryCard({ client }: { client: ClientSummary }) {
           className="shrink-0 rounded-lg p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted"
           title="Open client dashboard"
         >
-          <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+          <ArrowUpRight className="size-4 text-muted-foreground" />
         </Link>
       </div>
 
       {/* Metrics row */}
       <div className="mx-4 mb-3 grid grid-cols-3 divide-x divide-border/60 rounded-xl border border-border/50 bg-muted/30">
-        <div className="flex flex-col items-center px-2 py-2.5">
+        <div className="flex flex-col items-center p-2.5">
           <span className="text-base font-semibold tabular-nums text-foreground">{client.openTaskCount}</span>
           <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Tasks</span>
         </div>
-        <div className="flex flex-col items-center px-2 py-2.5">
+        <div className="flex flex-col items-center p-2.5">
           <span className="text-base font-semibold tabular-nums text-foreground">{client.activeProjectCount}</span>
           <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Projects</span>
         </div>
-        <div className="flex flex-col items-center px-2 py-2.5">
+        <div className="flex flex-col items-center p-2.5">
           <span className="flex items-center gap-1">
             <span
               className={cn(
-                'h-1.5 w-1.5 rounded-full',
+                'size-1.5 rounded-full',
                 hasMeeting ? 'bg-success' : 'bg-muted-foreground/40'
               )}
             />
@@ -155,7 +155,7 @@ function ClientSummaryCard({ client }: { client: ClientSummary }) {
           title="Projects"
           className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
         >
-          <Briefcase className="h-3.5 w-3.5" />
+          <Briefcase className="size-3.5" />
           <span>Projects</span>
         </Link>
         <Link
@@ -164,7 +164,7 @@ function ClientSummaryCard({ client }: { client: ClientSummary }) {
           title="Tasks"
           className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
         >
-          <CheckSquare className="h-3.5 w-3.5" />
+          <CheckSquare className="size-3.5" />
           <span>Tasks</span>
         </Link>
         <Link
@@ -173,7 +173,7 @@ function ClientSummaryCard({ client }: { client: ClientSummary }) {
           title="Meetings"
           className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
         >
-          <Video className="h-3.5 w-3.5" />
+          <Video className="size-3.5" />
           <span>Meetings</span>
         </Link>
         <Link
@@ -182,7 +182,7 @@ function ClientSummaryCard({ client }: { client: ClientSummary }) {
           title="Ads"
           className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
         >
-          <Megaphone className="h-3.5 w-3.5" />
+          <Megaphone className="size-3.5" />
           <span>Ads</span>
         </Link>
       </div>
@@ -196,7 +196,7 @@ function ClientCardSkeleton() {
   return (
     <div className="flex flex-col rounded-2xl border border-border/50 bg-background/80 p-4">
       <div className="flex items-start gap-3">
-        <Skeleton className="h-10 w-10 rounded-xl" />
+        <Skeleton className="size-10 rounded-xl" />
         <div className="flex-1 space-y-1.5">
           <Skeleton className="h-4 w-3/4" />
           <Skeleton className="h-3 w-1/2" />

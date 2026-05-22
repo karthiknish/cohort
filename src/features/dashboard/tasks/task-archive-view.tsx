@@ -50,7 +50,7 @@ export function TaskArchiveView({
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+          <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
           <p className="text-sm text-muted-foreground">Loading archive…</p>
         </div>
       </div>
@@ -62,8 +62,8 @@ export function TaskArchiveView({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted/20">
-            <Archive className="h-5 w-5 text-muted-foreground" />
+          <div className="flex size-10 items-center justify-center rounded-xl bg-muted/20">
+            <Archive className="size-5 text-muted-foreground" />
           </div>
           <div>
             <h2 className="text-lg font-semibold">Archived Tasks</h2>
@@ -79,8 +79,8 @@ export function TaskArchiveView({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-muted/20 flex items-center justify-center">
-                <Archive className="h-5 w-5 text-muted-foreground" />
+              <div className="size-10 rounded-full bg-muted/20 flex items-center justify-center">
+                <Archive className="size-5 text-muted-foreground" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.total}</p>
@@ -92,8 +92,8 @@ export function TaskArchiveView({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-success" />
+              <div className="size-10 rounded-full bg-success/10 flex items-center justify-center">
+                <TrendingUp className="size-5 text-success" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.byStatus.completed || 0}</p>
@@ -105,8 +105,8 @@ export function TaskArchiveView({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-destructive" />
+              <div className="size-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                <Calendar className="size-5 text-destructive" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.byPriority.urgent || 0}</p>
@@ -118,8 +118,8 @@ export function TaskArchiveView({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-info" />
+              <div className="size-10 rounded-full bg-info/10 flex items-center justify-center">
+                <Calendar className="size-5 text-info" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.byPriority.high || 0}</p>
@@ -134,7 +134,7 @@ export function TaskArchiveView({
       {archivedTasks.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Archive className="h-12 w-12 text-muted-foreground/20 mb-4" />
+            <Archive className="size-12 text-muted-foreground/20 mb-4" />
             <p className="text-muted-foreground">No archived tasks yet</p>
             <p className="text-xs text-muted-foreground/60 mt-1">
               Tasks you archive will appear here
@@ -203,13 +203,13 @@ function ArchivedTaskRow({
       <div className="flex items-center gap-2">
         {onRestore ? (
           <Button variant="ghost" size="sm" onClick={handleRestoreClick} className="h-8 gap-1">
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw className="size-3.5" />
             Restore
           </Button>
         ) : null}
         {onPermanentlyDelete ? (
           <Button variant="ghost" size="sm" onClick={handleDeleteClick} className="h-8 gap-1 text-destructive hover:text-destructive">
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="size-3.5" />
             Delete
           </Button>
         ) : null}
@@ -238,7 +238,7 @@ export function ArchiveToggle({
         onClick={onUnarchive}
         className={cn('h-8 gap-1 text-warning hover:text-warning/80', className)}
       >
-        <RotateCcw className="h-3.5 w-3.5" />
+        <RotateCcw className="size-3.5" />
         Unarchive
       </Button>
     )
@@ -251,7 +251,7 @@ export function ArchiveToggle({
       onClick={onArchive}
       className={cn('h-8 gap-1 text-muted-foreground hover:text-foreground', className)}
     >
-      <Archive className="h-3.5 w-3.5" />
+      <Archive className="size-3.5" />
       Archive
     </Button>
   )

@@ -119,8 +119,14 @@ export function useGeocodeResolveBatch(names: string[], options?: { enabled?: bo
       const failedNames: string[] = []
 
       // Process sequentially to avoid rate limiting
-      for (const name of names) {
-        if (!name) continue
+      const geocodeNext = async (index: number): Promise<void> => {
+        const name = names[index]
+        if (!name) {
+          if (index + 1 < names.length) {
+            return geocodeNext(index + 1)
+          }
+          return
+        }
 
         try {
           const coords = await resolveCoordinates(name)
@@ -134,11 +140,13 @@ export function useGeocodeResolveBatch(names: string[], options?: { enabled?: bo
           failedNames.push(name)
         }
 
-        // Small delay between requests to respect rate limits
-        if (names.indexOf(name) < names.length - 1) {
+        if (index + 1 < names.length) {
           await new Promise((resolve) => setTimeout(resolve, 100))
+          return geocodeNext(index + 1)
         }
       }
+
+      await geocodeNext(0)
 
       return { coordinates, failedNames }
     },

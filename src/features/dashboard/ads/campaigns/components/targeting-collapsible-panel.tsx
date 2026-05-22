@@ -44,8 +44,8 @@ export function TargetingCollapsiblePanel({
             aria-expanded={expanded}
             aria-controls={`targeting-panel-${sectionId}`}
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/60 ring-1 ring-border/50">
-              <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted/60 ring-1 ring-border/50">
+              <Icon className="size-4 text-muted-foreground" aria-hidden />
             </span>
             <span className="text-sm font-medium text-foreground">{title}</span>
             {typeof count === 'number' ? (
@@ -60,11 +60,11 @@ export function TargetingCollapsiblePanel({
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+              className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
               aria-label={`${expanded ? 'Collapse' : 'Expand'} ${title}`}
             >
               <ChevronDown
-                className={cn('h-4 w-4 transition-transform duration-200', expanded && 'rotate-180')}
+                className={cn('size-4 transition-transform duration-200', expanded && 'rotate-180')}
                 aria-hidden
               />
             </button>

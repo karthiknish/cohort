@@ -20,8 +20,8 @@ export function GoogleWorkspaceCard(props: GoogleWorkspaceCardProps) {
 
   return (
     <Card className={cn(DASHBOARD_THEME.cards.base, 'flex h-full items-center gap-3 p-4')}>
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-muted/60 bg-background">
-        <GoogleWorkspaceIcon className="h-5 w-5" />
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-muted/60 bg-background">
+        <GoogleWorkspaceIcon className="size-5" />
       </div>
 
       <div className="min-w-0 flex-1 space-y-0.5">

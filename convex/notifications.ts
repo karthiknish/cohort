@@ -248,29 +248,34 @@ export const list = zWorkspaceQuery({
     }> = []
 
     if (Array.isArray(args.overflowLegacyIds) && args.overflowLegacyIds.length > 0) {
-      for (const legacyId of args.overflowLegacyIds) {
-        if (typeof legacyId !== 'string' || legacyId.length === 0) continue
-        const row = await ctx.db
-          .query('notifications')
-          .withIndex('by_workspaceId_legacyId', (q) =>
-            q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId),
-          )
-          .unique()
-        if (!row) continue
-        if (
-          !matchesNotificationRecipient(row, {
-            userId,
-            role: args.role,
-            clientId: args.clientId,
-            unreadOnly: args.unread,
-            excludeActor: true,
-          })
-        ) {
-          continue
-        }
-        if (!passesInAppPreferenceFilter(row, ctx.user.notificationPreferences)) continue
-        if (userPivot && !isStrictlyOlderThanPivot(row, userPivot)) continue
-        collected.push(row)
+      const overflowRows = await Promise.all(
+        args.overflowLegacyIds.map(async (legacyId) => {
+          if (typeof legacyId !== 'string' || legacyId.length === 0) return null
+          const row = await ctx.db
+            .query('notifications')
+            .withIndex('by_workspaceId_legacyId', (q) =>
+              q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId),
+            )
+            .unique()
+          if (!row) return null
+          if (
+            !matchesNotificationRecipient(row, {
+              userId,
+              role: args.role,
+              clientId: args.clientId,
+              unreadOnly: args.unread,
+              excludeActor: true,
+            })
+          ) {
+            return null
+          }
+          if (!passesInAppPreferenceFilter(row, ctx.user.notificationPreferences)) return null
+          if (userPivot && !isStrictlyOlderThanPivot(row, userPivot)) return null
+          return row
+        }),
+      )
+      for (const row of overflowRows) {
+        if (row) collected.push(row)
       }
     }
 
@@ -316,8 +321,10 @@ export const list = zWorkspaceQuery({
       collected.length > pageSize + 1
         ? collected
             .slice(pageSize + 1)
-            .map((r) => (typeof r.legacyId === 'string' ? r.legacyId : ''))
-            .filter((id) => id.length > 0)
+            .flatMap((r) => {
+              const id = typeof r.legacyId === 'string' ? r.legacyId : ''
+              return id.length > 0 ? [id] : []
+            })
         : undefined
 
     const pageRows = collected.slice(0, pageSize)
@@ -468,38 +475,40 @@ export const ack = zRateLimitedWorkspaceMutation({
       ),
     )
 
-    for (const row of rows) {
-      if (!row) continue
+    await Promise.all(
+      rows.map(async (row) => {
+        if (!row) return
 
-      if (
-        !matchesNotificationRecipient(row, {
-          userId,
-          role: roleArg,
-          clientId: args.clientId,
-          excludeActor: true,
-        })
-      ) {
-        continue
-      }
+        if (
+          !matchesNotificationRecipient(row, {
+            userId,
+            role: roleArg,
+            clientId: args.clientId,
+            excludeActor: true,
+          })
+        ) {
+          return
+        }
 
-      const readBy = Array.isArray(row.readBy) ? row.readBy : []
-      const acknowledgedBy = Array.isArray(row.acknowledgedBy) ? row.acknowledgedBy : []
-      const readBySet = new Set(readBy)
-      const acknowledgedBySet = new Set(acknowledgedBy)
+        const readBy = Array.isArray(row.readBy) ? row.readBy : []
+        const acknowledgedBy = Array.isArray(row.acknowledgedBy) ? row.acknowledgedBy : []
+        const readBySet = new Set(readBy)
+        const acknowledgedBySet = new Set(acknowledgedBy)
 
-      if (args.action === 'dismiss') {
-        await ctx.db.patch(row._id, {
-          readBy: readBySet.has(userId) ? readBy : [...readBy, userId],
-          acknowledgedBy: acknowledgedBySet.has(userId) ? acknowledgedBy : [...acknowledgedBy, userId],
-          updatedAtMs: Date.now(),
-        })
-      } else {
-        await ctx.db.patch(row._id, {
-          readBy: readBySet.has(userId) ? readBy : [...readBy, userId],
-          updatedAtMs: Date.now(),
-        })
-      }
-    }
+        if (args.action === 'dismiss') {
+          await ctx.db.patch(row._id, {
+            readBy: readBySet.has(userId) ? readBy : [...readBy, userId],
+            acknowledgedBy: acknowledgedBySet.has(userId) ? acknowledgedBy : [...acknowledgedBy, userId],
+            updatedAtMs: Date.now(),
+          })
+        } else {
+          await ctx.db.patch(row._id, {
+            readBy: readBySet.has(userId) ? readBy : [...readBy, userId],
+            updatedAtMs: Date.now(),
+          })
+        }
+      }),
+    )
 
     return { ok: true }
   },

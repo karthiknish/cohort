@@ -55,8 +55,8 @@ export type UnifiedItem = {
 }
 
 const SOURCE_ICONS: Record<string, ReactNode> = {
-  direct_message: <MessageCircle className="h-4 w-4" />,
-  channel: <Hash className="h-4 w-4" />,
+  direct_message: <MessageCircle className="size-4" />,
+  channel: <Hash className="size-4" />,
 }
 
 function getInitials(name: string | null | undefined): string {
@@ -172,8 +172,8 @@ export function ConversationListPane({
       <div className="space-y-3 border-b border-muted/30 p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary ring-1 ring-primary/15">
-              <Inbox className="h-4 w-4" />
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary ring-1 ring-primary/15">
+              <Inbox className="size-4" />
             </div>
             <div className="min-w-0">
               <h3 className="truncate text-sm font-semibold tracking-tight">Inbox</h3>
@@ -190,12 +190,12 @@ export function ConversationListPane({
             ) : null}
           </div>
           <Button variant="ghost" size="sm" onClick={onNewDM} title="New direct message" aria-label="Start a new direct message">
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4" />
           </Button>
         </div>
 
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             ref={searchInputRef}
             value={searchQuery}
@@ -215,11 +215,11 @@ export function ConversationListPane({
               All <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{channelCount + dmCount}</Badge>
             </TabsTrigger>
             <TabsTrigger value="channel" className="flex-1 text-xs data-[state=active]:shadow-sm">
-              <Hash className="mr-0.5 h-3 w-3" />
+              <Hash className="mr-0.5 size-3" />
               {channelCount}
             </TabsTrigger>
             <TabsTrigger value="direct_message" className="flex-1 text-xs data-[state=active]:shadow-sm">
-              <MessageCircle className="mr-0.5 h-3 w-3" />
+              <MessageCircle className="mr-0.5 size-3" />
               {dmCount}
             </TabsTrigger>
           </TabsList>
@@ -237,7 +237,7 @@ export function ConversationListPane({
           >
             {['inbox-skeleton-1', 'inbox-skeleton-2', 'inbox-skeleton-3', 'inbox-skeleton-4', 'inbox-skeleton-5'].map((slotKey) => (
               <div key={slotKey} className="flex items-center gap-3 p-3">
-                <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                <Skeleton className="size-10 shrink-0 rounded-full" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-3 w-32" />
@@ -247,11 +247,11 @@ export function ConversationListPane({
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="p-8 text-center">
-            <Inbox className="mx-auto mb-3 h-12 w-12 text-muted-foreground/40" />
+            <Inbox className="mx-auto mb-3 size-12 text-muted-foreground/40" />
             <p className="text-sm text-muted-foreground">{searchQuery ? 'No conversations match your search.' : 'No conversations yet.'}</p>
             {sourceFilter === 'all' ? (
               <Button variant="outline" size="sm" className="mt-3" onClick={onNewDM}>
-                <Plus className="mr-1 h-4 w-4" />
+                <Plus className="mr-1 size-4" />
                 Start a conversation
               </Button>
             ) : null}
@@ -281,7 +281,7 @@ export function ConversationListPane({
                     hasUnread && !selected && 'bg-muted/25',
                   )}
                 >
-                  <Avatar className="h-10 w-10 shrink-0">
+                  <Avatar className="size-10 shrink-0">
                     {item.type === 'channel' && item.metadata.channelAvatarUrl ? (
                       <AvatarImage src={item.metadata.channelAvatarUrl} alt={item.name} className="object-cover" />
                     ) : null}
@@ -321,7 +321,7 @@ export function ConversationListPane({
                   {hasUnread ? (
                     <div className="flex shrink-0 items-center gap-1">
                       {item.unreadCount > 0 ? <Badge variant="default" className="h-5 px-1.5 text-xs">{item.unreadCount}</Badge> : null}
-                      <div className="h-2 w-2 rounded-full bg-primary" />
+                      <div className="size-2 rounded-full bg-primary" />
                     </div>
                   ) : null}
                 </button>
@@ -533,7 +533,7 @@ export function ChannelConversationPane({
 
     return (
       <Alert className="mx-4 mt-4 border-warning/20 bg-warning/10 text-warning-foreground">
-        <AlertCircle className="h-4 w-4" />
+        <AlertCircle className="size-4" />
         <AlertTitle>Linked message unavailable</AlertTitle>
         <AlertDescription className="space-y-2">
           <p>We couldn&apos;t open the requested message in #{selectedChannel.name}. It may no longer be available in this channel.</p>
@@ -775,8 +775,8 @@ export function EmptyConversationPane({
     <div className="relative flex min-h-[min(60dvh,480px)] flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-muted/20 via-background to-background px-4 py-10 sm:px-6 sm:py-12">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
       <div className="relative max-w-md text-center">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 text-primary ring-1 ring-primary/15">
-          <Sparkles className="h-8 w-8" />
+        <div className="mx-auto mb-5 flex size-16 items-center justify-center rounded-2xl bg-accent/10 text-primary ring-1 ring-primary/15">
+          <Sparkles className="size-8" />
         </div>
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Pick a conversation</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -784,17 +784,17 @@ export function EmptyConversationPane({
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <Badge variant="outline" className="gap-1.5 border-muted/60 bg-background/80">
-            <Hash className="h-3 w-3" />
+            <Hash className="size-3" />
             {channelCount} channel{channelCount === 1 ? '' : 's'}
           </Badge>
           <Badge variant="outline" className="gap-1.5 border-muted/60 bg-background/80">
-            <MessageCircle className="h-3 w-3" />
+            <MessageCircle className="size-3" />
             {dmCount} DM{dmCount === 1 ? '' : 's'}
           </Badge>
         </div>
         {onNewDM ? (
           <Button type="button" className="mt-8 gap-2 shadow-sm" onClick={onNewDM}>
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4" />
             Start a direct message
           </Button>
         ) : null}

@@ -55,19 +55,17 @@ export async function fetchLinkedInAdAccounts(options: {
 
   const elements = Array.isArray(payload?.elements) ? payload.elements : []
 
-  return elements
-    .map((account): LinkedInAdAccount | null => {
+  return elements.flatMap((account): LinkedInAdAccount[] => {
       const id = typeof account.id === 'string' ? account.id.replace('urn:li:sponsoredAccount:', '') : null
-      if (!id) return null
+      if (!id) return []
 
-      return {
+      return [{
         id,
         name: account.name ?? `LinkedIn Account ${id}`,
         status: account.status,
         currency: account.currency,
-      }
+      }]
     })
-    .filter((account): account is LinkedInAdAccount => Boolean(account))
 }
 
 // =============================================================================

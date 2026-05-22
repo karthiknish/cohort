@@ -166,10 +166,10 @@ function SubmissionReviewActions({
           disabled={isPending}
           onClick={handleNeedsFollowUpClick}
         >
-          {isPending ? <LoaderCircle className="h-3 w-3 animate-spin" /> : 'Follow up'}
+          {isPending ? <LoaderCircle className="size-3 animate-spin" /> : 'Follow up'}
         </Button>
         <Button type="button" size="sm" className="h-7 text-xs" disabled={isPending} onClick={handleMarkReadyClick}>
-          {isPending ? <LoaderCircle className="h-3 w-3 animate-spin" /> : 'Mark ready'}
+          {isPending ? <LoaderCircle className="size-3 animate-spin" /> : 'Mark ready'}
         </Button>
       </div>
     </TableCell>

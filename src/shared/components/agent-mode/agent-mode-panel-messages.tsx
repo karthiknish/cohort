@@ -26,13 +26,13 @@ import {
   stopPropagation,
 } from './agent-mode-panel-message-utils'
 
-const AGENT_TYPING_ICON = <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+const AGENT_TYPING_ICON = <Sparkles className="size-4 text-primary" aria-hidden />
 
 function stepStatusIcon(status: AgentExecutionStep['status']) {
-  if (status === 'completed') return <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
-  if (status === 'failed') return <AlertCircle className="h-3.5 w-3.5 text-destructive" aria-hidden />
-  if (status === 'active') return <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" aria-hidden />
-  return <Clock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+  if (status === 'completed') return <Check className="size-3.5 text-primary" aria-hidden />
+  if (status === 'failed') return <AlertCircle className="size-3.5 text-destructive" aria-hidden />
+  if (status === 'active') return <Loader2 className="size-3.5 animate-spin text-primary" aria-hidden />
+  return <Clock className="size-3.5 text-muted-foreground" aria-hidden />
 }
 
 export function AgentExecutionTimeline({
@@ -48,10 +48,10 @@ export function AgentExecutionTimeline({
 
   return (
     <div className="flex gap-3" role="status" aria-live="polite" aria-atomic="true">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/15">
-        <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/15">
+        <Sparkles className="size-4 text-primary" aria-hidden />
       </div>
-      <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md border border-border/60 bg-card/90 px-3 py-3 shadow-sm">
+      <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md border border-border/60 bg-card/90 p-3 shadow-sm">
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
         <ol className="mt-2 space-y-2">
           {steps.map((step) => (
@@ -124,7 +124,7 @@ export function AgentMessagesSection({
         {isConversationLoading ? (
           <div className="flex h-full min-h-[240px] items-center justify-center">
             <div className="flex flex-col items-center gap-3 text-center">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden />
+              <Loader2 className="size-6 animate-spin text-primary" aria-hidden />
               <p className="text-sm text-muted-foreground">Loading conversation…</p>
             </div>
           </div>
@@ -182,7 +182,7 @@ export function AgentMessagesSection({
             className="pointer-events-auto h-8 gap-1.5 rounded-full border border-border/60 bg-background/95 px-4 shadow-lg backdrop-blur-sm"
             onClick={onJumpToLatest}
           >
-            <ArrowDown className="h-3.5 w-3.5" aria-hidden />
+            <ArrowDown className="size-3.5" aria-hidden />
             Latest messages
           </Button>
         </div>
@@ -207,7 +207,7 @@ export function FailedMessageBanner({
       className="flex items-center justify-between gap-3 border-t border-destructive/20 bg-destructive/[0.07] px-4 py-2.5"
     >
       <div className="flex items-center gap-2 text-sm text-destructive">
-        <WifiOff className="h-4 w-4 shrink-0" aria-hidden />
+        <WifiOff className="size-4 shrink-0" aria-hidden />
         <span className="font-medium">Message failed to send</span>
       </div>
       <Button
@@ -217,7 +217,7 @@ export function FailedMessageBanner({
         className="h-8 gap-1.5 rounded-full border-destructive/25 text-destructive hover:bg-destructive/10"
         aria-label="Retry sending failed message"
       >
-        <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+        <RefreshCw className="size-3.5" aria-hidden />
         Retry
       </Button>
     </div>

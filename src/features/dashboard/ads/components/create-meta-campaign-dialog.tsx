@@ -1,7 +1,7 @@
 'use client'
 
 import { useAction } from 'convex/react'
-import { useCallback, useState } from 'react'
+import { useCallback, useReducer, type ChangeEvent } from 'react'
 
 import { adsCampaignsApi } from '@/lib/convex-api'
 import { asErrorMessage } from '@/lib/convex-errors'
@@ -43,6 +43,59 @@ type Props = {
   onCreated?: () => void
 }
 
+type CreateMetaCampaignState = {
+  name: string
+  objective: string
+  dailyBudget: string
+  startTime: string
+  stopTime: string
+  loading: boolean
+}
+
+type CreateMetaCampaignAction =
+  | { type: 'setName'; value: string }
+  | { type: 'setObjective'; value: string }
+  | { type: 'setDailyBudget'; value: string }
+  | { type: 'setStartTime'; value: string }
+  | { type: 'setStopTime'; value: string }
+  | { type: 'setLoading'; value: boolean }
+  | { type: 'resetAfterCreate' }
+
+function createInitialCreateMetaCampaignState(): CreateMetaCampaignState {
+  return {
+    name: '',
+    objective: META_OBJECTIVES[0].value,
+    dailyBudget: '',
+    startTime: '',
+    stopTime: '',
+    loading: false,
+  }
+}
+
+function createMetaCampaignReducer(
+  state: CreateMetaCampaignState,
+  action: CreateMetaCampaignAction,
+): CreateMetaCampaignState {
+  switch (action.type) {
+    case 'setName':
+      return { ...state, name: action.value }
+    case 'setObjective':
+      return { ...state, objective: action.value }
+    case 'setDailyBudget':
+      return { ...state, dailyBudget: action.value }
+    case 'setStartTime':
+      return { ...state, startTime: action.value }
+    case 'setStopTime':
+      return { ...state, stopTime: action.value }
+    case 'setLoading':
+      return { ...state, loading: action.value }
+    case 'resetAfterCreate':
+      return { ...state, name: '', dailyBudget: '' }
+    default:
+      return state
+  }
+}
+
 export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Props) {
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
@@ -58,18 +111,14 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
     stopTime?: string
   }) => Promise<{ success: boolean; campaignId?: string }>
 
-  const [name, setName] = useState('')
-  const [objective, setObjective] = useState<string>(META_OBJECTIVES[0].value)
-  const [dailyBudget, setDailyBudget] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [stopTime, setStopTime] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [state, dispatch] = useReducer(createMetaCampaignReducer, undefined, createInitialCreateMetaCampaignState)
+  const { name, objective, dailyBudget, startTime, stopTime, loading } = state
 
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
 
   const handleSubmit = useCallback(async () => {
     if (!workspaceId || !name.trim()) return
-    setLoading(true)
+    dispatch({ type: 'setLoading', value: true })
     try {
       await createMetaCampaign({
         workspaceId,
@@ -83,8 +132,7 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
         stopTime: stopTime.trim() || undefined,
       })
       toast({ title: 'Campaign created', description: `"${name.trim()}" is paused in Meta — add ad sets next.` })
-      setName('')
-      setDailyBudget('')
+      dispatch({ type: 'resetAfterCreate' })
       onOpenChange(false)
       onCreated?.()
     } catch (error) {
@@ -95,7 +143,7 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
         fallbackMessage: asErrorMessage(error),
       })
     } finally {
-      setLoading(false)
+      dispatch({ type: 'setLoading', value: false })
     }
   }, [
     createMetaCampaign,
@@ -109,6 +157,34 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
     selectedClientId,
     workspaceId,
   ])
+
+  const handleNameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    dispatch({ type: 'setName', value: event.target.value })
+  }, [])
+
+  const handleDailyBudgetChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    dispatch({ type: 'setDailyBudget', value: event.target.value })
+  }, [])
+
+  const handleStartTimeChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    dispatch({ type: 'setStartTime', value: event.target.value })
+  }, [])
+
+  const handleStopTimeChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    dispatch({ type: 'setStopTime', value: event.target.value })
+  }, [])
+
+  const handleObjectiveChange = useCallback((value: string) => {
+    dispatch({ type: 'setObjective', value })
+  }, [])
+
+  const handleCancel = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
+
+  const handleSubmitClick = useCallback(() => {
+    void handleSubmit()
+  }, [handleSubmit])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -124,12 +200,12 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
             <Input
               id="meta-campaign-name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={handleNameChange}
               placeholder="Spring promo"
             />
           </FormField>
           <FormField id="meta-campaign-objective" label="Objective">
-            <Select value={objective} onValueChange={setObjective}>
+            <Select value={objective} onValueChange={handleObjectiveChange}>
               <SelectTrigger id="meta-campaign-objective">
                 <SelectValue />
               </SelectTrigger>
@@ -148,7 +224,7 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
               type="number"
               min={1}
               value={dailyBudget}
-              onChange={(e) => setDailyBudget(e.target.value)}
+              onChange={handleDailyBudgetChange}
               placeholder="50"
             />
           </FormField>
@@ -158,7 +234,7 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
                 id="meta-campaign-start"
                 type="datetime-local"
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                onChange={handleStartTimeChange}
               />
             </FormField>
             <FormField id="meta-campaign-stop" label="End (optional)" description="ISO datetime">
@@ -166,16 +242,16 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
                 id="meta-campaign-stop"
                 type="datetime-local"
                 value={stopTime}
-                onChange={(e) => setStopTime(e.target.value)}
+                onChange={handleStopTimeChange}
               />
             </FormField>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <Button variant="outline" onClick={handleCancel} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={() => void handleSubmit()} disabled={loading || !name.trim()}>
+          <Button onClick={handleSubmitClick} disabled={loading || !name.trim()}>
             {loading ? 'Creating…' : 'Create campaign'}
           </Button>
         </DialogFooter>

@@ -43,7 +43,7 @@ export function ComparisonTable({ rows, loading, hasSelection }: ComparisonTable
                 ROAS
                 <Tooltip>
                   <TooltipTrigger>
-                    <Info className="h-3 w-3" />
+                    <Info className="size-3" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Return on Ad Spend</p>
@@ -56,7 +56,7 @@ export function ComparisonTable({ rows, loading, hasSelection }: ComparisonTable
                 CPA
                 <Tooltip>
                   <TooltipTrigger>
-                    <Info className="h-3 w-3" />
+                    <Info className="size-3" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Cost Per Acquisition</p>
@@ -69,7 +69,7 @@ export function ComparisonTable({ rows, loading, hasSelection }: ComparisonTable
                 Conversions
                 <Tooltip>
                   <TooltipTrigger>
-                    <Info className="h-3 w-3" />
+                    <Info className="size-3" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Total conversion events in the selected period</p>

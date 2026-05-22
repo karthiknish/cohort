@@ -40,11 +40,11 @@ export function SocialsPageLayout({
       <Tabs value={mobileTab} onValueChange={setMobileTab} className="w-full lg:hidden">
         <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-muted/40 p-1">
           <TabsTrigger value="performance" className="gap-1.5 rounded-lg text-xs sm:text-sm">
-            <LineChart className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <LineChart className="size-3.5 shrink-0" aria-hidden />
             Performance
           </TabsTrigger>
           <TabsTrigger value="setup" className="gap-1.5 rounded-lg text-xs sm:text-sm">
-            <Settings2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <Settings2 className="size-3.5 shrink-0" aria-hidden />
             Connection
           </TabsTrigger>
         </TabsList>
@@ -106,12 +106,12 @@ export function SocialsSurfaceTabsList({
   return (
     <TabsList className={cn(DASHBOARD_THEME.tabs.list, 'h-auto w-full justify-start gap-1 rounded-xl p-1 sm:w-auto')}>
       <TabsTrigger value="facebook" className={tabClass}>
-        <Facebook className="h-4 w-4 shrink-0 text-info" aria-hidden />
+        <Facebook className="size-4 shrink-0 text-info" aria-hidden />
         Facebook
         <SurfaceTabStatusBadge status={facebookStatus} />
       </TabsTrigger>
       <TabsTrigger value="instagram" className={tabClass}>
-        <Instagram className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+        <Instagram className="size-4 shrink-0 text-accent" aria-hidden />
         Instagram
         <SurfaceTabStatusBadge status={instagramStatus} />
       </TabsTrigger>

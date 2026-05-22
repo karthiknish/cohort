@@ -58,8 +58,8 @@ export function SocialsKpiGrid({ items }: SocialsKpiGridProps) {
                       {item.value}
                     </p>
                   </div>
-                  <div className={cn(DASHBOARD_THEME.icons.container, 'h-11 w-11 shrink-0 shadow-sm')}>
-                    <Icon className="h-5 w-5" aria-hidden />
+                  <div className={cn(DASHBOARD_THEME.icons.container, 'size-11 shrink-0 shadow-sm')}>
+                    <Icon className="size-5" aria-hidden />
                   </div>
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground md:text-sm">{item.detail}</p>

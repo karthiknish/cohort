@@ -68,7 +68,7 @@ export function WorkspaceTrendsCard({ summaries, periodDays, mixedCurrencies }: 
         <CardHeader className="pb-3">
           <div className="space-y-1">
             <CardTitle className="text-base flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-primary" />
+              <DollarSign className="size-4 text-primary" />
               Trending across workspaces
             </CardTitle>
             <CardDescription>Leaders across your selected workspaces (last {periodDays} days).</CardDescription>
@@ -92,7 +92,7 @@ export function WorkspaceTrendsCard({ summaries, periodDays, mixedCurrencies }: 
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <CardTitle className="text-base flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-primary" />
+              <DollarSign className="size-4 text-primary" />
               Trending across workspaces
             </CardTitle>
             <CardDescription>Leaders across your selected workspaces (last {periodDays} days).</CardDescription>
@@ -108,7 +108,7 @@ export function WorkspaceTrendsCard({ summaries, periodDays, mixedCurrencies }: 
         {insights.roasLeader && (
           <div className="rounded-xl border bg-card p-3">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-warning" /> ROAS leader
+              <Trophy className="size-4 text-warning" /> ROAS leader
             </p>
             <p className="mt-1 text-sm font-semibold">{insights.roasLeader.clientName}</p>
             <p className="text-xs text-muted-foreground">{formatRoas(insights.roasLeader.roas)} ROAS</p>
@@ -134,7 +134,7 @@ export function WorkspaceTrendsCard({ summaries, periodDays, mixedCurrencies }: 
         {insights.conversionsLeader && (
           <div className="rounded-xl border bg-card p-3">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-primary" /> Most conversions
+              <TrendingUp className="size-4 text-primary" /> Most conversions
             </p>
             <p className="mt-1 text-sm font-semibold">{insights.conversionsLeader.clientName}</p>
             <p className="text-xs text-muted-foreground">{insights.conversionsLeader.totalConversions.toLocaleString('en-US')} conversions</p>
@@ -144,7 +144,7 @@ export function WorkspaceTrendsCard({ summaries, periodDays, mixedCurrencies }: 
         <div className="sm:col-span-2 flex justify-end">
           <Link href="/dashboard">
             <Button variant="ghost" size="sm" className="h-8 px-2 text-xs gap-1">
-              View comparison <ArrowUpRight className="h-3 w-3" />
+              View comparison <ArrowUpRight className="size-3" />
             </Button>
           </Link>
         </div>

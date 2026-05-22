@@ -37,9 +37,9 @@ const LeafletMap = dynamic(
   { 
     ssr: false,
     loading: () => (
-      <div className="flex items-center justify-center bg-muted/30 rounded-lg h-full w-full">
+      <div className="flex items-center justify-center bg-muted/30 rounded-lg size-full">
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin" />
+          <Loader2 className="size-6 animate-spin" />
           <span className="text-sm">Loading map…</span>
         </div>
       </div>
@@ -108,7 +108,7 @@ export function LocationMap({
       {showSearch && (
         <div className="relative">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search for a city, country, or region…"
               value={searchQuery}
@@ -116,7 +116,7 @@ export function LocationMap({
               className="pl-9 pr-9"
             />
             {searching && (
-              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
             )}
           </div>
           
@@ -129,7 +129,7 @@ export function LocationMap({
                   className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
                   onClick={searchResultHandlers[result.place_id]}
                 >
-                  <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <MapPin className="size-4 shrink-0 text-muted-foreground" />
                   <span className="truncate">{result.display_name}</span>
                 </button>
               ))}
@@ -152,7 +152,7 @@ export function LocationMap({
           <div className="flex flex-wrap gap-1.5">
             {selectedLocations.map((loc) => (
               <Badge key={loc.id} variant="secondary" className="gap-1 pr-1">
-                <MapPin className="h-3 w-3" />
+                <MapPin className="size-3" />
                 {loc.name}
                 {onLocationRemove && (
                   <button
@@ -160,7 +160,7 @@ export function LocationMap({
                     onClick={removeHandlers[loc.id]}
                     className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="size-3" />
                   </button>
                 )}
               </Badge>

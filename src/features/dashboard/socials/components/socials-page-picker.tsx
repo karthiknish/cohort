@@ -55,7 +55,7 @@ export function SocialsPagePicker({
         </div>
         {linkedIg ? (
           <div className="flex items-center gap-2 rounded-xl border border-accent/20 bg-accent/5 px-3 py-2 text-xs text-foreground">
-            <Instagram className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+            <Instagram className="size-4 shrink-0 text-accent" aria-hidden />
             <span>
               Linked IG · <span className="font-medium">@{linkedIg}</span>
             </span>
@@ -87,14 +87,14 @@ export function SocialsPagePicker({
 
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" onClick={onConfirm} disabled={confirming || !selectedPageId || loading}>
-            {confirming ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {confirming ? <LoaderCircle className="mr-2 size-4 animate-spin" aria-hidden /> : null}
             {setupComplete ? 'Update Page' : 'Confirm Page'}
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={onReload} disabled={loading}>
             {loading ? (
-              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+              <LoaderCircle className="mr-2 size-4 animate-spin" aria-hidden />
             ) : (
-              <RefreshCw className="mr-2 h-4 w-4" aria-hidden />
+              <RefreshCw className="mr-2 size-4" aria-hidden />
             )}
             Reload Pages
           </Button>

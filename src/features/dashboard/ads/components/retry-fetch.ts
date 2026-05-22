@@ -43,7 +43,7 @@ export async function retryFetch(
 
   let lastError: Error | null = null
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+  const attemptFetch = async (attempt: number): Promise<Response> => {
     try {
       if (signal?.aborted) {
         throw new DOMException('Aborted', 'AbortError')
@@ -95,6 +95,7 @@ export async function retryFetch(
       const delayMs = calculateDelay(attempt, baseDelayMs, maxDelayMs)
       onRetry?.(attempt + 1, apiError, delayMs)
       await sleepWithSignal(delayMs, signal)
+      return attemptFetch(attempt + 1)
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         throw error
@@ -117,7 +118,7 @@ export async function retryFetch(
         const delayMs = calculateDelay(attempt, baseDelayMs, maxDelayMs)
         onRetry?.(attempt + 1, networkError, delayMs)
         await sleepWithSignal(delayMs, signal)
-        continue
+        return attemptFetch(attempt + 1)
       }
 
       if (error instanceof UnifiedError) {
@@ -128,7 +129,7 @@ export async function retryFetch(
     }
   }
 
-  throw lastError ?? new Error('Request failed after retries')
+  return attemptFetch(0)
 }
 
 export function getRetryableErrorMessage(error: unknown): string {

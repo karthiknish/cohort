@@ -16,7 +16,7 @@ export function MinifiedSoftwarePreview() {
       />
       <div
         aria-hidden="true"
-        className="absolute -right-8 top-16 h-40 w-40 rounded-full bg-info/10 blur-3xl"
+        className="absolute -right-8 top-16 size-40 rounded-full bg-info/10 blur-3xl"
       />
 
       <div
@@ -30,7 +30,7 @@ export function MinifiedSoftwarePreview() {
 
       <p className="mt-4 flex flex-col items-center gap-2 text-center text-[11px] font-medium tracking-wide text-muted-foreground sm:flex-row sm:justify-center sm:gap-6">
         <span className="inline-flex items-center gap-1.5">
-          <MousePointer2 className="h-3.5 w-3.5 shrink-0 text-primary/70" aria-hidden />
+          <MousePointer2 className="size-3.5 shrink-0 text-primary/70" aria-hidden />
           Click sections or metrics to explore
         </span>
         <span className="hidden text-muted-foreground/40 sm:inline" aria-hidden>

@@ -143,15 +143,15 @@ export async function upsertExpenseAttachmentFiles(
   const attachments = Array.isArray(input.attachments) ? input.attachments : []
   if (attachments.length === 0) return input
 
-  const resolved: ExpenseAttachment[] = []
-  for (const attachment of attachments) {
-    const existing = await lookup({ url: attachment.url })
-    if (existing) {
-      resolved.push({ ...attachment, url: existing.storageId })
-    } else {
-      resolved.push(attachment)
-    }
-  }
+  const resolved = await Promise.all(
+    attachments.map(async (attachment) => {
+      const existing = await lookup({ url: attachment.url })
+      if (existing) {
+        return { ...attachment, url: existing.storageId }
+      }
+      return attachment
+    }),
+  )
 
   return {
     ...input,
