@@ -1,4 +1,4 @@
-import { internalQuery, query, type MutationCtx } from './_generated/server'
+import { internalQuery, query } from './_generated/server'
 import { v } from 'convex/values'
 import {
   zWorkspaceMutation,
@@ -10,6 +10,11 @@ import {
 } from './functions'
 import { z } from 'zod/v4'
 import { Errors } from './errors'
+import {
+  loadWorkspaceAdminMembers,
+  mergeTeamMembersWithAdmins,
+  syncWorkspaceClientAdminMembers,
+} from './clientAdminTeamSync'
 
 const clientZ = z.object({
   legacyId: z.string(),
@@ -25,53 +30,6 @@ const clientZ = z.object({
   updatedAtMs: z.number(),
   deletedAtMs: z.number().nullable(),
 })
-
-type ClientTeamMemberRow = {
-  name: string
-  role: string
-}
-
-async function loadWorkspaceAdminMembers(
-  ctx: Pick<MutationCtx, 'db'>,
-  workspaceId: string,
-): Promise<ClientTeamMemberRow[]> {
-  const [membersByAgency, agencyAdmin] = await Promise.all([
-    ctx.db.query('users').withIndex('by_agencyId', (q) => q.eq('agencyId', workspaceId)).take(500),
-    ctx.db.query('users').withIndex('by_legacyId', (q) => q.eq('legacyId', workspaceId)).unique(),
-  ])
-
-  const rows = agencyAdmin
-    ? [agencyAdmin, ...membersByAgency.filter((row) => row.legacyId !== agencyAdmin.legacyId)]
-    : membersByAgency
-
-  const admins: ClientTeamMemberRow[] = []
-
-  for (const row of rows) {
-    if (row.status === 'disabled' || row.status === 'suspended') continue
-    if (row.role !== 'admin') continue
-
-    const name = typeof row.name === 'string' ? row.name.trim() : ''
-    if (!name) continue
-
-    admins.push({ name, role: 'Admin' })
-  }
-
-  return admins
-}
-
-function mergeTeamMembersWithAdmins(
-  teamMembers: ClientTeamMemberRow[],
-  adminMembers: ClientTeamMemberRow[],
-): ClientTeamMemberRow[] {
-  const existingNames = new Set(teamMembers.map((member) => member.name.toLowerCase()))
-  const additions = adminMembers.filter((member) => !existingNames.has(member.name.toLowerCase()))
-
-  if (additions.length === 0) {
-    return teamMembers
-  }
-
-  return [...teamMembers, ...additions]
-}
 
 function slugify(value: string): string {
   const base = value
@@ -334,39 +292,10 @@ export const syncAdminTeamMembers = zWorkspaceMutation({
   },
   returns: z.object({ updatedCount: z.number() }),
   handler: async (ctx, args) => {
-    const adminMembers = await loadWorkspaceAdminMembers(ctx, args.workspaceId)
-    if (adminMembers.length === 0) {
-      return { updatedCount: 0 }
-    }
-
-    const clients = args.legacyId
-      ? await ctx.db
-          .query('clients')
-          .withIndex('by_workspace_legacyId', (q) =>
-            q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId!),
-          )
-          .unique()
-          .then((row) => (row && row.deletedAtMs === null ? [row] : []))
-      : await ctx.db
-          .query('clients')
-          .withIndex('by_workspace_nameLower_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
-          .collect()
-          .then((rows) => rows.filter((row) => row.deletedAtMs === null))
-
-    let updatedCount = 0
-
-    for (const client of clients) {
-      const merged = mergeTeamMembersWithAdmins(client.teamMembers, adminMembers)
-      if (merged.length === client.teamMembers.length) {
-        continue
-      }
-
-      await ctx.db.patch(client._id, {
-        teamMembers: merged,
-        updatedAtMs: ctx.now,
-      })
-      updatedCount += 1
-    }
+    const { updatedCount } = await syncWorkspaceClientAdminMembers(ctx, args.workspaceId, {
+      legacyId: args.legacyId,
+      now: ctx.now,
+    })
 
     return { updatedCount }
   },

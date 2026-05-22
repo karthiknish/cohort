@@ -20,7 +20,18 @@ export type AdminInvitationRecord = {
   acceptedAtMs: number | null
 }
 
-export const ROLE_ASSIGNABLE: AdminUserRole[] = ['team', 'client']
+export const ROLE_ASSIGNABLE: AdminUserRole[] = ADMIN_USER_ROLES
+
+export function roleLabel(role: AdminUserRole): string {
+  switch (role) {
+    case 'admin':
+      return 'Admin'
+    case 'team':
+      return 'Team Member'
+    case 'client':
+      return 'Client'
+  }
+}
 export const STATUS_OPTIONS: StatusFilter[] = ['all', ...ADMIN_USER_STATUSES]
 export const INVITATION_STATUSES: InvitationLifecycleStatus[] = ['pending', 'accepted', 'expired', 'revoked']
 
@@ -52,6 +63,7 @@ export type AdminUsersPageState = {
   invitationActionKey: string | null
   inviteOpen: boolean
   revokeOpen: boolean
+  detailsOpen: boolean
   selectedUser: AdminUserRecord | null
   inviteEmail: string
   inviteRole: AdminUserRole
@@ -72,6 +84,7 @@ export type AdminUsersPageAction =
   | { type: 'setInvitationActionKey'; value: string | null | ((prev: string | null) => string | null) }
   | { type: 'setInviteOpen'; value: boolean }
   | { type: 'setRevokeOpen'; value: boolean }
+  | { type: 'setDetailsOpen'; value: boolean }
   | { type: 'setSelectedUser'; value: AdminUserRecord | null }
   | { type: 'setInviteEmail'; value: string }
   | { type: 'setInviteRole'; value: AdminUserRole }
@@ -94,6 +107,7 @@ export function createInitialAdminUsersPageState(): AdminUsersPageState {
     invitationActionKey: null,
     inviteOpen: false,
     revokeOpen: false,
+    detailsOpen: false,
     selectedUser: null,
     inviteEmail: '',
     inviteRole: 'team',
@@ -145,6 +159,8 @@ export function adminUsersPageReducer(state: AdminUsersPageState, action: AdminU
       return { ...state, inviteOpen: action.value }
     case 'setRevokeOpen':
       return { ...state, revokeOpen: action.value }
+    case 'setDetailsOpen':
+      return { ...state, detailsOpen: action.value }
     case 'setSelectedUser':
       return { ...state, selectedUser: action.value }
     case 'setInviteEmail':

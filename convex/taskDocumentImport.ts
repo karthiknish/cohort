@@ -7,7 +7,7 @@ import type { Id } from './_generated/dataModel'
 
 import { geminiAI, type GeminiRequestPart } from '../src/services/gemini'
 import { enforceGeminiActionRateLimit } from './geminiRateLimit'
-import { Errors, withErrorHandling } from './errors'
+import { ErrorCode, Errors, isAppError, withErrorHandling } from './errors'
 import {
   listWorkspaceMembers,
 } from './agentActions/helpers/context'
@@ -183,10 +183,24 @@ async function loadClientRosterNames(
 ): Promise<string[]> {
   if (!clientId) return []
 
-  const client = await ctx.runQuery(api.clients.getByLegacyId, {
-    workspaceId,
-    legacyId: clientId,
-  })
+  let client:
+    | {
+        accountManager: string
+        teamMembers: Array<{ name: string; role: string }>
+      }
+    | null = null
+
+  try {
+    client = await ctx.runQuery(api.clients.getByLegacyId, {
+      workspaceId,
+      legacyId: clientId,
+    })
+  } catch (error) {
+    if (isAppError(error, ErrorCode.RESOURCE.NOT_FOUND)) {
+      return []
+    }
+    throw error
+  }
 
   if (!client) return []
 

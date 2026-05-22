@@ -12,7 +12,6 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { getPreviewAdminInvitations, getPreviewAdminUsers } from '@/lib/preview-data'
 import type { AdminUserRecord, AdminUserRole, AdminUserStatus } from '@/types/admin'
 import {
-  ROLE_ASSIGNABLE,
   adminUsersPageReducer,
   createInitialAdminUsersPageState,
   normalizeAdminRole,
@@ -43,6 +42,7 @@ export function useAdminUsersPage() {
     invitationActionKey,
     inviteOpen,
     revokeOpen,
+    detailsOpen,
     selectedUser,
     inviteEmail,
     inviteRole,
@@ -213,14 +213,6 @@ export function useAdminUsersPage() {
 
   const handleRoleChange = useCallback((record: AdminUserRecord, nextRole: AdminUserRole) => {
     if (record.role === nextRole) {
-      return
-    }
-
-    if (!ROLE_ASSIGNABLE.includes(nextRole) && record.role !== nextRole) {
-      notifyFailure({
-        title: 'Unsupported role',
-        message: 'This page only manages team or client roles.',
-      })
       return
     }
 
@@ -512,19 +504,41 @@ export function useAdminUsersPage() {
     dispatch({ type: 'setRevokeOpen', value: false })
   }, [])
 
-  const handleRevokeOpenChange = useCallback((open: boolean) => {
-    dispatch({ type: 'setRevokeOpen', value: open })
+  const handleDetailsClose = useCallback(() => {
+    dispatch({ type: 'setDetailsOpen', value: false })
   }, [])
 
-  const handleSelectUser = useCallback((userRecord: AdminUserRecord) => {
+  const handleDetailsOpenChange = useCallback((open: boolean) => {
+    dispatch({ type: 'setDetailsOpen', value: open })
+    if (!open) {
+      dispatch({ type: 'setSelectedUser', value: null })
+    }
+  }, [])
+
+  const handleRevokeOpenChange = useCallback((open: boolean) => {
+    dispatch({ type: 'setRevokeOpen', value: open })
+    if (!open) {
+      dispatch({ type: 'setSelectedUser', value: null })
+    }
+  }, [])
+
+  const handleViewDetails = useCallback((userRecord: AdminUserRecord) => {
     dispatch({ type: 'setSelectedUser', value: userRecord })
+    dispatch({ type: 'setDetailsOpen', value: true })
+  }, [])
+
+  const handleRevokeAccess = useCallback((userRecord: AdminUserRecord) => {
+    dispatch({ type: 'setSelectedUser', value: userRecord })
+    dispatch({ type: 'setRevokeOpen', value: true })
   }, [])
 
   const handleRevokeConfirm = useCallback(() => {
     if (selectedUser) {
       handleApprovalToggle(selectedUser, false)
     }
-  }, [selectedUser, handleApprovalToggle])
+    dispatch({ type: 'setRevokeOpen', value: false })
+    dispatch({ type: 'setSelectedUser', value: null })
+  }, [handleApprovalToggle, selectedUser])
 
   const handleLoadMore = useCallback(() => {
     if (isPreviewMode) return
@@ -543,10 +557,6 @@ export function useAdminUsersPage() {
         dispatch({ type: 'setLoadingMore', value: false })
       })
   }, [isPreviewMode, loadingMore, loadMore, reportActionFailure])
-
-  const handleRevokeOpen = useCallback(() => {
-    dispatch({ type: 'setRevokeOpen', value: true })
-  }, [])
 
   return {
     user,
@@ -569,6 +579,7 @@ export function useAdminUsersPage() {
     invitationActionKey,
     inviteOpen,
     revokeOpen,
+    detailsOpen,
     selectedUser,
     inviteEmail,
     inviteRole,
@@ -591,10 +602,12 @@ export function useAdminUsersPage() {
     handleInvitationSearchChange,
     handleInvitationStatusFilterChange,
     handleRevokeClose,
+    handleDetailsClose,
+    handleDetailsOpenChange,
     handleRevokeOpenChange,
-    handleSelectUser,
+    handleViewDetails,
+    handleRevokeAccess,
     handleRevokeConfirm,
     handleLoadMore,
-    handleRevokeOpen,
   }
 }

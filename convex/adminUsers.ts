@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { buildAdminUserPage } from './adminUserPage'
+import { syncWorkspaceClientAdminMembers } from './clientAdminTeamSync'
 import { Errors, asErrorMessage, isAppError } from './errors'
 import { applyManualPagination, adminMutation, adminPaginatedQuery, adminQuery } from './functions'
 
@@ -203,6 +204,19 @@ export const updateUserRoleStatus = adminMutation({
       await ctx.db.patch(existing._id, patch)
 
       const updated = await ctx.db.get(existing._id)
+      const nextRole = updated?.role ?? existing.role
+
+      if (args.role === 'admin' && existing.role !== 'admin' && nextRole === 'admin') {
+        try {
+          await syncWorkspaceClientAdminMembers(ctx, targetWorkspaceId, { now: ctx.now })
+        } catch (syncError) {
+          console.error('[adminUsers:updateUserRoleStatus] client admin sync failed', {
+            legacyId: args.legacyId,
+            workspaceId: targetWorkspaceId,
+            syncError,
+          })
+        }
+      }
 
       return {
         legacyId: updated?.legacyId ?? args.legacyId,

@@ -36,6 +36,7 @@ export default function AdminUsersPage() {
       inviteRole={page.inviteRole}
       inviteSending={page.inviteSending}
       revokeOpen={page.revokeOpen}
+      detailsOpen={page.detailsOpen}
       selectedUser={page.selectedUser}
       onRefresh={page.handleRefresh}
       onInviteOpenChange={page.handleInviteOpenChange}
@@ -48,13 +49,15 @@ export default function AdminUsersPage() {
       onRoleFilterChange={page.handleRoleFilterChange}
       onRoleChange={page.handleRoleChange}
       onApprovalToggle={page.handleApprovalToggle}
-      onSelectUser={page.handleSelectUser}
-      onRevokeOpen={page.handleRevokeOpen}
+      onViewDetails={page.handleViewDetails}
+      onRevokeAccess={page.handleRevokeAccess}
       onLoadMore={page.handleLoadMore}
       onInvitationSearchChange={page.handleInvitationSearchChange}
       onInvitationStatusFilterChange={page.handleInvitationStatusFilterChange}
       onResendInvitation={page.handleResendInvitation}
       onRevokeInvitation={page.handleRevokeInvitation}
+      onDetailsOpenChange={page.handleDetailsOpenChange}
+      onDetailsClose={page.handleDetailsClose}
       onRevokeOpenChange={page.handleRevokeOpenChange}
       onRevokeClose={page.handleRevokeClose}
       onRevokeConfirm={page.handleRevokeConfirm}

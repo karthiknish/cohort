@@ -6,6 +6,7 @@
  */
 
 import { v } from 'convex/values'
+import { internalMutation } from './_generated/server'
 import { adminMutation } from './functions'
 import { resolveMetricCurrency } from '@/domain/ads/money'
 import {
@@ -13,6 +14,10 @@ import {
   normalizeAdsProviderId,
   normalizeSurfaceId,
 } from '@/domain/ads/provider'
+import {
+  loadWorkspaceAdminMembers,
+  mergeTeamMembersWithAdmins,
+} from './clientAdminTeamSync'
 
 // =============================================================================
 // backfillAdMetricsCurrency
@@ -135,4 +140,115 @@ export const backfillAdMetricsCurrency = adminMutation({
       nextCursor: result.continueCursor,
     }
   },
+})
+
+// =============================================================================
+// backfillClientAdminTeamMembers
+//
+// Adds every active workspace admin to each active client roster. Idempotent:
+// skips clients that already include an admin by name (case-insensitive).
+//
+// Loop until `done: true` (admin session or CLI internal mutation):
+//
+//   let cursor = null
+//   do {
+//     const res = await convex.mutation(api.adminMigrations.backfillClientAdminTeamMembers, { cursor })
+//     cursor = res.data.nextCursor
+//   } while (!res.data.done)
+//
+// CLI (production deploy key):
+//
+//   npx convex run adminMigrations:backfillClientAdminTeamMembersInternal --prod --env-file .env.prod
+//
+// =============================================================================
+
+type BackfillClientAdminTeamMembersArgs = {
+  batchSize?: number
+  cursor?: string | null
+}
+
+type BackfillClientAdminTeamMembersResult = {
+  processed: number
+  patched: number
+  done: boolean
+  nextCursor: string | null
+}
+
+async function backfillClientAdminTeamMembersBatch(
+  ctx: { db: Parameters<typeof loadWorkspaceAdminMembers>[0]['db'] },
+  args: BackfillClientAdminTeamMembersArgs,
+  now: number,
+): Promise<BackfillClientAdminTeamMembersResult> {
+  const batchSize = Math.min(Math.max(args.batchSize ?? 50, 1), 200)
+
+  const result = await ctx.db
+    .query('clients')
+    .withIndex('by_createdAtMs')
+    .order('asc')
+    .paginate({ numItems: batchSize, cursor: args.cursor ?? null })
+
+  const adminMembersByWorkspace = new Map<string, Awaited<ReturnType<typeof loadWorkspaceAdminMembers>>>()
+  let patched = 0
+
+  for (const client of result.page) {
+    if (client.deletedAtMs !== null) {
+      continue
+    }
+
+    let adminMembers = adminMembersByWorkspace.get(client.workspaceId)
+    if (!adminMembers) {
+      adminMembers = await loadWorkspaceAdminMembers(ctx, client.workspaceId)
+      adminMembersByWorkspace.set(client.workspaceId, adminMembers)
+    }
+
+    if (adminMembers.length === 0) {
+      continue
+    }
+
+    const merged = mergeTeamMembersWithAdmins(client.teamMembers, adminMembers)
+    if (merged.length === client.teamMembers.length) {
+      continue
+    }
+
+    await ctx.db.patch(client._id, {
+      teamMembers: merged,
+      updatedAtMs: now,
+    })
+    patched += 1
+  }
+
+  return {
+    processed: result.page.length,
+    patched,
+    done: result.isDone,
+    nextCursor: result.continueCursor,
+  }
+}
+
+export const backfillClientAdminTeamMembers = adminMutation({
+  args: {
+    batchSize: v.optional(v.number()),
+    cursor: v.optional(v.union(v.string(), v.null())),
+  },
+  returns: v.object({
+    processed: v.number(),
+    patched: v.number(),
+    done: v.boolean(),
+    nextCursor: v.union(v.string(), v.null()),
+  }),
+  handler: async (ctx, args) => backfillClientAdminTeamMembersBatch(ctx, args, ctx.now),
+})
+
+export const backfillClientAdminTeamMembersInternal = internalMutation({
+  args: {
+    batchSize: v.optional(v.number()),
+    cursor: v.optional(v.union(v.string(), v.null())),
+  },
+  returns: v.object({
+    processed: v.number(),
+    patched: v.number(),
+    done: v.boolean(),
+    nextCursor: v.union(v.string(), v.null()),
+  }),
+  handler: async (ctx, args) => backfillClientAdminTeamMembersBatch(ctx, args, Date.now()),
 })

@@ -29,7 +29,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
@@ -48,6 +47,7 @@ import {
   ROLE_ASSIGNABLE,
   STATUS_OPTIONS,
   invitationStatusLabel,
+  roleLabel,
   statusLabel,
   type AdminInvitationRecord,
   type InvitationLifecycleStatus,
@@ -71,15 +71,15 @@ function UserRow({
   savingId,
   onRoleChange,
   onApprovalToggle,
-  onSelectUser,
-  onRevokeOpen,
+  onViewDetails,
+  onRevokeAccess,
 }: {
   record: AdminUserRecord
   savingId: string | null
   onRoleChange: (record: AdminUserRecord, role: AdminUserRole) => void
   onApprovalToggle: (record: AdminUserRecord, approved: boolean) => void
-  onSelectUser: (user: AdminUserRecord) => void
-  onRevokeOpen: () => void
+  onViewDetails: (user: AdminUserRecord) => void
+  onRevokeAccess: (user: AdminUserRecord) => void
 }) {
   const handleRoleChange = useCallback(
     (value: string) => onRoleChange(record, value as AdminUserRole),
@@ -91,7 +91,8 @@ function UserRow({
     [onApprovalToggle, record]
   )
 
-  const handleViewDetails = useCallback(() => onSelectUser(record), [onSelectUser, record])
+  const handleViewDetails = useCallback(() => onViewDetails(record), [onViewDetails, record])
+  const handleRevokeAccess = useCallback(() => onRevokeAccess(record), [onRevokeAccess, record])
 
   return (
     <tr className="border-b border-muted/20">
@@ -109,13 +110,13 @@ function UserRow({
           onValueChange={handleRoleChange}
           disabled={savingId === record.id}
         >
-          <SelectTrigger className="w-24">
+          <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {ROLE_ASSIGNABLE.map((role) => (
               <SelectItem key={role} value={role}>
-                {role.charAt(0).toUpperCase() + role.slice(1)}
+                {roleLabel(role)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -144,13 +145,12 @@ function UserRow({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem onClick={handleViewDetails}>
               View details
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={onRevokeOpen}
+              onClick={handleRevokeAccess}
               className="text-destructive focus:text-destructive"
             >
               <Trash2 className="mr-2 size-4" />
@@ -316,8 +316,8 @@ type AdminUsersDirectorySectionProps = {
   onRoleFilterChange: (value: string) => void
   onRoleChange: (record: AdminUserRecord, role: AdminUserRole) => void
   onApprovalToggle: (record: AdminUserRecord, approved: boolean) => void
-  onSelectUser: (user: AdminUserRecord) => void
-  onRevokeOpen: () => void
+  onViewDetails: (user: AdminUserRecord) => void
+  onRevokeAccess: (user: AdminUserRecord) => void
   onLoadMore: () => void
 }
 
@@ -338,8 +338,8 @@ export function AdminUsersDirectorySection({
   onRoleFilterChange,
   onRoleChange,
   onApprovalToggle,
-  onSelectUser,
-  onRevokeOpen,
+  onViewDetails,
+  onRevokeAccess,
   onLoadMore,
 }: AdminUsersDirectorySectionProps) {
   return (
@@ -418,8 +418,8 @@ export function AdminUsersDirectorySection({
                     savingId={savingId}
                     onRoleChange={onRoleChange}
                     onApprovalToggle={onApprovalToggle}
-                    onSelectUser={onSelectUser}
-                    onRevokeOpen={onRevokeOpen}
+                    onViewDetails={onViewDetails}
+                    onRevokeAccess={onRevokeAccess}
                   />
                 ))
               )}
@@ -666,6 +666,58 @@ export function AdminUsersRevokeDialog({
   )
 }
 
+type AdminUsersDetailDialogProps = {
+  detailsOpen: boolean
+  selectedUser: AdminUserRecord | null
+  onOpenChange: (open: boolean) => void
+  onClose: () => void
+}
+
+export function AdminUsersDetailDialog({
+  detailsOpen,
+  selectedUser,
+  onOpenChange,
+  onClose,
+}: AdminUsersDetailDialogProps) {
+  return (
+    <Dialog open={detailsOpen} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{selectedUser?.name ?? 'User details'}</DialogTitle>
+          <DialogDescription>{selectedUser?.email ?? 'Account information'}</DialogDescription>
+        </DialogHeader>
+        {selectedUser ? (
+          <dl className="grid gap-3 py-2 text-sm">
+            <div className="grid grid-cols-[7rem_1fr] gap-2">
+              <dt className="text-muted-foreground">Role</dt>
+              <dd>{roleLabel(selectedUser.role)}</dd>
+            </div>
+            <div className="grid grid-cols-[7rem_1fr] gap-2">
+              <dt className="text-muted-foreground">Status</dt>
+              <dd className="capitalize">{selectedUser.status.replace('_', ' ')}</dd>
+            </div>
+            <div className="grid grid-cols-[7rem_1fr] gap-2">
+              <dt className="text-muted-foreground">Workspace</dt>
+              <dd>{selectedUser.agencyId ?? '—'}</dd>
+            </div>
+            <div className="grid grid-cols-[7rem_1fr] gap-2">
+              <dt className="text-muted-foreground">Created</dt>
+              <dd>{selectedUser.createdAt ? formatRelativeTime(selectedUser.createdAt) : '—'}</dd>
+            </div>
+            <div className="grid grid-cols-[7rem_1fr] gap-2">
+              <dt className="text-muted-foreground">Last login</dt>
+              <dd>{selectedUser.lastLoginAt ? formatRelativeTime(selectedUser.lastLoginAt) : 'Never'}</dd>
+            </div>
+          </dl>
+        ) : null}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 type AdminUsersPageContentProps = {
   isPreviewMode: boolean
   loading: boolean
@@ -691,6 +743,7 @@ type AdminUsersPageContentProps = {
   inviteRole: string
   inviteSending: boolean
   revokeOpen: boolean
+  detailsOpen: boolean
   selectedUser: AdminUserRecord | null
   onRefresh: () => void
   onInviteOpenChange: (open: boolean) => void
@@ -703,13 +756,15 @@ type AdminUsersPageContentProps = {
   onRoleFilterChange: (value: string) => void
   onRoleChange: (record: AdminUserRecord, role: AdminUserRole) => void
   onApprovalToggle: (record: AdminUserRecord, approved: boolean) => void
-  onSelectUser: (user: AdminUserRecord) => void
-  onRevokeOpen: () => void
+  onViewDetails: (user: AdminUserRecord) => void
+  onRevokeAccess: (user: AdminUserRecord) => void
   onLoadMore: () => void
   onInvitationSearchChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onInvitationStatusFilterChange: (value: string) => void
   onResendInvitation: (invitation: AdminInvitationRecord) => void
   onRevokeInvitation: (invitation: AdminInvitationRecord) => void
+  onDetailsOpenChange: (open: boolean) => void
+  onDetailsClose: () => void
   onRevokeOpenChange: (open: boolean) => void
   onRevokeClose: () => void
   onRevokeConfirm: () => void
@@ -741,6 +796,7 @@ export function AdminUsersPageContent(props: AdminUsersPageContentProps) {
     inviteRole,
     inviteSending,
     revokeOpen,
+    detailsOpen,
     selectedUser,
     onRefresh,
     onInviteOpenChange,
@@ -753,13 +809,15 @@ export function AdminUsersPageContent(props: AdminUsersPageContentProps) {
     onRoleFilterChange,
     onRoleChange,
     onApprovalToggle,
-    onSelectUser,
-    onRevokeOpen,
+    onViewDetails,
+    onRevokeAccess,
     onLoadMore,
     onInvitationSearchChange,
     onInvitationStatusFilterChange,
     onResendInvitation,
     onRevokeInvitation,
+    onDetailsOpenChange,
+    onDetailsClose,
     onRevokeOpenChange,
     onRevokeClose,
     onRevokeConfirm,
@@ -827,8 +885,8 @@ export function AdminUsersPageContent(props: AdminUsersPageContentProps) {
           onRoleFilterChange={onRoleFilterChange}
           onRoleChange={onRoleChange}
           onApprovalToggle={onApprovalToggle}
-          onSelectUser={onSelectUser}
-          onRevokeOpen={onRevokeOpen}
+          onViewDetails={onViewDetails}
+          onRevokeAccess={onRevokeAccess}
           onLoadMore={onLoadMore}
         />
         <AdminUsersInvitationsSection
@@ -844,6 +902,13 @@ export function AdminUsersPageContent(props: AdminUsersPageContentProps) {
           onRevoke={onRevokeInvitation}
         />
       </AdminPageShell>
+
+      <AdminUsersDetailDialog
+        detailsOpen={detailsOpen}
+        selectedUser={selectedUser}
+        onOpenChange={onDetailsOpenChange}
+        onClose={onDetailsClose}
+      />
 
       <AdminUsersRevokeDialog
         revokeOpen={revokeOpen}

@@ -89,6 +89,7 @@ import type * as appProxy from "../appProxy.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as auth from "../auth.js";
 import type * as authActions from "../authActions.js";
+import type * as clientAdminTeamSync from "../clientAdminTeamSync.js";
 import type * as clients from "../clients.js";
 import type * as collaborationChannelAvatars from "../collaborationChannelAvatars.js";
 import type * as collaborationChannels from "../collaborationChannels.js";
@@ -245,6 +246,7 @@ declare const fullApi: ApiFromModules<{
   auditLogs: typeof auditLogs;
   auth: typeof auth;
   authActions: typeof authActions;
+  clientAdminTeamSync: typeof clientAdminTeamSync;
   clients: typeof clients;
   collaborationChannelAvatars: typeof collaborationChannelAvatars;
   collaborationChannels: typeof collaborationChannels;

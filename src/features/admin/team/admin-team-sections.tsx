@@ -180,7 +180,7 @@ export function AdminTeamInviteDialog({
         <DialogHeader>
           <DialogTitle>Invite new user</DialogTitle>
           <DialogDescription>
-            Send an invitation email to add a new member to your organization.
+            Send an invitation email to add a team member, client contact, or admin to your organization.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit}>
@@ -209,6 +209,7 @@ export function AdminTeamInviteDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="team">Team Member</SelectItem>
+                  <SelectItem value="client">Client</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>

@@ -90,7 +90,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
   const { replace } = useRouter()
   const pathname = usePathname()
   const { user, loading: authLoading } = useAuth()
-  const { selectedClient, selectedClientId } = useClientContext()
+  const { selectedClient, selectedClientId, clients } = useClientContext()
   const { setProjectContext } = useNavigationContext()
   const { isPreviewMode } = usePreview()
 
@@ -122,8 +122,16 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     }
   }, [normalizedClientId, normalizedClientName])
 
-  const taskFormClient = selectedClient ?? routeClientContext
-  const taskFormClientId = selectedClientId ?? routeClientContext?.id ?? undefined
+  const effectiveTaskClient = useMemo(() => {
+    if (selectedClient) return selectedClient
+    const routeId = routeClientContext?.id
+    if (!routeId) return null
+    return clients.find((client) => client.id === routeId) ?? null
+  }, [clients, routeClientContext?.id, selectedClient])
+
+  const taskFormClient = effectiveTaskClient ?? routeClientContext
+  const taskFormClientId = effectiveTaskClient?.id ?? selectedClientId ?? routeClientContext?.id ?? undefined
+  const taskWorkspaceId = effectiveTaskClient?.workspaceId ?? user?.agencyId ?? null
   const newTaskDisabledReason = useMemo(() => {
     if (authLoading) return null
     if (!user?.id) return 'Sign in to create tasks.'
@@ -172,17 +180,17 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     nextCursor,
   } = useTasks({
     userId: user?.id,
-    clientId: selectedClientId ?? undefined,
+    clientId: taskFormClientId ?? undefined,
     authLoading,
     isPreviewMode,
-    workspaceId: user?.agencyId ?? null,
+    workspaceId: taskWorkspaceId,
   })
 
   const workspaceMembers = useQuery(
     usersApi.listWorkspaceMembers,
-    user?.agencyId && !isPreviewMode
+    taskWorkspaceId && !isPreviewMode
       ? {
-          workspaceId: user.agencyId,
+          workspaceId: taskWorkspaceId,
           limit: 500,
         }
       : 'skip'
@@ -199,7 +207,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
 
   const workspaceMembersQueryError = useConvexQueryError({
     data: workspaceMembers,
-    skipped: !user?.agencyId || isPreviewMode,
+    skipped: !taskWorkspaceId || isPreviewMode,
     fallbackMessage: 'Unable to load workspace members.',
   })
   const platformUsersQueryError = useConvexQueryError({
@@ -214,11 +222,11 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     const platformAdmins = (platformUsers ?? []).filter((member) => member.role?.toLowerCase() === 'admin')
 
     return mergeTaskParticipants([
-      selectedClient?.teamMembers ?? [],
+      effectiveTaskClient?.teamMembers ?? selectedClient?.teamMembers ?? [],
       workspaceMembers ?? [],
       platformAdmins,
     ])
-  }, [platformUsers, selectedClient?.teamMembers, workspaceMembers])
+  }, [effectiveTaskClient?.teamMembers, platformUsers, selectedClient?.teamMembers, workspaceMembers])
 
   // Debounced search for filters
   const [rawSearchQuery, setRawSearchQuery] = useState('')
@@ -490,7 +498,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
   )
 
   const documentImport = useTasksDocumentImport({
-    workspaceId: user?.agencyId ? String(user.agencyId) : null,
+    workspaceId: taskWorkspaceId ? String(taskWorkspaceId) : null,
     userId: user?.id,
     participants: taskParticipants,
     clientId: taskFormClientId,
