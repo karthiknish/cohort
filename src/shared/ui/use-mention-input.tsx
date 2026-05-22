@@ -9,13 +9,10 @@ import { HoverPreview } from '@/shared/ui/hover-preview'
 import { FieldLabel } from '@/shared/ui/field'
 import { Input } from '@/shared/ui/input'
 import { LiveRegion } from '@/shared/ui/live-region'
-import { interactiveTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 import { MentionUserHoverPreview } from './mention-input-helpers'
 import type { MentionInputComponentProps, MentionState, MentionableUser } from './mention-input-types'
-
-export type { MentionableUser, MentionInputProps } from './mention-input-types'
 
 const DEFAULT_MENTION_STATE: MentionState = {
   active: false,

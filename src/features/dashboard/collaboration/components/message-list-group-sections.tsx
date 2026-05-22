@@ -9,7 +9,7 @@ import {
   DirectMessageCard,
   MessageDateSeparator,
 } from './message-list-sections'
-import type { MessageListRenderers } from './message-list-sections'
+import type { MessageListRenderers } from './message-list-render-context'
 import type { UnifiedMessage } from './message-list-types'
 
 type MessageListMessageEntryProps = {

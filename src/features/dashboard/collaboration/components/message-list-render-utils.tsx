@@ -32,19 +32,21 @@ export function mergeMessageListRenderers({
 }: MessageListRendererProps): MessageListRenderers | undefined {
   const merged: MessageListRenderers = {
     ...renderersProp,
-    renderMessageExtras: renderersProp?.renderMessageExtras ?? renderMessageExtras,
-    renderMessageActions: renderersProp?.renderMessageActions ?? renderMessageActions,
-    renderMessageAttachments: renderersProp?.renderMessageAttachments ?? renderMessageAttachments,
-    renderMessageFooter: renderersProp?.renderMessageFooter ?? renderMessageFooter,
-    renderThreadSection: renderersProp?.renderThreadSection ?? renderThreadSection,
-    renderEditForm: renderersProp?.renderEditForm ?? renderEditForm,
-    renderDeletedInfo: renderersProp?.renderDeletedInfo ?? renderDeletedInfo,
-    renderMessageWrapper: renderersProp?.renderMessageWrapper ?? renderMessageWrapper,
+    renderMessageExtras: renderMessageExtras ?? renderersProp?.renderMessageExtras,
+    renderMessageActions: renderMessageActions ?? renderersProp?.renderMessageActions,
+    renderMessageAttachments: renderMessageAttachments ?? renderersProp?.renderMessageAttachments,
+    renderMessageFooter: renderMessageFooter ?? renderersProp?.renderMessageFooter,
+    renderThreadSection: renderThreadSection ?? renderersProp?.renderThreadSection,
+    renderEditForm: renderEditForm ?? renderersProp?.renderEditForm,
+    renderDeletedInfo: renderDeletedInfo ?? renderersProp?.renderDeletedInfo,
+    renderMessageWrapper: renderMessageWrapper ?? renderersProp?.renderMessageWrapper,
   }
 
-  const content = renderersProp?.renderMessageContent ?? renderMessageContent
+  const content = renderMessageContent ?? renderersProp?.renderMessageContent
   if (content) {
-    merged.renderMessageContent = toMessageContentComponent(content)
+    merged.renderMessageContent = isNormalizedMessageContentComponent(content)
+      ? content
+      : toMessageContentComponent(content)
   }
 
   const hasRenderer = Object.values(merged).some((value) => value !== undefined)
@@ -92,9 +94,21 @@ export function useMessageListRenderers({
   )
 }
 
+const MESSAGE_CONTENT_COMPONENT_NAME = 'MessageContentComponent'
+
+function isNormalizedMessageContentComponent(
+  renderer: ComponentType<{ message: UnifiedMessage }> | ((message: UnifiedMessage) => ReactNode),
+): renderer is ComponentType<{ message: UnifiedMessage }> {
+  return typeof renderer === 'function' && renderer.name === MESSAGE_CONTENT_COMPONENT_NAME
+}
+
 export function toMessageContentComponent(
   renderer: ComponentType<{ message: UnifiedMessage }> | ((message: UnifiedMessage) => ReactNode),
 ): ComponentType<{ message: UnifiedMessage }> {
+  if (isNormalizedMessageContentComponent(renderer)) {
+    return renderer
+  }
+
   const usesDirectMessageArg =
     typeof renderer === 'function' &&
     renderer.length === 1 &&
@@ -104,6 +118,6 @@ export function toMessageContentComponent(
     if (usesDirectMessageArg) {
       return (renderer as (msg: UnifiedMessage) => ReactNode)(message)
     }
-    return createElement(renderer as ComponentType<{ message: UnifiedMessage }>, { message })
+    return createElement(renderer as unknown as ComponentType<{ message: UnifiedMessage }>, { message })
   }
 }

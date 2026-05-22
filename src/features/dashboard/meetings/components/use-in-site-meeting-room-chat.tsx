@@ -26,107 +26,14 @@ import {
   type MeetingChatMentionState,
 } from './in-site-meeting-room-chat.utils'
 import { MeetingChatFloatingDock, type MeetingChatMentionCandidate } from './in-site-meeting-room-chat-sections'
+import {
+  createInitialMeetingChatState,
+  meetingChatReducer,
+  type InSiteMeetingRoomChatProps,
+} from './in-site-meeting-room-chat-state'
 
-type InSiteMeetingRoomChatProps = {
-  compact?: boolean
-}
-
-type MeetingChatState = {
-  isOpen: boolean
-  draft: string
-  lastReadAt: number
-  highlightedMentionIndex: number
-  mentionState: MeetingChatMentionState
-  pendingAttachments: PendingAttachment[]
-  uploadingFiles: boolean
-}
-
-type MeetingChatAction =
-  | { type: 'open'; latestTimestamp: number }
-  | { type: 'close'; latestTimestamp: number }
-  | { type: 'setDraft'; value: string }
-  | { type: 'syncMentionState'; value: MeetingChatMentionState }
-  | { type: 'resetMentionState' }
-  | { type: 'setHighlightedMentionIndex'; value: number | ((current: number) => number) }
-  | { type: 'addAttachments'; attachments: PendingAttachment[] }
-  | { type: 'removeAttachment'; attachmentId: string }
-  | { type: 'clearComposer' }
-  | { type: 'setUploadingFiles'; value: boolean }
-
-function createInitialMeetingChatState(): MeetingChatState {
-  return {
-    isOpen: false,
-    draft: '',
-    lastReadAt: 0,
-    highlightedMentionIndex: 0,
-    mentionState: DEFAULT_MEETING_CHAT_MENTION_STATE,
-    pendingAttachments: [],
-    uploadingFiles: false,
-  }
-}
-
-function meetingChatReducer(state: MeetingChatState, action: MeetingChatAction): MeetingChatState {
-  switch (action.type) {
-    case 'open':
-      return {
-        ...state,
-        isOpen: true,
-        lastReadAt: action.latestTimestamp > 0 ? action.latestTimestamp : state.lastReadAt,
-        mentionState: DEFAULT_MEETING_CHAT_MENTION_STATE,
-        highlightedMentionIndex: 0,
-      }
-    case 'close':
-      return {
-        ...state,
-        isOpen: false,
-        lastReadAt: action.latestTimestamp > 0 ? action.latestTimestamp : state.lastReadAt,
-        mentionState: DEFAULT_MEETING_CHAT_MENTION_STATE,
-        highlightedMentionIndex: 0,
-      }
-    case 'setDraft':
-      return { ...state, draft: action.value }
-    case 'syncMentionState':
-      return { ...state, mentionState: action.value, highlightedMentionIndex: 0 }
-    case 'resetMentionState':
-      return {
-        ...state,
-        mentionState: DEFAULT_MEETING_CHAT_MENTION_STATE,
-        highlightedMentionIndex: 0,
-      }
-    case 'setHighlightedMentionIndex':
-      return {
-        ...state,
-        highlightedMentionIndex:
-          typeof action.value === 'function'
-            ? action.value(state.highlightedMentionIndex)
-            : action.value,
-      }
-    case 'addAttachments':
-      return { ...state, pendingAttachments: [...state.pendingAttachments, ...action.attachments] }
-    case 'removeAttachment':
-      return {
-        ...state,
-        pendingAttachments: state.pendingAttachments.filter(
-          (attachment) => attachment.id !== action.attachmentId
-        ),
-      }
-    case 'clearComposer':
-      return {
-        ...state,
-        draft: '',
-        pendingAttachments: [],
-        mentionState: DEFAULT_MEETING_CHAT_MENTION_STATE,
-        highlightedMentionIndex: 0,
-      }
-    case 'setUploadingFiles':
-      return { ...state, uploadingFiles: action.value }
-    default:
-      return state
-  }
-}
-
-
-export function useInSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChatProps) {
+export function useInSiteMeetingRoomChat(props: InSiteMeetingRoomChatProps) {
+  const { compact = false } = props
   const { user } = useAuth()
   const { toast } = useToast()
   const convex = useConvex()

@@ -32,7 +32,6 @@ export function MessageListActiveBody({
     messagesEndRef,
     groupedMessages,
     renderers,
-    effectiveRenderMessageWrapper,
     localReactionPending,
     highlightedMessageId,
     showJumpToLatest,
@@ -57,7 +56,6 @@ export function MessageListActiveBody({
       renderers: renderers ?? {},
       showAvatars,
       onReact: handleReaction,
-      renderMessageWrapper: effectiveRenderMessageWrapper,
     }),
     [
       currentUserId,
@@ -70,7 +68,6 @@ export function MessageListActiveBody({
       renderers,
       showAvatars,
       handleReaction,
-      effectiveRenderMessageWrapper,
     ],
   )
 

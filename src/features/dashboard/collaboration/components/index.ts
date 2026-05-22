@@ -66,7 +66,8 @@ export { ImageUrlPreview } from './image-url-preview'
 export { LinkPreviewCard } from './link-preview-card'
 
 // Types
-export type { CollaborationMessagePaneProps } from './message-pane'
+export type { CollaborationMessagePaneProps } from './message-pane-types'
+export type { MessageListRenderers } from './message-list-render-context'
 export type { MessageActionsBarProps, ReplyActionsBarProps, MessageEditFormProps, MessageHeaderProps, MessageAvatarProps, DeletedMessageInfoProps, DeletingOverlayProps } from './message-item-parts'
 export type { MessagePaneHeaderProps, MessageSearchBarProps, MessagesErrorStateProps, DateSeparatorProps } from './message-pane-parts'
 export type { PendingAttachmentsListProps, ReplyIndicatorProps, MessageComposerProps } from './message-composer'

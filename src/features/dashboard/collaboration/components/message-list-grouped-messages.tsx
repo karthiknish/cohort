@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils'
 
 import { MessageListDayGroup } from './message-list-group-sections'
-import type { MessageListRenderers } from './message-list-sections'
+import type { MessageListRenderers } from './message-list-render-context'
 import type { UnifiedMessage } from './message-list-types'
 
 export type MessageListGroupedMessagesProps = {
@@ -19,7 +19,6 @@ export type MessageListGroupedMessagesProps = {
   renderers: MessageListRenderers
   showAvatars: boolean
   onReact: (messageId: string, emoji: string) => Promise<void>
-  renderMessageWrapper?: (message: UnifiedMessage, children: React.ReactNode) => React.ReactNode
 }
 
 export function MessageListGroupedMessages({
@@ -35,7 +34,6 @@ export function MessageListGroupedMessages({
   renderers,
   showAvatars,
   onReact,
-  renderMessageWrapper,
 }: MessageListGroupedMessagesProps) {
   return (
     <div className={cn('space-y-6', isChannel && 'space-y-1')}>
@@ -55,7 +53,7 @@ export function MessageListGroupedMessages({
           renderers={renderers}
           showAvatars={showAvatars}
           onReact={onReact}
-          renderMessageWrapper={renderMessageWrapper}
+          renderMessageWrapper={renderers.renderMessageWrapper}
         />
       ))}
     </div>

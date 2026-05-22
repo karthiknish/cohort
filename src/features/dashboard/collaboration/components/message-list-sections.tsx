@@ -1,9 +1,7 @@
 'use client'
 
-import { Fragment, useCallback, useMemo, type ComponentType, type MouseEvent, type ReactNode } from 'react'
-import { ArrowDown, LoaderCircle, RefreshCw, Smile } from 'lucide-react'
-
-import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
+import { useCallback, useMemo, type ComponentType, type MouseEvent, type ReactNode } from 'react'
+import { LoaderCircle, RefreshCw, Smile } from 'lucide-react'
 
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { Button } from '@/shared/ui/button'
@@ -18,18 +16,10 @@ import { cn } from '@/lib/utils'
 
 import { CHAT_MESSAGE_BODY_CLASS } from '../lib/chat-text'
 
+import type { MessageListRenderers } from './message-list-render-context'
 import type { UnifiedMessage } from './message-list-types'
 
-export type MessageListRenderers = {
-  renderMessageActions?: (message: UnifiedMessage) => ReactNode
-  renderMessageAttachments?: (message: UnifiedMessage) => ReactNode
-  renderMessageContent?: ComponentType<{ message: UnifiedMessage }>
-  renderMessageExtras?: (message: UnifiedMessage) => ReactNode
-  renderMessageFooter?: (message: UnifiedMessage) => ReactNode
-  renderThreadSection?: (message: UnifiedMessage) => ReactNode
-  renderEditForm?: (message: UnifiedMessage) => ReactNode
-  renderDeletedInfo?: (message: UnifiedMessage) => ReactNode
-}
+export type { MessageListRenderers } from './message-list-render-context'
 
 function formatTime(ms: number): string {
   const date = new Date(ms)
@@ -471,148 +461,3 @@ export function DirectMessageCard({
   )
 }
 
-export type MessageListScrollUi = {
-  isChannel: boolean
-  isLoading: boolean
-  showAvatars: boolean
-  showJumpToLatest: boolean
-  hasMore: boolean
-}
-
-export function MessageListScrollBody({
-  currentUserId,
-  editingMessageId,
-  deletingMessageId,
-  updatingMessageId,
-  effectiveRenderMessageWrapper,
-  groupedMessages,
-  handleReaction,
-  highlightedMessageId,
-  localReactionPending,
-  messagesEndRef,
-  onLoadMore,
-  reactionPendingByMessage,
-  renderers,
-  scrollRef,
-  scrollToLatest,
-  handleScroll,
-  typingIndicatorText,
-  ui,
-}: {
-  currentUserId: string | null
-  editingMessageId?: string | null
-  deletingMessageId?: string | null
-  updatingMessageId?: string | null
-  effectiveRenderMessageWrapper?: (message: UnifiedMessage, children: ReactNode) => ReactNode
-  groupedMessages: Map<string, UnifiedMessage[]>
-  handleReaction: (messageId: string, emoji: string) => Promise<void>
-  highlightedMessageId: string | null
-  localReactionPending: string | null
-  messagesEndRef: React.RefObject<HTMLDivElement | null>
-  onLoadMore: () => void
-  reactionPendingByMessage: Record<string, string | null>
-  renderers: MessageListRenderers
-  scrollRef: React.RefObject<HTMLDivElement | null>
-  scrollToLatest: () => void
-  handleScroll: () => void
-  typingIndicatorText?: string
-  ui: MessageListScrollUi
-}) {
-  const { isChannel, isLoading, showAvatars, showJumpToLatest, hasMore } = ui
-  return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
-      >
-        <div className={cn('min-w-0 max-w-full p-4', isChannel && 'space-y-4')}>
-          {hasMore ? (
-            <MessageListLoadMoreButton disabled={isLoading} isLoading={isLoading} onLoadMore={onLoadMore} />
-          ) : null}
-
-          <div className={cn('space-y-6', isChannel && 'space-y-1')}>
-            {Array.from(groupedMessages.entries()).map(([date, msgs]) => (
-              <div key={date}>
-                <MessageDateSeparator date={date} />
-
-                <div className={cn('space-y-3', isChannel && 'space-y-1')}>
-                  {msgs.map((message) => {
-                    const isEditing = editingMessageId === message.id
-                    const isDeleting = deletingMessageId === message.id
-                    const isUpdating = updatingMessageId === message.id
-
-                    if (isChannel) {
-                      const content = (
-                        <ChannelMessageCardWithPending
-                          currentUserId={currentUserId}
-                          highlighted={message.id === highlightedMessageId}
-                          isDeleting={isDeleting}
-                          isEditing={isEditing}
-                          isUpdating={isUpdating}
-                          localReactionPending={localReactionPending}
-                          message={message}
-                          onReact={handleReaction}
-                          reactionPendingByMessage={reactionPendingByMessage}
-                          renderers={renderers}
-                          showAvatars={showAvatars}
-                        />
-                      )
-
-                      return (
-                        <Fragment key={message.id}>
-                          {effectiveRenderMessageWrapper ? effectiveRenderMessageWrapper(message, content) : content}
-                        </Fragment>
-                      )
-                    }
-
-                    const messageContent = (
-                      <DirectMessageCard
-                        currentUserId={currentUserId}
-                        isDeleting={isDeleting}
-                        isEditing={isEditing}
-                        localReactionPending={localReactionPending}
-                        message={message}
-                        onReact={handleReaction}
-                        reactionPendingByMessage={reactionPendingByMessage}
-                        renderers={renderers}
-                        showAvatars={showAvatars}
-                      />
-                    )
-
-                    return (
-                      <Fragment key={message.id}>
-                        {effectiveRenderMessageWrapper ? effectiveRenderMessageWrapper(message, messageContent) : messageContent}
-                      </Fragment>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {typingIndicatorText ? (
-            <ChatTypingIndicator label={typingIndicatorText} variant="bubble" className="mt-2" />
-          ) : null}
-
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {showJumpToLatest ? (
-        <div className="pointer-events-none absolute bottom-4 right-4 z-10">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="pointer-events-auto gap-1.5 shadow-md ring-1 ring-border/60"
-            onClick={scrollToLatest}
-          >
-            <ArrowDown className="size-3.5" />
-            Latest
-          </Button>
-        </div>
-      ) : null}
-    </div>
-  )
-}

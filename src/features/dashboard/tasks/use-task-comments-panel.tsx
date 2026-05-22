@@ -21,16 +21,7 @@ import {
   TaskCommentsThreadList,
   type TaskCommentComposerAttachment,
 } from './task-comments-sections'
-
-type TaskCommentsPanelProps = {
-  taskId: string
-  workspaceId: string | null
-  userId: string | null
-  userName: string | null
-  userRole: string | null
-  participants: TaskParticipant[]
-  onCommentCountChange?: (count: number) => void
-}
+import type { TaskCommentsPanelProps } from './task-comments-panel-types'
 
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return '1 KB'
@@ -83,7 +74,7 @@ type TaskCommentsPanelAction =
   | { type: 'startEdit'; comment: TaskComment }
   | { type: 'startSending' }
 
-const INITIAL_TASK_COMMENTS_PANEL_STATE: TaskCommentsPanelState = {
+export const INITIAL_TASK_COMMENTS_PANEL_STATE: TaskCommentsPanelState = {
   composerValue: '',
   sending: false,
   uploading: false,
@@ -95,7 +86,7 @@ const INITIAL_TASK_COMMENTS_PANEL_STATE: TaskCommentsPanelState = {
   deletingCommentId: null,
 }
 
-function taskCommentsPanelReducer(
+export function taskCommentsPanelReducer(
   state: TaskCommentsPanelState,
   action: TaskCommentsPanelAction,
 ): TaskCommentsPanelState {
@@ -148,11 +139,12 @@ function taskCommentsPanelReducer(
         sending: true,
         uploading: true,
       }
-    default:
-      return state
+    default: {
+      const _exhaustive: never = action
+      return _exhaustive
+    }
   }
 }
-
 
 export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
   const {

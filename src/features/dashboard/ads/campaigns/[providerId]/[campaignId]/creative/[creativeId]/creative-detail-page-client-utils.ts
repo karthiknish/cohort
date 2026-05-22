@@ -242,6 +242,7 @@ export function buildCreativePerformanceSummary(
   creativeMetrics: NormalizedAdMetric[] | null,
   convexProviderId: ProviderId | null,
   days: string,
+  currency?: string | null,
 ) {
   if (!creativeMetrics || !convexProviderId) return null
 
@@ -276,5 +277,6 @@ export function buildCreativePerformanceSummary(
     ctr: totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0,
     roas: averageRoaS,
     cpc: averageCpc,
+    currency: currency ?? undefined,
   }
 }

@@ -1,3 +1,5 @@
+import type { DateRange } from './date-range-picker'
+
 export type BiddingDraft = {
   type: string
   value: string
@@ -36,3 +38,16 @@ export type CampaignGroup = {
 }
 
 export type CampaignManagementView = 'campaigns' | 'groups'
+
+export type CampaignManagementCardProps = {
+  providerId: string
+  providerName: string
+  isConnected: boolean
+  dateRange: DateRange
+  onRefresh?: () => void
+  setupRequired?: boolean
+  setupTitle?: string
+  setupDescription?: string
+  setupActionLabel?: string
+  onSetupAction?: () => void
+}

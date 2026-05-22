@@ -6,6 +6,7 @@ export type CreativePerformanceSummary = AdMetricsSummary & {
   ctr: number
   roas: number
   cpc: number
+  currency?: string
 }
 
 export type Platform = CreativeSocialPreviewPlatform

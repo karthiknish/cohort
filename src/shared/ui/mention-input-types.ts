@@ -1,3 +1,5 @@
+import type { Ref } from 'react'
+
 export interface MentionableUser {
   id: string
   name: string
@@ -27,5 +29,5 @@ export interface MentionState {
 }
 
 export type MentionInputComponentProps = MentionInputProps & {
-  ref?: React.Ref<HTMLInputElement>
+  ref?: Ref<HTMLInputElement>
 }

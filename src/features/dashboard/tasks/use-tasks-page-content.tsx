@@ -70,7 +70,7 @@ const DeleteTaskDialog = dynamic(
   { ssr: false }
 )
 
-type TasksPageClientProps = {
+export type TasksPageClientProps = {
   initialProjectId?: string | null
   initialProjectName?: string | null
   initialClientId?: string | null

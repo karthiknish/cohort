@@ -2,7 +2,7 @@
 
 import { formatDistanceToNowStrict } from 'date-fns'
 import { useConvexAuth, useQuery } from 'convex/react'
-import { LoaderCircle, TrendingUp, Info } from 'lucide-react'
+import { TrendingUp, Info } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 
 import {
@@ -27,6 +27,7 @@ import {
   DashboardEmptyPerformanceCard,
   DashboardSectionHeading,
 } from '@/features/dashboard/home/components/dashboard-empty-performance-card'
+import { DashboardOverviewErrorsAlert } from '@/features/dashboard/home/components/dashboard-overview-errors-alert'
 import { DashboardOverviewHeader } from '@/features/dashboard/home/components/dashboard-overview-header'
 import {
   DashboardSnapshotMetricGrid,
@@ -36,7 +37,6 @@ import { QuickActions } from '@/features/dashboard/home/components/quick-actions
 import { StatsCards } from '@/features/dashboard/home/components/stats-cards'
 import type { SummaryStat } from '@/types/dashboard'
 import { FadeIn } from '@/shared/ui/animate-in'
-import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import {
   Card,
@@ -51,44 +51,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
-
-export function DashboardOverviewErrorAlert({
-  errors,
-  isRefreshing,
-  onRetry,
-}: {
-  errors: string[]
-  isRefreshing: boolean
-  onRetry: () => void
-}) {
-  if (errors.length === 0) {
-    return null
-  }
-
-  return (
-    <FadeIn>
-      <Alert variant="destructive">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 space-y-1">
-            <AlertTitle>Some data could not be loaded</AlertTitle>
-            <AlertDescription>{errors.join(' ')}</AlertDescription>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0 border-destructive/40 bg-background hover:bg-destructive/10"
-            onClick={onRetry}
-            disabled={isRefreshing}
-          >
-            {isRefreshing ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
-            Try again
-          </Button>
-        </div>
-      </Alert>
-    </FadeIn>
-  )
-}
 
 export function DashboardOverviewSpendRevenueChart({
   chartMetrics,
@@ -643,7 +605,7 @@ export function DashboardOverviewPageView({
         onRefresh={onRefresh}
       />
 
-      <DashboardOverviewErrorAlert
+      <DashboardOverviewErrorsAlert
         errors={dashboardErrors}
         isRefreshing={isRefreshing}
         onRetry={onRefresh}

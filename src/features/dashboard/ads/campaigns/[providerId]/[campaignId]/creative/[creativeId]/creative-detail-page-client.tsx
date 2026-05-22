@@ -1,12 +1,11 @@
 'use client'
 
-import { useCreativeDetailPageClient } from './creative-detail-page-client-controller'
+import {
+  useCreativeDetailPageClient,
+  type CreativeDetailPageClientProps,
+} from './creative-detail-page-client-controller'
 
-type CreativeDetailPageClientProps = {
-  campaignName?: string | null
-  currency?: string | null
-  searchParamsString?: string
-}
+export type { CreativeDetailPageClientProps }
 
 export default function CreativeDetailPageClient(props: CreativeDetailPageClientProps) {
   return useCreativeDetailPageClient(props)

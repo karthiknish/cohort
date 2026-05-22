@@ -38,11 +38,13 @@ import {
   createInitialCreativeDetailPageState,
   creativeDetailPageReducer,
 } from './creative-detail-page-client-state'
+import { normalizeCurrencyCode } from '@/constants/currencies'
+
 import { CreativeDetailPageContent } from './creative-detail-page-client-sections'
 import { CreativeDetailPageLoadingState } from './creative-detail-page-client-loading'
 import { CreativeDetailPageNotFoundState } from './creative-detail-page-client-not-found'
 
-type CreativeDetailPageClientProps = {
+export type CreativeDetailPageClientProps = {
   campaignName?: string | null
   currency?: string | null
   searchParamsString?: string
@@ -106,7 +108,10 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
   }, [])
 
   const campaignName = initialCampaignName || 'Campaign'
-  void currency
+  const displayCurrency = useMemo(
+    () => normalizeCurrencyCode(currency ?? undefined) ?? 'USD',
+    [currency],
+  )
   const convexProviderId = useMemo(
     () => resolveRouteProviderId(params.providerId),
     [params.providerId],
@@ -259,7 +264,7 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [creative])
+  }, [creative, days, runMetricsFetch])
 
   const handleCopy = useCallback((text: string, field: string) => {
     const canUseClipboardApi =
@@ -729,8 +734,8 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
   }, [creative, params.creativeId])
 
   const performanceSummary = useMemo(
-    () => buildCreativePerformanceSummary(creativeMetrics, convexProviderId, days),
-    [convexProviderId, creativeMetrics, days],
+    () => buildCreativePerformanceSummary(creativeMetrics, convexProviderId, days, displayCurrency),
+    [convexProviderId, creativeMetrics, days, displayCurrency],
   )
 
   const efficiencyScore = useMemo(() => {

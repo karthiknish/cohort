@@ -2,7 +2,7 @@
 
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ProposalDraft } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/shared/ui/use-toast'

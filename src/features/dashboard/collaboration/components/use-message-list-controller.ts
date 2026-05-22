@@ -84,15 +84,11 @@ export function useMessageListController({
       return undefined
     }
 
-    return mergeMessageListRenderers({
-      renderers: {
-        ...(renderContext ?? {}),
-        ...renderersProp,
-      },
-    })
+    return {
+      ...(renderContext ?? {}),
+      ...renderersProp,
+    }
   }, [renderContext, renderersProp])
-
-  const effectiveRenderMessageWrapper = renderers?.renderMessageWrapper
 
   const requestLoadOlder = useCallback(() => {
     const container = scrollRef.current
@@ -265,7 +261,6 @@ export function useMessageListController({
     messagesEndRef,
     groupedMessages,
     renderers,
-    effectiveRenderMessageWrapper,
     localReactionPending,
     highlightedMessageId,
     showJumpToLatest,
