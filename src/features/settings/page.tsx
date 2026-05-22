@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, startTransition, useCallback, useEffect, useState } from 'react'
+import { Suspense, startTransition, useCallback } from 'react'
 import { Bell, LoaderCircle, Shield, User } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
@@ -11,15 +11,13 @@ import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { FadeInItem } from '@/shared/ui/animate-in'
 import { cn } from '@/lib/utils'
 
-import {
-  ProfileCard,
-  RegionalPreferencesCard,
-  DataExportCard,
-  PrivacySettingsCard,
-  DeleteAccountCard,
-  SettingsPageHeader,
-  NotificationPreferencesPanel,
-} from './components'
+import { DataExportCard } from './components/data-export-card'
+import { DeleteAccountCard } from './components/delete-account-card'
+import { NotificationPreferencesPanel } from './components/notification-preferences-panel'
+import { PrivacySettingsCard } from './components/privacy-settings-card'
+import { ProfileCard } from './components/profile-card'
+import { RegionalPreferencesCard } from './components/regional-preferences-card'
+import { SettingsPageHeader } from './components/settings-page-header'
 
 type SettingsTab = 'profile' | 'notifications' | 'account'
 
@@ -31,36 +29,32 @@ function parseSettingsTab(value: string | null): SettingsTab {
 
 function SettingsPageFallback() {
   return (
-    <div className="flex min-h-[40vh] items-center justify-center" role="status" aria-live="polite">
+    <output className="flex min-h-[40vh] items-center justify-center" aria-live="polite">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <LoaderCircle className="size-4 animate-spin" aria-hidden />
         Loading settings…
       </div>
-    </div>
+    </output>
   )
 }
 
 function SettingsPageInner() {
   const { isPreviewMode } = usePreview()
   const router = useRouter()
+  const { replace } = router
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const tabFromUrl = parseSettingsTab(searchParams.get('tab'))
-  const [activeTab, setActiveTab] = useState<SettingsTab>(tabFromUrl)
-
-  useEffect(() => {
-    setActiveTab(parseSettingsTab(searchParams.get('tab')))
-  }, [searchParams])
+  const { get } = searchParams
+  const activeTab = parseSettingsTab(get('tab'))
 
   const handleSettingsTabChange = useCallback(
     (value: string) => {
       const next = parseSettingsTab(value)
       startTransition(() => {
-        setActiveTab(next)
-        router.replace(`${pathname}?tab=${next}`, { scroll: false })
+        replace(`${pathname}?tab=${next}`, { scroll: false })
       })
     },
-    [pathname, router],
+    [pathname, replace],
   )
 
   const previewDescription = isPreviewMode

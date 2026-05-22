@@ -99,6 +99,7 @@ export function CreativeMediaField({
         ref={inputRef}
         type="file"
         accept={accept}
+        aria-label="Upload creative media"
         className="sr-only"
         disabled={disabled || uploading}
         onChange={onFileSelect}
@@ -133,7 +134,7 @@ export function CreativeMediaField({
                   <span className="font-medium text-foreground">Ready for ad creation</span>
                 </>
               ) : (
-                <span className="text-muted-foreground">Preview only — upload to attach to Meta</span>
+                <span className="text-muted-foreground">Preview only - upload to attach to Meta</span>
               )}
             </div>
             <div className="flex gap-1.5">
@@ -228,7 +229,7 @@ export function CreativeMediaField({
             disabled={disabled || uploading}
           />
           <p className="text-[11px] text-muted-foreground">
-            Meta still requires an uploaded hash for most image ads — URL alone may not be enough.
+            Meta still requires an uploaded hash for most image ads - URL alone may not be enough.
           </p>
         </div>
       ) : null}

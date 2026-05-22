@@ -149,7 +149,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
 
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={100}>
-      <nav className="flex flex-1 flex-col space-y-4">
+      <nav className="flex flex-1 flex-col gap-y-4">
         <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-4 px-1">
             {navigationGroups.map((group) => (

@@ -118,34 +118,28 @@ export function AdSetupPanel({
     initializingTikTok ||
     initializingGoogle
 
-  const googleSelectAction = useMemo(
-    () => (
-      <Button size="sm" onClick={onOpenGoogleSetup} disabled={initializingGoogle}>
-        Select account
-      </Button>
-    ),
-    [onOpenGoogleSetup, initializingGoogle],
-  )
-
-  const tiktokFinishAction = useMemo(
-    () => (
-      <Button size="sm" onClick={onInitializeTikTok} disabled={initializingTikTok}>
-        {initializingTikTok ? (
-          <>
-            <Loader2 className="mr-2 size-3 animate-spin" />
-            Finishing…
-          </>
-        ) : (
-          'Finish setup'
-        )}
-      </Button>
-    ),
-    [onInitializeTikTok, initializingTikTok],
-  )
-
   if (!hasSetupWork && connectedCount >= totalProviders) {
     return null
   }
+
+  const googleSelectAction = (
+    <Button size="sm" onClick={onOpenGoogleSetup} disabled={initializingGoogle}>
+      Select account
+    </Button>
+  )
+
+  const tiktokFinishAction = (
+    <Button size="sm" onClick={onInitializeTikTok} disabled={initializingTikTok}>
+      {initializingTikTok ? (
+        <>
+          <Loader2 className="mr-2 size-3 animate-spin" />
+          Finishing…
+        </>
+      ) : (
+        'Finish setup'
+      )}
+    </Button>
+  )
 
   const progressValue = totalProviders > 0 ? Math.round((connectedCount / totalProviders) * 100) : 0
 
@@ -304,7 +298,7 @@ export function AdSetupPanel({
         {connectedCount === 0 ? (
           <p className="text-xs text-muted-foreground">
             Tip: connect Google, Meta, LinkedIn, and TikTok from the cards below. Each uses a secure
-            redirect to the platform — you&apos;ll return here to finish setup.
+            redirect to the platform - you&apos;ll return here to finish setup.
           </p>
         ) : null}
 

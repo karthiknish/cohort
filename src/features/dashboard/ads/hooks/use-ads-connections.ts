@@ -76,7 +76,7 @@ type DisconnectOptions = {
 // =============================================================================
 
 export interface UseAdsConnectionsOptions {
-  /** Callback when a refresh is triggered */
+  /** @deprecated Pass `refreshTick` from this hook into `useAdsMetrics({ refreshTick })` instead. */
   onRefresh?: () => void
 }
 
@@ -137,6 +137,7 @@ export interface UseAdsConnectionsReturn {
 
   // Trigger refresh
   triggerRefresh: () => void
+  refreshTick: number
 }
 
 // =============================================================================
@@ -144,7 +145,7 @@ export interface UseAdsConnectionsReturn {
 // =============================================================================
 
 export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAdsConnectionsReturn {
-  const { onRefresh } = options
+  void options.onRefresh
 
   const {
     user,
@@ -230,7 +231,6 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     dialogOpen: false,
   })
   const googleSetupMessage = googleSetupUi.message
-  const googleSetupDialogOpen = googleSetupUi.dialogOpen
   const setGoogleSetupMessage = useCallback((message: string | null) => {
     setGoogleSetupUi((prev) => ({ ...prev, message }))
   }, [])
@@ -260,10 +260,12 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     setSelectedMetaAccountId('')
   }
 
-  // Trigger refresh
+  const [refreshTick, setRefreshTick] = useState(0)
+
+  // Trigger refresh for metrics consumers via refreshTick
   const triggerRefresh = useCallback(() => {
-    onRefresh?.()
-  }, [onRefresh])
+    setRefreshTick((tick) => tick + 1)
+  }, [])
 
   // Derived state
   const automationStatuses = mappedStatuses?.statuses ?? []
@@ -286,6 +288,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
   const googleStatus = automationStatuses.find((s) => s.providerId === PROVIDER_IDS.GOOGLE)
   const googleNeedsAccountSelection = Boolean(googleStatus?.linkedAt && !googleStatus.accountId)
+  const googleSetupDialogOpen = googleSetupUi.dialogOpen || googleNeedsAccountSelection
 
   const tiktokStatus = automationStatuses.find((s) => s.providerId === PROVIDER_IDS.TIKTOK)
   const tiktokNeedsAccountSelection = Boolean(tiktokStatus?.linkedAt && !tiktokStatus.accountId)
@@ -443,7 +446,16 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setInitializingGoogle(false)
     }
-  }, [initializeAdAccount, selectedClientId, selectedGoogleAccountId, toast, triggerRefresh, workspaceId])
+  }, [
+    initializeAdAccount,
+    selectedClientId,
+    selectedGoogleAccountId,
+    setGoogleSetupDialogOpen,
+    setGoogleSetupMessage,
+    toast,
+    triggerRefresh,
+    workspaceId,
+  ])
 
   const initializeLinkedInIntegration = useCallback(async () => {
     if (!workspaceId) {
@@ -713,10 +725,6 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       return
     }
 
-    if (!googleSetupDialogOpen) {
-      setGoogleSetupDialogOpen(true)
-    }
-
     if (loadingGoogleAccountOptions || googleAccountOptions.length > 0) {
       return
     }
@@ -729,9 +737,9 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   }, [
     googleAccountOptions.length,
     googleNeedsAccountSelection,
-    googleSetupDialogOpen,
     loadGoogleAdAccounts,
     loadingGoogleAccountOptions,
+    setGoogleSetupMessage,
   ])
 
   useEffect(() => {
@@ -852,7 +860,18 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setConnectingProvider(null)
     }
-  }, [convexAuthLoading, isAuthenticated, router, selectedClientId, startGoogleOauth, startLinkedInOauth, startMetaOauth, startTikTokOauth, user])
+  }, [
+    convexAuthLoading,
+    isAuthenticated,
+    router,
+    selectedClientId,
+    setGoogleSetupMessage,
+    startGoogleOauth,
+    startLinkedInOauth,
+    startMetaOauth,
+    startTikTokOauth,
+    user,
+  ])
 
   const handleDisconnect = useCallback(async (providerId: string, options?: DisconnectOptions) => {
     const providerName = formatProviderName(providerId)
@@ -988,5 +1007,6 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
     // Trigger refresh
     triggerRefresh,
+    refreshTick,
   }
 }

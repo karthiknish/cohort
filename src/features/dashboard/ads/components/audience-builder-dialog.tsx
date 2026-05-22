@@ -324,7 +324,7 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
           <div className="space-y-3 px-6 pb-2">
             <Alert>
               <AlertDescription className="text-xs">
-                Meta custom audiences start empty. Segments, map pins, and interests in this dialog are not sent to Meta — configure targeting on each ad set instead.
+                Meta custom audiences start empty. Segments, map pins, and interests in this dialog are not sent to Meta - configure targeting on each ad set instead.
               </AlertDescription>
             </Alert>
             <MetaAudiencesPanel workspaceId={String(user.agencyId)} clientId={selectedClientId} />

@@ -23,8 +23,8 @@ import {
   MetricsTableFilters,
   MetricsTableHeader,
   MetricsTableLoadMore,
-  buildMetricsTableColumns,
 } from './metrics-table-card-sections'
+import { buildMetricsTableColumns } from './metrics-table-card-columns'
 
 const rows = [
   { id: '1', date: '2024-01-01', providerId: 'google_ads', spend: 120, impressions: 1000, clicks: 45, conversions: 4, revenue: 380 },

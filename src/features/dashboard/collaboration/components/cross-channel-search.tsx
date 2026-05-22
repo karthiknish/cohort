@@ -17,7 +17,8 @@ import {
 import { Input } from '@/shared/ui/input'
 import { useToast } from '@/shared/ui/use-toast'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { cn, formatRelativeTime } from '@/lib/utils'
+import { ClientRelativeTime } from '@/shared/components/client-relative-time'
+import { cn } from '@/lib/utils'
 import type { CollaborationChannelType, CollaborationMessage } from '@/types/collaboration'
 
 interface ChannelOption {
@@ -472,11 +473,9 @@ function SearchResultItem({ result, onSelect }: SearchResultItemProps) {
               {channel.type}
             </Badge>
             <span className="text-xs text-muted-foreground">{channel.name}</span>
-            {message.createdAt && (
-              <span className="text-xs text-muted-foreground" suppressHydrationWarning>
-                {formatRelativeTime(new Date(message.createdAt))}
-              </span>
-            )}
+            {message.createdAt ? (
+              <ClientRelativeTime value={message.createdAt} className="text-xs text-muted-foreground" />
+            ) : null}
           </div>
 
           <p className="text-sm line-clamp-2 mt-1">{message.content}</p>

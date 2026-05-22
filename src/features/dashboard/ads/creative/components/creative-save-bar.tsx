@@ -16,12 +16,11 @@ export function CreativeSaveBar(props: {
   if (!isDirty && !isSaving) return null
 
   return (
-    <div
+    <section
       className={cn(
         'sticky bottom-0 z-30 mt-4 rounded-2xl border border-border/60 bg-background/95 px-4 py-3 shadow-lg shadow-primary/5 backdrop-blur-md supports-backdrop-filter:bg-background/80',
         className,
       )}
-      role="region"
       aria-label="Save creative changes"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -63,6 +62,6 @@ export function CreativeSaveBar(props: {
           </Button>
         </div>
       </div>
-    </div>
+    </section>
   )
 }

@@ -40,37 +40,34 @@ export function ChatTypingIndicator({
 }: ChatTypingIndicatorProps) {
   if (variant === 'inline') {
     return (
-      <p
+      <output
         className={cn('flex items-center gap-2 text-xs text-muted-foreground', className)}
-        role="status"
         aria-live="polite"
       >
         <TypingDots />
         <span>{label}</span>
-      </p>
+      </output>
     )
   }
 
   if (variant === 'composer') {
     return (
-      <p
+      <output
         className={cn(
           'flex min-h-[1rem] items-center gap-2 text-[11px] leading-snug text-muted-foreground',
           className,
         )}
-        role="status"
         aria-live="polite"
       >
         <TypingDots className="scale-90" />
         <span className="truncate">{label}</span>
-      </p>
+      </output>
     )
   }
 
   return (
-    <div
+    <output
       className={cn('flex items-end gap-2.5 px-1 py-2 motion-reduce:py-1', className)}
-      role="status"
       aria-live="polite"
       aria-atomic="true"
     >
@@ -83,6 +80,6 @@ export function ChatTypingIndicator({
           <span className="text-sm text-muted-foreground">{label}</span>
         </div>
       </div>
-    </div>
+    </output>
   )
 }

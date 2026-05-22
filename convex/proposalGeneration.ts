@@ -19,7 +19,8 @@ import {
   sanitizeDeckProviderWarnings,
 } from '../src/lib/proposal-deck-generation'
 import { mergeProposalForm } from '../src/lib/proposals'
-import { GammaService, getGammaCircuitBreaker } from '../src/services/gamma'
+import { GammaService } from '../src/services/gamma/api'
+import { getGammaCircuitBreaker } from '../src/services/gamma/circuit-breaker'
 import { generateDeckInstructions, generateProposalSuggestions } from '../src/lib/proposal-deck-ai'
 
 const POLL_INTERVAL_MS = 5000

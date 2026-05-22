@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { Track } from 'livekit-client'
 
@@ -98,21 +98,37 @@ export function InSiteMeetingLiveRoomCanvas(props: LiveRoomCanvasProps) {
     onResult: onAppendTranscript,
   })
 
-  useEffect(() => {
+  const previousCaptureStatusRef = useRef<string | null>(null)
+  const captureStatusKey = `${isSupported}:${isListening}:${error ?? ''}`
+  if (
+    onCaptureStatusChange &&
+    previousCaptureStatusRef.current !== captureStatusKey
+  ) {
+    previousCaptureStatusRef.current = captureStatusKey
     onCaptureStatusChange({
       supported: isSupported,
       listening: isListening,
       error,
     })
-  }, [error, isListening, isSupported, onCaptureStatusChange])
+  }
 
-  useEffect(() => {
-    onInterimTranscriptChange(transcript.trim())
-  }, [onInterimTranscriptChange, transcript])
+  const previousTranscriptRef = useRef<string | null>(null)
+  const trimmedTranscript = transcript.trim()
+  if (
+    onInterimTranscriptChange &&
+    previousTranscriptRef.current !== trimmedTranscript
+  ) {
+    previousTranscriptRef.current = trimmedTranscript
+    onInterimTranscriptChange(trimmedTranscript)
+  }
+
+  if (!autoCaptureEnabled && previousTranscriptRef.current !== '') {
+    previousTranscriptRef.current = ''
+    onInterimTranscriptChange('')
+  }
 
   useEffect(() => {
     if (!autoCaptureEnabled) {
-      onInterimTranscriptChange('')
       if (isListening) {
         stopListening()
       }
@@ -130,7 +146,7 @@ export function InSiteMeetingLiveRoomCanvas(props: LiveRoomCanvasProps) {
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [autoCaptureEnabled, error, isListening, isSupported, onInterimTranscriptChange, startListening, stopListening])
+  }, [autoCaptureEnabled, error, isListening, isSupported, startListening, stopListening])
 
   useEffect(() => {
     return () => {

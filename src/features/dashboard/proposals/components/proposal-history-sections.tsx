@@ -112,19 +112,21 @@ export function ProposalHistoryHeader({
   )
 }
 
+export type ProposalHistoryEmptyActions = {
+  canCreate: boolean
+  canManage: boolean
+  creating: boolean
+  generating: boolean
+}
+
 export function ProposalHistoryEmptyState({
-  canCreate,
-  canManage = true,
-  isCreating,
-  isGenerating,
+  actions,
   onCreateNew,
 }: {
-  canCreate: boolean
-  canManage?: boolean
-  isCreating: boolean
-  isGenerating: boolean
+  actions: ProposalHistoryEmptyActions
   onCreateNew: () => void
 }) {
+  const { canCreate, canManage = true, creating: isCreating, generating: isGenerating } = actions
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-muted-foreground/25 bg-linear-to-b from-muted/10 to-transparent px-6 py-14 text-center">
       <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/15">

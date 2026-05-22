@@ -47,7 +47,7 @@ export function TaskViewDialog({
   userRole = null,
   participants = EMPTY_PARTICIPANTS,
 }: TaskViewDialogProps) {
-  const [activeTab, setActiveTab] = useState<'details' | 'comments'>(initialTab)
+  const [activeTab, setActiveTab] = useState<'details' | 'comments'>('details')
   const [commentCountState, setCommentCountState] = useState<{
     taskId: string
     sourceCount: number
@@ -61,21 +61,17 @@ export function TaskViewDialog({
       ? commentCountState.count
       : sourceCommentCount
 
-  useEffect(() => {
-    if (open) {
-      setActiveTab(initialTab)
-    }
-  }, [open, initialTab, taskId])
-
   const handleDialogOpenChange = useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen) {
+      if (nextOpen) {
+        setActiveTab(initialTab)
+      } else {
         setCommentCountState(null)
         setActiveTab('details')
       }
       onOpenChange(nextOpen)
     },
-    [onOpenChange],
+    [initialTab, onOpenChange],
   )
 
   const handleCommentCountChange = useCallback(

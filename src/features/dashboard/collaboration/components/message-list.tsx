@@ -6,7 +6,6 @@ import { ArrowDown } from 'lucide-react'
 import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
-import type { CollaborationMessage, CollaborationMention } from '@/types/collaboration'
 import { useMessageListRenderContext } from './message-list-render-context'
 import {
   ChannelMessageCard,
@@ -17,59 +16,7 @@ import {
   MessageListLoadingState,
 } from './message-list-sections'
 import type { MessageListRenderers } from './message-list-sections'
-
-export interface UnifiedMessage {
-  id: string
-  senderId: string | null
-  senderName: string
-  senderRole?: string | null
-  content: string
-  createdAtMs: number
-  edited?: boolean
-  deleted?: boolean
-  reactions?: Array<{ emoji: string; count: number; userIds: string[] }>
-  attachments?: Array<{ url: string; name?: string; mimeType?: string; size?: number }>
-  sharedTo?: string[]
-  // Channel-specific fields
-  mentions?: CollaborationMention[]
-  threadRootId?: string | null
-  threadReplyCount?: number
-  threadLastReplyAt?: string | null
-  isPinned?: boolean
-  deletedBy?: string | null
-  deletedAt?: string | null
-}
-
-/**
- * Convert a CollaborationMessage (channel message) to UnifiedMessage format
- */
-export function collaborationToUnifiedMessage(msg: CollaborationMessage): UnifiedMessage {
-  return {
-    id: msg.id,
-    senderId: msg.senderId,
-    senderName: msg.senderName,
-    senderRole: msg.senderRole,
-    content: msg.content ?? '',
-    createdAtMs: msg.createdAt ? new Date(msg.createdAt).getTime() : Date.now(),
-    edited: msg.isEdited,
-    deleted: msg.isDeleted,
-    reactions: msg.reactions ?? undefined,
-    attachments: msg.attachments?.map(a => ({
-      url: a.url,
-      name: a.name,
-      mimeType: a.type ?? undefined,
-      size: a.size ? parseInt(a.size, 10) : undefined,
-    })) ?? undefined,
-    sharedTo: msg.sharedTo ?? undefined,
-    mentions: msg.mentions ?? undefined,
-    threadRootId: msg.threadRootId ?? undefined,
-    threadReplyCount: msg.threadReplyCount ?? undefined,
-    threadLastReplyAt: msg.threadLastReplyAt ?? undefined,
-    isPinned: msg.isPinned,
-    deletedBy: msg.deletedBy ?? undefined,
-    deletedAt: msg.deletedAt ?? undefined,
-  }
-}
+import type { UnifiedMessage } from './message-list-types'
 
 export interface MessageListProps {
   messages: UnifiedMessage[]

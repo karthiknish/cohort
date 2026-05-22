@@ -1,5 +1,6 @@
 'use client'
 
+import { cn } from '@/lib/utils'
 import { Skeleton } from '@/shared/ui/skeleton'
 
 const ROOMS = ['room-1', 'room-2', 'room-3', 'room-4', 'room-5', 'room-6']
@@ -33,9 +34,12 @@ export function MeetingsPageSkeleton() {
               <Skeleton className="h-6 w-14 rounded-full" />
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex -space-x-2">
-                {AVATARS.map((avatarId) => (
-                  <Skeleton key={avatarId} className="size-7 rounded-full ring-2 ring-background" />
+              <div className="flex">
+                {AVATARS.map((avatarId, avatarIndex) => (
+                  <Skeleton
+                    key={avatarId}
+                    className={cn('size-7 rounded-full ring-2 ring-background', avatarIndex > 0 && '-ml-2')}
+                  />
                 ))}
               </div>
               <Skeleton className="h-3 w-20" />

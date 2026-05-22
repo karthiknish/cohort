@@ -10,11 +10,9 @@ export {
   MOTION_PANEL_TRANSITION,
   AGENT_PANEL_SURFACE,
   AGENT_MESSAGE_THREAD,
-  stopPropagation,
-  formatMessageDayLabel,
-  messageDayKey,
-  AgentMessageDayDivider,
-} from './agent-mode-panel-message-utils'
+} from './agent-mode-panel-message-constants'
+
+export { AgentMessageDayDivider } from './agent-mode-panel-message-utils'
 
 export { AgentMessageAttachmentChips } from './agent-mode-panel-attachments'
 

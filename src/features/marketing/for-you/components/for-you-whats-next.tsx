@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useClientNowMs } from '@/lib/hooks/use-client-relative-time'
 import { formatDistanceToNow } from 'date-fns'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { Bell, CheckSquare, CircleCheck, MessageSquare } from 'lucide-react'
@@ -207,15 +208,9 @@ export function ForYouWhatsNext() {
   const { isAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
   const { isPreviewMode } = usePreview()
   const [tab, setTab] = useState<WhatsNextTab>('tasks')
-  const [nowMs, setNowMs] = useState(0)
+  const nowMs = useClientNowMs()
   const workspaceId = getWorkspaceId(user)
   const canQuery = isAuthenticated && !isConvexLoading && !!workspaceId && !!user?.id
-
-  useEffect(() => {
-    setNowMs(Date.now())
-    const id = window.setInterval(() => setNowMs(Date.now()), 60_000)
-    return () => window.clearInterval(id)
-  }, [])
 
   const rawTasks = useQuery(
     tasksApi.listForUser,

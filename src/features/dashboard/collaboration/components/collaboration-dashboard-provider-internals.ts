@@ -1,7 +1,7 @@
 'use client'
 
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
@@ -88,31 +88,34 @@ export function useCollaborationDashboardUrlState({
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
   }, [pathname, router, searchParams])
 
-  useEffect(() => {
-    if (!requestedProjectId && !requestedChannelId && !requestedChannelType && !requestedClientId) {
-      projectParamHandledRef.current = null
-      channelParamHandledRef.current = null
-      return
-    }
+  const hasUrlChannelParams =
+    Boolean(requestedProjectId || requestedChannelId || requestedChannelType || requestedClientId)
 
-    const paramSignature = [
-      requestedProjectId ?? '',
-      requestedProjectName ?? '',
-      requestedChannelId ?? '',
-      requestedChannelType ?? '',
-      requestedClientId ?? '',
-    ].join('|')
+  const paramSignature = useMemo(
+    () =>
+      [
+        requestedProjectId ?? '',
+        requestedProjectName ?? '',
+        requestedChannelId ?? '',
+        requestedChannelType ?? '',
+        requestedClientId ?? '',
+      ].join('|'),
+    [
+      requestedChannelId,
+      requestedChannelType,
+      requestedClientId,
+      requestedProjectId,
+      requestedProjectName,
+    ],
+  )
 
-    const alreadyApplied =
-      projectParamHandledRef.current === paramSignature ||
-      channelParamHandledRef.current === paramSignature
-
-    if (alreadyApplied) {
-      return
+  const targetChannel = useMemo(() => {
+    if (!hasUrlChannelParams) {
+      return null
     }
 
     const normalizedName = requestedProjectName?.toLowerCase() ?? null
-    const targetChannel =
+    return (
       (requestedChannelId
         ? channels.find((channel) => channel.id === requestedChannelId)
         : undefined) ??
@@ -144,26 +147,35 @@ export function useCollaborationDashboardUrlState({
             (channel) =>
               channel.type === 'project' && channel.name.toLowerCase() === normalizedName,
           )
-        : undefined)
-
-    if (targetChannel && targetChannel.id !== selectedChannelId) {
-      selectChannel(targetChannel.id)
-    }
-
-    if (targetChannel) {
-      projectParamHandledRef.current = paramSignature
-      channelParamHandledRef.current = paramSignature
-    }
+        : undefined) ??
+      null
+    )
   }, [
     channels,
+    hasUrlChannelParams,
     requestedChannelId,
     requestedChannelType,
     requestedClientId,
     requestedProjectId,
     requestedProjectName,
-    selectChannel,
-    selectedChannelId,
   ])
+
+  if (!hasUrlChannelParams) {
+    projectParamHandledRef.current = null
+    channelParamHandledRef.current = null
+  } else if (targetChannel) {
+    const alreadyApplied =
+      projectParamHandledRef.current === paramSignature ||
+      channelParamHandledRef.current === paramSignature
+
+    if (!alreadyApplied) {
+      if (targetChannel.id !== selectedChannelId) {
+        selectChannel(targetChannel.id)
+      }
+      projectParamHandledRef.current = paramSignature
+      channelParamHandledRef.current = paramSignature
+    }
+  }
 
   const clearProjectFilter = useCallback(() => {
     replaceSearchParams((params) => {

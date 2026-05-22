@@ -33,7 +33,7 @@ export function MessagePaneHeader({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate text-lg font-bold tracking-tight text-foreground">{channel.name}</h2>
+              <h2 className="truncate text-lg tracking-tight text-foreground">{channel.name}</h2>
               <Badge
                 variant="outline"
                 className={cn(

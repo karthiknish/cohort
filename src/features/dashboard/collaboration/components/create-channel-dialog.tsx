@@ -29,6 +29,15 @@ import { Textarea } from '@/shared/ui/textarea'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useToast } from '@/shared/ui/use-toast'
 
+const CREATE_CHANNEL_DEFAULT_TRIGGER = (
+  <DialogTrigger asChild>
+    <Button className="gap-2">
+      <Plus className="size-4" />
+      Create channel
+    </Button>
+  </DialogTrigger>
+)
+
 import type { ChangeEvent } from 'react'
 
 type WorkspaceMemberOption = {
@@ -253,21 +262,12 @@ export function CreateChannelDialog({
     dispatch({ type: 'setIsCreating', isCreating: false })
   }, [channelName, description, isCreating, onCreate, resetForm, selectedMemberIds, toast, userId, visibility, workspaceId])
 
-  const defaultTrigger = (
-    <DialogTrigger asChild>
-      <Button className="gap-2">
-        <Plus className="size-4" />
-        Create channel
-      </Button>
-    </DialogTrigger>
-  )
-
   return (
     <Dialog
       open={open}
       onOpenChange={handleOpenChange}
     >
-      {trigger || defaultTrigger}
+      {trigger ?? CREATE_CHANNEL_DEFAULT_TRIGGER}
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

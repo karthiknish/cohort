@@ -73,6 +73,7 @@ export function GoogleSalesSection({ formData, onChange, disabled }: GoogleObjec
               <Label htmlFor="target-roas">Target ROAS (%)</Label>
               <input
                 id="target-roas"
+                aria-label="Target ROAS (%)"
                 type="number"
                 min="1"
                 max="1000"
@@ -93,6 +94,7 @@ export function GoogleSalesSection({ formData, onChange, disabled }: GoogleObjec
               <Label htmlFor="target-cpa">Target CPA ($)</Label>
               <input
                 id="target-cpa"
+                aria-label="Target CPA ($)"
                 type="number"
                 min="0.01"
                 step="0.01"

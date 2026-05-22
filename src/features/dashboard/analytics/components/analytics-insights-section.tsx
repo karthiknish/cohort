@@ -12,7 +12,7 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { normalizeInsightMarkdown } from '../lib/insight-utils'
-import { PROVIDER_LABELS, type AlgorithmicInsight, type ProviderInsight } from '../hooks'
+import { PROVIDER_LABELS, type AlgorithmicInsight, type ProviderInsight } from '../hooks/types'
 
 interface AnalyticsInsightsSectionProps {
   insights: ProviderInsight[]

@@ -6,7 +6,7 @@ import { type VariantProps } from "class-variance-authority"
 
 import { interactiveTransitionClass } from "@/lib/motion"
 import { cn } from "@/lib/utils"
-import { toggleVariants } from "@/shared/ui/toggle"
+import { toggleVariants } from "@/shared/ui/toggle-variants"
 
 const ToggleGroupContext = React.createContext<
   VariantProps<typeof toggleVariants> & {

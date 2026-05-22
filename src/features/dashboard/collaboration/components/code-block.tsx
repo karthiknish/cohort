@@ -10,7 +10,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
-import { TrustedHtml, createTrustedHtml } from '@/shared/ui/trusted-html'
+import { TrustedHtml } from '@/shared/ui/trusted-html'
+import { createTrustedHtml } from '@/shared/ui/trusted-html-types'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/shared/ui/use-toast'

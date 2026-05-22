@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/shared/ui/card'
+import { ClientFormattedDate } from '@/shared/components/client-formatted-date'
 import { cn } from '@/lib/utils'
 import { TruncatedTextPreview } from '@/shared/ui/hover-preview'
 import type { ClientRecord } from '@/types/clients'
@@ -99,9 +100,12 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
                         <span className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/80">
                           Team {Array.isArray(client.teamMembers) ? client.teamMembers.length : 0}
                         </span>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70" suppressHydrationWarning>
-                          {client.createdAt ? new Date(client.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'NEW'}
-                        </span>
+                        <ClientFormattedDate
+                          value={client.createdAt}
+                          formatStr="MMM d"
+                          className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70"
+                          fallback="NEW"
+                        />
                       </div>
                     </Link>
                   ))}

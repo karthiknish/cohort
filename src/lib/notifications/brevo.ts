@@ -10,29 +10,25 @@ import { ConvexHttpClient } from 'convex/browser'
 
 import { internal } from '/_generated/api'
 import { RETRY_CONFIG, sleep, calculateBackoffDelay } from './config'
-import {
-  projectCreatedTemplate,
-  taskAssignedTemplate,
-  mentionTemplate,
-  proposalReadyTemplate,
-  integrationAlertTemplate,
-  workspaceInviteTemplate,
-  performanceDigestTemplate,
-  taskActivityTemplate,
-  meetingScheduledTemplate,
-  meetingRescheduledTemplate,
-  meetingCancelledTemplate,
-} from './email-templates'
+import { integrationAlertTemplate } from './email-templates/integration-alert'
+import { meetingCancelledTemplate } from './email-templates/meeting-cancelled'
+import { meetingRescheduledTemplate } from './email-templates/meeting-rescheduled'
+import { meetingScheduledTemplate } from './email-templates/meeting-scheduled'
+import { mentionTemplate } from './email-templates/mention'
+import { performanceDigestTemplate } from './email-templates/performance-digest'
+import { projectCreatedTemplate } from './email-templates/project-created'
+import { proposalReadyTemplate } from './email-templates/proposal-ready'
+import { taskActivityTemplate } from './email-templates/task-activity'
+import { taskAssignedTemplate } from './email-templates/task-assigned'
+import { workspaceInviteTemplate } from './email-templates/workspace-invite'
 import { isEmailPrefEnabled } from './preferences'
-import type {
-  IntegrationAlertTemplateParams,
-  WorkspaceInviteTemplateParams,
-  PerformanceDigestTemplateParams,
-  TaskActivityTemplateParams,
-  MeetingScheduledTemplateParams,
-  MeetingRescheduledTemplateParams,
-  MeetingCancelledTemplateParams,
-} from './email-templates'
+import type { IntegrationAlertTemplateParams } from './email-templates/integration-alert'
+import type { MeetingCancelledTemplateParams } from './email-templates/meeting-cancelled'
+import type { MeetingRescheduledTemplateParams } from './email-templates/meeting-rescheduled'
+import type { MeetingScheduledTemplateParams } from './email-templates/meeting-scheduled'
+import type { PerformanceDigestTemplateParams } from './email-templates/performance-digest'
+import type { TaskActivityTemplateParams } from './email-templates/task-activity'
+import type { WorkspaceInviteTemplateParams } from './email-templates/workspace-invite'
 
 // =============================================================================
 // CONFIGURATION

@@ -12,7 +12,7 @@ import type {
     TrendCondition,
     ThresholdOperator,
 } from './types'
-import { safeEvaluateFormula } from '../metrics'
+import { safeEvaluateFormula } from '../metrics/formula-engine'
 
 // =============================================================================
 // HELPER FUNCTIONS

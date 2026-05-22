@@ -183,12 +183,12 @@ export function ChannelPresenceList({
   return (
     <div className={cn('flex items-center gap-1', className)}>
       <span className="text-xs text-muted-foreground">{title}:</span>
-      <div className="flex -space-x-1">
-        {displayMembers.map((member) => (
+      <div className="flex">
+        {displayMembers.map((member, memberIndex) => (
           <TooltipProvider key={member.id} delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="relative">
+                <div className={cn('relative', memberIndex > 0 && '-ml-1')}>
                   <Avatar className="size-7 rounded-full bg-accent/10 text-[10px] font-medium text-primary ring-2 ring-background">
                     {member.avatarUrl ? <AvatarImage src={member.avatarUrl} alt={member.name} className="object-cover" /> : null}
                     <AvatarFallback>{member.name.charAt(0).toUpperCase()}</AvatarFallback>

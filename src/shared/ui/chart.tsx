@@ -1,9 +1,12 @@
 "use client"
 
 import * as React from "react"
-import * as RechartsPrimitive from "recharts"
+import type { LegendProps, TooltipProps } from "recharts"
+import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent"
+import type { ComponentProps, ComponentType } from "react"
 
 import { cn } from "@/lib/utils"
+import { Legend, ResponsiveContainer, Tooltip } from "@/shared/ui/recharts-dynamic"
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = {
@@ -61,9 +64,7 @@ function ChartContainer({
   ...props
 }: React.ComponentProps<"div"> & {
   config: ChartConfig
-  children: React.ComponentProps<
-    typeof RechartsPrimitive.ResponsiveContainer
-  >["children"]
+  children: ComponentProps<typeof ResponsiveContainer>["children"]
 }) {
   const uniqueId = React.useId()
   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
@@ -81,9 +82,9 @@ function ChartContainer({
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        <RechartsPrimitive.ResponsiveContainer>
+        <ResponsiveContainer>
           {children}
-        </RechartsPrimitive.ResponsiveContainer>
+        </ResponsiveContainer>
       </div>
     </ChartContext.Provider>
   )
@@ -118,8 +119,9 @@ ${colorConfig
   return <style>{cssText}</style>
 }
 
-function ChartTooltip(props: React.ComponentPropsWithoutRef<typeof RechartsPrimitive.Tooltip>) {
-  return <RechartsPrimitive.Tooltip {...props} />
+function ChartTooltip(props: TooltipProps<ValueType, NameType>) {
+  const TooltipComponent = Tooltip as ComponentType<TooltipProps<ValueType, NameType>>
+  return <TooltipComponent {...props} />
 }
 
 function ChartTooltipContent({
@@ -136,7 +138,7 @@ function ChartTooltipContent({
   color,
   nameKey,
   labelKey,
-}: React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
+}: TooltipProps<ValueType, NameType> &
   React.ComponentProps<"div"> & {
     hideLabel?: boolean
     hideIndicator?: boolean
@@ -146,11 +148,12 @@ function ChartTooltipContent({
   }) {
   const { config } = useChart()
 
-  const tooltipLabel = React.useMemo(() => {
-    if (hideLabel || !payload?.length) {
-      return null
-    }
+  if (!active || !payload?.length) {
+    return null
+  }
 
+  let tooltipLabel: React.ReactNode = null
+  if (!hideLabel) {
     const [item] = payload
     const key = `${labelKey || item?.dataKey || item?.name || "value"}`
     const itemConfig = getPayloadConfigFromPayload(config, item, key)
@@ -160,30 +163,14 @@ function ChartTooltipContent({
         : itemConfig?.label
 
     if (labelFormatter) {
-      return (
+      tooltipLabel = (
         <div className={cn("font-medium", labelClassName)}>
           {labelFormatter(value, payload)}
         </div>
       )
+    } else if (value) {
+      tooltipLabel = <div className={cn("font-medium", labelClassName)}>{value}</div>
     }
-
-    if (!value) {
-      return null
-    }
-
-    return <div className={cn("font-medium", labelClassName)}>{value}</div>
-  }, [
-    label,
-    labelFormatter,
-    payload,
-    hideLabel,
-    labelClassName,
-    config,
-    labelKey,
-  ])
-
-  if (!active || !payload?.length) {
-    return null
   }
 
   const nestLabel = payload.length === 1 && indicator !== "dot"
@@ -264,8 +251,9 @@ function ChartTooltipContent({
   )
 }
 
-function ChartLegend(props: React.ComponentPropsWithoutRef<typeof RechartsPrimitive.Legend>) {
-  return <RechartsPrimitive.Legend {...props} />
+function ChartLegend(props: LegendProps) {
+  const LegendComponent = Legend as ComponentType<LegendProps>
+  return <LegendComponent {...props} />
 }
 
 function ChartLegendContent({
@@ -275,7 +263,7 @@ function ChartLegendContent({
   verticalAlign = "bottom",
   nameKey,
 }: React.ComponentProps<"div"> &
-  Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+  Pick<LegendProps, "payload" | "verticalAlign"> & {
     hideIcon?: boolean
     nameKey?: string
   }) {

@@ -192,6 +192,7 @@ export function ChannelInfoDialog({
             ref={fileInputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
+            aria-label="Upload channel photo"
             className="sr-only"
             onChange={handleFileChange}
           />

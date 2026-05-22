@@ -5,7 +5,7 @@ import { interactiveTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { LoaderCircle } from 'lucide-react'
 
-export interface SpinnerProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface SpinnerProps extends React.HTMLAttributes<HTMLOutputElement> {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   variant?: 'default' | 'primary' | 'muted'
 }
@@ -26,7 +26,7 @@ const variantClasses = {
 
 export function Spinner({ className, size = 'md', variant = 'default', ...props }: SpinnerProps) {
   return (
-    <div role="status" aria-label="Loading" {...props}>
+    <output aria-label="Loading" {...props}>
       <LoaderCircle
         className={cn(
           'animate-spin',
@@ -36,7 +36,7 @@ export function Spinner({ className, size = 'md', variant = 'default', ...props 
         )}
       />
       <span className="sr-only">Loading…</span>
-    </div>
+    </output>
   )
 }
 

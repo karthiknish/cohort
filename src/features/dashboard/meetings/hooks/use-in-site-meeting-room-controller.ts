@@ -3,7 +3,7 @@
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCreateLayoutContext } from '@/shared/ui/livekit'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { logError } from '@/lib/convex-errors'
 import { useToast } from '@/shared/ui/use-toast'
@@ -48,9 +48,48 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
   const [joinConfig, setJoinConfig] = useState<LiveKitJoinPayload | null>(null)
   const [joiningRoom, setJoiningRoom] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
-  const [isMinimized, setIsMinimized] = useState(false)
-  const [isMobileViewport, setIsMobileViewport] = useState(false)
-  const [pipSupported, setPipSupported] = useState(false)
+  const [isMinimizedPreference, setIsMinimizedPreference] = useState(false)
+  const isMobileViewport = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === 'undefined') {
+        return () => undefined
+      }
+
+      const media = window.matchMedia('(max-width: 767px)')
+      const updateViewport = () => {
+        onStoreChange()
+      }
+
+      updateViewport()
+
+      if (typeof media.addEventListener === 'function') {
+        media.addEventListener('change', updateViewport)
+        return () => {
+          media.removeEventListener('change', updateViewport)
+        }
+      }
+
+      media.addListener(updateViewport)
+      return () => {
+        media.removeListener(updateViewport)
+      }
+    },
+    () => {
+      if (typeof window === 'undefined') {
+        return false
+      }
+      return window.matchMedia('(max-width: 767px)').matches
+    },
+    () => false,
+  )
+  const pipSupported =
+    typeof document !== 'undefined' &&
+    Boolean(
+      document.pictureInPictureEnabled ||
+        (typeof HTMLVideoElement !== 'undefined' &&
+          'webkitSetPresentationMode' in HTMLVideoElement.prototype),
+    )
+  const isMinimized = Boolean(joinConfig) && !isMobileViewport && isMinimizedPreference
   const [pipActive, setPipActive] = useState(false)
   const autoCaptureEnabled = true
   const [captureStatus, setCaptureStatus] = useState<CaptureStatus>({
@@ -628,52 +667,13 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
       return
     }
 
-    setIsMinimized((current) => !current)
+    setIsMinimizedPreference((current) => !current)
   }, [canMinimizeRoom])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    const media = window.matchMedia('(max-width: 767px)')
-    const updateViewport = () => {
-      setIsMobileViewport(media.matches)
-    }
-
-    updateViewport()
-
-    if (typeof media.addEventListener === 'function') {
-      media.addEventListener('change', updateViewport)
-      return () => {
-        media.removeEventListener('change', updateViewport)
-      }
-    }
-
-    media.addListener(updateViewport)
-    return () => {
-      media.removeListener(updateViewport)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (typeof document === 'undefined') {
-      return
-    }
-
-    const supported =
-      document.pictureInPictureEnabled ||
-      (typeof HTMLVideoElement !== 'undefined' && 'webkitSetPresentationMode' in HTMLVideoElement.prototype)
-
-    setPipSupported(Boolean(supported))
-  }, [])
 
   useEffect(() => {
     if (joinConfig) {
       return
     }
-
-    setIsMinimized(false)
 
     if (typeof document !== 'undefined' && document.pictureInPictureElement && document.exitPictureInPicture) {
       void document.exitPictureInPicture().catch(() => undefined)
@@ -681,14 +681,6 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
 
     setPipActive(false)
   }, [joinConfig])
-
-  useEffect(() => {
-    if (isMobileViewport) {
-      return
-    }
-
-    setIsMinimized(false)
-  }, [isMobileViewport])
 
   useEffect(() => {
     if (settingsWidgetOpen) {
@@ -811,7 +803,7 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     roomPinnedToMobileTray,
     canMinimizeRoom,
     isMinimized,
-    setIsMinimized,
+    setIsMinimized: setIsMinimizedPreference,
     isMobileViewport,
     pipSupported,
     pipActive,

@@ -14,6 +14,7 @@ import { LiveRegion } from '@/shared/ui/live-region'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
+import { ClientRelativeTime } from '@/shared/components/client-relative-time'
 import { chromaticTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
@@ -28,9 +29,8 @@ import {
   CHAT_CONVERSATION_ROW_CLASS,
   CHAT_LIST_PREVIEW_CLASS,
   formatConversationSnippet,
-  formatRelativeTime,
 } from '../utils'
-import { collaborationToUnifiedMessage } from './message-list'
+import { collaborationToUnifiedMessage } from './message-list-utils'
 import { MessagesErrorState } from './message-pane-parts'
 import { UnifiedMessagePane } from './unified-message-pane'
 
@@ -101,7 +101,6 @@ export function ConversationListPane({
 }: ConversationListPaneProps & { className?: string }) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const previousUnreadRef = useRef(totalUnread)
-  const [unreadAnnouncement, setUnreadAnnouncement] = useState('')
 
   const handleSearchChange = useCallback((event: { target: { value: string } }) => {
     onSearchQueryChange(event.target.value)
@@ -139,25 +138,25 @@ export function ConversationListPane({
     return () => window.removeEventListener('keydown', onGlobalKeyDown)
   }, [])
 
-  useEffect(() => {
+  const unreadAnnouncement = (() => {
     if (isLoading) {
       previousUnreadRef.current = totalUnread
-      return
+      return ''
     }
 
     const previousUnread = previousUnreadRef.current
+    let message = ''
 
     if (totalUnread > previousUnread) {
       const newMessages = totalUnread - previousUnread
-      setUnreadAnnouncement(
-        `${newMessages} new ${newMessages === 1 ? 'message has' : 'messages have'} arrived. ${totalUnread} unread ${totalUnread === 1 ? 'conversation' : 'conversations'} in inbox.`
-      )
+      message = `${newMessages} new ${newMessages === 1 ? 'message has' : 'messages have'} arrived. ${totalUnread} unread ${totalUnread === 1 ? 'conversation' : 'conversations'} in inbox.`
     } else if (totalUnread === 0 && previousUnread > 0) {
-      setUnreadAnnouncement('All inbox conversations are marked as read.')
+      message = 'All inbox conversations are marked as read.'
     }
 
     previousUnreadRef.current = totalUnread
-  }, [isLoading, totalUnread])
+    return message
+  })()
 
   const showRecentLabel = sourceFilter === 'all' && !searchQuery.trim()
 
@@ -228,9 +227,8 @@ export function ConversationListPane({
 
       <ScrollArea className="min-h-0 w-full max-w-full flex-1 overflow-x-hidden">
         {isLoading ? (
-          <div
-            className="space-y-3 p-4"
-            role="status"
+          <output
+            className="block space-y-3 p-4"
             aria-live="polite"
             aria-busy="true"
             aria-label="Loading conversations"
@@ -244,7 +242,7 @@ export function ConversationListPane({
                 </div>
               </div>
             ))}
-          </div>
+          </output>
         ) : filteredItems.length === 0 ? (
           <div className="p-8 text-center">
             <Inbox className="mx-auto mb-3 size-12 text-muted-foreground/40" />
@@ -294,9 +292,10 @@ export function ConversationListPane({
                     <div className="flex items-center justify-between gap-2">
                       <span className={cn('truncate text-sm', hasUnread ? 'font-semibold' : 'font-medium', selected && 'text-primary')}>{item.name}</span>
                       {item.lastMessageAtMs ? (
-                        <span className="shrink-0 text-[10px] text-muted-foreground" suppressHydrationWarning>
-                          {formatRelativeTime(new Date(item.lastMessageAtMs).toISOString())}
-                        </span>
+                        <ClientRelativeTime
+                          value={item.lastMessageAtMs}
+                          className="shrink-0 text-[10px] text-muted-foreground"
+                        />
                       ) : null}
                     </div>
 
@@ -334,8 +333,26 @@ export function ConversationListPane({
   )
 }
 
-export type ChannelConversationPaneProps = {
+export type ChannelPaneListState = {
   canLoadMore: boolean
+  loading: boolean
+  loadingMore: boolean
+}
+
+export type ChannelPaneSearchState = {
+  active: boolean
+  searching: boolean
+}
+
+export type ChannelPaneComposerState = {
+  sending: boolean
+  uploading: boolean
+}
+
+export type ChannelConversationPaneProps = {
+  listState: ChannelPaneListState
+  searchState: ChannelPaneSearchState
+  composerState: ChannelPaneComposerState
   channelMessages: CollaborationMessage[]
   channelMessagesForPane: CollaborationMessage[]
   channelParticipants: ChannelParticipant[]
@@ -344,9 +361,6 @@ export type ChannelConversationPaneProps = {
   currentUserRole: string | null
   deepLinkMessageId: string | null
   deepLinkThreadId: string | null
-  isChannelSearchActive: boolean
-  isCurrentChannelLoading: boolean
-  loadingMore: boolean
   messageDeletingId: string | null
   messageInput: string
   messageSearchQuery: string
@@ -375,16 +389,13 @@ export type ChannelConversationPaneProps = {
   pendingAttachments: PendingAttachment[]
   reactionPendingByMessage: ReactionPendingState
   searchHighlights: string[]
-  searchingMessages: boolean
   selectedChannel: Channel
-  sending: boolean
   threadErrorsByRootId: ThreadErrorsState
   threadLoadingByRootId: ThreadLoadingState
   threadMessagesByRootId: ThreadMessagesState
   threadNextCursorByRootId: ThreadCursorsState
   threadUnreadCountsByRootId: Record<string, number>
   typingIndicatorText?: string
-  uploading: boolean
   messagesError: string | null
   onRetryMessages: () => void
   channelUnreadCount: number
@@ -425,7 +436,9 @@ function hasRequestedDeepLinkTarget(
 }
 
 export function ChannelConversationPane({
-  canLoadMore,
+  listState,
+  searchState,
+  composerState,
   channelMessages,
   channelMessagesForPane,
   channelParticipants,
@@ -434,9 +447,6 @@ export function ChannelConversationPane({
   currentUserRole,
   deepLinkMessageId,
   deepLinkThreadId,
-  isChannelSearchActive,
-  isCurrentChannelLoading,
-  loadingMore,
   messageDeletingId,
   messageInput,
   messageSearchQuery,
@@ -460,9 +470,7 @@ export function ChannelConversationPane({
   pendingAttachments,
   reactionPendingByMessage,
   searchHighlights,
-  searchingMessages,
   selectedChannel,
-  sending,
   sharedFiles,
   canManageMembers,
   onManageMembers,
@@ -474,13 +482,16 @@ export function ChannelConversationPane({
   threadNextCursorByRootId,
   threadUnreadCountsByRootId,
   typingIndicatorText,
-  uploading,
   messagesError,
   onRetryMessages,
   channelUnreadCount,
   onMarkChannelRead,
   markChannelReadPending,
 }: ChannelConversationPaneProps) {
+  const { canLoadMore, loading: isCurrentChannelLoading, loadingMore } = listState
+  const { active: isChannelSearchActive, searching: searchingMessages } = searchState
+  const { sending, uploading } = composerState
+
   const showMissingDeepLinkNotice =
     (Boolean(deepLinkMessageId?.trim()) || Boolean(deepLinkThreadId?.trim())) &&
     !isCurrentChannelLoading &&
@@ -596,9 +607,11 @@ export function ChannelConversationPane({
       messages={channelMessagesForPane.map(collaborationToUnifiedMessage)}
       currentUserId={currentUserId}
       currentUserRole={currentUserRole}
-      isLoading={isCurrentChannelLoading || (isChannelSearchActive && searchingMessages)}
-      isLoadingMore={!isChannelSearchActive && loadingMore}
-      hasMore={!isChannelSearchActive && canLoadMore}
+      listState={{
+        loading: isCurrentChannelLoading || (isChannelSearchActive && searchingMessages),
+        loadingMore: !isChannelSearchActive && loadingMore,
+        hasMore: !isChannelSearchActive && canLoadMore,
+      }}
       onLoadMore={handleLoadMore}
       messageSearchQuery={messageSearchQuery}
       onMessageSearchChange={onMessageSearchChange}
@@ -606,9 +619,12 @@ export function ChannelConversationPane({
       messageInput={messageInput}
       onMessageInputChange={onMessageInputChange}
       onSendMessage={handleSendMessage}
-      isSending={sending || uploading}
+      composerState={{
+        sending: sending || uploading,
+        pendingAttachments: pendingAttachments.length > 0,
+        uploadingAttachments: uploading,
+      }}
       pendingAttachments={pendingAttachments}
-      uploadingAttachments={uploading}
       onAddAttachments={onAddAttachments}
       onRemoveAttachment={onRemoveAttachment}
       typingIndicator={typingIndicatorText}
@@ -738,9 +754,11 @@ export function DirectMessageConversationPane({
       header={dmHeader}
       messages={dmMessagesForPane.map(directMessageToUnifiedMessage)}
       currentUserId={currentUserId}
-      isLoading={dmIsLoadingMessages || (isDmSearchActive && dmSearchingMessages)}
-      isLoadingMore={!isDmSearchActive && dmIsLoadingMore}
-      hasMore={!isDmSearchActive && dmHasMoreMessages}
+      listState={{
+        loading: dmIsLoadingMessages || (isDmSearchActive && dmSearchingMessages),
+        loadingMore: !isDmSearchActive && dmIsLoadingMore,
+        hasMore: !isDmSearchActive && dmHasMoreMessages,
+      }}
       onLoadMore={dmLoadMoreMessages}
       messageSearchQuery={dmMessageSearchQuery}
       onMessageSearchChange={onDmMessageSearchChange}
@@ -748,9 +766,12 @@ export function DirectMessageConversationPane({
       messageInput={dmMessageInput}
       onMessageInputChange={setActiveDmMessageInput}
       onSendMessage={handleSendDirectMessage}
-      isSending={dmIsSending || uploading}
+      composerState={{
+        sending: dmIsSending || uploading,
+        pendingAttachments: pendingAttachments.length > 0,
+        uploadingAttachments: uploading,
+      }}
       pendingAttachments={pendingAttachments}
-      uploadingAttachments={uploading}
       onAddAttachments={onAddAttachments}
       onRemoveAttachment={onRemoveAttachment}
       onToggleReaction={dmToggleReaction}

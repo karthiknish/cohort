@@ -155,7 +155,7 @@ export function EmptyState({
 }: EmptyStateProps) {
   const headingId = useId()
   return (
-    <div className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center" role="region" aria-labelledby={headingId}>
+    <section className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center" aria-labelledby={headingId}>
       <Icon className="mx-auto size-12 text-muted-foreground/40" aria-hidden />
       <h3 id={headingId} className="mt-4 text-lg font-medium text-foreground">
         {title}
@@ -169,7 +169,7 @@ export function EmptyState({
           </Button>
         </div>
       ) : null}
-    </div>
+    </section>
   )
 }
 
@@ -178,11 +178,10 @@ export function EmptyState({
  */
 export function ModulePageLoadingPlaceholder({ message = 'Loading…' }: { message?: string }) {
   return (
-    <div
-      role="status"
+    <output
       aria-live="polite"
       aria-busy="true"
-      className="space-y-4"
+      className="block space-y-4"
     >
       <span className="sr-only">{message}</span>
       <div className="rounded-lg border border-muted/50 bg-muted/20 p-6">
@@ -199,7 +198,7 @@ export function ModulePageLoadingPlaceholder({ message = 'Loading…' }: { messa
         <Skeleton className="h-36 rounded-xl" />
         <Skeleton className="h-36 rounded-xl" />
       </div>
-    </div>
+    </output>
   )
 }
 

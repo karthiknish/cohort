@@ -32,24 +32,22 @@ import { FadeIn } from '@/shared/ui/animate-in'
 import { cn } from '@/lib/utils'
 
 // Extracted hooks
-import {
-  useProposalPageInteractions,
-  useProposalWizard,
-  useProposalDrafts,
-  useProposalSubmission,
-  useDeckPreparation,
-} from './hooks'
+import { useDeckPreparation } from './hooks/use-deck-preparation'
+import { useProposalDrafts } from './hooks/use-proposal-drafts'
+import { useProposalPageInteractions } from './hooks/use-proposal-page-interactions'
+import { useProposalSubmission } from './hooks/use-proposal-submission'
+import { useProposalWizard } from './hooks/use-proposal-wizard'
 
 function ProposalsPageContent() {
   const { push } = useRouter()
-  const searchParams = useSearchParams()
+  const { get } = useSearchParams()
   const { toast } = useToast()
   const { user } = useAuth()
   const { selectedClient, selectedClientId, selectClient } = useClientContext()
   const { isPreviewMode } = usePreview()
   const canManageProposals = isPreviewMode || can(user?.role, 'proposals.manage')
   const [isWizardOpen, setIsWizardOpen] = useState(false)
-  const clientIdParam = searchParams.get('clientId')
+  const clientIdParam = get('clientId')
 
   // Handle URL params for client selection
   useEffect(() => {
@@ -393,18 +391,22 @@ function ProposalsPageContent() {
         <ProposalHistory
           proposals={displayedProposals}
           draftId={displayedDraftId}
-          isLoading={displayedLoadingState}
+          workflow={{
+            loading: displayedLoadingState,
+            generating: isSubmitting,
+            creating: isCreatingDraft,
+          }}
+          capabilities={{
+            canManage: canManageProposals,
+            canCreate: canManageProposals && Boolean(selectedClientId),
+          }}
           deletingProposalId={deletingProposalId}
           onRefresh={isPreviewMode ? handlePreviewRefresh : handleRefreshProposals}
           onResume={handleResumeProposalInModal}
           onRequestDelete={isPreviewMode ? handlePreviewRequestDelete : requestDeleteProposal}
-          isGenerating={isSubmitting}
           downloadingDeckId={downloadingDeckId}
           onDownloadDeck={isPreviewMode ? handlePreviewDownloadDeck : handleDownloadDeck}
           onCreateNew={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
-          canManage={canManageProposals}
-          canCreate={canManageProposals && Boolean(selectedClientId)}
-          isCreating={isCreatingDraft}
         />
         <ProposalDeleteDialog
           open={isDeleteDialogOpen}

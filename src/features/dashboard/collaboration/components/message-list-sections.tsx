@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, type MouseEvent, type ReactNode } from 'react'
+import { Fragment, useCallback, type ComponentType, type MouseEvent, type ReactNode } from 'react'
+import { ArrowDown, LoaderCircle, RefreshCw, Smile } from 'lucide-react'
 
-import { LoaderCircle, RefreshCw, Smile } from 'lucide-react'
+import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
 
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { Button } from '@/shared/ui/button'
@@ -17,12 +18,12 @@ import { cn } from '@/lib/utils'
 
 import { CHAT_MESSAGE_BODY_CLASS } from '../lib/chat-text'
 
-import type { UnifiedMessage } from './message-list'
+import type { UnifiedMessage } from './message-list-types'
 
 export type MessageListRenderers = {
   renderMessageActions?: (message: UnifiedMessage) => ReactNode
   renderMessageAttachments?: (message: UnifiedMessage) => ReactNode
-  renderMessageContent?: (message: UnifiedMessage) => ReactNode
+  renderMessageContent?: ComponentType<{ message: UnifiedMessage }>
   renderMessageExtras?: (message: UnifiedMessage) => ReactNode
   renderMessageFooter?: (message: UnifiedMessage) => ReactNode
   renderThreadSection?: (message: UnifiedMessage) => ReactNode
@@ -33,6 +34,20 @@ export type MessageListRenderers = {
 function formatTime(ms: number): string {
   const date = new Date(ms)
   return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+}
+
+function MessageContentBody({
+  message,
+  Content,
+}: {
+  message: UnifiedMessage
+  Content: ComponentType<{ message: UnifiedMessage }>
+}) {
+  return (
+    <div className={CHAT_MESSAGE_BODY_CLASS}>
+      <Content message={message} />
+    </div>
+  )
 }
 
 function getInitials(name: string): string {
@@ -213,12 +228,16 @@ function MessageReactionPickerActions({
   )
 }
 
+export type ChannelMessagePendingState = {
+  deleting: boolean
+  editing: boolean
+  updating: boolean
+}
+
 export function ChannelMessageCard({
   currentUserId,
   highlighted,
-  isDeleting,
-  isEditing,
-  isUpdating,
+  pending,
   localReactionPending,
   message,
   onReact,
@@ -228,9 +247,7 @@ export function ChannelMessageCard({
 }: {
   currentUserId: string | null
   highlighted: boolean
-  isDeleting: boolean
-  isEditing: boolean
-  isUpdating: boolean
+  pending: ChannelMessagePendingState
   localReactionPending: string | null
   message: UnifiedMessage
   onReact: (messageId: string, emoji: string) => void
@@ -238,6 +255,7 @@ export function ChannelMessageCard({
   renderers: MessageListRenderers
   showAvatars: boolean
 }) {
+  const { deleting: isDeleting, editing: isEditing, updating: isUpdating } = pending
   const isPendingThis = localReactionPending?.startsWith(message.id) || reactionPendingByMessage[message.id]
 
   return (
@@ -275,7 +293,7 @@ export function ChannelMessageCard({
         ) : (
           <>
             {renderers.renderMessageContent ? (
-              <div className={CHAT_MESSAGE_BODY_CLASS}>{renderers.renderMessageContent(message)}</div>
+              <MessageContentBody message={message} Content={renderers.renderMessageContent} />
             ) : (
               <p className={cn(CHAT_MESSAGE_BODY_CLASS, 'whitespace-pre-wrap text-sm')}>{message.content}</p>
             )}
@@ -374,7 +392,7 @@ export function DirectMessageCard({
           ) : message.deleted ? (
             renderers.renderDeletedInfo ? renderers.renderDeletedInfo(message) : <p className="text-sm italic text-muted-foreground">Message removed</p>
           ) : renderers.renderMessageContent ? (
-            <div className={CHAT_MESSAGE_BODY_CLASS}>{renderers.renderMessageContent(message)}</div>
+            <MessageContentBody message={message} Content={renderers.renderMessageContent} />
           ) : (
             <p className={cn(CHAT_MESSAGE_BODY_CLASS, 'whitespace-pre-wrap text-sm')}>{message.content}</p>
           )}
@@ -424,6 +442,149 @@ export function DirectMessageCard({
       {isDeleting ? (
         <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/80">
           <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+export function MessageListScrollBody({
+  currentUserId,
+  editingMessageId,
+  deletingMessageId,
+  updatingMessageId,
+  effectiveRenderMessageWrapper,
+  groupedMessages,
+  handleReaction,
+  hasMore,
+  highlightedMessageId,
+  isChannel,
+  isLoading,
+  localReactionPending,
+  messagesEndRef,
+  onLoadMore,
+  reactionPendingByMessage,
+  renderers,
+  scrollRef,
+  showAvatars,
+  showJumpToLatest,
+  scrollToLatest,
+  handleScroll,
+  typingIndicatorText,
+}: {
+  currentUserId: string | null
+  editingMessageId?: string | null
+  deletingMessageId?: string | null
+  updatingMessageId?: string | null
+  effectiveRenderMessageWrapper?: (message: UnifiedMessage, children: ReactNode) => ReactNode
+  groupedMessages: Map<string, UnifiedMessage[]>
+  handleReaction: (messageId: string, emoji: string) => Promise<void>
+  hasMore: boolean
+  highlightedMessageId: string | null
+  isChannel: boolean
+  isLoading: boolean
+  localReactionPending: string | null
+  messagesEndRef: React.RefObject<HTMLDivElement | null>
+  onLoadMore: () => void
+  reactionPendingByMessage: Record<string, string | null>
+  renderers: MessageListRenderers
+  scrollRef: React.RefObject<HTMLDivElement | null>
+  showAvatars: boolean
+  showJumpToLatest: boolean
+  scrollToLatest: () => void
+  handleScroll: () => void
+  typingIndicatorText?: string
+}) {
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
+      >
+        <div className={cn('min-w-0 max-w-full p-4', isChannel && 'space-y-4')}>
+          {hasMore ? (
+            <MessageListLoadMoreButton disabled={isLoading} isLoading={isLoading} onLoadMore={onLoadMore} />
+          ) : null}
+
+          <div className={cn('space-y-6', isChannel && 'space-y-1')}>
+            {Array.from(groupedMessages.entries()).map(([date, msgs]) => (
+              <div key={date}>
+                <MessageDateSeparator date={date} />
+
+                <div className={cn('space-y-3', isChannel && 'space-y-1')}>
+                  {msgs.map((message) => {
+                    const isEditing = editingMessageId === message.id
+                    const isDeleting = deletingMessageId === message.id
+                    const isUpdating = updatingMessageId === message.id
+
+                    if (isChannel) {
+                      const content = (
+                        <ChannelMessageCard
+                          currentUserId={currentUserId}
+                          highlighted={message.id === highlightedMessageId}
+                          pending={{ deleting: isDeleting, editing: isEditing, updating: isUpdating }}
+                          localReactionPending={localReactionPending}
+                          message={message}
+                          onReact={handleReaction}
+                          reactionPendingByMessage={reactionPendingByMessage}
+                          renderers={renderers}
+                          showAvatars={showAvatars}
+                        />
+                      )
+
+                      return (
+                        <Fragment key={message.id}>
+                          {effectiveRenderMessageWrapper ? effectiveRenderMessageWrapper(message, content) : content}
+                        </Fragment>
+                      )
+                    }
+
+                    const messageContent = (
+                      <DirectMessageCard
+                        currentUserId={currentUserId}
+                        isDeleting={isDeleting}
+                        isEditing={isEditing}
+                        localReactionPending={localReactionPending}
+                        message={message}
+                        onReact={handleReaction}
+                        reactionPendingByMessage={reactionPendingByMessage}
+                        renderers={renderers}
+                        showAvatars={showAvatars}
+                      />
+                    )
+
+                    return (
+                      <Fragment key={message.id}>
+                        {effectiveRenderMessageWrapper ? effectiveRenderMessageWrapper(message, messageContent) : messageContent}
+                      </Fragment>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {typingIndicatorText ? (
+            <ChatTypingIndicator label={typingIndicatorText} variant="bubble" className="mt-2" />
+          ) : null}
+
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {showJumpToLatest ? (
+        <div className="pointer-events-none absolute bottom-4 right-4 z-10">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="pointer-events-auto gap-1.5 shadow-md ring-1 ring-border/60"
+            onClick={scrollToLatest}
+          >
+            <ArrowDown className="size-3.5" />
+            Latest
+          </Button>
         </div>
       ) : null}
     </div>

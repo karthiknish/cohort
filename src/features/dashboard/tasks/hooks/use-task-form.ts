@@ -96,6 +96,26 @@ export function useTaskForm({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
+  const nextClientId = selectedClient?.id ?? null
+  const nextClientName = selectedClient?.name ?? ''
+  const nextProjectId = projectContext?.id ?? null
+  const nextProjectName = projectContext?.name ?? ''
+
+  if (
+    formState.clientId !== nextClientId ||
+    formState.clientName !== nextClientName ||
+    formState.projectId !== nextProjectId ||
+    formState.projectName !== nextProjectName
+  ) {
+    setFormState((prev) => ({
+      ...prev,
+      clientId: nextClientId,
+      clientName: nextClientName,
+      projectId: nextProjectId,
+      projectName: nextProjectName,
+    }))
+  }
+
   const resetForm = useCallback(() => {
     setFormState(buildInitialFormState(selectedClient ?? undefined, projectContext))
     setCreateAttachments([])

@@ -481,11 +481,14 @@ export async function scanChannelRows(
       break
     }
 
-    const visitBatchRows = async (index: number): Promise<void> => {
-      if (index >= result.items.length || stoppedEarly) return
+    const visitRow = async (row: CollaborationMessageRow) => {
+      if (stoppedEarly || scanned >= maxRows) {
+        return
+      }
+      if (!row) {
+        return
+      }
 
-      const row = result.items[index]
-      if (!row) return
       const shouldContinue = await visitor(row)
       scanned += 1
       if (shouldContinue === false) {
@@ -494,13 +497,13 @@ export async function scanChannelRows(
       }
       if (scanned >= maxRows) {
         truncated = Boolean(result.nextCursor)
-        return
       }
-
-      await visitBatchRows(index + 1)
     }
 
-    await visitBatchRows(0)
+    await result.items.reduce<Promise<void>>(
+      (previous, row) => previous.then(() => visitRow(row)),
+      Promise.resolve(),
+    )
 
     if (stoppedEarly || !result.nextCursor || scanned >= maxRows) {
       break

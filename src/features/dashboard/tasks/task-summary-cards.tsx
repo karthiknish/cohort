@@ -71,9 +71,8 @@ export const TaskSummaryCards = memo(function TaskSummaryCards({
           </div>
         </div>
 
-        <div
-          className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end"
-          role="group"
+        <fieldset
+          className="m-0 grid min-w-0 grid-cols-2 gap-2 border-0 p-0 sm:flex sm:flex-wrap sm:justify-end"
           aria-label="Filter by status"
         >
           {stripStatuses.map((status) => (
@@ -85,7 +84,7 @@ export const TaskSummaryCards = memo(function TaskSummaryCards({
               onSelect={onStatusCardClick}
             />
           ))}
-        </div>
+        </fieldset>
       </div>
     </section>
   )

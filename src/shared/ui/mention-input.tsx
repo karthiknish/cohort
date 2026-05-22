@@ -508,28 +508,26 @@ export function MentionInput(
           />
 
           {showDropdown && (
-            <div
+            <ul
               id={`${inputId}-mentions`}
-              role="listbox"
               aria-label="Mention suggestions"
               onMouseDown={handleDropdownMouseDown}
-              className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border border-muted/60 bg-popover shadow-lg"
+              className="absolute left-0 right-0 top-full z-50 mt-1 list-none rounded-md border border-muted/60 bg-popover shadow-lg"
             >
-              <p className="border-b px-3 py-1.5 text-xs font-medium uppercase text-muted-foreground">
+              <li className="list-none border-b px-3 py-1.5 text-xs font-medium uppercase text-muted-foreground">
                 {hasReachedMentionLimit
                   ? `Mention limit reached (${mentionLimit})`
                   : mentionResults.length > 0
                     ? 'Select user'
                     : 'No matches'}
-              </p>
-              <div className="max-h-52 overflow-y-auto">
+              </li>
+              <li className="list-none max-h-52 overflow-y-auto">
                 {mentionResults.length > 0
                   ? mentionResults.map((user, index) => (
+                      <li key={user.id} className="list-none">
                       <button
-                        key={user.id}
                         id={`${inputId}-option-${user.id}`}
                         type="button"
-                        role="option"
                         aria-selected={index === effectiveHighlightedIndex}
                         onMouseEnter={mentionOptionHandlers[user.id]?.onMouseEnter}
                         onClick={mentionOptionHandlers[user.id]?.onClick}
@@ -553,23 +551,26 @@ export function MentionInput(
                           </p>
                         </div>
                       </button>
+                      </li>
                     ))
                   : (
-                      <p className="px-3 py-2 text-sm text-muted-foreground">
-                        {hasReachedMentionLimit
-                          ? 'Remove a mention to add another user.'
-                          : mentionState.query.length > 0
-                            ? `No users found for "${mentionState.query}".`
-                            : 'Start typing to search users.'}
-                      </p>
+                      <li className="list-none">
+                        <p className="px-3 py-2 text-sm text-muted-foreground">
+                          {hasReachedMentionLimit
+                            ? 'Remove a mention to add another user.'
+                            : mentionState.query.length > 0
+                              ? `No users found for "${mentionState.query}".`
+                              : 'Start typing to search users.'}
+                        </p>
+                      </li>
                     )}
-              </div>
+              </li>
               {mentionResults.length > 0 && (
-                <p className="border-t px-3 py-1.5 text-xs text-muted-foreground">
+                <li className="list-none border-t px-3 py-1.5 text-xs text-muted-foreground">
                   Use Up/Down to navigate, Enter to select, Esc to close.
-                </p>
+                </li>
               )}
-            </div>
+            </ul>
           )}
         </div>
 

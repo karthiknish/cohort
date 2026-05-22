@@ -9,14 +9,10 @@ import { geminiAI } from '../src/services/gemini'
 import { formatCurrency } from '../src/lib/utils'
 import { withErrorHandling } from './errors'
 import { enforceGeminiActionRateLimit } from './geminiRateLimit'
-import {
-  calculateAlgorithmicInsights,
-  getGlobalBudgetSuggestions,
-  enrichSummaryWithMetrics,
-  type AdMetricsSummary,
-  type AlgorithmicInsight,
-  type EnrichedMetricsSummary,
-} from '../src/lib/ad-algorithms'
+import type { AdMetricsSummary, AlgorithmicInsight, EnrichedMetricsSummary } from '../src/lib/ad-algorithms/types'
+import { getGlobalBudgetSuggestions } from '../src/lib/ad-algorithms/budget'
+import { enrichSummaryWithMetrics } from '../src/lib/ad-algorithms/efficiency'
+import { calculateAlgorithmicInsights } from '../src/lib/ad-algorithms/insights'
 
 interface MetricRecord {
   providerId: string

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { endOfDay, startOfDay, subDays } from 'date-fns'
 
@@ -91,28 +91,12 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   const { isPreviewMode } = usePreview()
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
 
-  const [metricsView, setMetricsView] = useState({
-    metrics: [] as MetricRecord[],
-    metricsLoading: false,
-    metricError: null as string | null,
-    nextCursor: null as string | null,
-    loadMoreError: null as string | null,
-    visibleCount: METRICS_PAGE_SIZE,
-    serverSideSummary: null as MetricsSummary | null,
-    adsInsightsSummary: null as AdsInsightsSummary | null,
-  })
-  const {
-    metrics,
-    metricsLoading,
-    metricError,
-    nextCursor,
-    loadMoreError,
-    visibleCount,
-    serverSideSummary,
-    adsInsightsSummary,
-  } = metricsView
+  const [visibleCount, setVisibleCount] = useState(METRICS_PAGE_SIZE)
+  const [persistedMetricError, setPersistedMetricError] = useState<string | null>(null)
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [internalRefreshTick, setInternalRefreshTick] = useState(0)
+  const refreshGenerationRef = useRef(0)
   
   const [dateRange, setDateRange] = useState<DateRange>(() => ({
     start: startOfDay(subDays(new Date(), DEFAULT_DATE_RANGE_DAYS - 1)),
@@ -124,21 +108,6 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
 
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const canQueryConvex = isAuthenticated && !convexAuthLoading && Boolean(user?.id)
-
-  // Note: `useQuery` will throw for hard errors (like Unauthorized).
-  // Waiting for `useConvexAuth` readiness prevents most of these.
-  useEffect(() => {
-    if (isPreviewMode) return
-    if (!workspaceId) return
-    if (canQueryConvex) return
-
-    // Keep initial auth boot silent, but if we previously surfaced an error,
-    // swap it to a session-expired message.
-    setMetricsView((prev) => ({
-      ...prev,
-      metricError: prev.metricError ? ERROR_MESSAGES.SIGN_IN_REQUIRED : prev.metricError,
-    }))
-  }, [canQueryConvex, isPreviewMode, workspaceId])
 
   const metricsRealtime = useQuery(
     api.adsMetrics.listMetricsWithSummary,
@@ -187,6 +156,80 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     [dateRange, metricsSource],
   )
 
+  const isConvexLoading =
+    !isPreviewMode && Boolean(workspaceId && canQueryConvex) && metricsRealtime === undefined
+
+  const derivedMetricsState = useMemo(() => {
+    if (!isPreviewMode && workspaceId && !canQueryConvex) {
+      return {
+        metricsLoading: false,
+        metrics: [] as MetricRecord[],
+        nextCursor: null as string | null,
+        serverSideSummary: null as MetricsSummary | null,
+        adsInsightsSummary: null as AdsInsightsSummary | null,
+      }
+    }
+
+    if (isConvexLoading) {
+      return {
+        metricsLoading: true,
+        metrics: [] as MetricRecord[],
+        nextCursor: null as string | null,
+        serverSideSummary: null as MetricsSummary | null,
+        adsInsightsSummary: null as AdsInsightsSummary | null,
+      }
+    }
+
+    const summary = !isPreviewMode && metricsRealtime?.summary ? metricsRealtime.summary : null
+    const v2Summary = !isPreviewMode && metricsRealtimeV2?.summary ? metricsRealtimeV2.summary : null
+    const page = metricsSource.slice(0, visibleCount)
+
+    return {
+      metricsLoading: false,
+      metrics: page,
+      nextCursor: metricsSource.length > visibleCount ? 'more' : null,
+      serverSideSummary: summary,
+      adsInsightsSummary: v2Summary as AdsInsightsSummary | null,
+    }
+  }, [
+    canQueryConvex,
+    isConvexLoading,
+    isPreviewMode,
+    metricsRealtime,
+    metricsRealtimeV2,
+    metricsSource,
+    visibleCount,
+    workspaceId,
+  ])
+
+  const {
+    metrics,
+    metricsLoading,
+    nextCursor,
+    serverSideSummary,
+    adsInsightsSummary,
+  } = derivedMetricsState
+
+  const metricError = useMemo(() => {
+    if (!isPreviewMode && workspaceId && !canQueryConvex && persistedMetricError) {
+      return ERROR_MESSAGES.SIGN_IN_REQUIRED
+    }
+    return persistedMetricError
+  }, [canQueryConvex, isPreviewMode, persistedMetricError, workspaceId])
+
+  if (internalRefreshTick > refreshGenerationRef.current) {
+    refreshGenerationRef.current = internalRefreshTick
+    if (visibleCount !== METRICS_PAGE_SIZE) {
+      setVisibleCount(METRICS_PAGE_SIZE)
+    }
+    if (persistedMetricError !== null) {
+      setPersistedMetricError(null)
+    }
+    if (loadMoreError !== null) {
+      setLoadMoreError(null)
+    }
+  }
+
   const effectiveServerSummary = useMemo(
     () => serverSideSummary ?? metricsSummaryFromV2Insights(adsInsightsSummary),
     [adsInsightsSummary, serverSideSummary],
@@ -222,54 +265,6 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     return summary
   }, [effectiveServerSummary, metricsSource.length, processedMetrics])
 
-  const isConvexLoading =
-    !isPreviewMode && Boolean(workspaceId && canQueryConvex) && metricsRealtime === undefined
-
-  useEffect(() => {
-    const resetRequested = refreshTick > 0
-    setMetricsView((prev) => ({
-      ...prev,
-      visibleCount: METRICS_PAGE_SIZE,
-      ...(resetRequested ? { metricError: null, loadMoreError: null } : {}),
-    }))
-  }, [refreshTick])
-
-  // Load/refresh local paged list from Convex/preview.
-  // Important: avoid state updates during render.
-  useEffect(() => {
-    setMetricsView((prev) => {
-      if (!isPreviewMode && workspaceId && !canQueryConvex) {
-        return {
-          ...prev,
-          metricsLoading: false,
-          metricError: null,
-          loadMoreError: null,
-          metrics: [],
-          nextCursor: null,
-          serverSideSummary: null,
-          adsInsightsSummary: null,
-        }
-      }
-
-      if (isConvexLoading) {
-        return { ...prev, metricsLoading: true }
-      }
-
-      const summary = !isPreviewMode && metricsRealtime?.summary ? metricsRealtime.summary : null
-      const v2Summary = !isPreviewMode && metricsRealtimeV2?.summary ? metricsRealtimeV2.summary : null
-      const firstPage = metricsSource.slice(0, METRICS_PAGE_SIZE)
-
-      return {
-        ...prev,
-        metricsLoading: false,
-        serverSideSummary: summary,
-        adsInsightsSummary: v2Summary as AdsInsightsSummary | null,
-        metrics: firstPage,
-        nextCursor: metricsSource.length > prev.visibleCount ? 'more' : null,
-      }
-    })
-  }, [canQueryConvex, isConvexLoading, isPreviewMode, metricsRealtime, metricsRealtimeV2, metricsSource, workspaceId])
-
   // Handlers
   const handleManualRefresh = useCallback(() => {
     if (metricsLoading) return
@@ -280,25 +275,21 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     if (!nextCursor || loadingMore || metricsLoading) return
 
     setLoadingMore(true)
-    setMetricsView((prev) => ({ ...prev, loadMoreError: null }))
+    setLoadMoreError(null)
 
     try {
       const nextCount = visibleCount + METRICS_PAGE_SIZE
-      setMetricsView((prev) => ({
-        ...prev,
-        visibleCount: nextCount,
-        metrics: metricsSource.slice(0, nextCount),
-      }))
+      setVisibleCount(nextCount)
     } catch (error: unknown) {
       logError(error, 'useAdsMetrics:handleLoadMore')
       const message = isAuthError(error)
         ? ERROR_MESSAGES.SIGN_IN_REQUIRED
         : asErrorMessage(error)
-      setMetricsView((prev) => ({ ...prev, loadMoreError: message }))
+      setLoadMoreError(message)
     } finally {
       setLoadingMore(false)
     }
-  }, [loadingMore, metricsLoading, metricsSource, nextCursor, visibleCount])
+  }, [loadingMore, metricsLoading, nextCursor, visibleCount])
 
   const handleExport = useCallback(() => {
     exportMetricsToCsv(processedMetrics)

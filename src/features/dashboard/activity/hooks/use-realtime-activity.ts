@@ -1,7 +1,7 @@
 'use client'
 
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useEffect, useReducer } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -14,80 +14,14 @@ import { api, notificationsApi } from '@/lib/convex-api'
 import { getPreviewActivity } from '@/lib/preview-data'
 import type { Activity } from '@/types/activity'
 
-type RealtimeActivityState = {
-  activities: Activity[]
-  loading: boolean
-  error: string | null
-  hasMore: boolean
-  currentLimit: number
-}
-
-type RealtimeActivityAction =
-  | {
-      type: 'syncData'
-      activities: Activity[]
-      loading: boolean
-      error: string | null
-      hasMore: boolean
-    }
-  | {
-      type: 'setError'
-      error: string | null
-    }
-  | {
-      type: 'setCurrentLimit'
-      currentLimit: number
-    }
-
-function createInitialRealtimeActivityState(limitCount: number): RealtimeActivityState {
-  return {
-    activities: [],
-    loading: false,
-    error: null,
-    hasMore: false,
-    currentLimit: limitCount,
-  }
-}
-
-function realtimeActivityReducer(
-  state: RealtimeActivityState,
-  action: RealtimeActivityAction,
-): RealtimeActivityState {
-  switch (action.type) {
-    case 'syncData':
-      return {
-        ...state,
-        activities: action.activities,
-        loading: action.loading,
-        error: action.error,
-        hasMore: action.hasMore,
-      }
-    case 'setError':
-      return {
-        ...state,
-        error: action.error,
-      }
-    case 'setCurrentLimit':
-      return {
-        ...state,
-        currentLimit: action.currentLimit,
-      }
-    default:
-      return state
-  }
-}
-
 export function useRealtimeActivity(limitCount = 20, preferPreviewData = false) {
   const { user } = useAuth()
   const { selectedClient } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
-  const [{ activities, loading, error, hasMore, currentLimit }, dispatch] = useReducer(
-    realtimeActivityReducer,
-    limitCount,
-    createInitialRealtimeActivityState,
-  )
+  const [currentLimit, setCurrentLimit] = useState(limitCount)
+  const [error, setError] = useState<string | null>(null)
 
   const usePreviewData = isPreviewMode || preferPreviewData
   const convexEnabled =
@@ -106,54 +40,41 @@ export function useRealtimeActivity(limitCount = 20, preferPreviewData = false) 
 
   const ackMutation = useMutation(notificationsApi.ack)
 
-  const refresh = useCallback(async () => {
-    dispatch({ type: 'setError', error: null })
-  }, [])
-
-  // Handle preview mode
-  useEffect(() => {
-    if (!usePreviewData) return
-
-    const previewActivities = getPreviewActivity(selectedClient?.id ?? null)
-    dispatch({
-      type: 'syncData',
-      activities: previewActivities.slice(0, currentLimit),
-      loading: false,
-      error: null,
-      hasMore: previewActivities.length > currentLimit,
-    })
-  }, [usePreviewData, selectedClient?.id, currentLimit])
-
-  // Convex realtime path
-  useEffect(() => {
-    if (!convexEnabled) return
-
-    if (!convexActivities) {
-      dispatch({
-        type: 'syncData',
-        activities,
-        loading: true,
-        error: null,
-        hasMore,
-      })
-      return
+  const { activities, loading, hasMore } = useMemo(() => {
+    if (usePreviewData) {
+      const previewActivities = getPreviewActivity(selectedClient?.id ?? null)
+      return {
+        activities: previewActivities.slice(0, currentLimit),
+        loading: false,
+        hasMore: previewActivities.length > currentLimit,
+      }
     }
 
-    dispatch({
-      type: 'syncData',
+    if (!convexEnabled) {
+      return { activities: [] as Activity[], loading: false, hasMore: false }
+    }
+
+    if (!convexActivities) {
+      return { activities: [] as Activity[], loading: true, hasMore: false }
+    }
+
+    return {
       activities: convexActivities,
       loading: false,
-      error: null,
       hasMore: convexActivities.length === currentLimit,
-    })
-  }, [activities, convexActivities, convexEnabled, currentLimit, hasMore])
+    }
+  }, [convexActivities, convexEnabled, currentLimit, selectedClient?.id, usePreviewData])
+
+  const refresh = useCallback(async () => {
+    setError(null)
+  }, [])
 
   const loadMore = useCallback(() => {
-    dispatch({ type: 'setCurrentLimit', currentLimit: currentLimit + limitCount })
-  }, [currentLimit, limitCount])
+    setCurrentLimit((prev) => prev + limitCount)
+  }, [limitCount])
 
   const retry = useCallback(() => {
-    dispatch({ type: 'setCurrentLimit', currentLimit: limitCount })
+    setCurrentLimit(limitCount)
     void refresh()
   }, [refresh, limitCount])
 
@@ -169,10 +90,10 @@ export function useRealtimeActivity(limitCount = 20, preferPreviewData = false) 
             ? { clientId: String(selectedClient.id) }
             : {}),
         })
-        dispatch({ type: 'setError', error: null })
+        setError(null)
       } catch (error) {
         logError(error, 'useRealtimeActivity:markAsRead')
-        dispatch({ type: 'setError', error: 'Unable to update activity read status. Please try again.' })
+        setError('Unable to update activity read status. Please try again.')
         reportConvexFailure({
         error: error,
         context: 'use-realtime-activity.ts:catch',

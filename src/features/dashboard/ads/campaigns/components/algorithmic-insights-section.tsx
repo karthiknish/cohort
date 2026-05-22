@@ -49,7 +49,7 @@ export function AlgorithmicInsightsSection({
           <CardTitle className="text-lg font-semibold tracking-tight">Efficiency score</CardTitle>
           <CardDescription>Overall performance health rating</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center space-y-4 py-6">
+        <CardContent className="flex flex-col items-center justify-center gap-y-4 py-6">
           {loading ? (
             <Skeleton className="size-32 rounded-full" />
           ) : (
@@ -104,7 +104,7 @@ export function AlgorithmicInsightsSection({
 
       {/* 2. AI Algorithm Insights / Suggestions */}
       <MotionCard className={cn(ADS_PAGE_THEME.surfaceCard, 'lg:col-span-2')}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border/50 pb-4">
+        <CardHeader className="flex flex-row items-center justify-between gap-y-0 border-b border-border/50 pb-4">
           <div className="space-y-1">
             <p className={ADS_PAGE_THEME.sectionEyebrow}>Recommendations</p>
             <CardTitle className="text-lg font-semibold tracking-tight">Algorithm analysis</CardTitle>

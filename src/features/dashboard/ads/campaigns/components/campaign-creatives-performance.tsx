@@ -105,7 +105,7 @@ export function CampaignCreativesPerformanceStrip({
             </h3>
           </div>
           <p className="max-w-xl text-xs text-muted-foreground">
-            Spend and delivery metrics are attributed per ad (Meta ad id). Last {periodDays} days — compare
+            Spend and delivery metrics are attributed per ad (Meta ad id). Last {periodDays} days - compare
             creatives to spot budget drainers and winners.
           </p>
         </div>

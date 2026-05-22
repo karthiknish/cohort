@@ -148,7 +148,7 @@ export function InsightsChartsHeader({
           <p className={ADS_PAGE_THEME.sectionEyebrow}>Visual analysis</p>
           <CardTitle className="text-lg font-semibold tracking-tight">Performance insights</CardTitle>
           <CardDescription className="max-w-xl text-pretty leading-relaxed">
-            Charts across {providersCount} platform{providersCount !== 1 ? 's' : ''} — switch tabs for
+            Charts across {providersCount} platform{providersCount !== 1 ? 's' : ''} - switch tabs for
             comparison, efficiency, trends, funnel, and benchmarks.
           </CardDescription>
         </div>

@@ -91,7 +91,7 @@ async function fetchConvexTokenOnce(): Promise<string | null> {
 }
 
 async function fetchConvexTokenWithRetry(assertActive: () => void): Promise<string | null> {
-  let token = await fetchConvexTokenOnce()
+  const token = await fetchConvexTokenOnce()
   if (token) {
     return token
   }
@@ -213,11 +213,7 @@ export function useAuthSync() {
   const hasSession = Boolean(betterAuthSession?.user ?? sessionUser)
   const awaitingSession = sessionPending && !betterAuthSession?.user && !sessionUser
 
-  useEffect(() => {
-    if (!profileMissing) {
-      return
-    }
-
+  if (profileMissing && syncState === 'success') {
     setSessionSync((prev) => ({
       ...prev,
       syncState: 'failed',
@@ -225,37 +221,44 @@ export function useAuthSync() {
         'SESSION_SYNC_FAILED',
         'Workspace profile not found. Your sign-in succeeded but the profile could not be loaded.',
         undefined,
-        true
+        true,
       ),
     }))
-  }, [profileMissing])
+  }
 
-  useEffect(() => {
+  const mappedBetterAuthUser = useMemo(() => {
     const rawUser = betterAuthSession?.user
-    if (rawUser) {
+    if (!rawUser) return null
+    return authService.mapBetterAuthUser(rawUser as Record<string, unknown>)
+  }, [betterAuthSession?.user])
+
+  if (mappedBetterAuthUser) {
+    if (sessionUser?.id !== mappedBetterAuthUser.id) {
       setSessionSync((prev) => ({
         ...prev,
-        sessionUser: authService.mapBetterAuthUser(rawUser as Record<string, unknown>),
+        sessionUser: mappedBetterAuthUser,
       }))
-      return
     }
+  } else if (
+    !awaitingSession &&
+    (sessionUser !== null ||
+      syncState !== 'idle' ||
+      authError !== null ||
+      convexLegacyId !== null ||
+      bootstrapProfile !== null)
+  ) {
+    setSessionSync({
+      syncState: 'idle',
+      authError: null,
+      sessionUser: null,
+      convexLegacyId: null,
+      bootstrapProfile: null,
+    })
+  }
 
-    if (!awaitingSession) {
-      setSessionSync({
-        syncState: 'idle',
-        authError: null,
-        sessionUser: null,
-        convexLegacyId: null,
-        bootstrapProfile: null,
-      })
-    }
-  }, [awaitingSession, betterAuthSession])
-
-  useEffect(() => {
-    if (!hasSession) {
-      return
-    }
-
+  const initialAuthHydratedRef = useRef(false)
+  if (hasSession && !initialAuthHydratedRef.current) {
+    initialAuthHydratedRef.current = true
     void authService.waitForInitialAuth().then(() => {
       const cachedUser = authService.getCurrentUser()
       if (cachedUser) {
@@ -265,7 +268,7 @@ export function useAuthSync() {
         }))
       }
     })
-  }, [hasSession])
+  }
 
   const runSessionSync = useCallback(async (runId: number) => {
     setSessionSync((prev) => ({ ...prev, syncState: 'running', authError: null }))
@@ -277,6 +280,10 @@ export function useAuthSync() {
     }
 
     try {
+      if (syncGenerationRef.current !== runId) {
+        return
+      }
+
       const result = await runAuthSyncPipeline(assertActive)
 
       if (syncGenerationRef.current !== runId) {

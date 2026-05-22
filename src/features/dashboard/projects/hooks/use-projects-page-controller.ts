@@ -4,7 +4,7 @@ import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useMutation as useTanstackMutation } from '@tanstack/react-query'
 import { useMutation, useQuery } from 'convex/react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useToast } from '@/shared/ui/use-toast'
@@ -12,6 +12,7 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 import { projectMilestonesApi, projectsApi, tasksApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
@@ -21,11 +22,8 @@ import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { type MilestoneRecord, MILESTONE_STATUSES } from '@/types/milestones'
 import { type ProjectRecord, type ProjectStatus, PROJECT_STATUSES } from '@/types/projects'
 
+import { useDebouncedValue } from '@/shared/hooks/use-debounce'
 import {
-  type SortDirection,
-  type SortField,
-  type StatusFilter,
-  type ViewMode,
   buildTaskCountsByProject,
   extractPaginatedItems,
   filterProjectsByQuery,
@@ -35,8 +33,11 @@ import {
   projectMatchesContext,
   PROJECTS_VIEW_MODE_STORAGE_KEY,
   SORT_OPTIONS,
-  useDebouncedValue,
-} from '../components'
+  type SortDirection,
+  type SortField,
+  type StatusFilter,
+  type ViewMode,
+} from '../components/utils'
 
 function isProjectStatus(value: unknown): value is ProjectStatus {
   return typeof value === 'string' && PROJECT_STATUSES.includes(value as ProjectStatus)
@@ -91,9 +92,8 @@ function mapMilestoneRecord(row: unknown): MilestoneRecord {
   }
 }
 
-/** @deprecated Consumers of this hook must be wrapped in <Suspense> */
 export function useProjectsPageController() {
-  const searchParams = useSearchParams()
+  const searchParams = useUrlSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const { user } = useAuth()
@@ -181,11 +181,85 @@ export function useProjectsPageController() {
   })
   const convexProjectsListError = mergeQueryErrors(projectsQueryError, tasksQueryError, milestonesQueryError)
 
-  useEffect(() => {
-    if (convexProjectsListError && !isPreviewMode && workspaceId && user?.id) {
-      setError(convexProjectsListError)
+  const syncedProjectsFromQuery = useMemo(() => {
+    if (isPreviewMode) {
+      let previewProjects = getPreviewProjects(selectedClientId)
+      if (statusFilter !== 'all') {
+        previewProjects = previewProjects.filter((project) => project.status === statusFilter)
+      }
+      return previewProjects
     }
-  }, [convexProjectsListError, isPreviewMode, user?.id, workspaceId])
+
+    if (!user?.id || !workspaceId || !projectsRealtime) {
+      return [] as ProjectRecord[]
+    }
+
+    const rows = extractPaginatedItems<unknown>(projectsRealtime)
+    const taskRows = extractPaginatedItems<{ projectId?: string | null; status?: unknown }>(tasksRealtime)
+    const taskCounts = buildTaskCountsByProject(taskRows)
+    return rows.map((row) => mergeProjectTaskCounts(mapProjectRecord(row), taskCounts))
+  }, [isPreviewMode, projectsRealtime, selectedClientId, statusFilter, tasksRealtime, user?.id, workspaceId])
+
+  const projectsSyncKey = useMemo(
+    () =>
+      `${isPreviewMode}|${selectedClientId ?? ''}|${statusFilter}|${user?.id ?? ''}|${workspaceId ?? ''}|${syncedProjectsFromQuery.length}|${syncedProjectsFromQuery[0]?.id ?? ''}|${syncedProjectsFromQuery.at(-1)?.updatedAt ?? ''}`,
+    [isPreviewMode, selectedClientId, statusFilter, syncedProjectsFromQuery, user?.id, workspaceId],
+  )
+  const projectsSyncKeyRef = useRef<string | null>(null)
+  if (projectsSyncKeyRef.current !== projectsSyncKey) {
+    projectsSyncKeyRef.current = projectsSyncKey
+    setProjects(syncedProjectsFromQuery)
+    setLoading(!isPreviewMode && Boolean(user?.id && workspaceId) && projectsRealtime === undefined)
+    setError(
+      convexProjectsListError && !isPreviewMode && workspaceId && user?.id
+        ? convexProjectsListError
+        : null,
+    )
+    setRetryCount(0)
+  }
+
+  const syncedMilestonesFromQuery = useMemo(() => {
+    if (viewMode !== 'gantt') {
+      return {} as Record<string, MilestoneRecord[]>
+    }
+
+    if (isPreviewMode) {
+      return getPreviewProjectMilestones(
+        selectedClientId,
+        projects.map((project) => project.id),
+      )
+    }
+
+    if (!milestonesRealtime) {
+      return {} as Record<string, MilestoneRecord[]>
+    }
+
+    const mapped: Record<string, MilestoneRecord[]> = {}
+    const projectIdSet = new Set(projects.map((project) => project.id))
+
+    for (const [projectId, rows] of Object.entries(milestonesRealtime)) {
+      if (projectIdSet.size > 0 && !projectIdSet.has(projectId)) {
+        continue
+      }
+
+      mapped[projectId] = (Array.isArray(rows) ? rows : []).map(mapMilestoneRecord)
+    }
+
+    return mapped
+  }, [isPreviewMode, milestonesRealtime, projects, selectedClientId, viewMode])
+
+  const milestonesSyncKey = useMemo(
+    () =>
+      `${viewMode}|${isPreviewMode}|${selectedClientId ?? ''}|${projects.map((project) => project.id).join(',')}|${Object.keys(syncedMilestonesFromQuery).length}`,
+    [isPreviewMode, projects, selectedClientId, syncedMilestonesFromQuery, viewMode],
+  )
+  const milestonesSyncKeyRef = useRef<string | null>(null)
+  if (milestonesSyncKeyRef.current !== milestonesSyncKey) {
+    milestonesSyncKeyRef.current = milestonesSyncKey
+    setMilestonesByProject(syncedMilestonesFromQuery)
+    setMilestonesLoading(viewMode === 'gantt' && !isPreviewMode && Boolean(workspaceId && user?.id) && milestonesRealtime === undefined)
+    setMilestonesError(null)
+  }
 
   const loadProjects = useCallback(async (): Promise<number> => {
     if (isPreviewMode) {
@@ -281,34 +355,13 @@ export function useProjectsPageController() {
   }, [isPreviewMode, milestonesRealtime, selectedClientId, viewMode])
 
   useEffect(() => {
+    const controllerRef = abortControllerRef
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
+      if (controllerRef.current) {
+        controllerRef.current.abort()
       }
     }
   }, [])
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      void loadProjects()
-    })
-
-    return () => {
-      cancelAnimationFrame(frame)
-    }
-  }, [loadProjects])
-
-  useEffect(() => {
-    if (viewMode !== 'gantt') return
-
-    const frame = requestAnimationFrame(() => {
-      void loadMilestones(projects.map((project) => project.id))
-    })
-
-    return () => {
-      cancelAnimationFrame(frame)
-    }
-  }, [loadMilestones, projects, viewMode])
 
   useKeyboardShortcut({
     combo: 'mod+k',

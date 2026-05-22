@@ -131,7 +131,13 @@ export function MetricCardsSection({
   efficiencyScore,
   defaultMoreMetricsOpen = false,
 }: MetricCardsSectionProps) {
-  const [moreOpen, setMoreOpen] = useState(defaultMoreMetricsOpen)
+  const [hasUserToggled, setHasUserToggled] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const effectiveMoreOpen = hasUserToggled ? moreOpen : defaultMoreMetricsOpen
+  const handleMoreOpenChange = (next: boolean) => {
+    setHasUserToggled(true)
+    setMoreOpen(next)
+  }
   const displayCurrency = normalizeCurrencyCode(currency)
   const displayEfficiencyScore =
     typeof efficiencyScore === 'number' && Number.isFinite(efficiencyScore)
@@ -226,7 +232,7 @@ export function MetricCardsSection({
         />
       </div>
 
-      <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
+      <Collapsible open={effectiveMoreOpen} onOpenChange={handleMoreOpenChange}>
         <CollapsibleTrigger asChild>
           <Button
             type="button"
@@ -235,10 +241,10 @@ export function MetricCardsSection({
             className="w-full gap-1.5 rounded-xl text-muted-foreground hover:text-foreground"
           >
             <ChevronDown
-              className={cn('size-4 transition-transform', moreOpen && 'rotate-180')}
+              className={cn('size-4 transition-transform', effectiveMoreOpen && 'rotate-180')}
               aria-hidden
             />
-            {moreOpen ? 'Hide additional metrics' : 'Show additional metrics'}
+            {effectiveMoreOpen ? 'Hide additional metrics' : 'Show additional metrics'}
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-4">

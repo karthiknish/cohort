@@ -237,6 +237,7 @@ export function MessageComposer({
           ref={fileInputRef}
           type="file"
           multiple
+          aria-label="Attach files to message"
           className="hidden"
           onChange={onAttachmentInputChange}
         />

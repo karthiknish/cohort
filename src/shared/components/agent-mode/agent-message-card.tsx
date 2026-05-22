@@ -509,8 +509,7 @@ export function AgentMessageCard({
           className="flex items-start gap-3"
         >
           <AgentAvatar />
-          <div
-            role="status"
+          <output
             aria-live={liveRegion}
             className={cn('min-w-0 max-w-[min(90%,32rem)] flex-1 overflow-hidden rounded-2xl rounded-tl-md border shadow-sm', surfaces.shell)}
           >
@@ -620,7 +619,7 @@ export function AgentMessageCard({
                 </div>
               ) : null}
             </div>
-          </div>
+          </output>
         </m.div>
       </LazyMotion>
     )

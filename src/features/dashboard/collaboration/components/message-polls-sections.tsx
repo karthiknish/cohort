@@ -11,6 +11,7 @@ import { DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigg
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Progress } from '@/shared/ui/progress'
+import { ClientFormattedDate } from '@/shared/components/client-formatted-date'
 import { cn } from '@/lib/utils'
 import type { MessagePoll, PollOption } from './message-polls'
 
@@ -34,8 +35,15 @@ export function PollCardHeader({
             {poll.endTime ? (
               <>
                 <span>•</span>
-                <span className={cn(isExpired && 'text-destructive')} suppressHydrationWarning>
-                  {isExpired ? 'Ended' : `Ends ${new Date(poll.endTime).toLocaleString()}`}
+                <span className={cn(isExpired && 'text-destructive')}>
+                  {isExpired ? (
+                    'Ended'
+                  ) : (
+                    <>
+                      Ends{' '}
+                      <ClientFormattedDate value={poll.endTime} formatStr="PPp" />
+                    </>
+                  )}
                 </span>
               </>
             ) : null}
@@ -58,27 +66,29 @@ export function PollCardHeader({
   )
 }
 
+export type PollOptionUiState = {
+  canVote: boolean
+  selected: boolean
+  showResults: boolean
+  hasLeadingWinner: boolean
+}
+
 export function PollOptionRow({
-  canVote,
+  ui,
   handleToggleOption,
-  hasLeadingWinner,
-  isSelected,
   option,
   percentage,
-  showOptionResults,
   sortedOptions,
   voteCount,
 }: {
-  canVote: boolean
+  ui: PollOptionUiState
   handleToggleOption: (optionId: string) => void
-  hasLeadingWinner: boolean
-  isSelected: boolean
   option: PollOption
   percentage: number
-  showOptionResults: boolean
   sortedOptions: PollOption[]
   voteCount: number
 }) {
+  const { canVote, selected: isSelected, showResults: showOptionResults, hasLeadingWinner } = ui
   const interactive = !showOptionResults && canVote
   const barStyle = useMemo(() => ({ width: `${percentage}%` }), [percentage])
 
@@ -137,29 +147,29 @@ export function PollOptionRow({
   )
 }
 
-export function PollCardFooterActions({
-  canEnd,
-  canVote,
-  hasVoted,
-  isExpired,
-  isVoting,
-  onEndPoll,
-  onShowResults,
-  onVote,
-  selectedOptionsCount,
-  showResults,
-}: {
+export type PollFooterUiState = {
   canEnd: boolean
   canVote: boolean
   hasVoted: boolean
   isExpired: boolean | null
   isVoting: boolean
+  showResults: boolean
+}
+
+export function PollCardFooterActions({
+  ui,
+  onEndPoll,
+  onShowResults,
+  onVote,
+  selectedOptionsCount,
+}: {
+  ui: PollFooterUiState
   onEndPoll: () => void
   onShowResults: () => void
   onVote: () => void
   selectedOptionsCount: number
-  showResults: boolean
 }) {
+  const { canEnd, canVote, hasVoted, isExpired, isVoting, showResults } = ui
   if (!((canVote && !hasVoted && !isExpired) || canEnd)) {
     return null
   }

@@ -84,6 +84,8 @@ export function useChannelMessageSearch({
 
       setSearch((prev) => ({ ...prev, searching: true, error: null }))
 
+      if (isCancelled()) return
+
       try {
         const payload = await convex.query(collaborationApi.searchChannel, {
           workspaceId: String(workspaceId),

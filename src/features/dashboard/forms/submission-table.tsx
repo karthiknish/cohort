@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef } from 'react'
 
 import type { ChecklistSubmission } from '@/types/workforce'
 import { Button } from '@/shared/ui/button'
@@ -24,7 +24,6 @@ export function SubmissionTable({
   pendingId = null,
 }: SubmissionTableProps) {
   const colSpan = canReview ? 5 : 4
-  const [announcement, setAnnouncement] = useState('')
   const previousPendingIdRef = useRef<string | null>(pendingId)
   const pendingActionRef = useRef<{
     id: string
@@ -32,21 +31,22 @@ export function SubmissionTable({
     title: string
   } | null>(null)
 
-  useEffect(() => {
+  const announcement = (() => {
     const previousPendingId = previousPendingIdRef.current
     const pendingAction = pendingActionRef.current
+    let message = ''
 
     if (pendingAction && previousPendingId === pendingAction.id && pendingId === null) {
-      setAnnouncement(
+      message =
         pendingAction.action === 'ready'
           ? `${pendingAction.title} marked ready.`
           : `${pendingAction.title} moved to follow up.`
-      )
       pendingActionRef.current = null
     }
 
     previousPendingIdRef.current = pendingId
-  }, [pendingId])
+    return message
+  })()
 
   const handleNeedsFollowUp = useCallback(
     (submission: ChecklistSubmission) => {
@@ -55,7 +55,6 @@ export function SubmissionTable({
         action: 'follow-up',
         title: submission.templateTitle,
       }
-      setAnnouncement(`Moving ${submission.templateTitle} to follow up.`)
       onNeedsFollowUp?.(submission.id)
     },
     [onNeedsFollowUp]
@@ -68,7 +67,6 @@ export function SubmissionTable({
         action: 'ready',
         title: submission.templateTitle,
       }
-      setAnnouncement(`Marking ${submission.templateTitle} ready.`)
       onMarkReady?.(submission.id)
     },
     [onMarkReady]

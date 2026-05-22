@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
-import { toast } from '@/shared/ui/sonner'
+import { toast } from '@/shared/ui/sonner-toast'
 import type { Activity } from '@/types/activity'
 
 interface NotificationConfig {

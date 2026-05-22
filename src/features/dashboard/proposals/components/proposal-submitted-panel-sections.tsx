@@ -85,7 +85,7 @@ export function ProposalSubmittedHero({
 
         <div className="flex-1 space-y-4 text-center md:text-left">
           <div className="space-y-1">
-            <h2 className="text-4xl font-extrabold tracking-tight text-foreground lg:text-5xl">Your Proposal is Ready!</h2>
+            <h2 className="text-4xl tracking-tight text-foreground lg:text-5xl">Your Proposal is Ready!</h2>
           </div>
           <p className="max-w-xl break-words text-lg font-medium leading-relaxed text-muted-foreground">
             Success! We&apos;ve synthesized your inputs into a strategic brief and an AI-powered presentation deck, ready for your next big pitch.
@@ -288,7 +288,7 @@ function ProposalDeckGeneratingState() {
           <LoaderCircle className="size-12 animate-spin text-primary/40" />
         </div>
       </div>
-      <h4 className="mb-2 text-xl font-extrabold tracking-tight">Architecting Your Deck</h4>
+      <h4 className="mb-2 text-xl tracking-tight">Architecting Your Deck</h4>
       <p className="max-w-[280px] text-sm leading-relaxed text-muted-foreground">
         Our AI engine is currently structuring your presentation slides. It usually takes less than 60 seconds.
       </p>

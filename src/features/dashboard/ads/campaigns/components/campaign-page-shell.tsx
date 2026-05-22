@@ -14,10 +14,10 @@ import {
 import { Button } from '@/shared/ui/button'
 
 type CampaignPageLayoutProps = {
-  renderPerformance: () => ReactNode
-  renderControls: () => ReactNode
-  renderCreatives: () => ReactNode
-  renderAdvanced?: () => ReactNode
+  performance: ReactNode
+  controls: ReactNode
+  creatives: ReactNode
+  advanced?: ReactNode
   creativesCount?: number
 }
 
@@ -75,25 +75,23 @@ function CampaignAdvancedCollapsible({ children }: { children: ReactNode }) {
 }
 
 export function CampaignPageLayout({
-  renderPerformance,
-  renderControls,
-  renderCreatives,
-  renderAdvanced,
+  performance,
+  controls,
+  creatives,
+  advanced,
   creativesCount,
 }: CampaignPageLayoutProps) {
   const [tab, setTab] = useState('performance')
 
   const performanceBlock = (
     <div className="space-y-8">
-      {renderPerformance()}
-      {renderAdvanced ? (
-        <CampaignAdvancedCollapsible>{renderAdvanced()}</CampaignAdvancedCollapsible>
-      ) : null}
+      {performance}
+      {advanced ? <CampaignAdvancedCollapsible>{advanced}</CampaignAdvancedCollapsible> : null}
     </div>
   )
 
-  const controlsBlock = <div className="space-y-6">{renderControls()}</div>
-  const creativesBlock = renderCreatives()
+  const controlsBlock = <div className="space-y-6">{controls}</div>
+  const creativesBlock = creatives
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="w-full">

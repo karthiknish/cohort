@@ -1,6 +1,5 @@
 'use client'
 
-import { useMemo } from 'react'
 
 import { cn } from '@/lib/utils'
 import { Label } from '@/shared/ui/label'
@@ -41,12 +40,12 @@ function Field({
   className,
   orientation = 'vertical',
   ...props
-}: React.ComponentProps<'div'> & { orientation?: 'vertical' | 'horizontal' | 'responsive' }) {
+}: React.ComponentProps<'fieldset'> & { orientation?: 'vertical' | 'horizontal' | 'responsive' }) {
   return (
-    <div
-      role="group"
+    <fieldset
       data-slot="field"
       className={cn(
+        'm-0 min-w-0 border-0 p-0',
         'flex gap-3',
         orientation === 'horizontal' && 'flex-row items-center',
         orientation === 'vertical' && 'flex-col',
@@ -93,25 +92,36 @@ function FieldError({
   errors,
   ...props
 }: React.ComponentProps<'div'> & { errors?: Array<{ message?: string } | undefined> }) {
-  const content = useMemo(() => {
-    if (children) return children
-    if (!errors?.length) return null
-    const messages = errors.flatMap((error) => {
-      const message = error?.message
-      return message ? [message] : []
-    })
-    if (messages.length === 0) return null
-    if (messages.length === 1) return messages[0]
+  if (children) {
     return (
+      <div
+        role="alert"
+        data-slot="field-error"
+        className={cn('text-sm font-medium text-destructive', className)}
+        {...props}
+      >
+        {children}
+      </div>
+    )
+  }
+
+  const messages = errors?.flatMap((error) => {
+    const message = error?.message
+    return message ? [message] : []
+  }) ?? []
+
+  if (messages.length === 0) return null
+
+  const content =
+    messages.length === 1 ? (
+      messages[0]
+    ) : (
       <ul className="ml-4 list-disc space-y-1">
         {messages.map((message) => (
           <li key={message}>{message}</li>
         ))}
       </ul>
     )
-  }, [children, errors])
-
-  if (!content) return null
 
   return (
     <div

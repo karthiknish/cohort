@@ -236,7 +236,14 @@ export function TaskCreationModalFormFields({
             Attach
           </Button>
         </div>
-        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFilesChange} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          aria-label="Attach files to task"
+          className="hidden"
+          onChange={handleFilesChange}
+        />
         {pendingAttachments.length > 0 ? (
           <PendingAttachmentsList
             attachments={pendingAttachments}

@@ -21,9 +21,13 @@ describe('workforce-routes', () => {
   })
 
   it('includes Workspace core links for all roles', () => {
-    for (const role of ['admin', 'team', 'client'] as const) {
-      const nav = navItemsForRole(role)
-      const core = nav.find((g) => g.id === 'core')
+    const navByRole = new Map(
+      (['admin', 'team', 'client'] as const).map((role) => [role, navItemsForRole(role)]),
+    )
+
+    for (const [, nav] of navByRole) {
+      const coreById = new Map(nav.map((group) => [group.id, group]))
+      const core = coreById.get('core')
       expect(core?.items.some((i) => i.href === '/dashboard/projects')).toBe(true)
       expect(core?.items.some((i) => i.href === '/dashboard/tasks')).toBe(true)
     }

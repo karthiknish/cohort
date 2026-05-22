@@ -87,7 +87,7 @@ function BudgetModeOption({
   disabled: boolean
   onSelect: (value: BudgetUiMode) => void
 }) {
-  const handleClick = useCallback(() => {
+  const selectBudgetModeValue = useCallback(() => {
     onSelect(opt.value)
   }, [onSelect, opt.value])
 
@@ -97,7 +97,7 @@ function BudgetModeOption({
       role="radio"
       aria-checked={selected}
       disabled={disabled}
-      onClick={handleClick}
+      onClick={selectBudgetModeValue}
       className={cn(
         'flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left transition-[border-color,box-shadow,background-color]',
         selected
@@ -284,13 +284,13 @@ export function BudgetControlSection({
 
       <CardContent className="space-y-5 pt-6">
         {!canEdit ? (
-          <div className={ADS_PAGE_THEME.controlPreviewBanner} role="status">
+          <output className={cn(ADS_PAGE_THEME.controlPreviewBanner, 'block')}>
             <Sparkles className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
             <p>
-              <span className="font-medium text-foreground">Preview mode</span> — switch to live mode to
+              <span className="font-medium text-foreground">Preview mode</span> - switch to live mode to
               edit budgets on the ad platform.
             </p>
-          </div>
+          </output>
         ) : null}
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">

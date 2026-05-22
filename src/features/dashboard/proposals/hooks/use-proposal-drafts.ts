@@ -288,7 +288,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         } finally {
             setIsCreatingDraft(false)
         }
-    }, [convexCreateProposal, currentSnapshotKey, currentStep, draftId, formState, hasPersistableData, isCreatingDraft, selectedClient, selectedClientId, toast, user?.id, workspaceId])
+    }, [convexCreateProposal, currentSnapshotKey, currentStep, draftId, formState, hasPersistableData, isCreatingDraft, selectedClient, selectedClientId, setDraftId, toast, user?.id, workspaceId])
 
     const saveDraftNow = useCallback(async (saveOptions?: { showToast?: boolean }) => {
         if (isPreviewMode || !hasPersistableData || !selectedClientId) {
@@ -420,7 +420,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         } finally {
             setIsCreatingDraft(false)
         }
-    }, [buildSnapshotKey, convexCreateProposal, isCreatingDraft, onAiSuggestionsChange, onFormStateChange, onLastSubmissionSnapshotChange, onPresentationDeckChange, onStepChange, onSubmittedChange, selectedClient, selectedClientId, toast, user?.id, workspaceId])
+    }, [buildSnapshotKey, convexCreateProposal, isCreatingDraft, onAiSuggestionsChange, onFormStateChange, onLastSubmissionSnapshotChange, onPresentationDeckChange, onStepChange, onSubmittedChange, selectedClient, selectedClientId, setDraftId, toast, user?.id, workspaceId])
 
     const handleResumeProposal = useCallback((proposal: ProposalDraft, forceEdit?: boolean) => {
         const mergedForm = mergeProposalForm(proposal.formData as Partial<ProposalFormData>)
@@ -452,7 +452,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         })
 
         wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, [buildSnapshotKey, onAiSuggestionsChange, onFormStateChange, onLastSubmissionSnapshotChange, onPresentationDeckChange, onStepChange, onSubmittedChange, selectedClientId, steps])
+    }, [buildSnapshotKey, onAiSuggestionsChange, onFormStateChange, onLastSubmissionSnapshotChange, onPresentationDeckChange, onStepChange, onSubmittedChange, selectedClientId, setDraftId, steps])
 
     const handleDeleteProposal = useCallback(async (proposal: ProposalDraft) => {
         if (deletingProposalId && deletingProposalId !== proposal.id) {
@@ -495,7 +495,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             setProposalPendingDelete(null)
             setIsDeleteDialogOpen(false)
         }
-    }, [buildSnapshotKey, convexRemoveProposal, deletingProposalId, draftId, onAiSuggestionsChange, onFormStateChange, onLastSubmissionSnapshotChange, onPresentationDeckChange, onStepChange, onSubmittedChange, selectedClientId, toast, workspaceId])
+    }, [buildSnapshotKey, convexRemoveProposal, deletingProposalId, draftId, onAiSuggestionsChange, onFormStateChange, onLastSubmissionSnapshotChange, onPresentationDeckChange, onStepChange, onSubmittedChange, selectedClientId, setDraftId, toast, workspaceId])
 
     const requestDeleteProposal = useCallback((proposal: ProposalDraft) => {
         setProposalPendingDelete(proposal)

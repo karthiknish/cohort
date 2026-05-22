@@ -60,6 +60,7 @@ export function usePresentationThemes() {
     let cancelled = false
 
     const load = async () => {
+      if (cancelled) return
       dispatch({ type: 'beginLoad' })
       try {
         const result = await listThemes({ limit: 50 })

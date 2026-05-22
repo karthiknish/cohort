@@ -1,5 +1,6 @@
 'use client'
 
+import { ClientFormattedDate } from '@/shared/components/client-formatted-date'
 import { notifyFailure } from '@/lib/notifications'
 import type { ChangeEvent, ClipboardEvent, DragEvent, ReactNode, RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -55,7 +56,9 @@ import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
 import { PendingAttachmentsList } from './message-composer'
 import { MessageContent } from './message-content'
 import { DeletedMessageInfo, DeletingOverlay, MessageEditForm } from './message-item-parts'
-import { collaborationToUnifiedMessage, type UnifiedMessage } from './message-list'
+import { collaborationToUnifiedMessage } from './message-list-utils'
+import { getSharePlatformLabel } from './unified-message-pane-render-utils'
+import type { UnifiedMessage } from './message-list-types'
 import { useMessageListRenderContext } from './message-list-render-context'
 import { MessageReactions } from './message-reactions'
 import { RichComposer } from './rich-composer'
@@ -70,11 +73,6 @@ function getInitials(name: string): string {
     .join('')
     .toUpperCase()
     .slice(0, 2)
-}
-
-export function getSharePlatformLabel(platform: 'email'): string {
-  if (platform === 'email') return 'Email'
-  return platform
 }
 
 export function SharedPlatformBadges({ platforms }: { platforms?: Array<'email'> }) {
@@ -300,12 +298,7 @@ export function UnifiedThreadReplyCard({
           <span className="font-medium text-foreground">{reply.senderName}</span>
           {reply.senderRole ? <span>{reply.senderRole}</span> : null}
           {reply.createdAt ? (
-            <span suppressHydrationWarning>
-              {new Date(reply.createdAt).toLocaleTimeString(undefined, {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </span>
+            <ClientFormattedDate value={reply.createdAt} formatStr="h:mm a" />
           ) : null}
           {message.edited && !message.deleted ? <span>edited</span> : null}
         </div>
@@ -453,9 +446,10 @@ export function UnifiedConversationHeader({
   }, [header])
 
   useEffect(() => {
+    const resetTimerRef = copyResetTimerRef
     return () => {
-      if (copyResetTimerRef.current) {
-        clearTimeout(copyResetTimerRef.current)
+      if (resetTimerRef.current) {
+        clearTimeout(resetTimerRef.current)
       }
     }
   }, [])
@@ -777,6 +771,7 @@ export function UnifiedComposerSection({
         ref={fileInputRef}
         type="file"
         multiple
+        aria-label="Attach files to message"
         className="hidden"
         onChange={onAttachmentInputChange}
       />
@@ -807,71 +802,3 @@ export function UnifiedComposerSection({
   )
 }
 
-export function renderMessageAttachmentsContent(message: UnifiedMessage) {
-  if (!message.attachments || message.attachments.length === 0) return null
-
-  const attachments: CollaborationAttachment[] = message.attachments.map((attachment) => ({
-    name: attachment.name ?? 'File',
-    url: attachment.url,
-    type: attachment.mimeType ?? null,
-    size: attachment.size ? String(attachment.size) : null,
-  }))
-
-  return <MessageAttachments attachments={attachments} />
-}
-
-export function renderMessageContentBlock(
-  message: UnifiedMessage,
-  originalMessage: CollaborationMessage | undefined,
-  highlightTerms?: string[],
-) {
-  return (
-    <MessageContent
-      content={originalMessage?.content ?? message.content ?? ''}
-      mentions={originalMessage?.mentions ?? message.mentions}
-      highlightTerms={highlightTerms}
-    />
-  )
-}
-
-export function renderDeletedMessageInfo(
-  message: UnifiedMessage,
-  deletedInfoByMessage?: Record<string, { deletedBy: string | null; deletedAt: string | null }>,
-) {
-  const info = deletedInfoByMessage?.[message.id] ?? {
-    deletedBy: message.deletedBy ?? null,
-    deletedAt: message.deletedAt ?? null,
-  }
-
-  if (!info.deletedBy && !info.deletedAt) {
-    return <p className="text-sm italic text-muted-foreground">Message removed</p>
-  }
-
-  return <DeletedMessageInfo deletedBy={info.deletedBy} deletedAt={info.deletedAt} />
-}
-
-export function renderMessageEditForm(
-  message: UnifiedMessage,
-  editingMessageId: string | null,
-  editingValue: string,
-  onChange: (value: string) => void,
-  onConfirm: () => void,
-  onCancel: () => void,
-  isUpdating: boolean,
-  editingPreview: string,
-) {
-  if (editingMessageId !== message.id) {
-    return null
-  }
-
-  return (
-    <MessageEditForm
-      value={editingValue}
-      onChange={onChange}
-      onConfirm={onConfirm}
-      onCancel={onCancel}
-      isUpdating={isUpdating}
-      editingPreview={editingPreview}
-    />
-  )
-}

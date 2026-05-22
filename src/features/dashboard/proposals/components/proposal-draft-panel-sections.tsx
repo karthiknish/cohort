@@ -1,7 +1,7 @@
 'use client'
 
 import { ChevronLeft, ChevronRight, FileText } from 'lucide-react'
-import { useMemo, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
@@ -77,16 +77,15 @@ export function ProposalDraftFooter({
   totalSteps: number
 }) {
   const progressPercent = Math.round(((currentStep + 1) / totalSteps) * 100)
-  const progressStyle = useMemo(() => ({ width: `${progressPercent}%` }), [progressPercent])
 
   return (
     <div className="mt-auto shrink-0 space-y-3 border-t border-border/50 pt-4">
-      <div className="h-1 overflow-hidden rounded-full bg-muted/60" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
-        <div
-          className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
-          style={progressStyle}
-        />
-      </div>
+      <progress
+        className="h-1 w-full overflow-hidden rounded-full bg-muted/60 [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-muted/60 [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-primary [&::-webkit-progress-value]:transition-[width] duration-300 ease-out"
+        value={progressPercent}
+        max={100}
+        aria-label={`Step ${currentStep + 1} of ${totalSteps}`}
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button
           variant="outline"

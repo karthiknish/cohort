@@ -11,7 +11,8 @@ import {
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
-import { cn, formatRelativeTime } from '@/lib/utils'
+import { ClientRelativeTime } from '@/shared/components/client-relative-time'
+import { cn } from '@/lib/utils'
 import type { CollaborationMessage } from '@/types/collaboration'
 
 interface Thread {
@@ -171,12 +172,19 @@ function ThreadCard({
                   {participants.length} {participants.length === 1 ? 'person' : 'people'}
                 </span>
 
-                {lastReplyAt && (
-                  <span className="flex items-center gap-1" suppressHydrationWarning>
-                    <Clock className="size-3" />
-                    {formatRelativeTime(new Date(lastReplyAt))}
-                  </span>
-                )}
+                {lastReplyAt ? (
+                  <ClientRelativeTime
+                    value={lastReplyAt}
+                    className="flex items-center gap-1"
+                  >
+                    {(label) => (
+                      <>
+                        <Clock className="size-3" />
+                        {label}
+                      </>
+                    )}
+                  </ClientRelativeTime>
+                ) : null}
 
                 {unreadCount > 0 && (
                   <Badge variant="default" className="text-xs">
@@ -185,11 +193,11 @@ function ThreadCard({
                 )}
               </div>
 
-              <div className="flex -space-x-1 mt-2">
-                {participants.slice(0, 4).map((name, i) => (
+              <div className="mt-2 flex">
+                {participants.slice(0, 4).map((name, participantIndex) => (
                   <Avatar
                     key={name}
-                    className="size-6 border-2 border-background"
+                    className={cn('size-6 border-2 border-background', participantIndex > 0 && '-ml-1')}
                   >
                     <AvatarFallback className="text-[10px]">
                       {name.charAt(0).toUpperCase()}
@@ -197,7 +205,7 @@ function ThreadCard({
                   </Avatar>
                 ))}
                 {participants.length > 4 && (
-                  <div className="size-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] text-muted-foreground">
+                  <div className="-ml-1 flex size-6 items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] text-muted-foreground">
                     +{participants.length - 4}
                   </div>
                 )}
@@ -249,11 +257,9 @@ export function ThreadBadge({
       {unreadCount && unreadCount > 0 && (
         <span className="font-medium">({unreadCount} new)</span>
       )}
-      {lastReplyAt && (
-        <span className="text-muted-foreground" suppressHydrationWarning>
-          {formatRelativeTime(new Date(lastReplyAt))}
-        </span>
-      )}
+      {lastReplyAt ? (
+        <ClientRelativeTime value={lastReplyAt} className="text-muted-foreground" />
+      ) : null}
     </button>
   )
 }

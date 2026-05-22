@@ -197,32 +197,26 @@ export function ThreadRetryButton({ isLoading, onRetry }: ThreadRetryButtonProps
   )
 }
 
+export type ThreadPanelState = {
+  isOpen: boolean
+  isLoading: boolean
+  hasNextCursor: boolean
+}
+
 export interface ThreadSectionProps {
   threadRootId: string
   replyCount: number
   unreadCount?: number
   lastReplyIso: string | null
-  isOpen: boolean
-  isLoading: boolean
+  panel: ThreadPanelState
   error: string | null
-  hasNextCursor: boolean
   replies: CollaborationMessage[]
   onToggle: () => void
   onRetry: () => void
   onLoadMore: () => void
   onReply: () => void
   canReply?: boolean
-  renderReply: (reply: CollaborationMessage) => React.ReactNode
-}
-
-function ThreadReplyContent({
-  renderReply,
-  reply,
-}: {
-  renderReply: (reply: CollaborationMessage) => React.ReactNode
-  reply: CollaborationMessage
-}) {
-  return <>{renderReply(reply)}</>
+  ReplyRenderer: React.ComponentType<{ reply: CollaborationMessage }>
 }
 
 export function ThreadSection({
@@ -230,18 +224,17 @@ export function ThreadSection({
   replyCount,
   unreadCount = 0,
   lastReplyIso,
-  isOpen,
-  isLoading,
+  panel,
   error,
-  hasNextCursor,
   replies,
   onToggle,
   onRetry,
   onLoadMore,
   onReply,
   canReply = true,
-  renderReply,
+  ReplyRenderer,
 }: ThreadSectionProps) {
+  const { isOpen, isLoading, hasNextCursor } = panel
   const hasThreadReplies = replyCount > 0
   const lastReplyLabel = lastReplyIso ? formatRelativeTime(lastReplyIso) : null
   const hasRepliesLoaded = replies.length > 0
@@ -290,7 +283,7 @@ export function ThreadSection({
               {error ? <ThreadError error={error} isLoading={isLoading} onRetry={onRetry} /> : null}
               <div className="space-y-2">
                 {replies.map((reply) => (
-                  <ThreadReplyContent key={reply.id} renderReply={renderReply} reply={reply} />
+                  <ReplyRenderer key={reply.id} reply={reply} />
                 ))}
               </div>
             </>

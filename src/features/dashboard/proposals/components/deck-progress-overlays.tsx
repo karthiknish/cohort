@@ -9,30 +9,10 @@ import {
   ProposalGenerationOverlayContent,
 } from './deck-progress-overlays-sections'
 
-export type DeckProgressStage = 'initializing' | 'polling' | 'launching' | 'queued' | 'error'
+import type { DeckProgressStage } from './deck-progress-overlays-types'
+import { getDeckStageCopy } from './deck-progress-overlays-utils'
 
-const deckStageMessages: Record<DeckProgressStage, { title: string; description: string }> = {
-  initializing: {
-    title: 'Starting deck request...',
-    description: 'Collecting your proposal details and preparing the presentation export.',
-  },
-  polling: {
-    title: 'Generating slides & saving...',
-    description: 'We are exporting the PPT and saving a copy for you.',
-  },
-  launching: {
-    title: 'Deck ready',
-    description: 'We saved a copy and are opening it for you now.',
-  },
-  queued: {
-    title: 'Still processing',
-    description: "The presentation export is still processing. We'll save it automatically as soon as it lands.",
-  },
-  error: {
-    title: 'Deck preparation failed',
-    description: 'We could not finish the export. Please retry or regenerate the proposal.',
-  },
-}
+export type { DeckProgressStage } from './deck-progress-overlays-types'
 
 const generationFlow: { label: string; helper: string; icon: LucideIcon; duration: number | null }[] = [
   {
@@ -203,7 +183,7 @@ export function DeckProgressOverlay({ stage, isVisible }: DeckProgressOverlayPro
     return null
   }
 
-  const copy = deckStageMessages[stage]
+  const copy = getDeckStageCopy(stage)
 
   return (
     <DeckProgressOverlayShell className="fixed inset-0 z-[2100] flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm">
@@ -212,6 +192,3 @@ export function DeckProgressOverlay({ stage, isVisible }: DeckProgressOverlayPro
   )
 }
 
-export function getDeckStageCopy(stage: DeckProgressStage) {
-  return deckStageMessages[stage]
-}

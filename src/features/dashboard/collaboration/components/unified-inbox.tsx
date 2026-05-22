@@ -1,6 +1,5 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
@@ -14,9 +13,8 @@ import {
   ConversationListPane,
   DirectMessageConversationPane,
   EmptyConversationPane,
-  type SourceFilter,
-  type UnifiedItem,
 } from './unified-inbox-sections'
+import { useUnifiedInboxController } from './use-unified-inbox-controller'
 
 type UnifiedInboxSidebarProps = {
   channels: Channel[]
@@ -136,23 +134,10 @@ export function UnifiedInbox({
   directMessagePane,
   manageChannel,
 }: UnifiedInboxProps) {
+  const { onNewDM, onBackToInbox } = sidebar
   const {
-    channels,
-    channelSummaries,
-    channelUnreadCounts,
-    dmConversations,
     selectedChannel,
-    selectedDM,
-    onSelectChannel,
-    onSelectDM,
-    onNewDM,
-    onBackToInbox,
-    isLoadingChannels,
-    isLoadingDMs,
-  } = sidebar
-  const {
     channelMessages,
-    visibleMessages,
     channelParticipants,
     mentionParticipants,
     messageSearchQuery,
@@ -171,7 +156,6 @@ export function UnifiedInbox({
     onAddAttachments,
     onRemoveAttachment,
     uploading,
-    typingParticipants,
     onComposerFocus,
     onComposerBlur,
     onEditMessage,
@@ -184,7 +168,6 @@ export function UnifiedInbox({
     threadNextCursorByRootId,
     threadLoadingByRootId,
     threadErrorsByRootId,
-    threadUnreadCountsByRootId,
     onLoadThreadReplies,
     onLoadMoreThreadReplies,
     onMarkThreadAsRead,
@@ -202,8 +185,7 @@ export function UnifiedInbox({
     isAdmin,
   } = channelPane
   const {
-    messages: dmMessages,
-    visibleMessages: dmVisibleMessages,
+    selectedDM,
     isLoadingMessages: dmIsLoadingMessages,
     isLoadingMore: dmIsLoadingMore,
     hasMoreMessages: dmHasMoreMessages,
@@ -212,221 +194,62 @@ export function UnifiedInbox({
     onMessageSearchChange: onDmMessageSearchChange,
     searchHighlights: dmSearchHighlights,
     searchingMessages: dmSearchingMessages,
-    sendMessage: dmSendMessage,
     isSending: dmIsSending,
     toggleReaction: dmToggleReaction,
     deleteMessage: dmDeleteMessage,
     editMessage: dmEditMessage,
     archiveConversation: dmArchiveConversation,
     muteConversation: dmMuteConversation,
-    clearPendingAttachments,
-    uploadPendingAttachments,
     onStartNewDM,
     messagesError: dmMessagesError,
     onRetryMessages: onDmRetryMessages,
   } = directMessagePane
   const canManageSelectedChannel = manageChannel?.canManageSelectedChannel ?? false
   const onManageSelectedChannel = manageChannel?.onManageSelectedChannel
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
-  const [dmMessageInputByConversation, setDmMessageInputByConversation] = useState<Record<string, string>>({})
 
-  const activeDmLegacyId = selectedDM?.legacyId ?? null
-  const dmMessageInput = activeDmLegacyId ? (dmMessageInputByConversation[activeDmLegacyId] ?? '') : ''
-
-  const setActiveDmMessageInput = useCallback(
-    (value: string) => {
-      if (!activeDmLegacyId) {
-        return
-      }
-
-      setDmMessageInputByConversation((current) => ({
-        ...current,
-        [activeDmLegacyId]: value,
-      }))
-    },
-    [activeDmLegacyId]
-  )
-
-  const handleSendDirectMessage = useCallback(
-    async (content: string) => {
-      const trimmed = content.trim()
-      const hasPendingAttachments = pendingAttachments.length > 0
-
-      if (!trimmed && !hasPendingAttachments) {
-        return
-      }
-
-      let uploadedAttachments: CollaborationAttachment[] = []
-      if (hasPendingAttachments) {
-        uploadedAttachments = await uploadPendingAttachments(pendingAttachments)
-
-        if (!trimmed && uploadedAttachments.length === 0) {
-          return
-        }
-      }
-
-      await dmSendMessage(trimmed, uploadedAttachments.length > 0 ? uploadedAttachments : undefined)
-      if (activeDmLegacyId) {
-        setDmMessageInputByConversation((current) => ({
-          ...current,
-          [activeDmLegacyId]: '',
-        }))
-      }
-      clearPendingAttachments()
-    },
-    [activeDmLegacyId, clearPendingAttachments, dmSendMessage, pendingAttachments, uploadPendingAttachments]
-  )
-
-  const unifiedItems = useMemo((): UnifiedItem[] => {
-    const items: UnifiedItem[] = []
-
-    for (const channel of channels) {
-      const summary = channelSummaries.get(channel.id)
-      const unreadCount = channelUnreadCounts[channel.id] ?? 0
-      items.push({
-        id: channel.id,
-        legacyId: channel.id,
-        type: 'channel',
-        name: channel.name,
-        lastMessageSnippet: summary?.lastMessage ?? null,
-        lastMessageAtMs: summary?.lastTimestamp ? new Date(summary.lastTimestamp).getTime() : null,
-        isRead: unreadCount <= 0,
-        unreadCount,
-        metadata: { channelType: channel.type, channelAvatarUrl: channel.avatarUrl ?? null },
-        originalData: channel,
-      })
-    }
-
-    for (const conv of dmConversations) {
-      items.push({
-        id: conv.legacyId,
-        legacyId: conv.legacyId,
-        type: 'direct_message',
-        name: conv.otherParticipantName,
-        lastMessageSnippet: conv.lastMessageSnippet ?? null,
-        lastMessageAtMs: conv.lastMessageAtMs ?? null,
-        isRead: conv.isRead,
-        unreadCount: conv.isRead ? 0 : 1,
-        metadata: { otherParticipantRole: conv.otherParticipantRole },
-        originalData: conv,
-      })
-    }
-
-    return items.sort((a, b) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0))
-  }, [channels, channelSummaries, channelUnreadCounts, dmConversations])
-
-  const filteredItems = useMemo(() => {
-    return unifiedItems.filter((item) => {
-      if (sourceFilter !== 'all' && item.type !== sourceFilter) return false
-      if (!searchQuery.trim()) return true
-      const query = searchQuery.toLowerCase()
-      return (
-        item.name?.toLowerCase().includes(query) ||
-        item.lastMessageSnippet?.toLowerCase().includes(query) ||
-        (item.type === 'direct_message' &&
-          (item.originalData as DirectConversation).otherParticipantName?.toLowerCase().includes(query))
-      )
-    })
-  }, [unifiedItems, sourceFilter, searchQuery])
-
-  const totalUnread = unifiedItems.reduce((sum, item) => sum + item.unreadCount, 0)
-  const channelCount = channels.length
-  const dmCount = dmConversations.length
-  const isLoading = isLoadingChannels || isLoadingDMs
-  const isChannelSearchActive = messageSearchQuery.trim().length > 0
-  const isDmSearchActive = dmMessageSearchQuery.trim().length > 0
-  const topLevelChannelMessages = useMemo(
-    () => channelMessages.filter((message) => !message?.parentMessageId),
-    [channelMessages],
-  )
-  const channelMessagesForPane = isChannelSearchActive ? visibleMessages : topLevelChannelMessages
-  const dmMessagesForPane = isDmSearchActive ? dmVisibleMessages : dmMessages
-
-  const typingIndicatorText = useMemo(() => {
-    if (!selectedChannel || typingParticipants.length === 0) {
-      return undefined
-    }
-
-    const names = typingParticipants
-      .flatMap((participant) => {
-        const name = participant.name
-        return typeof name === 'string' && name.trim().length > 0 ? [name] : []
-      })
-
-    if (names.length === 0) {
-      return undefined
-    }
-
-    if (names.length === 1) {
-      return `${names[0]} is typing...`
-    }
-
-    if (names.length === 2) {
-      return `${names[0]} and ${names[1]} are typing...`
-    }
-
-    return `${names[0]}, ${names[1]}, and ${names.length - 2} others are typing...`
-  }, [selectedChannel, typingParticipants])
-
-  const handleSelectItem = useCallback((item: UnifiedItem) => {
-    if (item.type === 'channel') {
-      onSelectChannel(item.id)
-    } else {
-      onSelectDM(item.originalData as DirectConversation)
-    }
-  }, [onSelectChannel, onSelectDM])
-
-  const isSelected = useCallback(
-    (item: UnifiedItem): boolean => {
-      if (item.type === 'channel') return selectedChannel?.id === item.id
-      return selectedDM?.legacyId === item.legacyId
-    },
-    [selectedChannel?.id, selectedDM?.legacyId]
-  )
-
-  const hasActiveConversation = Boolean(selectedChannel || selectedDM)
-
-  const handleBackToInbox = useCallback(() => {
-    onBackToInbox?.()
-  }, [onBackToInbox])
+  const inbox = useUnifiedInboxController({
+    sidebar,
+    channelPane,
+    directMessagePane,
+    onBackToInbox,
+  })
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden max-lg:min-h-[min(72dvh,640px)] lg:h-[640px] lg:flex-row">
       <ConversationListPane
-        className={cn(hasActiveConversation && 'max-lg:hidden')}
-        channelCount={channelCount}
-        dmCount={dmCount}
-        filteredItems={filteredItems}
-        isLoading={isLoading}
-        isSelected={isSelected}
+        className={cn(inbox.hasActiveConversation && 'max-lg:hidden')}
+        channelCount={inbox.channelCount}
+        dmCount={inbox.dmCount}
+        filteredItems={inbox.filteredItems}
+        isLoading={inbox.isLoading}
+        isSelected={inbox.isSelected}
         onNewDM={onNewDM}
-        onSearchQueryChange={setSearchQuery}
-        onSelectItem={handleSelectItem}
-        onSourceFilterChange={setSourceFilter}
-        searchQuery={searchQuery}
-        sourceFilter={sourceFilter}
-        totalUnread={totalUnread}
+        onSearchQueryChange={inbox.setSearchQuery}
+        onSelectItem={inbox.handleSelectItem}
+        onSourceFilterChange={inbox.setSourceFilter}
+        searchQuery={inbox.searchQuery}
+        sourceFilter={inbox.sourceFilter}
+        totalUnread={inbox.totalUnread}
       />
 
       <div
         className={cn(
           'flex min-h-0 min-w-0 flex-1 flex-col border-muted/40 max-lg:border-t lg:border-t-0',
-          !hasActiveConversation && 'max-lg:hidden',
+          !inbox.hasActiveConversation && 'max-lg:hidden',
         )}
       >
         {selectedChannel ? (
           <ChannelConversationPane
             canLoadMore={canLoadMore}
             channelMessages={channelMessages}
-            channelMessagesForPane={channelMessagesForPane}
+            channelMessagesForPane={inbox.channelMessagesForPane as CollaborationMessage[]}
             channelParticipants={channelParticipants}
             mentionParticipants={mentionParticipants}
             currentUserId={currentUserId}
             currentUserRole={currentUserRole}
             deepLinkMessageId={deepLinkMessageId ?? null}
             deepLinkThreadId={deepLinkThreadId ?? null}
-            isChannelSearchActive={isChannelSearchActive}
+            isChannelSearchActive={inbox.isChannelSearchActive}
             isCurrentChannelLoading={isCurrentChannelLoading}
             loadingMore={loadingMore}
             messageDeletingId={messageDeletingId}
@@ -434,7 +257,7 @@ export function UnifiedInbox({
             messageSearchQuery={messageSearchQuery}
             messageUpdatingId={messageUpdatingId}
             onAddAttachments={onAddAttachments}
-            onBackToInbox={handleBackToInbox}
+            onBackToInbox={inbox.handleBackToInbox}
             onComposerBlur={onComposerBlur}
             onComposerFocus={onComposerFocus}
             onDeleteMessage={onDeleteMessage}
@@ -465,7 +288,7 @@ export function UnifiedInbox({
             threadMessagesByRootId={threadMessagesByRootId}
             threadNextCursorByRootId={threadNextCursorByRootId}
             threadUnreadCountsByRootId={threadUnreadCountsByRootId}
-            typingIndicatorText={typingIndicatorText}
+            typingIndicatorText={inbox.typingIndicatorText}
             uploading={uploading}
             channelUnreadCount={channelUnreadCount}
             onMarkChannelRead={onMarkChannelRead}
@@ -483,30 +306,30 @@ export function UnifiedInbox({
             dmIsLoadingMore={dmIsLoadingMore}
             dmIsSending={dmIsSending}
             dmLoadMoreMessages={dmLoadMoreMessages}
-            dmMessageInput={dmMessageInput}
+            dmMessageInput={inbox.dmMessageInput}
             dmMessageSearchQuery={dmMessageSearchQuery}
-            dmMessagesForPane={dmMessagesForPane}
+            dmMessagesForPane={inbox.dmMessagesForPane as DirectMessage[]}
             dmMuteConversation={dmMuteConversation}
             dmSearchHighlights={dmSearchHighlights}
             dmSearchingMessages={dmSearchingMessages}
             dmToggleReaction={dmToggleReaction}
-            handleSendDirectMessage={handleSendDirectMessage}
-            isDmSearchActive={isDmSearchActive}
+            handleSendDirectMessage={inbox.handleSendDirectMessage}
+            isDmSearchActive={inbox.isDmSearchActive}
             onAddAttachments={onAddAttachments}
             onArchiveConversation={dmArchiveConversation}
-            onBackToInbox={handleBackToInbox}
+            onBackToInbox={inbox.handleBackToInbox}
             onDmMessageSearchChange={onDmMessageSearchChange}
             onRemoveAttachment={onRemoveAttachment}
             pendingAttachments={pendingAttachments}
             selectedDM={selectedDM}
-            setActiveDmMessageInput={setActiveDmMessageInput}
+            setActiveDmMessageInput={inbox.setActiveDmMessageInput}
             uploading={uploading}
             onStartNewDM={onStartNewDM}
             messagesError={dmMessagesError}
             onRetryMessages={onDmRetryMessages}
           />
         ) : (
-          <EmptyConversationPane channelCount={channelCount} dmCount={dmCount} onNewDM={onNewDM} />
+          <EmptyConversationPane channelCount={inbox.channelCount} dmCount={inbox.dmCount} onNewDM={onNewDM} />
         )}
       </div>
     </div>

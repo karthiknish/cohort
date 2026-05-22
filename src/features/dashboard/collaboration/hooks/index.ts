@@ -1,6 +1,7 @@
 // Collaboration hooks barrel file
 export { useCollaborationData } from './use-collaboration-data'
-export { useRealtimeMessages, useRealtimeTyping } from './use-realtime'
+export { useRealtimeChannelSnapshot, useRealtimeTyping } from './use-realtime'
+export type { RealtimeChannelSnapshot } from './use-realtime'
 export { useMessageActions } from './use-message-actions'
 export { useSendMessage, useFetchMessages } from './use-messages'
 export { useTyping } from './use-typing'

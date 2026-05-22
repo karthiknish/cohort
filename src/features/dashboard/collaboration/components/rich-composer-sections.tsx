@@ -213,18 +213,22 @@ export function RichComposerMentionMenu({
   onMentionMouseDown: (event: MouseEvent<HTMLButtonElement>) => void
 }) {
   return (
-    <div className="absolute bottom-2 left-2 z-20 w-64 rounded-md border border-muted/60 bg-popover p-1 shadow-lg" role="listbox" aria-label="Mention teammate suggestions">
-      <p className="px-2 py-1 text-xs font-medium uppercase text-muted-foreground">Mention teammate</p>
-      <div className="max-h-52 overflow-y-auto">
+    <ul className="absolute bottom-2 left-2 z-20 w-64 list-none rounded-md border border-muted/60 bg-popover p-1 shadow-lg" aria-label="Mention teammate suggestions">
+      <li className="list-none px-2 py-1 text-xs font-medium uppercase text-muted-foreground">Mention teammate</li>
+      <li className="list-none max-h-52 overflow-y-auto">
         {mentionResults.length > 0 ? mentionResults.map((participant, index) => {
           const isActive = index === highlightedMention
-          return <RichComposerMentionOption key={participant.name} isActive={isActive} mentionClick={onMentionClick} mentionMouseDown={onMentionMouseDown} participant={participant} />
+          return (
+            <li key={participant.name} className="list-none">
+              <RichComposerMentionOption isActive={isActive} mentionClick={onMentionClick} mentionMouseDown={onMentionMouseDown} participant={participant} />
+            </li>
+          )
         }) : (
           <div className="px-2 py-3 text-sm text-muted-foreground" aria-live="polite">
             No teammates match {mentionQuery.trim() ? `“${mentionQuery.trim()}”` : 'your search'}.
           </div>
         )}
-      </div>
-    </div>
+      </li>
+    </ul>
   )
 }

@@ -5,7 +5,7 @@ import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog'
 
 import { surfaceMotionClasses } from '@/lib/motion'
 import { cn } from '@/lib/utils'
-import { buttonVariants } from '@/shared/ui/button'
+import { buttonVariants } from '@/shared/ui/button-variants'
 
 const AlertDialog = AlertDialogPrimitive.Root
 

@@ -18,7 +18,7 @@ export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props)
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <Card className="border-muted/30 bg-muted/5 shadow-sm motion-chromatic hover:bg-muted/10">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
+        <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-1.5">
           <div className="flex items-center gap-2">
             <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Blended ROAS (MER)</CardTitle>
             <TooltipProvider>
@@ -39,7 +39,7 @@ export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props)
       </Card>
 
       <Card className="border-muted/30 bg-muted/5 shadow-sm motion-chromatic hover:bg-muted/10">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
+        <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-1.5">
           <div className="flex items-center gap-2">
             <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Avg. Order Value (AOV)</CardTitle>
             <TooltipProvider>
@@ -60,7 +60,7 @@ export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props)
       </Card>
 
       <Card className="border-muted/30 bg-muted/5 shadow-sm motion-chromatic hover:bg-muted/10">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
+        <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-1.5">
           <div className="flex items-center gap-2">
             <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Revenue Per Click (RPC)</CardTitle>
             <TooltipProvider>

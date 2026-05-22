@@ -1,5 +1,5 @@
-// Load environment variables
-require('dotenv').config({ path: '.env.local' });
+import { config } from 'dotenv'
 
-// Run the admin script
-require('./dist/scripts/set-admin-role.js');
+config({ path: '.env.local' })
+
+await import('./dist/scripts/set-admin-role.js')

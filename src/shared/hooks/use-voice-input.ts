@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 export interface UseVoiceInputOptions {
   onResult?: (transcript: string) => void
@@ -83,7 +83,11 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     maxDuration = 60,
   } = options
 
-  const [isSupported, setIsSupported] = useState(false)
+  const isSupported = useSyncExternalStore(
+    () => () => undefined,
+    () => getSpeechRecognition() !== null,
+    () => false,
+  )
   const [isListeningState, setIsListeningState] = useState(false)
   const [transcript, setTranscript] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -101,11 +105,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     optionsRef.current = options
   })
 
-  // Check browser support once on mount
   useEffect(() => {
-    const SpeechRecognition = getSpeechRecognition()
-    setIsSupported(SpeechRecognition !== null)
-
     return () => {
       isMountedRef.current = false
     }
@@ -114,7 +114,10 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
   // Sync with global state
   useEffect(() => {
     const checkGlobalState = setInterval(() => {
-      if (isMountedRef.current && globalIsListening !== isListeningState) {
+      if (!isMountedRef.current) {
+        return
+      }
+      if (globalIsListening !== isListeningState) {
         setIsListeningState(globalIsListening)
       }
     }, 100)

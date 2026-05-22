@@ -50,7 +50,7 @@ export function SocialsHeader({
                   </Badge>
                 ) : null}
               </div>
-              <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+              <h1 className="text-balance text-3xl tracking-tight text-foreground md:text-4xl">
                 {PAGE_TITLES.socials?.title ?? 'Socials'}
               </h1>
               <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground md:text-[15px]">

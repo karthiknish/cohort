@@ -426,7 +426,7 @@ export function SystemHealthView() {
         <SectionLabel>Overview</SectionLabel>
         <div className="grid gap-4 sm:grid-cols-3">
           <Card className="border-border/80 bg-card shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Response time</CardTitle>
               <Activity className="size-4 text-muted-foreground" aria-hidden />
             </CardHeader>
@@ -436,7 +436,7 @@ export function SystemHealthView() {
             </CardContent>
           </Card>
           <Card className="border-border/80 bg-card shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Uptime</CardTitle>
               <Clock className="size-4 text-muted-foreground" aria-hidden />
             </CardHeader>
@@ -446,7 +446,7 @@ export function SystemHealthView() {
             </CardContent>
           </Card>
           <Card className="border-border/80 bg-card shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Version</CardTitle>
               <Package className="size-4 text-muted-foreground" aria-hidden />
             </CardHeader>

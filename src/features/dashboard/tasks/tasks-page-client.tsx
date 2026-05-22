@@ -4,7 +4,7 @@ import { useQuery } from 'convex/react'
 import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import dynamic from 'next/dynamic'
 import { usePathname, useRouter } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   formatDate,
@@ -124,7 +124,7 @@ function TasksPageContent({
   initialProjectName,
   initialSearchParamsString,
 }: TasksPageClientProps) {
-  const router = useRouter()
+  const { replace } = useRouter()
   const pathname = usePathname()
   const { user, loading: authLoading } = useAuth()
   const { selectedClient, selectedClientId } = useClientContext()
@@ -172,20 +172,23 @@ function TasksPageContent({
   const actionParam = normalizedAction
   const searchParamsString = normalizedSearchParamsString
 
-  // Sync navigation context from URL project filters.
-  useEffect(() => {
-    if (isFeatureEnabled('BIDIRECTIONAL_NAV') && projectFilter.id && projectFilter.name) {
-      setProjectContext(projectFilter.id, projectFilter.name)
-    }
-  }, [projectFilter.id, projectFilter.name, setProjectContext])
+  const syncedProjectContextRef = useRef<string | null>(null)
+  const projectContextKey =
+    isFeatureEnabled('BIDIRECTIONAL_NAV') && projectFilter.id && projectFilter.name
+      ? `${projectFilter.id}|${projectFilter.name}`
+      : null
+  if (projectContextKey && syncedProjectContextRef.current !== projectContextKey) {
+    syncedProjectContextRef.current = projectContextKey
+    setProjectContext(projectFilter.id!, projectFilter.name!)
+  }
 
   const clearProjectFilter = useCallback(() => {
     const params = new URLSearchParams(searchParamsString)
     params.delete('projectId')
     params.delete('projectName')
     const next = params.toString()
-    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
-  }, [pathname, router, searchParamsString])
+    replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
+  }, [pathname, replace, searchParamsString])
 
   // Tasks data hook
   const {
@@ -295,24 +298,11 @@ function TasksPageContent({
       const params = new URLSearchParams(searchParamsString)
       params.delete('action')
       const next = params.toString()
-      router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
+      replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
     },
     onCreateTask: handleCreateTask,
     onUpdateTask: handleUpdateTask,
   })
-  const { setFormState } = form
-
-  // Update form when client changes
-  useEffect(() => {
-    setFormState((prev) => ({
-      ...prev,
-      clientId: taskFormClient?.id ?? null,
-      clientName: taskFormClient?.name ?? '',
-      projectId: projectFilter.id,
-      projectName: projectFilter.name ?? '',
-    }))
-  }, [projectFilter.id, projectFilter.name, setFormState, taskFormClient?.id, taskFormClient?.name])
-
   // Keyboard shortcuts
   useKeyboardShortcut({
     combo: 'mod+k',

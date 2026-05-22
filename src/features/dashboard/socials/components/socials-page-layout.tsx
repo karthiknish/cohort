@@ -14,22 +14,22 @@ type SocialsPageLayoutProps = {
   showSetup: boolean
   setupComplete: boolean
   connected: boolean
-  renderSetup: () => ReactNode
-  renderPerformance: () => ReactNode
+  setup: ReactNode
+  performance: ReactNode
 }
 
 export function SocialsPageLayout({
   showSetup,
   setupComplete,
   connected,
-  renderSetup,
-  renderPerformance,
+  setup,
+  performance,
 }: SocialsPageLayoutProps) {
   const defaultMobileTab = connected && setupComplete ? 'performance' : 'setup'
   const [mobileTab, setMobileTab] = useState(defaultMobileTab)
 
-  const setupSection = <SocialsSetupSection>{renderSetup()}</SocialsSetupSection>
-  const performanceSection = <SocialsPerformanceSection>{renderPerformance()}</SocialsPerformanceSection>
+  const setupSection = <SocialsSetupSection>{setup}</SocialsSetupSection>
+  const performanceSection = <SocialsPerformanceSection>{performance}</SocialsPerformanceSection>
 
   if (!showSetup) {
     return <div className="space-y-6">{performanceSection}</div>

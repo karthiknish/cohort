@@ -11,7 +11,7 @@ import { Sheet, SheetContent } from '@/shared/ui/sheet'
 import { AgentHistoryRail } from './agent-history-rail'
 import { AgentModeHeader } from './agent-mode-panel-header'
 import { AgentErrorBanner, RateLimitBanner } from './agent-mode-panel-composer'
-import { stopPropagation } from './agent-mode-panel-message-utils'
+import { stopPropagation } from './agent-mode-panel-message-constants'
 
 export function AgentModePanelShell({
   isOpen,
@@ -94,6 +94,7 @@ export function AgentModePanelShell({
           type="file"
           accept={attachmentAccept}
           multiple
+          aria-label="Attach files to agent message"
           className="hidden"
           onChange={onFileSelection}
         />

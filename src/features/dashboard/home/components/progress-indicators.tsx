@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/button'
 import { Progress } from '@/shared/ui/progress'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Badge } from '@/shared/ui/badge'
+import { ClientFormattedDate } from '@/shared/components/client-formatted-date'
 import { cn } from '@/lib/utils'
 
 const noop = () => {}
@@ -323,11 +324,13 @@ function OperationItem({
                   >
                     {step.name}
                   </span>
-                  {step.timestamp && (
-                    <span className="text-muted-foreground ml-auto" suppressHydrationWarning>
-                      {new Date(step.timestamp).toLocaleTimeString()}
-                    </span>
-                  )}
+                  {step.timestamp ? (
+                    <ClientFormattedDate
+                      value={step.timestamp}
+                      formatStr="h:mm:ss a"
+                      className="text-muted-foreground ml-auto"
+                    />
+                  ) : null}
                 </div>
               ))}
             </div>

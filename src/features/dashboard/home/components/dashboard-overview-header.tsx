@@ -62,7 +62,7 @@ export function DashboardOverviewHeader({
                 {greeting}
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-balance text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                <h1 className="text-balance text-2xl tracking-tight text-foreground sm:text-3xl">
                   {clientName}
                 </h1>
                 <Badge

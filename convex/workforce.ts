@@ -599,8 +599,8 @@ export const seedSchedulingModule = zAuthenticatedMutation({
       { legacyId: 'shift_seed_4', title: 'Weekly launch room', assigneeId: 'member-maya', assigneeName: 'Maya Adler', team: 'Delivery', dayLabel: 'Fri', timeLabel: '10:00 - 15:00', coverageLabel: 'Ready to publish', status: 'scheduled' as const, dayStartMs: ctx.now + 4 * 86_400_000 },
     ]
 
-    await Promise.all(
-      shifts.map(async (row) =>
+    await Promise.all([
+      ...shifts.map((row) =>
         ctx.db.insert('workforceShifts', {
           workspaceId: args.workspaceId,
           ...row,
@@ -608,33 +608,30 @@ export const seedSchedulingModule = zAuthenticatedMutation({
           updatedAtMs: ctx.now,
         }),
       ),
-    )
-
-    await ctx.db.insert('workforceShiftSwaps', {
-      workspaceId: args.workspaceId,
-      legacyId: 'swap_seed_1',
-      shiftLegacyId: 'shift_seed_3',
-      shiftTitle: 'Creative QA handoff',
-      requestedBy: 'James Liu',
-      requestedTo: 'Dan Wright',
-      windowLabel: 'Thu · 16:00 - 20:00',
-      status: 'pending',
-      createdAtMs: ctx.now,
-      updatedAtMs: ctx.now,
-    })
-
-    // Demo: Sofia unavailable during "Morning traffic" window (same day as first shift)
-    await ctx.db.insert('workforceAvailability', {
-      workspaceId: args.workspaceId,
-      legacyId: 'avail_seed_1',
-      personId: 'member-sofia',
-      startMs: ctx.now - 2 * 60 * 60_000,
-      endMs: ctx.now + 12 * 60 * 60_000,
-      kind: 'unavailable',
-      label: 'Conference · offline',
-      createdAtMs: ctx.now,
-      updatedAtMs: ctx.now,
-    })
+      ctx.db.insert('workforceShiftSwaps', {
+        workspaceId: args.workspaceId,
+        legacyId: 'swap_seed_1',
+        shiftLegacyId: 'shift_seed_3',
+        shiftTitle: 'Creative QA handoff',
+        requestedBy: 'James Liu',
+        requestedTo: 'Dan Wright',
+        windowLabel: 'Thu · 16:00 - 20:00',
+        status: 'pending',
+        createdAtMs: ctx.now,
+        updatedAtMs: ctx.now,
+      }),
+      ctx.db.insert('workforceAvailability', {
+        workspaceId: args.workspaceId,
+        legacyId: 'avail_seed_1',
+        personId: 'member-sofia',
+        startMs: ctx.now - 2 * 60 * 60_000,
+        endMs: ctx.now + 12 * 60 * 60_000,
+        kind: 'unavailable',
+        label: 'Conference · offline',
+        createdAtMs: ctx.now,
+        updatedAtMs: ctx.now,
+      }),
+    ])
 
     return { inserted: shifts.length + 2 }
   },

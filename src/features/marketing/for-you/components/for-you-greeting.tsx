@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth } from '@/shared/contexts/auth-context'
+import { useClientNow } from '@/lib/hooks/use-client-relative-time'
 import { cn } from '@/lib/utils'
 
 import { SectionPatternBackground } from '@/features/marketing/components/section-pattern-background'
@@ -15,8 +16,9 @@ function formatGreetingDate(date: Date): string {
 
 export function ForYouGreeting() {
   const { user } = useAuth()
+  const now = useClientNow()
   const firstName = user?.name?.split(' ')[0] ?? 'there'
-  const hour = new Date().getHours()
+  const hour = now?.getHours() ?? 12
   const salutation = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   return (
@@ -29,8 +31,8 @@ export function ForYouGreeting() {
     >
       <SectionPatternBackground variant="subtle" />
       <div className="relative px-5 py-6 sm:px-7 sm:py-7">
-        <p className="text-sm font-medium tracking-wide text-muted-foreground">
-          {formatGreetingDate(new Date())}
+        <p className="text-sm font-medium tracking-wide text-muted-foreground" suppressHydrationWarning>
+          {now ? formatGreetingDate(now) : '\u00a0'}
         </p>
         <h1
           id="for-you-greeting-heading"
@@ -39,7 +41,7 @@ export function ForYouGreeting() {
           {salutation}, {firstName}
         </h1>
         <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-          Your priorities, clients, and next steps — in one place.
+          Your priorities, clients, and next steps - in one place.
         </p>
       </div>
     </section>

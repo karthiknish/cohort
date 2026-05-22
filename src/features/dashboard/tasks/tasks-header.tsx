@@ -61,7 +61,7 @@ export function TasksHeader({
           </p>
         ) : null}
         {newTaskDisabledReason ? (
-          <p className="max-w-2xl text-xs text-warning" role="status">
+          <p className="max-w-2xl text-xs text-warning">
             {newTaskDisabledReason}
           </p>
         ) : null}

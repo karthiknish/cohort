@@ -102,7 +102,7 @@ function ProjectDateField({
         </PopoverContent>
       </Popover>
       {validationError ? (
-        <p id={errorId} className="text-xs text-destructive" role="status">
+        <p id={errorId} className="text-xs text-destructive">
           {validationError}
         </p>
       ) : null}
@@ -255,7 +255,7 @@ export function EditProjectFormFields({
           aria-describedby={validationErrors.description ? 'edit-project-description-error' : undefined}
         />
         {validationErrors.description ? (
-          <p id="edit-project-description-error" className="text-xs text-destructive" role="status">
+          <p id="edit-project-description-error" className="text-xs text-destructive">
             {validationErrors.description}
           </p>
         ) : null}

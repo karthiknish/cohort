@@ -44,10 +44,16 @@ export const deleteConversation = authenticatedMutation({
     deletedMessages: v.number(),
   }),
   handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query('agentConversations')
-      .withIndex('by_workspaceId_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.conversationId))
-      .unique()
+    const [existing, messages] = await Promise.all([
+      ctx.db
+        .query('agentConversations')
+        .withIndex('by_workspaceId_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.conversationId))
+        .unique(),
+      ctx.db
+        .query('agentMessages')
+        .withIndex('by_workspace_conversation_createdAt', (q) => q.eq('workspaceId', args.workspaceId).eq('conversationLegacyId', args.conversationId))
+        .collect(),
+    ])
 
     if (!existing) {
       throw Errors.resource.notFound('Conversation', args.conversationId)
@@ -57,15 +63,10 @@ export const deleteConversation = authenticatedMutation({
       throw Errors.auth.forbidden()
     }
 
-    // Delete messages first.
-    const messages = await ctx.db
-      .query('agentMessages')
-      .withIndex('by_workspace_conversation_createdAt', (q) => q.eq('workspaceId', args.workspaceId).eq('conversationLegacyId', args.conversationId))
-      .collect()
-
-    await Promise.all(messages.map(async (msg) => ctx.db.delete(msg._id)))
-
-    await ctx.db.delete(existing._id)
+    await Promise.all([
+      ...messages.map((msg) => ctx.db.delete(msg._id)),
+      ctx.db.delete(existing._id),
+    ])
     return { ok: true as const, deletedMessages: messages.length }
   },
 })

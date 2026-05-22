@@ -574,9 +574,7 @@ export default function CreativeDetailPageClient({
           // Fallback to execCommand for non-secure contexts or older browsers
           const textArea = document.createElement("textarea")
           textArea.value = text
-          textArea.style.position = "fixed"
-          textArea.style.left = "-999999px"
-          textArea.style.top = "-999999px"
+          textArea.style.cssText = "position:fixed;left:-999999px;top:-999999px"
           document.body.appendChild(textArea)
           textArea.focus()
           textArea.select()
@@ -1025,19 +1023,23 @@ export default function CreativeDetailPageClient({
     void generateCopy('captions')
   }, [generateCopy])
 
+  const onSaveShortcut = useEffectEvent(() => {
+    if (isDirty && !isSaving) {
+      void handleSave()
+    }
+  })
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 's') {
         event.preventDefault()
-        if (isDirty && !isSaving) {
-          void handleSave()
-        }
+        onSaveShortcut()
       }
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [handleSave, isDirty, isSaving])
+  }, [])
 
   const backUrl = `/dashboard/ads/campaigns/${params.providerId}/${params.campaignId}${searchParamsString ? `?${searchParamsString}` : ''}`
 
@@ -1081,7 +1083,7 @@ export default function CreativeDetailPageClient({
       roas: averageRoaS,
       cpc: averageCpc,
     }
-  }, [convexProviderId, creativeMetrics, days, params.providerId])
+  }, [convexProviderId, creativeMetrics, days])
 
   const efficiencyScore = useMemo(() => {
     if (!performanceSummary) return null

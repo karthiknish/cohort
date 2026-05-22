@@ -40,7 +40,9 @@ const deletedRenderContextValue = {
 }
 
 const replyRenderContextValue = {
-  renderMessageContent: () => <span>Reply body from render context</span>,
+  renderMessageContent: function TestMessageContent() {
+    return <span>Reply body from render context</span>
+  },
 }
 
 const noop = () => {}

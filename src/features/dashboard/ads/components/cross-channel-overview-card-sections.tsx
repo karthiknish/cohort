@@ -108,7 +108,7 @@ export function CrossChannelOverviewHeader({
           <p className={ADS_PAGE_THEME.sectionEyebrow}>Overview</p>
           <CardTitle className="text-lg font-semibold tracking-tight">Cross-channel KPIs</CardTitle>
           <CardDescription className="max-w-xl text-pretty leading-relaxed">
-            Totals and trends from your latest successful sync — filter by platform without leaving this view.
+            Totals and trends from your latest successful sync - filter by platform without leaving this view.
           </CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">

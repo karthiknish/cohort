@@ -102,9 +102,8 @@ function NotificationVirtualRow({
 
 function NotificationsLoadingSkeleton() {
   return (
-    <div
-      className="space-y-3 py-2"
-      role="status"
+    <output
+      className="block space-y-3 py-2"
       aria-live="polite"
       aria-busy="true"
       aria-label="Loading notifications"
@@ -119,7 +118,7 @@ function NotificationsLoadingSkeleton() {
           </div>
         </div>
       ))}
-    </div>
+    </output>
   )
 }
 

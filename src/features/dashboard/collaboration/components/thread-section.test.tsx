@@ -6,7 +6,9 @@ import type { CollaborationMessage } from '@/types/collaboration'
 
 import { ThreadSection } from './thread-section'
 
-const RENDER_REPLY = (message: CollaborationMessage) => <div>{message.content}</div>
+function TestReplyRenderer({ reply }: { reply: CollaborationMessage }) {
+  return <div>{reply.content}</div>
+}
 
 const reply: CollaborationMessage = {
   id: 'reply-1', senderId: 'user-2', senderName: 'Sam Lee', createdAt: '2026-03-11T12:30:00.000Z',
@@ -20,13 +22,13 @@ describe('ThreadSection', () => {
   it('renders deterministic loading, empty, and error states', () => {
     const baseProps = {
       threadRootId: 'root-1', replyCount: 1, unreadCount: 0, lastReplyIso: null, hasNextCursor: false,
-      onToggle: vi.fn(), onRetry: vi.fn(), onLoadMore: vi.fn(), onReply: vi.fn(), renderReply: vi.fn(),
+      onToggle: vi.fn(), onRetry: vi.fn(), onLoadMore: vi.fn(), onReply: vi.fn(), ReplyRenderer: TestReplyRenderer,
     }
 
-    const loadingMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} isOpen={true} isLoading={true} error={null} replies={[]} />)
-    const emptyMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} isOpen={true} isLoading={false} error={null} replies={[]} />)
-    const errorMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} isOpen={true} isLoading={false} error="Unable to load replies." replies={[]} />)
-    const loadedMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} isOpen={true} isLoading={false} error={null} replies={[reply]} renderReply={RENDER_REPLY} />)
+    const loadingMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={{ isOpen: true, isLoading: true, hasNextCursor: false }} error={null} replies={[]} />)
+    const emptyMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={{ isOpen: true, isLoading: false, hasNextCursor: false }} error={null} replies={[]} />)
+    const errorMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={{ isOpen: true, isLoading: false, hasNextCursor: false }} error="Unable to load replies." replies={[]} />)
+    const loadedMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={{ isOpen: true, isLoading: false, hasNextCursor: false }} error={null} replies={[reply]} ReplyRenderer={TestReplyRenderer} />)
 
     expect(loadingMarkup).toContain('Loading replies…')
     expect(emptyMarkup).toContain('No replies yet')

@@ -14,9 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
 
 type AdsPageLayoutProps = {
-  renderSetup: () => ReactNode
-  renderAnalytics: () => ReactNode
-  renderAdvancedAnalytics?: () => ReactNode
+  setup: ReactNode
+  analytics: ReactNode
+  advancedAnalytics?: ReactNode
   showSetup: boolean
   connectedAccountCount: number
   hasPendingSetup?: boolean
@@ -24,9 +24,9 @@ type AdsPageLayoutProps = {
 }
 
 export function AdsPageLayout({
-  renderSetup,
-  renderAnalytics,
-  renderAdvancedAnalytics,
+  setup,
+  analytics,
+  advancedAnalytics,
   showSetup,
   connectedAccountCount,
   hasPendingSetup = false,
@@ -36,28 +36,26 @@ export function AdsPageLayout({
     connectedAccountCount > 0 && !hasPendingSetup ? 'performance' : 'setup'
   const [mobileTab, setMobileTab] = useState(defaultTab)
 
+  const advancedAnalyticsBlock = advancedAnalytics ? (
+    <AdsAdvancedAnalyticsCollapsible hasMetricData={hasMetricData}>
+      {advancedAnalytics}
+    </AdsAdvancedAnalyticsCollapsible>
+  ) : null
+
   if (!showSetup) {
     return (
       <div className="space-y-8">
-        {renderAnalytics()}
-        {renderAdvancedAnalytics ? (
-          <AdsAdvancedAnalyticsCollapsible hasMetricData={hasMetricData}>
-            {renderAdvancedAnalytics()}
-          </AdsAdvancedAnalyticsCollapsible>
-        ) : null}
+        {analytics}
+        {advancedAnalyticsBlock}
       </div>
     )
   }
 
-  const setupBlock = <AdsSetupSection>{renderSetup()}</AdsSetupSection>
+  const setupBlock = <AdsSetupSection>{setup}</AdsSetupSection>
   const analyticsBlock = (
     <>
-      <AdsAnalyticsSection>{renderAnalytics()}</AdsAnalyticsSection>
-      {renderAdvancedAnalytics ? (
-        <AdsAdvancedAnalyticsCollapsible hasMetricData={hasMetricData}>
-          {renderAdvancedAnalytics()}
-        </AdsAdvancedAnalyticsCollapsible>
-      ) : null}
+      <AdsAnalyticsSection>{analytics}</AdsAnalyticsSection>
+      {advancedAnalyticsBlock}
     </>
   )
 
@@ -80,12 +78,8 @@ export function AdsPageLayout({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="performance" className="mt-5 space-y-8 focus-visible:outline-none">
-          {renderAnalytics()}
-          {renderAdvancedAnalytics ? (
-            <AdsAdvancedAnalyticsCollapsible hasMetricData={hasMetricData}>
-              {renderAdvancedAnalytics()}
-            </AdsAdvancedAnalyticsCollapsible>
-          ) : null}
+          {analytics}
+          {advancedAnalyticsBlock}
         </TabsContent>
         <TabsContent value="setup" className="mt-5 focus-visible:outline-none">
           {setupBlock}
@@ -151,10 +145,16 @@ function AdsAdvancedAnalyticsCollapsible({
   children: ReactNode
   hasMetricData: boolean
 }) {
-  const [open, setOpen] = useState(hasMetricData)
+  const [hasUserToggled, setHasUserToggled] = useState(false)
+  const [open, setOpen] = useState(false)
+  const effectiveOpen = hasUserToggled ? open : hasMetricData
+  const handleOpenChange = (next: boolean) => {
+    setHasUserToggled(true)
+    setOpen(next)
+  }
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className={ADS_PAGE_THEME.advancedPanel}>
+    <Collapsible open={effectiveOpen} onOpenChange={handleOpenChange} className={ADS_PAGE_THEME.advancedPanel}>
       <div className="flex items-center justify-between gap-3 p-4 sm:px-5">
         <div className="min-w-0 space-y-0.5">
           <p className="text-sm font-semibold tracking-tight text-foreground">Advanced analytics</p>
@@ -165,7 +165,7 @@ function AdsAdvancedAnalyticsCollapsible({
         <CollapsibleTrigger asChild>
           <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-xl">
             <Settings2 className="size-3.5" aria-hidden />
-            {open ? 'Hide' : 'Show'}
+            {effectiveOpen ? 'Hide' : 'Show'}
           </Button>
         </CollapsibleTrigger>
       </div>

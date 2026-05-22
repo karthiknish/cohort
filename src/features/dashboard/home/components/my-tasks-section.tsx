@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useClientNowMs } from '@/lib/hooks/use-client-relative-time'
 import Link from 'next/link'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { ArrowUpRight, CheckSquare, Clock } from 'lucide-react'
@@ -211,21 +211,8 @@ function TaskSkeleton() {
 export function MyTasksSection() {
   const { user } = useAuth()
   const { isAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
-  const [currentTimeMs, setCurrentTimeMs] = useState(0)
+  const currentTimeMs = useClientNowMs()
   const workspaceId = getWorkspaceId(user)
-
-  useEffect(() => {
-    const updateCurrentTime = () => {
-      setCurrentTimeMs(Date.now())
-    }
-
-    updateCurrentTime()
-    const intervalId = window.setInterval(updateCurrentTime, 60_000)
-
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [])
 
   const canQuery = isAuthenticated && !isConvexLoading && !!workspaceId && !!user?.id
 

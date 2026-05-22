@@ -93,15 +93,16 @@ export function useDirectConversationsQuery({
   const normalizedMessageSearch = messageSearchQuery.trim()
 
   useEffect(() => {
+    const replyTimersRef = previewReplyTimersRef
     return () => {
-      previewReplyTimersRef.current.forEach((timerId) => window.clearTimeout(timerId))
-      previewReplyTimersRef.current = []
+      replyTimersRef.current.forEach((timerId) => window.clearTimeout(timerId))
+      replyTimersRef.current = []
     }
   }, [])
 
-  useEffect(() => {
+  const previewFeedSnapshot = useMemo(() => {
     if (!isPreviewMode) {
-      return
+      return null
     }
 
     const previewSelf = {
@@ -109,17 +110,59 @@ export function useDirectConversationsQuery({
       name: currentUserName,
       role: currentUserRole,
     }
-    const conversations = getPreviewDirectConversations(previewSelf)
+    const previewUserId = currentUserId ?? 'preview-current-user'
     const messagesByConversation = Object.fromEntries(
-      conversations.map((conversation) => [
+      getPreviewDirectConversations(previewSelf).map((conversation) => [
         conversation.legacyId,
         getPreviewDirectMessages(conversation.legacyId, previewSelf),
-      ])
+      ]),
     ) as Record<string, DirectMessage[]>
 
+    const conversations = getPreviewDirectConversations(previewSelf)
+      .map((conversation) => {
+        const messages = messagesByConversation[conversation.legacyId] ?? []
+        const lastMessage = messages.reduce<DirectMessage | null>((latest, message) => {
+          if (latest === null || message.createdAtMs > latest.createdAtMs) {
+            return message
+          }
+          return latest
+        }, null)
+        const isRead = !messages.some(
+          (message) => message.senderId !== previewUserId && !message.readBy.includes(previewUserId),
+        )
+
+        const enriched: DirectConversation = {
+          ...conversation,
+          lastMessageSnippet: lastMessage?.deleted
+            ? 'Message deleted'
+            : lastMessage?.content
+              ? formatConversationSnippet(lastMessage.content, 160)
+              : null,
+          lastMessageAtMs: lastMessage?.createdAtMs ?? conversation.lastMessageAtMs ?? null,
+          lastMessageSenderId: lastMessage?.senderId ?? conversation.lastMessageSenderId ?? null,
+          isRead,
+          updatedAtMs: lastMessage?.updatedAtMs ?? conversation.updatedAtMs,
+        }
+        return enriched
+      })
+      .sort((a, b) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0))
+
+    return {
+      key: `${currentUserId ?? ''}|${currentUserName ?? ''}|${currentUserRole ?? ''}|${conversations.length}|${conversations[0]?.updatedAtMs ?? 0}`,
+      conversations,
+      messagesByConversation,
+    }
+  }, [currentUserId, currentUserName, currentUserRole, isPreviewMode])
+
+  const previewFeedSnapshotRef = useRef<string | null>(null)
+  if (previewFeedSnapshot && previewFeedSnapshotRef.current !== previewFeedSnapshot.key) {
+    previewFeedSnapshotRef.current = previewFeedSnapshot.key
     setFeed((prev) => ({
       ...prev,
-      previewData: { conversations, messagesByConversation },
+      previewData: {
+        conversations: previewFeedSnapshot.conversations,
+        messagesByConversation: previewFeedSnapshot.messagesByConversation,
+      },
       pagination: {
         messageCursor: null,
         allMessages: [],
@@ -127,15 +170,14 @@ export function useDirectConversationsQuery({
         isLoadingMore: false,
       },
     }))
-  }, [currentUserId, currentUserName, currentUserRole, isPreviewMode])
+  }
 
-  useEffect(() => {
-    if (isPreviewMode) {
-      return
+  const liveMessagesFromQuery = useMemo(() => {
+    if (isPreviewMode || !typedMessagesQuery) {
+      return null
     }
 
-    if (typedMessagesQuery) {
-      const newMessages = (typedMessagesQuery.items ?? []).map((m) => ({
+    const newMessages = (typedMessagesQuery.items ?? []).map((m) => ({
         id: m._id,
         legacyId: m.legacyId,
         senderId: m.senderId,
@@ -156,122 +198,112 @@ export function useDirectConversationsQuery({
         createdAtMs: m.createdAtMs,
         updatedAtMs: m.updatedAtMs,
       }))
-      
-      setFeed((prev) => {
-        const byLegacyId = new Map(prev.pagination.allMessages.map((m) => [m.legacyId, m]))
-        const loadingMore = prev.pagination.isLoadingMore && prev.pagination.messageCursor
 
-        if (loadingMore) {
-          for (const msg of newMessages) {
-            if (!byLegacyId.has(msg.legacyId)) {
-              byLegacyId.set(msg.legacyId, msg)
+    return {
+      key: `${selectedConversationLegacyId ?? ''}|${messageCursor ? 'cursor' : 'root'}|${isLoadingMore ? 'more' : 'fresh'}|${newMessages.length}|${typedMessagesQuery.nextCursor ? 'has-more' : 'end'}`,
+      newMessages,
+      hasMore: Boolean(typedMessagesQuery.nextCursor),
+      loadingMore: isLoadingMore && Boolean(messageCursor),
+    }
+  }, [isLoadingMore, isPreviewMode, messageCursor, selectedConversationLegacyId, typedMessagesQuery])
+
+  const conversationPaginationKey = `${isPreviewMode}|${selectedConversationLegacyId ?? ''}`
+  const conversationPaginationKeyRef = useRef<string | null>(null)
+  const liveMessagesSnapshotRef = useRef<string | null>(null)
+  const conversationChanged = conversationPaginationKeyRef.current !== conversationPaginationKey
+  const liveMessagesChanged =
+    Boolean(liveMessagesFromQuery) &&
+    liveMessagesSnapshotRef.current !== liveMessagesFromQuery.key
+
+  if (conversationChanged || liveMessagesChanged) {
+    if (conversationChanged) {
+      conversationPaginationKeyRef.current = conversationPaginationKey
+    }
+    if (liveMessagesFromQuery && liveMessagesChanged) {
+      liveMessagesSnapshotRef.current = liveMessagesFromQuery.key
+    }
+
+    setFeed((prev) => {
+      const basePagination = conversationChanged
+        ? {
+            messageCursor: null,
+            allMessages: [] as typeof prev.pagination.allMessages,
+            hasMore: !isPreviewMode,
+            isLoadingMore: false,
+          }
+        : prev.pagination
+
+      if (!liveMessagesFromQuery) {
+        return conversationChanged
+          ? {
+              ...prev,
+              pagination: basePagination,
             }
-          }
-        } else {
-          byLegacyId.clear()
-          for (const msg of newMessages) {
-            byLegacyId.set(msg.legacyId, msg)
-          }
-        }
-
-        return {
-          ...prev,
-          pagination: {
-            ...prev.pagination,
-            allMessages: Array.from(byLegacyId.values()).sort((a, b) => b.createdAtMs - a.createdAtMs),
-            hasMore: !!typedMessagesQuery.nextCursor,
-            isLoadingMore: loadingMore ? false : prev.pagination.isLoadingMore,
-          },
-        }
-      })
-    }
-  }, [typedMessagesQuery, isLoadingMore, isPreviewMode, messageCursor])
-
-  useEffect(() => {
-    setFeed((prev) => ({
-      ...prev,
-      pagination: {
-        messageCursor: null,
-        allMessages: [],
-        hasMore: !isPreviewMode,
-        isLoadingMore: false,
-      },
-    }))
-    if (selectedConversationLegacyId === null) {
-      return
-    }
-  }, [isPreviewMode, selectedConversationLegacyId])
-
-  useEffect(() => {
-    setSelectedConversation((previous) => {
-      if (!previous) {
-        return previous
+          : prev
       }
 
-      const pool = isPreviewMode
-        ? previewConversations
-        : conversationRows.map((c) => ({
-            id: c._id,
-            legacyId: c.legacyId,
-            otherParticipantId: c.otherParticipantId,
-            otherParticipantName: c.otherParticipantName,
-            otherParticipantRole: c.otherParticipantRole,
-            lastMessageSnippet: c.lastMessageSnippet,
-            lastMessageAtMs: c.lastMessageAtMs,
-            lastMessageSenderId: c.lastMessageSenderId,
-            isRead: c.isRead,
-            isArchived: c.isArchived,
-            isMuted: c.isMuted,
-            createdAtMs: c.createdAtMs,
-            updatedAtMs: c.updatedAtMs,
-          }))
-      const next = pool.find((conversation) => conversation.legacyId === previous.legacyId) ?? null
-      return next
-    })
-  }, [conversationRows, isPreviewMode, previewConversations])
+      const byLegacyId = new Map(basePagination.allMessages.map((message) => [message.legacyId, message]))
 
-  useEffect(() => {
-    if (!isPreviewMode) {
-      return
+      if (liveMessagesFromQuery.loadingMore) {
+        for (const message of liveMessagesFromQuery.newMessages) {
+          if (!byLegacyId.has(message.legacyId)) {
+            byLegacyId.set(message.legacyId, message)
+          }
+        }
+      } else {
+        byLegacyId.clear()
+        for (const message of liveMessagesFromQuery.newMessages) {
+          byLegacyId.set(message.legacyId, message)
+        }
+      }
+
+      return {
+        ...prev,
+        pagination: {
+          ...basePagination,
+          allMessages: Array.from(byLegacyId.values()).sort((a, b) => b.createdAtMs - a.createdAtMs),
+          hasMore: liveMessagesFromQuery.hasMore,
+          isLoadingMore: liveMessagesFromQuery.loadingMore ? false : basePagination.isLoadingMore,
+        },
+      }
+    })
+  }
+
+  const resolvedSelectedConversation = useMemo(() => {
+    if (!selectedConversation) {
+      return null
     }
 
-    const previewUserId = currentUserId ?? 'preview-current-user'
+    const pool = isPreviewMode
+      ? previewConversations
+      : conversationRows.map((c) => ({
+          id: c._id,
+          legacyId: c.legacyId,
+          otherParticipantId: c.otherParticipantId,
+          otherParticipantName: c.otherParticipantName,
+          otherParticipantRole: c.otherParticipantRole,
+          lastMessageSnippet: c.lastMessageSnippet,
+          lastMessageAtMs: c.lastMessageAtMs,
+          lastMessageSenderId: c.lastMessageSenderId,
+          isRead: c.isRead,
+          isArchived: c.isArchived,
+          isMuted: c.isMuted,
+          createdAtMs: c.createdAtMs,
+          updatedAtMs: c.updatedAtMs,
+        }))
 
-    setFeed((prev) => ({
-      ...prev,
-      previewData: {
-        ...prev.previewData,
-        conversations: [...prev.previewData.conversations]
-        .map((conversation) => {
-          const messages = previewMessagesByConversation[conversation.legacyId] ?? []
-          const lastMessage = messages.reduce<typeof messages[number] | null>((latest, message) => {
-            if (latest === null || message.createdAtMs > latest.createdAtMs) {
-              return message
-            }
+    return pool.find((conversation) => conversation.legacyId === selectedConversation.legacyId) ?? null
+  }, [conversationRows, isPreviewMode, previewConversations, selectedConversation])
 
-            return latest
-          }, null)
-          const isRead = !messages.some(
-            (message) => message.senderId !== previewUserId && !message.readBy.includes(previewUserId)
-          )
-
-          return {
-            ...conversation,
-            lastMessageSnippet: lastMessage?.deleted
-              ? 'Message deleted'
-              : lastMessage?.content
-                ? formatConversationSnippet(lastMessage.content, 160)
-                : null,
-            lastMessageAtMs: lastMessage?.createdAtMs ?? conversation.lastMessageAtMs,
-            lastMessageSenderId: lastMessage?.senderId ?? conversation.lastMessageSenderId,
-            isRead,
-            updatedAtMs: lastMessage?.updatedAtMs ?? conversation.updatedAtMs,
-          }
-        })
-        .sort((a, b) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0)),
-      },
-    }))
-  }, [currentUserId, isPreviewMode, previewMessagesByConversation])
+  if (
+    selectedConversation &&
+    resolvedSelectedConversation &&
+    resolvedSelectedConversation.updatedAtMs !== selectedConversation.updatedAtMs
+  ) {
+    setSelectedConversation(resolvedSelectedConversation)
+  } else if (selectedConversation && !resolvedSelectedConversation) {
+    setSelectedConversation(null)
+  }
 
   const liveConversations: DirectConversation[] = conversationRows
     .map((c) => ({
@@ -330,10 +362,14 @@ export function useDirectConversationsQuery({
     return null
   }, [isPreviewMode, normalizedMessageSearch, previewMessagesByConversation, selectedConversation, workspaceId])
 
-  useEffect(() => {
-    if (resolvedSyncSearch === null) return
-    setFeed((prev) => ({ ...prev, search: resolvedSyncSearch }))
-  }, [resolvedSyncSearch])
+  const syncSearchSnapshotRef = useRef<string | null>(null)
+  if (resolvedSyncSearch !== null) {
+    const syncSearchKey = `${selectedConversation?.legacyId ?? ''}|${normalizedMessageSearch}|${resolvedSyncSearch.results.length}|${resolvedSyncSearch.searching ? 'loading' : 'ready'}`
+    if (syncSearchSnapshotRef.current !== syncSearchKey) {
+      syncSearchSnapshotRef.current = syncSearchKey
+      setFeed((prev) => ({ ...prev, search: resolvedSyncSearch }))
+    }
+  }
 
   const fetchDirectMessageSearch = useCallback(
     async (isCancelled: () => boolean) => {
@@ -347,6 +383,8 @@ export function useDirectConversationsQuery({
         ...prev,
         search: { ...prev.search, searching: true, error: null },
       }))
+
+      if (isCancelled()) return
 
       try {
         const payload = (await convex.query(directMessagesApi.searchMessages, {

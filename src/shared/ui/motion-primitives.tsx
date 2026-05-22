@@ -136,7 +136,3 @@ export function MotionBadge({ pulse = false, className, children, ...props }: Mo
   )
 }
 
-/** Applies list item entrance CSS without Framer (virtualized-safe). */
-export function motionListItemClassName(className?: string) {
-  return cn(listItemEnterClass, className)
-}

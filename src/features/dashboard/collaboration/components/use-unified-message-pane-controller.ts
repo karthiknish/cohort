@@ -16,7 +16,7 @@ import { useToast } from '@/shared/ui/use-toast'
 import type { CollaborationMessage } from '@/types/collaboration'
 
 import type { PendingAttachment } from '../hooks/types'
-import type { UnifiedMessage } from './message-list'
+import type { UnifiedMessage } from './message-list-types'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
 
 type UseUnifiedMessagePaneControllerArgs = {

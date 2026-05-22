@@ -4,6 +4,7 @@ import { Suspense, type ReactNode } from 'react'
 import { ThemeProvider } from 'next-themes'
 
 import { AuthProvider } from '@/shared/contexts/auth-context'
+import { UrlSearchParamsProvider } from '@/shared/contexts/url-search-params-context'
 import { AnalyticsProvider } from '@/shared/providers/analytics-provider'
 import { PostHogProvider } from '@/shared/providers/posthog-provider'
 import { ConvexClientProvider } from '@/shared/providers/convex-provider'
@@ -22,12 +23,14 @@ export function AppProviders({ children, initialToken }: AppProvidersProps) {
         <AuthProvider>
           <QueryProvider>
             <Suspense fallback={null}>
-              <AnalyticsProvider>
-                <PostHogProvider>
-                  {children}
-                  <SonnerToaster />
-                </PostHogProvider>
-              </AnalyticsProvider>
+              <UrlSearchParamsProvider>
+                <AnalyticsProvider>
+                  <PostHogProvider>
+                    {children}
+                    <SonnerToaster />
+                  </PostHogProvider>
+                </AnalyticsProvider>
+              </UrlSearchParamsProvider>
             </Suspense>
           </QueryProvider>
         </AuthProvider>

@@ -28,12 +28,9 @@ import {
 } from '@/shared/ui/dialog'
 import { cn } from '@/lib/utils'
 
-export type ChatMediaAttachment = {
-  name: string
-  url: string
-  type?: string | null
-  size?: string | null
-}
+import type { AttachmentKind, ChatMediaAttachment } from './chat-media-gallery-types'
+export type { AttachmentKind, ChatMediaAttachment } from './chat-media-gallery-types'
+import { getAttachmentKind } from './chat-media-gallery-utils'
 
 export type ChatMediaGalleryProps = {
   attachments: ChatMediaAttachment[]
@@ -43,32 +40,10 @@ export type ChatMediaGalleryProps = {
   className?: string
 }
 
-export type AttachmentKind = 'image' | 'video' | 'pdf' | 'audio' | 'spreadsheet' | 'archive' | 'file'
-
 function hasUsableAttachmentUrl(url: string | null | undefined): boolean {
   if (typeof url !== 'string') return false
   const normalized = url.trim()
   return normalized.length > 0 && normalized !== '#' && normalized !== 'about:blank'
-}
-
-export function getAttachmentKind(attachment: ChatMediaAttachment): AttachmentKind {
-  const type = (attachment.type || '').toLowerCase()
-  const url = attachment.url || ''
-  const name = attachment.name.toLowerCase()
-
-  if (isLikelyImageUrl(url) || type.startsWith('image/')) return 'image'
-  if (type.startsWith('video/') || /\.(mp4|mov|webm|ogg)(\?.*)?$/i.test(url)) return 'video'
-  if (type.startsWith('audio/') || /\.(mp3|wav|m4a|aac)(\?.*)?$/i.test(url)) return 'audio'
-  if (type.includes('pdf') || name.endsWith('.pdf') || url.toLowerCase().includes('.pdf')) return 'pdf'
-  if (
-    type.includes('spreadsheet') ||
-    type.includes('excel') ||
-    /\.(xlsx?|csv)(\?.*)?$/i.test(name)
-  ) {
-    return 'spreadsheet'
-  }
-  if (type.includes('zip') || /\.(zip|rar|7z)(\?.*)?$/i.test(name)) return 'archive'
-  return 'file'
 }
 
 export function AttachmentKindIcon({ kind, className }: { kind: AttachmentKind; className?: string }) {
@@ -163,7 +138,8 @@ function MediaTile({
           <video
             src={attachment.url}
             controls
-            className="max-h-72 w-full rounded-xl bg-black"
+            aria-label={attachment.name || 'Video attachment'}
+            className="max-h-72 w-full rounded-xl bg-gray-950"
             preload="metadata"
           >
             <track kind="captions" label={`${attachment.name} captions`} />
@@ -364,7 +340,7 @@ export function ChatMediaGallery({
           </span>
           <div className="min-w-0 flex-1">
             <AttachmentName name={attachment.name} highlightTerms={highlightTerms} />
-            <p className="text-xs text-muted-foreground">Syncing — preview available when ready.</p>
+            <p className="text-xs text-muted-foreground">Syncing - preview available when ready.</p>
           </div>
           {attachment.size ? (
             <Badge variant="secondary" className="shrink-0 text-[10px]">

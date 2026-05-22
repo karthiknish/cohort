@@ -22,7 +22,7 @@ import {
   isReadLimitAppError,
 } from '@/lib/convex-errors'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { toast as sonnerToast } from '@/shared/ui/sonner'
+import { toast as sonnerToast } from '@/shared/ui/sonner-toast'
 import * as React from 'react'
 
 // =============================================================================
@@ -343,7 +343,7 @@ export function dismissAllToasts(): void {
 // RE-EXPORT SONNER FOR DIRECT USE
 // =============================================================================
 
-export { toast } from '@/shared/ui/sonner'
+export { toast } from '@/shared/ui/sonner-toast'
 
 // =============================================================================
 // EMAIL NOTIFICATIONS (Brevo)

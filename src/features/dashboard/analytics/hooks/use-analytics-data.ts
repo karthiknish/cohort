@@ -1,7 +1,7 @@
 'use client'
 
 import { useAction, useConvexAuth, useQuery } from 'convex/react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { analyticsInsightsApi, analyticsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
@@ -139,11 +139,18 @@ export function useAnalyticsData(
     }
   }, [clientId, generateInsights, includeInsights, isPreviewMode, periodDays, providerIds, workspaceId])
 
-  useEffect(() => {
-    if (!isPreviewMode && workspaceId && includeInsights) {
-      void fetchInsights()
-    }
-  }, [fetchInsights, includeInsights, isPreviewMode, workspaceId])
+  const insightsFetchKey = useMemo(
+    () =>
+      !isPreviewMode && workspaceId && includeInsights
+        ? `${workspaceId}|${clientId ?? ''}|${periodDays}|${providerIdsKey}`
+        : null,
+    [clientId, includeInsights, isPreviewMode, periodDays, providerIdsKey, workspaceId],
+  )
+  const lastInsightsFetchKeyRef = useRef<string | null>(null)
+  if (insightsFetchKey && lastInsightsFetchKeyRef.current !== insightsFetchKey) {
+    lastInsightsFetchKeyRef.current = insightsFetchKey
+    void fetchInsights()
+  }
 
   const loadMoreMetrics = useCallback(async () => {
     // Pagination is not supported in the Convex query

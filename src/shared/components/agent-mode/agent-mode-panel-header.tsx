@@ -25,7 +25,7 @@ import {
 } from '@/shared/ui/dropdown-menu'
 
 import { ConnectionIndicator } from './agent-mode-panel-composer'
-import { AGENT_PANEL_SURFACE } from './agent-mode-panel-message-utils'
+import { AGENT_PANEL_SURFACE } from './agent-mode-panel-message-constants'
 
 export function AgentModeHeader({
   connectionStatus,

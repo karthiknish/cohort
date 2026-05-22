@@ -65,7 +65,7 @@ function HomePageContent() {
               Now in public beta
             </div>
 
-            <h1 className="text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl xl:text-7xl">
+            <h1 className="text-4xl leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl xl:text-7xl">
               {HERO_HEADLINE}
             </h1>
 
@@ -106,7 +106,7 @@ function HomePageContent() {
               Interactive preview
             </p>
             <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
-              Explore a live sample of the workspace — switch sections, inspect metrics, and hover to pause the tour.
+              Explore a live sample of the workspace - switch sections, inspect metrics, and hover to pause the tour.
             </p>
           </div>
           <MinifiedSoftwarePreview />
@@ -122,7 +122,7 @@ function HomePageContent() {
         <div className="mx-auto max-w-6xl px-6">
           <FadeIn className="mb-16 text-center">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Features</p>
-            <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
+            <h2 className="mt-3 text-3xl text-foreground sm:text-4xl">
               Everything your agency runs on, now with operational depth
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
@@ -142,7 +142,7 @@ function HomePageContent() {
         <div className="relative mx-auto max-w-4xl rounded-3xl border border-primary/15 bg-card p-8 shadow-xl shadow-primary/[0.08] sm:p-12">
           <FadeIn className="text-center">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Get Started</p>
-            <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
+            <h2 className="mt-3 text-3xl text-foreground sm:text-4xl">
               Start your free workspace on a dedicated sign-in page
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">

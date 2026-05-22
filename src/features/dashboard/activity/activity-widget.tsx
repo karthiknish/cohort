@@ -207,7 +207,7 @@ export function ActivityWidget() {
 
   return (
     <Card className="shadow-sm h-full flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+      <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
         <div className="flex items-center gap-2">
           <CardTitle className="text-base">Recent Activity</CardTitle>
           {isRealTime && (

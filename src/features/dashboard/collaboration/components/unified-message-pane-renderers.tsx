@@ -1,22 +1,55 @@
 'use client'
 
-import { useCallback, useMemo, type ReactNode } from 'react'
+import { createContext, use, useCallback, useMemo, type ReactNode } from 'react'
 
 import type { CollaborationMessage } from '@/types/collaboration'
 
 import type { MessageListRenderers } from './message-list-render-context'
-import type { UnifiedMessage } from './message-list'
+import type { UnifiedMessage } from './message-list-types'
 import { SwipeableMessage } from './swipeable-message'
 import { ThreadSection } from './thread-section'
 import {
-  renderDeletedMessageInfo,
-  renderMessageAttachmentsContent,
   renderMessageContentBlock,
-  renderMessageEditForm,
-  SharedPlatformBadges,
-  UnifiedMessageActionBar,
-  UnifiedThreadReplyCard,
-} from './unified-message-pane-sections'
+} from './unified-message-pane-render-utils'
+import { UnifiedThreadReplyCard } from './unified-message-pane-sections'
+
+type UnifiedThreadReplyContextValue = {
+  activeDeletingMessageId: string | null
+  currentUserId: string | null
+  editingMessageId: string | null
+  handleReaction: (messageId: string, emoji: string) => Promise<void>
+  handleRequestDelete: (messageId: string) => void
+  handleStartEdit: (message: UnifiedMessage) => void
+  messageUpdatingId: string | null
+  onDeleteMessage?: (messageId: string) => Promise<void>
+  onEditMessage?: (messageId: string, newContent: string) => Promise<void>
+  reactionPendingByMessage: Record<string, string | null>
+}
+
+const UnifiedThreadReplyContext = createContext<UnifiedThreadReplyContextValue | null>(null)
+
+function UnifiedThreadReplyRenderer({ reply }: { reply: CollaborationMessage }) {
+  const context = use(UnifiedThreadReplyContext)
+  if (!context) {
+    throw new Error('UnifiedThreadReplyRenderer requires UnifiedThreadReplyContext')
+  }
+
+  return (
+    <UnifiedThreadReplyCard
+      reply={reply}
+      currentUserId={context.currentUserId}
+      editingMessageId={context.editingMessageId}
+      activeDeletingMessageId={context.activeDeletingMessageId}
+      messageUpdatingId={context.messageUpdatingId}
+      reactionPendingEmoji={context.reactionPendingByMessage[reply.id] ?? null}
+      onToggleReaction={(emoji) => {
+        void context.handleReaction(reply.id, emoji)
+      }}
+      onStartEdit={context.onEditMessage ? () => context.handleStartEdit(reply) : undefined}
+      onRequestDelete={context.onDeleteMessage ? () => context.handleRequestDelete(reply.id) : undefined}
+    />
+  )
+}
 
 type UseUnifiedMessagePaneRenderersArgs = {
   activeDeletingMessageId: string | null
@@ -56,7 +89,7 @@ type UseUnifiedMessagePaneRenderersArgs = {
   handleThreadToggle: (threadRootId: string, beforeMs?: number) => void
 }
 
-function UnifiedThreadSectionRenderer({
+export function UnifiedThreadSectionRenderer({
   activeDeletingMessageId,
   expanded,
   handleLoadMoreThread,
@@ -140,20 +173,19 @@ function UnifiedThreadSectionRenderer({
     handleReply(message)
   }, [handleReply, message])
 
-  const renderReply = useCallback(
-    (reply: CollaborationMessage) => (
-      <UnifiedThreadReplyCard
-        reply={reply}
-        currentUserId={currentUserId}
-        editingMessageId={editingMessageId}
-        activeDeletingMessageId={activeDeletingMessageId}
-        messageUpdatingId={messageUpdatingId}
-        reactionPendingEmoji={reactionPendingByMessage[reply.id] ?? null}
-        onToggleReaction={handleReaction}
-        onStartEdit={onEditMessage ? handleStartEdit : undefined}
-        onRequestDelete={onDeleteMessage ? handleRequestDelete : undefined}
-      />
-    ),
+  const threadReplyContext = useMemo(
+    (): UnifiedThreadReplyContextValue => ({
+      activeDeletingMessageId,
+      currentUserId,
+      editingMessageId,
+      handleReaction,
+      handleRequestDelete,
+      handleStartEdit,
+      messageUpdatingId,
+      onDeleteMessage,
+      onEditMessage,
+      reactionPendingByMessage,
+    }),
     [
       activeDeletingMessageId,
       currentUserId,
@@ -173,27 +205,31 @@ function UnifiedThreadSectionRenderer({
   }
 
   return (
+    <UnifiedThreadReplyContext.Provider value={threadReplyContext}>
     <ThreadSection
       threadRootId={threadRootId}
       replyCount={replyCount}
       unreadCount={unreadCount}
       lastReplyIso={lastReplyIso}
-      isOpen={Boolean(expanded[threadRootId])}
-      isLoading={threadLoading}
+      panel={{
+        isOpen: Boolean(expanded[threadRootId]),
+        isLoading: threadLoading,
+        hasNextCursor: Boolean(threadNextCursor),
+      }}
       error={threadError}
-      hasNextCursor={Boolean(threadNextCursor)}
       replies={threadReplies}
       onToggle={handleToggle}
       onRetry={handleRetry}
       onLoadMore={handleLoadMore}
       onReply={handleReplyClick}
       canReply={Boolean(onReply)}
-      renderReply={renderReply}
+      ReplyRenderer={UnifiedThreadReplyRenderer}
     />
+    </UnifiedThreadReplyContext.Provider>
   )
 }
 
-function SwipeableMessageRenderer({
+export function SwipeableMessageRenderer({
   children,
   currentUserId,
   handleReply,
@@ -229,239 +265,5 @@ function SwipeableMessageRenderer({
     >
       {children}
     </SwipeableMessage>
-  )
-}
-
-export function useUnifiedMessagePaneRenderers({
-  activeDeletingMessageId,
-  channelMessagesById,
-  currentUserId,
-  deletedInfoByMessage,
-  editingMessageId,
-  editingPreview,
-  editingValue,
-  expandedThreadIds,
-  headerType,
-  isMessageSearchActive,
-  messageSearchHighlights,
-  messageUpdatingId,
-  onDeleteMessage,
-  onEditMessage,
-  onReply,
-  onShareToPlatform,
-  reactionPendingByMessage,
-  resolveThreadRootId,
-  setEditingValue,
-  sharingTo,
-  threadErrorsByRootId,
-  threadLoadingByRootId,
-  threadMessagesByRootId,
-  threadNextCursorByRootId,
-  threadUnreadCountsByRootId,
-  handleCancelEdit,
-  handleConfirmEdit,
-  handleLoadMoreThread,
-  handleReaction,
-  handleReply,
-  handleRequestDelete,
-  handleRetryThreadLoad,
-  handleShare,
-  handleStartEdit,
-  handleThreadToggle,
-}: UseUnifiedMessagePaneRenderersArgs): MessageListRenderers {
-  const renderMessageExtras = useCallback(
-    (message: UnifiedMessage) => <SharedPlatformBadges platforms={message.sharedTo as Array<'email'> | undefined} />,
-    [],
-  )
-
-  const renderMessageActions = useCallback(
-    (message: UnifiedMessage) => (
-      <UnifiedMessageActionBar
-        headerType={headerType ?? 'dm'}
-        message={message}
-        currentUserId={currentUserId}
-        activeDeletingMessageId={activeDeletingMessageId}
-        messageUpdatingId={messageUpdatingId}
-        sharingTo={sharingTo}
-        onReply={onReply ? handleReply : undefined}
-        onStartEdit={onEditMessage ? handleStartEdit : undefined}
-        onRequestDelete={onDeleteMessage ? handleRequestDelete : undefined}
-        onShare={onShareToPlatform ? handleShare : undefined}
-      />
-    ),
-    [
-      activeDeletingMessageId,
-      currentUserId,
-      handleReply,
-      handleRequestDelete,
-      handleShare,
-      handleStartEdit,
-      headerType,
-      messageUpdatingId,
-      onDeleteMessage,
-      onEditMessage,
-      onReply,
-      onShareToPlatform,
-      sharingTo,
-    ],
-  )
-
-  const renderMessageContent = useCallback(
-    (message: UnifiedMessage) => {
-      const originalMessage = channelMessagesById.get(message.id)
-      return renderMessageContentBlock(
-        message,
-        originalMessage,
-        isMessageSearchActive ? messageSearchHighlights : undefined,
-      )
-    },
-    [channelMessagesById, isMessageSearchActive, messageSearchHighlights],
-  )
-
-  const renderMessageAttachments = useCallback((message: UnifiedMessage) => renderMessageAttachmentsContent(message), [])
-
-  const renderDeletedInfo = useCallback(
-    (message: UnifiedMessage) => renderDeletedMessageInfo(message, deletedInfoByMessage),
-    [deletedInfoByMessage],
-  )
-
-  const renderEditForm = useCallback(
-    (message: UnifiedMessage) => renderMessageEditForm(
-      message,
-      editingMessageId,
-      editingValue,
-      setEditingValue,
-      handleConfirmEdit,
-      handleCancelEdit,
-      messageUpdatingId === message.id,
-      editingPreview,
-    ),
-    [editingMessageId, editingPreview, editingValue, handleCancelEdit, handleConfirmEdit, messageUpdatingId, setEditingValue],
-  )
-
-  const renderThreadReply = useCallback(
-    (reply: CollaborationMessage) => (
-      <UnifiedThreadReplyCard
-        reply={reply}
-        currentUserId={currentUserId}
-        editingMessageId={editingMessageId}
-        activeDeletingMessageId={activeDeletingMessageId}
-        messageUpdatingId={messageUpdatingId}
-        reactionPendingEmoji={reactionPendingByMessage[reply.id] ?? null}
-        onToggleReaction={handleReaction}
-        onStartEdit={onEditMessage ? handleStartEdit : undefined}
-        onRequestDelete={onDeleteMessage ? handleRequestDelete : undefined}
-      />
-    ),
-    [
-      activeDeletingMessageId,
-      currentUserId,
-      editingMessageId,
-      handleReaction,
-      handleRequestDelete,
-      handleStartEdit,
-      messageUpdatingId,
-      onDeleteMessage,
-      onEditMessage,
-      reactionPendingByMessage,
-    ],
-  )
-
-  const renderThreadSection = useCallback(
-    (message: UnifiedMessage) => {
-      return (
-        <UnifiedThreadSectionRenderer
-          activeDeletingMessageId={activeDeletingMessageId}
-          currentUserId={currentUserId}
-          editingMessageId={editingMessageId}
-          expanded={expandedThreadIds}
-          handleLoadMoreThread={handleLoadMoreThread}
-          handleReaction={handleReaction}
-          handleReply={handleReply}
-          handleRequestDelete={handleRequestDelete}
-          handleRetryThreadLoad={handleRetryThreadLoad}
-          handleStartEdit={handleStartEdit}
-          handleThreadToggle={handleThreadToggle}
-          headerType={headerType}
-          message={message}
-          onReply={onReply}
-          onDeleteMessage={onDeleteMessage}
-          onEditMessage={onEditMessage}
-          reactionPendingByMessage={reactionPendingByMessage}
-          resolveThreadRootId={resolveThreadRootId}
-          threadErrorsByRootId={threadErrorsByRootId}
-          threadLoadingByRootId={threadLoadingByRootId}
-          threadMessagesByRootId={threadMessagesByRootId}
-          threadNextCursorByRootId={threadNextCursorByRootId}
-          threadUnreadCountsByRootId={threadUnreadCountsByRootId}
-          messageUpdatingId={messageUpdatingId}
-        />
-      )
-    },
-    [
-      activeDeletingMessageId,
-      currentUserId,
-      editingMessageId,
-      expandedThreadIds,
-      handleLoadMoreThread,
-      handleReaction,
-      handleReply,
-      handleRequestDelete,
-      handleRetryThreadLoad,
-      handleThreadToggle,
-      handleStartEdit,
-      headerType,
-      messageUpdatingId,
-      onReply,
-      onDeleteMessage,
-      onEditMessage,
-      reactionPendingByMessage,
-      resolveThreadRootId,
-      threadErrorsByRootId,
-      threadLoadingByRootId,
-      threadMessagesByRootId,
-      threadNextCursorByRootId,
-      threadUnreadCountsByRootId,
-    ],
-  )
-
-  const renderMessageWrapper = useCallback(
-    (message: UnifiedMessage, children: ReactNode) => (
-      <SwipeableMessageRenderer
-        currentUserId={currentUserId}
-        handleReply={handleReply}
-        handleRequestDelete={handleRequestDelete}
-        message={message}
-        onDeleteMessage={onDeleteMessage}
-        onReply={onReply}
-      >
-        {children}
-      </SwipeableMessageRenderer>
-    ),
-    [currentUserId, handleReply, handleRequestDelete, onDeleteMessage, onReply],
-  )
-
-  return useMemo(
-    () => ({
-      renderDeletedInfo,
-      renderEditForm,
-      renderMessageActions,
-      renderMessageAttachments,
-      renderMessageContent,
-      renderMessageExtras,
-      renderMessageWrapper,
-      renderThreadSection: headerType === 'channel' ? renderThreadSection : undefined,
-    }),
-    [
-      headerType,
-      renderDeletedInfo,
-      renderEditForm,
-      renderMessageActions,
-      renderMessageAttachments,
-      renderMessageContent,
-      renderMessageExtras,
-      renderMessageWrapper,
-      renderThreadSection,
-    ],
   )
 }

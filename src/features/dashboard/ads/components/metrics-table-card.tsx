@@ -3,12 +3,12 @@
 import { memo, useCallback, useMemo, useState, type ChangeEvent } from 'react'
 import { Card, CardContent } from '@/shared/ui/card'
 
+import { buildMetricsTableColumns } from './metrics-table-card-columns'
 import {
   MetricsTableBody,
   MetricsTableFilters,
   MetricsTableHeader,
   MetricsTableLoadMore,
-  buildMetricsTableColumns,
 } from './metrics-table-card-sections'
 
 import type { MetricRecord } from './types'

@@ -56,39 +56,46 @@ function extractAiSummary(insights: unknown, depth = 0): string | null {
   return null
 }
 
+export type ProposalHistoryCapabilities = {
+  canCreate: boolean
+  canManage: boolean
+}
+
+export type ProposalHistoryWorkflowState = {
+  loading: boolean
+  generating: boolean
+  creating: boolean
+}
+
 interface ProposalHistoryProps {
   proposals: ProposalDraft[]
   draftId: string | null
-  isLoading: boolean
+  workflow: ProposalHistoryWorkflowState
+  capabilities: ProposalHistoryCapabilities
   deletingProposalId: string | null
   onRefresh: () => void
   onResume: (proposal: ProposalDraft, forceEdit?: boolean) => void
   onRequestDelete: (proposal: ProposalDraft) => void
-  isGenerating: boolean
   downloadingDeckId: string | null
   onDownloadDeck: (proposal: ProposalDraft) => void
   onCreateNew: () => void
-  canCreate: boolean
-  canManage?: boolean
-  isCreating: boolean
 }
 
 function ProposalHistoryComponent({
   proposals,
   draftId,
-  isLoading,
+  workflow,
+  capabilities,
   deletingProposalId,
   onRefresh,
   onResume,
   onRequestDelete,
-  isGenerating,
   downloadingDeckId,
   onDownloadDeck,
   onCreateNew,
-  canCreate,
-  canManage = true,
-  isCreating,
 }: ProposalHistoryProps) {
+  const { loading: isLoading, generating: isGenerating, creating: isCreating } = workflow
+  const { canCreate, canManage = true } = capabilities
   const rows = proposals.map((proposal) => {
     const isActiveDraft = proposal.id === draftId
     const presentationUrl = proposal.pptUrl ?? proposal.presentationDeck?.storageUrl ?? proposal.presentationDeck?.pptxUrl ?? null
@@ -126,7 +133,7 @@ function ProposalHistoryComponent({
             <div className="min-w-0 space-y-1">
               <CardTitle className="text-lg font-semibold tracking-tight">Proposal history</CardTitle>
               <CardDescription className="text-sm leading-relaxed">
-                Drafts, generated decks, and sent proposals for this client — resume work or open materials in one place.
+                Drafts, generated decks, and sent proposals for this client - resume work or open materials in one place.
               </CardDescription>
             </div>
           </div>
@@ -136,10 +143,12 @@ function ProposalHistoryComponent({
           <div className="space-y-3">
             {proposals.length === 0 && !isLoading ? (
               <ProposalHistoryEmptyState
-                canCreate={canCreate}
-                canManage={canManage}
-                isCreating={isCreating}
-                isGenerating={isGenerating}
+                actions={{
+                  canCreate,
+                  canManage,
+                  creating: isCreating,
+                  generating: isGenerating,
+                }}
                 onCreateNew={onCreateNew}
               />
             ) : (

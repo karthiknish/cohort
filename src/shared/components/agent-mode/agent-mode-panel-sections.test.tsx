@@ -170,7 +170,7 @@ describe('agent mode panel sections', () => {
               clientId: 'm1',
               content: 'Hello',
               type: 'user',
-              timestamp: new Date(),
+              timestamp: '2024-01-15T12:00:00.000Z',
             } as AgentMessage,
           ]}
           processingSteps={[
@@ -273,7 +273,7 @@ describe('agent mode panel sections', () => {
             clientId: 'm1',
             content: 'Hello again',
             type: 'user',
-            timestamp: new Date(),
+            timestamp: '2024-01-15T12:00:00.000Z',
           } as AgentMessage,
         ]}
         onRetry={noop}

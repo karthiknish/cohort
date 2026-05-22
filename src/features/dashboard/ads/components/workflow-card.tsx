@@ -43,7 +43,7 @@ export function WorkflowCard({
             <CardTitle className="text-base leading-tight">Get paid media connected</CardTitle>
           </div>
           <CardDescription className="max-w-xl text-pretty leading-relaxed">
-            OAuth into Google, Meta, LinkedIn, and TikTok — then finish account selection in the setup
+            OAuth into Google, Meta, LinkedIn, and TikTok - then finish account selection in the setup
             panel. First sync pulls roughly 90 days of history.
           </CardDescription>
         </div>

@@ -98,7 +98,6 @@ export function ChecklistSubmissionRunner({
 }) {
   const [values, setValues] = useState<AnswerMap>({})
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-  const [submissionAnnouncement, setSubmissionAnnouncement] = useState('')
   const previousPendingRef = useRef(pending)
 
   const handleChange = useCallback((fieldId: string, value: string) => {
@@ -133,17 +132,19 @@ export function ChecklistSubmissionRunner({
     void handleSend()
   }, [handleSend])
 
-  useEffect(() => {
+  const submissionAnnouncement = (() => {
     const previousPending = previousPendingRef.current
+    let message = ''
 
     if (pending && !previousPending) {
-      setSubmissionAnnouncement(`Submitting ${templateTitle}.`)
+      message = `Submitting ${templateTitle}.`
     } else if (!pending && previousPending) {
-      setSubmissionAnnouncement(`${templateTitle} submission finished.`)
+      message = `${templateTitle} submission finished.`
     }
 
     previousPendingRef.current = pending
-  }, [pending, templateTitle])
+    return message
+  })()
 
   if (!templateLegacyId || fields.length === 0) {
     return (

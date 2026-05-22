@@ -150,6 +150,7 @@ export function ImageUploader({
         ref={inputRef}
         type="file"
         accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+        aria-label="Upload image"
         className="hidden"
         onChange={handleFileChange}
         disabled={disabled || isUploading}

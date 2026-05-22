@@ -204,10 +204,10 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
     // Horizontal rule
     hr: () => <hr className="my-4 border-muted/60" />,
     // Headings in messages
-    h1: ({ children }) => <h1 className="mt-4 mb-2 text-lg font-bold text-foreground">{children}</h1>,
-    h2: ({ children }) => <h2 className="mt-3 mb-2 text-base font-bold text-foreground">{children}</h2>,
-    h3: ({ children }) => <h3 className="mt-3 mb-1 text-sm font-bold text-foreground">{children}</h3>,
-    h4: ({ children }) => <h4 className="mt-2 mb-1 text-sm font-semibold text-foreground">{children}</h4>,
+    h1: ({ children }) => <h1 className="mt-4 mb-2 text-lg text-foreground">{children}</h1>,
+    h2: ({ children }) => <h2 className="mt-3 mb-2 text-base text-foreground">{children}</h2>,
+    h3: ({ children }) => <h3 className="mt-3 mb-1 text-sm text-foreground">{children}</h3>,
+    h4: ({ children }) => <h4 className="mt-2 mb-1 text-sm text-foreground">{children}</h4>,
     h5: ({ children }) => <h5 className="mt-2 mb-1 text-sm font-medium text-foreground">{children}</h5>,
     h6: ({ children }) => <h6 className="mt-2 mb-1 text-sm font-medium text-muted-foreground">{children}</h6>,
     // Strikethrough

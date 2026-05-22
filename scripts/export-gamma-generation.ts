@@ -3,7 +3,7 @@ import 'dotenv/config'
 import { access, mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve as resolvePath } from 'node:path'
 
-import { gammaService } from '../src/services/gamma'
+import { gammaService } from '../src/services/gamma/api'
 import { downloadGammaPresentation, findGammaFile } from '../src/services/gamma-utils'
 
 type SupportedFormat = 'pptx' | 'pdf'

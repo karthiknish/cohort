@@ -161,17 +161,15 @@ export function ProposalPreviewModeSection(props: {
       <ProposalHistory
         proposals={previewProposals}
         draftId={previewDraftId}
-        isLoading={false}
+        workflow={{ loading: false, generating: false, creating: false }}
+        capabilities={{ canCreate: false, canManage: false }}
         deletingProposalId={null}
         onRefresh={onRefreshPreview}
         onResume={onResume}
         onRequestDelete={onRequestDelete}
-        isGenerating={false}
         downloadingDeckId={null}
         onDownloadDeck={onDownloadDeck}
         onCreateNew={onCreateNew}
-        canCreate={false}
-        isCreating={false}
       />
     </>
   )

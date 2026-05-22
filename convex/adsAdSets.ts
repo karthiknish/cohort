@@ -40,13 +40,15 @@ export const listAdSets = action({
       requireIdentity(identity)
 
       const clientId = normalizeClientId(args.clientId ?? null)
-      const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
+      const [integration, { listMetaAdSets }] = await Promise.all([
+        getFacebookIntegration(ctx, args.workspaceId, clientId),
+        import('@/services/integrations/meta-ads/campaign-modules/adsets'),
+      ])
       const [accessToken, adAccountId] = await Promise.all([
         resolveFacebookAccessToken(args.workspaceId, integration, clientId),
         requireFacebookAdAccount(integration),
       ])
 
-      const { listMetaAdSets } = await import('@/services/integrations/meta-ads/campaign-modules/adsets')
       const adSets = await listMetaAdSets({
         accessToken,
         adAccountId,
@@ -87,13 +89,15 @@ export const createAdSet = action({
       requireIdentity(identity)
 
       const clientId = normalizeClientId(args.clientId ?? null)
-      const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
+      const [integration, { createMetaAdSet }] = await Promise.all([
+        getFacebookIntegration(ctx, args.workspaceId, clientId),
+        import('@/services/integrations/meta-ads/campaign-modules/adsets'),
+      ])
       const [accessToken, adAccountId] = await Promise.all([
         resolveFacebookAccessToken(args.workspaceId, integration, clientId),
         requireFacebookAdAccount(integration),
       ])
 
-      const { createMetaAdSet } = await import('@/services/integrations/meta-ads/campaign-modules/adsets')
       const result = await createMetaAdSet({
         accessToken,
         adAccountId,
@@ -130,10 +134,12 @@ export const updateAdSetTargeting = action({
       requireIdentity(identity)
 
       const clientId = normalizeClientId(args.clientId ?? null)
-      const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
+      const [integration, { updateMetaAdSet }] = await Promise.all([
+        getFacebookIntegration(ctx, args.workspaceId, clientId),
+        import('@/services/integrations/meta-ads/campaign-modules/adsets'),
+      ])
       const accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
 
-      const { updateMetaAdSet } = await import('@/services/integrations/meta-ads/campaign-modules/adsets')
       const result = await updateMetaAdSet({
         accessToken,
         adSetId: args.adSetId,

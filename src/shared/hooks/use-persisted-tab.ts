@@ -1,7 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 
 type UsePersistedTabOptions<TValue extends string> = {
   /** Query param key to use in the URL (default: "tab") */
@@ -34,7 +36,6 @@ function arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i])
 }
 
-/** @deprecated Consumers of this hook must be wrapped in <Suspense> */
 export function usePersistedTab<TValue extends string>(
   options: UsePersistedTabOptions<TValue>,
 ): UsePersistedTabReturn<TValue> {
@@ -48,7 +49,7 @@ export function usePersistedTab<TValue extends string>(
 
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const searchParams = useUrlSearchParams()
 
   const storageKey = useMemo(() => {
     const base = storageNamespace ? `${storageNamespace}:` : ''
@@ -57,85 +58,63 @@ export function usePersistedTab<TValue extends string>(
 
   // Start with defaultValue to avoid hydration mismatch
   const [value, setValueState] = useState<TValue>(defaultValue)
-  const [hasMounted, setHasMounted] = useState(false)
+  const hasMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
 
   const didInitRef = useRef(false)
-  // Use refs to prevent infinite loops from changing dependencies
   const allowedValuesRef = useRef(allowedValues)
   const defaultValueRef = useRef(defaultValue)
   const valueRef = useRef(value)
 
-  // Keep refs in sync
-  useEffect(() => {
-    allowedValuesRef.current = allowedValues
-    defaultValueRef.current = defaultValue
-    valueRef.current = value
-  })
+  allowedValuesRef.current = allowedValues
+  defaultValueRef.current = defaultValue
+  valueRef.current = value
 
-  // Only run initialization after mount to avoid hydration mismatch
-  useEffect(() => {
-    setHasMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (!hasMounted) return
-    if (didInitRef.current) return
+  if (hasMounted && !didInitRef.current) {
     didInitRef.current = true
 
     const fromUrl = searchParams.get(param)
     if (isAllowed(allowedValuesRef.current, fromUrl)) {
-      // Only set if different from default to avoid unnecessary re-render
       if (fromUrl !== defaultValueRef.current) {
         setValueState(fromUrl)
       }
-      return
-    }
-
-    try {
-      const fromStorage = window.localStorage.getItem(storageKey)
-      if (isAllowed(allowedValuesRef.current, fromStorage)) {
-        // Only set if different from default to avoid unnecessary re-render
-        if (fromStorage !== defaultValueRef.current) {
-          setValueState(fromStorage)
+    } else {
+      try {
+        const fromStorage = window.localStorage.getItem(storageKey)
+        if (isAllowed(allowedValuesRef.current, fromStorage)) {
+          if (fromStorage !== defaultValueRef.current) {
+            setValueState(fromStorage)
+          }
         }
+      } catch {
+        // ignore storage errors
       }
-    } catch {
-      // ignore storage errors
     }
-    // eslint_disable-next-line react-hooks/exhaustive-deps
-  }, [hasMounted, param, searchParams, storageKey])
+  }
 
-  // Handle allowed values changes in a separate effect with proper guards
-  useEffect(() => {
-    if (!hasMounted) return
-    
-    // Only reset if allowedValues actually changed (shallow compare contents)
-    if (arraysEqual(allowedValuesRef.current, allowedValues)) return
-    
+  if (hasMounted && !arraysEqual(allowedValuesRef.current, allowedValues)) {
     allowedValuesRef.current = allowedValues
-    
-    // Check if current value is still valid - if so, keep it
-    if (isAllowed(allowedValues, valueRef.current)) return
 
-    // Only reset if the current value is no longer allowed
-    setValueState(defaultValue)
-  }, [hasMounted, allowedValues, defaultValue])
+    if (!isAllowed(allowedValues, valueRef.current)) {
+      setValueState(defaultValue)
+    }
+  }
 
-  // Use a ref to track if we're currently syncing to URL to prevent loops
   const isSyncingToUrlRef = useRef(false)
-  
+
   const setValue = useCallback(
     (next: TValue) => {
-      // Use ref to get current allowed values without creating dependency
       const currentAllowed = allowedValuesRef.current
       const currentDefault = defaultValueRef.current
-      
+
       if (!isAllowed(currentAllowed, next)) {
         setValueState(currentDefault)
         return
       }
 
-      // Only update state if value actually changed
       setValueState((prev) => {
         if (prev === next) return prev
         return next
@@ -150,7 +129,6 @@ export function usePersistedTab<TValue extends string>(
       if (!syncToUrl) return
       if (isSyncingToUrlRef.current) return
 
-      // Check if URL actually needs to change
       const currentParamValue = searchParams.get(param)
       if (currentParamValue === next) return
 
@@ -158,15 +136,12 @@ export function usePersistedTab<TValue extends string>(
       const params = new URLSearchParams(searchParams.toString())
       params.set(param, next)
       const queryString = params.toString()
-      
-      // Use setTimeout to break synchronous render cycle
+
       setTimeout(() => {
         router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
         isSyncingToUrlRef.current = false
       }, 0)
     },
-    // Minimal deps - use refs for values that change frequently
-    // eslint_disable-next-line react-hooks/exhaustive-deps
     [param, pathname, router, searchParams, storageKey, syncToUrl],
   )
 

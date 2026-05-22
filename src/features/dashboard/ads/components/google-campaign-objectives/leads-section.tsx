@@ -78,6 +78,7 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
               <Label htmlFor="target-cpa">Target CPA ($)</Label>
               <input
                 id="target-cpa"
+                aria-label="Target CPA ($)"
                 type="number"
                 min="0.01"
                 step="0.01"

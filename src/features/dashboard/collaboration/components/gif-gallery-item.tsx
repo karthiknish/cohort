@@ -109,6 +109,7 @@ export function GifGalleryItem({
       <video
         ref={videoRef}
         src={attachment.url}
+        aria-label={attachment.name || 'GIF or video attachment'}
         className="w-full h-auto object-cover max-h-96"
         muted={isMuted}
         loop

@@ -13,7 +13,8 @@ import {
 } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
-import { Button, buttonVariants } from "@/shared/ui/button"
+import { Button } from "@/shared/ui/button"
+import { buttonVariants } from "@/shared/ui/button-variants"
 
 const CURRENT_YEAR = new Date().getFullYear()
 const DEFAULT_FROM_YEAR = CURRENT_YEAR - 10
@@ -178,9 +179,13 @@ function CalendarDayButton({
   const defaultClassNames = getDefaultClassNames()
 
   const ref = React.useRef<HTMLButtonElement>(null)
-  React.useEffect(() => {
-    if (modifiers.focused) ref.current?.focus()
-  }, [modifiers.focused])
+  const focusedRef = React.useRef(false)
+  if (modifiers.focused && !focusedRef.current) {
+    focusedRef.current = true
+    ref.current?.focus()
+  } else if (!modifiers.focused) {
+    focusedRef.current = false
+  }
 
   return (
     <Button

@@ -34,13 +34,10 @@ export function useTaskKeyboardNavigation({
 }: KeyboardNavigationOptions) {
   const selectedIndexRef = useRef(0)
 
-  // Update selected index when tasks change or selection changes externally
-  useEffect(() => {
-    const currentIndex = tasks.findIndex((t) => t.id === selectedTaskId)
-    if (currentIndex !== -1) {
-      selectedIndexRef.current = currentIndex
-    }
-  }, [tasks, selectedTaskId])
+  const currentIndex = tasks.findIndex((task) => task.id === selectedTaskId)
+  if (currentIndex !== -1) {
+    selectedIndexRef.current = currentIndex
+  }
 
   const getSelectedTaskById = useCallback((): TaskRecord | null => {
     if (!selectedTaskId) return null

@@ -8,6 +8,8 @@ import { Button } from './button'
 import { Inbox, FileSearch, Users, FolderOpen, CircleAlert, Plus, Calendar, MessageSquare, BarChart3, RefreshCw, WifiOff } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
+import { emptyStateIcons } from '@/shared/ui/empty-state-icons'
+
 export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: LucideIcon
   title: string
@@ -24,13 +26,7 @@ export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'card' | 'inline'
 }
 
-const iconMap: Record<string, LucideIcon> = {
-  inbox: Inbox,
-  search: FileSearch,
-  users: Users,
-  folder: FolderOpen,
-  alert: CircleAlert,
-}
+const iconMap = emptyStateIcons
 
 function createNetworkErrorAction(action: EmptyStateProps['action'], onRetry: () => void) {
   return (
@@ -237,4 +233,3 @@ export function NetworkErrorEmptyState(props: Partial<EmptyStateProps>) {
   )
 }
 
-export { iconMap as emptyStateIcons }

@@ -1,7 +1,9 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 
 type UseUrlDrivenDialogOptions<TValue extends string> = {
   paramName: string
@@ -16,14 +18,13 @@ type UseUrlDrivenDialogResult<TValue extends string> = {
   onOpenChange: (open: boolean) => void
 }
 
-/** @deprecated Consumers of this hook must be wrapped in <Suspense> */
 export function useUrlDrivenDialog<TValue extends string>({
   paramName,
   allowedValues,
 }: UseUrlDrivenDialogOptions<TValue>): UseUrlDrivenDialogResult<TValue> {
   const pathname = usePathname()
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const searchParams = useUrlSearchParams()
   const allowedValueSet = useMemo(() => new Set(allowedValues), [allowedValues])
 
   const searchValue = useMemo(() => {

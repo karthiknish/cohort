@@ -105,13 +105,21 @@ function MessageActionMenuItem({
   )
 }
 
-export interface MessageActionsBarProps {
-  message: CollaborationMessage
+export type MessageActionsPermissions = {
   canReact: boolean
   canManage: boolean
-  isUpdating: boolean
-  isDeleting: boolean
-  disableReactionActions: boolean
+}
+
+export type MessageActionsPendingState = {
+  updating: boolean
+  deleting: boolean
+  disableReactions: boolean
+}
+
+export interface MessageActionsBarProps {
+  message: CollaborationMessage
+  permissions: MessageActionsPermissions
+  pending: MessageActionsPendingState
   onReaction: (emoji: string) => void
   onReply: () => void
   onEdit: () => void
@@ -121,17 +129,17 @@ export interface MessageActionsBarProps {
 
 export function MessageActionsBar({
   message,
-  canReact,
-  canManage,
-  isUpdating,
-  isDeleting,
-  disableReactionActions,
+  permissions,
+  pending,
   onReaction,
   onReply,
   onEdit,
   onDelete,
   onCreateTask,
 }: MessageActionsBarProps) {
+  const { canReact, canManage } = permissions
+  const { updating: isUpdating, deleting: isDeleting, disableReactions: disableReactionActions } = pending
+
   if (message.isDeleted) return null
 
   return (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 
 import { convexErrorMessage } from '@/lib/handle-convex-error'
 
@@ -50,15 +50,10 @@ export function useConvexQueryError(options: UseConvexQueryErrorOptions): string
     fallbackMessage = 'Unable to load data. Please try again.',
   } = options
 
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    setError(
-      resolveConvexQueryErrorMessage(data, { skipped, loading, fallbackMessage }),
-    )
-  }, [data, skipped, loading, fallbackMessage])
-
-  return error
+  return useMemo(
+    () => resolveConvexQueryErrorMessage(data, { skipped, loading, fallbackMessage }),
+    [data, skipped, loading, fallbackMessage],
+  )
 }
 
 /**

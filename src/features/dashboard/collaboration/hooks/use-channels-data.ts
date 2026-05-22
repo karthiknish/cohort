@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 import type { ProjectRecord } from '@/types/projects'
@@ -116,35 +116,25 @@ export function useChannelsData({
     return [teamChannel, ...customTeamChannels, ...clientChannels, ...projectChannels]
   }, [aggregatedTeamMembers, avatarForChannel, clients, customChannels, projects, visibleClients])
 
-  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null)
+  const [pickedChannelId, setPickedChannelId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
-  useEffect(() => {
+  const selectedChannelId = useMemo(() => {
     if (channels.length === 0) {
-      if (selectedChannelId !== null) {
-        setSelectedChannelId(null)
-      }
-      return
+      return null
     }
 
-    if (selectedChannelId === null) {
-      return
-    }
-
-    if (channels.some((channel) => channel.id === selectedChannelId)) {
-      return
+    if (pickedChannelId && channels.some((channel) => channel.id === pickedChannelId)) {
+      return pickedChannelId
     }
 
     const preferredClientChannelId = visibleClientId ? `client-${visibleClientId}` : null
-    const fallbackChannelId =
+    return (
       (preferredClientChannelId && channels.some((channel) => channel.id === preferredClientChannelId)
         ? preferredClientChannelId
         : null) ?? channels[0]?.id ?? null
-
-    if (fallbackChannelId !== selectedChannelId) {
-      setSelectedChannelId(fallbackChannelId)
-    }
-  }, [channels, selectedChannelId, visibleClientId])
+    )
+  }, [channels, pickedChannelId, visibleClientId])
 
   const selectedChannel = useMemo(
     () => channels.find((channel) => channel.id === selectedChannelId) ?? null,
@@ -158,7 +148,7 @@ export function useChannelsData({
   }, [channels, searchQuery])
 
   const selectChannel = useCallback((channelId: string | null) => {
-    setSelectedChannelId(channelId)
+    setPickedChannelId(channelId)
   }, [])
 
   const channelParticipants = useMemo<ClientTeamMember[]>(() => {
@@ -188,7 +178,7 @@ export function useChannelsData({
     aggregatedTeamMembers,
     channels,
     selectedChannelId,
-    setSelectedChannelId,
+    setSelectedChannelId: setPickedChannelId,
     selectedChannel,
     searchQuery,
     setSearchQuery,

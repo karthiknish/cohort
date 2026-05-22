@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Repeat, Calendar, Info } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import {
@@ -18,6 +18,8 @@ import {
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Badge } from '@/shared/ui/badge'
+import { ClientFormattedDate } from '@/shared/components/client-formatted-date'
+import { useClientNow } from '@/lib/hooks/use-client-relative-time'
 import { cn } from '@/lib/utils'
 import type { RecurrenceRule } from '@/types/tasks'
 import { formatRecurrenceLabel } from './task-types'
@@ -37,6 +39,9 @@ export function RecurrenceEditor({
   disabled = false,
   showLabel = true,
 }: RecurrenceEditorProps) {
+  const now = useClientNow()
+  const minDate = useMemo(() => (now ? now.toISOString().split('T')[0] : ''), [now])
+
   const handleRuleChange = useCallback(
     (nextValue: string) => {
       onChange(nextValue as RecurrenceRule, endDate)
@@ -99,7 +104,7 @@ export function RecurrenceEditor({
                   type="date"
                   value={endDate || ''}
                   onChange={handleEndDateChange}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={minDate || undefined}
                   suppressHydrationWarning
                 />
                 {endDate && (
@@ -121,9 +126,14 @@ export function RecurrenceEditor({
       {value !== 'none' && (
         <div className="flex items-start gap-2 rounded-md bg-info/10 p-2 text-xs text-info">
           <Info className="size-3.5 shrink-0 mt-0.5" />
-          <p suppressHydrationWarning>
+          <p>
             New tasks will be created automatically based on this recurrence pattern.
-            {endDate && ` Recurring until ${new Date(endDate).toLocaleDateString()}.`}
+            {endDate ? (
+              <>
+                {' Recurring until '}
+                <ClientFormattedDate value={endDate} formatStr="PPP" />.
+              </>
+            ) : null}
           </p>
         </div>
       )}
@@ -156,50 +166,7 @@ export function RecurrenceBadge({
   )
 }
 
-// Calculate next occurrence date
-export function getNextOccurrence(
-  dueDate: string,
-  rule: RecurrenceRule,
-  endDate?: string | null
-): Date | null {
-  if (rule === 'none' || !dueDate) return null
-
-  const baseDate = new Date(dueDate)
-  const now = new Date()
-  const end = endDate ? new Date(endDate) : null
-
-  // Find next occurrence after today
-  const next = new Date(baseDate)
-  while (next <= now) {
-    switch (rule) {
-      case 'daily':
-        next.setDate(next.getDate() + 1)
-        break
-      case 'weekly':
-        next.setDate(next.getDate() + 7)
-        break
-      case 'biweekly':
-        next.setDate(next.getDate() + 14)
-        break
-      case 'monthly':
-        next.setMonth(next.getMonth() + 1)
-        break
-      case 'quarterly':
-        next.setMonth(next.getMonth() + 3)
-        break
-      case 'yearly':
-        next.setFullYear(next.getFullYear() + 1)
-        break
-    }
-
-    // Check if past end date
-    if (end && next > end) {
-      return null
-    }
-  }
-
-  return next
-}
+import { getNextOccurrence } from './task-recurring-utils'
 
 // Display next occurrence
 export function NextOccurrenceDisplay({
@@ -211,7 +178,8 @@ export function NextOccurrenceDisplay({
   rule: RecurrenceRule
   endDate?: string | null
 }) {
-  const next = getNextOccurrence(dueDate, rule, endDate)
+  const now = useClientNow()
+  const next = now ? getNextOccurrence(dueDate, rule, endDate, now) : null
 
   if (!next) {
     return (
@@ -223,7 +191,7 @@ export function NextOccurrenceDisplay({
 
   return (
     <div className="text-xs text-muted-foreground">
-      Next: <span className="font-medium" suppressHydrationWarning>{next.toLocaleDateString()}</span>
+      Next: <ClientFormattedDate value={next} formatStr="PPP" className="font-medium" />
     </div>
   )
 }
@@ -253,12 +221,12 @@ export function RecurringSeriesInfo({
         </div>
         <div>
           <span className="text-muted-foreground">Started:</span>
-          <span className="ml-1 font-medium" suppressHydrationWarning>{new Date(startDate).toLocaleDateString()}</span>
+          <ClientFormattedDate value={startDate} formatStr="PPP" className="ml-1 font-medium" />
         </div>
         {endDate && (
           <div>
             <span className="text-muted-foreground">Ends:</span>
-            <span className="ml-1 font-medium" suppressHydrationWarning>{new Date(endDate).toLocaleDateString()}</span>
+            <ClientFormattedDate value={endDate} formatStr="PPP" className="ml-1 font-medium" />
           </div>
         )}
         {count !== undefined && (

@@ -1,168 +1,20 @@
 'use client'
 
-import { useReducer, useMemo, useCallback, useRef } from 'react'
-import type { ChangeEvent } from 'react'
-import { LoaderCircle, Plus, Trash, Building2, Users } from 'lucide-react'
-
 import { cn } from '@/lib/utils'
-import { Button } from '@/shared/ui/button'
-import { Input } from '@/shared/ui/input'
+
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
-import { useAuth } from '@/shared/contexts/auth-context'
-import { useClientContext } from '@/shared/contexts/client-context'
-import type { ClientTeamMember } from '@/types/clients'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/select'
-import { TruncatedTextPreview } from '@/shared/ui/hover-preview'
-import { MentionInput, type MentionableUser } from '@/shared/ui/mention-input'
-import { api } from '@convex/_generated/api'
-import { useQuery } from 'convex/react'
-
-type ClientWorkspaceSelectorProps = {
-  className?: string
-}
-
-type ClientWorkspaceFormState = {
-  isSheetOpen: boolean
-  newClientName: string
-  accountManagerInput: string
-  teamInput: string
-  saving: boolean
-  removingId: string | null
-  errorMessage: string | null
-}
-
-type ClientWorkspaceFormAction =
-  | { type: 'setSheetOpen'; value: boolean }
-  | { type: 'resetForm' }
-  | { type: 'setNewClientName'; value: string }
-  | { type: 'setAccountManagerInput'; value: string }
-  | { type: 'setTeamInput'; value: string }
-  | { type: 'setSaving'; value: boolean }
-  | { type: 'setRemovingId'; value: string | null }
-  | { type: 'setErrorMessage'; value: string | null }
-
-function createInitialWorkspaceFormState(): ClientWorkspaceFormState {
-  return {
-    isSheetOpen: false,
-    newClientName: '',
-    accountManagerInput: '',
-    teamInput: '',
-    saving: false,
-    removingId: null,
-    errorMessage: null,
-  }
-}
-
-function clientWorkspaceFormReducer(
-  state: ClientWorkspaceFormState,
-  action: ClientWorkspaceFormAction,
-): ClientWorkspaceFormState {
-  switch (action.type) {
-    case 'setSheetOpen':
-      return action.value ? { ...state, isSheetOpen: true } : { ...createInitialWorkspaceFormState() }
-    case 'resetForm':
-      return { ...createInitialWorkspaceFormState(), isSheetOpen: state.isSheetOpen }
-    case 'setNewClientName':
-      return { ...state, newClientName: action.value }
-    case 'setAccountManagerInput':
-      return { ...state, accountManagerInput: action.value }
-    case 'setTeamInput':
-      return { ...state, teamInput: action.value }
-    case 'setSaving':
-      return { ...state, saving: action.value }
-    case 'setRemovingId':
-      return { ...state, removingId: action.value }
-    case 'setErrorMessage':
-      return { ...state, errorMessage: action.value }
-    default:
-      return state
-  }
-}
-
-function normalizeMentionInputValue(input: string): string {
-  return input.replace(/@\[(.*?)\]/g, '$1').trim()
-}
-
-function parseSinglePerson(input: string): string {
-  return normalizeMentionInputValue(input)
-    .split(',')
-    .map((value) => value.trim())
-    .find((value) => value.length > 0) ?? ''
-}
-
-function parseTeamMembers(input: string): ClientTeamMember[] {
-  return normalizeMentionInputValue(input)
-    .split(',')
-    .flatMap((member) => {
-      const entry = member.trim()
-      if (!entry) return []
-
-      const parts = entry.split(':')
-      const name = parts[0]?.trim() ?? ''
-      if (!name.length) return []
-      const role = parts[1]
-      return [{
-        name,
-        role: role ? role.trim() : 'Contributor',
-      }]
-    })
-}
-
-function WorkspaceRow({
-  client,
-  disabled,
-  onRemove,
-}: {
-  client: { id: string; name: string }
-  disabled: boolean
-  onRemove: (clientId: string) => void
-}) {
-  const handleRemove = useCallback(() => onRemove(client.id), [client.id, onRemove])
-
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-muted/60 bg-muted/30 px-4 py-3 text-sm transition-colors hover:bg-muted/50">
-      <div className="flex items-center gap-3">
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-accent/10 text-primary">
-          <Building2 className="size-3.5" />
-        </div>
-        <span className="font-medium">{client.name}</span>
-      </div>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        className="size-8 rounded-full text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
-        onClick={handleRemove}
-        disabled={disabled}
-        aria-label={`Remove ${client.name} workspace`}
-      >
-        <Trash className="size-4" aria-hidden />
-      </Button>
-    </div>
-  )
-}
+  ManageWorkspacesButton,
+  ManageWorkspacesDialog,
+  WorkspaceSelect,
+} from './client-workspace-selector-sections'
+import type { ClientWorkspaceSelectorProps } from './client-workspace-selector-types'
+import { useClientWorkspaceSelector } from './use-client-workspace-selector'
 
 export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorProps) {
-  const { user } = useAuth()
-  const { clients, selectedClientId, selectClient, createClient, removeClient } = useClientContext()
-
-  const isAdmin = user?.role === 'admin'
-  const hasClients = clients.length > 0
-
-  const [formState, dispatch] = useReducer(clientWorkspaceFormReducer, undefined, createInitialWorkspaceFormState)
   const {
+    isAdmin,
+    hasClients,
+    clients,
     isSheetOpen,
     newClientName,
     accountManagerInput,
@@ -170,291 +22,54 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
     saving,
     removingId,
     errorMessage,
-  } = formState
-  const accountManagerMentionsRef = useRef<MentionableUser[]>([])
-  const teamMentionsRef = useRef<MentionableUser[]>([])
-
-  const allUsers = useQuery(
-    api.users.listAllUsers,
-    isAdmin ? { limit: 500 } : 'skip'
-  ) as Array<{ id: string; name: string; email?: string; role?: string }> | undefined
-
-  const mentionableUsers: MentionableUser[] = useMemo(() => {
-    if (!allUsers) return []
-    return allUsers.map((user) => ({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    }))
-  }, [allUsers])
-
-  const handleSheetChange = useCallback((open: boolean) => {
-    dispatch({ type: 'setSheetOpen', value: open })
-    if (!open) {
-      accountManagerMentionsRef.current = []
-      teamMentionsRef.current = []
-    }
-  }, [])
-
-  const handleCreateClient = useCallback(async () => {
-    const name = newClientName.trim()
-    const accountManager = accountManagerMentionsRef.current[0]?.name ?? parseSinglePerson(accountManagerInput)
-
-    if (!name || !accountManager) {
-      dispatch({ type: 'setErrorMessage', value: 'Client name and account manager are required' })
-      return
-    }
-
-    const mentionTeamMembers: ClientTeamMember[] = teamMentionsRef.current.map((user) => ({
-      name: user.name,
-      role: user.role ?? 'Contributor',
-    }))
-    const typedTeamMembers = parseTeamMembers(teamInput)
-    const teamMembers = Array.from(
-      new Map(
-        [...mentionTeamMembers, ...typedTeamMembers].map((member) => [
-          member.name.trim().toLowerCase(),
-          {
-            name: member.name.trim(),
-            role: member.role?.trim() || 'Contributor',
-          },
-        ])
-      ).values()
-    )
-
-    dispatch({ type: 'setSaving', value: true })
-    dispatch({ type: 'setErrorMessage', value: null })
-
-    await createClient({
-      name,
-      accountManager,
-      teamMembers,
-    })
-      .then(() => {
-        handleSheetChange(false)
-      })
-      .catch((createError: unknown) => {
-        const message =
-          createError instanceof Error && createError.message
-            ? createError.message
-            : 'Unable to create client'
-        dispatch({ type: 'setErrorMessage', value: message })
-      })
-      .finally(() => {
-        dispatch({ type: 'setSaving', value: false })
-      })
-  }, [accountManagerInput, createClient, handleSheetChange, newClientName, teamInput])
-
-  const handleRemoveClient = useCallback(async (clientId: string) => {
-    dispatch({ type: 'setRemovingId', value: clientId })
-    dispatch({ type: 'setErrorMessage', value: null })
-
-    await removeClient(clientId)
-      .catch((removeError: unknown) => {
-        const message =
-          removeError instanceof Error && removeError.message
-            ? removeError.message
-            : 'Unable to remove client'
-        dispatch({ type: 'setErrorMessage', value: message })
-      })
-      .finally(() => {
-        dispatch({ type: 'setRemovingId', value: null })
-      })
-  }, [removeClient])
-
-  const handleClientNameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    dispatch({ type: 'setNewClientName', value: event.target.value })
-  }, [])
-
-  const handleAccountManagerChange = useCallback(
-    (value: string, mentions: MentionableUser[]) => {
-      dispatch({ type: 'setAccountManagerInput', value })
-      accountManagerMentionsRef.current = mentions.slice(0, 1)
-    },
-    []
-  )
-
-  const handleTeamChange = useCallback((value: string, mentions: MentionableUser[]) => {
-    dispatch({ type: 'setTeamInput', value })
-    teamMentionsRef.current = mentions
-  }, [])
-
-  const handleOpenSheet = useCallback(() => {
-    handleSheetChange(true)
-  }, [handleSheetChange])
-
-  const handleCloseSheet = useCallback(() => {
-    handleSheetChange(false)
-  }, [handleSheetChange])
-
-  const handleSaveClientClick = useCallback(() => {
-    void handleCreateClient()
-  }, [handleCreateClient])
-
-  const handleValueChange = useCallback((value: string) => {
-    selectClient(value)
-  }, [selectClient])
-
-  const selectedClient = useMemo(() => {
-    return clients.find((c) => c.id === selectedClientId) ?? clients[0]
-  }, [clients, selectedClientId])
-
-  const placeholder = hasClients ? 'Select workspace' : 'No workspaces available'
-  const selectValue = hasClients ? selectedClient?.id ?? '' : ''
-  const selectedLabel = selectedClient?.name ?? placeholder
+    mentionableUsers,
+    placeholder,
+    selectValue,
+    selectedLabel,
+    handleSheetChange,
+    handleClientNameChange,
+    handleAccountManagerChange,
+    handleTeamChange,
+    handleRemoveClient,
+    handleOpenSheet,
+    handleCloseSheet,
+    handleSaveClientClick,
+    handleValueChange,
+  } = useClientWorkspaceSelector({ className })
 
   return (
     <div className={cn('flex min-w-0 items-center gap-2', className)}>
-      <div className="relative min-w-0 flex-1 sm:max-w-[12.5rem] lg:max-w-[14rem]">
-        <Select
-          value={selectValue}
-          onValueChange={handleValueChange}
-          disabled={!hasClients}
-        >
-          <SelectTrigger
-            id="tour-workspace-selector"
-            className={cn(
-              'h-11 w-full border-input bg-background/50 backdrop-blur-sm motion-chromatic',
-              'hover:bg-background hover:border-accent/30 hover:shadow-sm',
-              'focus:ring-2 focus:ring-primary/20 focus:border-accent/40',
-              'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-background/50',
-              'data-[state=open]:bg-background data-[state=open]:border-accent/40 data-[state=open]:shadow-md',
-              'rounded-xl px-4'
-            )}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-primary">
-                <Building2 className="size-3.5" />
-              </div>
-              <SelectValue placeholder={placeholder}>
-                {selectedLabel}
-              </SelectValue>
-            </div>
-          </SelectTrigger>
-          <SelectContent
-            position="popper"
-            className="z-[3000] min-w-[var(--radix-select-trigger-width)] w-[var(--radix-select-trigger-width)]"
-            sideOffset={4}
-          >
-            <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-muted-foreground border-b border-border/50 mb-1">
-              <Users className="size-3" />
-              <span>Your Workspaces</span>
-            </div>
-            {clients.map((client) => (
-                <SelectItem
-                  key={client.id}
-                  value={client.id}
-                  hideIndicator
-                  className="cursor-pointer rounded-md mx-1 my-0.5 px-3 py-2.5 text-popover-foreground transition-colors hover:bg-muted focus:bg-muted focus:text-foreground data-[highlighted]:bg-muted data-[highlighted]:text-foreground data-[state=checked]:bg-accent/10 data-[state=checked]:font-medium data-[state=checked]:text-foreground"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                      <Building2 className="size-3" />
-                    </div>
-                    <TruncatedTextPreview text={client.name} />
-                  </div>
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <WorkspaceSelect
+        clients={clients}
+        hasClients={hasClients}
+        selectValue={selectValue}
+        selectedLabel={selectedLabel}
+        placeholder={placeholder}
+        onValueChange={handleValueChange}
+      />
 
       {isAdmin && (
         <>
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={handleOpenSheet}
-            className="size-11 rounded-xl border-input bg-background/50 backdrop-blur-sm hover:bg-background hover:border-accent/30 hover:shadow-sm motion-chromatic shrink-0"
-          >
-            <Plus className="size-4" />
-            <span className="sr-only">Manage clients</span>
-          </Button>
+          <ManageWorkspacesButton onClick={handleOpenSheet} />
 
-          <Dialog open={isSheetOpen} onOpenChange={handleSheetChange}>
-            <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Manage Workspaces</DialogTitle>
-                <DialogDescription>Create and organize client workspaces.</DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-5">
-                <div className="space-y-2.5">
-                  <label className="text-sm font-medium" htmlFor="client-name">
-                    Client name
-                  </label>
-                  <Input
-                    id="client-name"
-                    value={newClientName}
-                    onChange={handleClientNameChange}
-                    placeholder="e.g. Horizon Ventures"
-                    required
-                    className="h-11 rounded-lg"
-                  />
-                </div>
-                <MentionInput
-                  label="Account manager"
-                  value={accountManagerInput}
-                  onChange={handleAccountManagerChange}
-                  users={mentionableUsers}
-                  placeholder="Type a name or use @ to pick a user…"
-                  disabled={saving}
-                  singleSelect
-                />
-                <MentionInput
-                  label="Team members"
-                  value={teamInput}
-                  onChange={handleTeamChange}
-                  users={mentionableUsers}
-                  placeholder="Type names separated by commas, or use @ to add users…"
-                  disabled={saving}
-                  allowMultiple
-                  maxMentions={10}
-                />
-                {clients.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-sm font-semibold text-muted-foreground">Existing workspaces</p>
-                    <div className="space-y-2">
-                      {clients.map((client) => (
-                        <WorkspaceRow
-                          key={client.id}
-                          client={client}
-                          disabled={clients.length === 1 || removingId === client.id || saving}
-                          onRemove={handleRemoveClient}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {errorMessage && (
-                  <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3">
-                    <p className="text-sm text-destructive">{errorMessage}</p>
-                  </div>
-                )}
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-2 pt-4 border-t border-border/50">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCloseSheet}
-                    disabled={saving}
-                    className="rounded-lg"
-                  >
-                    Close
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={saving}
-                    className="rounded-lg"
-                    onClick={handleSaveClientClick}
-                  >
-                    {saving && <LoaderCircle className="mr-2 size-4 animate-spin" />}
-                    Save client
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <ManageWorkspacesDialog
+            isOpen={isSheetOpen}
+            onOpenChange={handleSheetChange}
+            newClientName={newClientName}
+            accountManagerInput={accountManagerInput}
+            teamInput={teamInput}
+            saving={saving}
+            removingId={removingId}
+            errorMessage={errorMessage}
+            clients={clients}
+            mentionableUsers={mentionableUsers}
+            onClientNameChange={handleClientNameChange}
+            onAccountManagerChange={handleAccountManagerChange}
+            onTeamChange={handleTeamChange}
+            onRemoveClient={handleRemoveClient}
+            onClose={handleCloseSheet}
+            onSave={handleSaveClientClick}
+          />
         </>
       )}
     </div>

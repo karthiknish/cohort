@@ -126,10 +126,11 @@ export function ProfileCard() {
   const avatarPreview = avatarPreviewOverride === undefined ? (user?.photoUrl ?? null) : avatarPreviewOverride
 
   useEffect(() => {
+    const avatarUrlRef = tempAvatarUrlRef
     return () => {
-      if (tempAvatarUrlRef.current) {
-        URL.revokeObjectURL(tempAvatarUrlRef.current)
-        tempAvatarUrlRef.current = null
+      if (avatarUrlRef.current) {
+        URL.revokeObjectURL(avatarUrlRef.current)
+        avatarUrlRef.current = null
       }
     }
   }, [])
@@ -400,10 +401,10 @@ export function ProfileCard() {
           <CardDescription>Update the contact details that appear in proposals and client-facing emails.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
+          <output className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
             <LoaderCircle className="size-4 animate-spin" aria-hidden />
             Loading profile…
-          </div>
+          </output>
         </CardContent>
       </Card>
     )
@@ -421,6 +422,7 @@ export function ProfileCard() {
             ref={avatarInputRef}
             type="file"
             accept="image/png,image/jpeg,image/jpg,image/webp"
+            aria-label="Upload profile photo"
             className="hidden"
             onChange={handleAvatarFileChange}
           />

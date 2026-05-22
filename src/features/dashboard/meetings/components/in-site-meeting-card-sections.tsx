@@ -344,6 +344,19 @@ export function MeetingRoomCanvasSection({
   )
 }
 
+export type MeetingRoomViewportState = {
+  mobile: boolean
+  minimized: boolean
+  pipSupported: boolean
+  pipActive: boolean
+}
+
+export type MeetingRoomJoinState = {
+  joining: boolean
+  preview: boolean
+  hasReference: boolean
+}
+
 export function MeetingRoomToolsSection({
   captureErrorPresent,
   captureListening,
@@ -357,13 +370,8 @@ export function MeetingRoomToolsSection({
   notesProcessingState,
   meetingTimezone,
   joinConfigPresent,
-  isMobileViewport,
-  isMinimized,
-  pipSupported,
-  pipActive,
-  joiningRoom,
-  isPreviewMeeting,
-  hasJoinReference,
+  viewport,
+  join,
   roomActionLabel,
   onOpenSidebar,
   onToggleMinimize,
@@ -381,18 +389,15 @@ export function MeetingRoomToolsSection({
   notesProcessingState: MeetingProcessingState
   meetingTimezone: string
   joinConfigPresent: boolean
-  isMobileViewport: boolean
-  isMinimized: boolean
-  pipSupported: boolean
-  pipActive: boolean
-  joiningRoom: boolean
-  isPreviewMeeting: boolean
-  hasJoinReference: boolean
+  viewport: MeetingRoomViewportState
+  join: MeetingRoomJoinState
   roomActionLabel: string
   onOpenSidebar: () => void
   onToggleMinimize: () => void
   onJoinRoom: () => void
 }) {
+  const { mobile: isMobileViewport, minimized: isMinimized, pipSupported, pipActive } = viewport
+  const { joining: joiningRoom, preview: isPreviewMeeting, hasReference: hasJoinReference } = join
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 rounded-3xl border border-border bg-card p-4 shadow-sm">
       <div>

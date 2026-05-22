@@ -38,12 +38,13 @@ export function MeetingsPanel() {
                 </span>
               </div>
               <div className="mt-1.5 flex items-center gap-2">
-                <div className="flex -space-x-1.5">
-                  {meeting.attendees.slice(0, 3).map((att) => (
+                <div className="flex">
+                  {meeting.attendees.slice(0, 3).map((att, attendeeIndex) => (
                     <div
                       key={att}
                       className={cn(
                         'flex size-4 items-center justify-center rounded-full border border-background text-[7px] font-bold text-viewer-chrome',
+                        attendeeIndex > 0 && '-ml-1.5',
                         ATTENDEE_COLORS[att] ?? 'bg-muted-foreground',
                       )}
                     >
@@ -51,7 +52,7 @@ export function MeetingsPanel() {
                     </div>
                   ))}
                   {meeting.attendees.length > 3 ? (
-                    <div className="flex size-4 items-center justify-center rounded-full border border-background bg-muted text-[7px] font-bold text-muted-foreground">
+                    <div className="-ml-1.5 flex size-4 items-center justify-center rounded-full border border-background bg-muted text-[7px] font-bold text-muted-foreground">
                       +{meeting.attendees.length - 3}
                     </div>
                   ) : null}

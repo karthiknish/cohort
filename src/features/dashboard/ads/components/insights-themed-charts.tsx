@@ -47,6 +47,7 @@ import { InsightsPanelEmpty } from './insights-charts-card-sections'
 
 const DOMAIN_0_100: [number, number] = [0, 100]
 const DATE_TICK_OPTIONS: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+const RADAR_TOOLTIP_CONTENT = <ChartTooltipContent hideLabel />
 
 function formatDateTick(value: string) {
   const date = new Date(value)
@@ -85,11 +86,6 @@ export function ProviderComparisonChart({
     [currency],
   )
 
-  const tooltipContent = useMemo(
-    () => <ChartTooltipContent formatter={spendFormatter} />,
-    [spendFormatter],
-  )
-
   const formatXAxis = useCallback((v: number) => formatCurrency(v, currency), [currency])
 
   if (!hasData) {
@@ -102,6 +98,8 @@ export function ProviderComparisonChart({
       />
     )
   }
+
+  const tooltipContent = <ChartTooltipContent formatter={spendFormatter} />
 
   return (
     <AdsChartShell>
@@ -159,11 +157,6 @@ export function EfficiencyRadarChart({
     [breakdown],
   )
 
-  const radarTooltipContent = useMemo(
-    () => <ChartTooltipContent hideLabel />,
-    [],
-  )
-
   if (!chartData.length) {
     return (
       <InsightsPanelEmpty
@@ -195,7 +188,7 @@ export function EfficiencyRadarChart({
           />
           <RechartsTooltip
             {...ADS_CHART_TOOLTIP_PROPS}
-            content={radarTooltipContent}
+            content={RADAR_TOOLTIP_CONTENT}
           />
         </RadarChart>
       </ChartContainer>
@@ -231,11 +224,6 @@ export function SpendTrendChart({
     [currency],
   )
 
-  const tooltipContent = useMemo(
-    () => <ChartTooltipContent labelFormatter={formatDateTick} formatter={currencyFormatter} />,
-    [currencyFormatter],
-  )
-
   const formatYAxis = useCallback((v: number) => formatCurrency(v, currency), [currency])
 
   if (!trendData || trendData.length < 2) {
@@ -248,6 +236,10 @@ export function SpendTrendChart({
       />
     )
   }
+
+  const tooltipContent = (
+    <ChartTooltipContent labelFormatter={formatDateTick} formatter={currencyFormatter} />
+  )
 
   return (
     <AdsChartShell>
@@ -341,11 +333,6 @@ export function BenchmarkComparisonChart({
     [],
   )
 
-  const tooltipContent = useMemo(
-    () => <ChartTooltipContent formatter={percentileFormatter} />,
-    [percentileFormatter],
-  )
-
   const formatPercentTick = useCallback((value: number) => `${value}%`, [])
 
   if (!chartData.length) {
@@ -356,6 +343,8 @@ export function BenchmarkComparisonChart({
       />
     )
   }
+
+  const tooltipContent = <ChartTooltipContent formatter={percentileFormatter} />
 
   return (
     <AdsChartShell>
@@ -397,4 +386,3 @@ export function BenchmarkComparisonChart({
   )
 }
 
-export { funnelStageThemeKey } from './ads-chart-configs'

@@ -26,7 +26,7 @@ export function ProjectStatusPills({
   }, [onStatusChange])
 
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label="Filter projects by status">
+    <fieldset className="m-0 flex min-w-0 flex-wrap gap-2 border-0 p-0" aria-label="Filter projects by status">
       <StatusPill
         label="All"
         count={totalCount}
@@ -42,7 +42,7 @@ export function ProjectStatusPills({
           onStatusChange={onStatusChange}
         />
       ))}
-    </div>
+    </fieldset>
   )
 }
 

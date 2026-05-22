@@ -6,7 +6,7 @@ import { Reply, Trash2, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { useSwipe } from '@/shared/hooks/gestures'
-import type { UnifiedMessage } from './message-list'
+import type { UnifiedMessage } from './message-list-types'
 
 export interface SwipeableMessageProps {
   message: UnifiedMessage

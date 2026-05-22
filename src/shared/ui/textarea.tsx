@@ -27,8 +27,9 @@ const Textarea = ({ className, autoGrow, onChange, ref, ...props }: TextareaProp
   const onTextareaChange = React.useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       if (autoGrow && internalRef.current) {
-        internalRef.current.style.height = 'auto'
-        internalRef.current.style.height = `${internalRef.current.scrollHeight}px`
+        const textarea = internalRef.current
+        textarea.style.cssText = 'height:auto'
+        textarea.style.cssText = `height:${textarea.scrollHeight}px`
       }
       onChange?.(e)
     },

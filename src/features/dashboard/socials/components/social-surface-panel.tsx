@@ -82,27 +82,14 @@ function formatSignedNumber(value: number): string {
   return `${value > 0 ? '+' : '-'}${formatCompactNumber(Math.abs(value))}`
 }
 
-function SocialMetricBarFill({ colorClass, width }: { colorClass: string; width: number }) {
-  const widthStyle = useMemo(() => ({ width: `${width}%` }), [width])
-
-  return (
-    <div
-      className={cn('h-full rounded-full transition-[width] motion-reduce:transition-none', colorClass)}
-      style={widthStyle}
-    />
-  )
-}
-
 function SocialMetricBars({ metrics, labelledBy }: { metrics: GraphMetric[]; labelledBy?: string }) {
   const maxValue = Math.max(...metrics.map((metric) => metric.value), 0)
 
   return (
-    <div className="space-y-5" role="list" aria-labelledby={labelledBy}>
+    <ul className="list-none space-y-5" aria-labelledby={labelledBy}>
       {metrics.map((metric) => {
-        const width = maxValue > 0 ? Math.max((metric.value / maxValue) * 100, metric.value > 0 ? 6 : 0) : 0
-
         return (
-          <div key={metric.label} className="space-y-2" role="listitem">
+          <li key={metric.label} className="list-none space-y-2">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground">{metric.label}</p>
@@ -110,20 +97,19 @@ function SocialMetricBars({ metrics, labelledBy }: { metrics: GraphMetric[]; lab
               </div>
               <p className="shrink-0 text-sm font-bold tabular-nums text-foreground">{metric.valueLabel}</p>
             </div>
-            <div
-              className="h-3 overflow-hidden rounded-full bg-muted/50 ring-1 ring-muted/30"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={maxValue}
-              aria-valuenow={metric.value}
+            <progress
+              className={cn(
+                'h-3 w-full overflow-hidden rounded-full bg-muted/50 ring-1 ring-muted/30 [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-muted/50 [&::-webkit-progress-value]:rounded-full',
+                metric.colorClass,
+              )}
+              value={metric.value}
+              max={maxValue > 0 ? maxValue : 100}
               aria-label={`${metric.label}: ${metric.valueLabel}`}
-            >
-              <SocialMetricBarFill colorClass={metric.colorClass} width={width} />
-            </div>
-          </div>
+            />
+          </li>
         )
       })}
-    </div>
+    </ul>
   )
 }
 
@@ -395,7 +381,7 @@ export function SocialSurfacePanel({
               <div className="space-y-3">
                 <div className="flex items-center gap-2 border-b border-muted/30 pb-2">
                   <MessageSquareMore className="size-4 text-primary" aria-hidden />
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Derived signals</h3>
+                  <h3 className="text-xs uppercase tracking-widest text-muted-foreground">Derived signals</h3>
                 </div>
                 <SocialInsightCards insights={insightCards} />
               </div>

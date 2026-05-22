@@ -9,7 +9,8 @@ import type { ClientTeamMember } from '@/types/clients'
 
 import type { PendingAttachment } from '../hooks/types'
 import type { MessageListRenderers } from './message-list-render-context'
-import { MessageList, type UnifiedMessage } from './message-list'
+import { MessageList } from './message-list'
+import type { UnifiedMessage } from './message-list-types'
 import { MessageListRenderProvider } from './message-list-render-context'
 import { MessageSearchBar, NoSearchResultsState } from './message-pane-parts'
 import { UnifiedComposerSection, UnifiedConversationHeader } from './unified-message-pane-sections'
@@ -31,9 +32,26 @@ export function UnifiedMessagePaneEmptyState() {
   )
 }
 
+export type MessagePaneListState = {
+  loading: boolean
+  loadingMore: boolean
+  hasMore: boolean
+}
+
+export type MessagePaneComposerState = {
+  focused: boolean
+  sending: boolean
+  pendingAttachments: boolean
+  uploadingAttachments: boolean
+}
+
+export type MessagePaneSearchState = {
+  canSearch: boolean
+  active: boolean
+}
+
 type UnifiedMessagePaneConversationLayoutProps = {
   activeDeletingMessageId: string | null
-  canSearchMessages: boolean
   confirmingDeleteMessageId: string | null
   currentUserId: string | null
   currentUserRole?: string | null
@@ -52,14 +70,10 @@ type UnifiedMessagePaneConversationLayoutProps = {
   handleConfirmDelete: () => void
   handleReaction: (messageId: string, emoji: string) => Promise<void>
   handleSend: () => Promise<void>
-  hasMore: boolean
-  hasPendingAttachments: boolean
+  listState: MessagePaneListState
+  composerState: MessagePaneComposerState
+  searchState: MessagePaneSearchState
   header: MessagePaneHeaderInfo
-  isComposerFocused: boolean
-  isLoading: boolean
-  isLoadingMore: boolean
-  isMessageSearchActive: boolean
-  isSending: boolean
   messageInput: string
   messageListRenderers: MessageListRenderers
   messageSearchQuery: string
@@ -103,14 +117,10 @@ export function UnifiedMessagePaneConversationLayout({
   handleConfirmDelete,
   handleReaction,
   handleSend,
-  hasMore,
-  hasPendingAttachments,
+  listState,
+  composerState,
+  searchState,
   header,
-  isComposerFocused,
-  isLoading,
-  isLoadingMore,
-  isMessageSearchActive,
-  isSending,
   messageInput,
   messageListRenderers,
   messageSearchQuery,
@@ -130,8 +140,16 @@ export function UnifiedMessagePaneConversationLayout({
   reactionPendingByMessage,
   statusBanner,
   typingIndicator,
-  uploadingAttachments,
 }: UnifiedMessagePaneConversationLayoutProps) {
+  const { loading: isLoading, loadingMore: isLoadingMore, hasMore } = listState
+  const {
+    focused: isComposerFocused,
+    sending: isSending,
+    pendingAttachments: hasPendingAttachments,
+    uploadingAttachments,
+  } = composerState
+  const { canSearch: canSearchMessages, active: isMessageSearchActive } = searchState
+
   const handleMessageSearchChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       onMessageSearchChange?.(event.target.value)

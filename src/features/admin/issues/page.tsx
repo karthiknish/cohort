@@ -69,7 +69,7 @@ function AdminIssuesToolbarActions({
   )
 }
 
-function renderSeverityBadge(severity: string) {
+function SeverityBadge({ severity }: { severity: string }) {
   const display = getProblemReportSeverityDisplay(severity)
 
   return (
@@ -82,7 +82,7 @@ function renderSeverityBadge(severity: string) {
   )
 }
 
-function renderStatusIcon(status: string) {
+function StatusIcon({ status }: { status: string }) {
   const display = getProblemReportStatusDisplay(status)
 
   switch (display.icon) {
@@ -131,10 +131,12 @@ function ProblemReportRow({
         <div className="text-sm">{report.userName}</div>
         <div className="text-xs text-muted-foreground">{report.userEmail}</div>
       </TableCell>
-      <TableCell>{renderSeverityBadge(report.severity)}</TableCell>
+      <TableCell>
+        <SeverityBadge severity={report.severity} />
+      </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
-          {renderStatusIcon(report.status)}
+          <StatusIcon status={report.status} />
           <Select
             value={report.status}
             onValueChange={handleStatusChange}
@@ -386,15 +388,14 @@ export default function AdminIssuesPage() {
         <CardContent className="space-y-4">
           <AdminQueryErrorAlert error={reportsQueryError} title="Unable to load reports" />
           {loading && resolvedReports.length === 0 ? (
-            <div
+            <output
               className="flex flex-col items-center justify-center py-12 text-muted-foreground"
-              role="status"
               aria-live="polite"
               aria-busy="true"
             >
               <LoaderCircle className="mb-4 size-8 animate-spin" aria-hidden />
               <p>Loading reports…</p>
-            </div>
+            </output>
           ) : filteredReports.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border rounded-lg border-dashed">
               <AlertCircle className="mb-4 size-8 opacity-20" />

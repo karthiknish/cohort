@@ -22,14 +22,15 @@ export const initializeGoogleAnalyticsProperty = action({
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw Errors.auth.unauthorized()
     const clientId = normalizeClientId(args.clientId ?? null)
-    const integration = await ctx.runQuery(internal.analyticsIntegrations.getGoogleAnalyticsIntegrationInternal, {
+    const integrationPromise = ctx.runQuery(internal.analyticsIntegrations.getGoogleAnalyticsIntegrationInternal, {
       workspaceId: args.workspaceId,
       clientId,
     })
+    const propertiesModulePromise = import('@/services/integrations/google-analytics/properties')
+    const integration = await integrationPromise
     if (!integration?.accessToken) throw Errors.integration.missingToken('Google Analytics')
-    const { fetchGoogleAnalyticsProperties, fetchGoogleAnalyticsPropertyCurrency } = await import(
-      '@/services/integrations/google-analytics/properties',
-    )
+    const { fetchGoogleAnalyticsProperties, fetchGoogleAnalyticsPropertyCurrency } =
+      await propertiesModulePromise
     const properties = await fetchGoogleAnalyticsProperties({ accessToken: integration.accessToken })
     if (!properties.length) {
       throw Errors.integration.notConfigured('Google Analytics', 'No Google Analytics properties available')
@@ -47,21 +48,23 @@ export const initializeGoogleAnalyticsProperty = action({
       propertyId: selectedProperty.id,
     })
 
-    await ctx.runMutation(internal.analyticsIntegrations.updateGoogleAnalyticsCredentialsInternal, {
-      workspaceId: args.workspaceId,
-      clientId,
-      accountId: selectedProperty.id,
-      accountName: selectedProperty.name,
-      currency: currencyCode,
-      linkedAtMs: integration.linkedAtMs ?? nowMs(),
-    })
-    await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
-      workspaceId: args.workspaceId,
-      providerId: 'google-analytics',
-      clientId,
-      jobType: 'initial-backfill',
-      timeframeDays: 90,
-    })
+    await Promise.all([
+      ctx.runMutation(internal.analyticsIntegrations.updateGoogleAnalyticsCredentialsInternal, {
+        workspaceId: args.workspaceId,
+        clientId,
+        accountId: selectedProperty.id,
+        accountName: selectedProperty.name,
+        currency: currencyCode,
+        linkedAtMs: integration.linkedAtMs ?? nowMs(),
+      }),
+      ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
+        workspaceId: args.workspaceId,
+        providerId: 'google-analytics',
+        clientId,
+        jobType: 'initial-backfill',
+        timeframeDays: 90,
+      }),
+    ])
     return {
       accountId: selectedProperty.id,
       accountName: selectedProperty.name,

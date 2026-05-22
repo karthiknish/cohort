@@ -2,15 +2,14 @@
 
 import { Building2, FolderKanban, Loader2, User, Users, type LucideIcon } from "lucide-react";
 import {
-	forwardRef,
 	useCallback,
 	useEffect,
-	useEffectEvent,
 	useImperativeHandle,
 	useMemo,
 	useRef,
 	useState,
 	type KeyboardEvent as ReactKeyboardEvent,
+	type Ref,
 } from "react";
 import { motionDurationSeconds, motionEasing } from "@/lib/animation-system";
 import { cn } from "@/lib/utils";
@@ -22,32 +21,14 @@ import {
 } from "@/shared/ui/motion";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 
-export type MentionType = "client" | "project" | "team" | "user";
+import type {
+	MentionDropdownHandle,
+	MentionDropdownProps,
+	MentionItem,
+	MentionType,
+} from './mention-dropdown-types'
 
-export interface MentionItem {
-	id: string;
-	name: string;
-	type: MentionType;
-	subtitle?: string;
-}
-
-export type MentionDropdownHandle = {
-	handleKeyDown: (event: ReactKeyboardEvent) => boolean;
-};
-
-interface MentionDropdownProps {
-	listboxId?: string;
-	isOpen: boolean;
-	onClose: () => void;
-	onSelect: (item: MentionItem) => void;
-	searchQuery: string;
-	position?: { top: number; left: number };
-	clients?: Array<{ id: string; name: string; company?: string }>;
-	projects?: Array<{ id: string; name: string; status?: string }>;
-	teams?: Array<{ id: string; name: string; memberCount?: number }>;
-	users?: Array<{ id: string; name: string; email?: string; role?: string }>;
-	isLoading?: boolean;
-}
+export type { MentionDropdownHandle, MentionItem, MentionType } from './mention-dropdown-types'
 
 const EMPTY_CLIENTS: NonNullable<MentionDropdownProps["clients"]> = [];
 const EMPTY_PROJECTS: NonNullable<MentionDropdownProps["projects"]> = [];
@@ -190,21 +171,19 @@ function MentionResultButton({
 	)
 }
 
-export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdownProps>(function MentionDropdown(
-	{
-		listboxId = "agent-mention-listbox",
-		isOpen,
-		onClose,
-		onSelect,
-		searchQuery,
-		clients = EMPTY_CLIENTS,
-		projects = EMPTY_PROJECTS,
-		teams = EMPTY_TEAMS,
-		users = EMPTY_USERS,
-		isLoading = false,
-	},
+export function MentionDropdown({
 	ref,
-) {
+	listboxId = "agent-mention-listbox",
+	isOpen,
+	onClose,
+	onSelect,
+	searchQuery,
+	clients = EMPTY_CLIENTS,
+	projects = EMPTY_PROJECTS,
+	teams = EMPTY_TEAMS,
+	users = EMPTY_USERS,
+	isLoading = false,
+}: MentionDropdownProps) {
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const [activeCategory, setActiveCategory] = useState<MentionType | null>(
 		null,
@@ -284,17 +263,15 @@ export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdown
 			[...counts.entries()].flatMap(([name, count]) => (count > 1 ? [name] : [])),
 		);
 	}, [filteredItems]);
-	const closeDropdown = useEffectEvent(() => {
-		onClose();
-	});
-	const selectMention = useEffectEvent((item: MentionItem) => {
-		onSelect(item);
-	});
+	const onCloseRef = useRef(onClose);
+	const onSelectRef = useRef(onSelect);
+	onCloseRef.current = onClose;
+	onSelectRef.current = onSelect;
 	const handleAllCategoryClick = useCallback(() => {
 		setActiveCategory(null);
 	}, []);
 
-	const handleListKeyDown = useEffectEvent((e: ReactKeyboardEvent): boolean => {
+	const handleListKeyDown = useCallback((e: ReactKeyboardEvent): boolean => {
 		if (!isOpen) return false;
 
 		switch (e.key) {
@@ -310,13 +287,13 @@ export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdown
 				e.preventDefault();
 				const selectedItem = filteredItems[clampedSelectedIndex];
 				if (selectedItem) {
-					selectMention(selectedItem);
+					onSelectRef.current(selectedItem);
 				}
 				return true;
 			}
 			case "Escape": {
 				e.preventDefault();
-				closeDropdown();
+				onCloseRef.current();
 				return true;
 			}
 			case "Tab": {
@@ -330,9 +307,9 @@ export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdown
 			default:
 				return false;
 		}
-	});
+	}, [activeCategory, clampedSelectedIndex, filteredItems, isOpen]);
 
-	useImperativeHandle(ref, () => ({ handleKeyDown: handleListKeyDown }), []);
+	useImperativeHandle(ref, () => ({ handleKeyDown: handleListKeyDown }), [handleListKeyDown]);
 
 	// Close on outside click
 	useEffect(() => {
@@ -341,7 +318,7 @@ export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdown
 				dropdownRef.current &&
 				!dropdownRef.current.contains(e.target as Node)
 			) {
-				closeDropdown();
+				onCloseRef.current();
 			}
 		};
 		if (isOpen) {
@@ -446,7 +423,7 @@ export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdown
 			</AnimatePresence>
 		</LazyMotion>
 	);
-});
+}
 
 // Styled mention pill component for display in messages
 export function MentionPill({ item }: { item: MentionItem }) {
@@ -462,36 +439,3 @@ export function MentionPill({ item }: { item: MentionItem }) {
 	);
 }
 
-// Format mention with structured identity for server-side resolution
-export function formatMention(item: MentionItem): string {
-	return `@[${item.name}](${item.type}:${item.id})`;
-}
-
-// Parse mentions from text
-export function parseMentions(text: string): {
-	cleanText: string;
-	mentions: MentionItem[];
-} {
-	const mentionRegex = /@\[([^\]]+)\]\((\w+):([^)]+)\)/g;
-	const mentions: MentionItem[] = [];
-	let cleanText = text;
-
-	let match: RegExpExecArray | null = mentionRegex.exec(text);
-	while (match !== null) {
-		const name = match[1];
-		const type = match[2];
-		const id = match[3];
-		if (name && type && id) {
-			mentions.push({
-				name,
-				type: type as MentionType,
-				id,
-			});
-			cleanText = cleanText.replace(match[0], `@${name}`);
-		}
-
-		match = mentionRegex.exec(text);
-	}
-
-	return { cleanText, mentions };
-}

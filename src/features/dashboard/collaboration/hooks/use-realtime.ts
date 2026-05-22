@@ -115,33 +115,31 @@ function mapConvexRealtimeMessageRow(row: ConvexMessageRow): CollaborationMessag
   }
 }
 
-interface UseRealtimeMessagesOptions {
+export type RealtimeChannelSnapshot =
+  | { kind: 'idle' }
+  | { kind: 'loading'; channelId: string }
+  | {
+      kind: 'success'
+      channelId: string
+      messages: CollaborationMessage[]
+      nextCursor: string | null
+    }
+  | { kind: 'error'; channelId: string; errorMessage: string }
+  | { kind: 'preview'; channelId: string; messages: CollaborationMessage[] }
+
+interface UseRealtimeChannelSnapshotOptions {
   workspaceId: string | null
   selectedChannel: Channel | null
   currentUserId?: string | null
   channelListRetryNonce: number
-  applyRealtimeChannelLoading: (channelId: string) => void
-  applyRealtimeChannelSuccess: (
-    channelId: string,
-    messages: CollaborationMessage[],
-    nextCursor: string | null,
-  ) => void
-  applyRealtimeChannelError: (channelId: string, errorMessage: string) => void
-  applyRealtimePreviewChannel: (channelId: string, messages: CollaborationMessage[]) => void
-  onError: (channel: Channel, errorMessage: string) => void
 }
 
-export function useRealtimeMessages({
+export function useRealtimeChannelSnapshot({
   workspaceId,
   selectedChannel,
   currentUserId,
   channelListRetryNonce,
-  applyRealtimeChannelLoading,
-  applyRealtimeChannelSuccess,
-  applyRealtimeChannelError,
-  applyRealtimePreviewChannel,
-  onError,
-}: UseRealtimeMessagesOptions) {
+}: UseRealtimeChannelSnapshotOptions): RealtimeChannelSnapshot {
   const { isPreviewMode } = usePreview()
 
   const channelId = selectedChannel?.id ?? null
@@ -191,92 +189,68 @@ export function useRealtimeMessages({
     ? channelListResults[channelListQueryId]
     : undefined
 
-  useEffect(() => {
-    if (!convexEnabled || !channelId) {
-      return
+  return useMemo((): RealtimeChannelSnapshot => {
+    if (!channelId || !channelType) {
+      return { kind: 'idle' }
     }
 
-    applyRealtimeChannelLoading(channelId)
-  }, [applyRealtimeChannelLoading, channelId, convexEnabled])
-
-  useEffect(() => {
-    if (!convexEnabled || !channelId) {
-      return
+    if (isPreviewMode) {
+      return {
+        kind: 'preview',
+        channelId,
+        messages: getPreviewCollaborationMessages(
+          channelType,
+          channelClientId,
+          channelProjectId,
+          currentUserId,
+        ),
+      }
     }
 
-    if (channelListResult === undefined || channelListResult instanceof Error) {
-      return
+    if (!convexEnabled) {
+      return { kind: 'idle' }
+    }
+
+    if (channelListResult === undefined) {
+      return { kind: 'loading', channelId }
+    }
+
+    if (channelListResult instanceof Error) {
+      return {
+        kind: 'error',
+        channelId,
+        errorMessage: asErrorMessage(channelListResult),
+      }
     }
 
     const convexRows = channelListResult as { items: Array<ConvexMessageRow>; nextCursor: string | null }
-
     const rows = Array.isArray(convexRows.items) ? convexRows.items : []
     const hasMore = Boolean(convexRows.nextCursor)
     const pageRows = rows
-
     const oldestRow = pageRows.length ? pageRows[pageRows.length - 1] : null
     const nextCursor =
       hasMore && oldestRow && typeof oldestRow.createdAtMs === 'number'
         ? encodeTimestampIdCursor(new Date(oldestRow.createdAtMs).toISOString(), String(oldestRow.legacyId ?? ''))
         : null
 
-    const next = pageRows
+    const messages = pageRows
       .flatMap((row) => {
         const message = mapConvexRealtimeMessageRow(row)
         return message.id ? [message] : []
       })
-      // `listChannel` is ordered desc; UI expects oldest->newest.
       .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
 
-    applyRealtimeChannelSuccess(channelId, next, nextCursor)
-  }, [
-    applyRealtimeChannelSuccess,
-    channelId,
-    channelListResult,
-    convexEnabled,
-  ])
-
-  useEffect(() => {
-    if (!convexEnabled || !channelId) {
-      return
-    }
-
-    if (channelListResult === undefined || !(channelListResult instanceof Error)) {
-      return
-    }
-
-    const errorMessage = asErrorMessage(channelListResult)
-
-    applyRealtimeChannelError(channelId, errorMessage)
-    if (selectedChannel) {
-      onError(selectedChannel, errorMessage)
-    }
-  }, [applyRealtimeChannelError, channelId, channelListResult, convexEnabled, onError, selectedChannel])
-
-  useEffect(() => {
-    if (convexEnabled) {
-      return
-    }
-
-    if (!channelId || !channelType) {
-      return
-    }
-
-    if (isPreviewMode) {
-      const previewMessages = getPreviewCollaborationMessages(
-        channelType,
-        channelClientId,
-        channelProjectId,
-        currentUserId,
-      )
-      applyRealtimePreviewChannel(channelId, previewMessages)
+    return {
+      kind: 'success',
+      channelId,
+      messages,
+      nextCursor,
     }
   }, [
-    applyRealtimePreviewChannel,
     channelClientId,
     channelId,
+    channelListResult,
     channelProjectId,
-    channelScopeId,
     channelType,
     convexEnabled,
     currentUserId,
@@ -297,7 +271,6 @@ interface ConvexTypingRow {
 }
 
 export function useRealtimeTyping({ userId, workspaceId, selectedChannel }: UseRealtimeTypingOptions) {
-  const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([])
   const { isPreviewMode } = usePreview()
 
   const channelId = selectedChannel?.id ?? null
@@ -319,25 +292,18 @@ export function useRealtimeTyping({ userId, workspaceId, selectedChannel }: UseR
       : 'skip'
   ) as Array<ConvexTypingRow> | undefined
 
-  useEffect(() => {
-    if (!convexEnabled) {
-      return
+  const typingParticipants = useMemo(() => {
+    if (!convexEnabled || !typingRows) {
+      return [] as TypingParticipant[]
     }
 
-    if (!typingRows) {
-      setTypingParticipants([])
-      return
-    }
-
-    const list = typingRows.flatMap((row) => {
+    return typingRows.flatMap((row) => {
       if (typeof row?.userId !== 'string' || row.userId === userId) return []
       const name = typeof row?.name === 'string' ? row.name : null
       if (!name || name.trim().length === 0) return []
       const role = typeof row?.role === 'string' ? row.role : null
       return [{ name, role } as TypingParticipant]
     })
-
-    setTypingParticipants(list)
   }, [convexEnabled, typingRows, userId])
 
   return { typingParticipants }

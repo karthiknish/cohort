@@ -187,7 +187,7 @@ export function CreateProjectFormFields({
           aria-describedby={nameError ? 'project-name-error' : undefined}
         />
         {nameError ? (
-          <p id="project-name-error" className="text-xs text-destructive" role="status">
+          <p id="project-name-error" className="text-xs text-destructive">
             {nameError}
           </p>
         ) : null}

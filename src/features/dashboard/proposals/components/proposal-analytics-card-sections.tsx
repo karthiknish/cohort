@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 
+import { ClientFormattedDate } from '@/shared/components/client-formatted-date'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -281,9 +282,11 @@ export function ProposalAnalyticsByClientCard({ byClient }: { byClient: Proposal
                 <p className="text-xs text-muted-foreground">
                   Last proposal:{' '}
                   {client.lastProposalAt ? (
-                    <time dateTime={client.lastProposalAt} suppressHydrationWarning>
-                      {new Date(client.lastProposalAt).toLocaleDateString()}
-                    </time>
+                    <ClientFormattedDate
+                      value={client.lastProposalAt}
+                      formatStr="PPP"
+                      dateTime={client.lastProposalAt}
+                    />
                   ) : 'N/A'}
                 </p>
               </div>

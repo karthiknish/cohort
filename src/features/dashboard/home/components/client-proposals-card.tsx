@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { ClientFormattedDate } from '@/shared/components/client-formatted-date'
 import { cn } from '@/lib/utils'
 import type { ProposalDraft } from '@/types/proposals'
 
@@ -99,9 +100,13 @@ function ClientProposalsCardComponent({ proposals, loading }: ClientProposalsCar
                                     </ViewTransition>
                                 </div>
                                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                    <span className="flex items-center gap-1" suppressHydrationWarning>
+                                    <span className="flex items-center gap-1">
                                         <Clock className="size-3" />
-                                        {proposal.updatedAt ? new Date(proposal.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Recently'}
+                                        {proposal.updatedAt ? (
+                                          <ClientFormattedDate value={proposal.updatedAt} formatStr="MMM d" />
+                                        ) : (
+                                          'Recently'
+                                        )}
                                     </span>
                                     <span className="h-2 w-px bg-muted-foreground/20" />
                                     <Link

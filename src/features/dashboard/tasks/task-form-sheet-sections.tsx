@@ -323,7 +323,14 @@ export function TaskSheetAttachmentsSection({
         </Button>
       </div>
 
-      <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileInputChange} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        aria-label="Attach files to task"
+        className="hidden"
+        onChange={handleFileInputChange}
+      />
 
       {pendingAttachments.length > 0 ? (
         <PendingAttachmentsList

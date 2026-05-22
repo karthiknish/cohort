@@ -1,32 +1,11 @@
 'use client'
 
-import type { CSSProperties, ReactNode } from 'react'
-import type { TooltipProps } from 'recharts'
-import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
+import type { ReactNode } from 'react'
 import { Minus, TrendingDown, TrendingUp } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
-export type AnalyticsChartPoint = {
-  date: string
-  users: number
-  sessions: number
-  revenue: number
-  conversions: number
-  conversionRate: number
-}
-
-export type AnalyticsChartTooltipProps = TooltipProps<ValueType, NameType>
-
-export const ANALYTICS_CHART_TOOLTIP_PROPS = {
-  wrapperStyle: { zIndex: 60, outline: 'none' } satisfies CSSProperties,
-  allowEscapeViewBox: { x: true, y: true },
-  isAnimationActive: false,
-} as const
-
-const CHART_CONTAINER_CLASS = 'aspect-auto h-[280px] min-h-[280px] w-full'
-
-export const ANALYTICS_CHART_CONTAINER_CLASS = CHART_CONTAINER_CLASS
+import type { AnalyticsChartPoint, AnalyticsChartTooltipProps } from './analytics-chart-tooltips-types'
 
 function resolveChartPoint(payload: AnalyticsChartTooltipProps['payload']): AnalyticsChartPoint | null {
   if (!payload?.length) return null

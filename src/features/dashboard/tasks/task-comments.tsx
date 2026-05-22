@@ -267,9 +267,14 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
 
   const loading = convexEnabled && convexRows === undefined
 
-  useEffect(() => {
-    onCommentCountChange?.(comments.length)
-  }, [comments.length, onCommentCountChange])
+  const previousCommentCountRef = useRef<number | null>(null)
+  if (
+    onCommentCountChange &&
+    previousCommentCountRef.current !== comments.length
+  ) {
+    previousCommentCountRef.current = comments.length
+    onCommentCountChange(comments.length)
+  }
 
   const activeReplyTo = useMemo(() => {
     if (!replyTo) return null

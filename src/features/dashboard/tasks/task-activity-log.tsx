@@ -3,7 +3,8 @@
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { Badge } from '@/shared/ui/badge'
-import { cn, formatRelativeTime } from '@/lib/utils'
+import { ClientRelativeTime } from '@/shared/components/client-relative-time'
+import { cn } from '@/lib/utils'
 import { Clock, Edit, Trash2, UserPlus, CheckCircle, MessageCircle, Timer } from 'lucide-react'
 import type { TaskActivity } from '@/types/tasks'
 
@@ -125,8 +126,8 @@ export function TaskActivityLog({ activities, loading, className, maxItems = 20 
                     <span className="font-medium text-foreground">{activity.userName}</span>
                     <span className="text-muted-foreground"> {formatActivityMessage(activity)}</span>
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5" suppressHydrationWarning>
-                    {formatRelativeTime(new Date(activity.timestamp))}
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    <ClientRelativeTime value={activity.timestamp} />
                   </p>
                 </div>
               </div>
@@ -153,12 +154,12 @@ export function ActivitySummary({ activities }: { activities: TaskActivity[] }) 
   const lastActivity = activities[0]
   if (!lastActivity) return null
 
-  const timeAgo = formatRelativeTime(new Date(lastActivity.timestamp))
-
   return (
     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
       <Clock className="size-3" />
-      <span>Last activity {timeAgo}</span>
+      <span>
+        Last activity <ClientRelativeTime value={lastActivity.timestamp} />
+      </span>
     </div>
   )
 }

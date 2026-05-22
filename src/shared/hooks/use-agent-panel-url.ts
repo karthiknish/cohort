@@ -1,7 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useCallback, useRef } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 
 import {
   agentPanelHref,
@@ -28,7 +30,7 @@ export function useAgentPanelUrl({
 }: UseAgentPanelUrlOptions) {
   const pathname = usePathname()
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const searchParams = useUrlSearchParams()
   const hydratedFromUrlRef = useRef(false)
   const lastPushedRef = useRef<string | null>(null)
 
@@ -48,10 +50,8 @@ export function useAgentPanelUrl({
     [conversationId, isOpen, pathname, router, searchParams, showHistory],
   )
 
-  useEffect(() => {
-    if (hydratedFromUrlRef.current) return
+  if (!hydratedFromUrlRef.current) {
     hydratedFromUrlRef.current = true
-
     const parsed = parseAgentPanelUrl(searchParams)
     if (parsed.open) {
       setOpen(true)
@@ -62,16 +62,23 @@ export function useAgentPanelUrl({
     if (parsed.conversationId && onLoadConversation) {
       void onLoadConversation(parsed.conversationId)
     }
-  }, [onLoadConversation, searchParams, setOpen, setShowHistory])
+    lastPushedRef.current = agentPanelHref(pathname, searchParams, {
+      open: parsed.open || isOpen,
+      view: parsed.view === 'history' ? 'history' : showHistory ? 'history' : 'chat',
+      conversationId: parsed.conversationId ?? conversationId,
+    })
+  }
 
-  useEffect(() => {
-    if (!hydratedFromUrlRef.current) return
+  const urlSyncKey = `${isOpen}|${showHistory ? 'history' : 'chat'}|${conversationId ?? ''}`
+  const urlSyncKeyRef = useRef<string | null>(null)
+  if (hydratedFromUrlRef.current && urlSyncKeyRef.current !== urlSyncKey) {
+    urlSyncKeyRef.current = urlSyncKey
     replaceUrl({
       open: isOpen,
       view: showHistory ? 'history' : 'chat',
       conversationId,
     })
-  }, [conversationId, isOpen, replaceUrl, showHistory])
+  }
 
   const openHistoryView = useCallback(() => {
     setShowHistory(true)

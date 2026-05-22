@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { useClientNowMs } from '@/lib/hooks/use-client-relative-time'
 import Link from 'next/link'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { ArrowUpRight, CheckSquare, Clock } from 'lucide-react'
@@ -176,14 +177,8 @@ export function ForYouTasks() {
   const { user } = useAuth()
   const { isAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
   const { isPreviewMode } = usePreview()
-  const [nowMs, setNowMs] = useState(0)
+  const nowMs = useClientNowMs()
   const workspaceId = getWorkspaceId(user)
-
-  useEffect(() => {
-    setNowMs(Date.now())
-    const id = window.setInterval(() => setNowMs(Date.now()), 60_000)
-    return () => window.clearInterval(id)
-  }, [])
 
   const canQuery = isAuthenticated && !isConvexLoading && !!workspaceId && !!user?.id
 
@@ -217,7 +212,7 @@ export function ForYouTasks() {
           <h2 id="for-you-tasks-heading" className="text-lg font-semibold tracking-tight text-foreground">
             Work items
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">Assigned to you — due soon and what&apos;s coming up.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Assigned to you - due soon and what&apos;s coming up.</p>
         </div>
         <Button asChild variant="ghost" size="sm" className="shrink-0 text-xs">
           <Link href="/dashboard/tasks">View all</Link>

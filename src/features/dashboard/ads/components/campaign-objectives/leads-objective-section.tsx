@@ -290,7 +290,7 @@ export function LeadsObjectiveSection({
                     ))}
                   </div>
                 ) : canUseMetaApi ? (
-                  <p className="text-xs text-muted-foreground">No lead forms on this page yet — create one below.</p>
+                  <p className="text-xs text-muted-foreground">No lead forms on this page yet - create one below.</p>
                 ) : null}
 
                 {canUseMetaApi ? (

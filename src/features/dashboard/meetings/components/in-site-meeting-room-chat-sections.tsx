@@ -359,6 +359,7 @@ export function MeetingChatPanel({
           type="file"
           multiple
           accept={attachmentAccept}
+          aria-label="Attach files to meeting chat"
           className="hidden"
           onChange={onAttachmentSelection}
         />

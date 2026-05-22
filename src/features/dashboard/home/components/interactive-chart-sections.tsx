@@ -247,19 +247,15 @@ export function InteractiveChartRenderer({
     [],
   )
 
-  const tooltipContent = useMemo(
-    () => <ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />,
-    [xAxisKey, dataKey, valueFormatter],
-  )
-
-  const pieTooltipContent = useMemo(
-    () => <PieTooltipContent valueFormatter={valueFormatter} />,
-    [valueFormatter],
-  )
-
   if (filteredData.length === 0) {
     return <InteractiveChartEmptyState />
   }
+
+  const tooltipContent = (
+    <ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />
+  )
+
+  const pieTooltipContent = <PieTooltipContent valueFormatter={valueFormatter} />
 
   const commonProps = {
     data: chartType === 'pie' ? categoryData : filteredData,

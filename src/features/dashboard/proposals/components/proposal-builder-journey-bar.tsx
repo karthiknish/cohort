@@ -35,9 +35,8 @@ export function ProposalBuilderJourneyBar({
 
   if (isSubmitting || isRecheckingDeck) {
     return (
-      <div
+      <output
         className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3"
-        role="status"
         aria-live="polite"
       >
         <div className="flex min-w-0 items-center gap-3">
@@ -47,12 +46,12 @@ export function ProposalBuilderJourneyBar({
               {isRecheckingDeck ? 'Checking deck status…' : 'Generating your proposal deck'}
             </p>
             <p className="text-xs text-muted-foreground">
-              This usually takes a few minutes. You can keep this panel open—we&apos;ll update when it&apos;s ready.
+              This usually takes a few minutes. You can keep this panel open - we&apos;ll update when it&apos;s ready.
             </p>
           </div>
         </div>
         <span className="text-xs font-medium text-muted-foreground">Step 5 of 5</span>
-      </div>
+      </output>
     )
   }
 
@@ -89,16 +88,15 @@ export function ProposalBuilderJourneyBar({
 
   if (submitted) {
     return (
-      <div
+      <output
         className="flex items-center gap-3 rounded-xl border border-muted/50 bg-muted/20 px-4 py-3"
-        role="status"
         aria-live="polite"
       >
         <Sparkles className="size-5 shrink-0 text-primary" aria-hidden />
         <p className="text-sm text-muted-foreground">
-          Submission received. We&apos;re finishing your deck—check back here or in proposal history.
+          Submission received. We&apos;re finishing your deck - check back here or in proposal history.
         </p>
-      </div>
+      </output>
     )
   }
 

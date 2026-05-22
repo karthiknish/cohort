@@ -93,7 +93,7 @@ export default function PrivacyPage() {
             Back to Home
           </Link>
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Privacy Policy</h1>
+            <h1 className="text-4xl tracking-tight sm:text-5xl">Privacy Policy</h1>
             <p className="text-sm text-muted-foreground">Last updated: January 6, 2026</p>
           </div>
         </div>

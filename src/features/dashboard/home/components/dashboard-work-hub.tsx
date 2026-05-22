@@ -188,7 +188,7 @@ export function DashboardWorkHub({ userRole }: DashboardWorkHubProps) {
           </Badge>
         </div>
         <CardDescription className="max-w-3xl text-pretty">
-          Shared delivery and agency growth tools in one place — jump straight into tasks, projects, and client work.
+          Shared delivery and agency growth tools in one place - jump straight into tasks, projects, and client work.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8 pt-6">

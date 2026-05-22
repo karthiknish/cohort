@@ -10,7 +10,8 @@ import type {
     AlertNotificationPayload,
 } from './types'
 import { evaluateRule } from './rules-engine'
-import { calculateAlgorithmicInsights, enrichSummaryWithMetrics } from '../ad-algorithms'
+import { enrichSummaryWithMetrics } from '../ad-algorithms/efficiency'
+import { calculateAlgorithmicInsights } from '../ad-algorithms/insights'
 import { adAlertsTemplate } from '../notifications/email-templates'
 
 // =============================================================================

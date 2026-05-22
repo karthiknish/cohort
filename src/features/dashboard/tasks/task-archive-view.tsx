@@ -6,7 +6,8 @@ import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { ScrollArea } from '@/shared/ui/scroll-area'
-import { cn, formatRelativeTime } from '@/lib/utils'
+import { ClientRelativeTime } from '@/shared/components/client-relative-time'
+import { cn } from '@/lib/utils'
 import type { TaskRecord } from '@/types/tasks'
 import { formatDate, formatStatusLabel } from './task-types'
 
@@ -197,7 +198,11 @@ function ArchivedTaskRow({
         </div>
         <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
           <span>Due: {task.dueDate ? formatDate(task.dueDate) : 'No date'}</span>
-          {task.deletedAt ? <span suppressHydrationWarning>Archived {formatRelativeTime(new Date(task.deletedAt))}</span> : null}
+          {task.deletedAt ? (
+            <span>
+              Archived <ClientRelativeTime value={task.deletedAt} />
+            </span>
+          ) : null}
         </div>
       </div>
       <div className="flex items-center gap-2">

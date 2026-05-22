@@ -36,9 +36,8 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
 
   if (loading && clients.length === 0) {
     return (
-      <div
-        className="mx-auto w-full max-w-3xl space-y-4 py-10"
-        role="status"
+      <output
+        className="mx-auto block w-full max-w-3xl space-y-4 py-10"
         aria-live="polite"
         aria-busy="true"
       >
@@ -56,7 +55,7 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
           <Skeleton className="h-28 rounded-lg" />
         </div>
         <span className="sr-only">Loading client workspaces…</span>
-      </div>
+      </output>
     )
   }
 

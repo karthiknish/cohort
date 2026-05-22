@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { splitAgentTextWithMentions } from './mention-highlights'
+import { splitAgentTextWithMentions } from './mention-highlights-utils'
 
 describe('splitAgentTextWithMentions', () => {
   it('highlights known multi-word mentions', () => {

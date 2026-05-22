@@ -280,34 +280,34 @@ export const sendMessage = action({
       const agentMessageLegacyId = crypto.randomUUID()
       const storedExecuteResult = serializeExecuteResultForStorage(executeResult)
 
-      await ctx.runMutation(api.agentMessages.upsert, {
-        workspaceId: args.workspaceId,
-        conversationLegacyId: convId,
-        legacyId: agentMessageLegacyId,
-        type: 'agent',
-        content: agentMessage,
-        createdAt: Date.now(),
-        userId: null,
-        action: agentAction,
-        route: agentRoute,
-        operation: agentOperation,
-        params: agentParams as JsonRecord | null,
-        executeResult: storedExecuteResult,
-      })
-
-      await ctx.runMutation(api.agentConversations.upsert, {
-        workspaceId: args.workspaceId,
-        legacyId: convId,
-        userId,
-        lastMessageAt: Date.now(),
-        messageCount: previousMessageCount + 2,
-      })
-
-      await ctx.runMutation(api.agentConversations.updatePreviewSnippet, {
-        workspaceId: args.workspaceId,
-        legacyId: convId,
-        previewSnippet: (agentMessage || args.message).slice(0, 160),
-      })
+      await Promise.all([
+        ctx.runMutation(api.agentMessages.upsert, {
+          workspaceId: args.workspaceId,
+          conversationLegacyId: convId,
+          legacyId: agentMessageLegacyId,
+          type: 'agent',
+          content: agentMessage,
+          createdAt: Date.now(),
+          userId: null,
+          action: agentAction,
+          route: agentRoute,
+          operation: agentOperation,
+          params: agentParams as JsonRecord | null,
+          executeResult: storedExecuteResult,
+        }),
+        ctx.runMutation(api.agentConversations.upsert, {
+          workspaceId: args.workspaceId,
+          legacyId: convId,
+          userId,
+          lastMessageAt: Date.now(),
+          messageCount: previousMessageCount + 2,
+        }),
+        ctx.runMutation(api.agentConversations.updatePreviewSnippet, {
+          workspaceId: args.workspaceId,
+          legacyId: convId,
+          previewSnippet: (agentMessage || args.message).slice(0, 160),
+        }),
+      ])
 
       const steps = [
         { id: 'parse', label: 'Parsed request', status: 'completed' as const },

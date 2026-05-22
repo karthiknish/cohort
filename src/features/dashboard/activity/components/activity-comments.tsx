@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { format } from 'date-fns'
 import { MessageCircle, Send, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { Textarea } from '@/shared/ui/textarea'
+import { useClientFormattedTime } from '@/lib/hooks/use-client-formatted-time'
 import { cn } from '@/lib/utils'
 import type { EnhancedActivity } from '../types'
 
@@ -15,6 +15,20 @@ interface ActivityComment {
   userName: string
   text: string
   timestamp: string
+}
+
+function ActivityCommentTime({ timestamp }: { timestamp: string }) {
+  const label = useClientFormattedTime(timestamp, 'MMM d, h:mm a')
+
+  if (!label) {
+    return null
+  }
+
+  return (
+    <time className="text-[10px] text-muted-foreground" dateTime={timestamp} suppressHydrationWarning>
+      {label}
+    </time>
+  )
 }
 
 interface ActivityCommentsProps {
@@ -91,13 +105,7 @@ export function ActivityComments({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xs font-medium">{comment.userName}</span>
-                      <time
-                        className="text-[10px] text-muted-foreground"
-                        dateTime={comment.timestamp}
-                        suppressHydrationWarning
-                      >
-                        {format(new Date(comment.timestamp), 'MMM d, h:mm a')}
-                      </time>
+                      <ActivityCommentTime timestamp={comment.timestamp} />
                     </div>
                     <p className="text-xs text-muted-foreground break-words">
                       {comment.text}

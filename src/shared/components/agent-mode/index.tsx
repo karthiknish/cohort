@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useRef, useState } from 'react'
+import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
 
 import { AgentModeButton } from './agent-mode-button'
 import { AgentModePanel } from './agent-mode-panel'
@@ -142,33 +142,50 @@ function AgentModeInner() {
     [undoAgentAction],
   )
 
+  const runtime = useMemo(
+    () => ({
+      open: isOpen,
+      processing: isProcessing,
+      extractingAttachments: isExtractingAttachments,
+    }),
+    [isOpen, isProcessing, isExtractingAttachments],
+  )
+
+  const historyLoad = useMemo(
+    () => ({
+      historyLoading: isHistoryLoading,
+      conversationLoading: isConversationLoading,
+      showArchived: showArchivedHistory,
+    }),
+    [isHistoryLoading, isConversationLoading, showArchivedHistory],
+  )
+
+  const scrollBehavior = useMemo(() => ({ pinnedToBottom: isPinnedToBottom }), [isPinnedToBottom])
+
   return (
     <>
       {!hideFab ? <AgentModeButton onClick={handleLauncherClick} isOpen={isOpen} /> : null}
       <AgentModePanel
         onPanelLayoutChange={setPanelLayout}
-        isOpen={isOpen}
+        runtime={runtime}
         activeContext={activeContext}
         maxMessageLength={maxMessageLength}
         onClose={handleClose}
         onOpenChange={setOpen}
         requestCloseRef={requestCloseRef}
         messages={messages}
-        isProcessing={isProcessing}
         onSendMessage={handleSendMessage}
         pendingAttachments={pendingAttachments}
         onAddAttachments={addAttachments}
         onRemoveAttachment={removeAttachment}
-        isExtractingAttachments={isExtractingAttachments}
         onClear={clearMessages}
         conversationId={conversationId}
         history={history}
-        isHistoryLoading={isHistoryLoading}
+        historyLoad={historyLoad}
         historyError={historyError}
         historyHasMore={historyHasMore}
         historySearch={historySearch}
         onHistorySearchChange={setHistorySearch}
-        showArchivedHistory={showArchivedHistory}
         onShowArchivedHistoryChange={setShowArchivedHistory}
         onOpenHistory={handleOpenHistory}
         onRetryHistory={handleRetryHistory}
@@ -176,7 +193,6 @@ function AgentModeInner() {
         onPinConversation={handlePinConversation}
         onArchiveConversation={handleArchiveConversation}
         onSelectConversation={loadConversation}
-        isConversationLoading={isConversationLoading}
         loadingConversationId={loadingConversationId}
         onUpdateConversationTitle={updateConversationTitle}
         onDeleteConversation={deleteConversation}
@@ -196,7 +212,7 @@ function AgentModeInner() {
         processingLabel={processingLabel}
         scrollContainerRef={scrollContainerRef}
         onMessagesScroll={onMessagesScroll}
-        isPinnedToBottom={isPinnedToBottom}
+        scrollBehavior={scrollBehavior}
         onJumpToLatest={scrollToLatest}
         connectionStatus={connectionStatus}
         rateLimitCountdown={rateLimitCountdown}

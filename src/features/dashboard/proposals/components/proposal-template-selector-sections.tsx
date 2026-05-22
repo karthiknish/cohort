@@ -207,7 +207,7 @@ export function ProposalTemplateSaveDialog(props: {
             <Input id="template-industry" value={templateIndustry} onChange={handleTemplateIndustryChange} placeholder="e.g., E-commerce, SaaS, Healthcare" />
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-x-2">
             <Checkbox id="is-default" checked={isDefault} onCheckedChange={handleDefaultChange} />
             <Label htmlFor="is-default" className="cursor-pointer text-sm font-normal">Set as the default starting template for new proposals</Label>
           </div>

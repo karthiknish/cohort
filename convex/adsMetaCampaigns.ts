@@ -37,15 +37,14 @@ export const createMetaCampaign = action({
       requireIdentity(identity)
 
       const clientId = normalizeClientId(args.clientId ?? null)
-      const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
+      const [integration, { createMetaCampaign: createCampaignOnMeta }] = await Promise.all([
+        getFacebookIntegration(ctx, args.workspaceId, clientId),
+        import('@/services/integrations/meta-ads/campaign-modules/core'),
+      ])
       const [accessToken, adAccountId] = await Promise.all([
         resolveFacebookAccessToken(args.workspaceId, integration, clientId),
         requireFacebookAdAccount(integration),
       ])
-
-      const { createMetaCampaign: createCampaignOnMeta } = await import(
-        '@/services/integrations/meta-ads/campaign-modules/core'
-      )
 
       const result = await createCampaignOnMeta({
         accessToken,

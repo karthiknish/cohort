@@ -1,7 +1,7 @@
 'use client'
 'use no memo'
 
-import { useCallback, useMemo, useRef, type ReactNode } from 'react'
+import { useCallback, useMemo, useRef, type ComponentType, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface VirtualizedListProps<T> {
@@ -9,8 +9,8 @@ export interface VirtualizedListProps<T> {
     items: T[]
     /** Estimated height of each item in pixels */
     estimateSize: number
-    /** Function to render each item */
-    renderItem: (item: T, index: number) => ReactNode
+    /** Component to render each item */
+    ItemComponent: ComponentType<{ item: T; index: number }>
     /** Optional function to get a unique key for each item */
     getItemKey?: (item: T, index: number) => string | number
     /** Height of the container (default: 400px) */
@@ -27,14 +27,14 @@ export interface VirtualizedListProps<T> {
     endReachedThreshold?: number
     /** Whether the list is loading more items */
     isLoadingMore?: boolean
-    /** Render function for loading indicator */
-    renderLoadingIndicator?: () => ReactNode
+    /** Loading indicator shown while fetching more items */
+    loadingIndicator?: ReactNode
 }
 
 export function VirtualizedList<T>({
     items,
     estimateSize,
-    renderItem,
+    ItemComponent,
     getItemKey,
     height = 400,
     className,
@@ -42,7 +42,7 @@ export function VirtualizedList<T>({
     onEndReached,
     endReachedThreshold = 200,
     isLoadingMore,
-    renderLoadingIndicator,
+    loadingIndicator,
 }: VirtualizedListProps<T>) {
     'use no memo'
 
@@ -98,16 +98,16 @@ export function VirtualizedList<T>({
                             gap={gap}
                             index={index}
                             itemsLength={items.length}
-                            renderItem={renderItem}
+                            ItemComponent={ItemComponent}
                             value={item}
                         >
                         </VirtualizedListRow>
                     )
                 })}
             </div>
-            {isLoadingMore && renderLoadingIndicator && (
-                <div className="py-4">{renderLoadingIndicator()}</div>
-            )}
+            {isLoadingMore && loadingIndicator ? (
+                <div className="py-4">{loadingIndicator}</div>
+            ) : null}
         </div>
     )
 }
@@ -139,13 +139,13 @@ function VirtualizedListRow<T>({
     gap,
     index,
     itemsLength,
-    renderItem,
+    ItemComponent,
     value,
 }: {
     gap: number
     index: number
     itemsLength: number
-    renderItem: (item: T, index: number) => ReactNode
+    ItemComponent: ComponentType<{ item: T; index: number }>
     value: T
 }) {
     const rowStyle = useMemo(
@@ -157,19 +157,7 @@ function VirtualizedListRow<T>({
 
     return (
         <div data-index={index} style={rowStyle}>
-            <VirtualizedListItemContent index={index} renderItem={renderItem} value={value} />
+            <ItemComponent item={value} index={index} />
         </div>
     )
-}
-
-function VirtualizedListItemContent<T>({
-    index,
-    renderItem,
-    value,
-}: {
-    index: number
-    renderItem: (item: T, index: number) => ReactNode
-    value: T
-}) {
-    return <>{renderItem(value, index)}</>
 }

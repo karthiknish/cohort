@@ -74,7 +74,7 @@ export function PreviewWindow({
           >
             <ChevronLeft className="size-3.5" />
           </button>
-          <div className="flex min-w-0 flex-1 gap-1" role="group" aria-label="Preview sections">
+          <fieldset className="m-0 flex min-w-0 flex-1 gap-1 border-0 p-0" aria-label="Preview sections">
             {PREVIEW_TAB_ORDER.map((id, index) => (
               <button
                 key={id}
@@ -89,7 +89,7 @@ export function PreviewWindow({
                 aria-current={index === activeTabIndex ? 'step' : undefined}
               />
             ))}
-          </div>
+          </fieldset>
           <button
             type="button"
             className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/50 bg-background/80 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"

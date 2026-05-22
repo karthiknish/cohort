@@ -8,12 +8,12 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 
-function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
+function InputGroup({ className, ...props }: React.ComponentProps<'fieldset'>) {
   return (
-    <div
+    <fieldset
       data-slot="input-group"
-      role="group"
       className={cn(
+        'm-0 min-w-0 border-0 p-0',
         'group/input-group relative flex w-full min-w-0 items-stretch rounded-md border border-input shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50',
         className,
       )}
@@ -43,13 +43,12 @@ function InputGroupAddon({
   className,
   align = 'inline-start',
   ...props
-}: React.ComponentProps<'div'> & VariantProps<typeof inputGroupAddonVariants>) {
+}: React.ComponentProps<'fieldset'> & VariantProps<typeof inputGroupAddonVariants>) {
   return (
-    <div
-      role="group"
+    <fieldset
       data-slot="input-group-addon"
       data-align={align}
-      className={cn(inputGroupAddonVariants({ align }), className)}
+      className={cn('m-0 min-w-0 border-0 p-0', inputGroupAddonVariants({ align }), className)}
       {...props}
     />
   )

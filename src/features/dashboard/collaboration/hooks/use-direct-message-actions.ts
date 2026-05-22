@@ -1,7 +1,7 @@
 'use client'
 
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useRef } from 'react'
 import { useMutation } from 'convex/react'
 
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -15,6 +15,28 @@ import type { useDirectConversationsQuery } from './use-direct-conversations-que
 
 type DirectConversationsQueryState = ReturnType<typeof useDirectConversationsQuery>
 type UseDirectMessageActionsOptions = UseDirectMessagesOptions & DirectConversationsQueryState
+
+type PreviewMessageLocation = {
+  conversationLegacyId: string
+  index: number
+}
+
+function buildPreviewMessageIndex(
+  conversations: Record<string, DirectMessage[]>,
+): Map<string, PreviewMessageLocation> {
+  const index = new Map<string, PreviewMessageLocation>()
+
+  for (const [conversationLegacyId, messages] of Object.entries(conversations)) {
+    for (let messageIndex = 0; messageIndex < messages.length; messageIndex += 1) {
+      const message = messages[messageIndex]
+      if (message) {
+        index.set(message.legacyId, { conversationLegacyId, index: messageIndex })
+      }
+    }
+  }
+
+  return index
+}
 
 export function useDirectMessageActions(options: UseDirectMessageActionsOptions) {
   const {
@@ -305,32 +327,26 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
     async (messageLegacyId: string, newContent: string) => {
       if (isPreviewMode) {
         setPreviewMessagesByConversation((prev) => {
-          const next: Record<string, DirectMessage[]> = { ...prev }
+          const location = buildPreviewMessageIndex(prev).get(messageLegacyId)
+          if (!location) return prev
 
-          for (const [conversationLegacyId, messages] of Object.entries(next)) {
-            const index = messages.findIndex((message) => message.legacyId === messageLegacyId)
-            if (index === -1) {
-              continue
-            }
+          const messages = prev[location.conversationLegacyId]
+          const existingMessage = messages?.[location.index]
+          if (!messages || !existingMessage) return prev
 
-            const existingMessage = messages[index]
-            if (!existingMessage) {
-              continue
-            }
-
-            const updatedMessages = [...messages]
-            updatedMessages[index] = {
-              ...existingMessage,
-              content: newContent,
-              edited: true,
-              editedAtMs: Date.now(),
-              updatedAtMs: Date.now(),
-            }
-            next[conversationLegacyId] = updatedMessages
-            break
+          const updatedMessages = [...messages]
+          updatedMessages[location.index] = {
+            ...existingMessage,
+            content: newContent,
+            edited: true,
+            editedAtMs: Date.now(),
+            updatedAtMs: Date.now(),
           }
 
-          return next
+          return {
+            ...prev,
+            [location.conversationLegacyId]: updatedMessages,
+          }
         })
         return
       }
@@ -359,33 +375,27 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
     async (messageLegacyId: string) => {
       if (isPreviewMode) {
         setPreviewMessagesByConversation((prev) => {
-          const next: Record<string, DirectMessage[]> = { ...prev }
+          const location = buildPreviewMessageIndex(prev).get(messageLegacyId)
+          if (!location) return prev
 
-          for (const [conversationLegacyId, messages] of Object.entries(next)) {
-            const index = messages.findIndex((message) => message.legacyId === messageLegacyId)
-            if (index === -1) {
-              continue
-            }
+          const messages = prev[location.conversationLegacyId]
+          const existingMessage = messages?.[location.index]
+          if (!messages || !existingMessage) return prev
 
-            const existingMessage = messages[index]
-            if (!existingMessage) {
-              continue
-            }
-
-            const updatedMessages = [...messages]
-            updatedMessages[index] = {
-              ...existingMessage,
-              content: '',
-              deleted: true,
-              deletedAtMs: Date.now(),
-              deletedBy: currentUserId ?? 'preview-current-user',
-              updatedAtMs: Date.now(),
-            }
-            next[conversationLegacyId] = updatedMessages
-            break
+          const updatedMessages = [...messages]
+          updatedMessages[location.index] = {
+            ...existingMessage,
+            content: '',
+            deleted: true,
+            deletedAtMs: Date.now(),
+            deletedBy: currentUserId ?? 'preview-current-user',
+            updatedAtMs: Date.now(),
           }
 
-          return next
+          return {
+            ...prev,
+            [location.conversationLegacyId]: updatedMessages,
+          }
         })
         return
       }
@@ -414,59 +424,55 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
       if (isPreviewMode) {
         const reactionUserId = currentUserId ?? 'preview-current-user'
         setPreviewMessagesByConversation((prev) => {
-          const next: Record<string, DirectMessage[]> = { ...prev }
+          const location = buildPreviewMessageIndex(prev).get(messageLegacyId)
+          if (!location) return prev
 
-          for (const [conversationLegacyId, messages] of Object.entries(next)) {
-            const index = messages.findIndex((message) => message.legacyId === messageLegacyId)
-            if (index === -1) {
-              continue
-            }
+          const messages = prev[location.conversationLegacyId]
+          const currentMessage = messages?.[location.index]
+          if (!messages || !currentMessage) return prev
 
-            const currentMessage = messages[index]
-            if (!currentMessage) {
-              continue
-            }
-            const currentReactions = currentMessage.reactions ?? []
-            const existingReaction = currentReactions.find((reaction) => reaction.emoji === emoji)
-            let nextReactions = currentReactions
+          const currentReactions = currentMessage.reactions ?? []
+          const reactionsByEmoji = new Map(currentReactions.map((reaction) => [reaction.emoji, reaction]))
+          const existingReaction = reactionsByEmoji.get(emoji)
+          let nextReactions = currentReactions
 
-            if (existingReaction) {
-              const existingReactionUserIds = new Set(existingReaction.userIds)
-              const hasReacted = existingReactionUserIds.has(reactionUserId)
-              nextReactions = currentReactions.flatMap<NonNullable<DirectMessage['reactions']>[number]>((reaction) => {
-                if (reaction.emoji !== emoji) {
-                  return [reaction]
-                }
+          if (existingReaction) {
+            const existingReactionUserIds = new Set(existingReaction.userIds)
+            const hasReacted = existingReactionUserIds.has(reactionUserId)
+            nextReactions = currentReactions.flatMap<NonNullable<DirectMessage['reactions']>[number]>((reaction) => {
+              if (reaction.emoji !== emoji) {
+                return [reaction]
+              }
 
-                const nextUserIds = hasReacted
-                  ? reaction.userIds.filter((entry) => entry !== reactionUserId)
-                  : [...reaction.userIds, reactionUserId]
+              const nextUserIds = hasReacted
+                ? reaction.userIds.filter((entry) => entry !== reactionUserId)
+                : [...reaction.userIds, reactionUserId]
 
-                if (nextUserIds.length === 0) {
-                  return []
-                }
+              if (nextUserIds.length === 0) {
+                return []
+              }
 
-                return [{
-                  ...reaction,
-                  count: nextUserIds.length,
-                  userIds: nextUserIds,
-                }]
-              })
-            } else {
-              nextReactions = [...currentReactions, { emoji, count: 1, userIds: [reactionUserId] }]
-            }
-
-            const updatedMessages = [...messages]
-            updatedMessages[index] = {
-              ...currentMessage,
-              reactions: nextReactions,
-              updatedAtMs: Date.now(),
-            }
-            next[conversationLegacyId] = updatedMessages
-            break
+              return [{
+                ...reaction,
+                count: nextUserIds.length,
+                userIds: nextUserIds,
+              }]
+            })
+          } else {
+            nextReactions = [...currentReactions, { emoji, count: 1, userIds: [reactionUserId] }]
           }
 
-          return next
+          const updatedMessages = [...messages]
+          updatedMessages[location.index] = {
+            ...currentMessage,
+            reactions: nextReactions,
+            updatedAtMs: Date.now(),
+          }
+
+          return {
+            ...prev,
+            [location.conversationLegacyId]: updatedMessages,
+          }
         })
         return
       }
@@ -579,16 +585,15 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
     ],
   )
 
-  useEffect(() => {
-    if (selectedConversation && !selectedConversation.isRead) {
-      markAsRead()
-    }
-  }, [selectedConversation, markAsRead])
-  useEffect(() => {
-    if (selectedConversation && !selectedConversation.isRead) {
-      void markAsRead()
-    }
-  }, [selectedConversation, markAsRead])
+  const markedReadConversationRef = useRef<string | null>(null)
+  if (
+    selectedConversation &&
+    !selectedConversation.isRead &&
+    markedReadConversationRef.current !== selectedConversation.legacyId
+  ) {
+    markedReadConversationRef.current = selectedConversation.legacyId
+    void markAsRead()
+  }
 
   return {
     sendMessage,

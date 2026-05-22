@@ -295,7 +295,9 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
     let cancelled = false
 
     const syncSessionExpiry = async () => {
-      if (cancelled) return
+      if (cancelled || hasPreviewAccess || authPhase !== 'ready_active' || !user) {
+        return
+      }
       const metadata = await fetchSessionMetadata()
       if (cancelled) return
       scheduleSessionPrompts(metadata)
@@ -324,12 +326,17 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
     }
   }, [authPhase, clearSessionTimers, hasPreviewAccess, scheduleSessionPrompts, user])
 
-  useEffect(() => {
-    if (!hasPreviewAccess && authPhase === 'ready_pending' && pathname !== '/pending-approval') {
-      const status = user?.status ?? 'pending'
-      window.location.href = `/pending-approval?status=${encodeURIComponent(status)}`
-    }
-  }, [authPhase, hasPreviewAccess, pathname, user?.status])
+  const redirectedPendingRef = useRef(false)
+  if (
+    !hasPreviewAccess &&
+    authPhase === 'ready_pending' &&
+    pathname !== '/pending-approval' &&
+    !redirectedPendingRef.current
+  ) {
+    redirectedPendingRef.current = true
+    const status = user?.status ?? 'pending'
+    window.location.href = `/pending-approval?status=${encodeURIComponent(status)}`
+  }
 
   if (hasPreviewAccess) {
     return <>{children}</>

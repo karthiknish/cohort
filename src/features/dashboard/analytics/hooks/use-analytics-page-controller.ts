@@ -2,7 +2,7 @@
 
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { differenceInDays, endOfDay, startOfDay } from 'date-fns'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -256,7 +256,7 @@ export function useAnalyticsPageController() {
       .finally(() => {
         setGaLoadingProperties(false)
       })
-  }, [listGoogleAnalyticsProperties, selectedClientId, workspaceId])
+  }, [listGoogleAnalyticsProperties, selectedClientId, setGaSetupMessage, workspaceId])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -300,37 +300,24 @@ export function useAnalyticsPageController() {
         message: mapOauthErrorToMessage(oauthError, message),
       })
     }
-  }, [loadGoogleAnalyticsPropertyOptions, toast])
+  }, [loadGoogleAnalyticsPropertyOptions, setGaSetupDialogOpen, setGaSetupMessage, toast])
 
-  useEffect(() => {
-    if (!gaNeedsPropertySelection || isPreviewMode) {
-      return
-    }
-
+  const gaPropertyAutoLoadRef = useRef(false)
+  if (gaNeedsPropertySelection && !isPreviewMode) {
     if (!gaSetupDialogOpen) {
-      requestAnimationFrame(() => {
-        setGaSetupDialogOpen(true)
-      })
+      setGaSetupDialogOpen(true)
     }
 
-    if (gaLoadingProperties || gaProperties.length > 0) {
-      return
-    }
-
-    void loadGoogleAnalyticsPropertyOptions().catch((error) => {
-      const message = mapGoogleAnalyticsIntegrationError(error)
-      requestAnimationFrame(() => {
+    if (!gaLoadingProperties && gaProperties.length === 0 && !gaPropertyAutoLoadRef.current) {
+      gaPropertyAutoLoadRef.current = true
+      void loadGoogleAnalyticsPropertyOptions().catch((error) => {
+        const message = mapGoogleAnalyticsIntegrationError(error)
         setGaSetupMessage(message)
       })
-    })
-  }, [
-    gaLoadingProperties,
-    gaNeedsPropertySelection,
-    gaProperties.length,
-    gaSetupDialogOpen,
-    isPreviewMode,
-    loadGoogleAnalyticsPropertyOptions,
-  ])
+    }
+  } else {
+    gaPropertyAutoLoadRef.current = false
+  }
 
   const {
     metricsData,
@@ -415,7 +402,7 @@ export function useAnalyticsPageController() {
       })
       setGaLoading(false)
     }
-  }, [isPreviewMode, selectedClientId, toast])
+  }, [isPreviewMode, selectedClientId, setGaLoading, setGaSetupMessage, toast])
 
   const handleSyncGoogleAnalytics = useCallback(() => {
     if (isPreviewMode) {
@@ -469,6 +456,7 @@ export function useAnalyticsPageController() {
     periodDays,
     refreshGoogleAnalyticsStatus,
     selectedClientId,
+    setGaSetupDialogOpen,
     toast,
   ])
 
@@ -480,7 +468,7 @@ export function useAnalyticsPageController() {
       setGaSetupMessage(message)
       notifyFailure({ title: 'Property load failed', message })
     })
-  }, [loadGoogleAnalyticsPropertyOptions])
+  }, [loadGoogleAnalyticsPropertyOptions, setGaSetupDialogOpen, setGaSetupMessage])
 
   const handleFinalizeGoogleAnalyticsSetup = useCallback(() => {
     if (isPreviewMode) return
@@ -527,6 +515,8 @@ export function useAnalyticsPageController() {
     refreshGoogleAnalyticsStatus,
     selectedClientId,
     toast,
+    setGaSetupDialogOpen,
+    setGaSetupMessage,
     workspaceId,
   ])
 
@@ -584,6 +574,7 @@ export function useAnalyticsPageController() {
     isPreviewMode,
     refreshGoogleAnalyticsStatus,
     selectedClientId,
+    setGaSetupDialogOpen,
     toast,
     workspaceId,
   ])

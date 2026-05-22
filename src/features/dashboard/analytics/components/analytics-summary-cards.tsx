@@ -80,7 +80,7 @@ function SummaryStatCard({
 }) {
   return (
     <Card className={DASHBOARD_THEME.stats.card}>
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-start justify-between gap-y-0 pb-2">
         <div className="flex items-center gap-2">
           <CardTitle className={DASHBOARD_THEME.stats.label}>{label}</CardTitle>
           <TooltipProvider>

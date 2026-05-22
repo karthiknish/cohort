@@ -368,7 +368,7 @@ export function AdConnectionsCard({
                   ) : null}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Secure OAuth redirect — pick accounts after you return.
+                  Secure OAuth redirect - pick accounts after you return.
                 </p>
               </div>
               <Progress

@@ -141,12 +141,12 @@ export async function downloadGammaPresentation(
       })
 
       if (!response.ok) {
-        const details = await response.text().catch(() => '')
         if (retryableStatuses.has(response.status) && attempt <= retries) {
           await new Promise((resolve) => setTimeout(resolve, backoffMs * attempt))
           continue
         }
 
+        const details = await response.text().catch(() => '')
         throw new Error(`Presentation file download failed (${response.status}): ${details || 'Unknown error'}`)
       }
 

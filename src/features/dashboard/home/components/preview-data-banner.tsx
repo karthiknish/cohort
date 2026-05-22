@@ -18,8 +18,7 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
   }
 
   return (
-    <div
-      role="region"
+    <section
       aria-label={isPreviewMode ? 'Preview mode' : 'Sample data banner'}
       className={cn(
         'relative overflow-hidden rounded-lg border motion-chromatic-lg',
@@ -84,6 +83,6 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
       {isPreviewMode && (
         <div className="h-1 w-full animate-pulse bg-warning/70" />
       )}
-    </div>
+    </section>
   )
 }

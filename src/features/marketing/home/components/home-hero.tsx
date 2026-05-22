@@ -16,7 +16,7 @@ type HomeHeroProps = {
 
 export function HomeHero({ headline, subhead, highlights }: HomeHeroProps) {
   return (
-    <FadeIn as="section" className="flex w-full max-w-2xl flex-col justify-center space-y-10 lg:py-12">
+    <FadeIn as="section" className="flex w-full max-w-2xl flex-col justify-center gap-y-10 lg:py-12">
       <div className="space-y-6">
         <div className="inline-flex items-center rounded-full border bg-background px-3 py-1 text-sm font-medium shadow-sm">
           <span className="flex size-2 rounded-full bg-success mr-2" aria-hidden="true"></span>

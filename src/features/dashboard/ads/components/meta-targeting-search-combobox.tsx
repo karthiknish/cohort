@@ -102,7 +102,7 @@ export function MetaTargetingSearchCombobox({
             />
           ))}
           {!error && results.length === 0 && query.trim().length >= 2 && !loading ? (
-            <li className="px-3 py-2 text-xs text-muted-foreground">No matches — try a different term</li>
+            <li className="px-3 py-2 text-xs text-muted-foreground">No matches - try a different term</li>
           ) : null}
         </ul>
       ) : null}
@@ -119,7 +119,7 @@ function MetaTargetingResultOption({
   onMouseDown: (event: MouseEvent<HTMLButtonElement>) => void
   onSelect: (item: MetaTargetingSearchResult) => void
 }) {
-  const handleClick = useCallback(() => {
+  const selectTargetingResult = useCallback(() => {
     onSelect(item)
   }, [item, onSelect])
 
@@ -130,7 +130,7 @@ function MetaTargetingResultOption({
         variant="ghost"
         className="h-auto w-full justify-start rounded-none px-3 py-2 text-left font-normal"
         onMouseDown={onMouseDown}
-        onClick={handleClick}
+        onClick={selectTargetingResult}
       >
         <span className="block text-sm font-medium">{item.name}</span>
         {item.path?.length ? (

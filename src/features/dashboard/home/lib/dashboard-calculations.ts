@@ -16,10 +16,7 @@ import {
     financialTotalsHelper,
     isFinancialComparable,
 } from '@/domain/ads/aggregate-financials'
-import {
-    selectTopStatsByRole,
-    type TaskSummary,
-} from '../components'
+import { selectTopStatsByRole, type TaskSummary } from '../components/utils'
 
 const NON_ADS_PROVIDER_IDS = new Set([
     'google-analytics',

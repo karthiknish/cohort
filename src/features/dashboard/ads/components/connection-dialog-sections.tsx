@@ -101,7 +101,7 @@ export function ConnectionDialogBody({
               <AlertCircle className="size-4 text-warning" />
               <AlertDescription className="text-sm text-foreground">
                 This connects <strong>paid Meta ads</strong> only. Organic Facebook/Instagram pages use{' '}
-                <strong>Socials</strong> in the sidebar — a separate connection.
+                <strong>Socials</strong> in the sidebar - a separate connection.
               </AlertDescription>
             </Alert>
           ) : null}

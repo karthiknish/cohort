@@ -196,7 +196,7 @@ export default function ProposalDeckPage() {
                     <div className="flex items-center gap-2">
                       <div className="h-8 w-1 bg-primary rounded-full" />
                       <div>
-                        <h4 className="text-sm font-bold uppercase tracking-widest text-foreground/80">Slide-by-Slide Guidance</h4>
+                        <h4 className="text-sm uppercase tracking-widest text-foreground/80">Slide-by-Slide Guidance</h4>
                         <p className="text-xs text-muted-foreground">Strategic walkthrough of your proposal deck</p>
                       </div>
                     </div>

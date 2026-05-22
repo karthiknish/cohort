@@ -50,6 +50,7 @@ export function CreativeFullPreviewDialog(props: {
             <video
               src={creative.videoUrl}
               controls
+              aria-label={`${displayName} video preview`}
               className="w-full rounded-lg"
               poster={creative.imageUrl || creative.thumbnailUrl}
             >

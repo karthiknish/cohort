@@ -3,11 +3,10 @@ import { Skeleton } from '@/shared/ui/skeleton'
 
 export default function WorkforceRouteLoading() {
   return (
-    <div
-      role="status"
+    <output
       aria-live="polite"
       aria-busy="true"
-      className="space-y-4"
+      className="block space-y-4"
     >
       <span className="sr-only">Loading workspace module</span>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -37,6 +36,6 @@ export default function WorkforceRouteLoading() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </output>
   )
 }

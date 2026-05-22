@@ -12,11 +12,17 @@ import { AgentComposerSection, type AgentComposerSectionProps } from './agent-mo
 import { AgentEmptyState } from './agent-mode-panel-header'
 import { AgentMessagesSection, FailedMessageBanner } from './agent-mode-panel-messages'
 
+export type AgentPanelContentViewState = {
+  conversationLoading: boolean
+  processing: boolean
+  showJumpToLatest: boolean
+  showEmptyState: boolean
+}
+
 export function AgentModePanelContent({
   dockComposerProps,
   emptyComposerProps,
-  isConversationLoading,
-  isProcessing,
+  viewState,
   lastFailedMessage,
   mentionLabels,
   messages,
@@ -29,14 +35,11 @@ export function AgentModePanelContent({
   processingLabel,
   scrollAreaRef,
   onMessagesScroll,
-  showJumpToLatest,
   onJumpToLatest,
-  showEmptyState,
 }: {
   dockComposerProps: AgentComposerSectionProps
   emptyComposerProps: AgentComposerSectionProps
-  isConversationLoading: boolean
-  isProcessing: boolean
+  viewState: AgentPanelContentViewState
   lastFailedMessage: string | null
   mentionLabels: string[]
   messages: AgentMessage[]
@@ -52,10 +55,15 @@ export function AgentModePanelContent({
   processingLabel: string
   scrollAreaRef: RefObject<HTMLDivElement | null>
   onMessagesScroll: () => void
-  showJumpToLatest: boolean
   onJumpToLatest: () => void
-  showEmptyState: boolean
 }) {
+  const {
+    conversationLoading: isConversationLoading,
+    processing: isProcessing,
+    showJumpToLatest,
+    showEmptyState,
+  } = viewState
+
   if (showEmptyState) {
     return (
       <AgentEmptyState>

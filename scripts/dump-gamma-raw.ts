@@ -1,6 +1,6 @@
 import 'dotenv/config'
 
-import { gammaService } from '../src/services/gamma'
+import { gammaService } from '../src/services/gamma/api'
 
 async function main() {
   const generationId = process.argv[2]

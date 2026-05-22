@@ -1,13 +1,14 @@
 'use client'
 
 import { LoaderCircle } from 'lucide-react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo } from 'react'
 
 import { isLoadingPhase } from '@/lib/auth-phase'
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { Button } from '@/shared/ui/button'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 
 function getStatusCopy(status: string): { title: string; message: string } {
   switch (status) {
@@ -42,8 +43,8 @@ function getStatusCopy(status: string): { title: string; message: string } {
 export function PendingApprovalContent() {
   const { user, authPhase, authError, retrySync, signOut } = useAuth()
   const { replace } = useRouter()
-  const searchParams = useSearchParams()
-  const requestedStatus = searchParams.get('status') ?? ''
+  const { get } = useUrlSearchParams()
+  const requestedStatus = get('status') ?? ''
 
   useEffect(() => {
     if (isLoadingPhase(authPhase)) {

@@ -218,13 +218,17 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
           notesProcessingState={notesProcessingState}
           meetingTimezone={meetingTimezone}
           joinConfigPresent={Boolean(joinConfig)}
-          isMobileViewport={isMobileViewport}
-          isMinimized={isMinimized}
-          pipSupported={pipSupported}
-          pipActive={pipActive}
-          joiningRoom={joiningRoom}
-          isPreviewMeeting={isPreviewMeeting}
-          hasJoinReference={hasJoinReference}
+          viewport={{
+            mobile: isMobileViewport,
+            minimized: isMinimized,
+            pipSupported,
+            pipActive,
+          }}
+          join={{
+            joining: joiningRoom,
+            preview: isPreviewMeeting,
+            hasReference: hasJoinReference,
+          }}
           roomActionLabel={roomActionLabel}
           onOpenSidebar={handleOpenSidebar}
           onToggleMinimize={toggleMinimizedRoom}

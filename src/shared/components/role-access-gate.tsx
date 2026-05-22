@@ -37,9 +37,8 @@ function AccessDeniedPanel({
   actionHref: string
 }) {
   return (
-    <div
+    <section
       className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-12 text-center"
-      role="status"
       aria-live="polite"
     >
       <h1 className="text-lg font-semibold text-foreground">{title}</h1>
@@ -47,22 +46,21 @@ function AccessDeniedPanel({
       <Button asChild variant="default">
         <Link href={actionHref}>{actionLabel}</Link>
       </Button>
-    </div>
+    </section>
   )
 }
 
 function RoleAccessLoadingState() {
   return (
-    <div
-      className="mx-auto w-full max-w-3xl space-y-4 py-10"
-      role="status"
+    <output
+      className="mx-auto block w-full max-w-3xl space-y-4 py-10"
       aria-live="polite"
       aria-busy="true"
     >
       <Skeleton className="h-24 w-full rounded-lg" />
       <Skeleton className="h-32 w-full rounded-lg" />
       <span className="sr-only">Checking access permissions…</span>
-    </div>
+    </output>
   )
 }
 

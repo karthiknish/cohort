@@ -243,9 +243,11 @@ export function NotificationPreferencesPanel() {
   if (loading || !localPrefs) {
     return (
       <Card>
-        <CardContent className="flex items-center gap-2 py-10 text-sm text-muted-foreground" role="status">
-          <LoaderCircle className="size-4 animate-spin" aria-hidden />
-          Loading notification preferences…
+        <CardContent className="py-10 text-sm text-muted-foreground">
+          <output aria-live="polite" className="flex items-center gap-2">
+            <LoaderCircle className="size-4 animate-spin" aria-hidden />
+            Loading notification preferences…
+          </output>
         </CardContent>
       </Card>
     )
@@ -274,10 +276,10 @@ export function NotificationPreferencesPanel() {
         </CardHeader>
         <CardContent className="space-y-6">
           {saving ? (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
+            <output className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
               <LoaderCircle className="size-4 animate-spin" aria-hidden />
               Saving…
-            </p>
+            </output>
           ) : null}
 
           <FormField

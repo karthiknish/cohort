@@ -435,13 +435,14 @@ function TeamIllustration() {
     <div className="mx-4 mt-6 overflow-hidden rounded-t-xl border border-b-0 border-border/50 bg-muted/40 px-4 pt-6">
       <div className="flex items-center justify-center">
         <TooltipProvider delayDuration={100}>
-          <div className="flex -space-x-2.5">
+          <div className="flex">
             {TEAM_MEMBERS.map((member, index) => (
               <Tooltip key={member.id}>
                 <TooltipTrigger asChild>
                   <Avatar
                     className={cn(
                       'size-11 cursor-pointer border-2 border-background shadow-sm transition-transform hover:-translate-y-1 hover:z-20',
+                      index > 0 && '-ml-2.5',
                       index === 2 ? 'z-10 ring-2 ring-accent/40' : '',
                     )}
                   >

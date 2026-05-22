@@ -280,13 +280,14 @@ export function CreativeSocialPreview(props: {
     [creative.landingPageUrl, pageDisplayName],
   )
 
-  const renderMedia = () => {
+  const renderPreviewMedia = useCallback(() => {
     if (creative.videoUrl && isDirectVideoUrl(creative.videoUrl)) {
       return (
         <div className={cn("relative bg-foreground overflow-hidden group/video", mediaAspectClass)}>
           <video
             ref={videoRef}
             src={creative.videoUrl}
+            aria-label={`${displayName} video preview`}
             className="size-full object-cover"
             poster={creative.imageUrl || creative.thumbnailUrl}
             onPlay={handlePlay}
@@ -421,9 +422,23 @@ export function CreativeSocialPreview(props: {
         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">No Asset Data</p>
       </div>
     )
-  }
+  }, [
+    creative,
+    displayName,
+    handleEnded,
+    handleImageLightboxOpenChange,
+    handleImageLoadFailed,
+    handleOpenImageLightbox,
+    handlePause,
+    handlePlay,
+    imageLightboxOpen,
+    imageLoadFailed,
+    isPlaying,
+    mediaAspectClass,
+    togglePlayPause,
+  ])
 
-  const renderPlatformMock = () => {
+  const renderPlatformMock = useCallback(() => {
     return (
       <AnimatePresence mode="wait">
         <m.div
@@ -464,7 +479,7 @@ export function CreativeSocialPreview(props: {
               ) : null}
 
               {/* Media — full bleed */}
-              <div className="w-full">{renderMedia()}</div>
+              <div className="w-full">{renderPreviewMedia()}</div>
 
               {/* Action row */}
               <div className="flex items-center justify-between px-3 py-2.5">
@@ -533,7 +548,7 @@ export function CreativeSocialPreview(props: {
                 </p>
               </div>
 
-              {renderMedia()}
+              {renderPreviewMedia()}
 
               <div className="p-4 bg-muted/5 flex items-center justify-between border-y border-muted-foreground/10">
                 <div className="min-w-0 pr-4 space-y-0.5">
@@ -583,7 +598,7 @@ export function CreativeSocialPreview(props: {
                 <MoreHorizontal className="size-4 opacity-40" />
               </div>
 
-              {renderMedia()}
+              {renderPreviewMedia()}
 
               <div className="p-4 space-y-4">
                 <div className="flex items-center gap-6 text-[11px] font-bold opacity-80">
@@ -639,7 +654,7 @@ export function CreativeSocialPreview(props: {
                 </div>
 
                 {/* Creative asset — edge-to-edge, separated from copy */}
-                <div className="w-full border-y border-[#dadde1]/80">{renderMedia()}</div>
+                <div className="w-full border-y border-[#dadde1]/80">{renderPreviewMedia()}</div>
 
                 {/* Link preview card (native FB ad footer) */}
                 <div className="flex items-stretch gap-3 border-b border-[#dadde1] bg-[#f0f2f5] px-3 py-2.5">
@@ -689,7 +704,19 @@ export function CreativeSocialPreview(props: {
         </m.div>
       </AnimatePresence>
     )
-  }
+  }, [
+      activePlatform,
+      campaignName,
+      creative,
+      displayName,
+      handleProfileImageError,
+      headlineText,
+      landingHostname,
+      pageDisplayName,
+      primaryText,
+      profileImageError,
+      renderPreviewMedia,
+  ])
 
   const handlePlatformChange = useCallback(
     (v: string) => dispatch({ type: 'setActivePlatform', value: v as Platform }),
@@ -704,7 +731,7 @@ export function CreativeSocialPreview(props: {
         <div className="flex items-center justify-between px-1">
           <div className="flex flex-col">
             <span className="text-[10px] font-black text-primary tracking-[0.2em] uppercase mb-0.5">Preview</span>
-            <h3 className="text-lg font-bold tracking-tight">Social Mockup</h3>
+            <h3 className="text-lg tracking-tight">Social Mockup</h3>
           </div>
           <div className="flex items-center gap-2">
             {/* Aspect Ratio Toggle */}
@@ -776,11 +803,11 @@ export function CreativeSocialPreview(props: {
                 {headlineVariantCount > 1 && onPreviewHeadlineIndexChange ? (
                   <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2 py-1">
                     <span className="text-[10px] font-semibold text-muted-foreground">Headline</span>
-                    {Array.from({ length: headlineVariantCount }, (_, index) => (
+                    {Array.from({ length: headlineVariantCount }, (_, variantIndex) => (
                       <PreviewVariantButton
-                        key={`headline-preview-${index}`}
-                        index={index}
-                        selected={previewHeadlineIndex === index}
+                        key={`headline-preview-v${variantIndex}`}
+                        index={variantIndex}
+                        selected={previewHeadlineIndex === variantIndex}
                         onSelect={handlePreviewHeadlineSelect}
                       />
                     ))}
@@ -789,11 +816,11 @@ export function CreativeSocialPreview(props: {
                 {descriptionVariantCount > 1 && onPreviewDescriptionIndexChange ? (
                   <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2 py-1">
                     <span className="text-[10px] font-semibold text-muted-foreground">Copy</span>
-                    {Array.from({ length: descriptionVariantCount }, (_, index) => (
+                    {Array.from({ length: descriptionVariantCount }, (_, variantIndex) => (
                       <PreviewVariantButton
-                        key={`description-preview-${index}`}
-                        index={index}
-                        selected={previewDescriptionIndex === index}
+                        key={`description-preview-v${variantIndex}`}
+                        index={variantIndex}
+                        selected={previewDescriptionIndex === variantIndex}
                         onSelect={handlePreviewDescriptionSelect}
                       />
                     ))}

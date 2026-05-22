@@ -14,6 +14,30 @@ import {
 } from './task-card-sections'
 import { isDueSoon, isOverdue, priorityAccentColors } from './task-types'
 
+const TASK_CARD_MENU_VISIBILITY = {
+  title: false,
+  menu: true,
+  contextPills: true,
+  indicators: true,
+  compactIndicators: false,
+} as const
+
+const TASK_CARD_TITLE_VISIBILITY = {
+  title: true,
+  menu: false,
+  contextPills: true,
+  indicators: true,
+  compactIndicators: false,
+} as const
+
+const TASK_CARD_BOARD_META_VISIBILITY = {
+  title: false,
+  menu: false,
+  contextPills: true,
+  indicators: true,
+  compactIndicators: true,
+} as const
+
 export type TaskCardProps = {
   task: TaskRecord
   variant?: 'grid' | 'board'
@@ -123,14 +147,19 @@ function TaskCardComponent({
                 </>
               )}
             </div>
-            <TaskCardHeaderSection {...headerProps} showTitle={false} />
+            <TaskCardHeaderSection
+              {...headerProps}
+              visibility={TASK_CARD_MENU_VISIBILITY}
+            />
           </div>
 
           <TaskCardHeaderSection
             {...headerProps}
-            showMenu={false}
-            showIndicators={!isBoard}
-            showContextPills={!isBoard}
+            visibility={{
+              ...TASK_CARD_TITLE_VISIBILITY,
+              contextPills: !isBoard,
+              indicators: !isBoard,
+            }}
             titleClassName={isBoard ? 'text-sm' : undefined}
           />
 
@@ -143,10 +172,7 @@ function TaskCardComponent({
           {isBoard ? (
             <TaskCardHeaderSection
               {...headerProps}
-              showTitle={false}
-              showMenu={false}
-              showIndicators
-              compactIndicators
+              visibility={TASK_CARD_BOARD_META_VISIBILITY}
             />
           ) : null}
 

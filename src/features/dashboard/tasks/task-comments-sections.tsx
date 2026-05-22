@@ -378,6 +378,7 @@ export function TaskCommentsComposerSection({
         ref={fileInputRef}
         type="file"
         multiple
+        aria-label="Attach files to comment"
         className="hidden"
         onChange={handleFileChange}
       />

@@ -3,7 +3,7 @@
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useMutation, useQuery } from 'convex/react'
-import { useCallback, useEffect, useMemo, useReducer } from 'react'
+import { useCallback, useMemo, useReducer, useRef } from 'react'
 
 import { useToast } from '@/shared/ui/use-toast'
 import { tasksApi } from '@/lib/convex-api'
@@ -258,46 +258,46 @@ export function useTasks({
     return convexTasksQuery === undefined
   }, [authLoading, convexTasksQuery, isPreviewMode, userId, workspaceId])
 
-  useEffect(() => {
+  const syncedTasksFromQuery = useMemo(() => {
     if (isPreviewMode) {
-      dispatch({
-        type: 'syncData',
-        tasks: getPreviewTasks(clientId ?? null),
-        error: null,
-      })
-      return
+      return getPreviewTasks(clientId ?? null)
     }
 
     if (!userId || !workspaceId) {
-      dispatch({
-        type: 'syncData',
-        tasks: [],
-        error: null,
-      })
-      return
+      return [] as TaskRecord[]
     }
 
     const queryValue = convexTasksQuery as unknown
     const isArray = Array.isArray(queryValue)
     const paginated = hasPaginatedItems(queryValue)
-    
+
     const rows = isArray
       ? (queryValue as TaskQueryRow[])
       : paginated
         ? queryValue.items
         : []
 
-    // Only log error if we have a response that's neither an array nor a paginated shape
     if (queryValue && !isArray && !paginated) {
       logError(convexTasksQuery, 'useTasks:unexpectedQueryShape')
     }
 
+    return rows.map(mapConvexTaskToTaskRecord)
+  }, [clientId, convexTasksQuery, isPreviewMode, userId, workspaceId])
+
+  const tasksSyncKey = useMemo(
+    () =>
+      `${isPreviewMode}|${clientId ?? ''}|${userId ?? ''}|${workspaceId ?? ''}|${syncedTasksFromQuery.length}|${syncedTasksFromQuery[0]?.id ?? ''}|${syncedTasksFromQuery.at(-1)?.updatedAt ?? ''}`,
+    [clientId, isPreviewMode, syncedTasksFromQuery, userId, workspaceId],
+  )
+  const tasksSyncKeyRef = useRef<string | null>(null)
+  if (tasksSyncKeyRef.current !== tasksSyncKey) {
+    tasksSyncKeyRef.current = tasksSyncKey
     dispatch({
       type: 'syncData',
-      tasks: rows.map(mapConvexTaskToTaskRecord),
+      tasks: syncedTasksFromQuery,
       error: null,
     })
-  }, [clientId, convexTasksQuery, isPreviewMode, userId, workspaceId])
+  }
 
   const handleLoadMore = useCallback(async () => {
     // Realtime query returns the current dataset; no cursor pagination.

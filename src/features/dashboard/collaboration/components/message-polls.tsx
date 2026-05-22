@@ -22,6 +22,8 @@ import {
   QuickPollTrigger,
 } from './message-polls-sections'
 
+const CREATE_POLL_DEFAULT_TRIGGER = <CreatePollDialogTrigger />
+
 export interface PollOption {
   id: string
   text: string
@@ -162,13 +164,15 @@ export function PollCard({
           return (
             <PollOptionRow
               key={option.id}
-              canVote={canVote}
+              ui={{
+                canVote,
+                selected: isSelected,
+                showResults: showOptionResults,
+                hasLeadingWinner: index === 0,
+              }}
               handleToggleOption={handleToggleOption}
-              hasLeadingWinner={index === 0}
-              isSelected={isSelected}
               option={option}
               percentage={percentage}
-              showOptionResults={showOptionResults}
               sortedOptions={sortedOptions}
               voteCount={voteCount}
             />
@@ -177,16 +181,18 @@ export function PollCard({
       </div>
 
       <PollCardFooterActions
-        canEnd={canEnd && !!onEndPoll}
-        canVote={canVote}
-        hasVoted={hasVoted}
-        isExpired={isExpired}
-        isVoting={isVoting}
+        ui={{
+          canEnd: canEnd && !!onEndPoll,
+          canVote,
+          hasVoted,
+          isExpired,
+          isVoting,
+          showResults,
+        }}
         onEndPoll={handleEndPoll}
         onShowResults={handleShowResults}
         onVote={handleVote}
         selectedOptionsCount={selectedOptions.length}
-        showResults={showResults}
       />
     </div>
   )
@@ -374,13 +380,9 @@ export function CreatePollDialog({
     setOpen(false)
   }, [])
 
-  const defaultTrigger = (
-    <CreatePollDialogTrigger />
-  )
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {trigger || defaultTrigger}
+      {trigger ?? CREATE_POLL_DEFAULT_TRIGGER}
       <DialogContent className="sm:max-w-md">
         <CreatePollDialogHeader />
         <CreatePollFormFields

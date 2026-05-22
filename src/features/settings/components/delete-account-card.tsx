@@ -42,7 +42,7 @@ export function DeleteAccountCard({ embedded = false }: DeleteAccountCardProps) 
           Delete account
         </CardTitle>
         <CardDescription>
-          Permanently remove your account and all associated data (GDPR Article 17 — Right to Erasure).
+          Permanently remove your account and all associated data (GDPR Article 17 - Right to Erasure).
         </CardDescription>
       </CardHeader>
       <CardContent className={embedded ? 'px-0' : undefined}>
@@ -91,7 +91,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
   const { user, deleteAccount } = useAuth()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
-  const router = useRouter()
+  const { push } = useRouter()
 
   const [deleteDialogState, setDeleteDialogState] = useState({
     confirm: '',
@@ -154,7 +154,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       .then(() => {
         toast({ title: 'Account deleted', description: 'Your account and associated data have been removed.' })
         onOpenChange(false)
-        router.push('/')
+        push('/')
       })
       .catch((accountError) => {
         const message = accountError instanceof Error ? accountError.message : 'Failed to delete account'
@@ -167,7 +167,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       .finally(() => {
         setDeleteDialogState((prev) => ({ ...prev, loading: false }))
       })
-  }, [deleteAccount, deleteConfirm, isPreviewMode, onOpenChange, router, toast, user])
+  }, [deleteAccount, deleteConfirm, isPreviewMode, onOpenChange, push, toast, user])
 
   const handleDeleteConfirmChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setDeleteDialogState((prev) => ({ ...prev, confirm: event.target.value, error: null }))

@@ -15,7 +15,7 @@ import type { Channel } from '../types'
 import { formatConversationSnippet } from '../lib/chat-text'
 import { useChannelMessageSearch } from './use-channel-message-search'
 import { useMessageActions } from './use-message-actions'
-import { useRealtimeMessages, useRealtimeTyping } from './use-realtime'
+import { useRealtimeChannelSnapshot, useRealtimeTyping } from './use-realtime'
 import { useThreads } from './use-threads'
 import { useTyping } from './use-typing'
 import { useCollaborationExternalNotify } from './use-collaboration-external-notify'
@@ -276,12 +276,13 @@ export function useMessagesData({
 
       return changed ? next : prev
     })
-  }, [channels, currentUserId, isPreviewMode])
+  }, [channels, currentUserId, isPreviewMode, setMessagesByChannel, setNextCursorByChannel])
 
   useEffect(() => {
+    const replyTimersRef = previewReplyTimersRef
     return () => {
-      previewReplyTimersRef.current.forEach((timerId) => window.clearTimeout(timerId))
-      previewReplyTimersRef.current = []
+      replyTimersRef.current.forEach((timerId) => window.clearTimeout(timerId))
+      replyTimersRef.current = []
     }
   }, [])
 
@@ -429,7 +430,7 @@ export function useMessagesData({
         return { ...prev, [channelId]: next }
       })
     },
-    []
+    [setMessagesByChannel],
   )
 
   const {
@@ -465,17 +466,63 @@ export function useMessagesData({
     [channelListRetryNonce],
   )
 
-  useRealtimeMessages({
+  const realtimeChannelSnapshot = useRealtimeChannelSnapshot({
     workspaceId,
     selectedChannel,
     currentUserId,
     channelListRetryNonce,
-    applyRealtimeChannelLoading,
-    applyRealtimeChannelSuccess,
-    applyRealtimeChannelError,
-    applyRealtimePreviewChannel,
-    onError: handleRealtimeMessagesError,
   })
+
+  const realtimeSnapshotApplyKey = useMemo(() => {
+    switch (realtimeChannelSnapshot.kind) {
+      case 'idle':
+        return 'idle'
+      case 'loading':
+        return `loading:${realtimeChannelSnapshot.channelId}`
+      case 'success':
+        return `success:${realtimeChannelSnapshot.channelId}:${realtimeChannelSnapshot.messages.length}:${realtimeChannelSnapshot.nextCursor ?? ''}`
+      case 'error':
+        return `error:${realtimeChannelSnapshot.channelId}:${realtimeChannelSnapshot.errorMessage}`
+      case 'preview':
+        return `preview:${realtimeChannelSnapshot.channelId}:${realtimeChannelSnapshot.messages.length}`
+      default: {
+        const _exhaustive: never = realtimeChannelSnapshot
+        return _exhaustive
+      }
+    }
+  }, [realtimeChannelSnapshot])
+
+  const realtimeSnapshotApplyKeyRef = useRef<string | null>(null)
+  if (realtimeSnapshotApplyKeyRef.current !== realtimeSnapshotApplyKey) {
+    realtimeSnapshotApplyKeyRef.current = realtimeSnapshotApplyKey
+    switch (realtimeChannelSnapshot.kind) {
+      case 'idle':
+        break
+      case 'loading':
+        applyRealtimeChannelLoading(realtimeChannelSnapshot.channelId)
+        break
+      case 'success':
+        applyRealtimeChannelSuccess(
+          realtimeChannelSnapshot.channelId,
+          realtimeChannelSnapshot.messages,
+          realtimeChannelSnapshot.nextCursor,
+        )
+        break
+      case 'error':
+        applyRealtimeChannelError(realtimeChannelSnapshot.channelId, realtimeChannelSnapshot.errorMessage)
+        if (selectedChannel) {
+          handleRealtimeMessagesError(selectedChannel, realtimeChannelSnapshot.errorMessage)
+        }
+        break
+      case 'preview':
+        applyRealtimePreviewChannel(realtimeChannelSnapshot.channelId, realtimeChannelSnapshot.messages)
+        break
+      default: {
+        const _exhaustive: never = realtimeChannelSnapshot
+        break
+      }
+    }
+  }
 
   const { typingParticipants } = useRealtimeTyping({
     userId: currentUserId,

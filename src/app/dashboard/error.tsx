@@ -1,7 +1,7 @@
 'use client'
 
 import { logRouteError } from '@/shared/ui/log-route-error'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -13,13 +13,16 @@ type DashboardErrorProps = {
 
 export default function DashboardError({ error, unstable_retry, reset }: DashboardErrorProps) {
   const { replace, refresh } = useRouter()
+  const loggedErrorKeyRef = useRef<string | null>(null)
+  const errorLogKey = `${error.digest ?? ''}:${error.message}`
 
-  useEffect(() => {
+  if (loggedErrorKeyRef.current !== errorLogKey) {
+    loggedErrorKeyRef.current = errorLogKey
     logRouteError(error, 'dashboard')
     if (typeof error.componentStack === 'string' && error.componentStack.length > 0) {
       console.error('[RouteError:dashboard] componentStack:', error.componentStack)
     }
-  }, [error])
+  }
 
   const handleRetry = useCallback(() => {
     if (typeof unstable_retry === 'function') {

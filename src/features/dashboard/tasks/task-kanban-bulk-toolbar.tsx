@@ -173,6 +173,7 @@ export function TaskKanbanBulkToolbar({
                   <p className="text-xs font-medium">Assign to (comma-separated names)</p>
                   <input
                     type="text"
+                    aria-label="Assign to (comma-separated names)"
                     placeholder="Alice, Bob, …"
                     value={assigneeInput}
                     onChange={handleAssigneeInputChange}

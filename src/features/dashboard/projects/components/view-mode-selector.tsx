@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 import { ChartGantt, Columns3, LayoutGrid, List } from 'lucide-react'
 
+import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
 
 import type { ViewMode } from './utils'
@@ -22,7 +23,7 @@ interface ViewModeSelectorProps {
 
 export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) {
   return (
-    <div className={PROJECTS_THEME.segmented} role="group" aria-label="Project view mode">
+    <fieldset className={cn(PROJECTS_THEME.segmented, 'm-0 min-w-0 border-0 p-0')} aria-label="Project view mode">
       {VIEW_OPTIONS.map(({ mode, label, icon: Icon }) => (
         <ViewModeButton
           key={mode}
@@ -33,7 +34,7 @@ export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) 
           onChange={onChange}
         />
       ))}
-    </div>
+    </fieldset>
   )
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { TASK_STATUSES } from '@/types/tasks'
 import type { TaskRecord, TaskStatus } from '@/types/tasks'
 import { PRIORITY_ORDER } from '../task-types'
@@ -255,17 +255,22 @@ export function useTaskFilters({
     return Array.from(options).toSorted((a, b) => a.localeCompare(b))
   }, [projectScopedTasks])
 
-  // Reset assignee if no longer valid
-  useEffect(() => {
-    if (selectedAssignee !== 'all' && !assigneeOptions.includes(selectedAssignee)) {
-      setSelectedAssignee('all')
-    }
-  }, [assigneeOptions, selectedAssignee])
+  if (selectedAssignee !== 'all' && !assigneeOptions.includes(selectedAssignee)) {
+    setSelectedAssignee('all')
+  }
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(TASK_VIEW_MODE_STORAGE_KEY, viewMode)
-  }, [viewMode])
+  const setViewModePersisted = useCallback<React.Dispatch<React.SetStateAction<'list' | 'grid' | 'board'>>>(
+    (mode) => {
+      setViewMode((current) => {
+        const resolved = typeof mode === 'function' ? mode(current) : mode
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(TASK_VIEW_MODE_STORAGE_KEY, resolved)
+        }
+        return resolved
+      })
+    },
+    [],
+  )
 
   return {
     selectedStatus,
@@ -281,7 +286,7 @@ export function useTaskFilters({
     sortDirection,
     toggleSortDirection,
     viewMode,
-    setViewMode,
+    setViewMode: setViewModePersisted,
     tasksForClient,
     projectScopedTasks,
     filteredTasks,

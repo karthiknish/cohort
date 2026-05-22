@@ -11,9 +11,8 @@ function QueryFetchingIndicator() {
   const n = useIsFetching()
   if (n === 0) return null
   return (
-    <div
-      className="pointer-events-none fixed top-0 right-0 left-0 z-[200] h-0.5 overflow-hidden bg-accent/15 motion-safe:animate-pulse"
-      role="status"
+    <output
+      className="pointer-events-none fixed top-0 right-0 left-0 z-[200] block h-0.5 overflow-hidden bg-accent/15 motion-safe:animate-pulse"
       aria-live="polite"
       aria-label="Refreshing data in the background"
     />

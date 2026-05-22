@@ -29,14 +29,13 @@ import {
   MOTION_FADE_SLIDE_UP,
   MOTION_FADE_SLIDE_UP_EXIT,
   MOTION_VISIBLE,
-} from './agent-mode-panel-message-utils'
+} from './agent-mode-panel-message-constants'
 
 function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
   if (status === 'connected') return null
 
   return (
-    <m.div
-      role="status"
+    <m.output
       aria-live="polite"
       initial={MOTION_FADE_SLIDE_UP}
       animate={MOTION_VISIBLE}
@@ -58,14 +57,13 @@ function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
           <span>Offline</span>
         </>
       )}
-    </m.div>
+    </m.output>
   )
 }
 
 export function RateLimitBanner({ countdown, onDismiss }: { countdown: number; onDismiss?: () => void }) {
   return (
-    <m.div
-      role="status"
+    <m.output
       aria-live="assertive"
       initial={MOTION_FADE_SLIDE_UP}
       animate={MOTION_VISIBLE}
@@ -81,7 +79,7 @@ export function RateLimitBanner({ countdown, onDismiss }: { countdown: number; o
           Dismiss
         </Button>
       ) : null}
-    </m.div>
+    </m.output>
   )
 }
 

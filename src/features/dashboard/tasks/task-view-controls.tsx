@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react'
 import { Columns3, Download, List, LayoutGrid } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { TASKS_THEME } from './tasks-theme'
 
@@ -26,7 +27,7 @@ export function TaskViewControls({
 }: TaskViewControlsProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className={TASKS_THEME.segmented} role="group" aria-label="View mode">
+      <fieldset className={cn(TASKS_THEME.segmented, 'm-0 min-w-0 border-0 p-0')} aria-label="View mode">
         {VIEW_OPTIONS.map(({ mode, label, icon: Icon }) => (
           <ViewToggleButton
             key={mode}
@@ -37,7 +38,7 @@ export function TaskViewControls({
             onViewModeChange={onViewModeChange}
           />
         ))}
-      </div>
+      </fieldset>
       <Button
         type="button"
         variant="outline"

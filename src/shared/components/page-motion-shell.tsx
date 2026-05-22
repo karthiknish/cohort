@@ -1,6 +1,6 @@
 'use client'
 
-import { lazy, Suspense, useMemo, type ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { FadeInStagger } from '@/shared/ui/animate-in'
 
 const LazyRevealTransition = lazy(() =>
@@ -18,19 +18,30 @@ type PageMotionShellProps = {
  * Standard page entrance: optional route reveal + staggered section fade-in.
  * Use once at the feature page root.
  */
-export function PageMotionShell({ children, className, reveal = true }: PageMotionShellProps) {
-  const content = useMemo(
-    () => <FadeInStagger className={className ?? 'flex flex-col gap-6'}>{children}</FadeInStagger>,
-    [children, className],
-  )
+function PageMotionFadeIn({ children, className }: { children: ReactNode; className?: string }) {
+  return <FadeInStagger className={className ?? 'flex flex-col gap-6'}>{children}</FadeInStagger>
+}
 
+function PageMotionSuspenseFallback({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return <PageMotionFadeIn className={className}>{children}</PageMotionFadeIn>
+}
+
+export function PageMotionShell({ children, className, reveal = true }: PageMotionShellProps) {
   if (!reveal) {
-    return content
+    return <PageMotionFadeIn className={className}>{children}</PageMotionFadeIn>
   }
 
   return (
-    <Suspense fallback={content}>
-      <LazyRevealTransition>{content}</LazyRevealTransition>
+    <Suspense fallback={<PageMotionSuspenseFallback className={className}>{children}</PageMotionSuspenseFallback>}>
+      <LazyRevealTransition>
+        <PageMotionFadeIn className={className}>{children}</PageMotionFadeIn>
+      </LazyRevealTransition>
     </Suspense>
   )
 }

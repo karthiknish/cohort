@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 
 type ChangedProp = { from: unknown; to: unknown }
 
@@ -23,42 +23,42 @@ export function useRenderLog(name: string, props?: Record<string, unknown>) {
   const countRef = useRef(0)
   const prevPropsRef = useRef<Record<string, unknown>>({})
 
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return
+  if (process.env.NODE_ENV !== 'development') {
+    return
+  }
 
-    countRef.current += 1
-    const changedProps: Record<string, ChangedProp> = {}
+  countRef.current += 1
+  const changedProps: Record<string, ChangedProp> = {}
 
-    if (props) {
-      Object.keys(props).forEach((key) => {
-        if (prevPropsRef.current[key] !== props[key]) {
-          changedProps[key] = {
-            from: prevPropsRef.current[key],
-            to: props[key],
-          }
+  if (props) {
+    Object.keys(props).forEach((key) => {
+      if (prevPropsRef.current[key] !== props[key]) {
+        changedProps[key] = {
+          from: prevPropsRef.current[key],
+          to: props[key],
         }
-      })
-      prevPropsRef.current = { ...props }
-    }
+      }
+    })
+    prevPropsRef.current = { ...props }
+  }
 
-    const logEntry = {
-      name,
-      renderCount: countRef.current,
-      timestamp: new Date().toISOString(),
-      changedProps: Object.keys(changedProps).length > 0 ? changedProps : 'none (likely state or context change)',
-    }
+  const logEntry = {
+    name,
+    renderCount: countRef.current,
+    timestamp: new Date().toISOString(),
+    changedProps: Object.keys(changedProps).length > 0 ? changedProps : 'none (likely state or context change)',
+  }
 
-    if (typeof window !== 'undefined') {
-      const win = window as RenderLogWindow
-      if (!win.__RENDER_LOGS__) win.__RENDER_LOGS__ = []
-      win.__RENDER_LOGS__.push(logEntry)
-      if (win.__RENDER_LOGS__.length > 200) win.__RENDER_LOGS__.shift()
-    }
+  if (typeof window !== 'undefined') {
+    const win = window as RenderLogWindow
+    if (!win.__RENDER_LOGS__) win.__RENDER_LOGS__ = []
+    win.__RENDER_LOGS__.push(logEntry)
+    if (win.__RENDER_LOGS__.length > 200) win.__RENDER_LOGS__.shift()
+  }
 
-    console.log(`[RenderLog] ${name} render #${countRef.current}`, logEntry)
+  console.log(`[RenderLog] ${name} render #${countRef.current}`, logEntry)
 
-    if (countRef.current > 50) {
-      console.warn(`[RenderLog] ${name} has rendered more than 50 times! Potential loop detected.`)
-    }
-  })
+  if (countRef.current > 50) {
+    console.warn(`[RenderLog] ${name} has rendered more than 50 times! Potential loop detected.`)
+  }
 }

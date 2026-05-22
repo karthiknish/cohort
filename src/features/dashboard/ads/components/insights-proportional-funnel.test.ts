@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { computeFunnelVisualWidths } from './insights-proportional-funnel'
+import { computeFunnelVisualWidths } from './insights-proportional-funnel-utils'
 
 describe('computeFunnelVisualWidths', () => {
   it('keeps bottom stage readable when top >> bottom (ad funnel)', () => {

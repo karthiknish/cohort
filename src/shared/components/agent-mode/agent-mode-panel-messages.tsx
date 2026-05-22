@@ -1,9 +1,11 @@
 'use client'
 
+import { parseISO, isValid } from 'date-fns'
 import { Fragment } from 'react'
 import { AlertCircle, ArrowDown, Check, Clock, Loader2, RefreshCw, Sparkles, WifiOff } from 'lucide-react'
 import { m } from '@/shared/ui/motion'
 
+import { useClientNow } from '@/lib/hooks/use-client-relative-time'
 import { cn } from '@/lib/utils'
 import type {
   AgentExecutionStep,
@@ -18,15 +20,31 @@ import { AgentMessageCard } from './agent-message-card'
 import {
   AGENT_MESSAGE_THREAD,
   AGENT_PANEL_SURFACE,
-  AgentMessageDayDivider,
   formatMessageDayLabel,
   messageDayKey,
   MOTION_FADE_IN,
   MOTION_FADE_IN_VISIBLE,
   stopPropagation,
-} from './agent-mode-panel-message-utils'
+} from './agent-mode-panel-message-constants'
+import { AgentMessageDayDivider } from './agent-mode-panel-message-utils'
 
 const AGENT_TYPING_ICON = <Sparkles className="size-4 text-primary" aria-hidden />
+const EMPTY_AGENT_EXECUTION_STEPS: AgentExecutionStep[] = []
+
+function toMessageTimestamp(value: Date | string | number): Date {
+  if (value instanceof Date) {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    const parsed = parseISO(value)
+    if (isValid(parsed)) {
+      return parsed
+    }
+  }
+
+  return new Date(value)
+}
 
 function stepStatusIcon(status: AgentExecutionStep['status']) {
   if (status === 'completed') return <Check className="size-3.5 text-primary" aria-hidden />
@@ -36,7 +54,7 @@ function stepStatusIcon(status: AgentExecutionStep['status']) {
 }
 
 export function AgentExecutionTimeline({
-  steps = [],
+  steps = EMPTY_AGENT_EXECUTION_STEPS,
   label,
 }: {
   steps?: AgentExecutionStep[]
@@ -47,7 +65,7 @@ export function AgentExecutionTimeline({
   }
 
   return (
-    <div className="flex gap-3" role="status" aria-live="polite" aria-atomic="true">
+    <output className="flex gap-3" aria-live="polite" aria-atomic="true">
       <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/15">
         <Sparkles className="size-4 text-primary" aria-hidden />
       </div>
@@ -75,7 +93,7 @@ export function AgentExecutionTimeline({
           ))}
         </ol>
       </div>
-    </div>
+    </output>
   )
 }
 
@@ -113,6 +131,8 @@ export function AgentMessagesSection({
   showJumpToLatest: boolean
   onJumpToLatest: () => void
 }) {
+  const now = useClientNow()
+
   return (
     <div className={cn('relative flex-1 min-h-0', AGENT_PANEL_SURFACE)}>
       <div
@@ -131,14 +151,11 @@ export function AgentMessagesSection({
         ) : (
           <div className="mx-auto w-full max-w-3xl space-y-4 pb-2">
             {messages.map((message, index) => {
-              const timestamp =
-                message.timestamp instanceof Date ? message.timestamp : new Date(message.timestamp)
+              const timestamp = toMessageTimestamp(message.timestamp)
               const dayKey = Number.isNaN(timestamp.getTime()) ? null : messageDayKey(timestamp)
               const previousMessage = index > 0 ? messages[index - 1] : null
               const previousTimestamp = previousMessage
-                ? previousMessage.timestamp instanceof Date
-                  ? previousMessage.timestamp
-                  : new Date(previousMessage.timestamp)
+                ? toMessageTimestamp(previousMessage.timestamp)
                 : null
               const previousDayKey =
                 previousTimestamp && !Number.isNaN(previousTimestamp.getTime())
@@ -148,8 +165,8 @@ export function AgentMessagesSection({
 
               return (
                 <Fragment key={message.clientId}>
-                  {showDayDivider ? (
-                    <AgentMessageDayDivider label={formatMessageDayLabel(timestamp)} />
+                  {showDayDivider && now ? (
+                    <AgentMessageDayDivider label={formatMessageDayLabel(timestamp, now)} />
                   ) : null}
                   <AgentMessageCard
                     message={message}

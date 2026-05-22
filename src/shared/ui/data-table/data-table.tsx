@@ -2,7 +2,9 @@
 'use no memo'
 
 import * as React from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 import {
   type Header,
   type ColumnDef,
@@ -347,9 +349,10 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   'use no memo'
 
-  const router = useRouter()
+  const { replace } = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const searchParams = useUrlSearchParams()
+  const { get } = searchParams
 
   const usesUrlPagination = syncPaginationToUrl && showPagination && !manualPagination
 
@@ -361,13 +364,13 @@ export function DataTable<TData, TValue>({
   const urlPagination = React.useMemo(
     () =>
       parsePaginationFromSearchParams(
-        (key) => searchParams.get(key),
+        (key) => get(key),
         pageSize,
         urlPageParam,
         urlPageSizeParam,
         isValidUrlPageSize,
       ),
-    [isValidUrlPageSize, pageSize, searchParams, urlPageParam, urlPageSizeParam],
+    [get, isValidUrlPageSize, pageSize, urlPageParam, urlPageSizeParam],
   )
 
   const [tableState, dispatch] = React.useReducer(
@@ -420,18 +423,15 @@ export function DataTable<TData, TValue>({
   const internalSearchValueRef = React.useRef('')
   const effectiveSearchValue = searchValue ?? internalSearchValueRef.current
 
-  // Sync search value into column filters
-  React.useEffect(() => {
-    if (!searchKey) return
+  const columnFiltersWithSearch = React.useMemo(() => {
+    if (!searchKey) return columnFilters
 
-    setColumnFilters((prev) => {
-      const otherFilters = prev.filter((filter) => filter.id !== searchKey)
-      if (effectiveSearchValue) {
-        return [...otherFilters, { id: searchKey, value: effectiveSearchValue }]
-      }
-      return otherFilters
-    })
-  }, [searchKey, effectiveSearchValue])
+    const otherFilters = columnFilters.filter((filter) => filter.id !== searchKey)
+    if (effectiveSearchValue) {
+      return [...otherFilters, { id: searchKey, value: effectiveSearchValue }]
+    }
+    return otherFilters
+  }, [columnFilters, effectiveSearchValue, searchKey])
 
   // react-doctor-disable-next-line react-hooks-js/incompatible-library
   const table = createReactTable({
@@ -478,7 +478,7 @@ export function DataTable<TData, TValue>({
           isValidUrlPageSize,
         )
         const queryString = params.toString()
-        router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
+        replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
         onPaginationChange?.(newPagination)
         return
       }
@@ -491,7 +491,7 @@ export function DataTable<TData, TValue>({
     },
     state: {
       sorting,
-      columnFilters,
+      columnFilters: columnFiltersWithSearch,
       columnVisibility,
       rowSelection,
       pagination,

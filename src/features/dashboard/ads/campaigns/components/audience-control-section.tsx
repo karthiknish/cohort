@@ -495,36 +495,6 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     [aggregatedData, displayInterests],
   )
 
-  const audienceEditorSection = useMemo(() => (
-    <AudienceEditorSection
-      aggregatedData={editorAggregatedData}
-      expandedSections={expandedSections}
-      toggleSection={toggleSection}
-      editingSection={editingSection}
-      onToggleEditing={handleToggleEditing}
-      canEditTargeting={canEditMetaTargeting}
-      workspaceId={workspaceId}
-      clientId={clientId}
-      onAddInterest={canEditMetaTargeting ? handleAddInterestDraft : undefined}
-      onRemoveInterest={canEditMetaTargeting ? handleRemoveInterestDraft : undefined}
-      onSaveTargeting={canEditMetaTargeting && editingSection === 'interests' ? handlePersistInterests : undefined}
-      savingTargeting={savingTargeting}
-    />
-  ), [
-    editorAggregatedData,
-    canEditMetaTargeting,
-    clientId,
-    editingSection,
-    expandedSections,
-    handleAddInterestDraft,
-    handlePersistInterests,
-    handleRemoveInterestDraft,
-    handleToggleEditing,
-    savingTargeting,
-    toggleSection,
-    workspaceId,
-  ])
-
   const audienceStats = useMemo(
     () => [
       {
@@ -551,25 +521,6 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
       insights?.totalEntities,
       targeting.length,
     ],
-  )
-
-  const headerActions = (
-    <>
-      <Button variant="outline" size="sm" className="gap-1.5" onClick={handleOpenBuilder}>
-        <Plus className="size-4" aria-hidden />
-        Create audience
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-9"
-        onClick={fetchTargeting}
-        disabled={loading}
-        aria-label="Refresh audience targeting"
-      >
-        <RefreshCw className={cn('size-4', loading && 'animate-spin')} aria-hidden />
-      </Button>
-    </>
   )
 
   if (loading && !hasLoaded) {
@@ -613,6 +564,42 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     )
   }
 
+  const audienceEditorSection = (
+    <AudienceEditorSection
+      aggregatedData={editorAggregatedData}
+      expandedSections={expandedSections}
+      toggleSection={toggleSection}
+      editingSection={editingSection}
+      onToggleEditing={handleToggleEditing}
+      canEditTargeting={canEditMetaTargeting}
+      workspaceId={workspaceId}
+      clientId={clientId}
+      onAddInterest={canEditMetaTargeting ? handleAddInterestDraft : undefined}
+      onRemoveInterest={canEditMetaTargeting ? handleRemoveInterestDraft : undefined}
+      onSaveTargeting={canEditMetaTargeting && editingSection === 'interests' ? handlePersistInterests : undefined}
+      savingTargeting={savingTargeting}
+    />
+  )
+
+  const headerActions = (
+    <>
+      <Button variant="outline" size="sm" className="gap-1.5" onClick={handleOpenBuilder}>
+        <Plus className="size-4" aria-hidden />
+        Create audience
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-9"
+        onClick={fetchTargeting}
+        disabled={loading}
+        aria-label="Refresh audience targeting"
+      >
+        <RefreshCw className={cn('size-4', loading && 'animate-spin')} aria-hidden />
+      </Button>
+    </>
+  )
+
   if (targeting.length === 0 && hasLoaded) {
     return (
       <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
@@ -647,7 +634,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         description={
           <>
             {insights?.totalEntities ?? targeting.length} configuration
-            {(insights?.totalEntities ?? targeting.length) === 1 ? '' : 's'} across ad sets — map,
+            {(insights?.totalEntities ?? targeting.length) === 1 ? '' : 's'} across ad sets - map,
             demographics, and segments in one view.
           </>
         }

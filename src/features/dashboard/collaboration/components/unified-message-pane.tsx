@@ -1,16 +1,19 @@
 'use client'
 
+import { useMemo } from 'react'
 import type { CollaborationMessage } from '@/types/collaboration'
 import type { ClientTeamMember } from '@/types/clients'
 
 import type { PendingAttachment } from '../hooks/types'
-import type { UnifiedMessage } from './message-list'
+import type { UnifiedMessage } from './message-list-types'
 import {
   UnifiedMessagePaneConversationLayout,
   UnifiedMessagePaneEmptyState,
+  type MessagePaneComposerState,
+  type MessagePaneListState,
 } from './unified-message-pane-layout'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
-import { useUnifiedMessagePaneRenderers } from './unified-message-pane-renderers'
+import { useUnifiedMessagePaneRenderers } from './use-unified-message-pane-renderers'
 import { useUnifiedMessagePaneController } from './use-unified-message-pane-controller'
 
 const EMPTY_PENDING_ATTACHMENTS: PendingAttachment[] = []
@@ -28,9 +31,8 @@ export interface UnifiedMessagePaneProps {
   messages: UnifiedMessage[]
   currentUserId: string | null
   currentUserRole?: string | null
-  isLoading: boolean
-  isLoadingMore: boolean
-  hasMore: boolean
+  listState: MessagePaneListState
+  composerState: Pick<MessagePaneComposerState, 'sending' | 'uploadingAttachments' | 'pendingAttachments'>
   onLoadMore: () => void
   onRefresh?: () => Promise<void> | void
   messageSearchQuery?: string
@@ -39,9 +41,7 @@ export interface UnifiedMessagePaneProps {
   messageInput: string
   onMessageInputChange: (value: string) => void
   onSendMessage: (content: string) => Promise<void>
-  isSending: boolean
   pendingAttachments?: PendingAttachment[]
-  uploadingAttachments?: boolean
   onAddAttachments?: (files: FileList | File[]) => void
   onRemoveAttachment?: (attachmentId: string) => void
   onToggleReaction: (messageId: string, emoji: string) => Promise<void>
@@ -79,9 +79,8 @@ export function UnifiedMessagePane({
   messages,
   currentUserId,
   currentUserRole,
-  isLoading,
-  isLoadingMore,
-  hasMore,
+  listState,
+  composerState,
   onLoadMore,
   onRefresh,
   messageSearchQuery = '',
@@ -90,9 +89,7 @@ export function UnifiedMessagePane({
   messageInput,
   onMessageInputChange,
   onSendMessage,
-  isSending,
   pendingAttachments = EMPTY_PENDING_ATTACHMENTS,
-  uploadingAttachments = false,
   onAddAttachments,
   onRemoveAttachment,
   onToggleReaction,
@@ -123,6 +120,13 @@ export function UnifiedMessagePane({
   messageUpdatingId = null,
   messageDeletingId = null,
 }: UnifiedMessagePaneProps) {
+  const { loading: isLoading, loadingMore: isLoadingMore, hasMore } = listState
+  const {
+    sending: isSending,
+    uploadingAttachments = false,
+    pendingAttachments: hasPendingAttachmentsFromProps = false,
+  } = composerState
+
   const {
     activeDeletingMessageId,
     channelMessagesById,
@@ -187,6 +191,19 @@ export function UnifiedMessagePane({
   })
   const canSearchMessages = Boolean(onMessageSearchChange)
   const isMessageSearchActive = messageSearchQuery.trim().length > 0
+  const searchState = useMemo(
+    () => ({ canSearch: canSearchMessages, active: isMessageSearchActive }),
+    [canSearchMessages, isMessageSearchActive],
+  )
+  const composerState = useMemo(
+    () => ({
+      focused: isComposerFocused,
+      sending: isSending,
+      pendingAttachments: hasPendingAttachments,
+      uploadingAttachments,
+    }),
+    [isComposerFocused, isSending, hasPendingAttachments, uploadingAttachments],
+  )
 
   const messageListRenderers = useUnifiedMessagePaneRenderers({
     activeDeletingMessageId,
@@ -233,7 +250,7 @@ export function UnifiedMessagePane({
   return (
     <UnifiedMessagePaneConversationLayout
       activeDeletingMessageId={activeDeletingMessageId}
-      canSearchMessages={canSearchMessages}
+      searchState={searchState}
       confirmingDeleteMessageId={confirmingDeleteMessageId}
       currentUserId={currentUserId}
       currentUserRole={currentUserRole}
@@ -252,14 +269,9 @@ export function UnifiedMessagePane({
       handleConfirmDelete={handleConfirmDelete}
       handleReaction={handleReaction}
       handleSend={handleSend}
-      hasMore={hasMore}
-      hasPendingAttachments={hasPendingAttachments}
+      listState={listState}
+      composerState={composerState}
       header={header}
-      isComposerFocused={isComposerFocused}
-      isLoading={isLoading}
-      isLoadingMore={isLoadingMore}
-      isMessageSearchActive={isMessageSearchActive}
-      isSending={isSending}
       messageInput={messageInput}
       messageListRenderers={messageListRenderers}
       messageSearchQuery={messageSearchQuery}
@@ -279,7 +291,6 @@ export function UnifiedMessagePane({
       reactionPendingByMessage={reactionPendingByMessage}
       statusBanner={statusBanner}
       typingIndicator={typingIndicator}
-      uploadingAttachments={uploadingAttachments}
     />
   )
 }

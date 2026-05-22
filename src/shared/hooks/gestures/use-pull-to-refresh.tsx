@@ -103,11 +103,9 @@ export function usePullToRefresh(
     const element = ref.current
     if (!element) return
 
-    const previousTouchAction = element.style.touchAction
-    const previousOverscrollBehaviorY = element.style.overscrollBehaviorY
+    const previousCssText = element.style.cssText
 
-    element.style.touchAction = 'pan-x'
-    element.style.overscrollBehaviorY = 'contain'
+    element.style.cssText = `${previousCssText};touch-action:pan-x;overscroll-behavior-y:contain`
 
     const handleTouchStart = (e: TouchEvent) => {
       if (element.scrollTop <= 0 && e.touches.length === 1) {
@@ -148,8 +146,7 @@ export function usePullToRefresh(
     element.addEventListener('touchend', handleTouchEnd, { passive: true })
 
     return () => {
-      element.style.touchAction = previousTouchAction
-      element.style.overscrollBehaviorY = previousOverscrollBehaviorY
+      element.style.cssText = previousCssText
       element.removeEventListener('touchstart', handleTouchStart)
       element.removeEventListener('touchmove', handleTouchMove)
       element.removeEventListener('touchend', handleTouchEnd)

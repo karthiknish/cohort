@@ -78,6 +78,14 @@ function TaskStatusMenuItem({
   )
 }
 
+export type TaskCardHeaderVisibility = {
+  title: boolean
+  menu: boolean
+  contextPills: boolean
+  indicators: boolean
+  compactIndicators: boolean
+}
+
 export function TaskCardHeaderSection({
   task,
   isPendingUpdate,
@@ -89,11 +97,13 @@ export function TaskCardHeaderSection({
   onQuickStatusChange,
   onClone,
   onShare,
-  showTitle = true,
-  showMenu = true,
-  showContextPills = true,
-  showIndicators = true,
-  compactIndicators = false,
+  visibility = {
+    title: true,
+    menu: true,
+    contextPills: true,
+    indicators: true,
+    compactIndicators: false,
+  },
   titleClassName,
 }: {
   task: TaskRecord
@@ -106,13 +116,16 @@ export function TaskCardHeaderSection({
   onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
   onClone?: (task: TaskRecord) => void
   onShare?: (task: TaskRecord) => void
-  showTitle?: boolean
-  showMenu?: boolean
-  showContextPills?: boolean
-  showIndicators?: boolean
-  compactIndicators?: boolean
+  visibility?: TaskCardHeaderVisibility
   titleClassName?: string
 }) {
+  const {
+    title: showTitle,
+    menu: showMenu,
+    contextPills: showContextPills,
+    indicators: showIndicators,
+    compactIndicators,
+  } = visibility
   const handleOpenTask = useCallback(() => {
     onOpen?.(task)
   }, [onOpen, task])

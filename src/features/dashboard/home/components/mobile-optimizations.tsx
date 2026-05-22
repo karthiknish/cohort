@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import { useMediaQuery, useWindowWidth } from '@/lib/hooks/use-media-query'
 import { ChevronUp, ChevronDown, X, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { useIsMobile as useIsMobileHook } from '@/shared/hooks/use-is-mobile'
@@ -74,16 +75,9 @@ export function MobileCollapsible({
   contentClassName,
 }: MobileCollapsibleProps) {
   const [isOpen, setIsOpen] = useState(true)
-  const [isMobile, setIsMobile] = useState(false)
+  const isMobile = useMediaQuery('(max-width: 767px)')
   const handleToggle = useCallback(() => {
     setIsOpen((current) => !current)
-  }, [])
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
   // Always show content on mobile by default
@@ -489,19 +483,8 @@ function resolveBreakpoint(width: number): MobileBreakpoint {
  * Hook to get current breakpoint
  */
 export function useBreakpoint() {
-  const [breakpoint, setBreakpoint] = useState<MobileBreakpoint>('2xl')
-
-  useEffect(() => {
-    const handleResize = () => {
-      setBreakpoint(resolveBreakpoint(window.innerWidth))
-    }
-
-    handleResize()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  return breakpoint
+  const width = useWindowWidth()
+  return useMemo(() => resolveBreakpoint(width), [width])
 }
 
 /**

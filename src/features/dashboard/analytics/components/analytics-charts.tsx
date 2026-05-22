@@ -13,14 +13,16 @@ import {
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
 import {
-  ANALYTICS_CHART_CONTAINER_CLASS,
-  ANALYTICS_CHART_TOOLTIP_PROPS,
   AnalyticsConversionRateTooltip,
   AnalyticsConversionsTooltip,
   AnalyticsRevenueTooltip,
   AnalyticsUsersSessionsTooltip,
-  type AnalyticsChartPoint,
 } from './analytics-chart-tooltips'
+import {
+  ANALYTICS_CHART_CONTAINER_CLASS,
+  ANALYTICS_CHART_TOOLTIP_PROPS,
+} from './analytics-chart-tooltips-constants'
+import type { AnalyticsChartPoint } from './analytics-chart-tooltips-types'
 import {
   Area,
   AreaChart,

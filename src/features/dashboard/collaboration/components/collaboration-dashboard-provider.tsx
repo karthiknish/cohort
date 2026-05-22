@@ -7,7 +7,7 @@ import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { collaborationChannelsApi, usersApi } from '@/lib/convex-api'
 
-import { useCollaborationData } from '../hooks'
+import { useCollaborationData } from '../hooks/use-collaboration-data'
 import { type DirectConversation, useDirectMessages } from '../hooks/use-direct-messages'
 import {
   useCollaborationDashboardActions,

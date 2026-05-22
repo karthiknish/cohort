@@ -6,7 +6,11 @@ import { Errors, withErrorHandling } from './errors'
 import { v } from 'convex/values'
 import type { Doc } from './_generated/dataModel'
 
-import { GammaService, GAMMA_IMAGE_MODEL_CREDITS, GAMMA_RECOMMENDED_MODELS } from '../src/services/gamma'
+import {
+  GammaService,
+  GAMMA_IMAGE_MODEL_CREDITS,
+  GAMMA_RECOMMENDED_MODELS,
+} from '../src/services/gamma/api'
 import { PRESENTATION_ENGINE_LABEL } from '../src/lib/proposal-deck-generation'
 
 async function requireAuthenticatedUser(ctx: ActionCtx): Promise<Doc<'users'>> {

@@ -117,7 +117,12 @@ export function GanttView({ projects, milestones, loading, error, onRefresh, onM
                 <div className="divide-y">
                   {projects.map((project) => (
                     <div key={project.id} className="relative h-16">
-                      {renderMilestonesForProject(project.id, milestones[project.id] ?? [], start, dayWidth, totalDays)}
+                      <ProjectMilestones
+                        milestoneList={milestones[project.id] ?? []}
+                        start={start}
+                        dayWidth={dayWidth}
+                        totalDays={totalDays}
+                      />
                     </div>
                   ))}
                 </div>
@@ -130,13 +135,17 @@ export function GanttView({ projects, milestones, loading, error, onRefresh, onM
   )
 }
 
-function renderMilestonesForProject(
-  projectId: string,
-  milestoneList: MilestoneRecord[],
-  start: Date,
-  dayWidth: number,
-  totalDays: number,
-) {
+function ProjectMilestones({
+  milestoneList,
+  start,
+  dayWidth,
+  totalDays,
+}: {
+  milestoneList: MilestoneRecord[]
+  start: Date
+  dayWidth: number
+  totalDays: number
+}) {
   if (milestoneList.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
@@ -145,9 +154,9 @@ function renderMilestonesForProject(
     )
   }
 
-  return milestoneList.map((milestone) => {
-    return <MilestoneBar key={milestone.id} milestone={milestone} start={start} dayWidth={dayWidth} totalDays={totalDays} />
-  })
+  return milestoneList.map((milestone) => (
+    <MilestoneBar key={milestone.id} milestone={milestone} start={start} dayWidth={dayWidth} totalDays={totalDays} />
+  ))
 }
 
 function MilestoneStatusIndicator({ status }: { status: MilestoneStatus }) {

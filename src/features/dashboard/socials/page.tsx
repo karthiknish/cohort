@@ -67,7 +67,7 @@ export default function SocialsPage() {
   const facebookHasData = (metrics.facebookOverview?.rowCount ?? 0) > 0
   const instagramHasData = (metrics.instagramOverview?.rowCount ?? 0) > 0
 
-  const renderSetup = useCallback(() => (
+  const setupSection = useMemo(() => (
     <FadeIn>
     <div className="space-y-4">
       <SocialsConnectionPanel
@@ -133,7 +133,7 @@ export default function SocialsPage() {
     setupComplete,
   ])
 
-  const renderPerformance = useCallback(() => (
+  const performanceSection = useMemo(() => (
     <FadeIn>
     <Tabs value={surfaceTab.value} onValueChange={handleSurfaceChange} className="space-y-6">
       <div className="sticky top-0 z-10 -mx-1 rounded-xl border border-muted/30 bg-card/90 px-1 py-2 shadow-sm backdrop-blur-md supports-backdrop-filter:bg-card/75">
@@ -206,8 +206,8 @@ export default function SocialsPage() {
           showSetup={!isPreviewMode}
           connected={connected}
           setupComplete={setupComplete}
-          renderSetup={renderSetup}
-          renderPerformance={renderPerformance}
+          setup={setupSection}
+          performance={performanceSection}
         />
       )}
     </PageMotionShell>

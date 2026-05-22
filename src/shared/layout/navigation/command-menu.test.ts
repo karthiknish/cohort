@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getNavigationItemsForUserRole, getQuickActionsForUserRole } from './command-menu'
+import { getNavigationItemsForUserRole, getQuickActionsForUserRole } from './command-menu-data'
 
 describe('getNavigationItemsForUserRole', () => {
   it('uses For You route instead of legacy activity redirect', () => {

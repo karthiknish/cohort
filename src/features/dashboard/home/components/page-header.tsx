@@ -60,7 +60,7 @@ export function PageHeader({
             )}
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                <h1 className="text-2xl tracking-tight text-foreground">
                   {title}
                 </h1>
                 {badge && (

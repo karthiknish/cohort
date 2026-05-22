@@ -44,7 +44,12 @@ export function useAgentMode(): UseAgentModeReturn {
     }
   }, [navigationState.projectId, pathname, selectedClientId])
 
-  const [isOpen, setOpenState] = useState(false)
+  const [isOpen, setOpenState] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false
+    }
+    return window.sessionStorage.getItem(AGENT_OPEN_STORAGE_KEY) === '1'
+  })
 
   const setOpen = useCallback((open: boolean) => {
     setOpenState(open)
@@ -66,14 +71,6 @@ export function useAgentMode(): UseAgentModeReturn {
     removeAttachment,
     clearAttachments,
   } = useAgentAttachments(workspaceId)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const stored = window.sessionStorage.getItem(AGENT_OPEN_STORAGE_KEY)
-    if (stored === '1') {
-      setOpenState(true)
-    }
-  }, [])
 
   const toggle = useCallback(() => {
     setOpen(!isOpen)

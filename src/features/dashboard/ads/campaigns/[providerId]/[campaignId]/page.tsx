@@ -578,7 +578,7 @@ function CampaignInsightsPageContent() {
     void loadInsights()
   }, [loadInsights])
 
-  const renderPerformance = useCallback(
+  const performanceSection = useMemo(
     () => (
       <>
         <CampaignSection
@@ -641,7 +641,7 @@ function CampaignInsightsPageContent() {
     ],
   )
 
-  const renderControls = useCallback(
+  const controlsSection = useMemo(
     () => (
       <>
         <BudgetControlSection
@@ -675,7 +675,7 @@ function CampaignInsightsPageContent() {
     ],
   )
 
-  const renderCreatives = useCallback(
+  const creativesSection = useMemo(
     () => (
       <CampaignAdsSection
         providerId={providerId}
@@ -689,7 +689,7 @@ function CampaignInsightsPageContent() {
     [providerId, campaignId, campaign?.objective, selectedClientId, isPreviewMode, displayCurrency],
   )
 
-  const renderAdvanced = useCallback(
+  const advancedSection = useMemo(
     () => (
       <div className="grid grid-cols-1 gap-6">
         <FormulaBuilderCard
@@ -731,10 +731,10 @@ function CampaignInsightsPageContent() {
       ) : null}
 
       <CampaignPageLayout
-        renderPerformance={renderPerformance}
-        renderControls={renderControls}
-        renderCreatives={renderCreatives}
-        renderAdvanced={renderAdvanced}
+        performance={performanceSection}
+        controls={controlsSection}
+        creatives={creativesSection}
+        advanced={advancedSection}
       />
     </div>
   )

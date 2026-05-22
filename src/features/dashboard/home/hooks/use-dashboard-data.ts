@@ -6,7 +6,7 @@ import { getPreviewMetrics, getPreviewProposals, getPreviewTasks } from '@/lib/p
 import type { TaskRecord } from '@/types/tasks'
 import type { MetricRecord, DashboardTaskItem } from '@/types/dashboard'
 import { mapTasksForDashboard } from '@/lib/dashboard-utils'
-import { summarizeTasks, type TaskSummary } from '../components'
+import { summarizeTasks, type TaskSummary } from '../components/utils'
 import { mergeProposalForm } from '@/lib/proposals'
 import type { ProposalDraft } from '@/types/proposals'
 import { adsMetricsApi, proposalsApi, tasksApi } from '@/lib/convex-api'

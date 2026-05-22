@@ -3,7 +3,7 @@
 import { notifyFailure } from '@/lib/notifications'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Suspense, createElement, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, createElement, useCallback, useMemo, useRef, useState } from 'react'
 import {
   Download,
   RefreshCcw,
@@ -41,13 +41,11 @@ import {
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
 
-import {
-  ClientsDashboardSkeleton,
-  TeamMembersCard,
-  ClientStatsGrid,
-  ClientDetailsCard,
-  ClientOnboardingChecklist,
-} from './components'
+import { ClientDetailsCard } from './components/client-details-card'
+import { ClientOnboardingChecklist } from './components/client-onboarding-card'
+import { ClientStatsGrid } from './components/client-stats-grid'
+import { ClientsDashboardSkeleton } from './components/clients-dashboard-skeleton'
+import { TeamMembersCard } from './components/team-members-card'
 import { ClientPipelineBoard } from './components/client-pipeline-board'
 import { useClientsData } from './use-clients-data'
 import { formatDate, getRelativeTimeString } from './utils'
@@ -81,12 +79,11 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
 
   const clientsData = useClientsData(selectedClient, isPreviewMode)
 
-  // Handle URL param sync
-  useEffect(() => {
-    if (initialClientId) {
-      selectClient(initialClientId)
-    }
-  }, [initialClientId, selectClient])
+  const syncedInitialClientIdRef = useRef<string | null>(null)
+  if (initialClientId && syncedInitialClientIdRef.current !== initialClientId) {
+    syncedInitialClientIdRef.current = initialClientId
+    selectClient(initialClientId)
+  }
 
   // Onboarding items
   const onboardingItems: OnboardingItem[] = useMemo(() => {

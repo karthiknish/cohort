@@ -1,7 +1,7 @@
 'use client'
 
 import type { RefObject } from 'react'
-import { useCallback, useMemo } from 'react'
+import { createContext, use, useCallback, useMemo } from 'react'
 
 import { LoaderCircle, RefreshCw } from 'lucide-react'
 
@@ -30,7 +30,8 @@ import {
   MessageHeader,
   ReplyActionsBar,
 } from './message-item-parts'
-import { MessageList, collaborationToUnifiedMessage } from './message-list'
+import { MessageList } from './message-list'
+import { collaborationToUnifiedMessage } from './message-list-utils'
 import { MessageContent } from './message-content'
 import { MessageReactions } from './message-reactions'
 import { SharedPlatformIcons } from './message-share-button'
@@ -78,6 +79,40 @@ function getThreadRootId(message: CollaborationMessage): string {
   return typeof message.threadRootId === 'string' && message.threadRootId.trim().length > 0
     ? message.threadRootId.trim()
     : message.id
+}
+
+type CollaborationThreadReplyContextValue = Omit<CollaborationMessageReplyItemProps, 'message'>
+
+const CollaborationThreadReplyContext = createContext<CollaborationThreadReplyContextValue | null>(null)
+
+function CollaborationThreadReplyRenderer({ reply }: { reply: CollaborationMessage }) {
+  const context = use(CollaborationThreadReplyContext)
+  if (!context) {
+    throw new Error('CollaborationThreadReplyRenderer requires CollaborationThreadReplyContext')
+  }
+
+  return <CollaborationMessageReplyItem message={reply} {...context} />
+}
+
+type SearchThreadReplyContextValue = Omit<CollaborationMessageItemProps, 'message'>
+
+const SearchThreadReplyContext = createContext<SearchThreadReplyContextValue | null>(null)
+
+function SearchThreadReplyRenderer({ reply }: { reply: CollaborationMessage }) {
+  const context = use(SearchThreadReplyContext)
+  if (!context) {
+    throw new Error('SearchThreadReplyRenderer requires SearchThreadReplyContext')
+  }
+
+  return (
+    <CollaborationMessageItem
+      {...context}
+      message={reply}
+      isReply
+      showAvatar
+      showHeader
+    />
+  )
 }
 
 export function CollaborationMessageItem({
@@ -144,36 +179,33 @@ export function CollaborationMessageItem({
   const handleThreadToggle = useCallback(() => onThreadToggle(threadRootId), [onThreadToggle, threadRootId])
   const handleRetryThreadLoad = useCallback(() => onRetryThreadLoad(threadRootId), [onRetryThreadLoad, threadRootId])
   const handleLoadMoreThread = useCallback(() => onLoadMoreThread(threadRootId), [onLoadMoreThread, threadRootId])
-  const renderThreadReply = useCallback(
-    (reply: CollaborationMessage) => (
-      <CollaborationMessageReplyItem
-        currentUserId={currentUserId}
-        currentUserRole={currentUserRole}
-        editingMessageId={editingMessageId}
-        editingPreview={editingPreview}
-        editingValue={editingValue}
-        expandedThreadIds={expandedThreadIds}
-        message={reply}
-        messageDeletingId={messageDeletingId}
-        messageUpdatingId={messageUpdatingId}
-        onCancelEdit={onCancelEdit}
-        onConfirmDelete={onConfirmDelete}
-        onConfirmEdit={onConfirmEdit}
-        onCreateTask={onCreateTask}
-        onEditingValueChange={onEditingValueChange}
-        onLoadMoreThread={onLoadMoreThread}
-        onReply={onReply}
-        onRetryThreadLoad={onRetryThreadLoad}
-        onStartEdit={onStartEdit}
-        onThreadToggle={onThreadToggle}
-        onToggleReaction={onToggleReaction}
-        reactionPendingByMessage={reactionPendingByMessage}
-        threadErrorsByRootId={threadErrorsByRootId}
-        threadLoadingByRootId={threadLoadingByRootId}
-        threadMessagesByRootId={threadMessagesByRootId}
-        threadNextCursorByRootId={threadNextCursorByRootId}
-      />
-    ),
+  const threadReplyContext = useMemo(
+    (): CollaborationThreadReplyContextValue => ({
+      currentUserId,
+      currentUserRole,
+      editingMessageId,
+      editingPreview,
+      editingValue,
+      expandedThreadIds,
+      messageDeletingId,
+      messageUpdatingId,
+      onCancelEdit,
+      onConfirmDelete,
+      onConfirmEdit,
+      onCreateTask,
+      onEditingValueChange,
+      onLoadMoreThread,
+      onReply,
+      onRetryThreadLoad,
+      onStartEdit,
+      onThreadToggle,
+      onToggleReaction,
+      reactionPendingByMessage,
+      threadErrorsByRootId,
+      threadLoadingByRootId,
+      threadMessagesByRootId,
+      threadNextCursorByRootId,
+    }),
     [
       currentUserId,
       currentUserRole,
@@ -313,21 +345,25 @@ export function CollaborationMessageItem({
         {message.isDeleted ? <DeletedMessageInfo deletedBy={message.deletedBy} deletedAt={message.deletedAt} /> : null}
 
         {!isReply && !message.isDeleted ? (
-          <ThreadSection
-            threadRootId={threadRootId}
-            replyCount={replyCount}
-            lastReplyIso={lastReplyIso}
-            isOpen={isThreadOpen}
-            isLoading={threadLoading}
-            error={threadError}
-            hasNextCursor={!!threadNextCursor}
-            replies={threadReplies}
-            onToggle={handleThreadToggle}
-            onRetry={handleRetryThreadLoad}
-            onLoadMore={handleLoadMoreThread}
-            onReply={handleReply}
-            renderReply={renderThreadReply}
-          />
+          <CollaborationThreadReplyContext.Provider value={threadReplyContext}>
+            <ThreadSection
+              threadRootId={threadRootId}
+              replyCount={replyCount}
+              lastReplyIso={lastReplyIso}
+              panel={{
+                isOpen: isThreadOpen,
+                isLoading: threadLoading,
+                hasNextCursor: !!threadNextCursor,
+              }}
+              error={threadError}
+              replies={threadReplies}
+              onToggle={handleThreadToggle}
+              onRetry={handleRetryThreadLoad}
+              onLoadMore={handleLoadMoreThread}
+              onReply={handleReply}
+              ReplyRenderer={CollaborationThreadReplyRenderer}
+            />
+          </CollaborationThreadReplyContext.Provider>
         ) : null}
       </div>
 
@@ -542,37 +578,8 @@ function SearchThreadSection({
   const handleRetry = useCallback(() => onRetryThreadLoad(threadRootId), [onRetryThreadLoad, threadRootId])
   const handleLoadMore = useCallback(() => onLoadMoreThread(threadRootId), [onLoadMoreThread, threadRootId])
   const handleReply = useCallback(() => onReply(originalMessage), [onReply, originalMessage])
-  const renderReply = useCallback(
-    (reply: CollaborationMessage) => (
-      <CollaborationMessageItem
-        currentUserId={currentUserId}
-        currentUserRole={currentUserRole}
-        editingMessageId={editingMessageId}
-        editingPreview={editingPreview}
-        editingValue={editingValue}
-        expandedThreadIds={expandedThreadIds}
-        message={reply}
-        messageDeletingId={messageDeletingId}
-        messageUpdatingId={messageUpdatingId}
-        onCancelEdit={onCancelEdit}
-        onConfirmDelete={onConfirmDelete}
-        onConfirmEdit={onConfirmEdit}
-        onCreateTask={onCreateTask}
-        onEditingValueChange={onEditingValueChange}
-        onLoadMoreThread={onLoadMoreThread}
-        onReply={onReply}
-        onRetryThreadLoad={onRetryThreadLoad}
-        onStartEdit={onStartEdit}
-        onThreadToggle={onThreadToggle}
-        onToggleReaction={onToggleReaction}
-        reactionPendingByMessage={reactionPendingByMessage}
-        threadErrorsByRootId={threadErrorsByRootId}
-        threadLoadingByRootId={threadLoadingByRootId}
-        threadMessagesByRootId={threadMessagesByRootId}
-        threadNextCursorByRootId={threadNextCursorByRootId}
-      />
-    ),
-    [
+  const searchThreadReplyContext = useMemo(
+    (): SearchThreadReplyContextValue => ({
       currentUserId,
       currentUserRole,
       editingMessageId,
@@ -597,25 +604,56 @@ function SearchThreadSection({
       threadLoadingByRootId,
       threadMessagesByRootId,
       threadNextCursorByRootId,
+    }),
+    [
+      currentUserId,
+      currentUserRole,
+      editingMessageId,
+      editingPreview,
+      editingValue,
+      expandedThreadIds,
+      messageDeletingId,
+      messageUpdatingId,
+      onCancelEdit,
+      onConfirmDelete,
+      onConfirmEdit,
+      onCreateTask,
+      onEditingValueChange,
+      onLoadMoreThread,
+      onReply,
+      onRetryThreadLoad,
+      onStartEdit,
+      onThreadToggle,
+      onToggleReaction,
+      originalMessage,
+      reactionPendingByMessage,
+      threadErrorsByRootId,
+      threadLoadingByRootId,
+      threadMessagesByRootId,
+      threadNextCursorByRootId,
     ],
   )
 
   return (
-    <ThreadSection
-      threadRootId={threadRootId}
-      replyCount={replyCount}
-      lastReplyIso={lastReplyIso}
-      isOpen={Boolean(expandedThreadIds[threadRootId])}
-      isLoading={threadLoading}
-      error={threadError}
-      hasNextCursor={!!threadNextCursor}
-      replies={threadReplies}
-      onToggle={handleToggle}
-      onRetry={handleRetry}
-      onLoadMore={handleLoadMore}
-      onReply={handleReply}
-      renderReply={renderReply}
-    />
+    <SearchThreadReplyContext.Provider value={searchThreadReplyContext}>
+      <ThreadSection
+        threadRootId={threadRootId}
+        replyCount={replyCount}
+        lastReplyIso={lastReplyIso}
+        panel={{
+          isOpen: Boolean(expandedThreadIds[threadRootId]),
+          isLoading: threadLoading,
+          hasNextCursor: !!threadNextCursor,
+        }}
+        error={threadError}
+        replies={threadReplies}
+        onToggle={handleToggle}
+        onRetry={handleRetry}
+        onLoadMore={handleLoadMore}
+        onReply={handleReply}
+        ReplyRenderer={SearchThreadReplyRenderer}
+      />
+    </SearchThreadReplyContext.Provider>
   )
 }
 

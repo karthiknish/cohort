@@ -126,7 +126,6 @@ export async function completeMetaOAuthFlow(options: {
   // We intentionally fail setup if this exchange fails to avoid storing short-lived tokens.
   let longLivedToken: string | null = null
   let expiresIn: number | undefined = tokenResponse.expires_in
-  let finalExchangeError: MetaOAuthError | null = null
 
   const attemptExchange = async (attempt: number): Promise<void> => {
     try {
@@ -201,7 +200,7 @@ export async function completeMetaOAuthFlow(options: {
         return attemptExchange(attempt + 1)
       }
 
-      finalExchangeError = exchangeError instanceof MetaOAuthError
+      throw exchangeError instanceof MetaOAuthError
         ? exchangeError
         : new MetaOAuthError(message)
     }
@@ -210,7 +209,7 @@ export async function completeMetaOAuthFlow(options: {
   await attemptExchange(0)
 
   if (!longLivedToken) {
-    throw finalExchangeError ?? new MetaOAuthError('Failed to exchange long-lived Meta token')
+    throw new MetaOAuthError('Failed to exchange long-lived Meta token')
   }
 
   const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000) : null

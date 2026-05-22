@@ -436,9 +436,7 @@ function KanbanColumn({
   )
 
   return (
-    <div
-      role="listbox"
-      tabIndex={bulkActive ? -1 : 0}
+    <section
       aria-label={`${column.label} task lane`}
       className={cn(
         'flex min-h-[min(68vh,560px)] w-[min(100%,280px)] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 shadow-sm transition-colors sm:w-[280px]',
@@ -459,11 +457,11 @@ function KanbanColumn({
         </Badge>
       </div>
       <ScrollArea className="min-h-0 flex-1">
-        <div className="space-y-3 p-3">
+        <ul className="list-none space-y-3 p-3">
           {column.items.length === 0 ? (
-            <div
+            <li
               className={cn(
-                'flex min-h-[7.5rem] flex-col items-center justify-center rounded-lg border border-dashed border-border/70 bg-card/60 p-4 text-center transition-colors',
+                'list-none flex min-h-[7.5rem] flex-col items-center justify-center rounded-lg border border-dashed border-border/70 bg-card/60 p-4 text-center transition-colors',
                 isDragTarget && 'border-primary/35 bg-primary/5',
               )}
             >
@@ -475,11 +473,11 @@ function KanbanColumn({
               ) : (
                 <p className="text-xs text-muted-foreground">No tasks in this column</p>
               )}
-            </div>
+            </li>
           ) : (
             column.items.map((task) => (
+              <li key={task.id} className="list-none">
               <KanbanTaskItem
-                key={task.id}
                 bulkActive={bulkActive}
                 handleDragEnd={handleDragEnd}
                 handleDragStart={handleDragStart}
@@ -498,11 +496,12 @@ function KanbanColumn({
                 selected={selectedTaskIds.has(task.id)}
                 task={task}
               />
+              </li>
             ))
           )}
-        </div>
+        </ul>
       </ScrollArea>
-    </div>
+    </section>
   )
 }
 
@@ -569,8 +568,6 @@ function KanbanTaskItem({
 
   return (
     <div
-      key={task.id}
-      role="option"
       tabIndex={bulkActive || pending ? -1 : 0}
       aria-selected={selected}
       aria-label={task.title}

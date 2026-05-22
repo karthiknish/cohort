@@ -10,7 +10,7 @@ import {
   MessageListLoadMoreButton,
   MessageListLoadingState,
 } from './message-list-sections'
-import type { UnifiedMessage } from './message-list'
+import type { UnifiedMessage } from './message-list-types'
 
 vi.mock('emoji-picker-react', () => ({
   __esModule: true,
@@ -20,7 +20,9 @@ vi.mock('emoji-picker-react', () => ({
 
 const renderers = {
   renderMessageActions: () => <span>Quick actions</span>,
-  renderMessageContent: (msg: UnifiedMessage) => <span>{msg.content}</span>,
+  renderMessageContent: function TestMessageContent({ message: msg }: { message: UnifiedMessage }) {
+    return <span>{msg.content}</span>
+  },
   renderMessageFooter: () => <span>Footer</span>,
   renderThreadSection: () => <span>Thread section</span>,
 }
@@ -61,9 +63,7 @@ describe('message list sections', () => {
         <ChannelMessageCard
           currentUserId="user-1"
           highlighted={true}
-          isDeleting={false}
-          isEditing={false}
-          isUpdating={false}
+          pending={{ deleting: false, editing: false, updating: false }}
           localReactionPending={null}
           message={message}
           onReact={onReact}

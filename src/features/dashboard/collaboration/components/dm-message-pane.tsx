@@ -6,9 +6,10 @@ import { useCallback, useMemo, useState } from 'react'
 import { asErrorMessage } from '@/lib/convex-errors'
 import { useToast } from '@/shared/ui/use-toast'
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
-import type { UnifiedMessage } from './message-list'
+import type { UnifiedMessage } from './message-list-types'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
 import { UnifiedMessagePane } from './unified-message-pane'
+import type { MessagePaneListState } from './unified-message-pane-layout'
 
 function toUnifiedMessage(msg: DirectMessage): UnifiedMessage {
   return {
@@ -36,12 +37,10 @@ function toUnifiedMessage(msg: DirectMessage): UnifiedMessage {
 interface DMMessagePaneProps {
   conversation: DirectConversation | null
   messages: DirectMessage[]
-  isLoading: boolean
-  isLoadingMore: boolean
-  hasMore: boolean
+  listState: MessagePaneListState
   onLoadMore: () => void
   onSendMessage: (content: string) => Promise<void>
-  isSending: boolean
+  composerState: { sending: boolean }
   onToggleReaction: (messageLegacyId: string, emoji: string) => Promise<void>
   onDeleteMessage?: (messageLegacyId: string) => Promise<void>
   onEditMessage?: (messageLegacyId: string, newContent: string) => Promise<void>
@@ -54,12 +53,10 @@ interface DMMessagePaneProps {
 export function DMMessagePane({
   conversation,
   messages,
-  isLoading,
-  isLoadingMore,
-  hasMore,
+  listState,
   onLoadMore,
   onSendMessage,
-  isSending,
+  composerState,
   onToggleReaction,
   onDeleteMessage,
   onEditMessage,
@@ -68,6 +65,7 @@ export function DMMessagePane({
   currentUserId,
   onShareToPlatform,
 }: DMMessagePaneProps) {
+  const { sending: isSending } = composerState
   const { toast } = useToast()
   const [inputValue, setInputValue] = useState('')
   const header = useMemo<MessagePaneHeaderInfo | null>(() => {
@@ -128,14 +126,12 @@ export function DMMessagePane({
       header={header}
       messages={unifiedMessages}
       currentUserId={currentUserId}
-      isLoading={isLoading}
-      isLoadingMore={isLoadingMore}
-      hasMore={hasMore}
+      listState={listState}
       onLoadMore={onLoadMore}
       messageInput={inputValue}
       onMessageInputChange={setInputValue}
       onSendMessage={handleSend}
-      isSending={isSending}
+      composerState={composerState}
       onToggleReaction={handleReaction}
       onDeleteMessage={onDeleteMessage}
       onEditMessage={onEditMessage}
