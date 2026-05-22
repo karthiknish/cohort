@@ -195,7 +195,7 @@ export function UnifiedMessagePane({
     () => ({ canSearch: canSearchMessages, active: isMessageSearchActive }),
     [canSearchMessages, isMessageSearchActive],
   )
-  const composerState = useMemo(
+  const layoutComposerState = useMemo(
     () => ({
       focused: isComposerFocused,
       sending: isSending,
@@ -270,7 +270,7 @@ export function UnifiedMessagePane({
       handleReaction={handleReaction}
       handleSend={handleSend}
       listState={listState}
-      composerState={composerState}
+      composerState={layoutComposerState}
       header={header}
       messageInput={messageInput}
       messageListRenderers={messageListRenderers}
@@ -287,6 +287,7 @@ export function UnifiedMessagePane({
       onReply={onReply}
       participants={participants}
       pendingAttachments={pendingAttachments}
+      uploadingAttachments={uploadingAttachments}
       placeholder={placeholder}
       reactionPendingByMessage={reactionPendingByMessage}
       statusBanner={statusBanner}

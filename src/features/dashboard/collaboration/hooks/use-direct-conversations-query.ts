@@ -213,14 +213,14 @@ export function useDirectConversationsQuery({
   const conversationChanged = conversationPaginationKeyRef.current !== conversationPaginationKey
   const liveMessagesChanged =
     Boolean(liveMessagesFromQuery) &&
-    liveMessagesSnapshotRef.current !== liveMessagesFromQuery.key
+    liveMessagesSnapshotRef.current !== liveMessagesFromQuery?.key
 
   if (conversationChanged || liveMessagesChanged) {
     if (conversationChanged) {
       conversationPaginationKeyRef.current = conversationPaginationKey
     }
     if (liveMessagesFromQuery && liveMessagesChanged) {
-      liveMessagesSnapshotRef.current = liveMessagesFromQuery.key
+      liveMessagesSnapshotRef.current = liveMessagesFromQuery?.key ?? null
     }
 
     setFeed((prev) => {

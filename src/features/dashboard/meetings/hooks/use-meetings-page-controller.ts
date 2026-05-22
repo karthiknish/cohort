@@ -359,11 +359,6 @@ export function useMeetingsPageController() {
     return meeting
   }, [sharedRoomMeeting, upcomingMeetings])
 
-  const resolvedActiveInSiteMeeting = useMemo(
-    () => resolveMeetingRecord(activeInSiteMeeting),
-    [activeInSiteMeeting, resolveMeetingRecord],
-  )
-
   const openInSiteMeeting = useCallback((meeting: MeetingRecord) => {
     const resolvedMeeting = resolveMeetingRecord(meeting)
     setActiveInSiteMeeting(resolvedMeeting)
@@ -375,12 +370,25 @@ export function useMeetingsPageController() {
     setRoomUrlState(null)
   }, [setRoomUrlState])
 
-  useEffect(() => {
-    if (!sharedRoomName) return
-    const nextMeeting = sharedRoomMeeting ?? upcomingMeetings.find((meeting) => meeting.roomName === sharedRoomName) ?? null
-    if (!nextMeeting) return
-    setActiveInSiteMeeting((current) => (current?.legacyId === nextMeeting.legacyId ? current : nextMeeting))
+  const sharedRoomResolvedMeeting = useMemo(() => {
+    if (!sharedRoomName) {
+      return null
+    }
+
+    return sharedRoomMeeting ?? upcomingMeetings.find((meeting) => meeting.roomName === sharedRoomName) ?? null
   }, [sharedRoomMeeting, sharedRoomName, upcomingMeetings])
+
+  const effectiveActiveInSiteMeeting = useMemo(() => {
+    if (activeInSiteMeeting) {
+      return resolveMeetingRecord(activeInSiteMeeting)
+    }
+
+    if (sharedRoomResolvedMeeting) {
+      return resolveMeetingRecord(sharedRoomResolvedMeeting)
+    }
+
+    return null
+  }, [activeInSiteMeeting, resolveMeetingRecord, sharedRoomResolvedMeeting])
 
   const handleStartQuickMeet = useCallback((options: {
     title: string
@@ -773,7 +781,7 @@ export function useMeetingsPageController() {
     cancelDialogMeeting,
     resolvedGoogleWorkspaceStatus,
     googleWorkspaceStatusLoading,
-    resolvedActiveInSiteMeeting,
+    resolvedActiveInSiteMeeting: effectiveActiveInSiteMeeting,
     editingMeeting,
     sharedRoomName,
     title,

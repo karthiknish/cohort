@@ -1,6 +1,6 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { History } from 'lucide-react'
 
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
@@ -96,6 +96,15 @@ function ProposalHistoryComponent({
 }: ProposalHistoryProps) {
   const { loading: isLoading, generating: isGenerating, creating: isCreating } = workflow
   const { canCreate, canManage = true } = capabilities
+  const emptyStateActions = useMemo(
+    () => ({
+      canCreate,
+      canManage,
+      creating: isCreating,
+      generating: isGenerating,
+    }),
+    [canCreate, canManage, isCreating, isGenerating],
+  )
   const rows = proposals.map((proposal) => {
     const isActiveDraft = proposal.id === draftId
     const presentationUrl = proposal.pptUrl ?? proposal.presentationDeck?.storageUrl ?? proposal.presentationDeck?.pptxUrl ?? null
@@ -142,15 +151,7 @@ function ProposalHistoryComponent({
           <ProposalHistoryHeader isLoading={isLoading} onRefresh={onRefresh} proposalCount={proposals.length} />
           <div className="space-y-3">
             {proposals.length === 0 && !isLoading ? (
-              <ProposalHistoryEmptyState
-                actions={{
-                  canCreate,
-                  canManage,
-                  creating: isCreating,
-                  generating: isGenerating,
-                }}
-                onCreateNew={onCreateNew}
-              />
+              <ProposalHistoryEmptyState actions={emptyStateActions} onCreateNew={onCreateNew} />
             ) : (
               rows.map((row) => (
                 <ProposalHistoryRow

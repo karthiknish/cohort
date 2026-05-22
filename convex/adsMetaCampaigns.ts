@@ -33,14 +33,14 @@ export const createMetaCampaign = action({
   },
   handler: async (ctx, args): Promise<{ success: boolean; campaignId?: string }> =>
     withErrorHandling(async () => {
-      const identity = await ctx.auth.getUserIdentity()
-      requireIdentity(identity)
-
       const clientId = normalizeClientId(args.clientId ?? null)
-      const [integration, { createMetaCampaign: createCampaignOnMeta }] = await Promise.all([
-        getFacebookIntegration(ctx, args.workspaceId, clientId),
-        import('@/services/integrations/meta-ads/campaign-modules/core'),
-      ])
+      const [identity, integration, { createMetaCampaign: createCampaignOnMeta }] =
+        await Promise.all([
+          ctx.auth.getUserIdentity(),
+          getFacebookIntegration(ctx, args.workspaceId, clientId),
+          import('@/services/integrations/meta-ads/campaign-modules/core'),
+        ])
+      requireIdentity(identity)
       const [accessToken, adAccountId] = await Promise.all([
         resolveFacebookAccessToken(args.workspaceId, integration, clientId),
         requireFacebookAdAccount(integration),

@@ -1,38 +1,20 @@
 'use client'
 
 import { useMemo } from 'react'
-import { AlertTriangle, ArrowRightLeft, CheckCircle2, CopyPlus, LoaderCircle, RefreshCw } from 'lucide-react'
+import { AlertTriangle, ArrowRightLeft, CheckCircle2, LoaderCircle, RefreshCw } from 'lucide-react'
 
-import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { EmptyState, NetworkErrorEmptyState } from '@/shared/ui/empty-state'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/select'
-import { Skeleton } from '@/shared/ui/skeleton'
 
+import {
+  getSurfaceStatusLabel,
+  getSurfaceStatusVariant,
+} from './socials-connection-panel-surface-status'
 import type { SocialsMetaSetupState, SocialsSurfaceStatus } from './socials-state'
 
-function getSurfaceStatusLabel(status: SocialsSurfaceStatus, count: number) {
-  if (status === 'ready') return `${count} ready`
-  if (status === 'loading') return 'Loading…'
-  if (status === 'source_required') return 'Source needed'
-  if (status === 'error') return 'Retry needed'
-  if (status === 'disconnected') return 'Not connected'
-  return 'Waiting'
-}
-
-function getSurfaceStatusVariant(status: SocialsSurfaceStatus): 'outline' | 'secondary' | 'info' {
-  if (status === 'ready') return 'secondary'
-  if (status === 'loading') return 'info'
-  return 'outline'
-}
+export { SocialsMetaSourceSwitcherCard } from './socials-meta-source-switcher-card'
+export { SocialsSurfaceInventoryCard } from './socials-surface-inventory-card'
 
 export function SocialsMetaSetupCard(props: {
   setupState: SocialsMetaSetupState
@@ -132,161 +114,6 @@ export function SocialsMetaSetupCard(props: {
           </div>
         </div>
       ) : null}
-    </div>
-  )
-}
-
-export function SocialsMetaSourceSwitcherCard(props: {
-  title: string
-  description: string
-  selectedMetaAccountId: string
-  selectedSourceLabel: string | null | undefined
-  metaAccountOptions: Array<{ id: string; name: string }>
-  loadingMetaAccountOptions: boolean
-  initializingMeta: boolean
-  onReloadAccounts: () => void
-  onSelectAccount: (accountId: string) => void
-  onConfirmSource: () => void
-  confirmationLabel: string
-}) {
-  const {
-    title,
-    description,
-    selectedMetaAccountId,
-    selectedSourceLabel,
-    metaAccountOptions,
-    loadingMetaAccountOptions,
-    initializingMeta,
-    onReloadAccounts,
-    onSelectAccount,
-    onConfirmSource,
-    confirmationLabel,
-  } = props
-
-  const currentSourceLabel =
-    metaAccountOptions.find((option) => option.id === selectedMetaAccountId)?.name ??
-    selectedSourceLabel ??
-    null
-
-  return (
-    <div className="rounded-2xl border border-dashed border-accent/25 bg-accent/[0.03] p-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className={DASHBOARD_THEME.badges.base}>
-              Meta source
-            </Badge>
-            {currentSourceLabel ? (
-              <Badge variant="secondary" className={DASHBOARD_THEME.badges.base}>
-                Current: {currentSourceLabel}
-              </Badge>
-            ) : null}
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold text-foreground">{title}</h4>
-            <p className="text-sm text-muted-foreground">{description}</p>
-          </div>
-        </div>
-        <Button type="button" variant="outline" size="sm" onClick={onReloadAccounts} disabled={loadingMetaAccountOptions}>
-          {loadingMetaAccountOptions ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}
-          Reload sources
-        </Button>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Select
-          value={selectedMetaAccountId}
-          onValueChange={onSelectAccount}
-          disabled={loadingMetaAccountOptions || metaAccountOptions.length === 0}
-        >
-          <SelectTrigger className={cn(DASHBOARD_THEME.inputs.base, 'w-full sm:max-w-md')}>
-            <SelectValue placeholder={loadingMetaAccountOptions ? 'Loading sources…' : 'Choose a Meta source'} />
-          </SelectTrigger>
-          <SelectContent>
-            {metaAccountOptions.map((account) => (
-              <SelectItem key={account.id} value={account.id}>
-                {account.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Button type="button" size="sm" onClick={onConfirmSource} disabled={initializingMeta || !selectedMetaAccountId}>
-          {initializingMeta ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <ArrowRightLeft className="mr-2 size-4" />}
-          {confirmationLabel}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-export function SocialsSurfaceInventoryCard(props: {
-  title: string
-  connected: boolean
-  loading: boolean
-  error: string | null
-  count: number
-  status: SocialsSurfaceStatus
-  emptyConnectedMessage: string
-  emptyDisconnectedMessage: string
-  onRetry: () => void
-  items: Array<{ id: string; name: string; subtitle: string }>
-}) {
-  const {
-    title,
-    connected,
-    loading,
-    error,
-    count,
-    status,
-    emptyConnectedMessage,
-    emptyDisconnectedMessage,
-    onRetry,
-    items,
-  } = props
-  const retryDiscoveryAction = useMemo(
-    () => ({ label: 'Retry discovery', onClick: onRetry, icon: RefreshCw }),
-    [onRetry],
-  )
-
-  return (
-    <div className="rounded-2xl border border-muted/50 bg-background p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <Badge variant="outline" className={DASHBOARD_THEME.badges.base}>
-          {getSurfaceStatusLabel(status, count)}
-        </Badge>
-      </div>
-
-      {error ? (
-        <NetworkErrorEmptyState
-          variant="card"
-          title={`Unable to load ${title.toLowerCase()}`}
-          description={error}
-          action={retryDiscoveryAction}
-          className="rounded-2xl px-4 py-6"
-        />
-      ) : items.length > 0 ? (
-        <div className="space-y-2">
-          {items.slice(0, 3).map((item) => (
-            <div key={item.id} className="rounded-2xl border border-muted/50 bg-muted/[0.04] px-3 py-2">
-              <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
-              <p className="text-xs text-muted-foreground">{item.subtitle}</p>
-            </div>
-          ))}
-        </div>
-      ) : loading ? (
-        <div className="space-y-2">{[0, 1, 2].map((slot) => <Skeleton key={slot} className="h-14 w-full rounded-2xl" />)}</div>
-      ) : (
-        <EmptyState
-          icon={connected ? CheckCircle2 : CopyPlus}
-          title={status === 'source_required' ? `Choose a Meta source to load ${title.toLowerCase()}` : connected ? `No ${title.toLowerCase()} surfaced yet` : `Connect Meta to load ${title.toLowerCase()}`}
-          description={connected ? emptyConnectedMessage : emptyDisconnectedMessage}
-          action={connected && status !== 'source_required' ? retryDiscoveryAction : undefined}
-          variant="card"
-          className="rounded-2xl px-4 py-6"
-        />
-      )}
     </div>
   )
 }

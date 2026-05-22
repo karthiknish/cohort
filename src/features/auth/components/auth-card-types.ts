@@ -14,15 +14,19 @@ export type SignUpData = {
   displayName: string
 }
 
-export type AuthCardProps = {
-  activeTab: 'signin' | 'signup'
-  emailError: string | null
+export type AuthCardUiState = {
   isSubmitting: boolean
   isAuthLoading: boolean
   rememberMe: boolean
   showPassword: boolean
   showConfirmPassword: boolean
   passwordsMatch: boolean
+}
+
+export type AuthCardProps = {
+  activeTab: 'signin' | 'signup'
+  emailError: string | null
+  ui: AuthCardUiState
   signInData: SignInData
   signUpData: SignUpData
   passwordStrength: PasswordStrength

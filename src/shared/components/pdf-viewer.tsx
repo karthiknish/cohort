@@ -28,9 +28,9 @@ export function PdfViewer({ url, title = 'PDF document', className }: PdfViewerP
 
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
-      <div className="relative min-h-[min(72dvh,720px)] flex-1 overflow-hidden rounded-xl border border-border/60 bg-gray-950 shadow-inner ring-1 ring-border/40">
+      <div className="relative min-h-[min(72dvh,720px)] flex-1 overflow-hidden rounded-xl border border-border/60 bg-foreground shadow-inner ring-1 ring-border/40">
         {isLoading && !loadError ? (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-gray-950/90">
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-foreground/90">
             <Loader2 className="size-8 animate-spin text-viewer-chrome/70" aria-hidden />
             <p className="text-sm text-viewer-chrome/60">Loading PDF…</p>
           </div>
@@ -59,7 +59,8 @@ export function PdfViewer({ url, title = 'PDF document', className }: PdfViewerP
         <iframe
           src={url}
           title={title}
-          className="h-full min-h-[min(72dvh,720px)] w-full bg-gray-950"
+          sandbox="allow-same-origin"
+          className="h-full min-h-[min(72dvh,720px)] w-full bg-foreground"
           onLoad={handleLoad}
           onError={handleError}
         />

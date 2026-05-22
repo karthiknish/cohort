@@ -231,6 +231,40 @@ export function InteractiveChartRenderer({
   valueFormatter: (value: number) => string
   xAxisKey: string
 }) {
+  if (filteredData.length === 0) {
+    return <InteractiveChartEmptyState />
+  }
+
+  return (
+    <InteractiveChartPlot
+      categoryData={categoryData}
+      chartType={chartType}
+      dataKey={dataKey}
+      filteredData={filteredData}
+      height={height}
+      valueFormatter={valueFormatter}
+      xAxisKey={xAxisKey}
+    />
+  )
+}
+
+function InteractiveChartPlot({
+  categoryData,
+  chartType,
+  dataKey,
+  filteredData,
+  height,
+  valueFormatter,
+  xAxisKey,
+}: {
+  categoryData: Array<{ name: string; value: number }>
+  chartType: ChartType
+  dataKey: string
+  filteredData: ChartDataPoint[]
+  height: number
+  valueFormatter: (value: number) => string
+  xAxisKey: string
+}) {
   const xAxisTickFormatter = useCallback(
     (value: string) => new Date(value).toLocaleDateString(undefined, DATE_FORMAT_OPTIONS),
     [],
@@ -247,15 +281,15 @@ export function InteractiveChartRenderer({
     [],
   )
 
-  if (filteredData.length === 0) {
-    return <InteractiveChartEmptyState />
-  }
-
-  const tooltipContent = (
-    <ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />
+  const tooltipContent = useMemo(
+    () => <ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />,
+    [xAxisKey, dataKey, valueFormatter],
   )
 
-  const pieTooltipContent = <PieTooltipContent valueFormatter={valueFormatter} />
+  const pieTooltipContent = useMemo(
+    () => <PieTooltipContent valueFormatter={valueFormatter} />,
+    [valueFormatter],
+  )
 
   const commonProps = {
     data: chartType === 'pie' ? categoryData : filteredData,

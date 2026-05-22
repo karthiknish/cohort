@@ -43,6 +43,20 @@ export type CollaborationFlattenedMessageItem =
   | { id: string; type: 'separator'; label: string }
   | { id: string; type: 'message'; message: CollaborationMessage; isFirstInGroup: boolean }
 
+export type CollaborationMessageDisplayState = {
+  isReply?: boolean
+  isSearchResult?: boolean
+  showAvatar?: boolean
+  showHeader?: boolean
+}
+
+const DEFAULT_COLLABORATION_MESSAGE_DISPLAY: Required<CollaborationMessageDisplayState> = {
+  isReply: false,
+  isSearchResult: false,
+  showAvatar: true,
+  showHeader: true,
+}
+
 type CollaborationMessageItemProps = {
   currentUserId?: string | null
   currentUserRole?: string | null
@@ -50,8 +64,7 @@ type CollaborationMessageItemProps = {
   editingPreview: string
   editingValue: string
   expandedThreadIds: Record<string, boolean>
-  isReply?: boolean
-  isSearchResult?: boolean
+  display?: CollaborationMessageDisplayState
   message: CollaborationMessage
   messageDeletingId: string | null
   messageUpdatingId: string | null
@@ -67,8 +80,6 @@ type CollaborationMessageItemProps = {
   onThreadToggle: (threadRootId: string) => void
   onToggleReaction: (messageId: string, emoji: string) => void
   reactionPendingByMessage: Record<string, string | null>
-  showAvatar?: boolean
-  showHeader?: boolean
   threadErrorsByRootId: Record<string, string | null>
   threadLoadingByRootId: Record<string, boolean>
   threadMessagesByRootId: Record<string, CollaborationMessage[]>
@@ -108,9 +119,7 @@ function SearchThreadReplyRenderer({ reply }: { reply: CollaborationMessage }) {
     <CollaborationMessageItem
       {...context}
       message={reply}
-      isReply
-      showAvatar
-      showHeader
+      display={{ isReply: true, showAvatar: true, showHeader: true }}
     />
   )
 }
@@ -122,8 +131,7 @@ export function CollaborationMessageItem({
   editingPreview,
   editingValue,
   expandedThreadIds,
-  isReply = false,
-  isSearchResult = false,
+  display,
   message,
   messageDeletingId,
   messageUpdatingId,
@@ -139,13 +147,15 @@ export function CollaborationMessageItem({
   onThreadToggle,
   onToggleReaction,
   reactionPendingByMessage,
-  showAvatar = true,
-  showHeader = true,
   threadErrorsByRootId,
   threadLoadingByRootId,
   threadMessagesByRootId,
   threadNextCursorByRootId,
 }: CollaborationMessageItemProps) {
+  const { isReply, isSearchResult, showAvatar, showHeader } = {
+    ...DEFAULT_COLLABORATION_MESSAGE_DISPLAY,
+    ...display,
+  }
   const canManageMessage =
     !message.isDeleted &&
     ((message.senderId && message.senderId === currentUserId) || currentUserRole === 'admin')
@@ -179,6 +189,26 @@ export function CollaborationMessageItem({
   const handleThreadToggle = useCallback(() => onThreadToggle(threadRootId), [onThreadToggle, threadRootId])
   const handleRetryThreadLoad = useCallback(() => onRetryThreadLoad(threadRootId), [onRetryThreadLoad, threadRootId])
   const handleLoadMoreThread = useCallback(() => onLoadMoreThread(threadRootId), [onLoadMoreThread, threadRootId])
+  const permissions = useMemo(
+    () => ({ canReact, canManage: canManageMessage }),
+    [canReact, canManageMessage],
+  )
+  const pending = useMemo(
+    () => ({
+      updating: isUpdating,
+      deleting: isDeleting,
+      disableReactions: disableReactionActions,
+    }),
+    [isUpdating, isDeleting, disableReactionActions],
+  )
+  const threadPanel = useMemo(
+    () => ({
+      isOpen: isThreadOpen,
+      isLoading: threadLoading,
+      hasNextCursor: !!threadNextCursor,
+    }),
+    [isThreadOpen, threadLoading, threadNextCursor],
+  )
   const threadReplyContext = useMemo(
     (): CollaborationThreadReplyContextValue => ({
       currentUserId,
@@ -271,11 +301,8 @@ export function CollaborationMessageItem({
         {!isReply ? (
           <MessageActionsBar
             message={message}
-            canReact={canReact}
-            canManage={canManageMessage}
-            isUpdating={isUpdating}
-            isDeleting={isDeleting}
-            disableReactionActions={disableReactionActions}
+            permissions={permissions}
+            pending={pending}
             onReaction={handleReaction}
             onReply={handleReply}
             onEdit={handleEdit}
@@ -350,11 +377,7 @@ export function CollaborationMessageItem({
               threadRootId={threadRootId}
               replyCount={replyCount}
               lastReplyIso={lastReplyIso}
-              panel={{
-                isOpen: isThreadOpen,
-                isLoading: threadLoading,
-                hasNextCursor: !!threadNextCursor,
-              }}
+              panel={threadPanel}
               error={threadError}
               replies={threadReplies}
               onToggle={handleThreadToggle}
@@ -493,14 +516,27 @@ function SearchMessageActionsBar({
   const handleDelete = useCallback(() => onConfirmDelete(message.id), [onConfirmDelete, message.id])
   const handleCreateTask = useCallback(() => onCreateTask(message), [onCreateTask, message])
 
+  const permissions = useMemo(
+    () => ({
+      canReact: !message.isDeleted && !!currentUserId,
+      canManage: canManageMessage,
+    }),
+    [message.isDeleted, currentUserId, canManageMessage],
+  )
+  const pending = useMemo(
+    () => ({
+      updating: messageUpdatingId === message.id,
+      deleting: messageDeletingId === message.id,
+      disableReactions: message.isDeleted || !currentUserId,
+    }),
+    [messageUpdatingId, message.id, messageDeletingId, message.isDeleted, currentUserId],
+  )
+
   return (
     <MessageActionsBar
       message={message}
-      canReact={!message.isDeleted && !!currentUserId}
-      canManage={canManageMessage}
-      isUpdating={messageUpdatingId === message.id}
-      isDeleting={messageDeletingId === message.id}
-      disableReactionActions={message.isDeleted || !currentUserId}
+      permissions={permissions}
+      pending={pending}
       onReaction={handleReaction}
       onReply={handleReply}
       onEdit={handleEdit}
@@ -578,6 +614,14 @@ function SearchThreadSection({
   const handleRetry = useCallback(() => onRetryThreadLoad(threadRootId), [onRetryThreadLoad, threadRootId])
   const handleLoadMore = useCallback(() => onLoadMoreThread(threadRootId), [onLoadMoreThread, threadRootId])
   const handleReply = useCallback(() => onReply(originalMessage), [onReply, originalMessage])
+  const searchThreadPanel = useMemo(
+    () => ({
+      isOpen: Boolean(expandedThreadIds[threadRootId]),
+      isLoading: threadLoading,
+      hasNextCursor: !!threadNextCursor,
+    }),
+    [expandedThreadIds, threadLoading, threadNextCursor, threadRootId],
+  )
   const searchThreadReplyContext = useMemo(
     (): SearchThreadReplyContextValue => ({
       currentUserId,
@@ -625,7 +669,6 @@ function SearchThreadSection({
       onStartEdit,
       onThreadToggle,
       onToggleReaction,
-      originalMessage,
       reactionPendingByMessage,
       threadErrorsByRootId,
       threadLoadingByRootId,
@@ -640,11 +683,7 @@ function SearchThreadSection({
         threadRootId={threadRootId}
         replyCount={replyCount}
         lastReplyIso={lastReplyIso}
-        panel={{
-          isOpen: Boolean(expandedThreadIds[threadRootId]),
-          isLoading: threadLoading,
-          hasNextCursor: !!threadNextCursor,
-        }}
+        panel={searchThreadPanel}
         error={threadError}
         replies={threadReplies}
         onToggle={handleToggle}
@@ -854,6 +893,8 @@ function CollaborationSearchMessageList({
     [visibleMessages],
   )
 
+  // react-doctor skip: MessageList render-prop slots are intentional — collapsing seven
+  // customization hooks into compound subcomponents would be a large cross-surface refactor.
   return (
     <MessageList
       messages={visibleMessages.map(collaborationToUnifiedMessage)}
@@ -1019,8 +1060,10 @@ export function CollaborationMessageViewport({
                     onThreadToggle={onThreadToggle}
                     onToggleReaction={onToggleReaction}
                     reactionPendingByMessage={reactionPendingByMessage}
-                    showAvatar={item.isFirstInGroup}
-                    showHeader={item.isFirstInGroup}
+                    display={{
+                      showAvatar: item.isFirstInGroup,
+                      showHeader: item.isFirstInGroup,
+                    }}
                     threadErrorsByRootId={threadErrorsByRootId}
                     threadLoadingByRootId={threadLoadingByRootId}
                     threadMessagesByRootId={threadMessagesByRootId}

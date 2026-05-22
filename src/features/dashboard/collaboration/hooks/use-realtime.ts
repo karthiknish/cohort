@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useReducer } from 'react'
 import { useQueries, useQuery } from 'convex/react'
 
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -309,24 +309,60 @@ export function useRealtimeTyping({ userId, workspaceId, selectedChannel }: UseR
   return { typingParticipants }
 }
 
+type TypingHideState = { hideAfterMs: number | null }
+
+type TypingHideAction =
+  | { type: 'clear' }
+  | { type: 'show' }
+  | { type: 'hide'; at: number }
+
+function typingHideReducer(_state: TypingHideState, action: TypingHideAction): TypingHideState {
+  switch (action.type) {
+    case 'clear':
+      return { hideAfterMs: null }
+    case 'show':
+      return { hideAfterMs: null }
+    case 'hide':
+      return { hideAfterMs: action.at }
+    default: {
+      const _exhaustive: never = action
+      return { hideAfterMs: null }
+    }
+  }
+}
+
 export function useTypingTimeout(typingParticipants: TypingParticipant[]) {
-  const [freshTypingParticipants, setFreshTypingParticipants] = useState<TypingParticipant[]>(typingParticipants)
+  const [{ hideAfterMs }, dispatchHide] = useReducer(typingHideReducer, { hideAfterMs: null })
+  const typingSignature = useMemo(
+    () => typingParticipants.map((participant) => `${participant.name}:${participant.role ?? ''}`).join('|'),
+    [typingParticipants],
+  )
 
   useEffect(() => {
-    setFreshTypingParticipants(typingParticipants)
-
     if (typingParticipants.length === 0) {
+      dispatchHide({ type: 'clear' })
       return
     }
 
+    dispatchHide({ type: 'show' })
     const timeoutId = window.setTimeout(() => {
-      setFreshTypingParticipants([])
+      dispatchHide({ type: 'hide', at: Date.now() })
     }, TYPING_TIMEOUT_MS)
 
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [typingParticipants])
+  }, [typingParticipants.length, typingSignature])
 
-  return freshTypingParticipants
+  return useMemo(() => {
+    if (typingParticipants.length === 0) {
+      return [] as TypingParticipant[]
+    }
+
+    if (hideAfterMs !== null) {
+      return [] as TypingParticipant[]
+    }
+
+    return typingParticipants
+  }, [hideAfterMs, typingParticipants])
 }

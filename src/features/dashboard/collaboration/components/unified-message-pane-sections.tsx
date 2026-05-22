@@ -2,8 +2,18 @@
 
 import { ClientFormattedDate } from '@/shared/components/client-formatted-date'
 import { notifyFailure } from '@/lib/notifications'
-import type { ChangeEvent, ClipboardEvent, DragEvent, ReactNode, RefObject } from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  createElement,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type DragEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import {
   Archive,
   ArchiveRestore,
@@ -310,7 +320,10 @@ export function UnifiedThreadReplyCard({
         ) : (
           <>
             {effectiveRenderMessageContent ? (
-              effectiveRenderMessageContent(message)
+              createElement(
+                effectiveRenderMessageContent as React.ComponentType<{ message: UnifiedMessage }>,
+                { message },
+              )
             ) : (
               <p className="max-w-full min-w-0 overflow-hidden break-words whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">
                 {message.content}

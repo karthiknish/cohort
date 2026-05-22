@@ -21,14 +21,12 @@ import {
   AdsPageSetupSection,
 } from './components/ads-page-sections'
 
-import {
-  useAdsMetrics,
-  useAdsConnections,
-  useDerivedMetrics,
-  useFormulaEditor,
-  useMetricsComparison,
-  useAlgorithmicInsights,
-} from './hooks'
+import { useAdsMetrics } from './hooks/use-ads-metrics'
+import { useAdsConnections } from './hooks/use-ads-connections'
+import { useDerivedMetrics } from './hooks/use-derived-metrics'
+import { useFormulaEditor } from './hooks/use-formula-editor'
+import { useMetricsComparison } from './hooks/use-metrics-comparison'
+import { useAlgorithmicInsights } from './hooks/use-algorithmic-insights'
 
 function isAuthError(error: unknown): boolean {
   const code = extractErrorCode(error)
@@ -146,6 +144,104 @@ export default function AdsPage() {
     void connections.reloadGoogleAccountOptions()
   }, [connections])
 
+  const handleReloadGoogleAccounts = useCallback(() => {
+    void connections.reloadGoogleAccountOptions()
+  }, [connections])
+
+  const handleInitializeGoogle = useCallback(() => {
+    void connections.initializeGoogleIntegration(
+      undefined,
+      connections.selectedGoogleAccountId || null,
+    )
+  }, [connections])
+
+  const activeCurrency = displayCurrency ?? undefined
+
+  const showWorkflow =
+    !isPreviewMode &&
+    (!connections.integrationStatuses ||
+      connections.automationStatuses.length === 0 ||
+      connections.automationStatuses.every((s) => s.status !== 'success'))
+
+  const setupSection = useMemo(
+    () => (
+      <AdsPageSetupSection
+        flags={{
+          isPreviewMode,
+          showWorkflow,
+          hasSuccessfulSync,
+          hasPendingSetup,
+        }}
+        connectedAccountCount={connectedAccountCount}
+        connections={connections}
+        metrics={metrics}
+        dateRange={metrics.dateRange}
+        openGoogleCampaignSetup={openGoogleCampaignSetup}
+        handleInitializeMeta={handleInitializeMeta}
+        handleInitializeTikTok={handleInitializeTikTok}
+      />
+    ),
+    [
+      isPreviewMode,
+      showWorkflow,
+      connectedAccountCount,
+      hasSuccessfulSync,
+      hasPendingSetup,
+      connections,
+      metrics,
+      openGoogleCampaignSetup,
+      handleInitializeMeta,
+      handleInitializeTikTok,
+    ],
+  )
+
+  const analyticsSection = useMemo(
+    () => (
+      <AdsPageAnalyticsSection
+        metrics={metrics}
+        algorithmicInsights={algorithmicInsights}
+        activeCurrency={activeCurrency}
+        connectedProviderIds={connectedProviderIds}
+        connectedAccountCount={connectedAccountCount}
+        suppressMetricsErrors={suppressMetricsErrors}
+        dateRange={metrics.dateRange}
+        providerCurrencyMap={providerCurrencyMap}
+      />
+    ),
+    [
+      metrics,
+      algorithmicInsights,
+      activeCurrency,
+      connectedProviderIds,
+      connectedAccountCount,
+      suppressMetricsErrors,
+      providerCurrencyMap,
+    ],
+  )
+
+  const advancedAnalyticsSection = useMemo(
+    () => (
+      <AdsPageAdvancedAnalyticsSection
+        metrics={metrics}
+        derivedMetrics={derivedMetrics}
+        formulaEditor={formulaEditor}
+        comparison={comparison}
+        activeCurrency={activeCurrency}
+        suppressMetricsErrors={suppressMetricsErrors}
+        handleLoadMoreMetrics={handleLoadMoreMetrics}
+      />
+    ),
+    [
+      metrics,
+      derivedMetrics,
+      formulaEditor,
+      comparison,
+      activeCurrency,
+      suppressMetricsErrors,
+      handleLoadMoreMetrics,
+    ],
+  )
+
   useEffect(() => {
     const errors: string[] = [
       ...(suppressMetricsErrors ? [] : [metrics.metricError ?? '', metrics.loadMoreError ?? '']),
@@ -163,13 +259,6 @@ export default function AdsPage() {
   }, [connections.connectionErrors, metrics.loadMoreError, metrics.metricError, suppressMetricsErrors, toast])
 
   const isInitialLoading = metrics.initialMetricsLoading && !connections.integrationStatuses
-  const activeCurrency = displayCurrency ?? undefined
-
-  const showWorkflow =
-    !isPreviewMode &&
-    (!connections.integrationStatuses ||
-      connections.automationStatuses.length === 0 ||
-      connections.automationStatuses.every((s) => s.status !== 'success'))
 
   return (
     <BoneyardSkeletonBoundary name="dashboard-ads-page" loading={isInitialLoading}>
@@ -195,44 +284,9 @@ export default function AdsPage() {
           />
 
           <AdsPageLayout
-            setup={
-              <AdsPageSetupSection
-                isPreviewMode={isPreviewMode}
-                showWorkflow={showWorkflow}
-                connectedAccountCount={connectedAccountCount}
-                hasSuccessfulSync={hasSuccessfulSync}
-                hasPendingSetup={hasPendingSetup}
-                connections={connections}
-                metrics={metrics}
-                dateRange={metrics.dateRange}
-                openGoogleCampaignSetup={openGoogleCampaignSetup}
-                handleInitializeMeta={handleInitializeMeta}
-                handleInitializeTikTok={handleInitializeTikTok}
-              />
-            }
-            analytics={
-              <AdsPageAnalyticsSection
-                metrics={metrics}
-                algorithmicInsights={algorithmicInsights}
-                activeCurrency={activeCurrency}
-                connectedProviderIds={connectedProviderIds}
-                connectedAccountCount={connectedAccountCount}
-                suppressMetricsErrors={suppressMetricsErrors}
-                dateRange={metrics.dateRange}
-                providerCurrencyMap={providerCurrencyMap}
-              />
-            }
-            advancedAnalytics={
-              <AdsPageAdvancedAnalyticsSection
-                metrics={metrics}
-                derivedMetrics={derivedMetrics}
-                formulaEditor={formulaEditor}
-                comparison={comparison}
-                activeCurrency={activeCurrency}
-                suppressMetricsErrors={suppressMetricsErrors}
-                handleLoadMoreMetrics={handleLoadMoreMetrics}
-              />
-            }
+            setup={setupSection}
+            analytics={analyticsSection}
+            advancedAnalytics={advancedAnalyticsSection}
             showSetup={!isPreviewMode}
             connectedAccountCount={connectedAccountCount}
             hasPendingSetup={hasPendingSetup}
@@ -251,15 +305,8 @@ export default function AdsPage() {
           onAccountSelectionChange={connections.setSelectedGoogleAccountId}
           loadingAccounts={connections.loadingGoogleAccountOptions}
           initializing={connections.initializingGoogle}
-          onReloadAccounts={() => {
-            void connections.reloadGoogleAccountOptions()
-          }}
-          onInitialize={() => {
-            void connections.initializeGoogleIntegration(
-              undefined,
-              connections.selectedGoogleAccountId || null,
-            )
-          }}
+          onReloadAccounts={handleReloadGoogleAccounts}
+          onInitialize={handleInitializeGoogle}
         />
       ) : null}
     </BoneyardSkeletonBoundary>

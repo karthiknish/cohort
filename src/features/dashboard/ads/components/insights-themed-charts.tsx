@@ -99,7 +99,30 @@ export function ProviderComparisonChart({
     )
   }
 
-  const tooltipContent = <ChartTooltipContent formatter={spendFormatter} />
+  return (
+    <ProviderComparisonChartPlot
+      chartData={chartData}
+      currency={currency}
+      formatXAxis={formatXAxis}
+      spendFormatter={spendFormatter}
+    />
+  )
+}
+
+function ProviderComparisonChartPlot({
+  chartData,
+  formatXAxis,
+  spendFormatter,
+}: {
+  chartData: { name: string; spend: number; revenue: number }[]
+  currency: string
+  formatXAxis: (v: number) => string
+  spendFormatter: (value: unknown, name: unknown) => React.ReactNode
+}) {
+  const tooltipContent = useMemo(
+    () => <ChartTooltipContent formatter={spendFormatter} />,
+    [spendFormatter],
+  )
 
   return (
     <AdsChartShell>
@@ -209,6 +232,27 @@ export function SpendTrendChart({
 }) {
   const trendData = data[providerId]
 
+  if (!trendData || trendData.length < 2) {
+    return (
+      <InsightsPanelEmpty
+        title="Not enough daily data for trends"
+        description={`Trend lines need multiple days of spend for ${providerLabel}. Widen the date range or run another sync.`}
+        actionHref="#connect-ad-platforms"
+        actionLabel="Run sync"
+      />
+    )
+  }
+
+  return <SpendTrendChartPlot currency={currency} trendData={trendData} />
+}
+
+function SpendTrendChartPlot({
+  currency,
+  trendData,
+}: {
+  currency: string
+  trendData: { date: string; actual: number; trend: number }[]
+}) {
   const currencyFormatter = useCallback(
     (value: unknown, name: unknown) => (
       <div className="flex items-center justify-between gap-8">
@@ -226,19 +270,9 @@ export function SpendTrendChart({
 
   const formatYAxis = useCallback((v: number) => formatCurrency(v, currency), [currency])
 
-  if (!trendData || trendData.length < 2) {
-    return (
-      <InsightsPanelEmpty
-        title="Not enough daily data for trends"
-        description={`Trend lines need multiple days of spend for ${providerLabel}. Widen the date range or run another sync.`}
-        actionHref="#connect-ad-platforms"
-        actionLabel="Run sync"
-      />
-    )
-  }
-
-  const tooltipContent = (
-    <ChartTooltipContent labelFormatter={formatDateTick} formatter={currencyFormatter} />
+  const tooltipContent = useMemo(
+    () => <ChartTooltipContent labelFormatter={formatDateTick} formatter={currencyFormatter} />,
+    [currencyFormatter],
   )
 
   return (
@@ -307,17 +341,29 @@ export function BenchmarkComparisonChart({
   providerLabel: string
 }) {
   const benchmarkData = data[providerId]
+  const chartData = (benchmarkData ?? []).map((b) => ({
+    metric: b.metric,
+    percentile: b.percentile,
+    benchmark: 50,
+  }))
 
-  const chartData = useMemo(
-    () =>
-      (benchmarkData ?? []).map((b) => ({
-        metric: b.metric,
-        percentile: b.percentile,
-        benchmark: 50,
-      })),
-    [benchmarkData],
-  )
+  if (!chartData.length) {
+    return (
+      <InsightsPanelEmpty
+        title="No benchmark comparison"
+        description={`Industry benchmarks for ${providerLabel} need CTR, CPC, and conversion signals from your sync.`}
+      />
+    )
+  }
 
+  return <BenchmarkComparisonChartPlot chartData={chartData} />
+}
+
+function BenchmarkComparisonChartPlot({
+  chartData,
+}: {
+  chartData: { metric: string; percentile: number; benchmark: number }[]
+}) {
   const percentileFormatter = useCallback(
     (value: unknown, name: unknown) => (
       <div className="flex items-center justify-between gap-8">
@@ -335,16 +381,10 @@ export function BenchmarkComparisonChart({
 
   const formatPercentTick = useCallback((value: number) => `${value}%`, [])
 
-  if (!chartData.length) {
-    return (
-      <InsightsPanelEmpty
-        title="No benchmark comparison"
-        description={`Industry benchmarks for ${providerLabel} need CTR, CPC, and conversion signals from your sync.`}
-      />
-    )
-  }
-
-  const tooltipContent = <ChartTooltipContent formatter={percentileFormatter} />
+  const tooltipContent = useMemo(
+    () => <ChartTooltipContent formatter={percentileFormatter} />,
+    [percentileFormatter],
+  )
 
   return (
     <AdsChartShell>

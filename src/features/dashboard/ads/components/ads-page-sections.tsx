@@ -11,12 +11,14 @@ import { MetricsTableCard } from '@/features/dashboard/ads/components/metrics-ta
 import { PerformanceSummaryCard } from '@/features/dashboard/ads/components/performance-summary-card'
 import { WorkflowCard } from '@/features/dashboard/ads/components/workflow-card'
 import type { DateRange } from '@/features/dashboard/ads/components/date-range-picker'
-import type { useAdsConnections } from '@/features/dashboard/ads/hooks'
-import type { useAdsMetrics } from '@/features/dashboard/ads/hooks'
-import type { useAlgorithmicInsights } from '@/features/dashboard/ads/hooks'
-import type { useDerivedMetrics } from '@/features/dashboard/ads/hooks'
-import type { useFormulaEditor } from '@/features/dashboard/ads/hooks'
-import type { useMetricsComparison } from '@/features/dashboard/ads/hooks'
+import type {
+  useAdsConnections,
+  useAdsMetrics,
+  useAlgorithmicInsights,
+  useDerivedMetrics,
+  useFormulaEditor,
+  useMetricsComparison,
+} from '@/features/dashboard/ads/hooks'
 
 const CampaignManagementCard = lazy(() =>
   import('./campaign-management-card').then((m) => ({ default: m.CampaignManagementCard })),
@@ -54,12 +56,16 @@ function AdsSuspenseReveal({ children, fallback }: { children: ReactNode; fallba
   )
 }
 
-type AdsPageSectionsProps = {
+export type AdsPageSetupFlags = {
   isPreviewMode: boolean
   showWorkflow: boolean
-  connectedAccountCount: number
   hasSuccessfulSync: boolean
   hasPendingSetup: boolean
+}
+
+type AdsPageSectionsProps = {
+  flags: AdsPageSetupFlags
+  connectedAccountCount: number
   connections: ReturnType<typeof useAdsConnections>
   metrics: ReturnType<typeof useAdsMetrics>
   derivedMetrics: ReturnType<typeof useDerivedMetrics>
@@ -77,11 +83,8 @@ type AdsPageSectionsProps = {
 }
 
 export function AdsPageSetupSection({
-  isPreviewMode,
-  showWorkflow,
+  flags,
   connectedAccountCount,
-  hasSuccessfulSync,
-  hasPendingSetup,
   connections,
   metrics,
   dateRange,
@@ -90,11 +93,8 @@ export function AdsPageSetupSection({
   handleInitializeTikTok,
 }: Pick<
   AdsPageSectionsProps,
-  | 'isPreviewMode'
-  | 'showWorkflow'
+  | 'flags'
   | 'connectedAccountCount'
-  | 'hasSuccessfulSync'
-  | 'hasPendingSetup'
   | 'connections'
   | 'metrics'
   | 'dateRange'
@@ -102,6 +102,7 @@ export function AdsPageSetupSection({
   | 'handleInitializeMeta'
   | 'handleInitializeTikTok'
 >) {
+  const { isPreviewMode, showWorkflow, hasSuccessfulSync, hasPendingSetup } = flags
   const {
     adPlatforms,
     connectedProviders,
@@ -113,12 +114,16 @@ export function AdsPageSetupSection({
     handleOauthRedirect,
     handleSyncNow,
     syncingProviders,
-    handleManualRefresh,
     googleNeedsAccountSelection,
     metaNeedsAccountSelection,
     tiktokNeedsAccountSelection,
-    pendingSetupCount,
   } = connections
+  const { handleManualRefresh } = metrics
+  const pendingSetupCount = [
+    googleNeedsAccountSelection,
+    metaNeedsAccountSelection,
+    tiktokNeedsAccountSelection,
+  ].filter(Boolean).length
 
   if (isPreviewMode) return null
 

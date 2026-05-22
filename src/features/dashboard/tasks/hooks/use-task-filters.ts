@@ -255,9 +255,12 @@ export function useTaskFilters({
     return Array.from(options).toSorted((a, b) => a.localeCompare(b))
   }, [projectScopedTasks])
 
-  if (selectedAssignee !== 'all' && !assigneeOptions.includes(selectedAssignee)) {
-    setSelectedAssignee('all')
-  }
+  const effectiveSelectedAssignee = useMemo(() => {
+    if (selectedAssignee !== 'all' && !assigneeOptions.includes(selectedAssignee)) {
+      return 'all'
+    }
+    return selectedAssignee
+  }, [assigneeOptions, selectedAssignee])
 
   const setViewModePersisted = useCallback<React.Dispatch<React.SetStateAction<'list' | 'grid' | 'board'>>>(
     (mode) => {

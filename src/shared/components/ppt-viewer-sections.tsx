@@ -22,7 +22,7 @@ export function PptViewerLoading({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'flex min-h-[min(60dvh,560px)] flex-1 items-center justify-center rounded-xl border border-border/60 bg-zinc-950',
+        'flex min-h-[min(60dvh,560px)] flex-1 items-center justify-center rounded-xl border border-border/60 bg-foreground',
         className,
       )}
     >
@@ -107,7 +107,7 @@ export function PptViewerThumbnailButton({
           : 'border-transparent opacity-70 hover:border-muted-foreground/30 hover:opacity-100',
       )}
     >
-      <div className="relative h-14 w-24 bg-zinc-900 sm:h-16 sm:w-28">
+      <div className="relative h-14 w-24 bg-foreground/90 sm:h-16 sm:w-28">
         {slide.imageUrl ? (
           <Image
             src={slide.imageUrl}
@@ -150,7 +150,7 @@ export function PptViewerCanvas({
   const hasMultiple = slides.length > 1
 
   return (
-    <div className="relative aspect-video w-full max-h-[min(72dvh,720px)] overflow-hidden rounded-xl border border-border/60 bg-zinc-950 shadow-inner ring-1 ring-white/5">
+    <div className="relative aspect-video w-full max-h-[min(72dvh,720px)] overflow-hidden rounded-xl border border-border/60 bg-foreground shadow-inner ring-1 ring-white/5">
       {currentSlideData?.imageUrl ? (
         <Image
           src={currentSlideData.imageUrl}
@@ -162,7 +162,7 @@ export function PptViewerCanvas({
           priority={currentSlide === 0}
         />
       ) : (
-        <div className="flex h-full min-h-[280px] w-full items-center justify-center bg-gradient-to-b from-zinc-900 to-zinc-950 p-8 sm:min-h-[360px]">
+        <div className="flex h-full min-h-[280px] w-full items-center justify-center bg-gradient-to-b from-foreground/90 to-foreground p-8 sm:min-h-[360px]">
           <div className="max-w-lg text-center">
             <p className="text-sm font-medium uppercase tracking-widest text-viewer-chrome/40">
               Slide {currentSlide + 1}

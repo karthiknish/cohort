@@ -200,11 +200,7 @@ export function useProjectsPageController() {
     return rows.map((row) => mergeProjectTaskCounts(mapProjectRecord(row), taskCounts))
   }, [isPreviewMode, projectsRealtime, selectedClientId, statusFilter, tasksRealtime, user?.id, workspaceId])
 
-  const projectsSyncKey = useMemo(
-    () =>
-      `${isPreviewMode}|${selectedClientId ?? ''}|${statusFilter}|${user?.id ?? ''}|${workspaceId ?? ''}|${syncedProjectsFromQuery.length}|${syncedProjectsFromQuery[0]?.id ?? ''}|${syncedProjectsFromQuery.at(-1)?.updatedAt ?? ''}`,
-    [isPreviewMode, selectedClientId, statusFilter, syncedProjectsFromQuery, user?.id, workspaceId],
-  )
+  const projectsSyncKey = `${isPreviewMode}|${selectedClientId ?? ''}|${statusFilter}|${user?.id ?? ''}|${workspaceId ?? ''}|${syncedProjectsFromQuery.length}|${syncedProjectsFromQuery[0]?.id ?? ''}|${syncedProjectsFromQuery.at(-1)?.updatedAt ?? ''}`
   const projectsSyncKeyRef = useRef<string | null>(null)
   if (projectsSyncKeyRef.current !== projectsSyncKey) {
     projectsSyncKeyRef.current = projectsSyncKey
@@ -248,11 +244,7 @@ export function useProjectsPageController() {
     return mapped
   }, [isPreviewMode, milestonesRealtime, projects, selectedClientId, viewMode])
 
-  const milestonesSyncKey = useMemo(
-    () =>
-      `${viewMode}|${isPreviewMode}|${selectedClientId ?? ''}|${projects.map((project) => project.id).join(',')}|${Object.keys(syncedMilestonesFromQuery).length}`,
-    [isPreviewMode, projects, selectedClientId, syncedMilestonesFromQuery, viewMode],
-  )
+  const milestonesSyncKey = `${viewMode}|${isPreviewMode}|${selectedClientId ?? ''}|${projects.map((project) => project.id).join(',')}|${Object.keys(syncedMilestonesFromQuery).length}`
   const milestonesSyncKeyRef = useRef<string | null>(null)
   if (milestonesSyncKeyRef.current !== milestonesSyncKey) {
     milestonesSyncKeyRef.current = milestonesSyncKey

@@ -124,10 +124,7 @@ export function AuthCardHeader({
 export function AuthCardSignInForm({
   activeTab,
   emailError,
-  isSubmitting,
-  isAuthLoading,
-  rememberMe,
-  showPassword,
+  ui,
   signInData,
   onRememberMeChange,
   onToggleShowPassword,
@@ -137,16 +134,14 @@ export function AuthCardSignInForm({
   AuthCardProps,
   | 'activeTab'
   | 'emailError'
-  | 'isSubmitting'
-  | 'isAuthLoading'
-  | 'rememberMe'
-  | 'showPassword'
+  | 'ui'
   | 'signInData'
   | 'onRememberMeChange'
   | 'onToggleShowPassword'
   | 'onSignInChange'
   | 'onSubmitSignIn'
 >) {
+  const { isSubmitting, isAuthLoading, rememberMe, showPassword } = ui
   return (
     <FadeInStagger
       key="signin"
@@ -245,11 +240,7 @@ export function AuthCardSignInForm({
 export function AuthCardSignUpForm({
   activeTab,
   emailError,
-  isSubmitting,
-  isAuthLoading,
-  showPassword,
-  showConfirmPassword,
-  passwordsMatch,
+  ui,
   signUpData,
   passwordStrength,
   onToggleShowPassword,
@@ -260,11 +251,7 @@ export function AuthCardSignUpForm({
   AuthCardProps,
   | 'activeTab'
   | 'emailError'
-  | 'isSubmitting'
-  | 'isAuthLoading'
-  | 'showPassword'
-  | 'showConfirmPassword'
-  | 'passwordsMatch'
+  | 'ui'
   | 'signUpData'
   | 'passwordStrength'
   | 'onToggleShowPassword'
@@ -272,6 +259,7 @@ export function AuthCardSignUpForm({
   | 'onSignUpChange'
   | 'onSubmitSignUp'
 >) {
+  const { isSubmitting, isAuthLoading, showPassword, showConfirmPassword, passwordsMatch } = ui
   return (
     <FadeInStagger
       key="signup"
@@ -455,10 +443,10 @@ export function AuthCardSignUpForm({
 }
 
 export function AuthCardSocialFooter({
-  isSubmitting,
-  isAuthLoading,
+  ui,
   onGoogleSignIn,
-}: Pick<AuthCardProps, 'isSubmitting' | 'isAuthLoading' | 'onGoogleSignIn'>) {
+}: Pick<AuthCardProps, 'ui' | 'onGoogleSignIn'>) {
+  const { isSubmitting, isAuthLoading } = ui
   return (
     <>
       <div className="relative py-1">

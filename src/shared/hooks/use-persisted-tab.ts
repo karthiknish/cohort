@@ -32,8 +32,9 @@ function isAllowed<TValue extends string>(
 }
 
 // Stable deep equality check for arrays
-function arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
-  return a.length === b.length && a.every((v, i) => v === b[i])
+function subscribeClientMounted(onStoreChange: () => void) {
+  onStoreChange()
+  return () => undefined
 }
 
 export function usePersistedTab<TValue extends string>(
@@ -56,52 +57,45 @@ export function usePersistedTab<TValue extends string>(
     return `${base}${pathname}:${param}`
   }, [pathname, param, storageNamespace])
 
-  // Start with defaultValue to avoid hydration mismatch
-  const [value, setValueState] = useState<TValue>(defaultValue)
+  const [pickedValue, setPickedValue] = useState<TValue | null>(null)
   const hasMounted = useSyncExternalStore(
     () => () => {},
     () => true,
     () => false,
   )
 
-  const didInitRef = useRef(false)
   const allowedValuesRef = useRef(allowedValues)
   const defaultValueRef = useRef(defaultValue)
-  const valueRef = useRef(value)
 
   allowedValuesRef.current = allowedValues
   defaultValueRef.current = defaultValue
-  valueRef.current = value
 
-  if (hasMounted && !didInitRef.current) {
-    didInitRef.current = true
-
-    const fromUrl = searchParams.get(param)
-    if (isAllowed(allowedValuesRef.current, fromUrl)) {
-      if (fromUrl !== defaultValueRef.current) {
-        setValueState(fromUrl)
+  const hydratedValue = useSyncExternalStore(
+    subscribeClientMounted,
+    () => {
+      const fromUrl = searchParams.get(param)
+      if (isAllowed(allowedValuesRef.current, fromUrl)) {
+        return fromUrl
       }
-    } else {
+
       try {
         const fromStorage = window.localStorage.getItem(storageKey)
         if (isAllowed(allowedValuesRef.current, fromStorage)) {
-          if (fromStorage !== defaultValueRef.current) {
-            setValueState(fromStorage)
-          }
+          return fromStorage
         }
       } catch {
         // ignore storage errors
       }
-    }
-  }
 
-  if (hasMounted && !arraysEqual(allowedValuesRef.current, allowedValues)) {
-    allowedValuesRef.current = allowedValues
+      return defaultValueRef.current
+    },
+    () => defaultValueRef.current,
+  )
 
-    if (!isAllowed(allowedValues, valueRef.current)) {
-      setValueState(defaultValue)
-    }
-  }
+  const value = useMemo(() => {
+    const candidate = hasMounted ? (pickedValue ?? hydratedValue) : defaultValue
+    return isAllowed(allowedValues, candidate) ? candidate : defaultValue
+  }, [allowedValues, defaultValue, hasMounted, hydratedValue, pickedValue])
 
   const isSyncingToUrlRef = useRef(false)
 
@@ -111,11 +105,11 @@ export function usePersistedTab<TValue extends string>(
       const currentDefault = defaultValueRef.current
 
       if (!isAllowed(currentAllowed, next)) {
-        setValueState(currentDefault)
+        setPickedValue(currentDefault)
         return
       }
 
-      setValueState((prev) => {
+      setPickedValue((prev) => {
         if (prev === next) return prev
         return next
       })

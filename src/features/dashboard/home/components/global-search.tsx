@@ -13,7 +13,8 @@ import {
 import { Badge } from '@/shared/ui/badge'
 import { useToast } from '@/shared/ui/use-toast'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { cn, formatRelativeTime } from '@/lib/utils'
+import { useClientRelativeTime } from '@/lib/hooks/use-client-relative-time'
+import { cn } from '@/lib/utils'
 
 export type SearchResultType = 'tasks' | 'projects' | 'messages' | 'clients' | 'files' | 'proposals'
 
@@ -116,17 +117,7 @@ function globalSearchReducer(state: GlobalSearchState, action: GlobalSearchActio
 }
 
 function SearchResultRelativeTime({ createdAt }: { createdAt: string }) {
-  const [relativeTime, setRelativeTime] = useState<string | null>(null)
-
-  useEffect(() => {
-    const createdAtDate = new Date(createdAt)
-    if (Number.isNaN(createdAtDate.getTime())) {
-      setRelativeTime(null)
-      return
-    }
-
-    setRelativeTime(formatRelativeTime(createdAtDate))
-  }, [createdAt])
+  const relativeTime = useClientRelativeTime(createdAt)
 
   if (!relativeTime) {
     return null

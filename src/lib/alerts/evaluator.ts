@@ -12,7 +12,7 @@ import type {
 import { evaluateRule } from './rules-engine'
 import { enrichSummaryWithMetrics } from '../ad-algorithms/efficiency'
 import { calculateAlgorithmicInsights } from '../ad-algorithms/insights'
-import { adAlertsTemplate } from '../notifications/email-templates'
+import { adAlertsTemplate } from '../notifications/email-templates/ad-alerts'
 
 // =============================================================================
 // BATCH EVALUATION

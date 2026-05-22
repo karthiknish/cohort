@@ -604,16 +604,25 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         }
     }, [buildSnapshotKey, proposals, proposalsKey, selectedClientId, steps.length])
 
+    const shouldScheduleAutosave =
+        !isPreviewMode &&
+        !isBootstrapping &&
+        hydrationRef.current &&
+        hasPersistableData &&
+        Boolean(selectedClientId) &&
+        lastSavedSnapshotRef.current !== currentSnapshotKey
+
+    const resolvedAutosaveStatus = useMemo(() => {
+        if (shouldScheduleAutosave && autosaveStatus === 'idle') {
+            return 'saving' as const
+        }
+        return autosaveStatus
+    }, [autosaveStatus, shouldScheduleAutosave])
+
     useEffect(() => {
-        if (isPreviewMode || isBootstrapping || !hydrationRef.current || !hasPersistableData || !selectedClientId) {
+        if (!shouldScheduleAutosave) {
             return
         }
-
-        if (lastSavedSnapshotRef.current === currentSnapshotKey) {
-            return
-        }
-
-        setAutosaveStatus('saving')
 
         const timeoutId = window.setTimeout(() => {
             void saveDraftNow()
@@ -622,7 +631,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         return () => {
             window.clearTimeout(timeoutId)
         }
-    }, [currentSnapshotKey, hasPersistableData, isBootstrapping, isPreviewMode, saveDraftNow, selectedClientId])
+    }, [currentSnapshotKey, saveDraftNow, shouldScheduleAutosave])
 
     return {
         draftId,
@@ -630,7 +639,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         isLoadingProposals,
         isCreatingDraft,
         isBootstrapping,
-        autosaveStatus,
+        autosaveStatus: resolvedAutosaveStatus,
         deletingProposalId,
         proposalPendingDelete,
         isDeleteDialogOpen,

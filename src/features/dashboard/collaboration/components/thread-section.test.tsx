@@ -10,6 +10,9 @@ function TestReplyRenderer({ reply }: { reply: CollaborationMessage }) {
   return <div>{reply.content}</div>
 }
 
+const THREAD_PANEL_LOADING = { isOpen: true, isLoading: true, hasNextCursor: false } as const
+const THREAD_PANEL_EMPTY = { isOpen: true, isLoading: false, hasNextCursor: false } as const
+
 const reply: CollaborationMessage = {
   id: 'reply-1', senderId: 'user-2', senderName: 'Sam Lee', createdAt: '2026-03-11T12:30:00.000Z',
   channelType: 'project', clientId: 'client-1', projectId: 'project-1', content: 'Reviewed.', updatedAt: null,
@@ -25,10 +28,10 @@ describe('ThreadSection', () => {
       onToggle: vi.fn(), onRetry: vi.fn(), onLoadMore: vi.fn(), onReply: vi.fn(), ReplyRenderer: TestReplyRenderer,
     }
 
-    const loadingMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={{ isOpen: true, isLoading: true, hasNextCursor: false }} error={null} replies={[]} />)
-    const emptyMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={{ isOpen: true, isLoading: false, hasNextCursor: false }} error={null} replies={[]} />)
-    const errorMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={{ isOpen: true, isLoading: false, hasNextCursor: false }} error="Unable to load replies." replies={[]} />)
-    const loadedMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={{ isOpen: true, isLoading: false, hasNextCursor: false }} error={null} replies={[reply]} ReplyRenderer={TestReplyRenderer} />)
+    const loadingMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={THREAD_PANEL_LOADING} error={null} replies={[]} />)
+    const emptyMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={THREAD_PANEL_EMPTY} error={null} replies={[]} />)
+    const errorMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={THREAD_PANEL_EMPTY} error="Unable to load replies." replies={[]} />)
+    const loadedMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={THREAD_PANEL_EMPTY} error={null} replies={[reply]} ReplyRenderer={TestReplyRenderer} />)
 
     expect(loadingMarkup).toContain('Loading replies…')
     expect(emptyMarkup).toContain('No replies yet')

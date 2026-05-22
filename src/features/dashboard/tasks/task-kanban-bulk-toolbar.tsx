@@ -83,6 +83,7 @@ export function TaskKanbanBulkToolbar({
     return (
       <div className="flex items-center justify-between px-1 py-2 border-b border-muted/20">
         <button
+          type="button"
           onClick={onSelectAll}
           className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
@@ -203,24 +204,28 @@ export function TaskKanbanBulkToolbar({
               </PopoverTrigger>
               <PopoverContent className="w-48 p-1" align="end">
                 <button
+                  type="button"
                   onClick={handleClearDueDate}
                   className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
                 >
                   Clear due date
                 </button>
                 <button
+                  type="button"
                   onClick={handleSetToday}
                   className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
                 >
                   Today
                 </button>
                 <button
+                  type="button"
                   onClick={handleSetTomorrow}
                   className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
                 >
                   Tomorrow
                 </button>
                 <button
+                  type="button"
                   onClick={handleSetNextWeek}
                   className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
                 >

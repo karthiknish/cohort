@@ -181,6 +181,12 @@ export function useMessagesData({
     [],
   )
   const [channelListRetryNonce, setChannelListRetryNonce] = useState(0)
+  const selectedChannelId = selectedChannel?.id ?? null
+  const [prevSelectedChannelId, setPrevSelectedChannelId] = useState(selectedChannelId)
+  if (selectedChannelId !== prevSelectedChannelId) {
+    setPrevSelectedChannelId(selectedChannelId)
+    setChannelListRetryNonce(0)
+  }
   const [messageInput, setMessageInputState] = useState('')
   const [messageSearchQuery, setMessageSearchQuery] = useState('')
 
@@ -198,9 +204,45 @@ export function useMessagesData({
       : 'skip'
   )
 
+  const previewMessagesByChannel = useMemo(() => {
+    if (!isPreviewMode || channels.length === 0) {
+      return {} as MessagesByChannelState
+    }
+
+    const next: MessagesByChannelState = {}
+    for (const channel of channels) {
+      next[channel.id] = getPreviewCollaborationMessages(
+        channel.type,
+        channel.clientId ?? null,
+        channel.projectId ?? null,
+        currentUserId,
+      )
+    }
+    return next
+  }, [channels, currentUserId, isPreviewMode])
+
+  const resolvedMessagesByChannel = useMemo(() => {
+    if (!isPreviewMode) {
+      return messagesByChannel
+    }
+    return { ...previewMessagesByChannel, ...messagesByChannel }
+  }, [isPreviewMode, messagesByChannel, previewMessagesByChannel])
+
+  const resolvedNextCursorByChannel = useMemo(() => {
+    if (!isPreviewMode) {
+      return nextCursorByChannel
+    }
+
+    const next = { ...nextCursorByChannel }
+    for (const channel of channels) {
+      next[channel.id] = null
+    }
+    return next
+  }, [channels, isPreviewMode, nextCursorByChannel])
+
   const channelMessages = useMemo(
-    () => (selectedChannel ? messagesByChannel[selectedChannel.id] ?? [] : []),
-    [messagesByChannel, selectedChannel],
+    () => (selectedChannel ? resolvedMessagesByChannel[selectedChannel.id] ?? [] : []),
+    [resolvedMessagesByChannel, selectedChannel],
   )
   const threadRootIdsForUnread = useMemo(() => {
     const ids = new Set<string>()
@@ -236,49 +278,6 @@ export function useMessagesData({
   )
 
   useEffect(() => {
-    if (!isPreviewMode || channels.length === 0) {
-      return
-    }
-
-    setMessagesByChannel((prev) => {
-      let changed = false
-      const next = { ...prev }
-
-      for (const channel of channels) {
-        if (Array.isArray(next[channel.id])) {
-          continue
-        }
-
-        next[channel.id] = getPreviewCollaborationMessages(
-          channel.type,
-          channel.clientId ?? null,
-          channel.projectId ?? null,
-          currentUserId,
-        )
-        changed = true
-      }
-
-      return changed ? next : prev
-    })
-
-    setNextCursorByChannel((prev) => {
-      let changed = false
-      const next = { ...prev }
-
-      for (const channel of channels) {
-        if (next[channel.id] === null) {
-          continue
-        }
-
-        next[channel.id] = null
-        changed = true
-      }
-
-      return changed ? next : prev
-    })
-  }, [channels, currentUserId, isPreviewMode, setMessagesByChannel, setNextCursorByChannel])
-
-  useEffect(() => {
     const replyTimersRef = previewReplyTimersRef
     return () => {
       replyTimersRef.current.forEach((timerId) => window.clearTimeout(timerId))
@@ -303,7 +302,7 @@ export function useMessagesData({
     workspaceId,
     selectedChannel,
     channelMessages,
-    messagesByChannel,
+    messagesByChannel: resolvedMessagesByChannel,
     messageSearchQuery,
     isPreviewMode,
   })
@@ -325,14 +324,11 @@ export function useMessagesData({
     setChannelListRetryNonce((n) => n + 1)
   }, [applyRealtimeChannelLoading, isSearchActive, retrySearch, selectedChannel])
 
-  useEffect(() => {
-    setChannelListRetryNonce(0)
-  }, [selectedChannel?.id])
   const channelUnreadCounts = useMemo(() => {
     if (isPreviewMode) {
       return Object.fromEntries(
         channels.map((channel) => {
-          const unreadCount = (messagesByChannel[channel.id] ?? []).filter((message) => {
+          const unreadCount = (resolvedMessagesByChannel[channel.id] ?? []).filter((message) => {
             if (message.isDeleted || message.parentMessageId) return false
             if (!currentUserId) return false
             if (message.senderId === currentUserId) return false
@@ -357,7 +353,7 @@ export function useMessagesData({
         Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0,
       ]),
     )
-  }, [channels, currentUserId, isPreviewMode, messagesByChannel, unreadCountsResult])
+  }, [channels, currentUserId, isPreviewMode, resolvedMessagesByChannel, unreadCountsResult])
   const threadUnreadCountsByRootId = useMemo(() => {
     const source =
       (threadUnreadCountsResult as { countsByThreadRootId?: Record<string, number> } | null)?.countsByThreadRootId
@@ -375,7 +371,7 @@ export function useMessagesData({
 
   const channelSummaries = useMemo<Map<string, ChannelSummary>>(() => {
     const result = new Map<string, ChannelSummary>()
-    Object.entries(messagesByChannel).forEach(([channelId, list]) => {
+    Object.entries(resolvedMessagesByChannel).forEach(([channelId, list]) => {
       if (list && list.length > 0) {
         const last = list[list.length - 1]
         if (last) {
@@ -387,11 +383,11 @@ export function useMessagesData({
       }
     })
     return result
-  }, [messagesByChannel])
+  }, [resolvedMessagesByChannel])
 
   const isCurrentChannelLoading = selectedChannel ? loadingChannelId === selectedChannel.id : false
   const loadingMore = selectedChannel ? loadingMoreChannelId === selectedChannel.id : false
-  const canLoadMore = selectedChannel ? Boolean(nextCursorByChannel[selectedChannel.id]) : false
+  const canLoadMore = selectedChannel ? Boolean(resolvedNextCursorByChannel[selectedChannel.id]) : false
 
   const resolveSenderDetails = useCallback(() => {
     const participant = participantNameMap.get(fallbackDisplayName.toLowerCase())
@@ -589,7 +585,7 @@ export function useMessagesData({
     workspaceId,
     channels,
     isPreviewMode,
-    nextCursorByChannel,
+    nextCursorByChannel: resolvedNextCursorByChannel,
     setLoadingMoreChannelId,
     mutateChannelMessages,
     setNextCursorByChannel,

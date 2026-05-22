@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { usePrevious } from '@/shared/hooks/use-previous'
 import type { ReactNode } from 'react'
 
 import { AlertCircle, Hash, Inbox, MessageCircle, Plus, Search, Sparkles } from 'lucide-react'
@@ -100,7 +101,7 @@ export function ConversationListPane({
   className,
 }: ConversationListPaneProps & { className?: string }) {
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const previousUnreadRef = useRef(totalUnread)
+  const previousUnread = usePrevious(totalUnread)
 
   const handleSearchChange = useCallback((event: { target: { value: string } }) => {
     onSearchQueryChange(event.target.value)
@@ -138,25 +139,22 @@ export function ConversationListPane({
     return () => window.removeEventListener('keydown', onGlobalKeyDown)
   }, [])
 
-  const unreadAnnouncement = (() => {
-    if (isLoading) {
-      previousUnreadRef.current = totalUnread
+  const unreadAnnouncement = useMemo(() => {
+    if (isLoading || previousUnread === undefined) {
       return ''
     }
 
-    const previousUnread = previousUnreadRef.current
-    let message = ''
-
     if (totalUnread > previousUnread) {
       const newMessages = totalUnread - previousUnread
-      message = `${newMessages} new ${newMessages === 1 ? 'message has' : 'messages have'} arrived. ${totalUnread} unread ${totalUnread === 1 ? 'conversation' : 'conversations'} in inbox.`
-    } else if (totalUnread === 0 && previousUnread > 0) {
-      message = 'All inbox conversations are marked as read.'
+      return `${newMessages} new ${newMessages === 1 ? 'message has' : 'messages have'} arrived. ${totalUnread} unread ${totalUnread === 1 ? 'conversation' : 'conversations'} in inbox.`
     }
 
-    previousUnreadRef.current = totalUnread
-    return message
-  })()
+    if (totalUnread === 0 && previousUnread > 0) {
+      return 'All inbox conversations are marked as read.'
+    }
+
+    return ''
+  }, [isLoading, previousUnread, totalUnread])
 
   const showRecentLabel = sourceFilter === 'all' && !searchQuery.trim()
 
@@ -601,17 +599,31 @@ export function ChannelConversationPane({
     await onEditMessage(selectedChannel.id, messageId, newContent)
   }, [onEditMessage, selectedChannel.id])
 
+  const channelListState = useMemo(
+    () => ({
+      loading: isCurrentChannelLoading || (isChannelSearchActive && searchingMessages),
+      loadingMore: !isChannelSearchActive && loadingMore,
+      hasMore: !isChannelSearchActive && canLoadMore,
+    }),
+    [canLoadMore, isChannelSearchActive, isCurrentChannelLoading, loadingMore, searchingMessages],
+  )
+
+  const channelComposerState = useMemo(
+    () => ({
+      sending: sending || uploading,
+      pendingAttachments: pendingAttachments.length > 0,
+      uploadingAttachments: uploading,
+    }),
+    [pendingAttachments.length, sending, uploading],
+  )
+
   return (
     <UnifiedMessagePane
       header={channelHeader}
       messages={channelMessagesForPane.map(collaborationToUnifiedMessage)}
       currentUserId={currentUserId}
       currentUserRole={currentUserRole}
-      listState={{
-        loading: isCurrentChannelLoading || (isChannelSearchActive && searchingMessages),
-        loadingMore: !isChannelSearchActive && loadingMore,
-        hasMore: !isChannelSearchActive && canLoadMore,
-      }}
+      listState={channelListState}
       onLoadMore={handleLoadMore}
       messageSearchQuery={messageSearchQuery}
       onMessageSearchChange={onMessageSearchChange}
@@ -619,11 +631,7 @@ export function ChannelConversationPane({
       messageInput={messageInput}
       onMessageInputChange={onMessageInputChange}
       onSendMessage={handleSendMessage}
-      composerState={{
-        sending: sending || uploading,
-        pendingAttachments: pendingAttachments.length > 0,
-        uploadingAttachments: uploading,
-      }}
+      composerState={channelComposerState}
       pendingAttachments={pendingAttachments}
       onAddAttachments={onAddAttachments}
       onRemoveAttachment={onRemoveAttachment}
@@ -749,16 +757,30 @@ export function DirectMessageConversationPane({
     )
   }, [dmSearchingMessages, isDmSearchActive, messagesError, onRetryMessages])
 
+  const dmListState = useMemo(
+    () => ({
+      loading: dmIsLoadingMessages || (isDmSearchActive && dmSearchingMessages),
+      loadingMore: !isDmSearchActive && dmIsLoadingMore,
+      hasMore: !isDmSearchActive && dmHasMoreMessages,
+    }),
+    [dmHasMoreMessages, dmIsLoadingMessages, dmIsLoadingMore, dmSearchingMessages, isDmSearchActive],
+  )
+
+  const dmComposerState = useMemo(
+    () => ({
+      sending: dmIsSending || uploading,
+      pendingAttachments: pendingAttachments.length > 0,
+      uploadingAttachments: uploading,
+    }),
+    [dmIsSending, pendingAttachments.length, uploading],
+  )
+
   return (
     <UnifiedMessagePane
       header={dmHeader}
       messages={dmMessagesForPane.map(directMessageToUnifiedMessage)}
       currentUserId={currentUserId}
-      listState={{
-        loading: dmIsLoadingMessages || (isDmSearchActive && dmSearchingMessages),
-        loadingMore: !isDmSearchActive && dmIsLoadingMore,
-        hasMore: !isDmSearchActive && dmHasMoreMessages,
-      }}
+      listState={dmListState}
       onLoadMore={dmLoadMoreMessages}
       messageSearchQuery={dmMessageSearchQuery}
       onMessageSearchChange={onDmMessageSearchChange}
@@ -766,11 +788,7 @@ export function DirectMessageConversationPane({
       messageInput={dmMessageInput}
       onMessageInputChange={setActiveDmMessageInput}
       onSendMessage={handleSendDirectMessage}
-      composerState={{
-        sending: dmIsSending || uploading,
-        pendingAttachments: pendingAttachments.length > 0,
-        uploadingAttachments: uploading,
-      }}
+      composerState={dmComposerState}
       pendingAttachments={pendingAttachments}
       onAddAttachments={onAddAttachments}
       onRemoveAttachment={onRemoveAttachment}

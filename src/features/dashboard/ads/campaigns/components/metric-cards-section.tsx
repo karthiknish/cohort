@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   ChevronDown,
   CreditCard,
@@ -134,10 +134,10 @@ export function MetricCardsSection({
   const [hasUserToggled, setHasUserToggled] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const effectiveMoreOpen = hasUserToggled ? moreOpen : defaultMoreMetricsOpen
-  const handleMoreOpenChange = (next: boolean) => {
+  const handleMoreOpenChange = useCallback((next: boolean) => {
     setHasUserToggled(true)
     setMoreOpen(next)
-  }
+  }, [])
   const displayCurrency = normalizeCurrencyCode(currency)
   const displayEfficiencyScore =
     typeof efficiencyScore === 'number' && Number.isFinite(efficiencyScore)

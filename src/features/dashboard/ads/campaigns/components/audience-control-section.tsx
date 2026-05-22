@@ -523,6 +523,23 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     ],
   )
 
+  const audienceEditorSection = (
+    <AudienceEditorSection
+      aggregatedData={editorAggregatedData}
+      expandedSections={expandedSections}
+      toggleSection={toggleSection}
+      editingSection={editingSection}
+      onToggleEditing={handleToggleEditing}
+      canEditTargeting={canEditMetaTargeting}
+      workspaceId={workspaceId}
+      clientId={clientId}
+      onAddInterest={canEditMetaTargeting ? handleAddInterestDraft : undefined}
+      onRemoveInterest={canEditMetaTargeting ? handleRemoveInterestDraft : undefined}
+      onSaveTargeting={canEditMetaTargeting && editingSection === 'interests' ? handlePersistInterests : undefined}
+      savingTargeting={savingTargeting}
+    />
+  )
+
   if (loading && !hasLoaded) {
     return (
       <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
@@ -563,23 +580,6 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
       </MotionCard>
     )
   }
-
-  const audienceEditorSection = (
-    <AudienceEditorSection
-      aggregatedData={editorAggregatedData}
-      expandedSections={expandedSections}
-      toggleSection={toggleSection}
-      editingSection={editingSection}
-      onToggleEditing={handleToggleEditing}
-      canEditTargeting={canEditMetaTargeting}
-      workspaceId={workspaceId}
-      clientId={clientId}
-      onAddInterest={canEditMetaTargeting ? handleAddInterestDraft : undefined}
-      onRemoveInterest={canEditMetaTargeting ? handleRemoveInterestDraft : undefined}
-      onSaveTargeting={canEditMetaTargeting && editingSection === 'interests' ? handlePersistInterests : undefined}
-      savingTargeting={savingTargeting}
-    />
-  )
 
   const headerActions = (
     <>

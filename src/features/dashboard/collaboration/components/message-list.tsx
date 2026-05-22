@@ -1,21 +1,18 @@
 'use client'
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
-import { Button } from '@/shared/ui/button'
-import { cn } from '@/lib/utils'
 import { useMessageListRenderContext } from './message-list-render-context'
 import {
-  ChannelMessageCard,
-  DirectMessageCard,
-  MessageDateSeparator,
   MessageListEmptyState,
-  MessageListLoadMoreButton,
   MessageListLoadingState,
 } from './message-list-sections'
 import type { MessageListRenderers } from './message-list-sections'
+import { toMessageContentComponent } from './message-list-render-utils'
+import {
+  MessageListJumpToLatest,
+  MessageListScrollBody,
+} from './message-list-scroll-sections'
 import type { UnifiedMessage } from './message-list-types'
 
 export interface MessageListProps {
@@ -41,21 +38,16 @@ export interface MessageListProps {
   variant?: 'channel' | 'dm'
   showAvatars?: boolean
   compact?: boolean
-  // Channel-specific callbacks
   onEditMessage?: (messageId: string, content: string) => void
   onDeleteMessage?: (messageId: string) => void
   onReply?: (message: UnifiedMessage) => void
   onCreateTask?: (message: UnifiedMessage) => void
-  // Pull to refresh
   onRefresh?: () => Promise<void> | void
-  // State for editing/deleting
   editingMessageId?: string | null
   deletingMessageId?: string | null
   updatingMessageId?: string | null
-  // Deep-link focus support
   focusMessageId?: string | null
   focusThreadId?: string | null
-  /** Shown as animated bubble above the latest messages when others are typing */
   typingIndicatorText?: string
 }
 
@@ -69,17 +61,17 @@ function formatDate(ms: number): string {
 function groupMessagesByDate(messages: UnifiedMessage[]): Map<string, UnifiedMessage[]> {
   const groups = new Map<string, UnifiedMessage[]>()
   const seenIds = new Set<string>()
-  
+
   for (const message of messages) {
     if (seenIds.has(message.id)) continue
     seenIds.add(message.id)
-    
+
     const dateKey = formatDate(message.createdAtMs)
     const existing = groups.get(dateKey) ?? []
     existing.push(message)
     groups.set(dateKey, existing)
   }
-  
+
   return groups
 }
 
@@ -127,15 +119,12 @@ export function MessageList({
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const [showJumpToLatest, setShowJumpToLatest] = useState(false)
 
-  const sortedMessages = useMemo(() => 
-    messages.toSorted((a, b) => a.createdAtMs - b.createdAtMs),
-    [messages]
+  const sortedMessages = useMemo(
+    () => messages.toSorted((a, b) => a.createdAtMs - b.createdAtMs),
+    [messages],
   )
-  
-  const groupedMessages = useMemo(() => 
-    groupMessagesByDate(sortedMessages),
-    [sortedMessages]
-  )
+
+  const groupedMessages = useMemo(() => groupMessagesByDate(sortedMessages), [sortedMessages])
   const effectiveRenderMessageExtras = renderMessageExtras ?? renderContext?.renderMessageExtras
   const effectiveRenderMessageActions = renderMessageActions ?? renderContext?.renderMessageActions
   const effectiveRenderMessageContent = renderMessageContent ?? renderContext?.renderMessageContent
@@ -149,7 +138,9 @@ export function MessageList({
     () => ({
       renderMessageActions: effectiveRenderMessageActions,
       renderMessageAttachments: effectiveRenderMessageAttachments,
-      renderMessageContent: effectiveRenderMessageContent,
+      renderMessageContent: effectiveRenderMessageContent
+        ? toMessageContentComponent(effectiveRenderMessageContent)
+        : undefined,
       renderMessageExtras: effectiveRenderMessageExtras,
       renderMessageFooter: effectiveRenderMessageFooter,
       renderThreadSection: effectiveRenderThreadSection,
@@ -165,7 +156,7 @@ export function MessageList({
       effectiveRenderMessageExtras,
       effectiveRenderMessageFooter,
       effectiveRenderThreadSection,
-    ]
+    ],
   )
 
   const requestLoadOlder = useCallback(() => {
@@ -183,7 +174,6 @@ export function MessageList({
   }, [hasMore, isLoading, onLoadMore])
 
   useEffect(() => {
-    // Release load-more guard if a load cycle ends without message changes.
     if (!isLoading && loadingOlderRef.current && prependSnapshotRef.current) {
       loadingOlderRef.current = false
       prependSnapshotRef.current = null
@@ -220,9 +210,7 @@ export function MessageList({
         previousLast !== lastId
 
       const appendedAtBottom =
-        previousLast !== null &&
-        previousFirst === firstId &&
-        previousLast !== lastId
+        previousLast !== null && previousFirst === firstId && previousLast !== lastId
 
       if ((conversationSwitched || appendedAtBottom) && shouldStickToBottomRef.current) {
         container.scrollTop = container.scrollHeight
@@ -317,22 +305,25 @@ export function MessageList({
     const distanceFromBottom = container.scrollHeight - (container.scrollTop + container.clientHeight)
     shouldStickToBottomRef.current = distanceFromBottom < 80
     setShowJumpToLatest(distanceFromBottom > 200 && sortedMessages.length > 0)
-    
+
     if (container.scrollTop < 64) {
       requestLoadOlder()
     }
   }, [requestLoadOlder, sortedMessages.length])
 
-  const handleReaction = useCallback(async (messageId: string, emoji: string) => {
-    const key = `${messageId}-${emoji}`
-    if (localReactionPending) return
-    setLocalReactionPending(key)
-    try {
-      await onToggleReaction(messageId, emoji)
-    } finally {
-      setLocalReactionPending(null)
-    }
-  }, [localReactionPending, onToggleReaction])
+  const handleReaction = useCallback(
+    async (messageId: string, emoji: string) => {
+      const key = `${messageId}-${emoji}`
+      if (localReactionPending) return
+      setLocalReactionPending(key)
+      try {
+        await onToggleReaction(messageId, emoji)
+      } finally {
+        setLocalReactionPending(null)
+      }
+    },
+    [localReactionPending, onToggleReaction],
+  )
 
   const isChannel = variant === 'channel'
 
@@ -354,98 +345,32 @@ export function MessageList({
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div
-        ref={scrollRef}
+      <MessageListScrollBody
+        scrollRef={scrollRef}
+        messagesEndRef={messagesEndRef}
+        isChannel={isChannel}
+        hasMore={hasMore}
+        isLoading={isLoading}
+        groupedMessages={groupedMessages}
+        typingIndicatorText={typingIndicatorText}
         onScroll={handleScroll}
-        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
-      >
-        <div className={cn('min-w-0 max-w-full p-4', isChannel && 'space-y-4')}>
-          {hasMore && (
-            <MessageListLoadMoreButton disabled={isLoading} isLoading={isLoading} onLoadMore={requestLoadOlder} />
-          )}
+        onLoadMore={requestLoadOlder}
+        groupedMessagesProps={{
+          currentUserId,
+          highlightedMessageId,
+          editingMessageId,
+          deletingMessageId,
+          updatingMessageId,
+          localReactionPending,
+          reactionPendingByMessage,
+          renderers,
+          showAvatars,
+          onReact: handleReaction,
+          renderMessageWrapper: effectiveRenderMessageWrapper,
+        }}
+      />
 
-          <div className={cn('space-y-6', isChannel && 'space-y-1')}>
-            {Array.from(groupedMessages.entries()).map(([date, msgs]) => (
-              <div key={date}>
-                <MessageDateSeparator date={date} />
-                
-                <div className={cn('space-y-3', isChannel && 'space-y-1')}>
-                  {msgs.map((message) => {
-                    const isEditing = editingMessageId === message.id
-                    const isDeleting = deletingMessageId === message.id
-                    const isUpdating = updatingMessageId === message.id
-                    
-                    if (isChannel) {
-                      const content = (
-                        <ChannelMessageCard
-                          currentUserId={currentUserId}
-                          highlighted={message.id === highlightedMessageId}
-                          isDeleting={isDeleting}
-                          isEditing={isEditing}
-                          isUpdating={isUpdating}
-                          localReactionPending={localReactionPending}
-                          message={message}
-                          onReact={handleReaction}
-                          reactionPendingByMessage={reactionPendingByMessage}
-                          renderers={renderers}
-                          showAvatars={showAvatars}
-                        />
-                      )
-
-                      return (
-                        <Fragment key={message.id}>
-                          {effectiveRenderMessageWrapper ? effectiveRenderMessageWrapper(message, content) : content}
-                        </Fragment>
-                      )
-                    }
-
-                    const messageContent = (
-                      <DirectMessageCard
-                        currentUserId={currentUserId}
-                        isDeleting={isDeleting}
-                        isEditing={isEditing}
-                        localReactionPending={localReactionPending}
-                        message={message}
-                        onReact={handleReaction}
-                        reactionPendingByMessage={reactionPendingByMessage}
-                        renderers={renderers}
-                        showAvatars={showAvatars}
-                      />
-                    )
-                    
-                    return (
-                      <Fragment key={message.id}>
-                        {effectiveRenderMessageWrapper ? effectiveRenderMessageWrapper(message, messageContent) : messageContent}
-                      </Fragment>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          {typingIndicatorText ? (
-            <ChatTypingIndicator label={typingIndicatorText} variant="bubble" className="mt-2" />
-          ) : null}
-
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {showJumpToLatest ? (
-        <div className="pointer-events-none absolute bottom-4 right-4 z-10">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="pointer-events-auto gap-1.5 shadow-md ring-1 ring-border/60"
-            onClick={scrollToLatest}
-          >
-            <ArrowDown className="size-3.5" />
-            Latest
-          </Button>
-        </div>
-      ) : null}
+      <MessageListJumpToLatest visible={showJumpToLatest} onClick={scrollToLatest} />
     </div>
   )
 }

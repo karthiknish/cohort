@@ -1,7 +1,7 @@
 'use client'
 
 import { notifyFailure } from '@/lib/notifications'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { useToast } from '@/shared/ui/use-toast'
 
@@ -152,6 +152,25 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
           finalizeMeetingAfterRoomExit(true)
         }, [finalizeMeetingAfterRoomExit])
 
+  const toolsViewport = useMemo(
+    () => ({
+      mobile: isMobileViewport,
+      minimized: isMinimized,
+      pipSupported,
+      pipActive,
+    }),
+    [isMinimized, isMobileViewport, pipActive, pipSupported],
+  )
+
+  const toolsJoin = useMemo(
+    () => ({
+      joining: joiningRoom,
+      preview: isPreviewMeeting,
+      hasReference: hasJoinReference,
+    }),
+    [hasJoinReference, isPreviewMeeting, joiningRoom],
+  )
+
   const meetingShell = (
     <>
       <div className="flex flex-col gap-5 p-5 lg:px-6">
@@ -218,17 +237,8 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
           notesProcessingState={notesProcessingState}
           meetingTimezone={meetingTimezone}
           joinConfigPresent={Boolean(joinConfig)}
-          viewport={{
-            mobile: isMobileViewport,
-            minimized: isMinimized,
-            pipSupported,
-            pipActive,
-          }}
-          join={{
-            joining: joiningRoom,
-            preview: isPreviewMeeting,
-            hasReference: hasJoinReference,
-          }}
+          viewport={toolsViewport}
+          join={toolsJoin}
           roomActionLabel={roomActionLabel}
           onOpenSidebar={handleOpenSidebar}
           onToggleMinimize={toggleMinimizedRoom}

@@ -471,6 +471,10 @@ export async function scanChannelRows(
   let stoppedEarly = false
 
   while (scanned < maxRows) {
+    if (stoppedEarly) {
+      break
+    }
+
     let q = queryBuilder()
     q = applyManualPagination(q, cursor)
 
@@ -500,10 +504,12 @@ export async function scanChannelRows(
       }
     }
 
-    await result.items.reduce<Promise<void>>(
-      (previous, row) => previous.then(() => visitRow(row)),
-      Promise.resolve(),
-    )
+    if (!stoppedEarly && scanned < maxRows) {
+      await result.items.reduce<Promise<void>>(
+        (previous, row) => previous.then(() => visitRow(row)),
+        Promise.resolve(),
+      )
+    }
 
     if (stoppedEarly || !result.nextCursor || scanned >= maxRows) {
       break

@@ -66,6 +66,15 @@ export function DMMessagePane({
   onShareToPlatform,
 }: DMMessagePaneProps) {
   const { sending: isSending } = composerState
+  const layoutComposerState = useMemo(
+    () => ({
+      focused: false,
+      sending: isSending,
+      pendingAttachments: false,
+      uploadingAttachments: false,
+    }),
+    [isSending],
+  )
   const { toast } = useToast()
   const [inputValue, setInputValue] = useState('')
   const header = useMemo<MessagePaneHeaderInfo | null>(() => {
@@ -131,7 +140,7 @@ export function DMMessagePane({
       messageInput={inputValue}
       onMessageInputChange={setInputValue}
       onSendMessage={handleSend}
-      composerState={composerState}
+      composerState={layoutComposerState}
       onToggleReaction={handleReaction}
       onDeleteMessage={onDeleteMessage}
       onEditMessage={onEditMessage}

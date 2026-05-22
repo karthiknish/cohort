@@ -1,10 +1,9 @@
 'use client'
 
-import { createElement, useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, ReactNode, RefObject } from 'react'
 import { Send } from 'lucide-react'
 
-import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
 import type { ClientTeamMember } from '@/types/clients'
 
 import type { PendingAttachment } from '../hooks/types'
@@ -12,9 +11,14 @@ import type { MessageListRenderers } from './message-list-render-context'
 import { MessageList } from './message-list'
 import type { UnifiedMessage } from './message-list-types'
 import { MessageListRenderProvider } from './message-list-render-context'
-import { MessageSearchBar, NoSearchResultsState } from './message-pane-parts'
 import { UnifiedComposerSection, UnifiedConversationHeader } from './unified-message-pane-sections'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
+import {
+  resolveUnifiedMessagePaneEmptyState,
+  UnifiedMessagePaneDeleteConfirm,
+  useUnifiedMessagePaneAttachHandler,
+  useUnifiedMessagePaneMessageSearch,
+} from './unified-message-pane-layout-sections'
 
 export function UnifiedMessagePaneEmptyState() {
   return (
@@ -98,7 +102,6 @@ type UnifiedMessagePaneConversationLayoutProps = {
 
 export function UnifiedMessagePaneConversationLayout({
   activeDeletingMessageId,
-  canSearchMessages,
   confirmingDeleteMessageId,
   currentUserId,
   currentUserRole,
@@ -150,53 +153,16 @@ export function UnifiedMessagePaneConversationLayout({
   } = composerState
   const { canSearch: canSearchMessages, active: isMessageSearchActive } = searchState
 
-  const handleMessageSearchChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      onMessageSearchChange?.(event.target.value)
-    },
-    [onMessageSearchChange]
-  )
+  const { messageSearchOpen, handleToggleMessageSearch, searchBar } = useUnifiedMessagePaneMessageSearch({
+    canSearchMessages,
+    headerType: header.type,
+    messageSearchQuery,
+    messageSearchActive: isMessageSearchActive,
+    resultCount: messages.length,
+    onMessageSearchChange,
+  })
 
-  const handleClearMessageSearch = useCallback(() => {
-    onMessageSearchChange?.('')
-  }, [onMessageSearchChange])
-
-  const messageSearchInputRef = useRef<HTMLInputElement>(null)
-  const [messageSearchOpen, setMessageSearchOpen] = useState(false)
-
-  const handleToggleMessageSearch = useCallback(() => {
-    setMessageSearchOpen((open) => {
-      const next = !open
-      if (!next) {
-        onMessageSearchChange?.('')
-      }
-      return next
-    })
-  }, [onMessageSearchChange])
-
-  useEffect(() => {
-    if (!messageSearchOpen) return
-    messageSearchInputRef.current?.focus()
-  }, [messageSearchOpen])
-
-  useEffect(() => {
-    if (!canSearchMessages || !onMessageSearchChange || !messageSearchOpen) {
-      return
-    }
-
-    const onGlobalKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      setMessageSearchOpen(false)
-      onMessageSearchChange('')
-    }
-
-    window.addEventListener('keydown', onGlobalKeyDown)
-    return () => window.removeEventListener('keydown', onGlobalKeyDown)
-  }, [canSearchMessages, messageSearchOpen, onMessageSearchChange])
-
-  const handleAttachClick = useCallback(() => {
-    fileInputRef.current?.click()
-  }, [fileInputRef])
+  const handleAttachClick = useUnifiedMessagePaneAttachHandler({ fileInputRef })
 
   const handleConfirmDeleteChange = useCallback(
     (open: boolean) => {
@@ -204,10 +170,10 @@ export function UnifiedMessagePaneConversationLayout({
         handleCancelDelete()
       }
     },
-    [handleCancelDelete]
+    [handleCancelDelete],
   )
 
-  const resolvedEmptyState = isMessageSearchActive ? createElement(NoSearchResultsState) : emptyState
+  const resolvedEmptyState = resolveUnifiedMessagePaneEmptyState(isMessageSearchActive, emptyState)
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background/50 max-lg:min-h-[min(72dvh,640px)] lg:h-[640px]">
@@ -223,17 +189,7 @@ export function UnifiedMessagePaneConversationLayout({
 
       {statusBanner}
 
-      {canSearchMessages && onMessageSearchChange && messageSearchOpen ? (
-        <MessageSearchBar
-          inputRef={messageSearchInputRef}
-          value={messageSearchQuery}
-          onChange={handleMessageSearchChange}
-          resultCount={messages.length}
-          isActive={isMessageSearchActive}
-          placeholder={header.type === 'dm' ? 'Search messages in this conversation…' : 'Search messages in this channel…'}
-          onClear={handleClearMessageSearch}
-        />
-      ) : null}
+      {searchBar}
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <MessageListRenderProvider value={messageListRenderers}>
@@ -285,15 +241,10 @@ export function UnifiedMessagePaneConversationLayout({
         typingIndicator={typingIndicator}
       />
 
-      <ConfirmDialog
-        open={Boolean(confirmingDeleteMessageId)}
+      <UnifiedMessagePaneDeleteConfirm
+        confirmingDeleteMessageId={confirmingDeleteMessageId}
+        activeDeletingMessageId={activeDeletingMessageId}
         onOpenChange={handleConfirmDeleteChange}
-        title="Delete message"
-        description="This removes the message content for everyone in the conversation and keeps a deleted placeholder in the timeline."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        variant="destructive"
-        isLoading={activeDeletingMessageId === confirmingDeleteMessageId}
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
       />

@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useCallback, type ComponentType, type MouseEvent, type ReactNode } from 'react'
+import { Fragment, useCallback, useMemo, type ComponentType, type MouseEvent, type ReactNode } from 'react'
 import { ArrowDown, LoaderCircle, RefreshCw, Smile } from 'lucide-react'
 
 import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
@@ -234,6 +234,29 @@ export type ChannelMessagePendingState = {
   updating: boolean
 }
 
+type ChannelMessageCardWithPendingProps = Omit<
+  Parameters<typeof ChannelMessageCard>[0],
+  'pending'
+> & {
+  isDeleting: boolean
+  isEditing: boolean
+  isUpdating: boolean
+}
+
+export function ChannelMessageCardWithPending({
+  isDeleting,
+  isEditing,
+  isUpdating,
+  ...props
+}: ChannelMessageCardWithPendingProps) {
+  const pending = useMemo(
+    () => ({ deleting: isDeleting, editing: isEditing, updating: isUpdating }),
+    [isDeleting, isEditing, isUpdating],
+  )
+
+  return <ChannelMessageCard pending={pending} {...props} />
+}
+
 export function ChannelMessageCard({
   currentUserId,
   highlighted,
@@ -448,6 +471,14 @@ export function DirectMessageCard({
   )
 }
 
+export type MessageListScrollUi = {
+  isChannel: boolean
+  isLoading: boolean
+  showAvatars: boolean
+  showJumpToLatest: boolean
+  hasMore: boolean
+}
+
 export function MessageListScrollBody({
   currentUserId,
   editingMessageId,
@@ -456,21 +487,17 @@ export function MessageListScrollBody({
   effectiveRenderMessageWrapper,
   groupedMessages,
   handleReaction,
-  hasMore,
   highlightedMessageId,
-  isChannel,
-  isLoading,
   localReactionPending,
   messagesEndRef,
   onLoadMore,
   reactionPendingByMessage,
   renderers,
   scrollRef,
-  showAvatars,
-  showJumpToLatest,
   scrollToLatest,
   handleScroll,
   typingIndicatorText,
+  ui,
 }: {
   currentUserId: string | null
   editingMessageId?: string | null
@@ -479,22 +506,19 @@ export function MessageListScrollBody({
   effectiveRenderMessageWrapper?: (message: UnifiedMessage, children: ReactNode) => ReactNode
   groupedMessages: Map<string, UnifiedMessage[]>
   handleReaction: (messageId: string, emoji: string) => Promise<void>
-  hasMore: boolean
   highlightedMessageId: string | null
-  isChannel: boolean
-  isLoading: boolean
   localReactionPending: string | null
   messagesEndRef: React.RefObject<HTMLDivElement | null>
   onLoadMore: () => void
   reactionPendingByMessage: Record<string, string | null>
   renderers: MessageListRenderers
   scrollRef: React.RefObject<HTMLDivElement | null>
-  showAvatars: boolean
-  showJumpToLatest: boolean
   scrollToLatest: () => void
   handleScroll: () => void
   typingIndicatorText?: string
+  ui: MessageListScrollUi
 }) {
+  const { isChannel, isLoading, showAvatars, showJumpToLatest, hasMore } = ui
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <div
@@ -520,10 +544,12 @@ export function MessageListScrollBody({
 
                     if (isChannel) {
                       const content = (
-                        <ChannelMessageCard
+                        <ChannelMessageCardWithPending
                           currentUserId={currentUserId}
                           highlighted={message.id === highlightedMessageId}
-                          pending={{ deleting: isDeleting, editing: isEditing, updating: isUpdating }}
+                          isDeleting={isDeleting}
+                          isEditing={isEditing}
+                          isUpdating={isUpdating}
                           localReactionPending={localReactionPending}
                           message={message}
                           onReact={handleReaction}

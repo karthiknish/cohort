@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { UnifiedMessage } from './message-list-types'
 import type { MessageListRenderers } from './message-list-sections'
 import { useMessageListRenderContext } from './message-list-render-context'
+import { toMessageContentComponent } from './message-list-render-utils'
 
 function formatDate(ms: number): string {
   const date = new Date(ms)
@@ -106,7 +107,9 @@ export function useMessageListController({
     () => ({
       renderMessageActions: effectiveRenderMessageActions,
       renderMessageAttachments: effectiveRenderMessageAttachments,
-      renderMessageContent: effectiveRenderMessageContent,
+      renderMessageContent: effectiveRenderMessageContent
+        ? toMessageContentComponent(effectiveRenderMessageContent)
+        : undefined,
       renderMessageExtras: effectiveRenderMessageExtras,
       renderMessageFooter: effectiveRenderMessageFooter,
       renderThreadSection: effectiveRenderThreadSection,

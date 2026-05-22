@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { usePrevious } from '@/shared/hooks/use-previous'
 import { LoaderCircle, Send } from 'lucide-react'
 
 import type { FormFieldDefinition } from '@/types/workforce'
@@ -98,7 +99,7 @@ export function ChecklistSubmissionRunner({
 }) {
   const [values, setValues] = useState<AnswerMap>({})
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-  const previousPendingRef = useRef(pending)
+  const previousPending = usePrevious(pending)
 
   const handleChange = useCallback((fieldId: string, value: string) => {
     setValues((prev) => ({ ...prev, [fieldId]: value }))
@@ -132,19 +133,15 @@ export function ChecklistSubmissionRunner({
     void handleSend()
   }, [handleSend])
 
-  const submissionAnnouncement = (() => {
-    const previousPending = previousPendingRef.current
-    let message = ''
-
-    if (pending && !previousPending) {
-      message = `Submitting ${templateTitle}.`
-    } else if (!pending && previousPending) {
-      message = `${templateTitle} submission finished.`
+  const submissionAnnouncement = useMemo(() => {
+    if (pending && previousPending === false) {
+      return `Submitting ${templateTitle}.`
     }
-
-    previousPendingRef.current = pending
-    return message
-  })()
+    if (!pending && previousPending === true) {
+      return `${templateTitle} submission finished.`
+    }
+    return ''
+  }, [pending, previousPending, templateTitle])
 
   if (!templateLegacyId || fields.length === 0) {
     return (

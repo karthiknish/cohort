@@ -386,12 +386,14 @@ function HomeAuthPageContent() {
             <AuthCard
               activeTab={activeTab}
               emailError={emailError}
-              isSubmitting={isSubmitting}
-              isAuthLoading={isAuthLoading}
-              rememberMe={rememberMe}
-              showPassword={showPassword}
-              showConfirmPassword={showConfirmPassword}
-              passwordsMatch={passwordsMatch}
+              ui={{
+                isSubmitting,
+                isAuthLoading,
+                rememberMe,
+                showPassword,
+                showConfirmPassword,
+                passwordsMatch,
+              }}
               signInData={signInData}
               signUpData={signUpData}
               passwordStrength={passwordStrength}

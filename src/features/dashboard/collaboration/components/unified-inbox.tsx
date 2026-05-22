@@ -1,5 +1,7 @@
 'use client'
 
+import { useMemo } from 'react'
+
 import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
@@ -168,6 +170,7 @@ export function UnifiedInbox({
     threadNextCursorByRootId,
     threadLoadingByRootId,
     threadErrorsByRootId,
+    threadUnreadCountsByRootId,
     onLoadThreadReplies,
     onLoadMoreThreadReplies,
     onMarkThreadAsRead,
@@ -214,6 +217,22 @@ export function UnifiedInbox({
     onBackToInbox,
   })
 
+  const listState = useMemo(
+    () => ({ canLoadMore, loading: isCurrentChannelLoading, loadingMore }),
+    [canLoadMore, isCurrentChannelLoading, loadingMore],
+  )
+  const searchState = useMemo(
+    () => ({
+      active: inbox.isChannelSearchActive,
+      searching: searchingMessages,
+    }),
+    [inbox.isChannelSearchActive, searchingMessages],
+  )
+  const composerState = useMemo(
+    () => ({ sending, uploading }),
+    [sending, uploading],
+  )
+
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden max-lg:min-h-[min(72dvh,640px)] lg:h-[640px] lg:flex-row">
       <ConversationListPane
@@ -240,7 +259,9 @@ export function UnifiedInbox({
       >
         {selectedChannel ? (
           <ChannelConversationPane
-            canLoadMore={canLoadMore}
+            listState={listState}
+            searchState={searchState}
+            composerState={composerState}
             channelMessages={channelMessages}
             channelMessagesForPane={inbox.channelMessagesForPane as CollaborationMessage[]}
             channelParticipants={channelParticipants}
@@ -249,9 +270,6 @@ export function UnifiedInbox({
             currentUserRole={currentUserRole}
             deepLinkMessageId={deepLinkMessageId ?? null}
             deepLinkThreadId={deepLinkThreadId ?? null}
-            isChannelSearchActive={inbox.isChannelSearchActive}
-            isCurrentChannelLoading={isCurrentChannelLoading}
-            loadingMore={loadingMore}
             messageDeletingId={messageDeletingId}
             messageInput={messageInput}
             messageSearchQuery={messageSearchQuery}
@@ -274,12 +292,10 @@ export function UnifiedInbox({
             pendingAttachments={pendingAttachments}
             reactionPendingByMessage={reactionPendingByMessage}
             searchHighlights={searchHighlights}
-            searchingMessages={searchingMessages}
             onClearDeepLink={onClearDeepLink}
             messagesError={messagesError}
             onRetryMessages={onRetryMessages}
             selectedChannel={selectedChannel}
-            sending={sending}
             sharedFiles={sharedFiles}
             canManageMembers={canManageSelectedChannel}
             onManageMembers={onManageSelectedChannel}
@@ -289,7 +305,6 @@ export function UnifiedInbox({
             threadNextCursorByRootId={threadNextCursorByRootId}
             threadUnreadCountsByRootId={threadUnreadCountsByRootId}
             typingIndicatorText={inbox.typingIndicatorText}
-            uploading={uploading}
             channelUnreadCount={channelUnreadCount}
             onMarkChannelRead={onMarkChannelRead}
             markChannelReadPending={markChannelReadPending}

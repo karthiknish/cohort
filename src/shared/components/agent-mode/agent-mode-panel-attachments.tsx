@@ -5,7 +5,8 @@ import { AlertCircle, Loader2, X } from 'lucide-react'
 
 import type { AgentAttachmentContext } from '@/lib/agent-attachments'
 import { Button } from '@/shared/ui/button'
-import { AttachmentKindIcon, getAttachmentKind } from '@/shared/ui/chat-media-gallery'
+import { AttachmentKindIcon } from '@/shared/ui/chat-media-gallery'
+import { getAttachmentKind } from '@/shared/ui/chat-media-gallery-utils'
 
 function AttachmentStatusBadge({ attachment }: { attachment: AgentAttachmentContext }) {
   if (attachment.extractionStatus === 'extracting') {

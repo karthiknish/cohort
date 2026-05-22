@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { Link2, LineChart, Settings2 } from 'lucide-react'
 
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
@@ -148,10 +148,10 @@ function AdsAdvancedAnalyticsCollapsible({
   const [hasUserToggled, setHasUserToggled] = useState(false)
   const [open, setOpen] = useState(false)
   const effectiveOpen = hasUserToggled ? open : hasMetricData
-  const handleOpenChange = (next: boolean) => {
+  const handleOpenChange = useCallback((next: boolean) => {
     setHasUserToggled(true)
     setOpen(next)
-  }
+  }, [])
 
   return (
     <Collapsible open={effectiveOpen} onOpenChange={handleOpenChange} className={ADS_PAGE_THEME.advancedPanel}>

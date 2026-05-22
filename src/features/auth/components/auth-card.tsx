@@ -16,12 +16,7 @@ import {
 export function AuthCard({
   activeTab,
   emailError,
-  isSubmitting,
-  isAuthLoading,
-  rememberMe,
-  showPassword,
-  showConfirmPassword,
-  passwordsMatch,
+  ui,
   signInData,
   signUpData,
   passwordStrength,
@@ -55,10 +50,7 @@ export function AuthCard({
             <AuthCardSignInForm
               activeTab={activeTab}
               emailError={emailError}
-              isSubmitting={isSubmitting}
-              isAuthLoading={isAuthLoading}
-              rememberMe={rememberMe}
-              showPassword={showPassword}
+              ui={ui}
               signInData={signInData}
               onRememberMeChange={onRememberMeChange}
               onToggleShowPassword={onToggleShowPassword}
@@ -69,11 +61,7 @@ export function AuthCard({
             <AuthCardSignUpForm
               activeTab={activeTab}
               emailError={emailError}
-              isSubmitting={isSubmitting}
-              isAuthLoading={isAuthLoading}
-              showPassword={showPassword}
-              showConfirmPassword={showConfirmPassword}
-              passwordsMatch={passwordsMatch}
+              ui={ui}
               signUpData={signUpData}
               passwordStrength={passwordStrength}
               onToggleShowPassword={onToggleShowPassword}
@@ -83,11 +71,7 @@ export function AuthCard({
             />
           )}
 
-          <AuthCardSocialFooter
-            isSubmitting={isSubmitting}
-            isAuthLoading={isAuthLoading}
-            onGoogleSignIn={onGoogleSignIn}
-          />
+          <AuthCardSocialFooter ui={ui} onGoogleSignIn={onGoogleSignIn} />
         </div>
 
         <AuthCardTermsFooter />

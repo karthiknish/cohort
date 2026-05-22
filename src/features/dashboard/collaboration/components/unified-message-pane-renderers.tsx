@@ -6,6 +6,37 @@ import type { CollaborationMessage } from '@/types/collaboration'
 
 import type { MessageListRenderers } from './message-list-render-context'
 import type { UnifiedMessage } from './message-list-types'
+
+function collaborationMessageToUnified(message: CollaborationMessage): UnifiedMessage {
+  return {
+    id: message.id,
+    senderId: message.senderId ?? null,
+    senderName: message.senderName,
+    senderRole: message.senderRole,
+    content: message.content ?? '',
+    createdAtMs: message.createdAt ? Date.parse(message.createdAt) : 0,
+    edited: message.isEdited,
+    deleted: message.isDeleted,
+    reactions: message.reactions,
+    attachments: message.attachments?.map((attachment) => ({
+      url: attachment.url,
+      name: attachment.name,
+      mimeType: attachment.type ?? undefined,
+      size:
+        attachment.size != null && attachment.size !== ''
+          ? Number(attachment.size)
+          : undefined,
+    })),
+    sharedTo: message.sharedTo,
+    mentions: message.mentions,
+    threadRootId: message.threadRootId,
+    threadReplyCount: message.threadReplyCount,
+    threadLastReplyAt: message.threadLastReplyAt,
+    isPinned: message.isPinned,
+    deletedBy: message.deletedBy,
+    deletedAt: message.deletedAt,
+  }
+}
 import { SwipeableMessage } from './swipeable-message'
 import { ThreadSection } from './thread-section'
 import {
@@ -34,6 +65,19 @@ function UnifiedThreadReplyRenderer({ reply }: { reply: CollaborationMessage }) 
     throw new Error('UnifiedThreadReplyRenderer requires UnifiedThreadReplyContext')
   }
 
+  const handleToggleReaction = useCallback(
+    (emoji: string) => {
+      void context.handleReaction(reply.id, emoji)
+    },
+    [context, reply.id],
+  )
+  const handleStartEdit = useCallback(() => {
+    context.handleStartEdit(collaborationMessageToUnified(reply))
+  }, [context, reply])
+  const handleRequestDelete = useCallback(() => {
+    context.handleRequestDelete(reply.id)
+  }, [context, reply.id])
+
   return (
     <UnifiedThreadReplyCard
       reply={reply}
@@ -42,11 +86,9 @@ function UnifiedThreadReplyRenderer({ reply }: { reply: CollaborationMessage }) 
       activeDeletingMessageId={context.activeDeletingMessageId}
       messageUpdatingId={context.messageUpdatingId}
       reactionPendingEmoji={context.reactionPendingByMessage[reply.id] ?? null}
-      onToggleReaction={(emoji) => {
-        void context.handleReaction(reply.id, emoji)
-      }}
-      onStartEdit={context.onEditMessage ? () => context.handleStartEdit(reply) : undefined}
-      onRequestDelete={context.onDeleteMessage ? () => context.handleRequestDelete(reply.id) : undefined}
+      onToggleReaction={handleToggleReaction}
+      onStartEdit={context.onEditMessage ? handleStartEdit : undefined}
+      onRequestDelete={context.onDeleteMessage ? handleRequestDelete : undefined}
     />
   )
 }
@@ -200,6 +242,15 @@ export function UnifiedThreadSectionRenderer({
     ],
   )
 
+  const threadPanel = useMemo(
+    () => ({
+      isOpen: Boolean(expanded[threadRootId]),
+      isLoading: threadLoading,
+      hasNextCursor: Boolean(threadNextCursor),
+    }),
+    [expanded, threadLoading, threadNextCursor, threadRootId],
+  )
+
   if (headerType !== 'channel' || message.deleted) {
     return null
   }
@@ -211,11 +262,7 @@ export function UnifiedThreadSectionRenderer({
       replyCount={replyCount}
       unreadCount={unreadCount}
       lastReplyIso={lastReplyIso}
-      panel={{
-        isOpen: Boolean(expanded[threadRootId]),
-        isLoading: threadLoading,
-        hasNextCursor: Boolean(threadNextCursor),
-      }}
+      panel={threadPanel}
       error={threadError}
       replies={threadReplies}
       onToggle={handleToggle}

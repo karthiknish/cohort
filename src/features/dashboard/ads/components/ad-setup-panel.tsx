@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, CheckCircle2, CircleAlert, Loader2, PlugZap } from 'lucide-react'
 

@@ -103,16 +103,11 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
   // Keep options ref in sync without causing re-renders
   useEffect(() => {
     optionsRef.current = options
-  })
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
+  }, [options])
 
   // Sync with global state
   useEffect(() => {
+    isMountedRef.current = true
     const checkGlobalState = setInterval(() => {
       if (!isMountedRef.current) {
         return
@@ -121,7 +116,10 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
         setIsListeningState(globalIsListening)
       }
     }, 100)
-    return () => clearInterval(checkGlobalState)
+    return () => {
+      clearInterval(checkGlobalState)
+      isMountedRef.current = false
+    }
   }, [isListeningState])
 
   const clearTimers = useCallback(() => {

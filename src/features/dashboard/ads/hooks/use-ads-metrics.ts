@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { endOfDay, startOfDay, subDays } from 'date-fns'
 
@@ -96,7 +96,6 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [internalRefreshTick, setInternalRefreshTick] = useState(0)
-  const refreshGenerationRef = useRef(0)
   
   const [dateRange, setDateRange] = useState<DateRange>(() => ({
     start: startOfDay(subDays(new Date(), DEFAULT_DATE_RANGE_DAYS - 1)),
@@ -217,19 +216,6 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     return persistedMetricError
   }, [canQueryConvex, isPreviewMode, persistedMetricError, workspaceId])
 
-  if (internalRefreshTick > refreshGenerationRef.current) {
-    refreshGenerationRef.current = internalRefreshTick
-    if (visibleCount !== METRICS_PAGE_SIZE) {
-      setVisibleCount(METRICS_PAGE_SIZE)
-    }
-    if (persistedMetricError !== null) {
-      setPersistedMetricError(null)
-    }
-    if (loadMoreError !== null) {
-      setLoadMoreError(null)
-    }
-  }
-
   const effectiveServerSummary = useMemo(
     () => serverSideSummary ?? metricsSummaryFromV2Insights(adsInsightsSummary),
     [adsInsightsSummary, serverSideSummary],
@@ -268,6 +254,9 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   // Handlers
   const handleManualRefresh = useCallback(() => {
     if (metricsLoading) return
+    setVisibleCount(METRICS_PAGE_SIZE)
+    setPersistedMetricError(null)
+    setLoadMoreError(null)
     setInternalRefreshTick((tick) => tick + 1)
   }, [metricsLoading])
 
@@ -296,6 +285,9 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   }, [processedMetrics])
 
   const triggerRefresh = useCallback(() => {
+    setVisibleCount(METRICS_PAGE_SIZE)
+    setPersistedMetricError(null)
+    setLoadMoreError(null)
     setInternalRefreshTick((tick) => tick + 1)
   }, [])
 

@@ -53,6 +53,59 @@ interface PollCardProps {
   className?: string
 }
 
+type PollOptionRowFlags = {
+  canVote: boolean
+  hasVoted: boolean
+  isExpired: boolean
+  showResults: boolean
+}
+
+type PollOptionRowItemProps = {
+  flags: PollOptionRowFlags
+  handleToggleOption: (optionId: string) => void
+  index: number
+  option: PollOption
+  selectedOptions: string[]
+  sortedOptions: PollOption[]
+  totalVotes: number
+}
+
+function PollOptionRowItem({
+  flags,
+  handleToggleOption,
+  index,
+  option,
+  selectedOptions,
+  sortedOptions,
+  totalVotes,
+}: PollOptionRowItemProps) {
+  const { canVote, hasVoted, isExpired, showResults } = flags
+  const voteCount = option.voters.length
+  const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0
+  const isSelected = selectedOptions.includes(option.id)
+  const showOptionResults = showResults || hasVoted || isExpired || !canVote
+  const ui = useMemo(
+    () => ({
+      canVote,
+      selected: isSelected,
+      showResults: showOptionResults,
+      hasLeadingWinner: index === 0,
+    }),
+    [canVote, index, isSelected, showOptionResults],
+  )
+
+  return (
+    <PollOptionRow
+      ui={ui}
+      handleToggleOption={handleToggleOption}
+      option={option}
+      percentage={percentage}
+      sortedOptions={sortedOptions}
+      voteCount={voteCount}
+    />
+  )
+}
+
 /**
  * Display a poll with voting functionality
  */
@@ -148,47 +201,45 @@ export function PollCard({
     }
   }, [onEndPoll, poll.id, toast])
 
-  const isExpired = typeof poll.endTime === 'string' ? new Date(poll.endTime) < new Date() : false
+  const isExpired = useMemo(
+    () => (typeof poll.endTime === 'string' ? new Date(poll.endTime) < new Date() : false),
+    [poll.endTime],
+  )
+
+  const footerUi = useMemo(
+    () => ({
+      canEnd: canEnd && !!onEndPoll,
+      canVote,
+      hasVoted,
+      isExpired:
+        typeof poll.endTime === 'string' ? new Date(poll.endTime) < new Date() : false,
+      isVoting,
+      showResults,
+    }),
+    [canEnd, canVote, hasVoted, isVoting, onEndPoll, poll.endTime, showResults],
+  )
 
   return (
     <div className={cn('border rounded-lg overflow-hidden bg-muted/30', className)}>
       <PollCardHeader isExpired={isExpired} poll={poll} totalVotes={totalVotes} />
 
       <div className="p-3 space-y-2">
-        {sortedOptions.map((option, index) => {
-          const voteCount = option.voters.length
-          const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0
-          const isSelected = selectedOptions.includes(option.id)
-          const showOptionResults = showResults || hasVoted || isExpired || !canVote
-
-          return (
-            <PollOptionRow
-              key={option.id}
-              ui={{
-                canVote,
-                selected: isSelected,
-                showResults: showOptionResults,
-                hasLeadingWinner: index === 0,
-              }}
-              handleToggleOption={handleToggleOption}
-              option={option}
-              percentage={percentage}
-              sortedOptions={sortedOptions}
-              voteCount={voteCount}
-            />
-          )
-        })}
+        {sortedOptions.map((option, index) => (
+          <PollOptionRowItem
+            key={option.id}
+            flags={{ canVote, hasVoted, isExpired, showResults }}
+            handleToggleOption={handleToggleOption}
+            index={index}
+            option={option}
+            selectedOptions={selectedOptions}
+            sortedOptions={sortedOptions}
+            totalVotes={totalVotes}
+          />
+        ))}
       </div>
 
       <PollCardFooterActions
-        ui={{
-          canEnd: canEnd && !!onEndPoll,
-          canVote,
-          hasVoted,
-          isExpired,
-          isVoting,
-          showResults,
-        }}
+        ui={footerUi}
         onEndPoll={handleEndPoll}
         onShowResults={handleShowResults}
         onVote={handleVote}

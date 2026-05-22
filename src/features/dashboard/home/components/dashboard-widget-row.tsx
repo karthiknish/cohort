@@ -65,12 +65,17 @@ export function DashboardWidgetRow({
 
   return (
     <li
-      className="flex list-none items-center gap-2 rounded-lg border bg-muted/30 p-2 group"
-      tabIndex={-1}
-      aria-describedby={instructionsId}
+      className="list-none rounded-lg border bg-muted/30 p-2 group"
       aria-label={`${widget.title}, position ${index + 1} of ${total}`}
-      onKeyDown={handleKeyDown}
     >
+      <div
+        role="toolbar"
+        aria-label={`Reorder ${widget.title}`}
+        tabIndex={0}
+        aria-describedby={instructionsId}
+        onKeyDown={handleKeyDown}
+        className="flex items-center gap-2"
+      >
       <div className="flex flex-col gap-0.5">
         <Button
           type="button"
@@ -140,6 +145,7 @@ export function DashboardWidgetRow({
             <TooltipContent>Hide widget</TooltipContent>
           </Tooltip>
         </TooltipProvider>
+      </div>
       </div>
     </li>
   )

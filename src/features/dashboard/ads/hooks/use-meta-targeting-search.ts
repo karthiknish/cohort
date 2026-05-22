@@ -52,15 +52,15 @@ export function useMetaTargetingSearch({
       setError(null)
 
       try {
-        const rows =
+        const rowsPromise =
           mode === 'interests'
-            ? await searchInterests({
+            ? searchInterests({
                 workspaceId,
                 clientId: clientId ?? null,
                 query: trimmed,
                 limit: 20,
               })
-            : await searchGeolocations({
+            : searchGeolocations({
                 workspaceId,
                 clientId: clientId ?? null,
                 query: trimmed,
@@ -68,11 +68,17 @@ export function useMetaTargetingSearch({
               })
 
         if (requestId !== requestIdRef.current) return
-        setResults(Array.isArray(rows) ? rows : [])
+
+        const rows = await rowsPromise
+
+        if (requestId === requestIdRef.current) {
+          setResults(Array.isArray(rows) ? rows : [])
+        }
       } catch (err) {
-        if (requestId !== requestIdRef.current) return
-        setResults([])
-        setError(err instanceof Error ? err.message : 'Search failed')
+        if (requestId === requestIdRef.current) {
+          setResults([])
+          setError(err instanceof Error ? err.message : 'Search failed')
+        }
       } finally {
         if (requestId === requestIdRef.current) {
           setLoading(false)
@@ -84,7 +90,6 @@ export function useMetaTargetingSearch({
 
   useEffect(() => {
     if (!enabled || !workspaceId) {
-      setResults([])
       return
     }
 
@@ -95,10 +100,12 @@ export function useMetaTargetingSearch({
     return () => window.clearTimeout(handle)
   }, [debounceMs, enabled, query, runSearch, workspaceId])
 
+  const visibleResults = !enabled || !workspaceId ? [] : results
+
   return {
     query,
     setQuery,
-    results,
+    results: visibleResults,
     loading,
     error,
     clear: useCallback(() => {

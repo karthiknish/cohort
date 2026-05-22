@@ -23,7 +23,7 @@ import { Textarea } from '@/shared/ui/textarea'
 import { VoiceInputButton } from '@/shared/ui/voice-input'
 
 import { MentionDropdown, type MentionDropdownHandle, type MentionItem } from './mention-dropdown'
-import { splitAgentTextWithMentions } from './mention-highlights'
+import { splitAgentTextWithMentions } from './mention-highlights-utils'
 import { AttachmentList } from './agent-mode-panel-attachments'
 import {
   MOTION_FADE_SLIDE_UP,

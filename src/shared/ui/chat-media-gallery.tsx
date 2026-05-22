@@ -139,7 +139,7 @@ function MediaTile({
             src={attachment.url}
             controls
             aria-label={attachment.name || 'Video attachment'}
-            className="max-h-72 w-full rounded-xl bg-gray-950"
+            className="max-h-72 w-full rounded-xl bg-foreground"
             preload="metadata"
           >
             <track kind="captions" label={`${attachment.name} captions`} />
@@ -364,6 +364,7 @@ export function ChatMediaGallery({
               <iframe
                 src={activePdf.url}
                 title={activePdf.name}
+                sandbox="allow-same-origin"
                 className="min-h-[60vh] w-full flex-1 bg-muted/20"
               />
               <div className="flex justify-end gap-2 border-t border-border/50 px-4 py-3">

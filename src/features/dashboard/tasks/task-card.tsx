@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, ViewTransition } from 'react'
+import { memo, useMemo, ViewTransition } from 'react'
 
 import type { TaskRecord, TaskStatus } from '@/types/tasks'
 import { clickableCardClass, listItemEnterClass } from '@/lib/motion'
@@ -109,6 +109,15 @@ function TaskCardComponent({
     onShare,
   }
 
+  const titleVisibility = useMemo(
+    () => ({
+      ...TASK_CARD_TITLE_VISIBILITY,
+      contextPills: !isBoard,
+      indicators: !isBoard,
+    }),
+    [isBoard],
+  )
+
   return (
     <ViewTransition>
       <div
@@ -155,11 +164,7 @@ function TaskCardComponent({
 
           <TaskCardHeaderSection
             {...headerProps}
-            visibility={{
-              ...TASK_CARD_TITLE_VISIBILITY,
-              contextPills: !isBoard,
-              indicators: !isBoard,
-            }}
+            visibility={titleVisibility}
             titleClassName={isBoard ? 'text-sm' : undefined}
           />
 

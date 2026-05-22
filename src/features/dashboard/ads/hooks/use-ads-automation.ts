@@ -1,7 +1,7 @@
 'use client'
 
 import { notifyFailure } from '@/lib/notifications'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useMutation } from 'convex/react'
 
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -64,8 +64,11 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
   const updateAutomationSettings = useMutation(adsIntegrationsApi.updateAutomationSettings)
   const requestManualSync = useMutation(adsIntegrationsApi.requestManualSync)
 
-  // State
-  const [automationDraft, setAutomationDraft] = useState<Record<string, ProviderAutomationFormState>>({})
+  // State — only local edits; server values are derived below
+  const [automationDraftEdits, setAutomationDraftEdits] = useState<{
+    key: string
+    draft: Record<string, ProviderAutomationFormState>
+  } | null>(null)
   const [savingSettings, setSavingSettings] = useState<Record<string, boolean>>({})
   const [settingsErrors, setSettingsErrors] = useState<Record<string, string>>({})
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({})
@@ -83,15 +86,11 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
     [automationStatuses]
   )
 
-  useEffect(() => {
+  const automationDraftFromServer = useMemo(() => {
     if (automationStatuses.length === 0) {
-      setAutomationDraft(prev => {
-        // Only update if not already empty
-        if (Object.keys(prev).length === 0) return prev
-        return {}
-      })
-      return
+      return {} as Record<string, ProviderAutomationFormState>
     }
+
     const nextDraft: Record<string, ProviderAutomationFormState> = {}
     automationStatuses.forEach((status) => {
       nextDraft[status.providerId] = {
@@ -100,19 +99,31 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
         scheduledTimeframeDays: normalizeTimeframe(status.scheduledTimeframeDays ?? null),
       }
     })
-    setAutomationDraft(nextDraft)
-  }, [automationStatuses, automationStatusesKey])
+    return nextDraft
+  }, [automationStatuses])
+
+  const automationDraft = useMemo(() => {
+    if (automationDraftEdits?.key === automationStatusesKey) {
+      return automationDraftEdits.draft
+    }
+    return automationDraftFromServer
+  }, [automationDraftEdits, automationDraftFromServer, automationStatusesKey])
 
   // Handlers
   const updateAutomationDraft = useCallback(
     (providerId: string, updates: Partial<ProviderAutomationFormState>) => {
-      setAutomationDraft((prev) => {
-        const current = prev[providerId] ?? {
+      setAutomationDraftEdits((prev) => {
+        const base =
+          prev?.key === automationStatusesKey ? prev.draft : automationDraftFromServer
+        const current = base[providerId] ?? {
           autoSyncEnabled: true,
           syncFrequencyMinutes: DEFAULT_SYNC_FREQUENCY_MINUTES,
           scheduledTimeframeDays: DEFAULT_TIMEFRAME_DAYS,
         }
-        return { ...prev, [providerId]: { ...current, ...updates } }
+        return {
+          key: automationStatusesKey,
+          draft: { ...base, [providerId]: { ...current, ...updates } },
+        }
       })
       setSettingsErrors((prev) => {
         if (!prev[providerId]) return prev
@@ -121,7 +132,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
         return next
       })
     },
-    []
+    [automationDraftFromServer, automationStatusesKey],
   )
 
   const handleSaveAutomation = useCallback(

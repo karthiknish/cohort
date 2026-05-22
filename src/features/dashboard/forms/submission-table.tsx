@@ -1,4 +1,5 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { usePrevious } from '@/shared/hooks/use-previous'
 
 import type { ChecklistSubmission } from '@/types/workforce'
 import { Button } from '@/shared/ui/button'
@@ -24,32 +25,41 @@ export function SubmissionTable({
   pendingId = null,
 }: SubmissionTableProps) {
   const colSpan = canReview ? 5 : 4
-  const previousPendingIdRef = useRef<string | null>(pendingId)
+  const previousPendingId = usePrevious(pendingId)
   const pendingActionRef = useRef<{
     id: string
     action: 'ready' | 'follow-up'
     title: string
   } | null>(null)
+  const announcedCompletionKeyRef = useRef<string | null>(null)
 
-  const announcement = (() => {
-    const previousPendingId = previousPendingIdRef.current
-    const pendingAction = pendingActionRef.current
-    let message = ''
-
-    if (pendingAction && previousPendingId === pendingAction.id && pendingId === null) {
-      message =
-        pendingAction.action === 'ready'
-          ? `${pendingAction.title} marked ready.`
-          : `${pendingAction.title} moved to follow up.`
-      pendingActionRef.current = null
+  const pendingAction = pendingActionRef.current
+  const announcement = useMemo(() => {
+    if (!pendingAction || previousPendingId !== pendingAction.id || pendingId !== null) {
+      return ''
     }
 
-    previousPendingIdRef.current = pendingId
-    return message
-  })()
+    return pendingAction.action === 'ready'
+      ? `${pendingAction.title} marked ready.`
+      : `${pendingAction.title} moved to follow up.`
+  }, [pendingAction, pendingId, previousPendingId])
+
+  const [liveAnnouncement, setLiveAnnouncement] = useState('')
+  const completionKey =
+    pendingAction && previousPendingId === pendingAction.id && pendingId === null
+      ? `${pendingAction.id}:${pendingAction.action}`
+      : null
+
+  if (completionKey && announcedCompletionKeyRef.current !== completionKey) {
+    announcedCompletionKeyRef.current = completionKey
+    setLiveAnnouncement(announcement)
+    pendingActionRef.current = null
+  }
 
   const handleNeedsFollowUp = useCallback(
     (submission: ChecklistSubmission) => {
+      setLiveAnnouncement('')
+      announcedCompletionKeyRef.current = null
       pendingActionRef.current = {
         id: submission.id,
         action: 'follow-up',
@@ -62,6 +72,8 @@ export function SubmissionTable({
 
   const handleMarkReady = useCallback(
     (submission: ChecklistSubmission) => {
+      setLiveAnnouncement('')
+      announcedCompletionKeyRef.current = null
       pendingActionRef.current = {
         id: submission.id,
         action: 'ready',
@@ -74,7 +86,7 @@ export function SubmissionTable({
 
   return (
     <Card>
-      <LiveRegion message={announcement} />
+      <LiveRegion message={liveAnnouncement} />
       <CardHeader>
         <CardTitle className="text-lg">Recent submissions</CardTitle>
         <p className="text-sm text-muted-foreground">Quality and status for each run; reviewers can nudge the queue here.</p>

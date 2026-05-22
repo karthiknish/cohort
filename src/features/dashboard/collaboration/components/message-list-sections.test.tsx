@@ -28,6 +28,7 @@ const renderers = {
 }
 
 const emptyReactionPendingByMessage = {} as Record<string, unknown>
+const idleChannelPending = { deleting: false, editing: false, updating: false } as const
 const onReact = vi.fn()
 
 const message: UnifiedMessage = {
@@ -63,7 +64,7 @@ describe('message list sections', () => {
         <ChannelMessageCard
           currentUserId="user-1"
           highlighted={true}
-          pending={{ deleting: false, editing: false, updating: false }}
+          pending={idleChannelPending}
           localReactionPending={null}
           message={message}
           onReact={onReact}

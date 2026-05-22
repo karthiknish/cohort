@@ -284,18 +284,22 @@ export function useAuthSync() {
         return
       }
 
-      const result = await runAuthSyncPipeline(assertActive)
+      const resultPromise = runAuthSyncPipeline(assertActive)
 
       if (syncGenerationRef.current !== runId) {
         return
       }
 
-      setSessionSync((prev) => ({
-        ...prev,
-        convexLegacyId: result.subject,
-        bootstrapProfile: result.profile,
-        syncState: 'success',
-      }))
+      const result = await resultPromise
+
+      if (syncGenerationRef.current === runId) {
+        setSessionSync((prev) => ({
+          ...prev,
+          convexLegacyId: result.subject,
+          bootstrapProfile: result.profile,
+          syncState: 'success',
+        }))
+      }
     } catch (error) {
       if (error instanceof StaleSyncError) {
         return

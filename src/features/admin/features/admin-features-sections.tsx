@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Lightbulb, LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -140,6 +141,11 @@ export function AdminFeaturesPageContent({
   onMoveFeature,
   onSubmitFeature,
 }: AdminFeaturesPageContentProps) {
+  const toolbarActions = useMemo(
+    () => <AdminFeaturesToolbarActions refreshing={refreshing} onRefresh={onRefresh} />,
+    [refreshing, onRefresh],
+  )
+
   return (
     <>
       <AdminPageShell
@@ -151,7 +157,7 @@ export function AdminFeaturesPageContent({
           </>
         }
         isPreviewMode={isPreviewMode}
-        actions={<AdminFeaturesToolbarActions refreshing={refreshing} onRefresh={onRefresh} />}
+        actions={toolbarActions}
       >
         <AdminQueryErrorAlert error={featuresQueryError} title="Unable to load features" />
 

@@ -36,14 +36,13 @@ export const listAdSets = action({
   },
   handler: async (ctx, args): Promise<NormalizedAdSet[]> =>
     withErrorHandling(async (): Promise<NormalizedAdSet[]> => {
-      const identity = await ctx.auth.getUserIdentity()
-      requireIdentity(identity)
-
       const clientId = normalizeClientId(args.clientId ?? null)
-      const [integration, { listMetaAdSets }] = await Promise.all([
+      const [identity, integration, { listMetaAdSets }] = await Promise.all([
+        ctx.auth.getUserIdentity(),
         getFacebookIntegration(ctx, args.workspaceId, clientId),
         import('@/services/integrations/meta-ads/campaign-modules/adsets'),
       ])
+      requireIdentity(identity)
       const [accessToken, adAccountId] = await Promise.all([
         resolveFacebookAccessToken(args.workspaceId, integration, clientId),
         requireFacebookAdAccount(integration),
@@ -85,14 +84,13 @@ export const createAdSet = action({
   },
   handler: async (ctx, args): Promise<{ success: boolean; adSetId?: string }> =>
     withErrorHandling(async () => {
-      const identity = await ctx.auth.getUserIdentity()
-      requireIdentity(identity)
-
       const clientId = normalizeClientId(args.clientId ?? null)
-      const [integration, { createMetaAdSet }] = await Promise.all([
+      const [identity, integration, { createMetaAdSet }] = await Promise.all([
+        ctx.auth.getUserIdentity(),
         getFacebookIntegration(ctx, args.workspaceId, clientId),
         import('@/services/integrations/meta-ads/campaign-modules/adsets'),
       ])
+      requireIdentity(identity)
       const [accessToken, adAccountId] = await Promise.all([
         resolveFacebookAccessToken(args.workspaceId, integration, clientId),
         requireFacebookAdAccount(integration),

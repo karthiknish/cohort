@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import {
   CircleAlert,
@@ -765,6 +765,37 @@ export function AdminUsersPageContent(props: AdminUsersPageContentProps) {
     onRevokeConfirm,
   } = props
 
+  const pageActions = useMemo(
+    () => (
+      <AdminUsersPageActions
+        loading={loading}
+        inviteOpen={inviteOpen}
+        inviteEmail={inviteEmail}
+        inviteRole={inviteRole}
+        inviteSending={inviteSending}
+        onRefresh={onRefresh}
+        onInviteOpenChange={onInviteOpenChange}
+        onInviteEmailChange={onInviteEmailChange}
+        onInviteRoleChange={onInviteRoleChange}
+        onInviteClose={onInviteClose}
+        onInviteUser={onInviteUser}
+      />
+    ),
+    [
+      loading,
+      inviteOpen,
+      inviteEmail,
+      inviteRole,
+      inviteSending,
+      onRefresh,
+      onInviteOpenChange,
+      onInviteEmailChange,
+      onInviteRoleChange,
+      onInviteClose,
+      onInviteUser,
+    ],
+  )
+
   return (
     <>
       <AdminPageShell
@@ -776,21 +807,7 @@ export function AdminUsersPageContent(props: AdminUsersPageContentProps) {
           </>
         }
         isPreviewMode={isPreviewMode}
-        actions={
-          <AdminUsersPageActions
-            loading={loading}
-            inviteOpen={inviteOpen}
-            inviteEmail={inviteEmail}
-            inviteRole={inviteRole}
-            inviteSending={inviteSending}
-            onRefresh={onRefresh}
-            onInviteOpenChange={onInviteOpenChange}
-            onInviteEmailChange={onInviteEmailChange}
-            onInviteRoleChange={onInviteRoleChange}
-            onInviteClose={onInviteClose}
-            onInviteUser={onInviteUser}
-          />
-        }
+        actions={pageActions}
       >
         <AdminUsersSummaryCards summary={summary} loading={loading} />
         <AdminUsersDirectorySection

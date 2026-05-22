@@ -318,6 +318,23 @@ function ProposalsPageContent() {
     return ''
   }, [isPresentationReady, isRecheckingDeck, isSubmitting, submitted])
 
+  const proposalHistoryWorkflow = useMemo(
+    () => ({
+      loading: displayedLoadingState,
+      generating: isSubmitting,
+      creating: isCreatingDraft,
+    }),
+    [displayedLoadingState, isCreatingDraft, isSubmitting],
+  )
+
+  const proposalHistoryCapabilities = useMemo(
+    () => ({
+      canManage: canManageProposals,
+      canCreate: canManageProposals && Boolean(selectedClientId),
+    }),
+    [canManageProposals, selectedClientId],
+  )
+
   const stepContent = useMemo(
     () => (
     <ProposalStepContent
@@ -391,15 +408,8 @@ function ProposalsPageContent() {
         <ProposalHistory
           proposals={displayedProposals}
           draftId={displayedDraftId}
-          workflow={{
-            loading: displayedLoadingState,
-            generating: isSubmitting,
-            creating: isCreatingDraft,
-          }}
-          capabilities={{
-            canManage: canManageProposals,
-            canCreate: canManageProposals && Boolean(selectedClientId),
-          }}
+          workflow={proposalHistoryWorkflow}
+          capabilities={proposalHistoryCapabilities}
           deletingProposalId={deletingProposalId}
           onRefresh={isPreviewMode ? handlePreviewRefresh : handleRefreshProposals}
           onResume={handleResumeProposalInModal}

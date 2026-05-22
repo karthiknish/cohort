@@ -28,6 +28,9 @@ import { ProposalTemplateSelector } from './proposal-template-selector'
 import { ProposalVersionHistory } from './proposal-version-history'
 import { ProposalWizardHeader } from './proposal-wizard-header'
 
+const PREVIEW_PROPOSAL_WORKFLOW = { loading: false, generating: false, creating: false } as const
+const PREVIEW_PROPOSAL_CAPABILITIES = { canCreate: false, canManage: false } as const
+
 export function ProposalPageActions(props: {
   canManage?: boolean
   currentFormData: ProposalFormData
@@ -161,8 +164,8 @@ export function ProposalPreviewModeSection(props: {
       <ProposalHistory
         proposals={previewProposals}
         draftId={previewDraftId}
-        workflow={{ loading: false, generating: false, creating: false }}
-        capabilities={{ canCreate: false, canManage: false }}
+        workflow={PREVIEW_PROPOSAL_WORKFLOW}
+        capabilities={PREVIEW_PROPOSAL_CAPABILITIES}
         deletingProposalId={null}
         onRefresh={onRefreshPreview}
         onResume={onResume}

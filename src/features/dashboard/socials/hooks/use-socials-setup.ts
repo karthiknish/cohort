@@ -83,14 +83,22 @@ export function useSocialsSetup(status: SocialsConnectionStatus | null): UseSoci
     }
   }, [canAct, discoverPages, selectedClientId, selectedPageId, status?.facebookPageId, workspaceId])
 
-  useEffect(() => {
-    if (!status?.connected) {
+  const isConnected = Boolean(status?.connected)
+  const [prevConnected, setPrevConnected] = useState(isConnected)
+  if (isConnected !== prevConnected) {
+    setPrevConnected(isConnected)
+    if (!isConnected) {
       setPages([])
       setSelectedPageId('')
+    }
+  }
+
+  useEffect(() => {
+    if (!isConnected) {
       return
     }
     void loadPages()
-  }, [status?.connected, status?.facebookPageId, loadPages])
+  }, [isConnected, status?.facebookPageId, loadPages])
 
   const confirmSelectedPage = useCallback(async () => {
     if (!canAct || !workspaceId || !selectedPageId) return

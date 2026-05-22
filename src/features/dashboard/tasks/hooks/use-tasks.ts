@@ -284,11 +284,7 @@ export function useTasks({
     return rows.map(mapConvexTaskToTaskRecord)
   }, [clientId, convexTasksQuery, isPreviewMode, userId, workspaceId])
 
-  const tasksSyncKey = useMemo(
-    () =>
-      `${isPreviewMode}|${clientId ?? ''}|${userId ?? ''}|${workspaceId ?? ''}|${syncedTasksFromQuery.length}|${syncedTasksFromQuery[0]?.id ?? ''}|${syncedTasksFromQuery.at(-1)?.updatedAt ?? ''}`,
-    [clientId, isPreviewMode, syncedTasksFromQuery, userId, workspaceId],
-  )
+  const tasksSyncKey = `${isPreviewMode}|${clientId ?? ''}|${userId ?? ''}|${workspaceId ?? ''}|${syncedTasksFromQuery.length}|${syncedTasksFromQuery[0]?.id ?? ''}|${syncedTasksFromQuery.at(-1)?.updatedAt ?? ''}`
   const tasksSyncKeyRef = useRef<string | null>(null)
   if (tasksSyncKeyRef.current !== tasksSyncKey) {
     tasksSyncKeyRef.current = tasksSyncKey

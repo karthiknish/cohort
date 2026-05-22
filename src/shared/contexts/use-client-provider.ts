@@ -28,6 +28,7 @@ export function useClientProvider(): ClientContextValue {
     undefined,
     createInitialClientProviderState,
   )
+  const hasInitializedRef = useRef(false)
   const previewEnabled = useSyncExternalStore(
     (onStoreChange) => {
       if (typeof window === 'undefined') {

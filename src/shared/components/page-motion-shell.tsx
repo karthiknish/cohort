@@ -38,7 +38,9 @@ export function PageMotionShell({ children, className, reveal = true }: PageMoti
   }
 
   return (
-    <Suspense fallback={<PageMotionSuspenseFallback className={className}>{children}</PageMotionSuspenseFallback>}>
+    <Suspense
+      fallback={<PageMotionSuspenseFallback className={className}>{children}</PageMotionSuspenseFallback>}
+    >
       <LazyRevealTransition>
         <PageMotionFadeIn className={className}>{children}</PageMotionFadeIn>
       </LazyRevealTransition>

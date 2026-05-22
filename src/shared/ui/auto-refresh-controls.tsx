@@ -39,8 +39,13 @@ export function AutoRefreshControls({
 }: AutoRefreshProps) {
   const [interval, setRefreshInterval] = useState<RefreshInterval>(() => defaultInterval)
   const timeoutRef = useRef<ReturnType<typeof globalThis.setInterval> | undefined>(undefined)
+  const onRefreshRef = useRef(onRefresh)
 
   const selectedIntervalMs = INTERVAL_OPTIONS.find((opt) => opt.value === interval)?.ms ?? null
+
+  useEffect(() => {
+    onRefreshRef.current = onRefresh
+  }, [onRefresh])
 
   const clearAutoRefresh = useCallback(() => {
     if (timeoutRef.current) {
@@ -57,20 +62,31 @@ export function AutoRefreshControls({
     }
 
     timeoutRef.current = setInterval(() => {
-      onRefresh()
+      void onRefreshRef.current()
     }, intervalMs)
-  }, [clearAutoRefresh, onRefresh])
+  }, [clearAutoRefresh])
 
   // Handle interval change
-  const handleIntervalChange = useCallback((newInterval: RefreshInterval) => {
-    setRefreshInterval(newInterval)
-  }, [])
+  const handleIntervalChange = useCallback(
+    (newInterval: RefreshInterval) => {
+      setRefreshInterval(newInterval)
+      const intervalMs = INTERVAL_OPTIONS.find((opt) => opt.value === newInterval)?.ms ?? null
+      startAutoRefresh(intervalMs)
+    },
+    [startAutoRefresh],
+  )
 
-  // Set up auto-refresh on mount or when interval changes
   useEffect(() => {
-    startAutoRefresh(selectedIntervalMs)
-    return () => clearAutoRefresh()
-  }, [clearAutoRefresh, selectedIntervalMs, startAutoRefresh])
+    const initialIntervalMs = INTERVAL_OPTIONS.find((opt) => opt.value === defaultInterval)?.ms ?? null
+    startAutoRefresh(initialIntervalMs)
+    const intervalStore = timeoutRef
+    return () => {
+      if (intervalStore.current) {
+        clearInterval(intervalStore.current)
+        intervalStore.current = undefined
+      }
+    }
+  }, [defaultInterval, startAutoRefresh])
 
   // Manual refresh handler
   const handleManualRefresh = useCallback(() => {

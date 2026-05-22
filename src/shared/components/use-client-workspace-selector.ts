@@ -113,17 +113,17 @@ export function useClientWorkspaceSelector(_props: ClientWorkspaceSelectorProps)
     dispatch({ type: 'setRemovingId', value: clientId })
     dispatch({ type: 'setErrorMessage', value: null })
 
-    await removeClient(clientId)
-      .catch((removeError: unknown) => {
-        const message =
-          removeError instanceof Error && removeError.message
-            ? removeError.message
-            : 'Unable to remove client'
-        dispatch({ type: 'setErrorMessage', value: message })
-      })
-      .finally(() => {
-        dispatch({ type: 'setRemovingId', value: null })
-      })
+    try {
+      await removeClient(clientId)
+    } catch (removeError: unknown) {
+      const message =
+        removeError instanceof Error && removeError.message
+          ? removeError.message
+          : 'Unable to remove client'
+      dispatch({ type: 'setErrorMessage', value: message })
+    } finally {
+      dispatch({ type: 'setRemovingId', value: null })
+    }
   }, [removeClient])
 
   const handleClientNameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {

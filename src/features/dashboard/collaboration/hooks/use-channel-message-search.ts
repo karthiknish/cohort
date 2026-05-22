@@ -31,13 +31,12 @@ export function useChannelMessageSearch({
   messageSearchQuery,
   isPreviewMode,
 }: UseChannelMessageSearchOptions) {
-  const [search, setSearch] = useState({
+  const [asyncSearch, setAsyncSearch] = useState({
     results: [] as CollaborationMessage[],
     highlights: [] as string[],
     searching: false,
     error: null as string | null,
   })
-  const { results: searchResults, highlights: searchHighlights, searching: searchingMessages, error: searchError } = search
   const [searchRetryNonce, setSearchRetryNonce] = useState(0)
 
   const retrySearch = useCallback(() => {
@@ -70,10 +69,13 @@ export function useChannelMessageSearch({
     return null
   }, [isPreviewMode, messagesByChannel, normalizedMessageSearch, parsedSearch, selectedChannel])
 
-  useEffect(() => {
-    if (resolvedSyncSearch === null) return
-    setSearch(resolvedSyncSearch)
-  }, [resolvedSyncSearch])
+  const search = resolvedSyncSearch ?? asyncSearch
+  const {
+    results: searchResults,
+    highlights: searchHighlights,
+    searching: searchingMessages,
+    error: searchError,
+  } = search
 
   const fetchChannelMessageSearch = useCallback(
     async (isCancelled: () => boolean) => {
@@ -82,7 +84,7 @@ export function useChannelMessageSearch({
       const startMs = parsedSearch.start ? Date.parse(parsedSearch.start) : NaN
       const endMs = parsedSearch.end ? Date.parse(parsedSearch.end) : NaN
 
-      setSearch((prev) => ({ ...prev, searching: true, error: null }))
+      setAsyncSearch((prev) => ({ ...prev, searching: true, error: null }))
 
       if (isCancelled()) return
 
@@ -117,7 +119,7 @@ export function useChannelMessageSearch({
           })
           .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
 
-        setSearch({
+        setAsyncSearch({
           results: mapped,
           highlights,
           searching: false,
@@ -126,7 +128,7 @@ export function useChannelMessageSearch({
       } catch (error: unknown) {
         if (isCancelled()) return
         logError(error, 'useCollaborationData:searchChannel')
-        setSearch({
+        setAsyncSearch({
           results: [],
           highlights: parsedSearch.highlights,
           searching: false,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { MotionCard } from '@/shared/ui/motion-primitives'
 import type { PerformanceAnalysis } from '@/lib/ad-algorithms'
@@ -41,7 +41,26 @@ export function InsightsChartsCard({
   hasConnections = false,
 }: InsightsChartsCardProps) {
   const [selectedProvider, setSelectedProvider] = useState<string>('all')
-  const [activeTab, setActiveTab] = useState<InsightsTabId>('comparison')
+  const [tabSelection, setTabSelection] = useState<{ analysisKey: string; tab: InsightsTabId } | null>(null)
+
+  const analysisKey = useMemo(() => {
+    if (!analysis) return 'empty'
+    return analysis.summaries.map((summary) => summary.providerId).join('|')
+  }, [analysis])
+
+  const defaultActiveTab = useMemo(
+    () => (analysis ? pickDefaultInsightsTab(analysis.chartData) : 'comparison'),
+    [analysis],
+  )
+
+  const activeTab = tabSelection?.analysisKey === analysisKey ? tabSelection.tab : defaultActiveTab
+
+  const setActiveTab = useCallback(
+    (tab: InsightsTabId) => {
+      setTabSelection({ analysisKey, tab })
+    },
+    [analysisKey],
+  )
 
   const providers = useMemo(() => {
     if (!analysis) return []
@@ -82,11 +101,6 @@ export function InsightsChartsCard({
       benchmarks: tabHasChartData('benchmarks', chartData, activeProvider),
     }
   }, [activeProvider, analysis])
-
-  useEffect(() => {
-    if (!analysis) return
-    setActiveTab(pickDefaultInsightsTab(analysis.chartData))
-  }, [analysis])
 
   if (loading) {
     return <InsightsChartsLoadingState />

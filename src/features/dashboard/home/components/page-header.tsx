@@ -70,7 +70,10 @@ export function PageHeader({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground">
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+                        >
                           <CircleHelp className="size-4" />
                           <span className="sr-only">Help</span>
                         </button>

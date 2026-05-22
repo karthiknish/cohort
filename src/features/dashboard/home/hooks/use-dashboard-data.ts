@@ -55,9 +55,6 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     const canQueryConvex = isConvexAuthenticated && !isConvexLoading && !!user?.id && !!workspaceId
 
     const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
-    const [shapeMetricsError, setShapeMetricsError] = useState<string | null>(null)
-    const [shapeTasksError, setShapeTasksError] = useState<string | null>(null)
-    const [shapeProposalsError, setShapeProposalsError] = useState<string | null>(null)
 
     const proposalsArgs = useMemo(() => (usePreviewData || !workspaceId || !canQueryConvex
             ? 'skip'
@@ -126,9 +123,6 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         fallbackMessage: 'Unable to load proposals.',
     })
 
-    const metricsError = mergeQueryErrors(shapeMetricsError, metricsQueryError)
-    const tasksError = mergeQueryErrors(shapeTasksError, tasksQueryError)
-    const proposalsError = mergeQueryErrors(shapeProposalsError, proposalsQueryError)
 
     const triggerReload = useCallback(() => {
         setLastRefreshed(new Date())
@@ -202,10 +196,6 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         }
     }, [usePreviewData, selectedClientId, user?.id, metricsRealtime])
 
-    useEffect(() => {
-        setShapeMetricsError(metricsResult.error)
-    }, [metricsResult.error])
-
     const metrics = metricsResult.data
 
     const metricsLoading = useMemo(() => {
@@ -259,10 +249,6 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
             }
         }
     }, [usePreviewData, selectedClientId, user?.id, convexTasks])
-
-    useEffect(() => {
-        setShapeTasksError(tasksResult.error)
-    }, [tasksResult.error])
 
     const rawTasks = tasksResult.data
 
@@ -323,10 +309,6 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         }
     }, [usePreviewData, selectedClientId, user?.id, user?.role, convexProposals])
 
-    useEffect(() => {
-        setShapeProposalsError(proposalsResult.error)
-    }, [proposalsResult.error])
-
     const proposals = proposalsResult.data
 
     const proposalsLoading = useMemo(() => {
@@ -336,6 +318,10 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     }, [usePreviewData, user?.id, convexProposals])
 
     const isRefreshing = metricsLoading || tasksLoading || proposalsLoading
+
+    const metricsError = mergeQueryErrors(metricsResult.error, metricsQueryError)
+    const tasksError = mergeQueryErrors(tasksResult.error, tasksQueryError)
+    const proposalsError = mergeQueryErrors(proposalsResult.error, proposalsQueryError)
 
     return useMemo(() => ({
         metrics,

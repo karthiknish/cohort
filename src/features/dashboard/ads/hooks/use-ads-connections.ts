@@ -221,7 +221,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   // Connection state
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null)
   const [connectionErrors, setConnectionErrors] = useState<Record<string, string>>({})
-  const [connectedProviders, setConnectedProviders] = useState<Record<string, boolean>>({})
+  const [connectedProviderOverrides, setConnectedProviderOverrides] = useState<Record<string, boolean>>({})
   // integrationStatuses is derived directly from mappedStatuses
   const [syncingProviders, setSyncingProviders] = useState<Record<string, boolean>>({})
 
@@ -558,9 +558,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     }
   }, [initializeAdAccount, toast, selectedClientId, triggerRefresh, workspaceId])
 
-  // Sync connected providers from statuses
-  useEffect(() => {
-    if (!mappedStatuses?.statuses) return
+  const connectedProvidersFromStatuses = useMemo(() => {
+    if (!mappedStatuses?.statuses) {
+      return {} as Record<string, boolean>
+    }
+
     const updatedConnected: Record<string, boolean> = {}
     mappedStatuses.statuses.forEach((status) => {
       // `status.status` is derived from lastSyncStatus. Immediately after OAuth we store
@@ -568,8 +570,13 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       // look disconnected even though the account is linked.
       updatedConnected[status.providerId] = Boolean(status.linkedAt) || status.status === 'success'
     })
-    setConnectedProviders(updatedConnected)
+    return updatedConnected
   }, [mappedStatuses])
+
+  const connectedProviders = useMemo(
+    () => ({ ...connectedProvidersFromStatuses, ...connectedProviderOverrides }),
+    [connectedProviderOverrides, connectedProvidersFromStatuses],
+  )
 
   // URL signaling handler
   const oauthProcessedRef = useRef<Record<string, boolean>>({})
@@ -764,7 +771,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
     try {
       await action()
-      setConnectedProviders((prev) => ({ ...prev, [providerId]: true }))
+      setConnectedProviderOverrides((prev) => ({ ...prev, [providerId]: true }))
       triggerRefresh()
     } catch (error: unknown) {
       reportConvexFailure({
@@ -777,7 +784,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         ...prev,
         [providerId]: convexErrorMessage(error, 'Connection failed.'),
       }))
-      setConnectedProviders((prev) => ({ ...prev, [providerId]: false }))
+      setConnectedProviderOverrides((prev) => ({ ...prev, [providerId]: false }))
     } finally {
       setConnectingProvider(null)
     }
@@ -898,7 +905,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       // Delete sync jobs first, then the integration
       await deleteSyncJobsMutation({ workspaceId, providerId, clientId: selectedClientId ?? null })
       await deleteAdIntegrationMutation({ workspaceId, providerId, clientId: selectedClientId ?? null })
-      setConnectedProviders((prev) => ({ ...prev, [providerId]: false }))
+      setConnectedProviderOverrides((prev) => ({ ...prev, [providerId]: false }))
       toast({
         title: TOAST_TITLES.DISCONNECTED,
         description: options?.clearHistoricalData

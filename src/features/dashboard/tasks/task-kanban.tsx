@@ -567,14 +567,12 @@ function KanbanTaskItem({
   )
 
   return (
-    <div
+    <article
       tabIndex={bulkActive || pending ? -1 : 0}
-      aria-selected={selected}
       aria-label={task.title}
       aria-describedby={keyboardInstructionsId}
       aria-grabbed={isDragging}
       aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
-      aria-roledescription="task card"
       draggable={!bulkActive && !pending}
       onDragStart={onItemDragStart}
       onDragEnd={handleDragEnd}
@@ -600,6 +598,6 @@ function KanbanTaskItem({
         onSelectToggle={onToggleTaskSelection}
         searchQuery={searchQuery}
       />
-    </div>
+    </article>
   )
 }

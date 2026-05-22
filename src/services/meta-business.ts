@@ -127,7 +127,9 @@ export async function completeMetaOAuthFlow(options: {
   let longLivedToken: string | null = null
   let expiresIn: number | undefined = tokenResponse.expires_in
 
-  const attemptExchange = async (attempt: number): Promise<void> => {
+  const attemptExchange = async (
+    attempt: number,
+  ): Promise<{ accessToken: string; expiresIn?: number }> => {
     try {
       logger.debug('[Meta OAuth Flow] Attempting long-lived token exchange', { userId, attempt: attempt + 1 })
       
@@ -181,6 +183,7 @@ export async function completeMetaOAuthFlow(options: {
       longLivedToken = extended.access_token
       expiresIn = extended.expires_in
       logger.info('[Meta OAuth Flow] Long-lived token obtained successfully', { userId, expiresIn })
+      return { accessToken: extended.access_token, expiresIn: extended.expires_in }
     } catch (exchangeError) {
       const message = exchangeError instanceof Error ? exchangeError.message : 'Long-lived token exchange failed'
       const isRetryable = exchangeError instanceof MetaOAuthError
@@ -206,15 +209,16 @@ export async function completeMetaOAuthFlow(options: {
     }
   }
 
-  await attemptExchange(0)
-
-  if (!longLivedToken) {
-    throw new MetaOAuthError('Failed to exchange long-lived Meta token')
+  const ensureLongLivedToken = async (): Promise<Date | null> => {
+    const exchange = await attemptExchange(0)
+    longLivedToken = exchange.accessToken
+    expiresIn = exchange.expiresIn
+    return exchange.expiresIn ? new Date(Date.now() + exchange.expiresIn * 1000) : null
   }
 
-  const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000) : null
-
   if (entryPoint === 'socials') {
+    const expiresAt = await ensureLongLivedToken()
+
     await persistSocialIntegrationTokens({
       userId,
       clientId: clientId ?? null,
@@ -231,6 +235,8 @@ export async function completeMetaOAuthFlow(options: {
     return
   }
 
+  const adsExpiresAt = await ensureLongLivedToken()
+
   // Ads: persist tokens only. Ad account selection happens in setup UI.
   await persistIntegrationTokens({
     userId,
@@ -241,7 +247,7 @@ export async function completeMetaOAuthFlow(options: {
     accountId: null,
     accountName: null,
     status: 'pending',
-    accessTokenExpiresAt: expiresAt,
+    accessTokenExpiresAt: adsExpiresAt,
   })
 
   logger.info('[Meta OAuth Flow] Ads integration persisted successfully; awaiting account selection', {

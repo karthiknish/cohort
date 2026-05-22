@@ -87,22 +87,28 @@ export function MetaTargetingSearchCombobox({
       {open && (results.length > 0 || error || (query.trim().length >= 2 && !loading)) ? (
         <ul
           id={listId}
-          role="listbox"
-          className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-border bg-popover py-1 shadow-md"
+          className="absolute z-50 mt-1 max-h-48 w-full list-none overflow-auto rounded-lg border border-border bg-popover py-1 shadow-md"
         >
           {error ? (
-            <li className="px-3 py-2 text-xs text-destructive">{error}</li>
+            <li>
+              <p className="px-3 py-2 text-xs text-destructive" role="status">
+                {error}
+              </p>
+            </li>
           ) : null}
           {results.map((item) => (
-            <MetaTargetingResultOption
-              key={`${item.type}-${item.id}`}
-              item={item}
-              onMouseDown={handleResultMouseDown}
-              onSelect={handleSelect}
-            />
+            <li key={`${item.type}-${item.id}`}>
+              <MetaTargetingResultOption
+                item={item}
+                onMouseDown={handleResultMouseDown}
+                onSelect={handleSelect}
+              />
+            </li>
           ))}
           {!error && results.length === 0 && query.trim().length >= 2 && !loading ? (
-            <li className="px-3 py-2 text-xs text-muted-foreground">No matches - try a different term</li>
+            <li>
+              <p className="px-3 py-2 text-xs text-muted-foreground">No matches - try a different term</p>
+            </li>
           ) : null}
         </ul>
       ) : null}
@@ -124,24 +130,24 @@ function MetaTargetingResultOption({
   }, [item, onSelect])
 
   return (
-    <li role="option" aria-selected={false}>
-      <Button
-        type="button"
-        variant="ghost"
-        className="h-auto w-full justify-start rounded-none px-3 py-2 text-left font-normal"
-        onMouseDown={onMouseDown}
-        onClick={selectTargetingResult}
-      >
-        <span className="block text-sm font-medium">{item.name}</span>
-        {item.path?.length ? (
-          <span className="block text-[10px] text-muted-foreground">{item.path.join(' › ')}</span>
-        ) : null}
-        {item.audienceSize ? (
+    <Button
+      type="button"
+      role="option"
+      aria-selected={false}
+      variant="ghost"
+      className="h-auto w-full justify-start rounded-none px-3 py-2 text-left font-normal"
+      onMouseDown={onMouseDown}
+      onClick={selectTargetingResult}
+    >
+      <span className="block text-sm font-medium">{item.name}</span>
+      {item.path?.length ? (
+        <span className="block text-[10px] text-muted-foreground">{item.path.join(' › ')}</span>
+      ) : null}
+      {item.audienceSize ? (
           <span className="block text-[10px] text-muted-foreground">
             ~{item.audienceSize.toLocaleString()} people
           </span>
         ) : null}
-      </Button>
-    </li>
+    </Button>
   )
 }

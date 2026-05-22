@@ -89,7 +89,7 @@ export function AgentModePanel(props: AgentModePanelProps) {
         onRetryUserMessage={onRetryUserMessage}
         onConfirmPending={onConfirmPending}
         onUndoAction={onUndoAction}
-        processingSteps={processingSteps}
+        processingSteps={processingSteps ?? []}
         processingLabel={processingLabel}
         scrollAreaRef={scrollAreaRef}
         onMessagesScroll={onMessagesScroll}

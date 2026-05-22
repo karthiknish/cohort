@@ -670,6 +670,14 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     setIsMinimizedPreference((current) => !current)
   }, [canMinimizeRoom])
 
+  const [prevJoinConfig, setPrevJoinConfig] = useState(joinConfig)
+  if (joinConfig !== prevJoinConfig) {
+    setPrevJoinConfig(joinConfig)
+    if (!joinConfig) {
+      setPipActive(false)
+    }
+  }
+
   useEffect(() => {
     if (joinConfig) {
       return
@@ -678,8 +686,6 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     if (typeof document !== 'undefined' && document.pictureInPictureElement && document.exitPictureInPicture) {
       void document.exitPictureInPicture().catch(() => undefined)
     }
-
-    setPipActive(false)
   }, [joinConfig])
 
   useEffect(() => {
