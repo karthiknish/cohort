@@ -5,6 +5,7 @@ import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-the
 import { MotionCard } from '@/shared/ui/motion-primitives'
 import type { PerformanceAnalysis } from '@/lib/ad-algorithms'
 
+import type { AdsMetricsDisplayState } from './ads-metrics-display-state'
 import {
   getProviderDisplayName,
   pickDefaultInsightsTab,
@@ -32,6 +33,7 @@ interface InsightsChartsCardProps {
   currency?: string
   loading?: boolean
   hasConnections?: boolean
+  metricsDisplayState?: AdsMetricsDisplayState
 }
 
 export function InsightsChartsCard({
@@ -39,6 +41,7 @@ export function InsightsChartsCard({
   currency = 'USD',
   loading = false,
   hasConnections = false,
+  metricsDisplayState,
 }: InsightsChartsCardProps) {
   const [selectedProvider, setSelectedProvider] = useState<string>('all')
   const [tabSelection, setTabSelection] = useState<{ analysisKey: string; tab: InsightsTabId } | null>(null)
@@ -107,7 +110,12 @@ export function InsightsChartsCard({
   }
 
   if (!analysis || analysis.summaries.length === 0) {
-    return <InsightsChartsEmptyState hasConnections={hasConnections} />
+    return (
+      <InsightsChartsEmptyState
+        hasConnections={hasConnections}
+        metricsDisplayState={metricsDisplayState}
+      />
+    )
   }
 
   const funnelStages = analysis.chartData.funnelCharts[activeProvider]

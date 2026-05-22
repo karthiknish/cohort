@@ -36,7 +36,7 @@ describe('tasks document import review helpers', () => {
         buildTask({
           assignmentStatus: 'unassigned',
           documentAssigneeNames: ['Deepak'],
-          suggestions: ['Deepak Sharma'],
+          suggestions: ['Deepak Karnan'],
         }),
       ]),
     ).toBe(true)
@@ -73,11 +73,23 @@ describe('tasks document import review helpers', () => {
         buildTask({
           assignmentStatus: 'unassigned',
           documentAssigneeNames: ['Deepak'],
-          suggestions: ['Deepak Sharma'],
+          suggestions: ['Deepak Karnan'],
           assignedToUserIds: [],
         }),
       ]),
     ).toBe('Pick workspace teammates for 1 task.')
+  })
+
+  it('describes client roster matches in the assignee prompt', () => {
+    expect(
+      buildAssigneeReviewPrompt(
+        buildTask({
+          assignmentStatus: 'unassigned',
+          documentAssigneeNames: ['Deepak'],
+          suggestions: ['Deepak Karnan'],
+        }),
+      ),
+    ).toContain('client roster')
   })
 
   it('blocks free-text assignees that are not workspace members', () => {

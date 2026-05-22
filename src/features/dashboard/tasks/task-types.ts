@@ -204,6 +204,13 @@ export function isFutureTaskDueDateValue(value: string | null | undefined, now: 
   return isFutureTaskDueDate(date, now)
 }
 
+export function assignableImportParticipants(participants: TaskParticipant[]): TaskParticipant[] {
+  return participants.filter((participant) => {
+    const id = participant.id?.trim()
+    return Boolean(id && !id.startsWith('member-'))
+  })
+}
+
 // Convert ClientTeamMember[] to MentionableUser[] for MentionInput
 export function teamMembersToMentionable(
   members: TaskParticipant[]

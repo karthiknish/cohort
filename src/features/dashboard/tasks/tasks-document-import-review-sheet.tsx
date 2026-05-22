@@ -8,7 +8,7 @@ import { Label } from '@/shared/ui/label'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet'
 import { cn } from '@/lib/utils'
 
-import { teamMembersToMentionable, type TaskParticipant } from './task-types'
+import { assignableImportParticipants, teamMembersToMentionable, type TaskParticipant } from './task-types'
 import { TASKS_THEME } from './tasks-theme'
 import type { ProposedImportTask } from './tasks-document-import-types'
 import {
@@ -40,7 +40,10 @@ export function TasksDocumentImportReviewSheet({
   onConfirm,
   onDiscard,
 }: TasksDocumentImportReviewSheetProps) {
-  const mentionableUsers = useMemo(() => teamMembersToMentionable(participants), [participants])
+  const mentionableUsers = useMemo(
+    () => teamMembersToMentionable(assignableImportParticipants(participants)),
+    [participants],
+  )
   const selectedCount = proposedTasks.filter((task) => task.include).length
   const reviewBlocker = getImportReviewBlocker(proposedTasks)
   const reviewDescription = buildImportReviewDescription(documentSummary, proposedTasks)

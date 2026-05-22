@@ -39,6 +39,15 @@ describe('cross-channel overview card utils', () => {
     expect(computeCtrParts(5000, 4160)).toEqual({ rate: 1, clicksExceedImpressions: true })
   })
 
+  it('formats dormant synced accounts with explicit zeros', () => {
+    const { cards } = buildCrossChannelSummaryCards([], 'synced_no_delivery')
+    const spend = cards.find((card) => card.id === 'spend')
+    const impressions = cards.find((card) => card.id === 'impressions')
+
+    expect(spend?.helper).toContain('No spend recorded')
+    expect(impressions?.value).toBe('0')
+  })
+
   it('formats money in a single currency for connected meta-only data', () => {
     const { cards } = buildCrossChannelSummaryCards([metaRow()])
     const spend = cards.find((card) => card.id === 'spend')

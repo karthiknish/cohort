@@ -11,6 +11,7 @@ import { MetricsTableCard } from '@/features/dashboard/ads/components/metrics-ta
 import { PerformanceSummaryCard } from '@/features/dashboard/ads/components/performance-summary-card'
 import { WorkflowCard } from '@/features/dashboard/ads/components/workflow-card'
 import { AdSetupPanel } from '@/features/dashboard/ads/components/ad-setup-panel'
+import { resolveAdsMetricsDisplayState } from '@/features/dashboard/ads/components/ads-metrics-display-state'
 import type { DateRange } from '@/features/dashboard/ads/components/date-range-picker'
 import type {
   useAdsConnections,
@@ -67,6 +68,7 @@ export type AdsPageSetupFlags = {
 type AdsPageSectionsProps = {
   flags: AdsPageSetupFlags
   connectedAccountCount: number
+  hasSuccessfulSync: boolean
   connections: ReturnType<typeof useAdsConnections>
   metrics: ReturnType<typeof useAdsMetrics>
   derivedMetrics: ReturnType<typeof useDerivedMetrics>
@@ -275,6 +277,7 @@ export function AdsPageAnalyticsSection({
   activeCurrency,
   connectedProviderIds,
   connectedAccountCount,
+  hasSuccessfulSync,
   suppressMetricsErrors,
   dateRange,
   providerCurrencyMap,
@@ -285,6 +288,7 @@ export function AdsPageAnalyticsSection({
   | 'activeCurrency'
   | 'connectedProviderIds'
   | 'connectedAccountCount'
+  | 'hasSuccessfulSync'
   | 'suppressMetricsErrors'
   | 'dateRange'
 > & { providerCurrencyMap: Record<string, string> }) {
@@ -301,6 +305,20 @@ export function AdsPageAnalyticsSection({
     handleManualRefresh,
   } = metrics
 
+  const metricsDisplayState = resolveAdsMetricsDisplayState({
+    metricsLoading: initialMetricsLoading || metricsLoading,
+    connectedAccountCount,
+    hasSuccessfulSync,
+    hasMetricData,
+  })
+
+  const performanceEmptyMessage =
+    metricsDisplayState === 'synced_no_delivery'
+      ? 'This account synced successfully, but Meta returned no delivery metrics for the selected dates. Try widening the date range or confirm campaigns are active in Ads Manager.'
+      : metricsDisplayState === 'needs_sync'
+        ? 'Your ad account is connected. Run a sync to populate spend, clicks, and conversions for this date range.'
+        : undefined
+
   return (
     <>
       <FadeIn>
@@ -310,6 +328,7 @@ export function AdsPageAnalyticsSection({
           currency={activeCurrency}
           connectedProviderIds={connectedProviderIds}
           hasConnectedAds={connectedAccountCount > 0}
+          hasSuccessfulSync={hasSuccessfulSync}
           hasMetricData={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}
@@ -332,6 +351,10 @@ export function AdsPageAnalyticsSection({
           onRefresh={handleManualRefresh}
           onExport={handleExport}
           showActions={false}
+          emptyMessage={performanceEmptyMessage}
+          emptyCtaLabel={
+            metricsDisplayState === 'synced_no_delivery' ? 'Adjust date range' : 'Run first sync'
+          }
         />
       </FadeIn>
 
@@ -353,6 +376,7 @@ export function AdsPageAnalyticsSection({
             currency={activeCurrency}
             loading={metricsLoading || initialMetricsLoading}
             hasConnections={connectedAccountCount > 0}
+            metricsDisplayState={metricsDisplayState}
           />
         </AdsSuspenseReveal>
       </FadeIn>

@@ -1,6 +1,7 @@
 'use node'
 
 import { action } from './_generated/server'
+import { api } from './_generated/api'
 import { v } from 'convex/values'
 import type { Id } from './_generated/dataModel'
 
@@ -14,10 +15,12 @@ import { resolveAgentDueDateMs } from './agentActions/helpers/dates'
 import { asNonEmptyString, asStringArray } from './agentActions/helpers/values'
 import {
   assessDocumentImportDueDate,
+  buildAssigneeMemberPool,
   enrichExtractedTasksWithDocumentAssignees,
   parseExtractedTasksResponse,
   resolveDocumentImportAssignees,
   resolveDocumentImportPriority,
+  type DocumentImportWorkspaceMember,
   type RawExtractedTask,
 } from './taskDocumentImportParsing'
 
@@ -173,15 +176,37 @@ async function loadVisualGeminiParts(
   )
 }
 
-async function resolveTaskAssignment(
+async function loadClientRosterNames(
   ctx: Parameters<typeof listWorkspaceMembers>[0],
   workspaceId: string,
-  rawTask: RawExtractedTask,
-): Promise<Pick<ProposedImportTask, 'assignedToUserIds' | 'assignmentStatus' | 'suggestions'>> {
-  const assignedToNames = asStringArray(rawTask.assignedToNames)
-  const members = await listWorkspaceMembers(ctx, workspaceId)
+  clientId: string | null,
+): Promise<string[]> {
+  if (!clientId) return []
 
-  return resolveDocumentImportAssignees(assignedToNames, members)
+  const client = await ctx.runQuery(api.clients.getByLegacyId, {
+    workspaceId,
+    legacyId: clientId,
+  })
+
+  if (!client) return []
+
+  const names: string[] = []
+  const accountManager = client.accountManager?.trim()
+  if (accountManager) names.push(accountManager)
+
+  for (const member of client.teamMembers ?? []) {
+    const name = member.name?.trim()
+    if (name) names.push(name)
+  }
+
+  return names
+}
+
+async function resolveTaskAssignment(
+  assignedToNames: string[],
+  assigneeMemberPool: DocumentImportWorkspaceMember[],
+): Promise<Pick<ProposedImportTask, 'assignedToUserIds' | 'assignmentStatus' | 'suggestions'>> {
+  return resolveDocumentImportAssignees(assignedToNames, assigneeMemberPool)
 }
 
 async function resolveTaskDueDate(
@@ -233,17 +258,22 @@ async function resolveTaskDueDate(
 async function mapRawTasksToProposals(
   ctx: Parameters<typeof listWorkspaceMembers>[0],
   workspaceId: string,
+  clientId: string | null,
   rawTasks: RawExtractedTask[],
 ): Promise<ProposedImportTask[]> {
   const nowMs = Date.now()
+  const workspaceMembers = await listWorkspaceMembers(ctx, workspaceId)
+  const clientRosterNames = await loadClientRosterNames(ctx, workspaceId, clientId)
+  const assigneeMemberPool = buildAssigneeMemberPool(workspaceMembers, clientRosterNames)
 
   const proposals = await Promise.all(
     rawTasks.slice(0, 25).map(async (rawTask) => {
       const title = asNonEmptyString(rawTask.title)
       if (!title) return null
 
+      const assignedToNames = asStringArray(rawTask.assignedToNames)
       const [assignment, dueDate] = await Promise.all([
-        resolveTaskAssignment(ctx, workspaceId, rawTask),
+        resolveTaskAssignment(assignedToNames, assigneeMemberPool),
         resolveTaskDueDate(rawTask, nowMs),
       ])
       const documentAssigneeNames: string[] = []
@@ -339,7 +369,12 @@ export const extractTasksFromDocument = action({
         extractedText,
         parseExtractedTasksResponse(raw),
       )
-      const proposedTasks = await mapRawTasksToProposals(ctx, workspaceId, rawTasks)
+      const proposedTasks = await mapRawTasksToProposals(
+        ctx,
+        workspaceId,
+        args.clientId ?? null,
+        rawTasks,
+      )
 
       if (proposedTasks.length === 0) {
         throw Errors.validation.invalidInput(

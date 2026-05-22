@@ -21,6 +21,11 @@ import {
   totalsFromServerSummary,
   totalsHaveDeliveryActivity,
 } from './cross-channel-overview-card.utils'
+import {
+  resolveAdsMetricsDisplayState,
+  type AdsMetricsDisplayState,
+} from './ads-metrics-display-state'
+import { parseMetricDate } from '../hooks/use-ads-metrics.helpers'
 
 const EMPTY_CONNECTED_PROVIDER_IDS: string[] = []
 
@@ -40,6 +45,8 @@ interface CrossChannelOverviewCardProps {
   showDateAndExport?: boolean
   /** At least one ad platform is linked (used for chart empty-state copy). */
   hasConnectedAds?: boolean
+  /** At least one linked platform has completed a successful sync. */
+  hasSuccessfulSync?: boolean
 }
 
 export function CrossChannelOverviewCard({
@@ -55,6 +62,7 @@ export function CrossChannelOverviewCard({
   onExport,
   showDateAndExport = true,
   hasConnectedAds = false,
+  hasSuccessfulSync = false,
 }: CrossChannelOverviewCardProps) {
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
 
@@ -95,12 +103,36 @@ export function CrossChannelOverviewCard({
     [canonicalConnected, currency, filteredMetrics, selectedProviders, serverSideSummary],
   )
 
+  const displayState = useMemo<AdsMetricsDisplayState>(
+    () =>
+      resolveAdsMetricsDisplayState({
+        metricsLoading: initialMetricsLoading || metricsLoading,
+        connectedAccountCount: hasConnectedAds ? 1 : 0,
+        hasSuccessfulSync,
+        hasMetricData,
+      }),
+    [hasConnectedAds, hasMetricData, hasSuccessfulSync, initialMetricsLoading, metricsLoading],
+  )
+
   const { cards: summaryCards, chartCurrency } = useMemo(
-    () => buildCrossChannelSummaryCards(overviewMetrics),
-    [overviewMetrics],
+    () => buildCrossChannelSummaryCards(overviewMetrics, displayState),
+    [displayState, overviewMetrics],
   )
 
   const displayCurrency = chartCurrency ?? currency
+
+  const chartMetrics = useMemo(() => {
+    const dailyRows = filteredMetrics.filter(
+      (metric) => metric.date !== 'summary' && parseMetricDate(metric.date) !== null,
+    )
+    if (dailyRows.length > 0) {
+      return dailyRows
+    }
+
+    return overviewMetrics.filter(
+      (metric) => metric.date !== 'summary' && parseMetricDate(metric.date) !== null,
+    )
+  }, [filteredMetrics, overviewMetrics])
 
   const toggleProvider = useCallback((providerId: string) => {
     setSelectedProviders((prev) =>
@@ -136,15 +168,16 @@ export function CrossChannelOverviewCard({
       {initialMetricsLoading ? (
         <CrossChannelOverviewLoadingState />
       ) : !hasMetricData && !hasConnectedAds ? (
-        <CrossChannelOverviewEmptyState />
+        <CrossChannelOverviewEmptyState displayState="needs_connection" />
       ) : (
         <CrossChannelOverviewContent
           currency={displayCurrency}
-          metrics={filteredMetrics}
+          chartMetrics={chartMetrics}
           metricsLoading={metricsLoading}
           summaryCards={summaryCards}
           hasAggregateChartFallback={hasAggregateChartFallback}
           hasConnectedAds={hasConnectedAds}
+          displayState={displayState}
         />
       )}
     </MotionCard>

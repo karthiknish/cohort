@@ -43,10 +43,10 @@ export function buildAssigneeReviewPrompt(task: ProposedImportTask): string {
 
   if (task.documentAssigneeNames.length > 0) {
     if (task.suggestions.length > 0) {
-      return `The document assigns this to “${documentNames}”. Match it to a workspace profile — suggestions: ${task.suggestions.join(', ')}.`
+      return `The document assigns this to “${documentNames}”. It likely matches ${task.suggestions.join(', ')} on the client roster — pick a linked workspace teammate below or leave unassigned.`
     }
 
-    return `The document assigns this to “${documentNames}”, but that person isn't in your workspace. Pick a teammate below or leave unassigned.`
+    return `The document assigns this to “${documentNames}”, but that name is not linked to a workspace profile yet. Pick a teammate below or leave unassigned.`
   }
 
   if (task.suggestions.length > 0) {

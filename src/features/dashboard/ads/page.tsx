@@ -205,6 +205,7 @@ export default function AdsPage() {
         activeCurrency={activeCurrency}
         connectedProviderIds={connectedProviderIds}
         connectedAccountCount={connectedAccountCount}
+        hasSuccessfulSync={hasSuccessfulSync}
         suppressMetricsErrors={suppressMetricsErrors}
         dateRange={metrics.dateRange}
         providerCurrencyMap={providerCurrencyMap}
@@ -216,6 +217,7 @@ export default function AdsPage() {
       activeCurrency,
       connectedProviderIds,
       connectedAccountCount,
+      hasSuccessfulSync,
       suppressMetricsErrors,
       providerCurrencyMap,
     ],

@@ -170,6 +170,37 @@ function findSimilarMemberSuggestions(
   return [...suggestions].slice(0, limit)
 }
 
+export function buildAssigneeMemberPool(
+  workspaceMembers: DocumentImportWorkspaceMember[],
+  clientRosterNames: string[],
+): DocumentImportWorkspaceMember[] {
+  const pool = new Map<string, DocumentImportWorkspaceMember>()
+
+  for (const member of workspaceMembers) {
+    const name = member.name.trim()
+    if (!name) continue
+    pool.set(normalizeAssigneeLookup(name), member)
+  }
+
+  for (const rawName of clientRosterNames) {
+    const name = rawName.trim()
+    if (!name) continue
+
+    const key = normalizeAssigneeLookup(name)
+    if (pool.has(key)) continue
+
+    const linked = findWorkspaceMemberMatches(name, workspaceMembers)
+    if (linked.length === 1 && linked[0]?.id) {
+      pool.set(key, linked[0])
+      continue
+    }
+
+    pool.set(key, { id: '', name })
+  }
+
+  return [...pool.values()]
+}
+
 export function resolveDocumentImportAssignees(
   assignedToNames: string[],
   members: DocumentImportWorkspaceMember[],
@@ -197,7 +228,11 @@ export function resolveDocumentImportAssignees(
 
     if (matches.length === 1) {
       const member = matches[0]
-      if (member) resolvedUserIds.add(member.id)
+      if (member?.id) {
+        resolvedUserIds.add(member.id)
+      } else {
+        unmatchedQueries.push(name)
+      }
       continue
     }
 

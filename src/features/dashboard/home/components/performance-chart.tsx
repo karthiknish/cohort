@@ -38,6 +38,7 @@ interface PerformanceChartProps {
   showDetailLink?: boolean
   /** Hide built-in title row when a parent Card supplies the header. */
   hideHeader?: boolean
+  metricsDisplayState?: AdsMetricsDisplayState
 }
 
 const EMPTY_STATE_COPY: Record<
@@ -80,6 +81,15 @@ const ADS_CONNECTED_NO_METRICS_COPY = {
   detailLabel: 'Manage connections',
 } as const
 
+const ADS_SYNCED_NO_DELIVERY_COPY = {
+  message:
+    'This account synced successfully, but there is no daily spend or revenue in the selected date range. Widen the range in the page header or confirm campaigns were active in Ads Manager.',
+  primaryHref: '#connect-ad-platforms',
+  primaryLabel: 'Adjust date range',
+  detailHref: '#connect-ad-platforms',
+  detailLabel: 'Manage connections',
+} as const
+
 function formatCurrencyValue(value: number, currency: string = 'USD'): string {
   return formatEnUsCurrencyMaxFractionDigits(value, currency, 0)
 }
@@ -95,16 +105,16 @@ import {
   ChartLegendContent,
 } from '@/shared/ui/chart'
 import type { Formatter, NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
-
-// Direct Recharts imports to fix rendering issues on pages with many charts
 import {
-  AreaChart,
   Area,
+  AreaChart,
   CartesianGrid,
+  Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
-  Tooltip as RechartsTooltip,
-} from '@/shared/ui/recharts-dynamic'
+} from 'recharts'
+
+import type { AdsMetricsDisplayState } from '@/features/dashboard/ads/components/ads-metrics-display-state'
 
 const chartConfig = {
   revenue: {
@@ -126,14 +136,17 @@ export const PerformanceChart = memo(function PerformanceChart({
   adsAccountConnected = false,
   showDetailLink = true,
   hideHeader = false,
+  metricsDisplayState,
 }: PerformanceChartProps) {
   const copy =
     dataSource === 'ads'
-      ? hasAggregateData
-        ? ADS_SYNCED_NO_DAILY_COPY
-        : adsAccountConnected
-          ? ADS_CONNECTED_NO_METRICS_COPY
-          : EMPTY_STATE_COPY.ads
+      ? metricsDisplayState === 'synced_no_delivery'
+        ? ADS_SYNCED_NO_DELIVERY_COPY
+        : hasAggregateData
+          ? ADS_SYNCED_NO_DAILY_COPY
+          : adsAccountConnected
+            ? ADS_CONNECTED_NO_METRICS_COPY
+            : EMPTY_STATE_COPY.ads
       : EMPTY_STATE_COPY[dataSource]
   const detailLinkIsHash = copy.detailHref.startsWith('#')
   const chartData = useMemo(() => {

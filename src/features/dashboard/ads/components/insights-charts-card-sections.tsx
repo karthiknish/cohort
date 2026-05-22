@@ -21,6 +21,10 @@ import { cn } from '@/lib/utils'
 
 import type { InsightsTabId } from './insights-chart-utils'
 import { AdsChartShell } from './ads-chart-primitives'
+import {
+  adsMetricsEmptyCopy,
+  type AdsMetricsDisplayState,
+} from './ads-metrics-display-state'
 
 type ProviderOption = { id: string; name: string }
 
@@ -104,7 +108,44 @@ export function InsightsChartsLoadingState() {
   )
 }
 
-export function InsightsChartsEmptyState({ hasConnections = false }: { hasConnections?: boolean }) {
+export function InsightsChartsEmptyState({
+  hasConnections = false,
+  metricsDisplayState,
+}: {
+  hasConnections?: boolean
+  metricsDisplayState?: AdsMetricsDisplayState
+}) {
+  const dormant =
+    metricsDisplayState === 'synced_no_delivery'
+      ? adsMetricsEmptyCopy('synced_no_delivery')
+      : null
+  const needsSync =
+    metricsDisplayState === 'needs_sync' ? adsMetricsEmptyCopy('needs_sync') : null
+
+  const title = dormant
+    ? 'No chartable activity in this period'
+    : needsSync
+      ? needsSync.title
+      : hasConnections
+        ? 'Waiting for synced metrics'
+        : 'Connect ad platforms first'
+
+  const description = dormant
+    ? dormant.description
+    : needsSync
+      ? needsSync.description
+      : hasConnections
+        ? 'Your accounts are linked. Run a sync for the selected date range, then charts and funnel analysis will appear here.'
+        : 'Connect Google, Meta, LinkedIn, or TikTok above, then sync to unlock comparison, funnel, and benchmark charts.'
+
+  const actionLabel = dormant
+    ? dormant.actionLabel
+    : needsSync
+      ? needsSync.actionLabel
+      : hasConnections
+        ? 'Run sync'
+        : 'Connect account'
+
   return (
     <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
       <CardHeader className="border-b border-border/50 pb-5">
@@ -116,14 +157,10 @@ export function InsightsChartsEmptyState({ hasConnections = false }: { hasConnec
       </CardHeader>
       <CardContent className="pt-6">
         <InsightsPanelEmpty
-          title={hasConnections ? 'Waiting for synced metrics' : 'Connect ad platforms first'}
-          description={
-            hasConnections
-              ? 'Your accounts are linked. Run a sync for the selected date range, then charts and funnel analysis will appear here.'
-              : 'Connect Google, Meta, LinkedIn, or TikTok above, then sync to unlock comparison, funnel, and benchmark charts.'
-          }
+          title={title}
+          description={description}
           actionHref="#connect-ad-platforms"
-          actionLabel={hasConnections ? 'Run sync' : 'Connect account'}
+          actionLabel={actionLabel}
         />
       </CardContent>
     </MotionCard>

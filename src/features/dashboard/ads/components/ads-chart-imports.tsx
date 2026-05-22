@@ -21,7 +21,7 @@ import {
   Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
-} from '@/shared/ui/recharts-dynamic'
+} from 'recharts'
 
 export {
   Area,

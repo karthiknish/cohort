@@ -156,7 +156,9 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   )
 
   const isConvexLoading =
-    !isPreviewMode && Boolean(workspaceId && canQueryConvex) && metricsRealtime === undefined
+    !isPreviewMode &&
+    Boolean(workspaceId && canQueryConvex) &&
+    (metricsRealtime === undefined || metricsRealtimeV2 === undefined)
 
   const derivedMetricsState = useMemo(() => {
     if (!isPreviewMode && workspaceId && !canQueryConvex) {

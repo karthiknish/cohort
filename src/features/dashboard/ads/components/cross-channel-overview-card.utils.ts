@@ -7,6 +7,7 @@ import { normalizeAdsProviderId, type CanonicalAdsProviderId } from '@/domain/ad
 import { formatCurrency } from '@/lib/utils'
 
 import type { MetricRecord, MetricsSummary, SummaryCard, Totals } from './types'
+import type { AdsMetricsDisplayState } from './ads-metrics-display-state'
 
 const EMPTY_TOTALS: Totals = {
   spend: 0,
@@ -175,6 +176,7 @@ export function computeCtrParts(clicks: number, impressions: number): {
 
 export function buildCrossChannelSummaryCards(
   metrics: MetricRecord[],
+  displayState: AdsMetricsDisplayState = 'has_delivery',
 ): { cards: SummaryCard[]; chartCurrency?: string } {
   const aggregate = aggregateMetricFinancials(metricRowsForAggregation(metrics))
   const delivery = aggregate.deliveryTotals
@@ -184,11 +186,18 @@ export function buildCrossChannelSummaryCards(
   const revenue = financial.revenue ?? 0
   const fmtMoney = (amount: number) => formatAggregatedMoney(amount, financial, formatCurrency)
 
-  const hasData =
-    metrics.length > 0 ||
-    delivery.impressions > 0 ||
-    delivery.clicks > 0 ||
-    spend > 0
+  const hasDeliveryData =
+    metrics.length > 0 &&
+    (delivery.impressions > 0 ||
+      delivery.clicks > 0 ||
+      spend > 0 ||
+      delivery.conversions > 0)
+
+  const showSyncedEmptyState = displayState === 'synced_no_delivery'
+  const showNeedsSyncState = displayState === 'needs_sync'
+  const showNeedsConnectionState = displayState === 'needs_connection'
+
+  const hasData = hasDeliveryData || showSyncedEmptyState
 
   const { rate: ctr, clicksExceedImpressions } = computeCtrParts(delivery.clicks, delivery.impressions)
   const averageCpc = delivery.clicks > 0 && spend > 0 ? spend / delivery.clicks : 0
@@ -196,56 +205,110 @@ export function buildCrossChannelSummaryCards(
   const conversionRate = delivery.clicks > 0 ? delivery.conversions / delivery.clicks : 0
   const cpa = delivery.conversions > 0 && spend > 0 ? spend / delivery.conversions : 0
 
+  const spendHelper = (() => {
+    if (showSyncedEmptyState) {
+      return 'No spend recorded in this date range — campaigns may be paused or inactive'
+    }
+    if (showNeedsSyncState) {
+      return 'Run a sync to pull spend for the selected date range'
+    }
+    if (showNeedsConnectionState) {
+      return 'Connect a platform to populate'
+    }
+    if (hasDeliveryData) {
+      return metrics.length > 1 || metrics[0]?.date !== 'summary'
+        ? 'Connected platforms in this date range'
+        : 'Totals from your latest sync — run sync again for daily trends'
+    }
+    return 'Connect a platform to populate'
+  })()
+
+  const impressionsHelper = (() => {
+    if (showSyncedEmptyState) {
+      return 'Account synced, but no impressions were returned for these dates'
+    }
+    if (showNeedsSyncState) {
+      return 'Run a sync to populate delivery metrics'
+    }
+    if (showNeedsConnectionState) {
+      return 'Awaiting your first sync'
+    }
+    return hasDeliveryData ? 'Total times ads were served' : 'Awaiting your first sync'
+  })()
+
   const cards: SummaryCard[] = [
     {
       id: 'spend',
       label: 'Total Spend',
-      value: spend > 0 ? fmtMoney(spend) : hasData ? fmtMoney(0) : '—',
-      helper: hasData
-        ? metrics.length > 1 || metrics[0]?.date !== 'summary'
-          ? 'Connected platforms in this date range'
-          : 'Totals from your latest sync — run sync again for daily trends'
-        : 'Connect a platform to populate',
+      value: spend > 0 ? fmtMoney(spend) : showSyncedEmptyState ? fmtMoney(0) : hasData ? fmtMoney(0) : '—',
+      helper: spendHelper,
     },
     {
       id: 'impressions',
       label: 'Impressions',
-      value: delivery.impressions > 0 ? delivery.impressions.toLocaleString() : '—',
-      helper: hasData ? 'Total times ads were served' : 'Awaiting your first sync',
+      value:
+        delivery.impressions > 0
+          ? delivery.impressions.toLocaleString()
+          : showSyncedEmptyState
+            ? '0'
+            : '—',
+      helper: impressionsHelper,
     },
     {
       id: 'ctr',
       label: 'CTR',
-      value: ctr > 0 ? `${(ctr * 100).toFixed(2)}%` : '—',
+      value: ctr > 0 ? `${(ctr * 100).toFixed(2)}%` : showSyncedEmptyState ? '0.00%' : '—',
       helper: clicksExceedImpressions
         ? 'Clicks exceed impressions in synced data — CTR capped at 100%'
         : ctr > 0
           ? 'Clicks ÷ impressions'
-          : 'Needs impressions and clicks data',
+          : showSyncedEmptyState
+            ? 'No clicks or impressions in this date range'
+            : 'Needs impressions and clicks data',
     },
     {
       id: 'avg-cpc',
       label: 'Avg CPC',
-      value: delivery.clicks > 0 && spend > 0 ? fmtMoney(averageCpc) : '—',
-      helper: delivery.clicks > 0 ? 'What each click cost on average' : 'Need click data to calculate',
+      value: delivery.clicks > 0 && spend > 0 ? fmtMoney(averageCpc) : showSyncedEmptyState ? fmtMoney(0) : '—',
+      helper:
+        delivery.clicks > 0
+          ? 'What each click cost on average'
+          : showSyncedEmptyState
+            ? 'No clicks recorded in this date range'
+            : 'Need click data to calculate',
     },
     {
       id: 'cpa',
       label: 'CPA',
-      value: cpa > 0 ? fmtMoney(cpa) : '—',
-      helper: cpa > 0 ? 'Spend ÷ conversions (lower is better)' : 'Needs spend and conversions data',
+      value: cpa > 0 ? fmtMoney(cpa) : showSyncedEmptyState ? '—' : '—',
+      helper:
+        cpa > 0
+          ? 'Spend ÷ conversions (lower is better)'
+          : showSyncedEmptyState
+            ? 'No conversions recorded in this date range'
+            : 'Needs spend and conversions data',
     },
     {
       id: 'conv-rate',
       label: 'Conv. Rate',
-      value: conversionRate > 0 ? `${(conversionRate * 100).toFixed(2)}%` : '—',
-      helper: conversionRate > 0 ? 'Conversions ÷ clicks' : 'Needs clicks and conversions data',
+      value: conversionRate > 0 ? `${(conversionRate * 100).toFixed(2)}%` : showSyncedEmptyState ? '0.00%' : '—',
+      helper:
+        conversionRate > 0
+          ? 'Conversions ÷ clicks'
+          : showSyncedEmptyState
+            ? 'No conversions in this date range'
+            : 'Needs clicks and conversions data',
     },
     {
       id: 'roas',
       label: 'ROAS',
-      value: roas > 0 ? `${roas.toFixed(2)}x` : '—',
-      helper: roas > 0 ? 'Revenue ÷ spend (higher is better)' : 'Needs revenue and spend data',
+      value: roas > 0 ? `${roas.toFixed(2)}x` : showSyncedEmptyState ? '0.00x' : '—',
+      helper:
+        roas > 0
+          ? 'Revenue ÷ spend (higher is better)'
+          : showSyncedEmptyState
+            ? 'No attributed revenue in this date range'
+            : 'Needs revenue and spend data',
     },
   ]
 

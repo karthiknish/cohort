@@ -26,6 +26,10 @@ import { cn } from '@/lib/utils'
 import type { MetricRecord, SummaryCard } from './types'
 import { DateRangePicker, type DateRange } from './date-range-picker'
 import { PROVIDER_ICON_MAP, formatProviderName } from './utils'
+import {
+  adsMetricsEmptyCopy,
+  type AdsMetricsDisplayState,
+} from './ads-metrics-display-state'
 
 function ProviderFilterOption({
   providerId,
@@ -184,18 +188,45 @@ export function CrossChannelOverviewLoadingState() {
   )
 }
 
-export function CrossChannelOverviewEmptyState() {
+export function CrossChannelOverviewEmptyState({
+  displayState = 'needs_connection',
+}: {
+  displayState?: Exclude<AdsMetricsDisplayState, 'loading' | 'has_delivery'>
+}) {
+  const copy =
+    displayState === 'needs_sync' || displayState === 'synced_no_delivery'
+      ? adsMetricsEmptyCopy(displayState)
+      : adsMetricsEmptyCopy('needs_connection')
+
   return (
     <CardContent className="pt-6">
       <div className={ADS_PAGE_THEME.emptyState}>
-        <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-          Connect an ad platform and run a sync to populate spend, delivery, and conversion KPIs here.
-        </p>
+        <p className="text-sm font-medium text-foreground">{copy.title}</p>
+        <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">{copy.description}</p>
         <Button asChild size="sm" variant="outline" className="rounded-full">
-          <Link href="#connect-ad-platforms">Connect an account</Link>
+          <Link href={copy.actionHref}>{copy.actionLabel}</Link>
         </Button>
       </div>
     </CardContent>
+  )
+}
+
+function CrossChannelOverviewStatusBanner({
+  displayState,
+}: {
+  displayState: AdsMetricsDisplayState
+}) {
+  if (displayState !== 'synced_no_delivery' && displayState !== 'needs_sync') {
+    return null
+  }
+
+  const copy = adsMetricsEmptyCopy(displayState)
+
+  return (
+    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-muted-foreground">
+      <p className="font-medium text-foreground">{copy.title}</p>
+      <p className="mt-1 leading-relaxed">{copy.description}</p>
+    </div>
   )
 }
 
@@ -225,21 +256,24 @@ function SummaryCardTile({ card }: { card: SummaryCard }) {
 
 export function CrossChannelOverviewContent({
   currency,
-  metrics,
+  chartMetrics,
   metricsLoading,
   summaryCards,
   hasAggregateChartFallback = false,
   hasConnectedAds = false,
+  displayState = 'has_delivery',
 }: {
   currency?: string
-  metrics: MetricRecord[]
+  chartMetrics: MetricRecord[]
   metricsLoading: boolean
   summaryCards: SummaryCard[]
   hasAggregateChartFallback?: boolean
   hasConnectedAds?: boolean
+  displayState?: AdsMetricsDisplayState
 }) {
   return (
     <CardContent className="space-y-6 pt-6">
+      <CrossChannelOverviewStatusBanner displayState={displayState} />
       <FadeInStagger className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => (
           <SummaryCardTile key={card.id} card={card} />
@@ -247,12 +281,13 @@ export function CrossChannelOverviewContent({
       </FadeInStagger>
       <div className="h-[300px] w-full min-w-0 rounded-2xl border border-border/50 bg-muted/15 p-3 sm:p-4">
         <PerformanceChart
-          metrics={metrics}
+          metrics={chartMetrics}
           loading={metricsLoading}
           currency={currency}
           dataSource="ads"
           hasAggregateData={hasAggregateChartFallback}
           adsAccountConnected={hasConnectedAds}
+          metricsDisplayState={displayState}
         />
       </div>
     </CardContent>

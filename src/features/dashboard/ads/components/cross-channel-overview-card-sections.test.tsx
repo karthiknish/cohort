@@ -52,13 +52,18 @@ describe('cross channel overview card sections', () => {
     const emptyMarkup = renderToStaticMarkup(<CrossChannelOverviewEmptyState />)
 
     expect(loadingMarkup).toContain('skeleton-shimmer')
-    expect(emptyMarkup).toContain('Connect an ad platform and run a sync')
+    expect(emptyMarkup).toContain('Connect an ad platform')
     expect(emptyMarkup).toContain('Connect an account')
   })
 
   it('renders summary cards and the chart', () => {
     const markup = renderToStaticMarkup(
-      <CrossChannelOverviewContent currency="GBP" metrics={[{ id: '1', providerId: 'google', date: '2024-01-01', spend: 120, impressions: 1000, clicks: 45, conversions: 4, revenue: 380 }]} metricsLoading={false} summaryCards={[{ id: 'spend', label: 'Total Spend', value: '£120', helper: 'Connected platforms in this date range' }]} />,
+      <CrossChannelOverviewContent
+        currency="GBP"
+        chartMetrics={[{ id: '1', providerId: 'google', date: '2024-01-01', spend: 120, impressions: 1000, clicks: 45, conversions: 4, revenue: 380 }]}
+        metricsLoading={false}
+        summaryCards={[{ id: 'spend', label: 'Total Spend', value: '£120', helper: 'Connected platforms in this date range' }]}
+      />,
     )
 
     expect(markup).toContain('Total Spend')

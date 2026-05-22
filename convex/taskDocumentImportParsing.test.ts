@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   assessDocumentImportDueDate,
+  buildAssigneeMemberPool,
   enrichExtractedTasksWithDocumentAssignees,
   normalizePriority,
   parseExplicitDocumentPriority,
@@ -183,6 +184,32 @@ describe('enrichExtractedTasksWithDocumentAssignees', () => {
     )
 
     expect(enriched[0]?.assignedToNames).toEqual(['Alex Kim'])
+  })
+})
+
+describe('buildAssigneeMemberPool', () => {
+  const workspaceMembers = [
+    { id: 'user-aaa', name: 'aaa', email: 'aaa@example.com' },
+  ]
+
+  it('adds client roster names for first-name matching and suggestions', () => {
+    const pool = buildAssigneeMemberPool(workspaceMembers, ['Deepak Karnan', 'Archana Ravi Kumar'])
+
+    expect(resolveDocumentImportAssignees(['Deepak'], pool)).toEqual({
+      assignedToUserIds: [],
+      assignmentStatus: 'unassigned',
+      suggestions: ['Deepak Karnan'],
+    })
+  })
+
+  it('links roster names to workspace profiles when names match exactly', () => {
+    const pool = buildAssigneeMemberPool(workspaceMembers, ['aaa', 'Deepak Karnan'])
+
+    expect(resolveDocumentImportAssignees(['aaa'], pool)).toEqual({
+      assignedToUserIds: ['user-aaa'],
+      assignmentStatus: 'resolved',
+      suggestions: [],
+    })
   })
 })
 
