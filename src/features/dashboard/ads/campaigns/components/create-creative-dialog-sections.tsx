@@ -130,7 +130,6 @@ type CreateCreativeDialogFormProps = {
   status: CreativeStatus
   title: string
   uploadingImage: boolean
-  videoId: string
 }
 
 export function CreateCreativeDialogForm({

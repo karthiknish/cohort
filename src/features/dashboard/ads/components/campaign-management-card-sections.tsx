@@ -132,7 +132,7 @@ function CampaignRowActions({
         />
         <ActionTooltipButton
           actionLabel={biddingDisabledReason ?? 'Bidding strategy'}
-          disabled={actionLoading === campaign.id || biddingDisabled}
+          disabled={actionLoading === campaign.id || Boolean(biddingDisabled)}
           icon={trendingUpIcon}
           onClick={handleOpenBidding}
         />
