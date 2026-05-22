@@ -1,112 +1,251 @@
 'use client'
 
-import { createElement, useCallback, useEffect, useRef, useState, type ChangeEvent, type RefObject } from 'react'
+import {
+  createElement,
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type DragEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react'
+import { Send } from 'lucide-react'
 
+import type { ClientTeamMember } from '@/types/clients'
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
 
+import type { PendingAttachment } from '../hooks/types'
+import type { MessageListRenderers } from './message-list-render-context'
+import { MessageList } from './message-list'
+import type { UnifiedMessage } from './message-list-types'
+import { MessageListRenderProvider } from './message-list-render-context'
 import { MessageSearchBar, NoSearchResultsState } from './message-pane-parts'
+import { UnifiedComposerSection, UnifiedConversationHeader } from './unified-message-pane-sections'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
 
-type UseUnifiedMessagePaneSearchParams = {
-  canSearchMessages: boolean
-  headerType: MessagePaneHeaderInfo['type']
-  messageSearchQuery: string
-  messageSearchActive: boolean
-  resultCount: number
-  onMessageSearchChange?: (value: string) => void
-}
-
-export function useUnifiedMessagePaneMessageSearch({
-  canSearchMessages,
-  headerType,
-  messageSearchQuery,
-  messageSearchActive,
-  resultCount,
-  onMessageSearchChange,
-}: UseUnifiedMessagePaneSearchParams) {
-  const messageSearchInputRef = useRef<HTMLInputElement>(null)
-  const [messageSearchOpen, setMessageSearchOpen] = useState(false)
-  const [prevCanSearchMessages, setPrevCanSearchMessages] = useState(canSearchMessages)
-
-  if (canSearchMessages !== prevCanSearchMessages) {
-    setPrevCanSearchMessages(canSearchMessages)
-    if (!canSearchMessages) {
-      setMessageSearchOpen(false)
-    }
-  }
-
-  const handleMessageSearchChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      onMessageSearchChange?.(event.target.value)
-    },
-    [onMessageSearchChange],
+export function UnifiedMessagePaneEmptyState() {
+  return (
+    <div className="flex-1 flex items-center justify-center border-muted/40 h-full bg-background/50">
+      <div className="text-center p-8">
+        <div className="size-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+          <Send className="size-8 text-muted-foreground" />
+        </div>
+        <h3 className="text-lg font-medium text-foreground">Select a conversation</h3>
+        <p className="text-sm text-muted-foreground mt-1">
+          Choose a conversation from the sidebar to start messaging
+        </p>
+      </div>
+    </div>
   )
-
-  const handleClearMessageSearch = useCallback(() => {
-    onMessageSearchChange?.('')
-  }, [onMessageSearchChange])
-
-  const handleDismissMessageSearch = useCallback(() => {
-    setMessageSearchOpen(false)
-    onMessageSearchChange?.('')
-  }, [onMessageSearchChange])
-
-  const handleToggleMessageSearch = useCallback(() => {
-    setMessageSearchOpen((open) => {
-      const next = !open
-      if (!next) {
-        onMessageSearchChange?.('')
-      }
-      return next
-    })
-  }, [onMessageSearchChange])
-
-  useEffect(() => {
-    if (!messageSearchOpen) return
-    messageSearchInputRef.current?.focus()
-  }, [messageSearchOpen])
-
-  useEffect(() => {
-    if (!canSearchMessages || !messageSearchOpen) {
-      return
-    }
-
-    const onGlobalKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      handleDismissMessageSearch()
-    }
-
-    window.addEventListener('keydown', onGlobalKeyDown)
-    return () => window.removeEventListener('keydown', onGlobalKeyDown)
-  }, [canSearchMessages, handleDismissMessageSearch, messageSearchOpen])
-
-  const searchBar =
-    canSearchMessages && onMessageSearchChange && messageSearchOpen ? (
-      <MessageSearchBar
-        inputRef={messageSearchInputRef}
-        value={messageSearchQuery}
-        onChange={handleMessageSearchChange}
-        resultCount={resultCount}
-        isActive={messageSearchActive}
-        placeholder={
-          headerType === 'dm' ? 'Search messages in this conversation…' : 'Search messages in this channel…'
-        }
-        onClear={handleClearMessageSearch}
-      />
-    ) : null
-
-  return {
-    messageSearchOpen,
-    handleToggleMessageSearch,
-    searchBar,
-  }
 }
 
-export function resolveUnifiedMessagePaneEmptyState(
-  isMessageSearchActive: boolean,
-  emptyState?: React.ReactNode,
-) {
-  return isMessageSearchActive ? createElement(NoSearchResultsState) : emptyState
+export function UnifiedMessagePaneShimmerBackdrop() {
+  return (
+    <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+      <div className="absolute -top-[100%] -left-[100%] size-[300%] animate-shimmer bg-gradient-to-br from-transparent via-muted/30 to-transparent opacity-50" />
+    </div>
+  )
+}
+
+type UnifiedMessagePaneConversationHeaderSectionProps = {
+  header: MessagePaneHeaderInfo
+  canSearchMessages: boolean
+  messageSearchOpen: boolean
+  onToggleMessageSearch?: () => void
+  statusBanner?: ReactNode
+  searchBar: ReactNode
+}
+
+export function UnifiedMessagePaneConversationHeaderSection({
+  header,
+  canSearchMessages,
+  messageSearchOpen,
+  onToggleMessageSearch,
+  statusBanner,
+  searchBar,
+}: UnifiedMessagePaneConversationHeaderSectionProps) {
+  return (
+    <>
+      <UnifiedConversationHeader
+        header={header}
+        canSearchMessages={canSearchMessages}
+        messageSearchOpen={messageSearchOpen}
+        onToggleMessageSearch={onToggleMessageSearch}
+      />
+      {statusBanner}
+      {searchBar}
+    </>
+  )
+}
+
+type UnifiedMessagePaneMessagesSectionProps = {
+  header: MessagePaneHeaderInfo
+  messageListRenderers: MessageListRenderers
+  messages: UnifiedMessage[]
+  currentUserId: string | null
+  currentUserRole?: string | null
+  isLoading: boolean
+  hasMore: boolean
+  onLoadMore: () => void
+  onRefresh?: () => Promise<void> | void
+  onToggleReaction: (messageId: string, emoji: string) => Promise<void>
+  reactionPendingByMessage: Record<string, string | null>
+  onReply?: (message: UnifiedMessage) => void
+  onDeleteMessage?: (messageId: string) => Promise<void>
+  activeDeletingMessageId: string | null
+  messageUpdatingId: string | null
+  emptyState?: ReactNode
+  editingMessageId: string | null
+  effectiveFocusMessageId: string | null
+  effectiveFocusThreadId: string | null
+  typingIndicator?: string
+}
+
+export function UnifiedMessagePaneMessagesSection({
+  header,
+  messageListRenderers,
+  messages,
+  currentUserId,
+  currentUserRole,
+  isLoading,
+  hasMore,
+  onLoadMore,
+  onRefresh,
+  onToggleReaction,
+  reactionPendingByMessage,
+  onReply,
+  onDeleteMessage,
+  activeDeletingMessageId,
+  messageUpdatingId,
+  emptyState,
+  editingMessageId,
+  effectiveFocusMessageId,
+  effectiveFocusThreadId,
+  typingIndicator,
+}: UnifiedMessagePaneMessagesSectionProps) {
+  return (
+    <div className="relative flex min-h-0 flex-1 overflow-hidden">
+      <MessageListRenderProvider value={messageListRenderers}>
+        <MessageList
+          key={`${header.type}-${header.name}`}
+          messages={messages}
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          isLoading={isLoading}
+          hasMore={hasMore}
+          onLoadMore={onLoadMore}
+          onRefresh={onRefresh}
+          onToggleReaction={onToggleReaction}
+          reactionPendingByMessage={reactionPendingByMessage}
+          onReply={onReply}
+          onDeleteMessage={onDeleteMessage}
+          deletingMessageId={activeDeletingMessageId}
+          updatingMessageId={messageUpdatingId}
+          emptyState={emptyState}
+          variant={header.type === 'channel' ? 'channel' : 'dm'}
+          editingMessageId={editingMessageId}
+          focusMessageId={effectiveFocusMessageId}
+          focusThreadId={effectiveFocusThreadId}
+          typingIndicatorText={typingIndicator}
+        />
+      </MessageListRenderProvider>
+    </div>
+  )
+}
+
+type UnifiedMessagePaneComposerSectionProps = {
+  pendingAttachments: PendingAttachment[]
+  uploadingAttachments: boolean
+  isSending: boolean
+  onRemoveAttachment?: (attachmentId: string) => void
+  isComposerFocused: boolean
+  hasPendingAttachments: boolean
+  messageInput: string
+  onMessageInputChange: (value: string) => void
+  onSend: () => Promise<void>
+  placeholder: string
+  participants: ClientTeamMember[]
+  onFocus: () => void
+  onBlur: () => void
+  onDrop: (event: DragEvent<HTMLTextAreaElement>) => void
+  onDragOver: (event: DragEvent<HTMLTextAreaElement>) => void
+  onPaste: (event: ClipboardEvent<HTMLTextAreaElement>) => void
+  onAttachClick?: () => void
+  fileInputRef: RefObject<HTMLInputElement | null>
+  onAttachmentInputChange: (event: ChangeEvent<HTMLInputElement>) => void
+  typingIndicator?: string
+  confirmingDeleteMessageId: string | null
+  activeDeletingMessageId: string | null
+  onDeleteConfirmOpenChange: (open: boolean) => void
+  onConfirmDelete: () => void
+  onCancelDelete: () => void
+}
+
+export function UnifiedMessagePaneComposerSection({
+  pendingAttachments,
+  uploadingAttachments,
+  isSending,
+  onRemoveAttachment,
+  isComposerFocused,
+  hasPendingAttachments,
+  messageInput,
+  onMessageInputChange,
+  onSend,
+  placeholder,
+  participants,
+  onFocus,
+  onBlur,
+  onDrop,
+  onDragOver,
+  onPaste,
+  onAttachClick,
+  fileInputRef,
+  onAttachmentInputChange,
+  typingIndicator,
+  confirmingDeleteMessageId,
+  activeDeletingMessageId,
+  onDeleteConfirmOpenChange,
+  onConfirmDelete,
+  onCancelDelete,
+}: UnifiedMessagePaneComposerSectionProps) {
+  return (
+    <>
+      <UnifiedComposerSection
+        pendingAttachments={pendingAttachments}
+        uploadingAttachments={uploadingAttachments}
+        isSending={isSending}
+        onRemoveAttachment={onRemoveAttachment}
+        isComposerFocused={isComposerFocused}
+        hasPendingAttachments={hasPendingAttachments}
+        messageInput={messageInput}
+        onMessageInputChange={onMessageInputChange}
+        onSend={onSend}
+        placeholder={placeholder}
+        participants={participants}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onPaste={onPaste}
+        onAttachClick={onAttachClick}
+        fileInputRef={fileInputRef}
+        onAttachmentInputChange={onAttachmentInputChange}
+        typingIndicator={typingIndicator}
+      />
+
+      <UnifiedMessagePaneDeleteConfirm
+        confirmingDeleteMessageId={confirmingDeleteMessageId}
+        activeDeletingMessageId={activeDeletingMessageId}
+        onOpenChange={onDeleteConfirmOpenChange}
+        onConfirm={onConfirmDelete}
+        onCancel={onCancelDelete}
+      />
+    </>
+  )
 }
 
 type UnifiedMessagePaneDeleteConfirmProps = {
@@ -138,17 +277,4 @@ export function UnifiedMessagePaneDeleteConfirm({
       onCancel={onCancel}
     />
   )
-}
-
-export type UnifiedMessagePaneAttachHandlerProps = {
-  fileInputRef: RefObject<HTMLInputElement | null>
-  onAddAttachments?: (files: FileList | File[]) => void
-}
-
-export function useUnifiedMessagePaneAttachHandler({
-  fileInputRef,
-}: UnifiedMessagePaneAttachHandlerProps) {
-  return useCallback(() => {
-    fileInputRef.current?.click()
-  }, [fileInputRef])
 }

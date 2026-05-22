@@ -31,6 +31,7 @@ import {
   ReplyActionsBar,
 } from './message-item-parts'
 import { MessageList } from './message-list'
+import { toMessageContentComponent } from './message-list-render-utils'
 import { collaborationToUnifiedMessage } from './message-list-utils'
 import { MessageContent } from './message-content'
 import { MessageReactions } from './message-reactions'
@@ -43,12 +44,12 @@ export type CollaborationFlattenedMessageItem =
   | { id: string; type: 'separator'; label: string }
   | { id: string; type: 'message'; message: CollaborationMessage; isFirstInGroup: boolean }
 
-export type CollaborationMessageDisplayState = {
-  isReply?: boolean
-  isSearchResult?: boolean
-  showAvatar?: boolean
-  showHeader?: boolean
-}
+import type { CollaborationMessageDisplayState } from './message-pane-display-state'
+import {
+  COLLABORATION_MESSAGE_GROUP_CONTINUATION_DISPLAY,
+  COLLABORATION_MESSAGE_GROUP_HEADER_DISPLAY,
+  SEARCH_THREAD_REPLY_DISPLAY,
+} from './message-pane-display-state'
 
 const DEFAULT_COLLABORATION_MESSAGE_DISPLAY: Required<CollaborationMessageDisplayState> = {
   isReply: false,
@@ -119,7 +120,7 @@ function SearchThreadReplyRenderer({ reply }: { reply: CollaborationMessage }) {
     <CollaborationMessageItem
       {...context}
       message={reply}
-      display={{ isReply: true, showAvatar: true, showHeader: true }}
+      display={SEARCH_THREAD_REPLY_DISPLAY}
     />
   )
 }
@@ -152,10 +153,11 @@ export function CollaborationMessageItem({
   threadMessagesByRootId,
   threadNextCursorByRootId,
 }: CollaborationMessageItemProps) {
-  const { isReply, isSearchResult, showAvatar, showHeader } = {
-    ...DEFAULT_COLLABORATION_MESSAGE_DISPLAY,
-    ...display,
-  }
+  const resolvedDisplay = useMemo(
+    () => ({ ...DEFAULT_COLLABORATION_MESSAGE_DISPLAY, ...display }),
+    [display],
+  )
+  const { isReply, isSearchResult, showAvatar, showHeader } = resolvedDisplay
   const canManageMessage =
     !message.isDeleted &&
     ((message.senderId && message.senderId === currentUserId) || currentUserRole === 'admin')
@@ -893,8 +895,27 @@ function CollaborationSearchMessageList({
     [visibleMessages],
   )
 
-  // react-doctor skip: MessageList render-prop slots are intentional — collapsing seven
-  // customization hooks into compound subcomponents would be a large cross-surface refactor.
+  const messageListRenderers = useMemo(
+    () => ({
+      renderMessageContent: toMessageContentComponent(renderMessageContent),
+      renderMessageAttachments,
+      renderMessageExtras,
+      renderThreadSection,
+      renderMessageActions,
+      renderEditForm,
+      renderDeletedInfo,
+    }),
+    [
+      renderDeletedInfo,
+      renderEditForm,
+      renderMessageActions,
+      renderMessageAttachments,
+      renderMessageContent,
+      renderMessageExtras,
+      renderThreadSection,
+    ],
+  )
+
   return (
     <MessageList
       messages={visibleMessages.map(collaborationToUnifiedMessage)}
@@ -907,13 +928,7 @@ function CollaborationSearchMessageList({
       reactionPendingByMessage={reactionPendingByMessage}
       variant="channel"
       showAvatars={true}
-      renderMessageContent={renderMessageContent}
-      renderMessageAttachments={renderMessageAttachments}
-      renderMessageExtras={renderMessageExtras}
-      renderThreadSection={renderThreadSection}
-      renderMessageActions={renderMessageActions}
-      renderEditForm={renderEditForm}
-      renderDeletedInfo={renderDeletedInfo}
+      renderers={messageListRenderers}
       editingMessageId={editingMessageId}
       deletingMessageId={messageDeletingId}
       updatingMessageId={messageUpdatingId}
@@ -1060,10 +1075,11 @@ export function CollaborationMessageViewport({
                     onThreadToggle={onThreadToggle}
                     onToggleReaction={onToggleReaction}
                     reactionPendingByMessage={reactionPendingByMessage}
-                    display={{
-                      showAvatar: item.isFirstInGroup,
-                      showHeader: item.isFirstInGroup,
-                    }}
+                    display={
+                      item.isFirstInGroup
+                        ? COLLABORATION_MESSAGE_GROUP_HEADER_DISPLAY
+                        : COLLABORATION_MESSAGE_GROUP_CONTINUATION_DISPLAY
+                    }
                     threadErrorsByRootId={threadErrorsByRootId}
                     threadLoadingByRootId={threadLoadingByRootId}
                     threadMessagesByRootId={threadMessagesByRootId}

@@ -2,39 +2,27 @@
 
 import { useCallback } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, ReactNode, RefObject } from 'react'
-import { Send } from 'lucide-react'
 
 import type { ClientTeamMember } from '@/types/clients'
 
 import type { PendingAttachment } from '../hooks/types'
 import type { MessageListRenderers } from './message-list-render-context'
-import { MessageList } from './message-list'
 import type { UnifiedMessage } from './message-list-types'
-import { MessageListRenderProvider } from './message-list-render-context'
-import { UnifiedComposerSection, UnifiedConversationHeader } from './unified-message-pane-sections'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
 import {
-  resolveUnifiedMessagePaneEmptyState,
-  UnifiedMessagePaneDeleteConfirm,
+  UnifiedMessagePaneComposerSection,
+  UnifiedMessagePaneConversationHeaderSection,
+  UnifiedMessagePaneEmptyState,
+  UnifiedMessagePaneMessagesSection,
+  UnifiedMessagePaneShimmerBackdrop,
+} from './unified-message-pane-layout-sections'
+import {
   useUnifiedMessagePaneAttachHandler,
   useUnifiedMessagePaneMessageSearch,
-} from './unified-message-pane-layout-sections'
+} from './unified-message-pane-layout-hooks'
+import { resolveUnifiedMessagePaneEmptyState } from './unified-message-pane-layout-utils'
 
-export function UnifiedMessagePaneEmptyState() {
-  return (
-    <div className="flex-1 flex items-center justify-center border-muted/40 h-full bg-background/50">
-      <div className="text-center p-8">
-        <div className="size-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-          <Send className="size-8 text-muted-foreground" />
-        </div>
-        <h3 className="text-lg font-medium text-foreground">Select a conversation</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          Choose a conversation from the sidebar to start messaging
-        </p>
-      </div>
-    </div>
-  )
-}
+export { UnifiedMessagePaneEmptyState } from './unified-message-pane-layout-sections'
 
 export type MessagePaneListState = {
   loading: boolean
@@ -177,48 +165,41 @@ export function UnifiedMessagePaneConversationLayout({
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background/50 max-lg:min-h-[min(72dvh,640px)] lg:h-[640px]">
-      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[100%] -left-[100%] size-[300%] animate-shimmer bg-gradient-to-br from-transparent via-muted/30 to-transparent opacity-50" />
-      </div>
-      <UnifiedConversationHeader
+      <UnifiedMessagePaneShimmerBackdrop />
+
+      <UnifiedMessagePaneConversationHeaderSection
         header={header}
         canSearchMessages={canSearchMessages}
         messageSearchOpen={messageSearchOpen}
         onToggleMessageSearch={canSearchMessages && onMessageSearchChange ? handleToggleMessageSearch : undefined}
+        statusBanner={statusBanner}
+        searchBar={searchBar}
       />
 
-      {statusBanner}
+      <UnifiedMessagePaneMessagesSection
+        header={header}
+        messageListRenderers={messageListRenderers}
+        messages={messages}
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        isLoading={isLoading || isLoadingMore}
+        hasMore={hasMore}
+        onLoadMore={onLoadMore}
+        onRefresh={onRefresh}
+        onToggleReaction={handleReaction}
+        reactionPendingByMessage={reactionPendingByMessage}
+        onReply={onReply}
+        onDeleteMessage={onDeleteMessage}
+        activeDeletingMessageId={activeDeletingMessageId}
+        messageUpdatingId={messageUpdatingId}
+        emptyState={resolvedEmptyState}
+        editingMessageId={editingMessageId}
+        effectiveFocusMessageId={effectiveFocusMessageId}
+        effectiveFocusThreadId={effectiveFocusThreadId}
+        typingIndicator={typingIndicator}
+      />
 
-      {searchBar}
-
-      <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <MessageListRenderProvider value={messageListRenderers}>
-          <MessageList
-            key={`${header.type}-${header.name}`}
-            messages={messages}
-            currentUserId={currentUserId}
-            currentUserRole={currentUserRole}
-            isLoading={isLoading || isLoadingMore}
-            hasMore={hasMore}
-            onLoadMore={onLoadMore}
-            onRefresh={onRefresh}
-            onToggleReaction={handleReaction}
-            reactionPendingByMessage={reactionPendingByMessage}
-            onReply={onReply}
-            onDeleteMessage={onDeleteMessage}
-            deletingMessageId={activeDeletingMessageId}
-            updatingMessageId={messageUpdatingId}
-            emptyState={resolvedEmptyState}
-            variant={header.type === 'channel' ? 'channel' : 'dm'}
-            editingMessageId={editingMessageId}
-            focusMessageId={effectiveFocusMessageId}
-            focusThreadId={effectiveFocusThreadId}
-            typingIndicatorText={typingIndicator}
-          />
-        </MessageListRenderProvider>
-      </div>
-
-      <UnifiedComposerSection
+      <UnifiedMessagePaneComposerSection
         pendingAttachments={pendingAttachments}
         uploadingAttachments={uploadingAttachments}
         isSending={isSending}
@@ -239,14 +220,11 @@ export function UnifiedMessagePaneConversationLayout({
         fileInputRef={fileInputRef}
         onAttachmentInputChange={handleAttachmentInputChange}
         typingIndicator={typingIndicator}
-      />
-
-      <UnifiedMessagePaneDeleteConfirm
         confirmingDeleteMessageId={confirmingDeleteMessageId}
         activeDeletingMessageId={activeDeletingMessageId}
-        onOpenChange={handleConfirmDeleteChange}
-        onConfirm={handleConfirmDelete}
-        onCancel={handleCancelDelete}
+        onDeleteConfirmOpenChange={handleConfirmDeleteChange}
+        onConfirmDelete={handleConfirmDelete}
+        onCancelDelete={handleCancelDelete}
       />
     </div>
   )

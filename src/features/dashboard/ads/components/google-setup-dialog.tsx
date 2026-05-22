@@ -1,6 +1,8 @@
 'use client'
 
-import { AlertTriangle, Chrome, Loader2 } from 'lucide-react'
+import { AlertTriangle, Loader2 } from 'lucide-react'
+
+import { SvglBrandLogo } from '@/shared/components/svgl-brand-logo'
 
 import {
   Dialog,
@@ -56,7 +58,7 @@ export function GoogleSetupDialog({
         <DialogHeader>
           <div className="flex items-center gap-3">
             <span className="flex size-10 items-center justify-center rounded-full bg-info/10 text-info">
-              <Chrome className="size-5" />
+              <SvglBrandLogo brand="google" className="size-5" labeled={false} />
             </span>
             <div>
               <DialogTitle>Complete Google Ads setup</DialogTitle>

@@ -476,8 +476,8 @@ function KanbanColumn({
             </li>
           ) : (
             column.items.map((task) => (
-              <li key={task.id} className="list-none">
               <KanbanTaskItem
+                key={task.id}
                 bulkActive={bulkActive}
                 handleDragEnd={handleDragEnd}
                 handleDragStart={handleDragStart}
@@ -496,7 +496,6 @@ function KanbanColumn({
                 selected={selectedTaskIds.has(task.id)}
                 task={task}
               />
-              </li>
             ))
           )}
         </ul>
@@ -542,15 +541,15 @@ function KanbanTaskItem({
   selected: boolean
   task: TaskRecord
 }) {
-  const onItemDragStart = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
+  const onGripDragStart = useCallback(
+    (event: React.DragEvent<HTMLButtonElement>) => {
       handleDragStart(event, task)
     },
     [handleDragStart, task],
   )
 
   const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
       if (!event.altKey) {
         return
       }
@@ -566,24 +565,26 @@ function KanbanTaskItem({
     [onKeyboardMoveTask, task]
   )
 
+  const reorderEnabled = !bulkActive && !pending
+
   return (
-    <article
-      tabIndex={bulkActive || pending ? -1 : 0}
-      aria-label={task.title}
-      aria-describedby={keyboardInstructionsId}
-      aria-grabbed={isDragging}
-      aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
-      draggable={!bulkActive && !pending}
-      onDragStart={onItemDragStart}
-      onDragEnd={handleDragEnd}
-      onKeyDown={handleKeyDown}
-      className={cn(
-        'rounded-xl transition-opacity',
-        isDragging && 'opacity-40',
-        !bulkActive && !pending && 'cursor-grab active:cursor-grabbing',
-        (bulkActive || pending) && 'cursor-default',
-      )}
+    <li
+      className={cn('list-none rounded-xl transition-opacity', isDragging && 'opacity-40')}
     >
+      {reorderEnabled ? (
+        <button
+          type="button"
+          className="sr-only"
+          aria-label={`Reorder ${task.title}`}
+          aria-describedby={keyboardInstructionsId}
+          aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
+          aria-grabbed={isDragging}
+          draggable
+          onDragStart={onGripDragStart}
+          onDragEnd={handleDragEnd}
+          onKeyDown={handleKeyDown}
+        />
+      ) : null}
       <TaskCard
         task={task}
         variant="board"
@@ -598,6 +599,6 @@ function KanbanTaskItem({
         onSelectToggle={onToggleTaskSelection}
         searchQuery={searchQuery}
       />
-    </article>
+    </li>
   )
 }

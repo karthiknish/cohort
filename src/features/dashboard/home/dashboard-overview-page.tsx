@@ -2,7 +2,6 @@
 
 import { formatDistanceToNowStrict } from 'date-fns'
 import { useConvexAuth, useQuery } from 'convex/react'
-import { Info, LoaderCircle, TrendingUp } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 
 import {
@@ -11,19 +10,13 @@ import {
   financialTotalsHelper,
 } from '@/domain/ads/aggregate-financials'
 import { buildChartData } from '@/features/dashboard/home/lib/dashboard-calculations'
-import { PerformanceChart } from '@/features/dashboard/home/components/performance-chart'
 import { DashboardDailySnapshotCard } from '@/features/dashboard/home/components/dashboard-daily-snapshot-card'
-import {
-  DashboardEmptyPerformanceCard,
-  DashboardSectionHeading,
-} from '@/features/dashboard/home/components/dashboard-empty-performance-card'
 import { DashboardOverviewHeader } from '@/features/dashboard/home/components/dashboard-overview-header'
-import {
-  DashboardSnapshotMetricGrid,
-  type DashboardSnapshotMetric,
-} from '@/features/dashboard/home/components/dashboard-snapshot-metric-grid'
+import { DashboardOverviewErrorsAlert } from '@/features/dashboard/home/components/dashboard-overview-errors-alert'
+import { useDashboardDisplayStats } from '@/features/dashboard/home/components/dashboard-overview-page-hooks'
+import { DashboardOverviewPerformanceSection } from '@/features/dashboard/home/components/dashboard-overview-performance-section'
+import { DashboardOverviewSummarySection } from '@/features/dashboard/home/components/dashboard-overview-summary-section'
 import { QuickActions } from '@/features/dashboard/home/components/quick-actions'
-import { StatsCards } from '@/features/dashboard/home/components/stats-cards'
 import { useDashboardData, useDashboardStats } from '@/features/dashboard/home/hooks'
 import { analyticsIntegrationsApi, projectsApi } from '@/lib/convex-api'
 import { getPreviewProjects } from '@/lib/preview-data'
@@ -33,23 +26,8 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
-import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
-import { Button } from '@/shared/ui/button'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { FadeIn } from '@/shared/ui/animate-in'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/ui/card'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/shared/ui/tooltip'
 import { TASK_STATUSES, type TaskStatus } from '@/types/tasks'
 import { PROJECT_STATUSES, type ProjectStatus } from '@/types/projects'
 
@@ -216,7 +194,7 @@ export function DashboardOverviewPage() {
       : 'Google Analytics connected'
   }, [analyticsStatus, isPreviewMode])
 
-  const adsMetricsList = useMemo<DashboardSnapshotMetric[]>(() => {
+  const adsMetricsList = useMemo(() => {
     const formatMoney = (amount: number | null) =>
       formatAggregatedMoney(amount, adsSummary.financialTotals, formatCurrency)
 
@@ -230,13 +208,13 @@ export function DashboardOverviewPage() {
             ? `${adsSummary.providers.size} active channels`
             : 'No ad spend in this period',
         ),
-        accent: 'primary',
+        accent: 'primary' as const,
       },
       {
         label: 'Clicks',
         value: formatCompactNumber(adsSummary.clicks),
         helper: `${formatCompactNumber(adsSummary.impressions)} impressions`,
-        accent: 'info',
+        accent: 'info' as const,
       },
       {
         label: 'Conversions',
@@ -245,30 +223,30 @@ export function DashboardOverviewPage() {
           adsSummary.financialTotals.revenue !== null && adsSummary.financialTotals.revenue > 0
             ? `${formatMoney(adsSummary.financialTotals.revenue)} revenue`
             : 'No attributed revenue',
-        accent: 'success',
+        accent: 'success' as const,
       },
     ]
   }, [adsSummary])
 
-  const analyticsMetricsList = useMemo<DashboardSnapshotMetric[]>(
+  const analyticsMetricsList = useMemo(
     () => [
       {
         label: 'Users',
         value: formatCompactNumber(analyticsTotals.users),
         helper: analyticsStatusDetail,
-        accent: 'info',
+        accent: 'info' as const,
       },
       {
         label: 'Sessions',
         value: formatCompactNumber(analyticsTotals.sessions),
         helper: 'Site visits in range',
-        accent: 'primary',
+        accent: 'primary' as const,
       },
       {
         label: 'Conv. rate',
         value: `${analyticsConversionRate.toFixed(2)}%`,
         helper: `${formatCompactNumber(analyticsTotals.conversions)} conversions`,
-        accent: 'success',
+        accent: 'success' as const,
       },
     ],
     [analyticsConversionRate, analyticsStatusDetail, analyticsTotals],
@@ -295,15 +273,7 @@ export function DashboardOverviewPage() {
     statsLoading &&
     clientStatsLoading
 
-  const displayStats = useMemo(
-    () =>
-      orderedStats.map((stat) => ({
-        ...stat,
-        href: undefined,
-        featureLabel: undefined,
-      })),
-    [orderedStats],
-  )
+  const displayStats = useDashboardDisplayStats(orderedStats)
 
   const handleRefreshClick = useCallback(() => {
     void handleRefresh()
@@ -323,29 +293,11 @@ export function DashboardOverviewPage() {
             onRefresh={handleRefreshClick}
           />
 
-          {dashboardErrors.length > 0 ? (
-            <FadeIn>
-              <Alert variant="destructive">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0 space-y-1">
-                    <AlertTitle>Some data could not be loaded</AlertTitle>
-                    <AlertDescription>{dashboardErrors.join(' ')}</AlertDescription>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 border-destructive/40 bg-background hover:bg-destructive/10"
-                    onClick={handleRefreshClick}
-                    disabled={isRefreshing}
-                  >
-                    {isRefreshing ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
-                    Try again
-                  </Button>
-                </div>
-              </Alert>
-            </FadeIn>
-          ) : null}
+          <DashboardOverviewErrorsAlert
+            errors={dashboardErrors}
+            isRefreshing={isRefreshing}
+            onRetry={handleRefreshClick}
+          />
 
           <FadeIn>
             <DashboardDailySnapshotCard
@@ -356,99 +308,24 @@ export function DashboardOverviewPage() {
             />
           </FadeIn>
 
-          <section className="space-y-5" aria-label="Performance metrics">
-            {hasChartData ? (
-              <FadeIn id="tour-performance-chart">
-                <Card className="overflow-hidden border-muted/40 bg-card shadow-sm ring-1 ring-muted/20">
-                  <CardHeader className="border-b border-muted/40 bg-muted/[0.02] pb-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
-                            <TrendingUp className="size-4" aria-hidden />
-                          </span>
-                          <CardTitle className="text-lg tracking-tight">Spend & revenue</CardTitle>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="size-4 cursor-help text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                Daily ad spend and revenue from synced platforms for the current client.
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                        <CardDescription>Trend over the synced reporting window</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="h-[320px] pt-6 sm:h-[340px]">
-                    <PerformanceChart
-                      metrics={chartMetrics}
-                      loading={metricsLoading}
-                      currency={displayCurrency ?? undefined}
-                      dataSource="ads"
-                      showDetailLink={false}
-                      hideHeader
-                    />
-                  </CardContent>
-                </Card>
-              </FadeIn>
-            ) : null}
-
-            {(hasAdsData || hasAnalyticsData) && !hasChartData ? (
-              <div className="grid gap-8 lg:grid-cols-2">
-                {hasAdsData ? (
-                  <FadeIn>
-                    <div className="space-y-4">
-                      <DashboardSectionHeading
-                        eyebrow="Paid media"
-                        title="Ad platforms"
-                        description="Spend, delivery, and conversions from synced channels."
-                      />
-                      <DashboardSnapshotMetricGrid metrics={adsMetricsList} loading={adsLoading} />
-                    </div>
-                  </FadeIn>
-                ) : null}
-                {hasAnalyticsData ? (
-                  <FadeIn>
-                    <div className="space-y-4">
-                      <DashboardSectionHeading
-                        eyebrow="Site traffic"
-                        title="Analytics"
-                        description="Users, sessions, and conversion rate for the selected period."
-                      />
-                      <DashboardSnapshotMetricGrid metrics={analyticsMetricsList} loading={analyticsLoading} />
-                    </div>
-                  </FadeIn>
-                ) : null}
-              </div>
-            ) : null}
-
-            {!hasChartData && !hasAdsData && !hasAnalyticsData && !metricsLoading ? (
-              <FadeIn>
-                <DashboardEmptyPerformanceCard />
-              </FadeIn>
-            ) : null}
-          </section>
+          <DashboardOverviewPerformanceSection
+            hasChartData={hasChartData}
+            hasAdsData={hasAdsData}
+            hasAnalyticsData={hasAnalyticsData}
+            metricsLoading={metricsLoading}
+            chartMetrics={chartMetrics}
+            displayCurrency={displayCurrency}
+            adsMetricsList={adsMetricsList}
+            adsLoading={adsLoading}
+            analyticsMetricsList={analyticsMetricsList}
+            analyticsLoading={analyticsLoading}
+          />
 
           <FadeIn id="tour-quick-actions">
             <QuickActions compact />
           </FadeIn>
 
-          {displayStats.length > 0 ? (
-            <FadeIn>
-              <section className="space-y-4" aria-label="Summary statistics">
-                <DashboardSectionHeading
-                  eyebrow="Signals"
-                  title="Summary"
-                  description="Cross-channel KPIs rolled up for this workspace."
-                />
-                <StatsCards stats={displayStats} loading={statsLoading} primaryCount={4} linkless />
-              </section>
-            </FadeIn>
-          ) : null}
+          <DashboardOverviewSummarySection displayStats={displayStats} statsLoading={statsLoading} />
         </div>
       </BoneyardSkeletonBoundary>
     </PageMotionShell>

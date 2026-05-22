@@ -1,8 +1,9 @@
 'use client'
 
 import { useMemo, useState, type ReactNode } from 'react'
-import { Facebook, Instagram, LineChart, Settings2 } from 'lucide-react'
+import { LineChart, Settings2 } from 'lucide-react'
 
+import { SvglBrandLogo } from '@/shared/components/svgl-brand-logo'
 import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
@@ -106,12 +107,12 @@ export function SocialsSurfaceTabsList({
   return (
     <TabsList className={cn(DASHBOARD_THEME.tabs.list, 'h-auto w-full justify-start gap-1 rounded-xl p-1 sm:w-auto')}>
       <TabsTrigger value="facebook" className={tabClass}>
-        <Facebook className="size-4 shrink-0 text-info" aria-hidden />
+        <SvglBrandLogo brand="facebook" className="size-4 shrink-0" labeled={false} />
         Facebook
         <SurfaceTabStatusBadge status={facebookStatus} />
       </TabsTrigger>
       <TabsTrigger value="instagram" className={tabClass}>
-        <Instagram className="size-4 shrink-0 text-accent" aria-hidden />
+        <SvglBrandLogo brand="instagram" className="size-4 shrink-0" labeled={false} />
         Instagram
         <SurfaceTabStatusBadge status={instagramStatus} />
       </TabsTrigger>

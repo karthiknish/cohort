@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { UnifiedMessage } from './message-list-types'
-import type { MessageListRenderers } from './message-list-sections'
+import type { MessageListRenderers } from './message-list-render-context'
 import { useMessageListRenderContext } from './message-list-render-context'
-import { toMessageContentComponent } from './message-list-render-utils'
+import { mergeMessageListRenderers } from './message-list-render-utils'
 
 function formatDate(ms: number): string {
   const date = new Date(ms)
@@ -38,14 +38,7 @@ export type UseMessageListControllerArgs = {
   onLoadMore: () => void
   onToggleReaction: (messageId: string, emoji: string) => Promise<void>
   reactionPendingByMessage?: Record<string, string | null>
-  renderMessageExtras?: (message: UnifiedMessage) => React.ReactNode
-  renderMessageActions?: (message: UnifiedMessage) => React.ReactNode
-  renderMessageContent?: React.ComponentType<{ message: UnifiedMessage }>
-  renderMessageAttachments?: (message: UnifiedMessage) => React.ReactNode
-  renderMessageFooter?: (message: UnifiedMessage) => React.ReactNode
-  renderThreadSection?: (message: UnifiedMessage) => React.ReactNode
-  renderEditForm?: (message: UnifiedMessage) => React.ReactNode
-  renderDeletedInfo?: (message: UnifiedMessage) => React.ReactNode
+  renderers?: MessageListRenderers
   focusMessageId?: string | null
   focusThreadId?: string | null
   typingIndicatorText?: string
@@ -58,14 +51,7 @@ export function useMessageListController({
   onLoadMore,
   onToggleReaction,
   reactionPendingByMessage = EMPTY_REACTION_PENDING_BY_MESSAGE,
-  renderMessageExtras,
-  renderMessageActions,
-  renderMessageContent,
-  renderMessageAttachments,
-  renderMessageFooter,
-  renderThreadSection,
-  renderEditForm,
-  renderDeletedInfo,
+  renderers: renderersProp,
   focusMessageId,
   focusThreadId,
   typingIndicatorText,
@@ -93,40 +79,20 @@ export function useMessageListController({
 
   const groupedMessages = useMemo(() => groupMessagesByDate(sortedMessages), [sortedMessages])
 
-  const effectiveRenderMessageExtras = renderMessageExtras ?? renderContext?.renderMessageExtras
-  const effectiveRenderMessageActions = renderMessageActions ?? renderContext?.renderMessageActions
-  const effectiveRenderMessageContent = renderMessageContent ?? renderContext?.renderMessageContent
-  const effectiveRenderMessageAttachments = renderMessageAttachments ?? renderContext?.renderMessageAttachments
-  const effectiveRenderMessageFooter = renderMessageFooter ?? renderContext?.renderMessageFooter
-  const effectiveRenderThreadSection = renderThreadSection ?? renderContext?.renderThreadSection
-  const effectiveRenderEditForm = renderEditForm ?? renderContext?.renderEditForm
-  const effectiveRenderDeletedInfo = renderDeletedInfo ?? renderContext?.renderDeletedInfo
-  const effectiveRenderMessageWrapper = renderContext?.renderMessageWrapper
+  const renderers = useMemo<MessageListRenderers | undefined>(() => {
+    if (!renderContext && !renderersProp) {
+      return undefined
+    }
 
-  const renderers = useMemo<MessageListRenderers>(
-    () => ({
-      renderMessageActions: effectiveRenderMessageActions,
-      renderMessageAttachments: effectiveRenderMessageAttachments,
-      renderMessageContent: effectiveRenderMessageContent
-        ? toMessageContentComponent(effectiveRenderMessageContent)
-        : undefined,
-      renderMessageExtras: effectiveRenderMessageExtras,
-      renderMessageFooter: effectiveRenderMessageFooter,
-      renderThreadSection: effectiveRenderThreadSection,
-      renderEditForm: effectiveRenderEditForm,
-      renderDeletedInfo: effectiveRenderDeletedInfo,
-    }),
-    [
-      effectiveRenderDeletedInfo,
-      effectiveRenderEditForm,
-      effectiveRenderMessageActions,
-      effectiveRenderMessageAttachments,
-      effectiveRenderMessageContent,
-      effectiveRenderMessageExtras,
-      effectiveRenderMessageFooter,
-      effectiveRenderThreadSection,
-    ],
-  )
+    return mergeMessageListRenderers({
+      renderers: {
+        ...(renderContext ?? {}),
+        ...renderersProp,
+      },
+    })
+  }, [renderContext, renderersProp])
+
+  const effectiveRenderMessageWrapper = renderers?.renderMessageWrapper
 
   const requestLoadOlder = useCallback(() => {
     const container = scrollRef.current

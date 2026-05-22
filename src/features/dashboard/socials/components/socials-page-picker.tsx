@@ -1,7 +1,8 @@
 'use client'
 
-import { Instagram, LoaderCircle, RefreshCw } from 'lucide-react'
+import { LoaderCircle, RefreshCw } from 'lucide-react'
 
+import { SvglBrandLogo } from '@/shared/components/svgl-brand-logo'
 import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
@@ -55,7 +56,7 @@ export function SocialsPagePicker({
         </div>
         {linkedIg ? (
           <div className="flex items-center gap-2 rounded-xl border border-accent/20 bg-accent/5 px-3 py-2 text-xs text-foreground">
-            <Instagram className="size-4 shrink-0 text-accent" aria-hidden />
+            <SvglBrandLogo brand="instagram" className="size-4 shrink-0" labeled={false} />
             <span>
               Linked IG · <span className="font-medium">@{linkedIg}</span>
             </span>

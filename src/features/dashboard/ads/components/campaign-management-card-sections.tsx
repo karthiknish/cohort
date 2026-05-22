@@ -1,12 +1,12 @@
 'use client'
 
-import type { ColumnDef } from '@tanstack/react-table'
+import type { CellContext, ColumnDef, HeaderContext } from '@tanstack/react-table'
 import { CircleAlert, DollarSign, Pause, Play, RefreshCw, Trash2, TrendingUp } from 'lucide-react'
-import { useCallback, useMemo, type ReactNode } from 'react'
+import { createContext, use, useCallback, useMemo, ViewTransition, type ReactNode } from 'react'
 
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { VirtualizedDataTable } from '@/shared/ui/data-table'
+import { DataTableColumnHeader, VirtualizedDataTable } from '@/shared/ui/data-table'
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,9 @@ import { Label } from '@/shared/ui/label'
 import { StateWrapper } from '@/shared/ui/state-wrapper'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip'
+import { formatMoney, getCurrencyInfo, isSupportedCurrency, normalizeCurrencyCode } from '@/constants/currencies'
+import { Badge } from '@/shared/ui/badge'
+import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
 import { EmptyState } from '@/shared/ui/empty-state'
 
 import type { BiddingDraft, Campaign, CampaignGroup, CampaignManagementView } from './campaign-management-card-types'
@@ -62,7 +65,7 @@ const dollarSignIcon = <DollarSign className="size-4" />
 const trendingUpIcon = <TrendingUp className="size-4" />
 const trash2Icon = <Trash2 className="size-4" />
 
-function CampaignRowActions({
+export function CampaignRowActions({
   actionLoading,
   biddingDisabled,
   biddingDisabledReason,
@@ -148,7 +151,7 @@ function CampaignRowActions({
   )
 }
 
-function CampaignGroupRowActions({
+export function CampaignGroupRowActions({
   actionLoading,
   group,
   onAction,
@@ -546,7 +549,7 @@ function CampaignManagementDialogs({
   )
 }
 
-function CampaignManagementDisconnectedState({ providerName }: { providerName: string }) {
+export function CampaignManagementDisconnectedState({ providerName }: { providerName: string }) {
   return (
     <Card>
       <CardHeader>
@@ -556,7 +559,7 @@ function CampaignManagementDisconnectedState({ providerName }: { providerName: s
   )
 }
 
-function CampaignManagementSetupState({
+export function CampaignManagementSetupState({
   onSetupAction,
   providerName,
   setupActionLabel,
@@ -602,7 +605,7 @@ function CampaignManagementSetupState({
   )
 }
 
-function CampaignManagementConnectedView({
+export function CampaignManagementConnectedView({
   actionLoading,
   biddingDialogOpen,
   budgetDialogOpen,
@@ -707,16 +710,4 @@ function CampaignManagementConnectedView({
       />
     </>
   )
-}
-
-export {
-  BiddingStrategyDialog,
-  BudgetUpdateDialog,
-  CampaignManagementConnectedView,
-  CampaignManagementDisconnectedState,
-  CampaignGroupRowActions,
-  CampaignManagementHeader,
-  CampaignManagementSetupState,
-  CampaignManagementTableSection,
-  CampaignRowActions,
 }

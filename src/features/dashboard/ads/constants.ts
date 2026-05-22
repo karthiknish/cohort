@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
-import { Chrome, Facebook, Linkedin, Music4 } from 'lucide-react'
+
+import { createSvglBrandIcon } from '@/shared/components/svgl-brand-logo'
 
 export const METRICS_PAGE_SIZE = 100
 
@@ -23,12 +24,13 @@ export const TIMEFRAME_OPTIONS: Array<{ label: string; value: number }> = [
     { label: 'Past 90 days', value: 90 },
 ]
 
+/** Provider marks from https://svgl.app (see /public/svgl). */
 export const PROVIDER_ICON_MAP: Record<string, ComponentType<{ className?: string }>> = {
-    google: Chrome,
-    facebook: Facebook,
-    meta: Facebook,
-    linkedin: Linkedin,
-    tiktok: Music4,
+    google: createSvglBrandIcon('google'),
+    facebook: createSvglBrandIcon('meta'),
+    meta: createSvglBrandIcon('meta'),
+    linkedin: createSvglBrandIcon('linkedin'),
+    tiktok: createSvglBrandIcon('tiktok'),
 }
 
 export const DISPLAY_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {

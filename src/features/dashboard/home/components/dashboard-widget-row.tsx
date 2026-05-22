@@ -67,14 +67,14 @@ export function DashboardWidgetRow({
     <li
       className="list-none rounded-lg border bg-muted/30 p-2 group"
       aria-label={`${widget.title}, position ${index + 1} of ${total}`}
+      aria-describedby={instructionsId}
     >
       <div
         role="toolbar"
-        aria-label={`Reorder ${widget.title}`}
         tabIndex={0}
-        aria-describedby={instructionsId}
-        onKeyDown={handleKeyDown}
+        aria-label={`Reorder ${widget.title}`}
         className="flex items-center gap-2"
+        onKeyDown={handleKeyDown}
       >
       <div className="flex flex-col gap-0.5">
         <Button

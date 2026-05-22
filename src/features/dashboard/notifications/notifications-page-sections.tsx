@@ -42,28 +42,6 @@ import { NotificationEmptyState } from '@/features/notifications/components/noti
 import { useNotificationNavigation } from '@/features/notifications/hooks/use-notification-navigation'
 import { NOTIFICATIONS_PAGE_PAGE_SIZE } from '@/lib/notifications/pagination'
 
-type NotificationsCursor = {
-  createdAtMs: number
-  legacyId: string
-  scanCursor?: string | null
-  overflowLegacyIds?: string[]
-}
-
-const MAX_NOTIFICATION_PAGES = 10
-const VIRTUAL_NOTIFICATIONS_THRESHOLD = 24
-export const FILTER_VALUES = ['all', 'unread', 'mentions', 'tasks', 'collaboration', 'system'] as const
-
-export type AckAction = 'read' | 'dismiss'
-export type FilterType = (typeof FILTER_VALUES)[number]
-
-const FILTER_EMPTY_LABELS: Partial<Record<FilterType, string>> = {
-  unread: 'unread',
-  mentions: 'mention',
-  tasks: 'task',
-  collaboration: 'collaboration',
-  system: 'system',
-}
-
 export function NotificationVirtualRow({
   start,
   dataIndex,
@@ -120,374 +98,8 @@ export function NotificationsPageFallback() {
   )
 }
 
-export const NOTIFICATIONS_PAGE_FALLBACK = (
-  <RevealTransitionFallback>
-    <NotificationsPageFallback />
-  </RevealTransitionFallback>
-)
-
-export function useNotificationsPage() {
-  const { user } = useAuth()
-  const { selectedClientId } = useClientContext()
-  const { isPreviewMode } = usePreview()
-  const { toast } = useToast()
-
-  const filterTabs = usePersistedTab<FilterType>({
-    param: 'tab',
-    defaultValue: 'all',
-    allowedValues: FILTER_VALUES,
-    storageNamespace: 'dashboard:notifications',
-    syncToUrl: true,
-  })
-
-  const activeFilter = filterTabs.value
-  const setActiveFilter = filterTabs.setValue
-  const [ackInFlight, setAckInFlight] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
-  const [notificationAnnouncement, setNotificationAnnouncement] = useState('')
-  const handleOpenNotification = useNotificationNavigation()
-  const [previewNotificationState, setPreviewNotificationState] = useState<{
-    sourceKey: string
-    notifications: WorkspaceNotification[]
-  } | null>(null)
-  const previewSourceKey = `preview:${selectedClientId ?? 'all'}`
-  const basePreviewNotifications = useMemo(
-    () => getPreviewNotifications(selectedClientId ?? null),
-    [selectedClientId],
-  )
-  const previewNotifications = useMemo(() => {
-    if (previewNotificationState?.sourceKey === previewSourceKey) {
-      return previewNotificationState.notifications
-    }
-
-    return basePreviewNotifications
-  }, [basePreviewNotifications, previewNotificationState, previewSourceKey])
-
-  const convex = useConvex()
-  const workspaceId = user?.agencyId
-
-  const notificationsInfiniteQuery = useInfiniteQuery({
-    queryKey: ['notificationsPage', workspaceId, user?.role, selectedClientId, activeFilter],
-    enabled: !isPreviewMode && Boolean(workspaceId),
-    initialPageParam: null as NotificationsCursor | null,
-    maxPages: MAX_NOTIFICATION_PAGES,
-    queryFn: async ({ pageParam }) => {
-      if (!workspaceId) {
-        return { notifications: [], nextCursor: null as NotificationsCursor | null }
-      }
-
-      return convex.query(notificationsApi.list, {
-        workspaceId,
-        pageSize: parsePageSize(NOTIFICATIONS_PAGE_PAGE_SIZE, {
-          defaultValue: NOTIFICATIONS_PAGE_PAGE_SIZE,
-          max: 100,
-        }),
-        role: user?.role ?? undefined,
-        clientId: user?.role === 'client' ? (selectedClientId ?? undefined) : undefined,
-        unread: activeFilter === 'unread' ? true : undefined,
-        afterCreatedAtMs: pageParam?.createdAtMs,
-        afterLegacyId: pageParam?.legacyId,
-        scanCursor: pageParam?.scanCursor ?? undefined,
-        overflowLegacyIds: pageParam?.overflowLegacyIds,
-      })
-    },
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
-  })
-
-  const liveNotifications = useMemo(
-    () => notificationsInfiniteQuery.data?.pages.flatMap((page) => page.notifications ?? []) ?? [],
-    [notificationsInfiniteQuery.data?.pages],
-  )
-
-  const notifications = useMemo(() => {
-    let items = isPreviewMode ? previewNotifications : liveNotifications
-
-    if (activeFilter === 'mentions') {
-      items = items.filter(
-        (n: WorkspaceNotification) => n.kind === 'collaboration.mention' || n.kind === 'task.mention',
-      )
-    } else if (activeFilter === 'tasks') {
-      items = items.filter((n: WorkspaceNotification) => n.kind.startsWith('task.'))
-    } else if (activeFilter === 'collaboration') {
-      items = items.filter((n: WorkspaceNotification) => n.kind.startsWith('collaboration.'))
-    } else if (activeFilter === 'system') {
-      items = items.filter(
-        (n: WorkspaceNotification) =>
-          n.kind === 'proposal.deck.ready' || n.kind === 'report.generated' || n.kind === 'project.created',
-      )
-    }
-
-    return items
-  }, [activeFilter, isPreviewMode, liveNotifications, previewNotifications])
-
-  const ackNotifications = useMutation(notificationsApi.ack)
-
-  const loading = isPreviewMode ? false : notificationsInfiniteQuery.isLoading
-  const loadingMore = isPreviewMode ? false : notificationsInfiniteQuery.isFetchingNextPage
-  const error = isPreviewMode
-    ? null
-    : notificationsInfiniteQuery.isError
-      ? notificationsInfiniteQuery.error instanceof Error
-        ? notificationsInfiniteQuery.error.message
-        : 'Failed to load notifications'
-      : null
-  const nextCursor = isPreviewMode ? false : notificationsInfiniteQuery.hasNextPage
-
-  const updateNotificationStatus = useCallback(
-    (ids: string[], action: AckAction, label?: string) => {
-      if (isPreviewMode) {
-        if (ids.length === 0) {
-          return Promise.resolve()
-        }
-
-        const announcementLabel = label ?? `${ids.length} notification${ids.length > 1 ? 's' : ''}`
-        setNotificationAnnouncement(
-          action === 'dismiss'
-            ? `Dismissing ${announcementLabel}.`
-            : `Marking ${announcementLabel} as read.`,
-        )
-
-        setPreviewNotificationState((current) => {
-          const currentNotifications =
-            current?.sourceKey === previewSourceKey ? current.notifications : basePreviewNotifications
-
-          if (action === 'dismiss') {
-            return {
-              sourceKey: previewSourceKey,
-              notifications: currentNotifications.filter((notification) => !ids.includes(notification.id)),
-            }
-          }
-
-          return {
-            sourceKey: previewSourceKey,
-            notifications: currentNotifications.map((notification) =>
-              ids.includes(notification.id)
-                ? { ...notification, read: true, acknowledged: true }
-                : notification,
-            ),
-          }
-        })
-
-        toast({
-          title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
-          description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
-        })
-
-        setNotificationAnnouncement(
-          action === 'dismiss'
-            ? `${announcementLabel} dismissed.`
-            : `${announcementLabel} marked as read.`,
-        )
-
-        return Promise.resolve()
-      }
-
-      if (!workspaceId || ids.length === 0) {
-        return Promise.resolve()
-      }
-
-      const announcementLabel = label ?? `${ids.length} notification${ids.length > 1 ? 's' : ''}`
-      setNotificationAnnouncement(
-        action === 'dismiss'
-          ? `Dismissing ${announcementLabel}.`
-          : `Marking ${announcementLabel} as read.`,
-      )
-
-      setAckInFlight(true)
-
-      return ackNotifications({
-        workspaceId,
-        ids,
-        action,
-        ...(user?.role === 'client' && selectedClientId ? { clientId: selectedClientId } : {}),
-      })
-        .then(() => notificationsInfiniteQuery.refetch())
-        .then(() => {
-          toast({
-            title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
-            description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
-          })
-          setNotificationAnnouncement(
-            action === 'dismiss'
-              ? `${announcementLabel} dismissed.`
-              : `${announcementLabel} marked as read.`,
-          )
-        })
-        .catch((updateError) => {
-          logError(updateError, 'Notifications:updateStatus')
-          const message = asErrorMessage(updateError)
-          notifyFailure({
-            title: 'Notification error',
-            message,
-          })
-          setNotificationAnnouncement(`Could not update ${announcementLabel}. ${message}`)
-        })
-        .finally(() => {
-          setAckInFlight(false)
-        })
-    },
-    [
-      ackNotifications,
-      basePreviewNotifications,
-      isPreviewMode,
-      notificationsInfiniteQuery,
-      previewSourceKey,
-      selectedClientId,
-      toast,
-      user?.role,
-      workspaceId,
-    ],
-  )
-
-  const handleRefresh = useCallback(() => {
-    if (isPreviewMode) {
-      setPreviewNotificationState({
-        sourceKey: previewSourceKey,
-        notifications: basePreviewNotifications,
-      })
-      toast({ title: 'Preview data refreshed', description: 'Showing sample notifications.' })
-      return
-    }
-
-    void notificationsInfiniteQuery.refetch()
-  }, [basePreviewNotifications, isPreviewMode, notificationsInfiniteQuery, previewSourceKey, toast])
-
-  const handleRetryNotificationsQuery = useCallback(() => {
-    void notificationsInfiniteQuery.refetch()
-  }, [notificationsInfiniteQuery])
-
-  const handleLoadMore = useCallback(() => {
-    if (isPreviewMode) {
-      return
-    }
-
-    if (!notificationsInfiniteQuery.hasNextPage || notificationsInfiniteQuery.isFetchingNextPage) {
-      return
-    }
-
-    void notificationsInfiniteQuery.fetchNextPage()
-  }, [isPreviewMode, notificationsInfiniteQuery])
-
-  const handleDismiss = useCallback(
-    (id: string, title?: string) => {
-      void updateNotificationStatus([id], 'dismiss', title ? `${title} notification` : 'notification')
-    },
-    [updateNotificationStatus],
-  )
-
-  const handleMarkAsRead = useCallback(
-    (id: string, title?: string) => {
-      void updateNotificationStatus([id], 'read', title ? `${title} notification` : 'notification')
-    },
-    [updateNotificationStatus],
-  )
-
-  const handleMarkAllRead = useCallback(() => {
-    const unreadIds = notifications.flatMap((item) => (!item.read ? [item.id] : []))
-    if (unreadIds.length === 0) {
-      toast({ title: 'All caught up!', description: 'You have no unread notifications.' })
-      return
-    }
-    void updateNotificationStatus(unreadIds, 'read', `${unreadIds.length} notifications`)
-  }, [notifications, updateNotificationStatus, toast])
-
-  const handleActiveFilterChange = useCallback(
-    (value: string) => {
-      setActiveFilter(value as FilterType)
-    },
-    [setActiveFilter],
-  )
-
-  const handleClearAll = useCallback(() => {
-    const allIds = notifications.map((item) => item.id)
-    if (allIds.length === 0) {
-      toast({ title: 'Inbox empty', description: 'There are no notifications to clear.' })
-      return
-    }
-    void updateNotificationStatus(allIds, 'dismiss', `${allIds.length} notifications`)
-  }, [notifications, updateNotificationStatus, toast])
-
-  const unreadCount = notifications.filter((item) => !item.read).length
-
-  const handleSelectToggle = useCallback((id: string) => {
-    setSelectedIds((current) => {
-      const next = new Set(current)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }, [])
-
-  const handleBulkMarkRead = useCallback(() => {
-    const ids = [...selectedIds]
-    if (ids.length === 0) return
-    void updateNotificationStatus(ids, 'read').then(() => setSelectedIds(new Set()))
-  }, [selectedIds, updateNotificationStatus])
-
-  const handleBulkDismiss = useCallback(() => {
-    const ids = [...selectedIds]
-    if (ids.length === 0) return
-    void updateNotificationStatus(ids, 'dismiss').then(() => setSelectedIds(new Set()))
-  }, [selectedIds, updateNotificationStatus])
-
-  const notificationScrollRef = useRef<HTMLDivElement | null>(null)
-  const shouldVirtualizeNotifications = notifications.length > VIRTUAL_NOTIFICATIONS_THRESHOLD
-  const notificationVirtualizer = useVirtualizer({
-    count: shouldVirtualizeNotifications ? notifications.length : 0,
-    getScrollElement: () => notificationScrollRef.current,
-    estimateSize: () => 128,
-    overscan: 6,
-  })
-
-  useEffect(() => {
-    if (!shouldVirtualizeNotifications) {
-      return
-    }
-    notificationVirtualizer.measure()
-  }, [notificationVirtualizer, shouldVirtualizeNotifications, notifications.length])
-
-  const virtualTotalSize = notificationVirtualizer.getTotalSize()
-  const virtualContainerStyle = useMemo(() => ({ height: virtualTotalSize }), [virtualTotalSize])
-
-  const handleClearSelection = useCallback(() => {
-    setSelectedIds(new Set())
-  }, [])
-
-  return {
-    activeFilter,
-    ackInFlight,
-    error,
-    handleActiveFilterChange,
-    handleBulkDismiss,
-    handleBulkMarkRead,
-    handleClearAll,
-    handleClearSelection,
-    handleDismiss,
-    handleLoadMore,
-    handleMarkAllRead,
-    handleMarkAsRead,
-    handleOpenNotification,
-    handleRefresh,
-    handleRetryNotificationsQuery,
-    handleSelectToggle,
-    isPreviewMode,
-    loading,
-    loadingMore,
-    nextCursor,
-    notificationAnnouncement,
-    notificationScrollRef,
-    notifications,
-    notificationsInfiniteQuery,
-    notificationVirtualizer,
-    selectedIds,
-    shouldVirtualizeNotifications,
-    unreadCount,
-    virtualContainerStyle,
-  }
-}
+import { useNotificationsPage } from './notifications-page-hooks'
+import { FILTER_EMPTY_LABELS, type FilterType } from './notifications-page-constants'
 
 export function NotificationsPageHeader({
   onRefresh,
@@ -856,6 +468,49 @@ export function NotificationsFeedFooter({
         </div>
       ) : null}
     </>
+  )
+}
+
+export function NotificationsPageContent() {
+  const page = useNotificationsPage()
+
+  return (
+    <div className={DASHBOARD_THEME.layout.container}>
+      <LiveRegion message={page.notificationAnnouncement} />
+
+      <NotificationsPageHeader
+        onRefresh={page.handleRefresh}
+        onMarkAllRead={page.handleMarkAllRead}
+        onClearAll={page.handleClearAll}
+        refreshing={!page.isPreviewMode && page.notificationsInfiniteQuery.isFetching}
+        unreadCount={page.unreadCount}
+        notificationsCount={page.notifications.length}
+        ackInFlight={page.ackInFlight}
+      />
+
+      {page.isPreviewMode ? <NotificationsPreviewAlert /> : null}
+
+      {page.error ? (
+        <NotificationsErrorAlert
+          error={page.error}
+          isPreviewMode={page.isPreviewMode}
+          retrying={page.notificationsInfiniteQuery.isFetching}
+          onRetry={page.handleRetryNotificationsQuery}
+        />
+      ) : null}
+
+      <Tabs value={page.activeFilter} onValueChange={page.handleActiveFilterChange}>
+        <NotificationsFilterTabsList
+          activeFilter={page.activeFilter}
+          notificationsCount={page.notifications.length}
+          unreadCount={page.unreadCount}
+        />
+
+        <TabsContent value={page.activeFilter} className="mt-6">
+          <NotificationsFilterPanel page={page} />
+        </TabsContent>
+      </Tabs>
+    </div>
   )
 }
 

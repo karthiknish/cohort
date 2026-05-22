@@ -1,19 +1,9 @@
 'use client'
 
 import { useCallback } from 'react'
-import {
-  Building2,
-  CircleCheck,
-  Facebook,
-  Factory,
-  Globe,
-  Instagram,
-  Linkedin,
-  MapPin,
-  Twitter,
-  Users2,
-  Youtube,
-} from 'lucide-react'
+import { Building2, CircleCheck, Factory, Globe, MapPin, Users2 } from 'lucide-react'
+
+import { SvglBrandLogo, type SvglBrandSlug } from '@/shared/components/svgl-brand-logo'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { FormField, FieldSection } from '@/shared/ui/form-field'
@@ -75,21 +65,18 @@ function SelectionIndicator({ selected }: { selected: boolean }) {
   )
 }
 
+const SOCIAL_HANDLE_SVGL: Partial<Record<(typeof socialHandles)[number], SvglBrandSlug>> = {
+  Facebook: 'facebook',
+  Instagram: 'instagram',
+  LinkedIn: 'linkedin',
+  'X / Twitter': 'x',
+  YouTube: 'youtube',
+}
+
 function socialHandleIcon(handle: (typeof socialHandles)[number]) {
-  if (handle === 'Facebook') {
-    return <Facebook className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
-  }
-  if (handle === 'Instagram') {
-    return <Instagram className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
-  }
-  if (handle === 'LinkedIn') {
-    return <Linkedin className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
-  }
-  if (handle === 'X / Twitter') {
-    return <Twitter className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
-  }
-  if (handle === 'YouTube') {
-    return <Youtube className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
+  const brand = SOCIAL_HANDLE_SVGL[handle]
+  if (brand) {
+    return <SvglBrandLogo brand={brand} className="size-4 opacity-70 transition-opacity group-hover:opacity-100" labeled={false} />
   }
   return <Globe className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
 }

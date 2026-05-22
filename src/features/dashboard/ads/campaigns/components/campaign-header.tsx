@@ -1,7 +1,9 @@
 'use client'
 
 import { ViewTransition } from 'react'
-import { Chrome, Facebook, Linkedin, Megaphone, Music4, RefreshCw } from 'lucide-react'
+import { Megaphone, RefreshCw } from 'lucide-react'
+
+import { SvglBrandLogo, type SvglBrandSlug } from '@/shared/components/svgl-brand-logo'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -11,7 +13,7 @@ import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-the
 import { cn } from '@/lib/utils'
 import { formatDate, DATE_FORMATS } from '@/lib/dates'
 import { DASHBOARD_THEME, getIconContainerClasses } from '@/lib/dashboard-theme'
-import { formatProviderName, getProviderColor } from '@/lib/themes'
+import { formatProviderName } from '@/lib/themes'
 import { BackLink } from '@/shared/components/back-link'
 
 interface Campaign {
@@ -68,22 +70,20 @@ export function CampaignHeader({
 
   const getProviderIcon = () => {
     if (!campaign?.providerId) return null
-    const color = getProviderColor(campaign.providerId).hex
-    const colorClass = `text-[${color}]`
 
-    switch (campaign.providerId) {
-      case 'facebook':
-      case 'meta':
-        return <Facebook className={cn('size-3', colorClass)} aria-hidden />
-      case 'google':
-        return <Chrome className={cn('size-3', colorClass)} aria-hidden />
-      case 'tiktok':
-        return <Music4 className={cn('size-3', colorClass)} aria-hidden />
-      case 'linkedin':
-        return <Linkedin className={cn('size-3', colorClass)} aria-hidden />
-      default:
-        return null
-    }
+    const svglBrand: SvglBrandSlug | null =
+      campaign.providerId === 'facebook' || campaign.providerId === 'meta'
+        ? 'meta'
+        : campaign.providerId === 'google'
+          ? 'google'
+          : campaign.providerId === 'tiktok'
+            ? 'tiktok'
+            : campaign.providerId === 'linkedin'
+              ? 'linkedin'
+              : null
+
+    if (!svglBrand) return null
+    return <SvglBrandLogo brand={svglBrand} className="size-3" labeled={false} />
   }
 
   const objectiveLabel = formatObjectiveLabel(campaign?.objective)

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { usePrevious } from '@/shared/hooks/use-previous'
 
 import type { ChecklistSubmission } from '@/types/workforce'
@@ -44,21 +44,20 @@ export function SubmissionTable({
       : `${pendingAction.title} moved to follow up.`
   }, [pendingAction, pendingId, previousPendingId])
 
-  const [liveAnnouncement, setLiveAnnouncement] = useState('')
   const completionKey =
     pendingAction && previousPendingId === pendingAction.id && pendingId === null
       ? `${pendingAction.id}:${pendingAction.action}`
       : null
 
+  let liveAnnouncement = ''
   if (completionKey && announcedCompletionKeyRef.current !== completionKey) {
     announcedCompletionKeyRef.current = completionKey
-    setLiveAnnouncement(announcement)
+    liveAnnouncement = announcement
     pendingActionRef.current = null
   }
 
   const handleNeedsFollowUp = useCallback(
     (submission: ChecklistSubmission) => {
-      setLiveAnnouncement('')
       announcedCompletionKeyRef.current = null
       pendingActionRef.current = {
         id: submission.id,
@@ -72,7 +71,6 @@ export function SubmissionTable({
 
   const handleMarkReady = useCallback(
     (submission: ChecklistSubmission) => {
-      setLiveAnnouncement('')
       announcedCompletionKeyRef.current = null
       pendingActionRef.current = {
         id: submission.id,

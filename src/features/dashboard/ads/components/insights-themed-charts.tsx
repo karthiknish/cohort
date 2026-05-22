@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, type ReactNode } from 'react'
 
 import { formatCurrency } from '@/lib/utils'
 import type { PerformanceAnalysis } from '@/lib/ad-algorithms'
@@ -102,7 +102,6 @@ export function ProviderComparisonChart({
   return (
     <ProviderComparisonChartPlot
       chartData={chartData}
-      currency={currency}
       formatXAxis={formatXAxis}
       spendFormatter={spendFormatter}
     />
@@ -115,7 +114,6 @@ function ProviderComparisonChartPlot({
   spendFormatter,
 }: {
   chartData: { name: string; spend: number; revenue: number }[]
-  currency: string
   formatXAxis: (v: number) => string
   spendFormatter: (value: unknown, name: unknown) => React.ReactNode
 }) {

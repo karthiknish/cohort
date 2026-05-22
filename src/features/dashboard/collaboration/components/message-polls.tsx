@@ -219,6 +219,11 @@ export function PollCard({
     [canEnd, canVote, hasVoted, isVoting, onEndPoll, poll.endTime, showResults],
   )
 
+  const optionRowFlags = useMemo(
+    () => ({ canVote, hasVoted, isExpired, showResults }),
+    [canVote, hasVoted, isExpired, showResults],
+  )
+
   return (
     <div className={cn('border rounded-lg overflow-hidden bg-muted/30', className)}>
       <PollCardHeader isExpired={isExpired} poll={poll} totalVotes={totalVotes} />
@@ -227,7 +232,7 @@ export function PollCard({
         {sortedOptions.map((option, index) => (
           <PollOptionRowItem
             key={option.id}
-            flags={{ canVote, hasVoted, isExpired, showResults }}
+            flags={optionRowFlags}
             handleToggleOption={handleToggleOption}
             index={index}
             option={option}

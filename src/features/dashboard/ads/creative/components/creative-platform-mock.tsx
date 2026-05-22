@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties } from 'react'
 import NextImage from 'next/image'
 import { AnimatePresence, m } from '@/shared/ui/motion'
 import { slideInLeftVariants, transitions } from '@/lib/motion'
@@ -13,9 +13,11 @@ import {
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { cpMockStyles as s } from './creative-platform-mock-styles'
 
 import type { Creative } from './types'
 import { formatCTALabel } from './helpers'
+import { CreativePreviewMedia, type CreativePreviewMediaProps } from './creative-preview-media'
 
 import { Button } from '@/shared/ui/button'
 
@@ -49,7 +51,7 @@ function PreviewAvatar(props: {
           style={crispEdgesStyle}
         />
       ) : (
-        <div className="flex size-full items-center justify-center bg-[#e4e6eb] text-sm font-semibold text-[#050505]">
+        <div className="flex size-full items-center justify-center text-sm font-semibold" style={s.avatarPlaceholder}>
           {initial}
         </div>
       )}
@@ -68,7 +70,7 @@ export function CreativePlatformMock({
   landingHostname,
   profileImageError,
   onProfileImageError,
-  previewMedia,
+  previewMediaProps,
 }: {
   activePlatform: CreativeSocialPreviewPlatform
   campaignName: string
@@ -80,8 +82,9 @@ export function CreativePlatformMock({
   landingHostname: string
   profileImageError: boolean
   onProfileImageError: () => void
-  previewMedia: ReactNode
+  previewMediaProps: CreativePreviewMediaProps
 }) {
+  const previewMedia = <CreativePreviewMedia {...previewMediaProps} />
   return (
     <AnimatePresence mode="wait">
       <m.div
@@ -94,28 +97,29 @@ export function CreativePlatformMock({
         className="w-full"
       >
         {activePlatform === 'instagram' && (
-          <div className="overflow-hidden bg-white text-[#262626]">
+          <div className="overflow-hidden" style={s.igSurface}>
             <div className="flex items-center justify-between px-3 py-2.5">
               <div className="flex min-w-0 items-center gap-2.5">
-                <PreviewAvatar
-                  pageName={pageDisplayName}
-                  profileImageUrl={creative.pageProfileImageUrl}
-                  profileImageError={profileImageError}
-                  onProfileImageError={onProfileImageError}
-                  className="size-8"
-                  ringClassName="p-[2px] bg-gradient-to-tr from-[#feda75] via-[#fa7e1e] to-[#d62976]"
-                />
+                <div className="rounded-full p-[2px]" style={s.igRing}>
+                  <PreviewAvatar
+                    pageName={pageDisplayName}
+                    profileImageUrl={creative.pageProfileImageUrl}
+                    profileImageError={profileImageError}
+                    onProfileImageError={onProfileImageError}
+                    className="size-8"
+                  />
+                </div>
                 <div className="min-w-0">
                   <p className="truncate text-[13px] font-semibold leading-tight">{pageDisplayName}</p>
-                  <p className="text-[11px] leading-tight text-[#8e8e8e]">Sponsored</p>
+                  <p className="text-[11px] leading-tight" style={s.textMuted}>Sponsored</p>
                 </div>
               </div>
-              <MoreHorizontal className="size-5 shrink-0 text-[#262626]" strokeWidth={1.75} />
+              <MoreHorizontal className="size-5 shrink-0" style={s.textPrimary} strokeWidth={1.75} />
             </div>
 
             {primaryText ? (
               <div className="px-3 pb-3 pt-0.5">
-                <p className="whitespace-pre-wrap text-[14px] leading-[1.4] text-[#262626]">{primaryText}</p>
+                <p className="whitespace-pre-wrap text-[14px] leading-[1.4]" style={s.textPrimary}>{primaryText}</p>
               </div>
             ) : null}
 
@@ -135,19 +139,20 @@ export function CreativePlatformMock({
               {!primaryText ? (
                 <p className="text-[14px] leading-[1.4]">
                   <span className="font-semibold">{pageDisplayName}</span>{' '}
-                  <span className="font-normal text-[#262626]">See more</span>
+                  <span className="font-normal" style={s.textPrimary}>See more</span>
                 </p>
               ) : null}
               {headlineText ? (
-                <p className="text-[13px] font-medium text-[#00376b]">{headlineText}</p>
+                <p className="text-[13px] font-medium" style={s.link}>{headlineText}</p>
               ) : null}
             </div>
 
             {creative.callToAction ? (
-              <div className="border-t border-[#efefef] px-3 py-2.5">
+              <div className="border-t px-3 py-2.5" style={s.borderLightTop}>
                 <button
                   type="button"
-                  className="w-full rounded-lg bg-[#0095f6] py-2 text-center text-[14px] font-semibold text-white"
+                  className="w-full rounded-lg py-2 text-center text-[14px] font-semibold text-white"
+                  style={s.ctaInstagram}
                 >
                   {formatCTALabel(creative.callToAction)}
                 </button>
@@ -263,8 +268,11 @@ export function CreativePlatformMock({
         )}
 
         {activePlatform === 'facebook' && (
-          <div className="relative flex flex-col bg-[#f0f2f5] font-[system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,Helvetica,Arial,sans-serif]">
-            <div className="flex flex-col bg-white text-[#050505]">
+          <div
+            className="relative flex flex-col font-[system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,Helvetica,Arial,sans-serif]"
+            style={s.fbOuter}
+          >
+            <div className="flex flex-col" style={s.fbInner}>
               <div className="flex items-center gap-2 px-3 pb-1 pt-3">
                 <PreviewAvatar
                   pageName={pageDisplayName}
@@ -275,58 +283,64 @@ export function CreativePlatformMock({
                 />
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate text-[15px] font-semibold leading-[1.2]">{pageDisplayName}</p>
-                  <p className="flex items-center gap-1 text-[13px] leading-[1.2] text-[#65676b]">
+                  <p className="flex items-center gap-1 text-[13px] leading-[1.2]" style={s.textSecondary}>
                     <span>Sponsored</span>
                     <span aria-hidden>·</span>
                     <Globe className="size-3" aria-hidden />
                   </p>
                 </div>
-                <MoreHorizontal className="size-5 shrink-0 text-[#65676b]" strokeWidth={1.75} />
+                <MoreHorizontal className="size-5 shrink-0" style={s.textSecondary} strokeWidth={1.75} />
               </div>
 
               <div className="px-3 pb-3 pt-1">
-                <p className="whitespace-pre-wrap text-[15px] font-normal leading-[1.3333] text-[#050505]">
+                <p className="whitespace-pre-wrap text-[15px] font-normal leading-[1.3333]" style={s.textPrimary}>
                   {primaryText || 'No primary text available.'}
                 </p>
               </div>
 
-              <div className="w-full border-y border-[#dadde1]/80">{previewMedia}</div>
+              <div className="w-full border-y" style={s.fbMediaBorder}>
+                {previewMedia}
+              </div>
 
-              <div className="flex items-stretch gap-3 border-b border-[#dadde1] bg-[#f0f2f5] px-3 py-2.5">
+              <div className="flex items-stretch gap-3 border-b px-3 py-2.5" style={s.fbLinkRow}>
                 <div className="min-w-0 flex-1 py-0.5">
-                  <p className="truncate text-[12px] uppercase text-[#65676b]">{landingHostname}</p>
-                  <p className="mt-0.5 line-clamp-2 text-[16px] font-semibold leading-[1.2] text-[#050505]">
+                  <p className="truncate text-[12px] uppercase" style={s.textSecondary}>{landingHostname}</p>
+                  <p className="mt-0.5 line-clamp-2 text-[16px] font-semibold leading-[1.2]" style={s.textPrimary}>
                     {headlineText}
                   </p>
                 </div>
                 {creative.callToAction ? (
                   <button
                     type="button"
-                    className="shrink-0 self-center rounded-md bg-[#e4e6eb] px-4 py-2 text-[15px] font-semibold text-[#050505]"
+                    className="shrink-0 self-center rounded-md px-4 py-2 text-[15px] font-semibold"
+                    style={s.fbCta}
                   >
                     {formatCTALabel(creative.callToAction)}
                   </button>
                 ) : null}
               </div>
 
-              <div className="flex items-center justify-around border-b border-[#dadde1] p-1">
+              <div className="flex items-center justify-around border-b p-1" style={s.fbActionsBar}>
                 <button
                   type="button"
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[15px] font-semibold text-[#65676b] hover:bg-[#f0f2f5]"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[15px] font-semibold hover:bg-muted/40"
+                  style={s.textSecondary}
                 >
                   <ThumbsUp className="size-[18px]" strokeWidth={1.75} />
                   Like
                 </button>
                 <button
                   type="button"
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[15px] font-semibold text-[#65676b] hover:bg-[#f0f2f5]"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[15px] font-semibold hover:bg-muted/40"
+                  style={s.textSecondary}
                 >
                   <MessageCircle className="size-[18px]" strokeWidth={1.75} />
                   Comment
                 </button>
                 <button
                   type="button"
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[15px] font-semibold text-[#65676b] hover:bg-[#f0f2f5]"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[15px] font-semibold hover:bg-muted/40"
+                  style={s.textSecondary}
                 >
                   <Share2 className="size-[18px]" strokeWidth={1.75} />
                   Share

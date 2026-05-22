@@ -45,15 +45,15 @@ export type AdSetupPanelProps = {
 }
 
 function SetupTaskRow({
+  children,
   done,
   title,
   description,
-  action,
 }: {
+  children?: ReactNode
   done: boolean
   title: string
   description: string
-  action?: ReactNode
 }) {
   return (
     <div
@@ -77,7 +77,7 @@ function SetupTaskRow({
           <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
         </div>
       </div>
-      {action ? <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">{action}</div> : null}
+      {children ? <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">{children}</div> : null}
     </div>
   )
 }
@@ -121,25 +121,6 @@ export function AdSetupPanel({
   if (!hasSetupWork && connectedCount >= totalProviders) {
     return null
   }
-
-  const googleSelectAction = (
-    <Button size="sm" onClick={onOpenGoogleSetup} disabled={initializingGoogle}>
-      Select account
-    </Button>
-  )
-
-  const tiktokFinishAction = (
-    <Button size="sm" onClick={onInitializeTikTok} disabled={initializingTikTok}>
-      {initializingTikTok ? (
-        <>
-          <Loader2 className="mr-2 size-3 animate-spin" />
-          Finishing…
-        </>
-      ) : (
-        'Finish setup'
-      )}
-    </Button>
-  )
 
   const progressValue = totalProviders > 0 ? Math.round((connectedCount / totalProviders) * 100) : 0
 
@@ -199,8 +180,11 @@ export function AdSetupPanel({
             done={false}
             title="Select your Google Ads account"
             description="OAuth succeeded — pick which ads account to sync into this workspace."
-            action={googleSelectAction}
-          />
+          >
+            <Button size="sm" onClick={onOpenGoogleSetup} disabled={initializingGoogle}>
+              Select account
+            </Button>
+          </SetupTaskRow>
         ) : null}
 
         {metaSetupMessage ? (
@@ -222,9 +206,9 @@ export function AdSetupPanel({
               PROVIDER_INFO[PROVIDER_IDS.FACEBOOK].name +
               ' only — organic Facebook/Instagram pages use Socials, not this flow.'
             }
-            action={
-              <>
-                <Select
+          >
+            <>
+              <Select
                   value={selectedMetaAccountId || undefined}
                   onValueChange={onMetaAccountSelectionChange}
                   disabled={loadingMetaAccountOptions || initializingMeta || metaAccountOptions.length === 0}
@@ -264,9 +248,8 @@ export function AdSetupPanel({
                     'Finish setup'
                   )}
                 </Button>
-              </>
-            }
-          />
+            </>
+          </SetupTaskRow>
         ) : null}
 
         {!loadingMetaAccountOptions && metaNeedsAccountSelection && metaAccountOptions.length === 0 && !metaSetupMessage ? (
@@ -291,8 +274,18 @@ export function AdSetupPanel({
             done={false}
             title="Complete TikTok Ads setup"
             description="Confirm your default TikTok ad account so we can queue the initial 90-day sync."
-            action={tiktokFinishAction}
-          />
+          >
+            <Button size="sm" onClick={onInitializeTikTok} disabled={initializingTikTok}>
+              {initializingTikTok ? (
+                <>
+                  <Loader2 className="mr-2 size-3 animate-spin" />
+                  Finishing…
+                </>
+              ) : (
+                'Finish setup'
+              )}
+            </Button>
+          </SetupTaskRow>
         ) : null}
 
         {connectedCount === 0 ? (

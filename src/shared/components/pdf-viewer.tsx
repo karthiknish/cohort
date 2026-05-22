@@ -59,7 +59,7 @@ export function PdfViewer({ url, title = 'PDF document', className }: PdfViewerP
         <iframe
           src={url}
           title={title}
-          sandbox="allow-same-origin"
+          sandbox=""
           className="h-full min-h-[min(72dvh,720px)] w-full bg-foreground"
           onLoad={handleLoad}
           onError={handleError}

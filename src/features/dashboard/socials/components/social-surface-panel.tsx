@@ -1,9 +1,10 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { Activity, ExternalLink, Facebook, Instagram, MessageSquareMore, Repeat2, UsersRound } from 'lucide-react'
+import { Activity, ExternalLink, MessageSquareMore, Repeat2, UsersRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
+import { createSvglBrandIcon } from '@/shared/components/svgl-brand-logo'
 import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { Badge } from '@/shared/ui/badge'
@@ -41,10 +42,13 @@ type InsightMetric = {
   icon: LucideIcon
 }
 
+const FacebookBrandIcon = createSvglBrandIcon('facebook') as LucideIcon
+const InstagramBrandIcon = createSvglBrandIcon('instagram') as LucideIcon
+
 const SURFACE_COPY = {
   facebook: {
     title: 'Facebook',
-    icon: Facebook,
+    icon: FacebookBrandIcon,
     summaryTitle: 'Facebook organic performance',
     summaryDescription: 'Organic reach, engagement, and follower growth for Facebook Pages in this workspace.',
     emptyMessage: 'Connect Meta and select a Facebook Page to sync organic metrics.',
@@ -55,7 +59,7 @@ const SURFACE_COPY = {
   },
   instagram: {
     title: 'Instagram',
-    icon: Instagram,
+    icon: InstagramBrandIcon,
     summaryTitle: 'Instagram organic performance',
     summaryDescription: 'Organic reach, engagement, and follower growth for Instagram business profiles in this workspace.',
     emptyMessage: 'Connect Meta and link an Instagram business account to this Page in Meta.',

@@ -163,15 +163,20 @@ export default function AdsPage() {
       connections.automationStatuses.length === 0 ||
       connections.automationStatuses.every((s) => s.status !== 'success'))
 
+  const setupFlags = useMemo(
+    () => ({
+      isPreviewMode,
+      showWorkflow,
+      hasSuccessfulSync,
+      hasPendingSetup,
+    }),
+    [isPreviewMode, showWorkflow, hasSuccessfulSync, hasPendingSetup],
+  )
+
   const setupSection = useMemo(
     () => (
       <AdsPageSetupSection
-        flags={{
-          isPreviewMode,
-          showWorkflow,
-          hasSuccessfulSync,
-          hasPendingSetup,
-        }}
+        flags={setupFlags}
         connectedAccountCount={connectedAccountCount}
         connections={connections}
         metrics={metrics}
@@ -182,11 +187,8 @@ export default function AdsPage() {
       />
     ),
     [
-      isPreviewMode,
-      showWorkflow,
+      setupFlags,
       connectedAccountCount,
-      hasSuccessfulSync,
-      hasPendingSetup,
       connections,
       metrics,
       openGoogleCampaignSetup,

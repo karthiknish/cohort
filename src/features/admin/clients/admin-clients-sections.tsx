@@ -1,21 +1,16 @@
 'use client'
 
-import Link from 'next/link'
-import { LoaderCircle } from 'lucide-react'
+import { useMemo } from 'react'
 
-import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { AdminPageShell } from '../components/admin-page-shell'
 import type { AllocationUser } from '../lib/client-allocation'
 import type { TeamMemberField } from './hooks/use-admin-clients'
 import type { ClientRecord } from './admin-clients-types'
-import {
-  AdminClientsAddTeamMemberDialog,
-  AdminClientsDeleteDialog,
-  AdminClientsNewClientForm,
-  AdminClientsStatsGrid,
-  AdminClientsWorkspaceList,
-} from './admin-clients-page-content-sections'
+import { AdminClientsStatsGrid } from './admin-clients-page-content-sections'
+import { AdminClientsPageDialogs } from './admin-clients-page-dialogs'
+import { AdminClientsPageHeaderActions } from './admin-clients-page-header-actions'
+import { AdminClientsWorkspaceManagementCard } from './admin-clients-page-shell-sections'
 
 export function AdminClientsSignInRequired() {
   return (
@@ -137,6 +132,11 @@ export function AdminClientsPageContent(props: AdminClientsPageContentProps) {
     onConfirmAddTeamMember,
   } = props
 
+  const shellActions = useMemo(
+    () => <AdminClientsPageHeaderActions clientsLoading={clientsLoading} onRefresh={onRefresh} />,
+    [clientsLoading, onRefresh],
+  )
+
   return (
     <>
       <AdminPageShell
@@ -148,19 +148,7 @@ export function AdminClientsPageContent(props: AdminClientsPageContentProps) {
           </>
         }
         isPreviewMode={isPreviewMode}
-        actions={
-          <>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/admin/team">Team</Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/admin">Admin home</Link>
-            </Button>
-            <Button variant="outline" size="sm" onClick={onRefresh} disabled={clientsLoading} className="inline-flex items-center gap-2">
-              <LoaderCircle className={`size-4 ${clientsLoading ? 'animate-spin' : ''}`} /> Refresh
-            </Button>
-          </>
-        }
+        actions={shellActions}
       >
         <AdminClientsStatsGrid
           clientsLoading={clientsLoading}
@@ -171,76 +159,62 @@ export function AdminClientsPageContent(props: AdminClientsPageContentProps) {
           unmatchedCount={allocationSummary.unmatched.length}
         />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">New client</CardTitle>
-            <CardDescription>Kick off a workspace with the key account team.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <AdminClientsNewClientForm
-              assignableUsers={assignableUsers}
-              clientName={clientName}
-              clientAccountManager={clientAccountManager}
-              teamMemberFields={teamMemberFields}
-              clientSaving={clientSaving}
-              onFormSubmit={onFormSubmit}
-              onClientNameChange={onClientNameChange}
-              onAccountManagerChange={onAccountManagerChange}
-              onAccountManagerInputChange={onAccountManagerInputChange}
-              onAddTeamMemberField={onAddTeamMemberField}
-              onUpdateTeamMemberName={onUpdateTeamMemberName}
-              onUpdateTeamMemberRole={onUpdateTeamMemberRole}
-              onRemoveTeamMemberField={onRemoveTeamMemberField}
-              onResetClientForm={onResetClientForm}
-            />
-
-            <AdminClientsWorkspaceList
-              clientsLoading={clientsLoading}
-              clientsCount={clients.length}
-              clientsError={clientsError}
-              workspaceQueryError={workspaceQueryError}
-              clientSearch={clientSearch}
-              filteredClients={filteredClients}
-              unmatchedByClientId={unmatchedByClientId}
-              nextCursor={nextCursor}
-              loadingMore={loadingMore}
-              addingMember={addingMember}
-              clientPendingMembersId={clientPendingMembers?.id}
-              deletingClientId={deletingClientId}
-              removingTeamMemberKey={removingTeamMemberKey}
-              onClientSearchChange={onClientSearchChange}
-              onRequestAddTeamMember={onRequestAddTeamMember}
-              onRequestDeleteClient={onRequestDeleteClient}
-              onRemoveTeamMember={onRemoveTeamMember}
-              onLoadMore={onLoadMore}
-            />
-          </CardContent>
-        </Card>
+        <AdminClientsWorkspaceManagementCard
+          assignableUsers={assignableUsers}
+          clientName={clientName}
+          clientAccountManager={clientAccountManager}
+          teamMemberFields={teamMemberFields}
+          clientSaving={clientSaving}
+          clientsLoading={clientsLoading}
+          clientsCount={clients.length}
+          clientsError={clientsError}
+          workspaceQueryError={workspaceQueryError}
+          clientSearch={clientSearch}
+          filteredClients={filteredClients}
+          unmatchedByClientId={unmatchedByClientId}
+          nextCursor={nextCursor}
+          loadingMore={loadingMore}
+          addingMember={addingMember}
+          clientPendingMembersId={clientPendingMembers?.id}
+          deletingClientId={deletingClientId}
+          removingTeamMemberKey={removingTeamMemberKey}
+          onFormSubmit={onFormSubmit}
+          onClientNameChange={onClientNameChange}
+          onAccountManagerChange={onAccountManagerChange}
+          onAccountManagerInputChange={onAccountManagerInputChange}
+          onAddTeamMemberField={onAddTeamMemberField}
+          onUpdateTeamMemberName={onUpdateTeamMemberName}
+          onUpdateTeamMemberRole={onUpdateTeamMemberRole}
+          onRemoveTeamMemberField={onRemoveTeamMemberField}
+          onResetClientForm={onResetClientForm}
+          onClientSearchChange={onClientSearchChange}
+          onRequestAddTeamMember={onRequestAddTeamMember}
+          onRequestDeleteClient={onRequestDeleteClient}
+          onRemoveTeamMember={onRemoveTeamMember}
+          onLoadMore={onLoadMore}
+        />
       </AdminPageShell>
 
-      <AdminClientsDeleteDialog
-        open={isDeleteDialogOpen}
-        clientName={clientPendingDelete?.name}
+      <AdminClientsPageDialogs
+        isDeleteDialogOpen={isDeleteDialogOpen}
+        clientPendingDeleteName={clientPendingDelete?.name}
         deletingClientId={deletingClientId}
-        onOpenChange={onDeleteDialogChange}
-        onCancel={onCancelDelete}
-        onConfirm={onConfirmDelete}
-      />
-
-      <AdminClientsAddTeamMemberDialog
-        open={isTeamDialogOpen}
-        clientName={clientPendingMembers?.name}
+        onDeleteDialogChange={onDeleteDialogChange}
+        onCancelDelete={onCancelDelete}
+        onConfirmDelete={onConfirmDelete}
+        isTeamDialogOpen={isTeamDialogOpen}
+        clientPendingMembersName={clientPendingMembers?.name}
         assignableUsers={assignableUsers}
         memberName={memberName}
         memberRole={memberRole}
         addingMember={addingMember}
         existingMemberNames={(clientPendingMembers?.teamMembers ?? []).map((member) => member.name)}
-        onOpenChange={onTeamDialogChange}
+        onTeamDialogChange={onTeamDialogChange}
         onMemberNameChange={onMemberNameChange}
         onMemberNameInputChange={onMemberNameInputChange}
         onMemberRoleChange={onMemberRoleChange}
-        onCancel={onCancelTeamDialog}
-        onConfirm={onConfirmAddTeamMember}
+        onCancelTeamDialog={onCancelTeamDialog}
+        onConfirmAddTeamMember={onConfirmAddTeamMember}
       />
     </>
   )

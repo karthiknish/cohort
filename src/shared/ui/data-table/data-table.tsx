@@ -6,15 +6,11 @@ import { usePathname, useRouter } from 'next/navigation'
 
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 import {
-  type Header,
-  type ColumnDef,
   type ColumnFiltersState,
   type SortingState,
+  type PaginationState,
   type VisibilityState,
   type RowSelectionState,
-  type PaginationState,
-  type Row,
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
@@ -23,293 +19,27 @@ import {
 } from '@tanstack/react-table'
 import { useVirtualizer as createVirtualizer } from '@tanstack/react-virtual'
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/shared/ui/table'
 import { cn } from '@/lib/utils'
 
 import { DataTablePagination } from './data-table-pagination'
+import {
+  DataTableBodyContent,
+  DataTableHeaderCell,
+  DataTableScrollContainer,
+} from './data-table-sections'
+import {
+  DEFAULT_TABLE_MAX_HEIGHT,
+  EMPTY_COLUMN_FILTERS,
+  EMPTY_COLUMN_VISIBILITY,
+  EMPTY_SORTING,
+  buildPaginationSearchParams,
+  createInitialDataTableState,
+  dataTableReducer,
+  parsePaginationFromSearchParams,
+  type DataTableProps,
+} from './data-table-types'
 
-const DEFAULT_TABLE_MAX_HEIGHT = '520px'
-const EMPTY_SORTING: SortingState = []
-const EMPTY_COLUMN_FILTERS: ColumnFiltersState = []
-const EMPTY_COLUMN_VISIBILITY: VisibilityState = {}
-
-type DataTableState = {
-  sorting: SortingState
-  columnFilters: ColumnFiltersState
-  columnVisibility: VisibilityState
-  rowSelection: RowSelectionState
-  localPagination: PaginationState
-}
-
-type DataTableInitArg = {
-  pageSize: number
-  initialSorting: SortingState
-  initialColumnFilters: ColumnFiltersState
-  initialColumnVisibility: VisibilityState
-}
-
-type DataTableAction =
-  | { type: 'setSorting'; value: SortingState }
-  | {
-      type: 'setColumnFilters'
-      value: ColumnFiltersState | ((prev: ColumnFiltersState) => ColumnFiltersState)
-    }
-  | {
-      type: 'setColumnVisibility'
-      value: VisibilityState | ((prev: VisibilityState) => VisibilityState)
-    }
-  | {
-      type: 'setRowSelection'
-      value: RowSelectionState | ((prev: RowSelectionState) => RowSelectionState)
-    }
-  | {
-      type: 'setLocalPagination'
-      value: PaginationState | ((prev: PaginationState) => PaginationState)
-    }
-
-function createInitialDataTableState(init: DataTableInitArg): DataTableState {
-  return {
-    sorting: init.initialSorting,
-    columnFilters: init.initialColumnFilters,
-    columnVisibility: init.initialColumnVisibility,
-    rowSelection: {},
-    localPagination: {
-      pageIndex: 0,
-      pageSize: init.pageSize,
-    },
-  }
-}
-
-function dataTableReducer(state: DataTableState, action: DataTableAction): DataTableState {
-  switch (action.type) {
-    case 'setSorting':
-      return { ...state, sorting: action.value }
-    case 'setColumnFilters':
-      return {
-        ...state,
-        columnFilters:
-          typeof action.value === 'function' ? action.value(state.columnFilters) : action.value,
-      }
-    case 'setColumnVisibility':
-      return {
-        ...state,
-        columnVisibility:
-          typeof action.value === 'function' ? action.value(state.columnVisibility) : action.value,
-      }
-    case 'setRowSelection':
-      return {
-        ...state,
-        rowSelection:
-          typeof action.value === 'function' ? action.value(state.rowSelection) : action.value,
-      }
-    case 'setLocalPagination':
-      return {
-        ...state,
-        localPagination:
-          typeof action.value === 'function' ? action.value(state.localPagination) : action.value,
-      }
-    default:
-      return state
-  }
-}
-
-function getLoadingRowIds(loadingRows: number) {
-  return Array.from({ length: loadingRows }, (_, slotIndex) => `loading-row-${slotIndex + 1}`)
-}
-
-function getLoadingCellKey<TData, TValue>(column: ColumnDef<TData, TValue>) {
-  if ('id' in column && typeof column.id === 'string') {
-    return column.id
-  }
-
-  if ('accessorKey' in column && typeof column.accessorKey === 'string') {
-    return column.accessorKey
-  }
-
-  if ('header' in column && typeof column.header === 'string') {
-    return column.header
-  }
-
-  return 'column'
-}
-
-function DataTableHeaderCell<TData, TValue>({ header }: { header: Header<TData, TValue> }) {
-  const width = header.getSize()
-  const style = React.useMemo(() => ({ width }), [width])
-
-  return (
-    <TableHead key={header.id} style={style}>
-      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-    </TableHead>
-  )
-}
-
-function DataTableSpacerRow({ colSpan, height }: { colSpan: number; height: number }) {
-  const style = React.useMemo(() => ({ height: `${height}px` }), [height])
-
-  return (
-    <TableRow>
-      <TableCell colSpan={colSpan} style={style} />
-    </TableRow>
-  )
-}
-
-function DataTableBodyRow<TData>({
-  height,
-  onRowClick,
-  row,
-  rowClassName,
-}: {
-  height?: number
-  onRowClick?: (row: TData) => void
-  row: Row<TData>
-  rowClassName?: string | ((row: TData) => string)
-}) {
-  const style = React.useMemo(
-    () => (height ? { height: `${height}px` } : undefined),
-    [height]
-  )
-
-  const handleClick = React.useCallback(() => {
-    onRowClick?.(row.original)
-  }, [onRowClick, row.original])
-
-  const handleKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLTableRowElement>) => {
-      if (!onRowClick) return
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault()
-        handleClick()
-      }
-    },
-    [handleClick, onRowClick]
-  )
-
-  const resolvedClassName =
-    typeof rowClassName === 'function' ? rowClassName(row.original) : rowClassName
-
-  return (
-    <TableRow
-      data-state={row.getIsSelected() && 'selected'}
-      onClick={onRowClick ? handleClick : undefined}
-      onKeyDown={onRowClick ? handleKeyDown : undefined}
-      tabIndex={onRowClick ? 0 : undefined}
-      aria-label={onRowClick ? 'View row details' : undefined}
-      className={cn(
-        onRowClick &&
-          'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-        resolvedClassName
-      )}
-      style={style}
-    >
-      {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-      ))}
-    </TableRow>
-  )
-}
-
-export interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
-  searchKey?: string
-  searchValue?: string
-  onSearchChange?: (value: string) => void
-  pageSize?: number
-  showPagination?: boolean
-  showRowSelection?: boolean
-  onRowClick?: (row: TData) => void
-  rowClassName?: string | ((row: TData) => string)
-  emptyState?: React.ReactNode
-  loading?: boolean
-  loadingRows?: number
-  manualPagination?: boolean
-  pageCount?: number
-  onPaginationChange?: (pagination: PaginationState) => void
-  manualSorting?: boolean
-  onSortingChange?: (sorting: SortingState) => void
-  manualFiltering?: boolean
-  onColumnFiltersChange?: (filters: ColumnFiltersState) => void
-  initialSorting?: SortingState
-  initialColumnFilters?: ColumnFiltersState
-  initialColumnVisibility?: VisibilityState
-  stickyHeader?: boolean
-  maxHeight?: string | number
-  className?: string
-  getRowId?: (row: TData) => string
-  enableVirtualization?: boolean
-  rowHeight?: number
-  overscan?: number
-  /** When set with client-side pagination, `page` and `page size` are reflected in the URL. */
-  syncPaginationToUrl?: boolean
-  /** 1-based page number query param (default: `p`). Omitted when page 1. */
-  urlPageParam?: string
-  /** Page size query param (default: `perPage`). Omitted when it matches the `pageSize` prop. */
-  urlPageSizeParam?: string
-  /** When parsing `perPage` from the URL, only these values are accepted. */
-  urlPageSizeOptions?: number[]
-}
-
-function parsePaginationFromSearchParams(
-  get: (key: string) => string | null,
-  defaultPageSize: number,
-  urlPageParam: string,
-  urlPageSizeParam: string,
-  isValidUrlPageSize: (pageSize: number) => boolean,
-): PaginationState {
-  const pageRaw = get(urlPageParam)
-  const sizeRaw = get(urlPageSizeParam)
-
-  let pageIndex = 0
-  if (pageRaw) {
-    const parsed = Number.parseInt(pageRaw, 10)
-    if (Number.isFinite(parsed) && parsed >= 1) {
-      pageIndex = parsed - 1
-    }
-  }
-
-  let nextPageSize = defaultPageSize
-  if (sizeRaw) {
-    const parsed = Number.parseInt(sizeRaw, 10)
-    if (Number.isFinite(parsed) && isValidUrlPageSize(parsed)) {
-      nextPageSize = parsed
-    }
-  }
-
-  return { pageIndex, pageSize: nextPageSize }
-}
-
-function buildPaginationSearchParams(
-  searchParams: URLSearchParams,
-  pagination: PaginationState,
-  defaultPageSize: number,
-  urlPageParam: string,
-  urlPageSizeParam: string,
-  isValidUrlPageSize: (pageSize: number) => boolean,
-) {
-  const params = new URLSearchParams(searchParams.toString())
-  const oneBased = pagination.pageIndex + 1
-  if (oneBased > 1) {
-    params.set(urlPageParam, String(oneBased))
-  } else {
-    params.delete(urlPageParam)
-  }
-
-  if (pagination.pageSize !== defaultPageSize && isValidUrlPageSize(pagination.pageSize)) {
-    params.set(urlPageSizeParam, String(pagination.pageSize))
-  } else {
-    params.delete(urlPageSizeParam)
-  }
-
-  return params
-}
+export type { DataTableProps } from './data-table-types'
 
 export function DataTable<TData, TValue>({
   columns,
@@ -419,7 +149,6 @@ export function DataTable<TData, TValue>({
 
   const pagination = usesUrlPagination ? urlPagination : localPagination
 
-  // Controlled/uncontrolled search value
   const internalSearchValueRef = React.useRef('')
   const effectiveSearchValue = searchValue ?? internalSearchValueRef.current
 
@@ -455,7 +184,6 @@ export function DataTable<TData, TValue>({
         const searchFilter = newFilters.find((filter) => filter.id === searchKey)
         const nextSearch = typeof searchFilter?.value === 'string' ? searchFilter.value : ''
 
-        // Sync internal state only when uncontrolled
         if (searchValue === undefined) {
           internalSearchValueRef.current = nextSearch
         }
@@ -505,8 +233,6 @@ export function DataTable<TData, TValue>({
   })
 
   const rows = table.getRowModel().rows
-  const loadingRowIds = React.useMemo(() => getLoadingRowIds(loadingRows), [loadingRows])
-
   const shouldVirtualize = enableVirtualization && !manualPagination
   const virtualParentRef = React.useRef<HTMLDivElement | null>(null)
   const virtualizer = createVirtualizer({
@@ -515,13 +241,6 @@ export function DataTable<TData, TValue>({
     estimateSize: () => rowHeight,
     overscan,
   })
-  const virtualItems = shouldVirtualize ? virtualizer.getVirtualItems() : []
-  const firstVirtualItem = virtualItems.at(0)
-  const lastVirtualItem = virtualItems.at(-1)
-  const paddingTop = shouldVirtualize && firstVirtualItem ? firstVirtualItem.start : 0
-  const paddingBottom = shouldVirtualize && lastVirtualItem
-    ? virtualizer.getTotalSize() - lastVirtualItem.end
-    : 0
   const containerStyle = React.useMemo(() => {
     if (maxHeight) {
       return { maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight }
@@ -539,90 +258,57 @@ export function DataTable<TData, TValue>({
     virtualizer.measure()
   }, [shouldVirtualize, virtualizer])
 
+  const headerGroups = table.getHeaderGroups()
+  const body = React.useMemo(() => {
+    const virtualItems = shouldVirtualize ? virtualizer.getVirtualItems() : []
+    const firstVirtualItem = virtualItems.at(0)
+    const lastVirtualItem = virtualItems.at(-1)
+    const paddingTop = shouldVirtualize && firstVirtualItem ? firstVirtualItem.start : 0
+    const paddingBottom =
+      shouldVirtualize && lastVirtualItem ? virtualizer.getTotalSize() - lastVirtualItem.end : 0
+
+    return (
+      <DataTableBodyContent
+        columns={columns}
+        rows={rows}
+        loading={loading}
+        loadingRows={loadingRows}
+        shouldVirtualize={shouldVirtualize}
+        virtualItems={virtualItems}
+        paddingTop={paddingTop}
+        paddingBottom={paddingBottom}
+        onRowClick={onRowClick}
+        rowClassName={rowClassName}
+        emptyState={emptyState}
+      />
+    )
+  }, [
+    columns,
+    rows,
+    loading,
+    loadingRows,
+    shouldVirtualize,
+    virtualizer,
+    onRowClick,
+    rowClassName,
+    emptyState,
+  ])
+
   return (
     <div className={cn('space-y-4', className)}>
-      <div
-        ref={shouldVirtualize ? virtualParentRef : undefined}
-        className={cn(
-          'rounded-md border',
-          (maxHeight || shouldVirtualize) && 'overflow-auto'
-        )}
-        style={containerStyle}
-      >
-        <Table wrapperClassName={shouldVirtualize ? 'overflow-visible' : undefined}>
-          <TableHeader className={stickyHeader ? 'sticky top-0 bg-background z-10' : undefined}>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <DataTableHeaderCell key={header.id} header={header} />
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              // Loading skeleton
-              loadingRowIds.map((rowId) => (
-                <TableRow key={rowId}>
-                  {columns.map((column) => (
-                    <TableCell key={`${rowId}-${getLoadingCellKey(column)}`}>
-                      <div className="h-4 w-full animate-pulse rounded bg-muted" />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : rows.length ? (
-              shouldVirtualize ? (
-                <>
-                  {paddingTop > 0 && (
-                    <DataTableSpacerRow colSpan={columns.length} height={paddingTop} />
-                  )}
-                  {virtualItems.map((virtualRow) => {
-                    const row = rows[virtualRow.index]
-                    if (!row) {
-                      return null
-                    }
-
-                    return (
-                      <DataTableBodyRow
-                        key={row.id}
-                        onRowClick={onRowClick}
-                        row={row}
-                        rowClassName={rowClassName}
-                        height={virtualRow.size}
-                      />
-                    )
-                  })}
-                  {paddingBottom > 0 && (
-                    <DataTableSpacerRow colSpan={columns.length} height={paddingBottom} />
-                  )}
-                </>
-              ) : (
-                rows.map((row) => (
-                  <DataTableBodyRow
-                    key={row.id}
-                    onRowClick={onRowClick}
-                    row={row}
-                    rowClassName={rowClassName}
-                  />
-                ))
-              )
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  {emptyState ?? 'No results.'}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      {showPagination && (
+      <DataTableScrollContainer
+        shouldVirtualize={shouldVirtualize}
+        maxHeight={maxHeight}
+        shouldVirtualizeStyles={shouldVirtualize}
+        containerStyle={containerStyle}
+        virtualParentRef={virtualParentRef}
+        stickyHeader={stickyHeader}
+        headerGroups={headerGroups}
+        body={body}
+      />
+      {showPagination ? (
         <DataTablePagination table={table} showRowSelection={showRowSelection} />
-      )}
+      ) : null}
     </div>
   )
 }

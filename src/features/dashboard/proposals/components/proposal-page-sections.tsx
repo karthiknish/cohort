@@ -27,6 +27,8 @@ import { ProposalSubmittedPanel } from './proposal-submitted-panel'
 import { ProposalTemplateSelector } from './proposal-template-selector'
 import { ProposalVersionHistory } from './proposal-version-history'
 import { ProposalWizardHeader } from './proposal-wizard-header'
+import { DeckProgressOverlay, ProposalGenerationOverlay, type DeckProgressStage } from './deck-progress-overlays'
+import { ProposalDeleteDialog } from './proposal-delete-dialog'
 
 const PREVIEW_PROPOSAL_WORKFLOW = { loading: false, generating: false, creating: false } as const
 const PREVIEW_PROPOSAL_CAPABILITIES = { canCreate: false, canManage: false } as const
@@ -384,5 +386,153 @@ export function ProposalBuilderOverlay(props: {
 
   return (
     <div className="fixed inset-0 z-2000 isolate bg-background">{builderBody}</div>
+  )
+}
+
+export function ProposalsPageHeroSection({
+  clientName,
+  pageActions,
+}: {
+  clientName: string | null
+  pageActions: React.ReactNode
+}) {
+  return (
+    <section
+      className={cn(
+        'relative overflow-hidden rounded-2xl border border-muted/40 bg-linear-to-br from-primary/[0.07] via-background to-info/[0.05] p-5 shadow-sm sm:p-6',
+      )}
+    >
+      <div
+        className="pointer-events-none absolute -left-8 top-0 size-32 rounded-full bg-primary/10 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -right-10 -bottom-8 size-36 rounded-full bg-info/10 blur-3xl"
+        aria-hidden
+      />
+      <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <ProposalWizardHeader clientName={clientName} />
+        {pageActions}
+      </div>
+    </section>
+  )
+}
+
+export function ProposalsPageOverlays(props: {
+  isWizardOpen: boolean
+  onCloseWizard: () => void
+  isBootstrapping: boolean
+  submitted: boolean
+  isPresentationReady: boolean
+  summary: ProposalFormData
+  presentationDeck: unknown
+  deckDownloadUrl: string | null
+  activeProposalIdForDeck: string | null
+  canResumeSubmission: boolean
+  onResumeSubmission: () => void
+  isSubmitting: boolean
+  onRecheckDeck: () => Promise<void>
+  isRecheckingDeck: boolean
+  steps: ProposalStep[]
+  currentStep: number
+  draftId: string | null
+  autosaveStatus: 'idle' | 'saving' | 'saved' | 'error'
+  stepContent: React.ReactNode
+  onBack: () => void
+  onNext: () => void
+  onGoToStep: (index: number) => void
+  isFirstStep: boolean
+  isLastStep: boolean
+  validationMessages: string[]
+  isDeleteDialogOpen: boolean
+  deletingProposalId: string | null
+  proposalName: string | null
+  onDeleteDialogChange: (open: boolean) => void
+  onConfirmDelete: () => void
+  showGenerationOverlay: boolean
+  deckProgressStage: DeckProgressStage | null
+  showDeckProgressOverlay: boolean
+}) {
+  const {
+    isWizardOpen,
+    onCloseWizard,
+    isBootstrapping,
+    submitted,
+    isPresentationReady,
+    summary,
+    presentationDeck,
+    deckDownloadUrl,
+    activeProposalIdForDeck,
+    canResumeSubmission,
+    onResumeSubmission,
+    isSubmitting,
+    onRecheckDeck,
+    isRecheckingDeck,
+    steps,
+    currentStep,
+    draftId,
+    autosaveStatus,
+    stepContent,
+    onBack,
+    onNext,
+    onGoToStep,
+    isFirstStep,
+    isLastStep,
+    validationMessages,
+    isDeleteDialogOpen,
+    deletingProposalId,
+    proposalName,
+    onDeleteDialogChange,
+    onConfirmDelete,
+    showGenerationOverlay,
+    deckProgressStage,
+    showDeckProgressOverlay,
+  } = props
+
+  return (
+    <>
+      <ProposalDeleteDialog
+        open={isDeleteDialogOpen}
+        isDeleting={Boolean(deletingProposalId)}
+        proposalName={proposalName}
+        onOpenChange={onDeleteDialogChange}
+        onConfirm={onConfirmDelete}
+      />
+      <ProposalGenerationOverlay
+        isSubmitting={showGenerationOverlay}
+        isPresentationReady={isPresentationReady && !isWizardOpen}
+      />
+      <DeckProgressOverlay
+        stage={deckProgressStage ?? ('polling' satisfies DeckProgressStage)}
+        isVisible={showDeckProgressOverlay}
+      />
+      <ProposalBuilderOverlay
+        open={isWizardOpen}
+        onClose={onCloseWizard}
+        isBootstrapping={isBootstrapping}
+        submitted={submitted}
+        isPresentationReady={isPresentationReady}
+        summary={summary}
+        presentationDeck={presentationDeck}
+        deckDownloadUrl={deckDownloadUrl}
+        activeProposalIdForDeck={activeProposalIdForDeck}
+        canResumeSubmission={canResumeSubmission}
+        onResumeSubmission={onResumeSubmission}
+        isSubmitting={isSubmitting}
+        onRecheckDeck={onRecheckDeck}
+        isRecheckingDeck={isRecheckingDeck}
+        steps={steps}
+        currentStep={currentStep}
+        draftId={draftId}
+        autosaveStatus={autosaveStatus}
+        stepContent={stepContent}
+        onBack={onBack}
+        onNext={onNext}
+        onGoToStep={onGoToStep}
+        isFirstStep={isFirstStep}
+        isLastStep={isLastStep}
+        validationMessages={validationMessages}
+      />
+    </>
   )
 }

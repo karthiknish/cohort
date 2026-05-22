@@ -4,21 +4,24 @@ import { useMemo } from 'react'
 
 import {
   Briefcase,
-  Facebook,
   Globe,
-  Instagram,
   MessageCircle,
   Smartphone,
   Tag,
   UserCheck,
   Zap,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
+import { createSvglBrandIcon } from '@/shared/components/svgl-brand-logo'
 import { Badge } from '@/shared/ui/badge'
 import { cn } from '@/lib/utils'
 
 import type { AggregatedTargetingData } from './audience-control-types'
 import { TargetingCollapsiblePanel } from './targeting-collapsible-panel'
+
+const FacebookBrandIcon = createSvglBrandIcon('facebook') as LucideIcon
+const InstagramBrandIcon = createSvglBrandIcon('instagram') as LucideIcon
 
 type AudienceDisplaySectionProps = {
   aggregatedData: AggregatedTargetingData
@@ -129,7 +132,7 @@ export function AudienceDisplaySection({
           <div className="space-y-4">
             {aggregatedData.metaPlacements.facebook.length > 0 ? (
               <PlacementGroup
-                icon={Facebook}
+                icon={FacebookBrandIcon}
                 label="Facebook"
                 toneClass="text-info"
                 placements={aggregatedData.metaPlacements.facebook}
@@ -139,7 +142,7 @@ export function AudienceDisplaySection({
 
             {aggregatedData.metaPlacements.instagram.length > 0 ? (
               <PlacementGroup
-                icon={Instagram}
+                icon={InstagramBrandIcon}
                 label="Instagram"
                 toneClass="text-accent"
                 placements={aggregatedData.metaPlacements.instagram}

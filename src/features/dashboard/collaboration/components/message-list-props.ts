@@ -1,6 +1,8 @@
+import type { MessageListRenderers } from './message-list-render-context'
+import type { MessageListRendererProps } from './message-list-render-utils'
 import type { UnifiedMessage } from './message-list-types'
 
-export interface MessageListProps {
+export interface MessageListProps extends MessageListRendererProps {
   messages: UnifiedMessage[]
   currentUserId: string | null
   currentUserRole?: string | null
@@ -9,15 +11,7 @@ export interface MessageListProps {
   onLoadMore: () => void
   onToggleReaction: (messageId: string, emoji: string) => Promise<void>
   reactionPendingByMessage?: Record<string, string | null>
-  renderMessageExtras?: (message: UnifiedMessage) => React.ReactNode
-  renderMessageActions?: (message: UnifiedMessage) => React.ReactNode
-  renderMessageContent?: React.ComponentType<{ message: UnifiedMessage }>
-  renderMessageAttachments?: (message: UnifiedMessage) => React.ReactNode
-  renderMessageFooter?: (message: UnifiedMessage) => React.ReactNode
-  renderThreadSection?: (message: UnifiedMessage) => React.ReactNode
-  renderEditForm?: (message: UnifiedMessage) => React.ReactNode
-  renderDeletedInfo?: (message: UnifiedMessage) => React.ReactNode
-  renderMessageWrapper?: (message: UnifiedMessage, children: React.ReactNode) => React.ReactNode
+  renderers?: MessageListRenderers
   emptyState?: React.ReactNode
   loadingSkeleton?: React.ReactNode
   variant?: 'channel' | 'dm'

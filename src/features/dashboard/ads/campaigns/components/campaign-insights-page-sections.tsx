@@ -20,14 +20,15 @@ import { Button } from '@/shared/ui/button'
 import { CardContent } from '@/shared/ui/card'
 import { MotionCard } from '@/shared/ui/motion-primitives'
 
-import { AlgorithmicInsightsSection } from '../../components/algorithmic-insights-section'
-import { AudienceControlSection } from '../../components/audience-control-section'
-import { BudgetControlSection } from '../../components/budget-control-section'
-import { CampaignAdsSection } from '../../components/campaign-ads-section'
-import { CampaignInsightsError } from '../../components/campaign-insights-error'
-import { CampaignPageLayout, CampaignSection } from '../../components/campaign-page-shell'
-import { InsightsChartsSection } from '../../components/insights-charts-section'
-import { MetricCardsSection } from '../../components/metric-cards-section'
+import { CampaignHeader } from './campaign-header'
+import { AlgorithmicInsightsSection } from './algorithmic-insights-section'
+import { AudienceControlSection } from './audience-control-section'
+import { BudgetControlSection } from './budget-control-section'
+import { CampaignAdsSection } from './campaign-ads-section'
+import { CampaignInsightsError } from './campaign-insights-error'
+import { CampaignPageLayout, CampaignSection } from './campaign-page-shell'
+import { InsightsChartsSection } from './insights-charts-section'
+import { MetricCardsSection } from './metric-cards-section'
 
 export type Campaign = {
   id: string
@@ -795,51 +796,63 @@ export function CampaignInsightsPageBody({
 }: {
   page: ReturnType<typeof useCampaignInsightsPage>
 }) {
-  const performanceSection = (
-    <CampaignInsightsPerformanceSection
-      calculatedMetrics={page.calculatedMetrics}
-      insightsLoading={page.insightsLoading}
-      displayCurrency={page.displayCurrency}
-      efficiencyScore={page.efficiencyScore}
-      insightsError={page.insightsError}
-      chartMetrics={page.chartMetrics}
-      engagementChartData={page.engagementChartData}
-      conversionsChartData={page.conversionsChartData}
-      reachChartData={page.reachChartData}
-      algorithmicInsightsList={page.algorithmicInsightsList}
-      onRetryInsights={page.handleRetryInsights}
-    />
+  const performanceSection = useMemo(
+    () => (
+      <CampaignInsightsPerformanceSection
+        calculatedMetrics={page.calculatedMetrics}
+        insightsLoading={page.insightsLoading}
+        displayCurrency={page.displayCurrency}
+        efficiencyScore={page.efficiencyScore}
+        insightsError={page.insightsError}
+        chartMetrics={page.chartMetrics}
+        engagementChartData={page.engagementChartData}
+        conversionsChartData={page.conversionsChartData}
+        reachChartData={page.reachChartData}
+        algorithmicInsightsList={page.algorithmicInsightsList}
+        onRetryInsights={page.handleRetryInsights}
+      />
+    ),
+    [page],
   )
 
-  const controlsSection = (
-    <CampaignInsightsControlsSection
-      providerId={page.providerId}
-      campaignId={page.campaignId}
-      selectedClientId={page.selectedClientId}
-      isPreviewMode={page.isPreviewMode}
-      displayCurrency={page.displayCurrency}
-      campaign={page.campaign}
-      onReloadCampaign={page.loadCampaign}
-    />
+  const controlsSection = useMemo(
+    () => (
+      <CampaignInsightsControlsSection
+        providerId={page.providerId}
+        campaignId={page.campaignId}
+        selectedClientId={page.selectedClientId}
+        isPreviewMode={page.isPreviewMode}
+        displayCurrency={page.displayCurrency}
+        campaign={page.campaign}
+        onReloadCampaign={page.loadCampaign}
+      />
+    ),
+    [page],
   )
 
-  const creativesSection = (
-    <CampaignInsightsCreativesSection
-      providerId={page.providerId}
-      campaignId={page.campaignId}
-      selectedClientId={page.selectedClientId}
-      isPreviewMode={page.isPreviewMode}
-      displayCurrency={page.displayCurrency}
-      campaign={page.campaign}
-    />
+  const creativesSection = useMemo(
+    () => (
+      <CampaignInsightsCreativesSection
+        providerId={page.providerId}
+        campaignId={page.campaignId}
+        selectedClientId={page.selectedClientId}
+        isPreviewMode={page.isPreviewMode}
+        displayCurrency={page.displayCurrency}
+        campaign={page.campaign}
+      />
+    ),
+    [page],
   )
 
-  const advancedSection = (
-    <CampaignInsightsAdvancedSection
-      formulaEditor={page.formulaEditor}
-      calculatedMetrics={page.calculatedMetrics}
-      insightsLoading={page.insightsLoading}
-    />
+  const advancedSection = useMemo(
+    () => (
+      <CampaignInsightsAdvancedSection
+        formulaEditor={page.formulaEditor}
+        calculatedMetrics={page.calculatedMetrics}
+        insightsLoading={page.insightsLoading}
+      />
+    ),
+    [page],
   )
 
   return (
@@ -853,3 +866,29 @@ export function CampaignInsightsPageBody({
 }
 
 export { ADS_PAGE_THEME }
+
+export function CampaignInsightsPageContent() {
+  const page = useCampaignInsightsPage()
+
+  return (
+    <div className={ADS_PAGE_THEME.innerContainer}>
+      <CampaignHeader
+        campaign={page.campaign}
+        loading={page.campaignLoading}
+        dateRange={page.dateRange}
+        onDateRangeChange={page.handleDateRangeChange}
+        onRefresh={page.loadInsights}
+        refreshing={page.insightsLoading}
+      />
+
+      {page.campaignError && !page.isPreviewMode ? (
+        <CampaignInsightsErrorBanner
+          message={page.campaignError}
+          onRetry={page.handleRetryCampaign}
+        />
+      ) : null}
+
+      <CampaignInsightsPageBody page={page} />
+    </div>
+  )
+}

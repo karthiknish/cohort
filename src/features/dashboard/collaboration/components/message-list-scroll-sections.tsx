@@ -1,140 +1,16 @@
 'use client'
 
-import { Fragment } from 'react'
-import { ArrowDown } from 'lucide-react'
-
 import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
-import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
 
+import { MessageListLoadMoreButton } from './message-list-sections'
 import {
-  ChannelMessageCardWithPending,
-  DirectMessageCard,
-  MessageDateSeparator,
-  MessageListLoadMoreButton,
-} from './message-list-sections'
-import type { MessageListRenderers } from './message-list-sections'
+  MessageListGroupedMessages,
+  type MessageListGroupedMessagesProps,
+} from './message-list-grouped-messages'
 import type { UnifiedMessage } from './message-list-types'
 
-type MessageListJumpToLatestProps = {
-  visible: boolean
-  onClick: () => void
-}
-
-export function MessageListJumpToLatest({ visible, onClick }: MessageListJumpToLatestProps) {
-  if (!visible) {
-    return null
-  }
-
-  return (
-    <div className="pointer-events-none absolute bottom-4 right-4 z-10">
-      <Button
-        type="button"
-        size="sm"
-        variant="secondary"
-        className="pointer-events-auto gap-1.5 shadow-md ring-1 ring-border/60"
-        onClick={onClick}
-      >
-        <ArrowDown className="size-3.5" />
-        Latest
-      </Button>
-    </div>
-  )
-}
-
-type MessageListGroupedMessagesProps = {
-  groupedMessages: Map<string, UnifiedMessage[]>
-  isChannel: boolean
-  currentUserId: string | null
-  highlightedMessageId: string | null
-  editingMessageId?: string | null
-  deletingMessageId?: string | null
-  updatingMessageId?: string | null
-  localReactionPending: string | null
-  reactionPendingByMessage: Record<string, string | null>
-  renderers: MessageListRenderers
-  showAvatars: boolean
-  onReact: (messageId: string, emoji: string) => Promise<void>
-  renderMessageWrapper?: (message: UnifiedMessage, children: React.ReactNode) => React.ReactNode
-}
-
-export function MessageListGroupedMessages({
-  groupedMessages,
-  isChannel,
-  currentUserId,
-  highlightedMessageId,
-  editingMessageId,
-  deletingMessageId,
-  updatingMessageId,
-  localReactionPending,
-  reactionPendingByMessage,
-  renderers,
-  showAvatars,
-  onReact,
-  renderMessageWrapper,
-}: MessageListGroupedMessagesProps) {
-  return (
-    <div className={cn('space-y-6', isChannel && 'space-y-1')}>
-      {Array.from(groupedMessages.entries()).map(([date, msgs]) => (
-        <div key={date}>
-          <MessageDateSeparator date={date} />
-
-          <div className={cn('space-y-3', isChannel && 'space-y-1')}>
-            {msgs.map((message) => {
-              const isEditing = editingMessageId === message.id
-              const isDeleting = deletingMessageId === message.id
-              const isUpdating = updatingMessageId === message.id
-
-              if (isChannel) {
-                const content = (
-                  <ChannelMessageCardWithPending
-                    currentUserId={currentUserId}
-                    highlighted={message.id === highlightedMessageId}
-                    isDeleting={isDeleting}
-                    isEditing={isEditing}
-                    isUpdating={isUpdating}
-                    localReactionPending={localReactionPending}
-                    message={message}
-                    onReact={onReact}
-                    reactionPendingByMessage={reactionPendingByMessage}
-                    renderers={renderers}
-                    showAvatars={showAvatars}
-                  />
-                )
-
-                return (
-                  <Fragment key={message.id}>
-                    {renderMessageWrapper ? renderMessageWrapper(message, content) : content}
-                  </Fragment>
-                )
-              }
-
-              const messageContent = (
-                <DirectMessageCard
-                  currentUserId={currentUserId}
-                  isDeleting={isDeleting}
-                  isEditing={isEditing}
-                  localReactionPending={localReactionPending}
-                  message={message}
-                  onReact={onReact}
-                  reactionPendingByMessage={reactionPendingByMessage}
-                  renderers={renderers}
-                  showAvatars={showAvatars}
-                />
-              )
-
-              return (
-                <Fragment key={message.id}>
-                  {renderMessageWrapper ? renderMessageWrapper(message, messageContent) : messageContent}
-                </Fragment>
-              )
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
+export { MessageListJumpToLatest } from './message-list-jump-to-latest'
 
 type MessageListScrollBodyProps = {
   scrollRef: React.RefObject<HTMLDivElement | null>
@@ -173,7 +49,6 @@ export function MessageListScrollBody({
         {typingIndicatorText ? (
           <ChatTypingIndicator label={typingIndicatorText} variant="bubble" className="mt-2" />
         ) : null}
-
         <div ref={messagesEndRef} />
       </div>
     </div>

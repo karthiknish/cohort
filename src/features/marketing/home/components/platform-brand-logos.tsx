@@ -1,26 +1,14 @@
-/**
- * Brand marks via `react-icons/si` (Simple Icons pack bundled with react-icons).
- * @see https://react-icons.github.io/react-icons/icons/si/
- */
-import type { IconType } from 'react-icons'
-import { SiGoogleads, SiLinkedin, SiMeta, SiTiktok } from 'react-icons/si'
-
+import { SvglBrandLogo, type SvglBrandSlug } from '@/shared/components/svgl-brand-logo'
 import { cn } from '@/lib/utils'
 
+/** Paid-media brands shown on marketing surfaces (logos from https://svgl.app). */
 export type PlatformBrandSlug = 'googleads' | 'meta' | 'linkedin' | 'tiktok'
 
-const ICONS: Record<PlatformBrandSlug, IconType> = {
-  googleads: SiGoogleads,
-  meta: SiMeta,
-  linkedin: SiLinkedin,
-  tiktok: SiTiktok,
-}
-
-const TITLES: Record<PlatformBrandSlug, string> = {
-  googleads: 'Google Ads',
-  meta: 'Meta',
-  linkedin: 'LinkedIn',
-  tiktok: 'TikTok',
+const SLUG_TO_SVGL: Record<PlatformBrandSlug, SvglBrandSlug> = {
+  googleads: 'googleads',
+  meta: 'meta',
+  linkedin: 'linkedin',
+  tiktok: 'tiktok',
 }
 
 export const HOME_HERO_BRAND_ORDER: PlatformBrandSlug[] = ['googleads', 'meta', 'linkedin', 'tiktok']
@@ -33,15 +21,7 @@ type PlatformBrandLogoProps = {
 }
 
 export function PlatformBrandLogo({ brand, className, labeled = true }: PlatformBrandLogoProps) {
-  const Icon = ICONS[brand]
-  return (
-    <Icon
-      className={cn('shrink-0', className)}
-      aria-label={labeled ? TITLES[brand] : undefined}
-      aria-hidden={labeled ? undefined : true}
-      role={labeled ? 'img' : undefined}
-    />
-  )
+  return <SvglBrandLogo brand={SLUG_TO_SVGL[brand]} className={className} labeled={labeled} />
 }
 
 type PlatformLogoStripProps = {

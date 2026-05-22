@@ -21,6 +21,23 @@ const crispEdgesStyle: CSSProperties = { imageRendering: 'crisp-edges' }
 const whileHoverScale: { scale: number } = { scale: 1.1 }
 const whileTapScale: { scale: number } = { scale: 0.9 }
 
+export type CreativePreviewMediaProps = {
+  creative: Creative
+  displayName: string
+  mediaAspectClass: string
+  imageLoadFailed: boolean
+  imageLightboxOpen: boolean
+  isPlaying: boolean
+  videoRef: RefObject<HTMLVideoElement | null>
+  onPlay: () => void
+  onPause: () => void
+  onEnded: () => void
+  onImageLoadFailed: () => void
+  onOpenImageLightbox: () => void
+  onImageLightboxOpenChange: (open: boolean) => void
+  onTogglePlayPause: () => void
+}
+
 export function CreativePreviewMedia({
   creative,
   displayName,
@@ -36,22 +53,7 @@ export function CreativePreviewMedia({
   onOpenImageLightbox,
   onImageLightboxOpenChange,
   onTogglePlayPause,
-}: {
-  creative: Creative
-  displayName: string
-  mediaAspectClass: string
-  imageLoadFailed: boolean
-  imageLightboxOpen: boolean
-  isPlaying: boolean
-  videoRef: RefObject<HTMLVideoElement | null>
-  onPlay: () => void
-  onPause: () => void
-  onEnded: () => void
-  onImageLoadFailed: () => void
-  onOpenImageLightbox: () => void
-  onImageLightboxOpenChange: (open: boolean) => void
-  onTogglePlayPause: () => void
-}) {
+}: CreativePreviewMediaProps) {
   if (creative.videoUrl && isDirectVideoUrl(creative.videoUrl)) {
     return (
       <div className={cn('relative bg-foreground overflow-hidden group/video', mediaAspectClass)}>

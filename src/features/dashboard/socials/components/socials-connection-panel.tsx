@@ -5,8 +5,6 @@ import {
   AlertCircle,
   CheckCircle2,
   Circle,
-  Facebook,
-  Instagram,
   LoaderCircle,
   RefreshCw,
   Shield,
@@ -19,6 +17,7 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent } from '@/shared/ui/card'
 import { DASHBOARD_THEME, getBadgeClasses, getButtonClasses } from '@/lib/dashboard-theme'
 import { EN_US_DATETIME_MEDIUM_FORMATTER } from '@/lib/intl/formatters'
+import { SvglBrandLogo } from '@/shared/components/svgl-brand-logo'
 import { cn } from '@/lib/utils'
 
 type SocialsConnectionPanelProps = {
@@ -172,10 +171,10 @@ export function SocialsConnectionPanel({
             <div className="flex min-w-0 gap-4">
               <div className="flex shrink-0 flex-col gap-1.5 rounded-2xl border border-muted/40 bg-linear-to-br from-info/5 via-background to-accent/5 p-2.5">
                 <div className={cn(DASHBOARD_THEME.icons.container, 'size-11 bg-info/10 text-info border-info/20')}>
-                  <Facebook className="size-5" aria-hidden />
+                  <SvglBrandLogo brand="facebook" className="size-5" labeled={false} />
                 </div>
                 <div className={cn(DASHBOARD_THEME.icons.container, 'size-11 bg-accent/10 text-accent border-accent/20')}>
-                  <Instagram className="size-5" aria-hidden />
+                  <SvglBrandLogo brand="instagram" className="size-5" labeled={false} />
                 </div>
               </div>
 

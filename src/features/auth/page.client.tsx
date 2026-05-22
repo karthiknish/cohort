@@ -376,6 +376,18 @@ function HomeAuthPageContent() {
     void handleSubmit('signup')(event)
   }, [handleSubmit])
 
+  const authCardUi = useMemo(
+    () => ({
+      isSubmitting,
+      isAuthLoading,
+      rememberMe,
+      showPassword,
+      showConfirmPassword,
+      passwordsMatch,
+    }),
+    [isSubmitting, isAuthLoading, rememberMe, showPassword, showConfirmPassword, passwordsMatch],
+  )
+
   return (
     <RevealTransition>
       <BoneyardSkeletonBoundary
@@ -386,14 +398,7 @@ function HomeAuthPageContent() {
             <AuthCard
               activeTab={activeTab}
               emailError={emailError}
-              ui={{
-                isSubmitting,
-                isAuthLoading,
-                rememberMe,
-                showPassword,
-                showConfirmPassword,
-                passwordsMatch,
-              }}
+              ui={authCardUi}
               signInData={signInData}
               signUpData={signUpData}
               passwordStrength={passwordStrength}
