@@ -94,6 +94,14 @@ export interface UseAdminClientsReturn {
     handleTeamDialogChange: (open: boolean) => void
     handleAddTeamMember: () => Promise<void>
     handleRemoveTeamMember: (client: ClientRecord, memberName: string) => Promise<void>
+    clientPendingEditMember: { client: ClientRecord; memberName: string; memberRole: string } | null
+    isEditRoleDialogOpen: boolean
+    editingMemberRole: string
+    updatingMemberRoleKey: string | null
+    setEditingMemberRole: (value: string) => void
+    requestEditTeamMemberRole: (client: ClientRecord, member: ClientTeamMember) => void
+    handleEditRoleDialogChange: (open: boolean) => void
+    handleUpdateTeamMemberRole: () => Promise<void>
 
 }
 
@@ -162,6 +170,15 @@ export function useAdminClients(): UseAdminClientsReturn {
         },
     })
 
+    const updateTeamMemberRoleMutation = useMutation({
+        mutationFn: async (args: ConvexArgs) =>
+            await convex.mutation(clientsApi.updateTeamMemberRole as never, args as never),
+        onSuccess: () => {
+            void clientsInfiniteQuery.refetch()
+            void queryClient.invalidateQueries({ queryKey: ['adminClients'] })
+        },
+    })
+
     const syncAdminTeamMembersMutation = useMutation({
         mutationFn: async (args: ConvexArgs) =>
             await convex.mutation(clientsApi.syncAdminTeamMembers as never, args as never),
@@ -185,6 +202,15 @@ export function useAdminClients(): UseAdminClientsReturn {
     const [removingTeamMemberKey, setRemovingTeamMemberKey] = useState<string | null>(null)
     const [memberName, setMemberName] = useState('')
     const [memberRole, setMemberRole] = useState('')
+
+    const [clientPendingEditMember, setClientPendingEditMember] = useState<{
+        client: ClientRecord
+        memberName: string
+        memberRole: string
+    } | null>(null)
+    const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false)
+    const [editingMemberRole, setEditingMemberRole] = useState('')
+    const [updatingMemberRoleKey, setUpdatingMemberRoleKey] = useState<string | null>(null)
 
     // Client form state
     const [clientSaving, setClientSaving] = useState(false)
@@ -524,6 +550,105 @@ export function useAdminClients(): UseAdminClientsReturn {
         }
     }, [isPreviewMode, toast, workspaceId, removeTeamMemberMutation])
 
+    const requestEditTeamMemberRole = useCallback((client: ClientRecord, member: ClientTeamMember) => {
+        setClientPendingEditMember({
+            client,
+            memberName: member.name,
+            memberRole: member.role,
+        })
+        setEditingMemberRole(member.role)
+        setIsEditRoleDialogOpen(true)
+    }, [])
+
+    const handleEditRoleDialogChange = useCallback((open: boolean) => {
+        setIsEditRoleDialogOpen(open)
+        if (!open) {
+            setClientPendingEditMember(null)
+            setEditingMemberRole('')
+        }
+    }, [])
+
+    const handleUpdateTeamMemberRole = useCallback(async () => {
+        if (!clientPendingEditMember) return
+
+        const { client, memberName: currentMemberName } = clientPendingEditMember
+        const normalizedName = currentMemberName.trim()
+        if (!normalizedName) return
+
+        const role = editingMemberRole.trim() || 'Contributor'
+
+        if (isPreviewMode) {
+            const updateKey = `${client.id}:${normalizedName.toLowerCase()}`
+            setUpdatingMemberRoleKey(updateKey)
+            setPreviewClients((current) =>
+                current.map((candidate) => {
+                    if (candidate.id !== client.id) {
+                        return candidate
+                    }
+
+                    return {
+                        ...candidate,
+                        teamMembers: candidate.teamMembers.map((member) =>
+                            member.name.trim().toLowerCase() === normalizedName.toLowerCase()
+                                ? { ...member, role }
+                                : member,
+                        ),
+                        updatedAt: new Date().toISOString(),
+                    }
+                }),
+            )
+            toast({
+                title: 'Preview mode',
+                description: `${normalizedName}'s role on ${client.name} was updated locally.`,
+            })
+            setIsEditRoleDialogOpen(false)
+            setClientPendingEditMember(null)
+            setEditingMemberRole('')
+            setUpdatingMemberRoleKey(null)
+            return
+        }
+
+        if (!workspaceId) return
+
+        const targetWorkspaceId = resolveClientWorkspaceId(client, workspaceId)
+        if (!targetWorkspaceId) return
+
+        const updateKey = `${client.id}:${normalizedName.toLowerCase()}`
+
+        try {
+            setUpdatingMemberRoleKey(updateKey)
+            await updateTeamMemberRoleMutation.mutateAsync({
+                workspaceId: targetWorkspaceId,
+                legacyId: client.id,
+                name: normalizedName,
+                role,
+            })
+
+            toast({
+                title: 'Role updated',
+                description: `${normalizedName} is now ${role} on ${client.name}.`,
+            })
+            setIsEditRoleDialogOpen(false)
+            setClientPendingEditMember(null)
+            setEditingMemberRole('')
+        } catch (err: unknown) {
+            reportConvexFailure({
+                error: err,
+                context: 'useAdminClients:handleUpdateTeamMemberRole',
+                title: 'Update role failed',
+            })
+        } finally {
+            setUpdatingMemberRoleKey(null)
+        }
+    }, [
+        clientPendingEditMember,
+        editingMemberRole,
+        isPreviewMode,
+        toast,
+        workspaceId,
+        updateTeamMemberRoleMutation,
+    ])
+
     // Client form handlers
     const resetClientForm = useCallback(() => {
         setClientName('')
@@ -664,5 +789,13 @@ export function useAdminClients(): UseAdminClientsReturn {
         handleTeamDialogChange,
         handleAddTeamMember,
         handleRemoveTeamMember,
+        clientPendingEditMember,
+        isEditRoleDialogOpen,
+        editingMemberRole,
+        updatingMemberRoleKey,
+        setEditingMemberRole,
+        requestEditTeamMemberRole,
+        handleEditRoleDialogChange,
+        handleUpdateTeamMemberRole,
     }
 }

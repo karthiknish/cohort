@@ -124,6 +124,23 @@ export function useAdminClientsPage() {
     (client: ClientRecord, memberName: string) => void adminClients.handleRemoveTeamMember(client, memberName),
     [adminClients]
   )
+  const handleEditTeamMemberRoleStable = useCallback(
+    (client: ClientRecord, member: { name: string; role: string }) =>
+      adminClients.requestEditTeamMemberRole(client, member),
+    [adminClients]
+  )
+  const handleEditingMemberRoleChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => adminClients.setEditingMemberRole(event.target.value),
+    [adminClients]
+  )
+  const handleCancelEditRoleDialog = useCallback(
+    () => adminClients.handleEditRoleDialogChange(false),
+    [adminClients]
+  )
+  const handleConfirmEditTeamMemberRole = useCallback(
+    () => void adminClients.handleUpdateTeamMemberRole(),
+    [adminClients]
+  )
 
   return {
     user,
@@ -149,5 +166,9 @@ export function useAdminClientsPage() {
     handleCancelTeamDialog,
     handleConfirmAddTeamMember,
     handleRemoveTeamMemberStable,
+    handleEditTeamMemberRoleStable,
+    handleEditingMemberRoleChange,
+    handleCancelEditRoleDialog,
+    handleConfirmEditTeamMemberRole,
   }
 }

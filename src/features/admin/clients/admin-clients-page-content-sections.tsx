@@ -226,6 +226,8 @@ type AdminClientsWorkspaceListProps = {
   onRequestAddTeamMember: (client: ClientRecord) => void
   onRequestDeleteClient: (client: ClientRecord) => void
   onRemoveTeamMember: (client: ClientRecord, memberName: string) => void
+  onEditTeamMemberRole: (client: ClientRecord, member: { name: string; role: string }) => void
+  updatingMemberRoleKey: string | null | undefined
   onLoadMore: () => void
 }
 
@@ -247,6 +249,8 @@ export function AdminClientsWorkspaceList({
   onRequestAddTeamMember,
   onRequestDeleteClient,
   onRemoveTeamMember,
+  onEditTeamMemberRole,
+  updatingMemberRoleKey,
   onLoadMore,
 }: AdminClientsWorkspaceListProps) {
   return (
@@ -287,6 +291,8 @@ export function AdminClientsWorkspaceList({
               onAddTeamMember={onRequestAddTeamMember}
               onDeleteClient={onRequestDeleteClient}
               onRemoveTeamMember={onRemoveTeamMember}
+              onEditTeamMemberRole={onEditTeamMemberRole}
+              updatingMemberRoleKey={updatingMemberRoleKey}
             />
           ))}
 
@@ -430,6 +436,68 @@ export function AdminClientsAddTeamMemberDialog({
           <Button type="button" onClick={onConfirm} disabled={addingMember}>
             {addingMember && <LoaderCircle className="mr-2 size-4 animate-spin" />}
             Add teammate
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+type AdminClientsEditTeamMemberRoleDialogProps = {
+  open: boolean
+  clientName: string | undefined
+  memberName: string | undefined
+  memberRole: string
+  updatingRole: boolean
+  onOpenChange: (open: boolean) => void
+  onMemberRoleChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onCancel: () => void
+  onConfirm: () => void
+}
+
+export function AdminClientsEditTeamMemberRoleDialog({
+  open,
+  clientName,
+  memberName,
+  memberRole,
+  updatingRole,
+  onOpenChange,
+  onMemberRoleChange,
+  onCancel,
+  onConfirm,
+}: AdminClientsEditTeamMemberRoleDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit teammate role</DialogTitle>
+          <DialogDescription>
+            Set {memberName ?? 'this teammate'}&apos;s role on {clientName ?? 'this client'}. Roles can differ per client.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="edit-team-member-name">Name</Label>
+            <Input id="edit-team-member-name" value={memberName ?? ''} disabled />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-team-member-role-input">Role</Label>
+            <Input
+              id="edit-team-member-role-input"
+              placeholder="e.g. Paid Media Lead"
+              value={memberRole}
+              onChange={onMemberRoleChange}
+              disabled={updatingRole}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={updatingRole}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={onConfirm} disabled={updatingRole}>
+            {updatingRole && <LoaderCircle className="mr-2 size-4 animate-spin" />}
+            Save role
           </Button>
         </DialogFooter>
       </DialogContent>

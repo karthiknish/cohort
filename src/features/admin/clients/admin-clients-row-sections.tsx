@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
-import { LoaderCircle, Plus, Trash2, X } from 'lucide-react'
+import { LoaderCircle, Pencil, Plus, Trash2, X } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -115,6 +115,8 @@ type AdminClientsClientRowProps = {
   onAddTeamMember: (client: ClientRecord) => void
   onDeleteClient: (client: ClientRecord) => void
   onRemoveTeamMember: (client: ClientRecord, memberName: string) => void
+  onEditTeamMemberRole: (client: ClientRecord, member: { name: string; role: string }) => void
+  updatingMemberRoleKey: string | null | undefined
 }
 
 export function AdminClientsClientRow({
@@ -127,6 +129,8 @@ export function AdminClientsClientRow({
   onAddTeamMember,
   onDeleteClient,
   onRemoveTeamMember,
+  onEditTeamMemberRole,
+  updatingMemberRoleKey,
 }: AdminClientsClientRowProps) {
   const handleAddTeamMember = useCallback(() => onAddTeamMember(client), [client, onAddTeamMember])
   const handleDeleteClient = useCallback(() => onDeleteClient(client), [client, onDeleteClient])
@@ -182,7 +186,9 @@ export function AdminClientsClientRow({
               client={client}
               member={member}
               removingTeamMemberKey={removingTeamMemberKey}
+              updatingMemberRoleKey={updatingMemberRoleKey}
               onRemove={onRemoveTeamMember}
+              onEditRole={onEditTeamMemberRole}
             />
           ))}
         </div>
@@ -195,17 +201,24 @@ type AdminClientsTeamMemberBadgeProps = {
   client: ClientRecord
   member: { name: string; role: string }
   removingTeamMemberKey: string | null | undefined
+  updatingMemberRoleKey: string | null | undefined
   onRemove: (client: ClientRecord, memberName: string) => void
+  onEditRole: (client: ClientRecord, member: { name: string; role: string }) => void
 }
 
 function AdminClientsTeamMemberBadge({
   client,
   member,
   removingTeamMemberKey,
+  updatingMemberRoleKey,
   onRemove,
+  onEditRole,
 }: AdminClientsTeamMemberBadgeProps) {
   const handleRemove = useCallback(() => onRemove(client, member.name), [client, member.name, onRemove])
-  const isRemoving = removingTeamMemberKey === `${client.id}:${member.name.toLowerCase()}`
+  const handleEditRole = useCallback(() => onEditRole(client, member), [client, member, onEditRole])
+  const memberKey = `${client.id}:${member.name.toLowerCase()}`
+  const isRemoving = removingTeamMemberKey === memberKey
+  const isUpdatingRole = updatingMemberRoleKey === memberKey
   const isAccountManager = member.name.toLowerCase() === client.accountManager.toLowerCase()
 
   return (
@@ -214,9 +227,19 @@ function AdminClientsTeamMemberBadge({
       {member.role && <span className="ml-2 text-muted-foreground">{member.role}</span>}
       <button
         type="button"
-        className="ml-2 rounded-full p-0.5 text-muted-foreground transition-colors hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
+        className="ml-2 rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={handleEditRole}
+        disabled={isRemoving || isUpdatingRole}
+        aria-label={`Edit ${member.name}'s role on ${client.name}`}
+        title={`Edit ${member.name}'s role`}
+      >
+        {isUpdatingRole ? <LoaderCircle className="size-3 animate-spin" /> : <Pencil className="size-3" />}
+      </button>
+      <button
+        type="button"
+        className="ml-1 rounded-full p-0.5 text-muted-foreground transition-colors hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
         onClick={handleRemove}
-        disabled={isRemoving || isAccountManager}
+        disabled={isRemoving || isUpdatingRole || isAccountManager}
         aria-label={`Remove ${member.name} from ${client.name}`}
         title={isAccountManager ? 'Account manager cannot be removed from the team' : `Remove ${member.name}`}
       >

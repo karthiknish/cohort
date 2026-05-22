@@ -1,7 +1,7 @@
 'use node'
 
 import { action } from './_generated/server'
-import { api } from './_generated/api'
+import { api, internal } from './_generated/api'
 import { v } from 'convex/values'
 import type { Id } from './_generated/dataModel'
 
@@ -216,6 +216,39 @@ async function loadClientRosterNames(
   return names
 }
 
+function mergeDocumentImportAssigneeProfiles(
+  ...memberLists: DocumentImportWorkspaceMember[][]
+): DocumentImportWorkspaceMember[] {
+  const byId = new Map<string, DocumentImportWorkspaceMember>()
+
+  for (const members of memberLists) {
+    for (const member of members) {
+      const id = member.id.trim()
+      const name = member.name.trim()
+      if (!id || !name) continue
+
+      const existing = byId.get(id)
+      if (!existing || name.length > existing.name.trim().length) {
+        byId.set(id, { id, name, email: member.email })
+      }
+    }
+  }
+
+  return [...byId.values()]
+}
+
+async function listDocumentImportAssigneeProfiles(
+  ctx: Parameters<typeof listWorkspaceMembers>[0],
+  workspaceId: string,
+): Promise<DocumentImportWorkspaceMember[]> {
+  const [workspaceMembers, platformAdmins] = await Promise.all([
+    listWorkspaceMembers(ctx, workspaceId),
+    ctx.runQuery(internal.taskDocumentImportQueries.listPlatformAdminMembersInternal, {}),
+  ])
+
+  return mergeDocumentImportAssigneeProfiles(workspaceMembers, platformAdmins)
+}
+
 async function resolveTaskAssignment(
   assignedToNames: string[],
   assigneeMemberPool: DocumentImportWorkspaceMember[],
@@ -276,9 +309,9 @@ async function mapRawTasksToProposals(
   rawTasks: RawExtractedTask[],
 ): Promise<ProposedImportTask[]> {
   const nowMs = Date.now()
-  const workspaceMembers = await listWorkspaceMembers(ctx, workspaceId)
+  const assigneeProfiles = await listDocumentImportAssigneeProfiles(ctx, workspaceId)
   const clientRosterNames = await loadClientRosterNames(ctx, workspaceId, clientId)
-  const assigneeMemberPool = buildAssigneeMemberPool(workspaceMembers, clientRosterNames)
+  const assigneeMemberPool = buildAssigneeMemberPool(assigneeProfiles, clientRosterNames)
 
   const proposals = await Promise.all(
     rawTasks.slice(0, 25).map(async (rawTask) => {
@@ -354,7 +387,7 @@ export const extractTasksFromDocument = action({
         scope: args.clientId ?? null,
       })
 
-      const members = await listWorkspaceMembers(ctx, workspaceId)
+      const members = await listDocumentImportAssigneeProfiles(ctx, workspaceId)
       const memberNames = members.map((member) => member.name)
 
       let raw: string

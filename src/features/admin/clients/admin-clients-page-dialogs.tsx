@@ -4,6 +4,7 @@ import type { AllocationUser } from '../lib/client-allocation'
 import {
   AdminClientsAddTeamMemberDialog,
   AdminClientsDeleteDialog,
+  AdminClientsEditTeamMemberRoleDialog,
 } from './admin-clients-page-content-sections'
 
 type AdminClientsPageDialogsProps = {
@@ -26,6 +27,15 @@ type AdminClientsPageDialogsProps = {
   onMemberRoleChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onCancelTeamDialog: () => void
   onConfirmAddTeamMember: () => void
+  isEditRoleDialogOpen: boolean
+  clientPendingEditMemberName: string | undefined
+  clientPendingEditClientName: string | undefined
+  editingMemberRole: string
+  updatingMemberRoleKey: string | null
+  onEditRoleDialogChange: (open: boolean) => void
+  onEditingMemberRoleChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onCancelEditRoleDialog: () => void
+  onConfirmEditTeamMemberRole: () => void
 }
 
 export function AdminClientsPageDialogs({
@@ -48,6 +58,15 @@ export function AdminClientsPageDialogs({
   onMemberRoleChange,
   onCancelTeamDialog,
   onConfirmAddTeamMember,
+  isEditRoleDialogOpen,
+  clientPendingEditMemberName,
+  clientPendingEditClientName,
+  editingMemberRole,
+  updatingMemberRoleKey,
+  onEditRoleDialogChange,
+  onEditingMemberRoleChange,
+  onCancelEditRoleDialog,
+  onConfirmEditTeamMemberRole,
 }: AdminClientsPageDialogsProps) {
   return (
     <>
@@ -74,6 +93,18 @@ export function AdminClientsPageDialogs({
         onMemberRoleChange={onMemberRoleChange}
         onCancel={onCancelTeamDialog}
         onConfirm={onConfirmAddTeamMember}
+      />
+
+      <AdminClientsEditTeamMemberRoleDialog
+        open={isEditRoleDialogOpen}
+        clientName={clientPendingEditClientName}
+        memberName={clientPendingEditMemberName}
+        memberRole={editingMemberRole}
+        updatingRole={Boolean(updatingMemberRoleKey)}
+        onOpenChange={onEditRoleDialogChange}
+        onMemberRoleChange={onEditingMemberRoleChange}
+        onCancel={onCancelEditRoleDialog}
+        onConfirm={onConfirmEditTeamMemberRole}
       />
     </>
   )

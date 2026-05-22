@@ -274,10 +274,10 @@ export function resolveDocumentImportAssignees(
   const unmatchedQueries: string[] = []
 
   for (const name of trimmedNames) {
-    const matches = findWorkspaceMemberMatches(name, linkedMembers)
+    const linkedMatches = findWorkspaceMemberMatches(name, linkedMembers)
 
-    if (matches.length === 1) {
-      const member = matches[0]
+    if (linkedMatches.length === 1) {
+      const member = linkedMatches[0]
       if (member?.id) {
         resolvedUserIds.add(member.id)
       } else {
@@ -286,7 +286,29 @@ export function resolveDocumentImportAssignees(
       continue
     }
 
-    if (matches.length > 1) {
+    if (linkedMatches.length > 1) {
+      ambiguousQueries.push(name)
+      continue
+    }
+
+    const poolMatches = findWorkspaceMemberMatches(name, members)
+    if (poolMatches.length === 1) {
+      const match = poolMatches[0]
+      if (match?.id) {
+        resolvedUserIds.add(match.id)
+        continue
+      }
+
+      if (match) {
+        const profileMatches = findWorkspaceMemberMatches(match.name, linkedMembers)
+        if (profileMatches.length === 1 && profileMatches[0]?.id) {
+          resolvedUserIds.add(profileMatches[0].id)
+          continue
+        }
+      }
+    }
+
+    if (poolMatches.length > 1) {
       ambiguousQueries.push(name)
       continue
     }

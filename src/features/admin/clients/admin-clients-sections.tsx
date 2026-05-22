@@ -51,6 +51,10 @@ type AdminClientsPageContentProps = {
   removingTeamMemberKey: string | null
   memberName: string
   memberRole: string
+  updatingMemberRoleKey: string | null
+  editingMemberRole: string
+  isEditRoleDialogOpen: boolean
+  clientPendingEditMember: { client: ClientRecord; memberName: string; memberRole: string } | null
   loadingMore: boolean
   onRefresh: () => void
   onFormSubmit: (event: React.FormEvent) => void
@@ -66,6 +70,7 @@ type AdminClientsPageContentProps = {
   onRequestAddTeamMember: (client: ClientRecord) => void
   onRequestDeleteClient: (client: ClientRecord) => void
   onRemoveTeamMember: (client: ClientRecord, memberName: string) => void
+  onEditTeamMemberRole: (client: ClientRecord, member: { name: string; role: string }) => void
   onLoadMore: () => void
   onDeleteDialogChange: (open: boolean) => void
   onCancelDelete: () => void
@@ -76,6 +81,10 @@ type AdminClientsPageContentProps = {
   onMemberRoleChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onCancelTeamDialog: () => void
   onConfirmAddTeamMember: () => void
+  onEditRoleDialogChange: (open: boolean) => void
+  onEditingMemberRoleChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onCancelEditRoleDialog: () => void
+  onConfirmEditTeamMemberRole: () => void
 }
 
 export function AdminClientsPageContent(props: AdminClientsPageContentProps) {
@@ -105,6 +114,10 @@ export function AdminClientsPageContent(props: AdminClientsPageContentProps) {
     removingTeamMemberKey,
     memberName,
     memberRole,
+    updatingMemberRoleKey,
+    editingMemberRole,
+    isEditRoleDialogOpen,
+    clientPendingEditMember,
     loadingMore,
     onRefresh,
     onFormSubmit,
@@ -120,6 +133,7 @@ export function AdminClientsPageContent(props: AdminClientsPageContentProps) {
     onRequestAddTeamMember,
     onRequestDeleteClient,
     onRemoveTeamMember,
+    onEditTeamMemberRole,
     onLoadMore,
     onDeleteDialogChange,
     onCancelDelete,
@@ -130,6 +144,10 @@ export function AdminClientsPageContent(props: AdminClientsPageContentProps) {
     onMemberRoleChange,
     onCancelTeamDialog,
     onConfirmAddTeamMember,
+    onEditRoleDialogChange,
+    onEditingMemberRoleChange,
+    onCancelEditRoleDialog,
+    onConfirmEditTeamMemberRole,
   } = props
 
   const shellActions = useMemo(
@@ -178,6 +196,7 @@ export function AdminClientsPageContent(props: AdminClientsPageContentProps) {
           clientPendingMembersId={clientPendingMembers?.id}
           deletingClientId={deletingClientId}
           removingTeamMemberKey={removingTeamMemberKey}
+          updatingMemberRoleKey={updatingMemberRoleKey}
           onFormSubmit={onFormSubmit}
           onClientNameChange={onClientNameChange}
           onAccountManagerChange={onAccountManagerChange}
@@ -191,6 +210,7 @@ export function AdminClientsPageContent(props: AdminClientsPageContentProps) {
           onRequestAddTeamMember={onRequestAddTeamMember}
           onRequestDeleteClient={onRequestDeleteClient}
           onRemoveTeamMember={onRemoveTeamMember}
+          onEditTeamMemberRole={onEditTeamMemberRole}
           onLoadMore={onLoadMore}
         />
       </AdminPageShell>
@@ -215,6 +235,15 @@ export function AdminClientsPageContent(props: AdminClientsPageContentProps) {
         onMemberRoleChange={onMemberRoleChange}
         onCancelTeamDialog={onCancelTeamDialog}
         onConfirmAddTeamMember={onConfirmAddTeamMember}
+        isEditRoleDialogOpen={isEditRoleDialogOpen}
+        clientPendingEditMemberName={clientPendingEditMember?.memberName}
+        clientPendingEditClientName={clientPendingEditMember?.client.name}
+        editingMemberRole={editingMemberRole}
+        updatingMemberRoleKey={updatingMemberRoleKey}
+        onEditRoleDialogChange={onEditRoleDialogChange}
+        onEditingMemberRoleChange={onEditingMemberRoleChange}
+        onCancelEditRoleDialog={onCancelEditRoleDialog}
+        onConfirmEditTeamMemberRole={onConfirmEditTeamMemberRole}
       />
     </>
   )

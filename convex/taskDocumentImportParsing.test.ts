@@ -202,6 +202,22 @@ describe('buildAssigneeMemberPool', () => {
     })
   })
 
+  it('resolves roster assignees when platform admin profiles are included in the pool', () => {
+    const pool = buildAssigneeMemberPool(
+      [
+        { id: 'admin-deepak', name: 'Deepak Karnan' },
+        { id: 'admin-archana', name: 'Archana Ravi Kumar' },
+      ],
+      ['Deepak Karnan', 'Archana Ravi Kumar'],
+    )
+
+    expect(resolveDocumentImportAssignees(['Deepak'], pool)).toEqual({
+      assignedToUserIds: ['admin-deepak'],
+      assignmentStatus: 'resolved',
+      suggestions: [],
+    })
+  })
+
   it('links roster names to admin workspace profiles via first-name matching', () => {
     const pool = buildAssigneeMemberPool(
       [{ id: 'admin-deepak', name: 'Deepak Karnan', email: 'deepak@agency.com' }],

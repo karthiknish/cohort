@@ -35,6 +35,10 @@ export default function AdminClientsPage() {
       isTeamDialogOpen={page.isTeamDialogOpen}
       addingMember={page.addingMember}
       removingTeamMemberKey={page.removingTeamMemberKey}
+      updatingMemberRoleKey={page.updatingMemberRoleKey}
+      editingMemberRole={page.editingMemberRole}
+      isEditRoleDialogOpen={page.isEditRoleDialogOpen}
+      clientPendingEditMember={page.clientPendingEditMember}
       memberName={page.memberName}
       memberRole={page.memberRole}
       loadingMore={page.loadingMore}
@@ -52,6 +56,7 @@ export default function AdminClientsPage() {
       onRequestAddTeamMember={page.requestAddTeamMember}
       onRequestDeleteClient={page.requestDeleteClient}
       onRemoveTeamMember={page.handleRemoveTeamMemberStable}
+      onEditTeamMemberRole={page.handleEditTeamMemberRoleStable}
       onLoadMore={page.handleLoadMore}
       onDeleteDialogChange={page.handleDeleteDialogChange}
       onCancelDelete={page.handleCancelDelete}
@@ -62,6 +67,10 @@ export default function AdminClientsPage() {
       onMemberRoleChange={page.handleMemberRoleChange}
       onCancelTeamDialog={page.handleCancelTeamDialog}
       onConfirmAddTeamMember={page.handleConfirmAddTeamMember}
+      onEditRoleDialogChange={page.handleEditRoleDialogChange}
+      onEditingMemberRoleChange={page.handleEditingMemberRoleChange}
+      onCancelEditRoleDialog={page.handleCancelEditRoleDialog}
+      onConfirmEditTeamMemberRole={page.handleConfirmEditTeamMemberRole}
     />
   )
 }

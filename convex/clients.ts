@@ -302,6 +302,63 @@ export const syncAdminTeamMembers = zWorkspaceMutation({
   },
 })
 
+export const updateTeamMemberRole = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    name: z.string(),
+    role: z.string(),
+  },
+  returns: z.string(),
+  handler: async (ctx, args) => {
+    const client = await ctx.db
+      .query('clients')
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .unique()
+
+    if (!client || client.deletedAtMs !== null) {
+      throw Errors.resource.notFound('Client')
+    }
+
+    const normalizedName = args.name.trim()
+    if (!normalizedName) {
+      throw Errors.validation.invalidInput('Team member name is required')
+    }
+
+    const normalizedRole = args.role.trim() || 'Contributor'
+    let found = false
+
+    const nextTeamMembers = client.teamMembers.map((member) => {
+      if (member.name.toLowerCase() !== normalizedName.toLowerCase()) {
+        return member
+      }
+
+      found = true
+      return { name: member.name, role: normalizedRole }
+    })
+
+    if (!found) {
+      throw Errors.resource.notFound('Team member')
+    }
+
+    const unchanged = client.teamMembers.every((member, index) => {
+      const next = nextTeamMembers[index]
+      return next && member.name === next.name && member.role === next.role
+    })
+
+    if (unchanged) {
+      return client.legacyId
+    }
+
+    await ctx.db.patch(client._id, {
+      teamMembers: nextTeamMembers,
+      updatedAtMs: ctx.now,
+    })
+
+    return client.legacyId
+  },
+})
+
 export const removeTeamMember = zWorkspaceMutation({
   args: {
     workspaceId: z.string(),

@@ -29,6 +29,7 @@ type AdminClientsWorkspaceManagementCardProps = {
   clientPendingMembersId: string | undefined
   deletingClientId: string | null | undefined
   removingTeamMemberKey: string | null | undefined
+  updatingMemberRoleKey: string | null | undefined
   onFormSubmit: (event: React.FormEvent) => void
   onClientNameChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onAccountManagerChange: (value: string) => void
@@ -42,6 +43,7 @@ type AdminClientsWorkspaceManagementCardProps = {
   onRequestAddTeamMember: (client: ClientRecord) => void
   onRequestDeleteClient: (client: ClientRecord) => void
   onRemoveTeamMember: (client: ClientRecord, memberName: string) => void
+  onEditTeamMemberRole: (client: ClientRecord, member: { name: string; role: string }) => void
   onLoadMore: () => void
 }
 
@@ -64,6 +66,7 @@ export function AdminClientsWorkspaceManagementCard({
   clientPendingMembersId,
   deletingClientId,
   removingTeamMemberKey,
+  updatingMemberRoleKey,
   onFormSubmit,
   onClientNameChange,
   onAccountManagerChange,
@@ -121,6 +124,8 @@ export function AdminClientsWorkspaceManagementCard({
           onRequestAddTeamMember={onRequestAddTeamMember}
           onRequestDeleteClient={onRequestDeleteClient}
           onRemoveTeamMember={onRemoveTeamMember}
+          onEditTeamMemberRole={onEditTeamMemberRole}
+          updatingMemberRoleKey={updatingMemberRoleKey}
           onLoadMore={onLoadMore}
         />
       </CardContent>
