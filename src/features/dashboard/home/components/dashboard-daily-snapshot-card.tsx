@@ -42,7 +42,10 @@ export function DashboardDailySnapshotCard({
   }
 
   return (
-    <Card className={cn('overflow-hidden ring-1 ring-muted/20', DASHBOARD_THEME.cards.base)}>
+    <Card
+      id="tour-stats-cards"
+      className={cn('overflow-hidden ring-1 ring-muted/20', DASHBOARD_THEME.cards.base)}
+    >
       <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'bg-muted/[0.02]')}>
         <div className="flex items-start gap-3">
           <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">

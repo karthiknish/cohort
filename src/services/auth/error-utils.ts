@@ -130,6 +130,27 @@ const errorMap: Record<string, string> = {
   'UNAUTHORIZED': 'Authentication required. Please sign in.',
   'FORBIDDEN': 'You do not have permission to perform this action.',
   'SERVICE_UNAVAILABLE': 'Service temporarily unavailable. Please try again later.',
+  'AUTH_SERVICE_MISCONFIGURED':
+    'Authentication service is misconfigured. Ensure Convex SITE_URL and BETTER_AUTH_SECRET match this deployment, then check server logs.',
+}
+
+/** Better Auth generic 500 body when Convex init or CORS/origin checks fail. */
+const BETTER_AUTH_GENERIC_500 =
+  "your request couldn't be completed"
+
+const AUTH_MISCONFIGURED_MESSAGE: string =
+  errorMap.AUTH_SERVICE_MISCONFIGURED
+  ?? 'Authentication service is misconfigured. Ensure Convex SITE_URL and BETTER_AUTH_SECRET match this deployment, then check server logs.'
+
+function isBetterAuthGenericFailureMessage(message: string): boolean {
+  const lower = message.toLowerCase()
+  return (
+    lower.includes(BETTER_AUTH_GENERIC_500)
+    || lower.includes('try again later')
+    || lower.includes('[betterauth]')
+    || lower.includes('better_auth_secret')
+    || lower.includes('site_url')
+  )
 }
 
 /**
@@ -141,6 +162,7 @@ export function getFriendlyAuthErrorMessage(error: unknown): string {
 
   if (typeof error === 'string') {
     if (errorMap[error]) return errorMap[error]
+    if (isBetterAuthGenericFailureMessage(error)) return AUTH_MISCONFIGURED_MESSAGE
     return error
   }
 
@@ -162,6 +184,7 @@ export function getFriendlyAuthErrorMessage(error: unknown): string {
     if (errorStatus === 429) return 'Too many requests. Please wait a moment and try again.'
     if (errorStatus === 503) return 'Service temporarily unavailable. Please try again later.'
     if (errorStatus === 408) return 'Request timed out. Please try again.'
+    if (errorStatus === 500) return AUTH_MISCONFIGURED_MESSAGE
   }
 
   // Check mapped error codes
@@ -171,6 +194,10 @@ export function getFriendlyAuthErrorMessage(error: unknown): string {
 
   // If we have a message from the error object, attempt to clean it
   if (errorMessage && typeof errorMessage === 'string') {
+    if (isBetterAuthGenericFailureMessage(errorMessage)) {
+      return AUTH_MISCONFIGURED_MESSAGE
+    }
+
     if (errorMessage.includes('redirect_uri_mismatch')) {
       return 'Google OAuth redirect URI mismatch. In Google Cloud Console, add http://localhost:3000/api/auth/callback/google (dev) or https://your-domain.com/api/auth/callback/google (prod), and set SITE_URL / BETTER_AUTH_URL to that same origin on your Convex deployment.'
     }
@@ -328,6 +355,13 @@ export function parseAuthError(error: unknown): Error {
     errorStatus === 503
   ) {
     return new ServiceUnavailableError()
+  }
+
+  if (
+    errorStatus === 500
+    || (errorMessage && isBetterAuthGenericFailureMessage(errorMessage))
+  ) {
+    return new ServiceUnavailableError(AUTH_MISCONFIGURED_MESSAGE)
   }
 
   // Default to unauthorized

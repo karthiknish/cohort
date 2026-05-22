@@ -227,7 +227,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
   )
   const handleLaunchTour = useCallback(() => {
     onOpenChange(false)
-    startTour()
+    void startTour({ ensureDashboard: true })
   }, [onOpenChange, startTour])
 
   const handleSkipWelcome = useCallback(() => {

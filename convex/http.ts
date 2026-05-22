@@ -1,28 +1,30 @@
 import { httpRouter } from 'convex/server'
 import { httpAction } from './_generated/server'
 
-import { authComponent, buildTrustedOrigins, createAuth } from './betterAuth/auth'
+import { authComponent, buildTrustedOrigins, createAuth, getAuthHealthSnapshot } from './betterAuth/auth'
+import { corsHeadersForOrigin } from './betterAuth/origins'
 import { adSyncNotification, externalWebhook } from './httpActions'
 import { run as adSyncWorker } from './adSyncWorker'
 
 const http = httpRouter()
 
-// Allowed origins for CORS — keep in sync with betterAuth/auth.ts trustedOrigins
+// Allowed origins for CORS — keep in sync with betterAuth/origins.ts
 const ALLOWED_ORIGINS = buildTrustedOrigins()
 
-function getCorsHeaders(origin: string | null): HeadersInit {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed.replace(/\/$/, '')))
-    ? origin
-    : ALLOWED_ORIGINS[0]!
-
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, better-auth-cookie',
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Max-Age': '86400',
-  }
-}
+http.route({
+  path: '/api/auth/ok',
+  method: 'GET',
+  handler: httpAction(async (_, request) => {
+    const origin = request.headers.get('origin')
+    return new Response(JSON.stringify(getAuthHealthSnapshot()), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeadersForOrigin(origin),
+      },
+    })
+  }),
+})
 
 // Handle CORS preflight for all /api/auth/* routes
 http.route({
@@ -32,7 +34,7 @@ http.route({
     const origin = request.headers.get('origin')
     return new Response(null, {
       status: 204,
-      headers: getCorsHeaders(origin),
+      headers: corsHeadersForOrigin(origin),
     })
   }),
 })
@@ -44,7 +46,7 @@ http.route({
     const origin = request.headers.get('origin')
     return new Response(null, {
       status: 204,
-      headers: getCorsHeaders(origin),
+      headers: corsHeadersForOrigin(origin),
     })
   }),
 })

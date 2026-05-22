@@ -360,7 +360,7 @@ export function DashboardOverviewPage() {
 
           <section className="space-y-5" aria-label="Performance metrics">
             {hasChartData ? (
-              <FadeIn>
+              <FadeIn id="tour-performance-chart">
                 <Card className="overflow-hidden border-muted/40 bg-card shadow-sm ring-1 ring-muted/20">
                   <CardHeader className="border-b border-muted/40 bg-muted/[0.02] pb-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -435,7 +435,7 @@ export function DashboardOverviewPage() {
             ) : null}
           </section>
 
-          <FadeIn>
+          <FadeIn id="tour-quick-actions">
             <QuickActions compact />
           </FadeIn>
 

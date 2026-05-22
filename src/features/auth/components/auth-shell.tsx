@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 
+import { SiteLogo } from '@/shared/components/site-logo'
 import { cn } from '@/lib/utils'
 
 type AuthShellProps = {
@@ -18,7 +19,10 @@ export function AuthShell({ children, className }: AuthShellProps) {
         className,
       )}
     >
-      <div className="w-full max-w-md lg:max-w-120">{children}</div>
+      <div className="flex w-full max-w-md flex-col items-center gap-8 lg:max-w-120">
+        <SiteLogo size="wordmarkLg" href="/" className="mx-auto" />
+        {children}
+      </div>
     </div>
   )
 }

@@ -190,7 +190,28 @@ Env vars (Next.js):
 
 Env vars (Convex dashboard / `bunx convex env set`):
 - `BETTER_AUTH_SECRET` (>= 32 chars)
-- `SITE_URL` (your site URL, e.g. `http://localhost:3000` in dev)
+- `SITE_URL` (must exactly match the browser origin: scheme + host + port, no trailing slash)
+- `BETTER_AUTH_URL` (optional; same value as `SITE_URL` on production)
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (if using Google sign-in)
+- Optional on Vercel previews: `VERCEL_URL` / `VERCEL_BRANCH_URL` are read on Convex when set
+
+**Production parity:** Convex `SITE_URL` must equal Vercel `NEXT_PUBLIC_SITE_URL`. List prod Convex env with `npx convex env list --prod`.
+
+**Smoke test** (replace with your deployment + live domain):
+
+```bash
+# Convex auth layer (expect 200 + null session, or 401 — not 500)
+curl -si -H "Origin: https://YOUR_LIVE_DOMAIN" \
+  "https://YOUR_DEPLOYMENT.convex.site/api/auth/get-session"
+
+# Health (no secrets): baseURL + trustedOriginCount
+curl -si "https://YOUR_DEPLOYMENT.convex.site/api/auth/ok"
+
+# Via Next.js proxy
+curl -si "https://YOUR_LIVE_DOMAIN/api/auth/get-session"
+```
+
+If you see HTTP 500 with *"Your request couldn't be completed"*, check Convex logs for `[betterAuth] BETTER_AUTH_SECRET`, HTTPS/`SITE_URL` errors, or a missing trusted origin (www vs apex). Vercel logs show `[auth-server] Convex auth … → 500` with parsed `code` / `message`.
 
 ### Firebase Setup
 

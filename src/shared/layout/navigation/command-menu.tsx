@@ -435,6 +435,7 @@ export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
     <>
       {/* Mobile: compact icon button */}
       <button
+        id="tour-command-menu-mobile"
         onClick={handleOpen}
         className="inline-flex sm:hidden items-center justify-center rounded-md border border-input bg-background p-2 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
         aria-label="Open quick navigation"

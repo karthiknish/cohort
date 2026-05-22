@@ -7,7 +7,10 @@ import { betterAuth } from "better-auth";
 import { components } from '/_generated/api';
 import type { DataModel } from '/_generated/dataModel';
 import authConfig from "../auth.config";
+import { buildTrustedOrigins, isConvexDevDeployment, isLocalDevUrl, normalizeOrigin } from "./origins";
 import schema from "./schema";
+
+export { buildTrustedOrigins } from "./origins";
 
 type ConvexCompatibleBetterAuthOptions = BetterAuthOptions & {
   baseURL?: string;
@@ -19,21 +22,12 @@ type AuthOptionsConfig = {
 
 const LOCAL_DEV_AUTH_ORIGIN = "http://localhost:3000";
 
-function isConvexDevDeployment(): boolean {
-  const deployment = process.env.CONVEX_DEPLOYMENT ?? "";
-  return deployment.startsWith("dev:") || deployment === "local";
-}
-
 function isStaticAuthBootstrap(ctx: GenericCtx<DataModel>): boolean {
   return Object.keys((ctx ?? {}) as object).length === 0;
 }
 
 function isSecureUrl(value: string | undefined | null): value is string {
   return typeof value === "string" && value.startsWith("https://");
-}
-
-function isLocalDevUrl(value: string | undefined | null): value is string {
-  return typeof value === "string" && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(value);
 }
 
 function authOriginCandidates(): Array<string | undefined> {
@@ -45,26 +39,10 @@ function authOriginCandidates(): Array<string | undefined> {
   ];
 }
 
-function shouldForceLocalhostAuthOrigin(): boolean {
-  return authOriginCandidates().some(isLocalDevUrl);
-}
-
-function buildLocalDevOrigins(): string[] {
-  const origins = new Set<string>([LOCAL_DEV_AUTH_ORIGIN, "http://127.0.0.1:3000"]);
-
-  for (const value of authOriginCandidates()) {
-    if (isLocalDevUrl(value)) {
-      origins.add(value.replace(/\/$/, ""));
-    }
-  }
-
-  return [...origins];
-}
-
 /** Public app origin for OAuth — must be the Next.js URL, never *.convex.site. */
 function resolveAuthBaseUrl(): string {
   const localDev = authOriginCandidates().find(isLocalDevUrl);
-  if (localDev) return localDev.replace(/\/$/, "");
+  if (localDev) return normalizeOrigin(localDev) ?? LOCAL_DEV_AUTH_ORIGIN;
 
   const siteUrl =
     process.env.SITE_URL
@@ -72,9 +50,20 @@ function resolveAuthBaseUrl(): string {
     || process.env.NEXT_PUBLIC_SITE_URL
     || process.env.NEXT_PUBLIC_APP_URL;
 
-  if (siteUrl) return siteUrl.replace(/\/$/, "");
+  return normalizeOrigin(siteUrl) ?? LOCAL_DEV_AUTH_ORIGIN;
+}
 
-  return LOCAL_DEV_AUTH_ORIGIN;
+/** Non-secret snapshot for GET /api/auth/ok (deployed auth debugging). */
+export function getAuthHealthSnapshot(): {
+  ok: true;
+  baseURL: string;
+  trustedOriginCount: number;
+} {
+  return {
+    ok: true,
+    baseURL: resolveAuthBaseUrl(),
+    trustedOriginCount: buildTrustedOrigins().length,
+  };
 }
 
 function resolveGoogleOAuthCredentials(): { clientId: string; clientSecret: string } | null {
@@ -121,30 +110,6 @@ function buildSocialProviders() {
   }
 
   return providers;
-}
-
-// Build trusted origins from env
-export function buildTrustedOrigins(): string[] {
-  if (shouldForceLocalhostAuthOrigin()) {
-    return buildLocalDevOrigins();
-  }
-
-  const origins = new Set<string>();
-
-  const explicitBaseUrl = process.env.BETTER_AUTH_URL;
-  const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  const convexSiteUrl =
-    process.env.NEXT_PUBLIC_CONVEX_SITE_URL
-    || process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
-    || process.env.CONVEX_SITE_URL;
-
-  if (explicitBaseUrl) origins.add(explicitBaseUrl);
-  if (siteUrl) origins.add(siteUrl);
-  if (appUrl) origins.add(appUrl);
-  if (convexSiteUrl) origins.add(convexSiteUrl);
-
-  return [...origins];
 }
 
 // Better Auth Options

@@ -36,6 +36,45 @@ function rewriteConvexAuthUrls(value: string): string {
   return value.split(convexOrigin).join(appOrigin)
 }
 
+type ConvexAuthErrorBody = {
+  code?: string
+  message?: string
+  error?: string
+  stack?: string
+}
+
+function parseConvexAuthErrorBody(body: string): ConvexAuthErrorBody | null {
+  const trimmed = body.trim()
+  if (!trimmed.startsWith('{')) return null
+  try {
+    const parsed = JSON.parse(trimmed) as ConvexAuthErrorBody
+    return typeof parsed === 'object' && parsed !== null ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function logConvexAuthProxyFailure(
+  method: string,
+  pathname: string,
+  status: number,
+  errorBody: string,
+): void {
+  const parsed = parseConvexAuthErrorBody(errorBody)
+  const message =
+    parsed?.message
+    ?? (typeof parsed?.error === 'string' ? parsed.error : undefined)
+    ?? errorBody.slice(0, 200)
+
+  console.error(`[auth-server] Convex auth ${method} ${pathname} → ${status}`, {
+    code: parsed?.code,
+    message,
+    bodyPreview: errorBody.slice(0, 200),
+    stackPreview:
+      typeof parsed?.stack === 'string' ? parsed.stack.slice(0, 200) : undefined,
+  })
+}
+
 /**
  * Convex Better Auth runs on *.convex.site but OAuth must use the Next.js app URL.
  * Rewrite Location headers and JSON bodies so the browser never navigates to Convex for auth.
@@ -92,9 +131,11 @@ async function proxyAuthToConvex(request: Request): Promise<Response> {
     const response = await fetch(targetUrl, init)
     if (!response.ok) {
       const errorBody = await response.clone().text()
-      console.error(
-        `[auth-server] Convex auth ${request.method} ${requestUrl.pathname} → ${response.status}`,
-        errorBody.slice(0, 500),
+      logConvexAuthProxyFailure(
+        request.method,
+        requestUrl.pathname,
+        response.status,
+        errorBody,
       )
     }
     return rewriteConvexAuthResponse(response)

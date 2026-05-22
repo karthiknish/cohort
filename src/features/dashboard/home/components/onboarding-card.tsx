@@ -47,7 +47,7 @@ export function OnboardingCard() {
             Getting started
           </Badge>
           <Button
-            onClick={startTour}
+            onClick={() => void startTour({ ensureDashboard: true })}
             size="sm"
             variant="default"
             className="bg-primary hover:bg-accent/90"

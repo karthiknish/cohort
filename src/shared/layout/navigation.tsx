@@ -25,6 +25,7 @@ import {
 import { Button } from '@/shared/ui/button'
 
 import { ProfileDropdown } from '@/shared/layout/profile-dropdown'
+import { useOnboardingTour } from '@/shared/hooks/use-onboarding-tour'
 
 const DASHBOARD_SIDEBAR_TRANSITION_STYLE = { viewTransitionName: 'dashboard-sidebar' } satisfies CSSProperties
 const DASHBOARD_HEADER_TRANSITION_STYLE = { viewTransitionName: 'dashboard-header' } satisfies CSSProperties
@@ -345,6 +346,7 @@ export function Header() {
   const accent = useDashboardRoleAccent()
   const [open, setOpen] = useState(false)
   const { open: helpOpen, onOpenChange: onHelpOpenChange, showWelcome, setShowWelcome } = useHelpModal()
+  const { startTour } = useOnboardingTour()
   const [problemReportOpen, setProblemReportOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const previewProfile = getPreviewSettingsProfile()
@@ -373,9 +375,8 @@ export function Header() {
     })
   }, [signOut])
   const handleShowOnboarding = useCallback(() => {
-    setShowWelcome(true)
-    void onHelpOpenChange(true)
-  }, [setShowWelcome, onHelpOpenChange])
+    void startTour({ ensureDashboard: true })
+  }, [startTour])
   const handleOpenHelp = useCallback(() => {
     setShortcutsOpen(false)
     setShowWelcome(false)
@@ -453,7 +454,13 @@ export function Header() {
           <div className="lg:hidden">
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="shrink-0" aria-label="Open navigation menu">
+                <Button
+                  id="tour-mobile-nav"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  aria-label="Open navigation menu"
+                >
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
@@ -538,10 +545,11 @@ export function Header() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
+                    id="tour-help-trigger"
                     variant="ghost"
                     size="icon"
                     onClick={handleShowOnboarding}
-                    className="hidden sm:inline-flex"
+                    className="inline-flex"
                     aria-label="Show onboarding tour"
                   >
                     <Rocket className="h-4 w-4" />

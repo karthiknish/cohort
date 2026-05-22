@@ -1,122 +1,198 @@
 'use client'
 
-import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useMemo } from 'react'
-import { driver } from 'driver.js'
+import { usePathname, useRouter } from 'next/navigation'
+import { driver, type DriveStep } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { useMutation } from 'convex/react'
-import { useAuth } from '@/shared/contexts/auth-context'
+
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { onboardingApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
-import { useToast } from '@/shared/ui/use-toast'
+import {
+  DASHBOARD_TOUR_ROUTE,
+  isDashboardPath,
+  materializeTourSteps,
+  resolveCommandMenuElement,
+  resolveNavigationElement,
+  TOUR_IDS,
+  waitForTourTargets,
+  type TourStepDefinition,
+} from '@/shared/lib/onboarding-tour'
+import { useAuth } from '@/shared/contexts/auth-context'
+
+export type StartTourOptions = {
+  /** Navigate to the dashboard home before highlighting UI (default: true). */
+  ensureDashboard?: boolean
+}
+
+function scrollTourTargetIntoView(element: Element | undefined) {
+  if (!(element instanceof HTMLElement)) return
+  element.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+}
 
 export function useOnboardingTour() {
-    const { user } = useAuth()
-    const { toast } = useToast()
-    const upsertOnboarding = useMutation(onboardingApi.upsert)
+  const { user } = useAuth()
+  const pathname = usePathname()
+  const router = useRouter()
+  const upsertOnboarding = useMutation(onboardingApi.upsert)
 
-    const tourSteps = useMemo(() => [
-        {
-            popover: {
-                title: 'Welcome to Cohorts',
-                description: 'Your premium agency workspace for tracking client growth and collaboration. Let\'s take a quick tour of the key features.',
-            }
+  const tourStepDefinitions = useMemo((): TourStepDefinition[] => {
+    return [
+      {
+        popover: {
+          title: 'Welcome to Cohorts',
+          description:
+            'A quick walkthrough of the dashboard — workspace switching, navigation, metrics, and where to get help.',
+          side: 'over',
         },
-        {
-            element: '#tour-workspace-selector',
-            popover: {
-                title: 'Client Workspaces',
-                description: 'Switch between client contexts here. All data on the dashboard will filter to the selected relationship.',
-                position: 'bottom' as const,
-            }
+      },
+      {
+        element: `#${TOUR_IDS.workspace}`,
+        requiresAny: [`#${TOUR_IDS.workspace}`],
+        popover: {
+          title: 'Client workspaces',
+          description:
+            'Switch the active client here. Metrics, tasks, and proposals on the dashboard follow this selection.',
+          side: 'bottom',
         },
-        {
-            element: '#tour-command-menu',
-            popover: {
-                title: 'Quick Navigation',
-                description: 'Press <kbd className="rounded bg-muted px-1 py-0.5 text-[10px] font-medium">⌘K</kbd> to open the command menu for fast access across pages and actions.',
-                position: 'bottom' as const,
-            }
+      },
+      {
+        element: () => resolveCommandMenuElement(),
+        requiresAny: [`#${TOUR_IDS.commandMenuDesktop}`, `#${TOUR_IDS.commandMenuMobile}`],
+        popover: {
+          title: 'Quick navigation',
+          description:
+            'Open search from here or press ⌘K (Ctrl+K on Windows) to jump to pages, clients, and actions.',
+          side: 'bottom',
         },
-        {
-            element: '#tour-stats-cards',
-            popover: {
-                title: 'Core KPI Summary',
-                description: 'See your top-level metrics at a glance, including revenue, ad spend, and task progress.',
-                position: 'bottom' as const,
-            }
+      },
+      {
+        element: `#${TOUR_IDS.stats}`,
+        requiresAny: [`#${TOUR_IDS.stats}`],
+        popover: {
+          title: 'Today\'s workload',
+          description:
+            'See open tasks, active projects, and live proposals for the workspace you have selected.',
+          side: 'bottom',
         },
-        {
-            element: '#tour-performance-chart',
-            popover: {
-                title: 'Performance analytics',
-                description: 'Deep dive into campaign trends and AI-powered insights across all your connected platforms.',
-                position: 'top' as const,
-            }
+      },
+      {
+        element: `#${TOUR_IDS.performance}`,
+        requiresAny: [`#${TOUR_IDS.performance}`],
+        popover: {
+          title: 'Spend & revenue',
+          description:
+            'Track daily ad spend and revenue once platforms are connected. Trends update as data syncs.',
+          side: 'top',
         },
-        {
-            element: '#tour-sidebar',
-            popover: {
-                title: 'The Navigation',
-                description: 'Access all your tools here: Clients, Ads integrations, Team chat, Tasks, and Projects.',
-                position: 'right' as const,
-            }
+      },
+      {
+        element: `#${TOUR_IDS.quickActions}`,
+        requiresAny: [`#${TOUR_IDS.quickActions}`],
+        popover: {
+          title: 'Quick actions',
+          description:
+            'Shortcuts to ads, analytics, collaboration, tasks, and proposals — the workflows you use most.',
+          side: 'top',
         },
-        {
-            element: '#tour-help-trigger',
-            popover: {
-                title: 'Need Help?',
-                description: 'Access the help guide and keyboard shortcuts anytime from this menu, or press <kbd className="rounded bg-muted px-1 py-0.5 text-[10px] font-medium">?</kbd>.',
-                position: 'left' as const,
-            }
+      },
+      {
+        element: () => resolveNavigationElement(),
+        requiresAny: [`#${TOUR_IDS.sidebar}`, `#${TOUR_IDS.mobileNav}`],
+        popover: {
+          title: 'Main navigation',
+          description:
+            'Move between Clients, Ads, Analytics, Meetings, Tasks, Proposals, Collaboration, and Projects.',
+          side: 'right',
         },
-        {
-            popover: {
-                title: 'Full Feature Suite',
-                description: 'Cohorts is more than just a dashboard. Explore these sections:<br/>• <b>Ads</b>: Manage integrations<br/>• <b>Analytics</b>: Monitor performance trends<br/>• <b>Collaboration</b>: Team chat & threads<br/>• <b>Projects & Tasks</b>: Deliverable tracking',
-            }
+      },
+      {
+        element: `#${TOUR_IDS.help}`,
+        requiresAny: [`#${TOUR_IDS.help}`],
+        popover: {
+          title: 'Help & tour',
+          description:
+            'Reopen this guided tour anytime from the rocket icon, or open the help panel for shortcuts and tips.',
+          side: 'left',
         },
-        {
-            popover: {
-                title: 'You\'re All Set!',
-                description: 'Explore the dashboard or head to the Ads section to connect your first integration. Happy growing!',
-            }
+      },
+      {
+        popover: {
+          title: 'You\'re all set',
+          description:
+            'Connect ad platforms under Ads when you are ready, then assign tasks so your team can execute. Happy growing.',
+          side: 'over',
         },
-    ], [])
+      },
+    ]
+  }, [])
 
-    const startTour = useCallback(() => {
-        // Custom premium styling for driver.js
-        const driverObj = driver({
-            showProgress: true,
-            animate: true,
-            steps: tourSteps,
-            popoverClass: 'cohorts-tour-popover',
-            onHighlightStarted: () => {
-                // Optional: Add custom animations or glow effects to highlighted element
-            },
-            onDestroyed: async () => {
-                if (!user?.id) return
+  const persistTourCompleted = useCallback(async () => {
+    if (!user?.id) return
 
-                try {
-                    await upsertOnboarding({
-                        userId: user.id,
-                        onboardingTourCompleted: true,
-                        onboardingTourCompletedAtMs: Date.now(),
-                    })
-                } catch (error: unknown) {
-                    console.error('Failed to save onboarding tour state:', error)
-                    reportConvexFailure({
-        error: error,
-        context: 'use-onboarding-tour.ts:catch',
+    try {
+      await upsertOnboarding({
+        userId: user.id,
+        onboardingTourCompleted: true,
+        onboardingTourCompletedAtMs: Date.now(),
+      })
+    } catch (error: unknown) {
+      console.error('Failed to save onboarding tour state:', error)
+      reportConvexFailure({
+        error,
+        context: 'use-onboarding-tour.ts:persistTourCompleted',
         title: 'Could not save tour progress',
         fallbackMessage: 'Could not save tour progress',
-        })
-                }
-            }
-        })
+      })
+    }
+  }, [upsertOnboarding, user?.id])
 
-        driverObj.drive()
-    }, [tourSteps, upsertOnboarding, user?.id])
+  const startTour = useCallback(
+    async (options?: StartTourOptions) => {
+      const ensureDashboard = options?.ensureDashboard ?? true
 
-    return { startTour }
+      if (ensureDashboard && !isDashboardPath(pathname)) {
+        router.push(DASHBOARD_TOUR_ROUTE)
+        await waitForTourTargets([
+          `#${TOUR_IDS.workspace}`,
+          `#${TOUR_IDS.stats}`,
+          `#${TOUR_IDS.quickActions}`,
+        ])
+      } else {
+        await waitForTourTargets([`#${TOUR_IDS.workspace}`], { timeoutMs: 1200 })
+      }
+
+      const steps = materializeTourSteps(tourStepDefinitions)
+      if (steps.length === 0) {
+        return
+      }
+
+      const driverObj = driver({
+        showProgress: true,
+        animate: true,
+        smoothScroll: true,
+        allowClose: true,
+        overlayClickBehavior: 'close',
+        stagePadding: 8,
+        stageRadius: 12,
+        popoverClass: 'cohorts-tour-popover',
+        progressText: '{{current}} of {{total}}',
+        nextBtnText: 'Next',
+        prevBtnText: 'Back',
+        doneBtnText: 'Done',
+        steps: steps as DriveStep[],
+        onHighlightStarted: (element) => {
+          scrollTourTargetIntoView(element)
+        },
+        onDestroyed: () => {
+          void persistTourCompleted()
+        },
+      })
+
+      driverObj.drive()
+    },
+    [pathname, persistTourCompleted, router, tourStepDefinitions],
+  )
+
+  return { startTour }
 }
