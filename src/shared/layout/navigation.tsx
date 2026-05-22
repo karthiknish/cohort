@@ -169,7 +169,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                     'flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
                     collapsed ? 'justify-center px-0' : 'justify-start',
                     isActive
-                      ? 'bg-primary text-primary-foreground hover:bg-accent/90 shadow-sm'
+                      ? 'bg-primary text-primary-foreground hover:bg-[color-mix(in_srgb,var(--primary)_88%,#0f172a_12%)] shadow-sm'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
                   )
 

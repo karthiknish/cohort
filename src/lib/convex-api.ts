@@ -123,7 +123,14 @@ export const adsMetricsApi = {
 export const adsCampaignsApi = {
   listCampaigns: looseApi.adsCampaigns.listCampaigns,
   createCampaign: looseApi.adsCampaigns.createCampaign,
+  createMetaCampaign: looseApi.adsMetaCampaigns.createMetaCampaign,
   updateCampaign: looseApi.adsCampaigns.updateCampaign,
+}
+
+export const adsAdSetsApi = {
+  listAdSets: looseApi.adsAdSets.listAdSets,
+  createAdSet: looseApi.adsAdSets.createAdSet,
+  updateAdSetTargeting: looseApi.adsAdSets.updateAdSetTargeting,
 }
 
 export const adsCampaignGroupsApi = {
@@ -154,6 +161,14 @@ export const adsTargetingApi = {
 
 export const adsAudiencesApi = {
   createAudience: looseApi.adsAudiences.createAudience,
+  listAudiences: looseApi.adsAudiencesMeta.listAudiences,
+}
+
+export const adsMetaToolsApi = {
+  searchTargetingInterests: looseApi.adsMetaTools.searchTargetingInterests,
+  searchTargetingGeolocations: looseApi.adsMetaTools.searchTargetingGeolocations,
+  listLeadgenForms: looseApi.adsMetaTools.listLeadgenForms,
+  createLeadgenForm: looseApi.adsMetaTools.createLeadgenForm,
 }
 
 export const agentApi = {

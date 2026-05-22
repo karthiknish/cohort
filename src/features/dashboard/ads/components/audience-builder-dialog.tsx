@@ -15,8 +15,10 @@ import { toast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { adsAudiencesApi } from '@/lib/convex-api'
+import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
 
+import { MetaAudiencesPanel } from '@/features/dashboard/ads/components/meta-audiences-panel'
 import {
   AudienceBuilderDialogFooter,
   AudienceBuilderDialogHeader,
@@ -124,6 +126,9 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
     setActiveTab('basics')
   }, [])
 
+  const convexProviderId = toAdsProviderId(providerId)
+  const isMetaAudience = convexProviderId === 'facebook'
+
   const handleCreate = useCallback(() => {
     if (!formData.name) {
       notifyFailure({
@@ -133,7 +138,12 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
       return
     }
 
-    if (formData.segments.length === 0 && formData.locations.length === 0 && formData.interests.length === 0) {
+    if (
+      !isMetaAudience &&
+      formData.segments.length === 0 &&
+      formData.locations.length === 0 &&
+      formData.interests.length === 0
+    ) {
       notifyFailure({
         title: 'Missing targeting',
         message: 'Please add at least one segment, location, or interest.',
@@ -154,14 +164,16 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
 
     void createAudience({
         workspaceId,
-      providerId: toAdsProviderId(providerId),
+      providerId: convexProviderId,
         clientId: selectedClientId ?? null,
         name: formData.name,
         description: formData.description,
-        segments: formData.segments,
-        locations: formData.locations.map((l) => ({ id: l.id, name: l.name, lat: l.lat, lng: l.lng })),
-        interests: formData.interests,
-        demographics: {
+        segments: isMetaAudience ? [] : formData.segments,
+        locations: isMetaAudience ? [] : formData.locations.map((l) => ({ id: l.id, name: l.name, lat: l.lat, lng: l.lng })),
+        interests: isMetaAudience ? [] : formData.interests,
+        demographics: isMetaAudience
+          ? undefined
+          : {
           ageMin: formData.ageMin,
           ageMax: formData.ageMax,
           genders: formData.genders,
@@ -171,7 +183,9 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
       .then((result) => {
         toast({
           title: 'Success',
-          description: result.message || `Audience "${formData.name}" created successfully.`,
+          description: isMetaAudience
+            ? `Empty custom audience "${formData.name}" created. Upload customer lists in Meta Events Manager, then attach to ad set targeting.`
+            : result.message || `Audience "${formData.name}" created successfully.`,
         })
 
         onOpenChange(false)
@@ -188,7 +202,7 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
       .finally(() => {
         setLoading(false)
       })
-  }, [formData, user, providerId, selectedClientId, createAudience, onOpenChange, resetForm])
+  }, [convexProviderId, formData, isMetaAudience, user, selectedClientId, createAudience, onOpenChange, resetForm])
 
   const handleDialogOpenChange = useCallback((open: boolean) => {
     onOpenChange(open)
@@ -224,6 +238,16 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
         <AudienceBuilderDialogHeader activeTab={activeTab} completionSteps={completionSteps} onSelectStep={setActiveTab} providerId={providerId} />
+        {isMetaAudience && user?.agencyId ? (
+          <div className="space-y-3 px-6 pb-2">
+            <Alert>
+              <AlertDescription className="text-xs">
+                Meta custom audiences start empty. Segments, map pins, and interests in this dialog are not sent to Meta — configure targeting on each ad set instead.
+              </AlertDescription>
+            </Alert>
+            <MetaAudiencesPanel workspaceId={String(user.agencyId)} clientId={selectedClientId} />
+          </div>
+        ) : null}
         <AudienceBuilderDialogTabs
           activeTab={activeTab}
           formData={formData}

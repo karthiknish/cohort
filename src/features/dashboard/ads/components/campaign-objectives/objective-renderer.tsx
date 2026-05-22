@@ -22,7 +22,15 @@ export function ObjectiveRenderer({ objective, formData, onChange, disabled }: O
       return <SalesObjectiveSection formData={formData} onChange={onChange} disabled={disabled} providerId={formData.providerId || 'facebook'} />
     
     case 'OUTCOME_LEADS':
-      return <LeadsObjectiveSection formData={formData} onChange={onChange} disabled={disabled} providerId={formData.providerId || 'facebook'} />
+      return (
+        <LeadsObjectiveSection
+          formData={formData}
+          onChange={onChange}
+          disabled={disabled}
+          providerId={formData.providerId || 'facebook'}
+          metaContext={undefined}
+        />
+      )
     
     case 'OUTCOME_TRAFFIC':
       return <TrafficObjectiveSection formData={formData} onChange={onChange} disabled={disabled} providerId={formData.providerId || 'facebook'} />

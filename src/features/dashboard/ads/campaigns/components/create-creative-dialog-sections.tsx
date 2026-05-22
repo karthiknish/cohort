@@ -4,12 +4,14 @@ import { useCallback } from 'react'
 
 import type { ChangeEvent, FormEvent } from 'react'
 
-import { AlertCircle, Loader2, Upload } from 'lucide-react'
+import { AlertCircle, Loader2 } from 'lucide-react'
 
+import { CreativeMediaField } from '@/features/dashboard/ads/components/creative-media-field'
 import { Button } from '@/shared/ui/button'
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { Input } from '@/shared/ui/input'
 import { FormField } from '@/shared/ui/form-field'
+import { Label } from '@/shared/ui/label'
 import {
   Select,
   SelectContent,
@@ -89,7 +91,9 @@ type CreateCreativeDialogFormProps = {
   callToActionType: string
   description: string
   imageHash: string
+  imagePreviewSrc?: string | null
   imageUrl: string
+  onClearImage?: () => void
   instagramActorId: string
   instagramActorOptions: Array<{ id: string; label: string }>
   isMeta: boolean
@@ -104,7 +108,12 @@ type CreateCreativeDialogFormProps = {
   onClose: () => void
   onDescriptionChange: (value: string) => void
   onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void
   onImageUrlChange: (value: string) => void
+  onClearVideo?: () => void
+  videoPreviewSrc?: string | null
+  videoId: string
+  uploadingVideo: boolean
   onInstagramActorIdChange: (value: string) => void
   onLinkUrlChange: (value: string) => void
   onNameChange: (value: string) => void
@@ -130,7 +139,9 @@ export function CreateCreativeDialogForm({
   callToActionType,
   description,
   imageHash,
+  imagePreviewSrc,
   imageUrl,
+  onClearImage,
   instagramActorId,
   instagramActorOptions,
   isMeta,
@@ -145,7 +156,12 @@ export function CreateCreativeDialogForm({
   onClose,
   onDescriptionChange,
   onImageUpload,
+  onVideoUpload,
   onImageUrlChange,
+  onClearVideo,
+  videoPreviewSrc,
+  videoId,
+  uploadingVideo,
   onInstagramActorIdChange,
   onLinkUrlChange,
   onNameChange,
@@ -162,7 +178,6 @@ export function CreateCreativeDialogForm({
   status,
   title,
   uploadingImage,
-  videoId,
 }: CreateCreativeDialogFormProps) {
   const handleInstagramActorIdChange = useCallback(
     (value: string) => {
@@ -235,21 +250,52 @@ export function CreateCreativeDialogForm({
       </FormField>
 
       {objectType === 'IMAGE' ? (
-        <FormField id="image" label="Creative Image" description={imageHash ? 'Image uploaded successfully' : undefined}>
-          <div className="flex gap-2">
-            <Input id="image" type="url" placeholder="https://example.com/image.jpg" value={imageUrl} onChange={createTextChangeHandler(onImageUrlChange)} disabled={loading} className="flex-1" />
-            <div className="relative">
-              <Input id="imageUpload" type="file" accept="image/*" onChange={onImageUpload} disabled={loading || uploadingImage} className="absolute inset-0 cursor-pointer opacity-0" />
-              <Button type="button" variant="outline" size="icon" disabled={loading || uploadingImage} aria-label="Upload creative image">
-                {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              </Button>
-            </div>
-          </div>
+        <FormField
+          id="image"
+          label="Creative Image"
+          description={imageHash ? 'Uploaded to Meta — safe to create your ad.' : 'Upload the image Meta will serve in the feed.'}
+        >
+          <CreativeMediaField
+            previewSrc={imagePreviewSrc}
+            imageUrl={imageUrl}
+            imageHash={imageHash}
+            uploading={uploadingImage}
+            disabled={loading}
+            onImageUrlChange={onImageUrlChange}
+            onFileSelect={onImageUpload}
+            onClear={onClearImage}
+          />
         </FormField>
       ) : null}
       {objectType === 'VIDEO' ? (
-        <FormField id="videoId" label="Video ID">
-          <Input id="videoId" placeholder="Enter your Meta video ID" value={videoId} onChange={createTextChangeHandler(onVideoIdChange)} disabled={loading} />
+        <FormField
+          id="video"
+          label="Creative Video"
+          description={videoId ? 'Uploaded to Meta — safe to create your ad.' : 'Upload the video Meta will serve in the feed.'}
+        >
+          <CreativeMediaField
+            mode="video"
+            previewSrc={videoPreviewSrc}
+            imageUrl=""
+            videoId={videoId}
+            uploading={uploadingVideo}
+            disabled={loading}
+            onImageUrlChange={() => {}}
+            onFileSelect={onVideoUpload}
+            onClear={onClearVideo}
+          />
+          <div className="mt-2 space-y-1.5">
+            <Label htmlFor="videoId" className="text-xs text-muted-foreground">
+              Or paste Meta video ID
+            </Label>
+            <Input
+              id="videoId"
+              placeholder="Meta video ID"
+              value={videoId}
+              onChange={createTextChangeHandler(onVideoIdChange)}
+              disabled={loading || uploadingVideo}
+            />
+          </div>
         </FormField>
       ) : null}
 

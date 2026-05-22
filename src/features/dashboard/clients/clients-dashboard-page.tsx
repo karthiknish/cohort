@@ -25,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/shared/ui/card'
+import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import {
   DropdownMenu,
@@ -285,6 +286,14 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
           </Tooltip>
         </div>
       </div>
+
+      {clientsData.workspaceMissing ? (
+        <Alert variant="destructive">
+          <AlertDescription>
+            Sign in again to load live project and task stats for this client.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <ClientStatsGrid
         stats={clientsData.stats}

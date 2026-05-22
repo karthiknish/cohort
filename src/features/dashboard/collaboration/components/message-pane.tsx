@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, RefObject } from 'react'
 
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
+import { useToast } from '@/shared/ui/use-toast'
 import { TaskCreationModal } from '@/features/dashboard/tasks/task-creation-modal'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationMessage } from '@/types/collaboration'
@@ -225,6 +226,7 @@ export function CollaborationMessagePane({
 }: CollaborationMessagePaneProps) {
   'use no memo'
 
+  const { toast } = useToast()
   const [paneState, dispatch] = useReducer(messagePaneReducer, INITIAL_MESSAGE_PANE_STATE)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -394,9 +396,15 @@ export function CollaborationMessagePane({
     dispatch({ type: 'open-task-modal', message })
   }, [])
 
-  const handleTaskCreated = useCallback((task: TaskRecord) => {
-    console.log('Task created from message:', task)
-  }, [])
+  const handleTaskCreated = useCallback(
+    (task: TaskRecord) => {
+      toast({
+        title: 'Task created',
+        description: task.title ? `"${task.title}" was added from this message.` : 'The task was added from this message.',
+      })
+    },
+    [toast],
+  )
 
   const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     onMessageSearchChange(event.target.value)

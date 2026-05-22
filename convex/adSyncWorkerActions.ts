@@ -10,6 +10,7 @@ import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
 import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
 import { syncGoogleAnalyticsMetrics } from '@/services/integrations/google-analytics/sync'
 import { refreshGoogleAccessToken } from '@/lib/integration-token-refresh'
+import { refreshMetaAccessToken } from '@/lib/integration-token-refresh-meta'
 import type { NormalizedMetric } from '@/types/integrations'
 import { Errors, withErrorHandling } from './errors'
 import { resolveMetricCurrency } from '@/domain/ads/money'
@@ -184,12 +185,16 @@ export const processClaimedJob = internalAction({
             throw Errors.integration.notConfigured('Meta', 'Account not configured')
           }
 
+          let metaAccessToken = integration.accessToken
           if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-            throw Errors.integration.expired('Meta')
+            metaAccessToken = await refreshMetaAccessToken({
+              userId: args.workspaceId,
+              clientId,
+            })
           }
 
           metrics = await fetchMetaAdsMetrics({
-            accessToken: integration.accessToken,
+            accessToken: metaAccessToken,
             adAccountId: accountId,
             timeframeDays: args.timeframeDays,
           })

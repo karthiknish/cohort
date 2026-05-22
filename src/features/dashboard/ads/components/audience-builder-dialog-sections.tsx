@@ -286,7 +286,11 @@ export function AudienceBuilderDialogHeader({
         </div>
         <div>
           <DialogTitle className="text-lg">Build New Audience</DialogTitle>
-          <DialogDescription>Create a custom audience for {providerId} campaigns</DialogDescription>
+          <DialogDescription>
+            {providerId === 'meta' || providerId === 'facebook'
+              ? 'Creates an empty Meta custom audience container (name + description). Targeting is set on ad sets, not here.'
+              : `Create a custom audience for ${providerId} campaigns`}
+          </DialogDescription>
         </div>
       </div>
       <div className="mt-4 flex items-center gap-2">

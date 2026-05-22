@@ -26,5 +26,5 @@ export { EngagementObjectiveSection } from './engagement-objective-section'
 export { AwarenessObjectiveSection } from './awareness-objective-section'
 export { AppPromotionSection } from './app-promotion-section'
 
-// Dynamic renderer
+/** Reserved for a future campaign creation wizard; not used in current routes. */
 export { ObjectiveRenderer } from './objective-renderer'

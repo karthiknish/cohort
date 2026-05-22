@@ -15,7 +15,6 @@ import {
   Link as LinkIcon,
   MousePointer2,
   FileText,
-  Image as ImageIcon,
   Video,
   Eye,
   Pin,
@@ -29,6 +28,7 @@ import { META_CTA_OPTIONS } from './creative-editing-utils'
 import type { Creative } from './types'
 import type { CreativePerformanceSummary } from './creative-social-preview'
 
+import { CreativeImageViewer } from '@/features/dashboard/ads/components/creative-image-viewer'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card'
@@ -737,19 +737,16 @@ export function CreativeEditorTabs(props: {
               <Separator className="my-6" />
 
               <div className="space-y-4">
-                {creative.imageUrl && (
-                  <div className="p-3 rounded-xl border bg-background flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
-                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Source Image</p>
-                        <p className="text-xs truncate text-primary">{creative.imageUrl}</p>
-                      </div>
-                    </div>
+                {creative.imageUrl ? (
+                  <div className="space-y-2">
+                    <CreativeImageViewer
+                      src={creative.imageUrl}
+                      alt={creative.name || 'Creative image'}
+                      variant="thumbnail"
+                    />
+                    <div className="flex justify-end">
                       <CopyValueButton
-                        value={creative.imageUrl ?? ''}
+                        value={creative.imageUrl}
                         field="imageUrl"
                         copiedField={copiedField}
                         onCopy={onCopy}
@@ -757,8 +754,9 @@ export function CreativeEditorTabs(props: {
                         ariaLabel="Copy source image URL"
                         iconClassName="h-3.5 w-3.5"
                       />
+                    </div>
                   </div>
-                )}
+                ) : null}
 
                 {creative.videoUrl && (
                   <div className="p-3 rounded-xl border bg-background flex items-center justify-between gap-4">

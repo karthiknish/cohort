@@ -4,47 +4,20 @@
 
 'use client'
 
-import { useCallback, type MouseEvent } from 'react'
+import { useCallback } from 'react'
 
+import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Heart, MessageSquare, Calendar, ThumbsUp } from 'lucide-react'
+import { Heart, Calendar, ThumbsUp } from 'lucide-react'
 import { ENGAGEMENT_TYPES } from './types'
 import type { ObjectiveComponentProps } from './types'
-
-// Mock posts - in real implementation, these would be fetched from the API
-const MOCK_POSTS = [
-  { id: 'post_1', message: 'Check out our new summer collection! ☀️', likes: 234, comments: 45, shares: 12 },
-  { id: 'post_2', message: 'Behind the scenes at our latest photoshoot 📸', likes: 567, comments: 89, shares: 34 },
-  { id: 'post_3', message: 'Thank you for 10K followers! 🎉', likes: 1234, comments: 234, shares: 156 },
-]
-
-const MOCK_EVENTS = [
-  { id: 'event_1', name: 'Summer Sale Launch', date: '2024-07-01', interested: 456 },
-  { id: 'event_2', name: 'Product Demo Webinar', date: '2024-07-15', interested: 234 },
-]
 
 export function EngagementObjectiveSection({ formData, onChange, disabled }: ObjectiveComponentProps) {
   const handleEngagementTypeChange = useCallback(
     (value: string) => {
       onChange({ engagementType: value as 'POST_ENGAGEMENT' | 'PAGE_ENGAGEMENT' | 'EVENT_RESPONSES' })
-    },
-    [onChange]
-  )
-
-  const handlePostSelect = useCallback(
-    (event: MouseEvent<HTMLButtonElement>) => {
-      const postId = event.currentTarget.dataset.postId
-      if (postId) onChange({ postId })
-    },
-    [onChange]
-  )
-
-  const handleEventSelect = useCallback(
-    (event: MouseEvent<HTMLButtonElement>) => {
-      const eventId = event.currentTarget.dataset.eventId
-      if (eventId) onChange({ eventId })
     },
     [onChange]
   )
@@ -88,87 +61,21 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
         </CardContent>
       </Card>
 
-      {/* Post Engagement - Select Post */}
-      {formData.engagementType === 'POST_ENGAGEMENT' && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ThumbsUp className="w-4 h-4" />
-              Select Post to Promote
-            </CardTitle>
-            <CardDescription>
-              Choose an existing post to boost engagement.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {MOCK_POSTS.map((post) => (
-                <button
-                  key={post.id}
-                  type="button"
-                  onClick={handlePostSelect}
-                  data-post-id={post.id}
-                  disabled={disabled}
-                  className={`w-full p-3 rounded-lg border text-left motion-chromatic ${
-                    formData.postId === post.id
-                      ? 'border-accent/20 bg-accent/10'
-                      : 'border-border hover:border-accent/50'
-                  }`}
-                >
-                  <p className="text-sm font-medium line-clamp-2">{post.message}</p>
-                  <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Heart className="w-3 h-3" /> {post.likes}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MessageSquare className="w-3 h-3" /> {post.comments}
-                    </span>
-                    <span>Shared {post.shares} times</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {formData.engagementType === 'POST_ENGAGEMENT' ? (
+        <Alert>
+          <AlertDescription className="text-xs">
+            Post selection is not wired in Cohort yet. Create your engagement ad in Meta Ads Manager and select the post there, or use Page engagement below.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
-      {/* Event Responses - Select Event */}
-      {formData.engagementType === 'EVENT_RESPONSES' && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Calendar className="w-4 h-4" />
-              Select Event to Promote
-            </CardTitle>
-            <CardDescription>
-              Choose an event to drive attendance.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {MOCK_EVENTS.map((event) => (
-                <button
-                  key={event.id}
-                  type="button"
-                  onClick={handleEventSelect}
-                  data-event-id={event.id}
-                  disabled={disabled}
-                  className={`w-full p-3 rounded-lg border text-left motion-chromatic ${
-                    formData.eventId === event.id
-                      ? 'border-accent/20 bg-accent/10'
-                      : 'border-border hover:border-accent/50'
-                  }`}
-                >
-                  <p className="text-sm font-medium">{event.name}</p>
-                  <p className="text-xs text-muted-foreground" suppressHydrationWarning>
-                    {new Date(event.date).toLocaleDateString()} • {event.interested} interested
-                  </p>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {formData.engagementType === 'EVENT_RESPONSES' ? (
+        <Alert>
+          <AlertDescription className="text-xs">
+            Event promotion requires selecting an event in Meta Ads Manager. Cohort does not list Page events via API in this flow yet.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {/* Page Engagement */}
       {formData.engagementType === 'PAGE_ENGAGEMENT' && (

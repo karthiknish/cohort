@@ -77,6 +77,12 @@ export interface ObjectiveComponentProps {
   onChange: (updates: Partial<CampaignFormData>) => void
   disabled?: boolean
   providerId: string
+  /** Required to load/create Meta leadgen forms */
+  metaContext?: {
+    workspaceId: string
+    clientId?: string | null
+    pageId?: string
+  }
 }
 
 export const CAMPAIGN_OBJECTIVES: CampaignObjectiveConfig[] = [

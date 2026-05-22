@@ -224,21 +224,10 @@ export function ClientsSummarySection() {
     shouldUsePreviewData ? 'skip' : { workspaceId }
   ) as ClientSummary[] | undefined
 
-  const clientContextFallback = useMemo<ClientSummary[]>(
-    () => clients.map((client) => ({
-      legacyId: client.id,
-      name: client.name,
-      accountManager: client.accountManager,
-      teamMembersCount: client.teamMembers.length,
-      openTaskCount: 0,
-      activeProjectCount: 0,
-      nextMeetingMs: null,
-    })),
-    [clients]
-  )
   const resolvedSummaries = shouldUsePreviewData
     ? getPreviewClientSummaries()
-    : (summaries && summaries.length > 0 ? summaries : clientContextFallback)
+    : summaries ?? []
+  const showEmptySummaries = !shouldUsePreviewData && summaries !== undefined && summaries.length === 0
   const isLoading = !shouldUsePreviewData && summaries === undefined
 
   return (
@@ -265,11 +254,17 @@ export function ClientsSummarySection() {
           </div>
         ) : resolvedSummaries.length === 0 ? (
           <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-            No clients yet.{` `}
-            <Link href="/admin/clients" className="font-medium text-primary hover:underline">
-              add your first client
-            </Link>{' '}
-            to get started.
+            {showEmptySummaries && clients.length > 0
+              ? 'Client summaries are not available yet. Open a client workspace or try again shortly.'
+              : (
+                <>
+                  No clients yet.{' '}
+                  <Link href="/admin/clients" className="font-medium text-primary hover:underline">
+                    Add your first client
+                  </Link>{' '}
+                  to get started.
+                </>
+              )}
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

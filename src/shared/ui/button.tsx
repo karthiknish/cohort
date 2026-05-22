@@ -35,6 +35,14 @@ function hasAccessibleButtonLabel(props: React.ComponentProps<'button'>): boolea
   return childrenContainAccessibleText(props.children)
 }
 
+/** Opaque hover fills — avoid `/80` on colored buttons over light cards (washes out + white text). */
+const hoverPrimaryBg =
+  'hover:bg-[color-mix(in_srgb,var(--primary)_88%,#0f172a_12%)]'
+const hoverSecondaryBg =
+  'hover:bg-[color-mix(in_srgb,var(--secondary)_88%,#0f172a_12%)]'
+const hoverDestructiveBg =
+  'hover:bg-[color-mix(in_srgb,var(--destructive)_88%,#0f172a_12%)]'
+
 const buttonVariants = cva(
   [
     "focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 aria-invalid:ring-destructive/20 aria-invalid:border-destructive",
@@ -44,17 +52,26 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground border border-border hover:bg-accent/90 shadow-sm hover:shadow-md",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 shadow-sm",
+        default: cn(
+          'bg-primary text-primary-foreground border border-border shadow-sm hover:shadow-md',
+          hoverPrimaryBg,
+        ),
+        destructive: cn(
+          'bg-destructive text-destructive-foreground focus-visible:ring-destructive/20 shadow-sm',
+          hoverDestructiveBg,
+        ),
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground hover:border-accent/30",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm",
-        ghost:
-          "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-primary text-primary-foreground border border-border hover:bg-accent/90 shadow-sm hover:shadow-md focus-visible:ring-primary/20",
+          'border border-border bg-background text-foreground shadow-xs hover:border-primary/30 hover:bg-primary/10 hover:text-foreground',
+        secondary: cn(
+          'bg-secondary text-secondary-foreground shadow-sm',
+          hoverSecondaryBg,
+        ),
+        ghost: 'text-foreground hover:bg-muted hover:text-foreground',
+        link: 'text-primary underline-offset-4 hover:underline',
+        success: cn(
+          'bg-primary text-primary-foreground border border-border shadow-sm hover:shadow-md focus-visible:ring-primary/20',
+          hoverPrimaryBg,
+        ),
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

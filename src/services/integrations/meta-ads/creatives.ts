@@ -122,7 +122,22 @@ export interface UploadMediaOptions {
   adAccountId: string
   fileName: string
   fileData: Uint8Array
+  mimeType?: string
   maxRetries?: number
+}
+
+function inferUploadMimeType(fileName: string, mimeType?: string): string {
+  if (mimeType && mimeType.trim().length > 0) return mimeType
+  const lower = fileName.toLowerCase()
+  if (lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm')) return 'video/mp4'
+  if (lower.endsWith('.png')) return 'image/png'
+  if (lower.endsWith('.gif')) return 'image/gif'
+  if (lower.endsWith('.webp')) return 'image/webp'
+  return 'image/jpeg'
+}
+
+function isVideoMimeType(mimeType: string): boolean {
+  return mimeType.startsWith('video/')
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -1128,11 +1143,64 @@ export async function updateMetaAdCreative(options: UpdateAdCreativeOptions): Pr
 // UPLOAD MEDIA TO AD ACCOUNT
 // =============================================================================
 
+export async function uploadVideoToMeta(options: UploadMediaOptions): Promise<{
+  success: boolean
+  videoId?: string
+  error?: string
+}> {
+  const { accessToken, adAccountId, fileName, fileData, mimeType } = options
+  const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`
+  const resolvedMime = inferUploadMimeType(fileName, mimeType)
+
+  const buffer = new ArrayBuffer(fileData.length)
+  const view = new Uint8Array(buffer)
+  view.set(fileData)
+  const blob = new Blob([buffer], { type: resolvedMime })
+
+  const formData = new FormData()
+  formData.append('source', blob, fileName)
+  formData.append('access_token', accessToken)
+
+  const url = `${META_API_BASE}/${formattedAccountId}/advideos`
+
+  try {
+    const response = await fetch(url, { method: 'POST', body: formData })
+    const result = (await response.json()) as {
+      id?: string
+      error?: { message?: string }
+    }
+
+    if (result?.error) {
+      return { success: false, error: result.error.message || 'Failed to upload video' }
+    }
+
+    return { success: true, videoId: result.id }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}
+
 export async function uploadMediaToMeta(options: UploadMediaOptions): Promise<{
   success: boolean
   creativeSpec?: string
+  videoId?: string
+  mediaType?: 'image' | 'video'
   error?: string
 }> {
+  const resolvedMime = inferUploadMimeType(options.fileName, options.mimeType)
+  if (isVideoMimeType(resolvedMime)) {
+    const videoResult = await uploadVideoToMeta(options)
+    return {
+      success: videoResult.success,
+      videoId: videoResult.videoId,
+      mediaType: 'video',
+      error: videoResult.error,
+    }
+  }
+
   const {
     accessToken,
     adAccountId,
@@ -1143,11 +1211,10 @@ export async function uploadMediaToMeta(options: UploadMediaOptions): Promise<{
   const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`
 
   const formData = new FormData()
-  // Create a Blob from the Uint8Array - copy to a new buffer to ensure proper ArrayBuffer
   const buffer = new ArrayBuffer(fileData.length)
   const view = new Uint8Array(buffer)
   view.set(fileData)
-  const blob = new Blob([buffer], { type: 'image/jpeg' })
+  const blob = new Blob([buffer], { type: resolvedMime })
 
   formData.append('source', blob, fileName)
   formData.append('access_token', accessToken)
@@ -1161,7 +1228,7 @@ export async function uploadMediaToMeta(options: UploadMediaOptions): Promise<{
     })
 
     const result = (await response.json()) as {
-      images?: Array<{ creative_spec?: string }>
+      images?: Record<string, { hash?: string; url?: string }>
       error?: { message?: string }
     }
 
@@ -1172,11 +1239,13 @@ export async function uploadMediaToMeta(options: UploadMediaOptions): Promise<{
       }
     }
 
-    const creativeSpec = result?.images?.[0]?.creative_spec
+    const firstImage = result?.images ? Object.values(result.images)[0] : undefined
+    const creativeSpec = firstImage?.hash ?? firstImage?.url
 
     return {
       success: true,
       creativeSpec,
+      mediaType: 'image',
     }
   } catch (error) {
     return {

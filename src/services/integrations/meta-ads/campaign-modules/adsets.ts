@@ -70,6 +70,7 @@ export async function listMetaAdSets(options: {
       lifetime_budget?: string
       bid_amount?: string
       optimization_goal?: string
+      targeting?: Record<string, unknown>
     }>
   }>({
     url,
@@ -88,6 +89,7 @@ export async function listMetaAdSets(options: {
     lifetimeBudget: a.lifetime_budget ? parseInt(a.lifetime_budget, 10) / 100 : undefined,
     bidAmount: a.bid_amount ? parseInt(a.bid_amount, 10) / 100 : undefined,
     optimization_goal: a.optimization_goal,
+    targeting: a.targeting,
   }))
 }
 
@@ -193,6 +195,7 @@ export async function updateMetaAdSet(
     dailyBudget,
     lifetimeBudget,
     bidAmount,
+    targeting,
     maxRetries = 3,
   } = options
 
@@ -212,6 +215,9 @@ export async function updateMetaAdSet(
   }
   if (bidAmount !== undefined) {
     params.set('bid_amount', String(Math.round(bidAmount * 100)))
+  }
+  if (targeting !== undefined) {
+    params.set('targeting', JSON.stringify(targeting))
   }
 
   await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })

@@ -29,7 +29,9 @@ describe('create creative dialog sections', () => {
         callToActionType="LEARN_MORE"
         description="Limited time"
         imageHash="hash-1"
+        imagePreviewSrc="https://example.com/image.jpg"
         imageUrl="https://example.com/image.jpg"
+        onClearImage={vi.fn()}
         instagramActorId="ig-1"
         instagramActorOptions={[{ id: 'ig-1', label: 'Brand IG' }]}
         isMeta={true}
@@ -44,6 +46,10 @@ describe('create creative dialog sections', () => {
         onClose={vi.fn()}
         onDescriptionChange={vi.fn()}
         onImageUpload={vi.fn()}
+        onVideoUpload={vi.fn()}
+        onClearVideo={vi.fn()}
+        videoPreviewSrc={null}
+        uploadingVideo={false}
         onImageUrlChange={vi.fn()}
         onInstagramActorIdChange={vi.fn()}
         onLinkUrlChange={vi.fn()}
@@ -72,6 +78,7 @@ describe('create creative dialog sections', () => {
         description=""
         imageHash=""
         imageUrl=""
+        onClearImage={vi.fn()}
         instagramActorId=""
         instagramActorOptions={[]}
         isMeta={true}
@@ -86,6 +93,10 @@ describe('create creative dialog sections', () => {
         onClose={vi.fn()}
         onDescriptionChange={vi.fn()}
         onImageUpload={vi.fn()}
+        onVideoUpload={vi.fn()}
+        onClearVideo={vi.fn()}
+        videoPreviewSrc={null}
+        uploadingVideo={false}
         onImageUrlChange={vi.fn()}
         onInstagramActorIdChange={vi.fn()}
         onLinkUrlChange={vi.fn()}
@@ -107,11 +118,13 @@ describe('create creative dialog sections', () => {
     )
 
     expect(imageMarkup).toContain('Creative Image')
-    expect(imageMarkup).toContain('Image uploaded successfully')
+    expect(imageMarkup).toContain('Ready for ad creation')
+    expect(imageMarkup).toContain('Replace')
     expect(imageMarkup).toContain('Facebook Page *')
     expect(imageMarkup).toContain('Linked Instagram account for selected page is preselected.')
     expect(imageMarkup).toContain('Create Ad')
     expect(videoMarkup).toContain('No Ad Set Available')
-    expect(videoMarkup).toContain('Video ID')
+    expect(videoMarkup).toContain('Creative Video')
+    expect(videoMarkup).toContain('Meta video ID')
   })
 })

@@ -602,12 +602,13 @@ function CampaignInsightsPageContent() {
       <CampaignAdsSection
         providerId={providerId}
         campaignId={campaignId}
+        campaignObjective={campaign?.objective}
         clientId={selectedClientId}
         isPreviewMode={isPreviewMode}
         currency={displayCurrency}
       />
     ),
-    [providerId, campaignId, selectedClientId, isPreviewMode, displayCurrency],
+    [providerId, campaignId, campaign?.objective, selectedClientId, isPreviewMode, displayCurrency],
   )
 
   const renderAdvanced = useCallback(

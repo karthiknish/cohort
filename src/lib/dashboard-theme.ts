@@ -23,7 +23,8 @@ export const DASHBOARD_THEME = {
   },
   buttons: {
     base: 'rounded-xl font-bold uppercase tracking-widest text-[11px] shadow-sm transition-[transform,box-shadow,background-color,color] active:scale-[0.98]',
-    primary: 'bg-primary text-primary-foreground hover:bg-accent/90',
+    primary:
+      'bg-primary text-primary-foreground hover:bg-[color-mix(in_srgb,var(--primary)_88%,#0f172a_12%)]',
     outline: 'border-muted/40 bg-background hover:bg-muted/5 hover:text-primary',
     ghost: 'hover:bg-muted/5 hover:text-primary',
   },

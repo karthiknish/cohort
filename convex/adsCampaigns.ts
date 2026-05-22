@@ -1,3 +1,5 @@
+'use node'
+
 import { action } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from './errors'
@@ -434,13 +436,19 @@ export const updateCampaign = action({
           budgetMode: mappedBudgetMode,
         })
       } else if (args.action === 'updateBidding' && args.biddingType) {
-        await updateTikTokCampaignBidding({
+        const biddingResult = await updateTikTokCampaignBidding({
           accessToken: integration.accessToken,
           advertiserId,
           campaignId: args.campaignId,
           biddingType: args.biddingType,
           biddingValue: args.biddingValue ?? 0,
         })
+        if (!biddingResult.success) {
+          throw Errors.integration.error(
+            'TikTok',
+            biddingResult.error ?? 'TikTok campaign bidding update is not supported',
+          )
+        }
       } else if (args.action === 'remove') {
         await removeTikTokCampaign({
           accessToken: integration.accessToken,

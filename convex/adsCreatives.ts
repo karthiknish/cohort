@@ -1,3 +1,5 @@
+'use node'
+
 import { action } from './_generated/server'
 import { api, internal } from '/_generated/api'
 import { v } from 'convex/values'
@@ -872,6 +874,7 @@ export const uploadMedia = action({
     clientId: v.optional(v.union(v.string(), v.null())),
     fileName: v.string(),
     fileData: v.bytes(),
+    mimeType: v.optional(v.string()),
   },
   handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
@@ -889,7 +892,7 @@ export const uploadMedia = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+    if (args.providerId !== 'facebook' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       throw Errors.integration.expired(args.providerId)
     }
 
@@ -901,11 +904,18 @@ export const uploadMedia = action({
         throw Errors.integration.notConfigured('Meta', 'Meta ad account ID not configured')
       }
 
+      let accessToken = integration.accessToken
+      if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+        const { refreshMetaAccessToken } = await import('@/lib/integration-token-refresh-meta')
+        accessToken = await refreshMetaAccessToken({ userId: args.workspaceId, clientId })
+      }
+
       const result = await uploadMediaToMeta({
-        accessToken: integration.accessToken,
+        accessToken,
         adAccountId,
         fileName: args.fileName,
         fileData: new Uint8Array(args.fileData),
+        mimeType: args.mimeType,
       })
 
       if (!result.success) {
@@ -915,6 +925,8 @@ export const uploadMedia = action({
       return {
         success: true,
         creativeSpec: result.creativeSpec,
+        videoId: result.videoId,
+        mediaType: result.mediaType,
       }
     }
 

@@ -120,6 +120,8 @@ export function useClientsData(selectedClient: ClientRecord | null, isPreviewMod
     proposalsRealtime === undefined
   )
 
+  const workspaceMissing = !isPreviewMode && Boolean(selectedClient) && !workspaceId
+
   return {
     // Queries
     proposalsRealtime,
@@ -128,6 +130,7 @@ export function useClientsData(selectedClient: ClientRecord | null, isPreviewMod
     // State
     stats,
     statsLoading,
+    workspaceMissing,
     adStatusLoading,
     adAccountsConnected,
   }

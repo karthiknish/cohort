@@ -69,10 +69,17 @@ export {
 // Campaigns
 export {
   listMetaCampaigns,
+  createMetaCampaign,
   updateMetaCampaignStatus,
   updateMetaCampaignBudget,
   updateMetaCampaignBidding,
   removeMetaCampaign,
+  listMetaAdSets,
+  createMetaAdSet,
+  updateMetaAdSet,
+  updateMetaAdSetStatus,
+  listMetaAudiences,
+  deleteMetaAudience,
   updateMetaAdStatus,
   fetchMetaAdMetrics,
   fetchMetaCreatives,
@@ -81,6 +88,13 @@ export {
   fetchMetaAudienceTargeting,
   createMetaAudience,
 } from './campaigns'
+
+export { searchMetaAdInterests, searchMetaAdGeolocations } from './targeting-search'
+export type { MetaTargetingSearchResult } from './targeting-search'
+export { listMetaLeadgenForms, createMetaLeadgenForm } from './leadgen-forms'
+export type { MetaLeadgenForm } from './leadgen-forms'
+export { buildMetaTargetingFromNormalized } from './meta-targeting-serialize'
+export type { MetaTargetingSource } from './meta-targeting-serialize'
 
 // Creatives
 export {
@@ -96,6 +110,7 @@ export {
   toMetaApiDestinationSpec,
   normalizeMetaObjectTypeForCreate,
   uploadMediaToMeta,
+  uploadVideoToMeta,
 } from './creatives'
 export type {
   MetaApiDestinationSpec,

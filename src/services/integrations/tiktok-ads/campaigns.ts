@@ -589,8 +589,11 @@ export async function updateTikTokCampaignBidding(options: {
   biddingType: string
   biddingValue: number
   maxRetries?: number
-}): Promise<{ success: boolean }> {
-  // TikTok bidding is often at the adgroup level.
+}): Promise<{ success: boolean; error?: string }> {
   void options
-  return { success: true }
+  return {
+    success: false,
+    error:
+      'TikTok campaign bidding updates are not supported in Cohort yet. Adjust bidding in TikTok Ads Manager at the ad group level.',
+  }
 }

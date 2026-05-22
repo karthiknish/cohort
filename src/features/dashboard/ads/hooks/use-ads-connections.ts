@@ -744,18 +744,10 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       // (and passes `isValidRedirectUrl` which allows relative paths).
       const redirectTarget = `${window.location.pathname}${window.location.search}`
       if (providerId === PROVIDER_IDS.FACEBOOK) {
-        console.log('[Meta OAuth Debug] Starting Meta OAuth flow...')
-        console.log('[Meta OAuth Debug] Redirect target:', redirectTarget)
         const { url } = await startMetaOauth(redirectTarget, selectedClientId ?? null)
-        console.log('[Meta OAuth Debug] Received OAuth URL:', url)
         if (typeof url !== 'string' || url.length === 0) {
           throw new Error('Meta OAuth did not return a URL. Check server logs and environment variables.')
         }
-        console.log('[Meta OAuth Debug] URL parsed:', {
-          origin: new URL(url).origin,
-          pathname: new URL(url).pathname,
-          params: Object.fromEntries(new URL(url).searchParams.entries())
-        })
         window.location.href = url
         return
       }

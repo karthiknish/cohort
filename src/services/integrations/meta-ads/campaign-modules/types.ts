@@ -140,6 +140,7 @@ export interface UpdateAdSetOptions {
   dailyBudget?: number
   lifetimeBudget?: number
   bidAmount?: number
+  targeting?: Record<string, unknown>
   maxRetries?: number
 }
 

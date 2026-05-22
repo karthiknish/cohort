@@ -2,19 +2,14 @@ import { getAdIntegration, updateIntegrationCredentials } from '@/lib/ads-admin'
 import { getGoogleAnalyticsIntegration, updateGoogleAnalyticsCredentials } from '@/lib/analytics-admin'
 import { logger } from '@/lib/logger'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
-import { META_API_VERSION, META_OAUTH_TOKEN_ENDPOINT } from '@/services/integrations/meta-ads/constants'
-import {
-  resolveGoogleAdsOAuthCredentials,
-  resolveGoogleAnalyticsOAuthCredentials,
-} from '@/services/google-oauth'
 import { cache } from 'react'
 
-interface RefreshParams {
-  userId: string
-  clientId?: string | null
-  forceRefresh?: boolean
-  providerId?: 'google' | 'google-analytics'
-}
+import { IntegrationTokenError, type RefreshParams } from './integration-token-refresh-shared'
+
+import { refreshMetaAccessToken } from './integration-token-refresh-meta'
+
+export { IntegrationTokenError, type RefreshParams } from './integration-token-refresh-shared'
+export { refreshMetaAccessToken } from './integration-token-refresh-meta'
 
 // Token refresh endpoints - updated to latest API versions
 const GOOGLE_TOKEN_ENDPOINT = process.env.GOOGLE_TOKEN_ENDPOINT ?? 'https://oauth2.googleapis.com/token'
@@ -67,27 +62,6 @@ function calculateBackoffDelay(attempt: number): number {
     maxDelayMs: TOKEN_REFRESH_CONFIG.maxDelayMs,
     jitterFactor: 0.3,
   })
-}
-
-export class IntegrationTokenError extends Error {
-  userId?: string
-  providerId?: string
-  isRetryable: boolean
-  httpStatus?: number
-
-  constructor(
-    message: string,
-    providerId?: string,
-    userId?: string,
-    options?: { isRetryable?: boolean; httpStatus?: number }
-  ) {
-    super(message)
-    this.name = 'IntegrationTokenError'
-    this.providerId = providerId
-    this.userId = userId
-    this.isRetryable = options?.isRetryable ?? false
-    this.httpStatus = options?.httpStatus
-  }
 }
 
 type AnyTimestamp = { toMillis: () => number } | { toDate: () => Date } | Date | string | number
@@ -144,9 +118,13 @@ export async function refreshGoogleAccessToken({ userId, clientId, providerId }:
     throw new IntegrationTokenError(`No ${providerName} refresh token available`, resolvedProviderId, userId)
   }
 
-  const credentials = resolvedProviderId === 'google-analytics'
-    ? resolveGoogleAnalyticsOAuthCredentials()
-    : resolveGoogleAdsOAuthCredentials()
+  const { resolveGoogleAdsOAuthCredentials, resolveGoogleAnalyticsOAuthCredentials } = await import(
+    '@/services/google-oauth'
+  )
+  const credentials =
+    resolvedProviderId === 'google-analytics'
+      ? resolveGoogleAnalyticsOAuthCredentials()
+      : resolveGoogleAdsOAuthCredentials()
 
   const googleClientId = credentials.clientId
   const googleClientSecret = credentials.clientSecret
@@ -273,141 +251,6 @@ export async function refreshGoogleAccessToken({ userId, clientId, providerId }:
   }
 
   throw lastError ?? new IntegrationTokenError('Google token refresh failed after all retries', resolvedProviderId, userId)
-}
-
-export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams): Promise<string> {
-  logger.info('[Meta Token Refresh] Starting token refresh', { userId, clientId, apiVersion: META_API_VERSION })
-
-  const integration = await getAdIntegration({ userId, providerId: 'facebook', clientId })
-
-  if (!integration?.accessToken) {
-    logger.error('[Meta Token Refresh] No access token available', { userId, clientId })
-    throw new IntegrationTokenError('No Meta Ads access token available', 'facebook', userId)
-  }
-
-  const appId = process.env.META_APP_ID
-  const appSecret = process.env.META_APP_SECRET
-
-  if (!appId || !appSecret) {
-    logger.error('[Meta Token Refresh] App credentials not configured')
-    throw new IntegrationTokenError('Meta app credentials are not configured', 'facebook', userId)
-  }
-
-  const params = new URLSearchParams({
-    grant_type: 'fb_exchange_token',
-    client_id: appId,
-    client_secret: appSecret,
-    fb_exchange_token: integration.accessToken,
-  })
-
-  let lastError: Error | null = null
-
-  for (let attempt = 0; attempt < TOKEN_REFRESH_CONFIG.maxRetries; attempt++) {
-    try {
-      logger.debug('[Meta Token Refresh] Attempting refresh', { userId, attempt: attempt + 1, maxRetries: TOKEN_REFRESH_CONFIG.maxRetries })
-      
-      const response = await fetch(`${META_OAUTH_TOKEN_ENDPOINT}?${params.toString()}`)
-
-      if (!response.ok) {
-        const errorPayload = await response.text()
-        let parsedError: { error?: { message?: string; code?: number } } = {}
-
-        try {
-          parsedError = JSON.parse(errorPayload)
-        } catch {
-          // Not JSON, use raw text
-        }
-
-        const errorMessage = parsedError?.error?.message ?? errorPayload
-        const errorCode = parsedError?.error?.code
-
-        // Check if error is retryable (5xx errors or specific Meta error codes)
-        const isRetryable = response.status >= 500 || response.status === 429
-
-        logger.warn('[Meta Token Refresh] Request failed', { 
-          userId, 
-          attempt: attempt + 1, 
-          status: response.status, 
-          errorCode,
-          isRetryable,
-          errorMessage: errorMessage.substring(0, 200)
-        })
-
-        if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
-          const delayMs = calculateBackoffDelay(attempt)
-          logger.info('[Meta Token Refresh] Retrying after delay', { userId, delayMs, nextAttempt: attempt + 2 })
-          lastError = new IntegrationTokenError(
-            `Failed to refresh Meta Ads token (${response.status}): ${errorMessage}`,
-            'facebook',
-            userId,
-            { isRetryable: true, httpStatus: response.status }
-          )
-          await sleep(delayMs)
-          continue
-        }
-
-        // Non-retryable error or exhausted retries
-        throw new IntegrationTokenError(
-          `Failed to refresh Meta Ads token (${response.status}): ${errorMessage}`,
-          'facebook',
-          userId,
-          { isRetryable: false, httpStatus: response.status }
-        )
-      }
-
-      const tokenPayload = (await response.json()) as {
-        access_token?: string
-        expires_in?: number
-        token_type?: string
-      }
-
-      if (!tokenPayload.access_token) {
-        logger.error('[Meta Token Refresh] Response missing access_token', { userId })
-        throw new IntegrationTokenError('Meta token response missing access_token', 'facebook', userId)
-      }
-
-      const expiresAt = computeExpiry(tokenPayload.expires_in)
-
-      await updateIntegrationCredentials({
-        userId,
-        providerId: 'facebook',
-        clientId,
-        accessToken: tokenPayload.access_token,
-        accessTokenExpiresAt: expiresAt ?? undefined,
-      })
-
-      logger.info('[Meta Token Refresh] Successfully refreshed token', { 
-        userId, 
-        clientId,
-        expiresIn: tokenPayload.expires_in,
-        expiresAt: expiresAt?.toISOString()
-      })
-
-      return tokenPayload.access_token
-    } catch (error) {
-      if (error instanceof IntegrationTokenError) {
-        throw error
-      }
-
-      // Network errors are retryable
-      lastError = error instanceof Error ? error : new Error('Unknown error')
-
-      if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
-        const delayMs = calculateBackoffDelay(attempt)
-        logger.warn('[Meta Token Refresh] Network error, retrying', { 
-          userId, 
-          attempt: attempt + 1, 
-          error: lastError.message,
-          delayMs 
-        })
-        await sleep(delayMs)
-        continue
-      }
-    }
-  }
-
-  logger.error('[Meta Token Refresh] All retries exhausted', { userId, clientId, lastError: lastError?.message })
-  throw lastError ?? new IntegrationTokenError('Meta token refresh failed after all retries', 'facebook', userId)
 }
 
 export async function refreshTikTokAccessToken({ userId, clientId }: RefreshParams): Promise<string> {

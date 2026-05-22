@@ -1,11 +1,45 @@
 "use node"
 
-import { action } from './_generated/server'
+import { action, type ActionCtx } from './_generated/server'
+import { api } from './_generated/api'
 import { Errors, withErrorHandling } from './errors'
 import { v } from 'convex/values'
+import type { Doc } from './_generated/dataModel'
 
 import { GammaService, GAMMA_IMAGE_MODEL_CREDITS, GAMMA_RECOMMENDED_MODELS } from '../src/services/gamma'
 import { PRESENTATION_ENGINE_LABEL } from '../src/lib/proposal-deck-generation'
+
+async function requireAuthenticatedUser(ctx: ActionCtx): Promise<Doc<'users'>> {
+  const identity = await ctx.auth.getUserIdentity()
+  if (!identity) {
+    throw Errors.auth.unauthorized()
+  }
+
+  const user = (await ctx.runQuery(api.users.getByLegacyId, {
+    legacyId: identity.subject,
+  })) as Doc<'users'> | null
+
+  if (!user) {
+    throw Errors.auth.userNotFound()
+  }
+
+  if (user.status !== 'active') {
+    if (user.status === 'disabled' || user.status === 'suspended') {
+      throw Errors.auth.userDisabled()
+    }
+    throw Errors.auth.forbidden('Your account is awaiting admin approval.')
+  }
+
+  return user
+}
+
+async function requireAdminUser(ctx: ActionCtx): Promise<Doc<'users'>> {
+  const user = await requireAuthenticatedUser(ctx)
+  if (user.role !== 'admin') {
+    throw Errors.auth.adminRequired()
+  }
+  return user
+}
 
 /**
  * Presentation deck provider status (admin / diagnostics only).
@@ -34,8 +68,10 @@ export const getStatus = action({
     documentDimensions: v.optional(v.array(v.string())),
     socialDimensions: v.optional(v.array(v.string())),
   }),
-  handler: async () =>
+  handler: async (ctx) =>
     withErrorHandling(async () => {
+      await requireAdminUser(ctx)
+
       const gammaService = new GammaService()
       const isConfigured = gammaService.isConfigured()
 
@@ -92,8 +128,10 @@ export const listFolders = action({
     hasMore: v.boolean(),
     nextCursor: v.union(v.string(), v.null()),
   }),
-  handler: async (_, args) =>
+  handler: async (ctx, args) =>
     withErrorHandling(async () => {
+      await requireAuthenticatedUser(ctx)
+
       const gammaService = new GammaService()
 
       if (!gammaService.isConfigured()) {
@@ -126,8 +164,10 @@ export const listThemes = action({
     hasMore: v.boolean(),
     nextCursor: v.union(v.string(), v.null()),
   }),
-  handler: async (_, args) =>
+  handler: async (ctx, args) =>
     withErrorHandling(async () => {
+      await requireAuthenticatedUser(ctx)
+
       const gammaService = new GammaService()
 
       if (!gammaService.isConfigured()) {

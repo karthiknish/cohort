@@ -14,19 +14,19 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-accent/90 shadow-sm",
+          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-[color-mix(in_srgb,var(--primary)_88%,#0f172a_12%)] shadow-sm",
         secondary:
-          "border-transparent bg-secondary/80 text-secondary-foreground [a&]:hover:bg-secondary/90",
+          "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-[color-mix(in_srgb,var(--secondary)_88%,#0f172a_12%)]",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20",
+          "border-transparent bg-destructive text-destructive-foreground [a&]:hover:bg-[color-mix(in_srgb,var(--destructive)_88%,#0f172a_12%)] focus-visible:ring-destructive/20",
         outline:
-          "text-foreground border-muted-foreground/30 [a&]:hover:bg-accent [a&]:hover:text-accent-foreground [a&]:hover:border-accent",
+          "text-foreground border-muted-foreground/30 [a&]:hover:bg-muted [a&]:hover:text-foreground",
         success:
-          "border-transparent bg-accent/10 text-primary [a&]:hover:bg-accent/15",
+          "border-transparent bg-primary/10 text-primary [a&]:hover:bg-primary/15",
         warning:
-          "border-transparent bg-accent text-accent-foreground [a&]:hover:bg-accent/90",
+          "border-transparent bg-warning text-warning-foreground [a&]:hover:bg-[color-mix(in_srgb,var(--warning)_92%,#0f172a_8%)]",
         info:
-          "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+          "border-transparent bg-info text-info-foreground [a&]:hover:bg-[color-mix(in_srgb,var(--info)_88%,#0f172a_12%)]",
       },
     },
     defaultVariants: {

@@ -52,6 +52,24 @@ type Props = {
   onSuccess?: () => void
 }
 
+function parseImageHashFromCreativeSpec(spec: string): string | null {
+  const trimmed = spec.trim()
+  if (!trimmed) return null
+  if (!trimmed.startsWith('{')) return trimmed
+  try {
+    const parsed = JSON.parse(trimmed) as { image_hash?: string }
+    return parsed.image_hash ?? null
+  } catch {
+    return null
+  }
+}
+
+function revokeBlobPreview(url: string | null) {
+  if (url?.startsWith('blob:')) {
+    URL.revokeObjectURL(url)
+  }
+}
+
 function generateCreativeIdempotencyKey(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return `creative_${crypto.randomUUID()}`
@@ -73,6 +91,9 @@ export function CreateCreativeDialog({
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadingVideo, setUploadingVideo] = useState(false)
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null)
+  const videoPreviewRef = useRef<string | null>(null)
   const [loadingPageActors, setLoadingPageActors] = useState(false)
   const [metaPageActors, setMetaPageActors] = useState<MetaPageActorOption[]>([])
   const [selectedAdSetId, setSelectedAdSetId] = useState<string | undefined>(() => propAdSetId)
@@ -96,6 +117,8 @@ export function CreateCreativeDialog({
   const [linkUrl, setLinkUrl] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [imageHash, setImageHash] = useState('')
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
+  const imagePreviewRef = useRef<string | null>(null)
   const [videoId, setVideoId] = useState('')
   const [pageId, setPageId] = useState('')
   const [instagramActorId, setInstagramActorId] = useState('')
@@ -112,6 +135,12 @@ export function CreateCreativeDialog({
     setLinkUrl('')
     setImageUrl('')
     setImageHash('')
+    revokeBlobPreview(imagePreviewRef.current)
+    imagePreviewRef.current = null
+    setImagePreviewUrl(null)
+    revokeBlobPreview(videoPreviewRef.current)
+    videoPreviewRef.current = null
+    setVideoPreviewUrl(null)
     setVideoId('')
     setPageId('')
     setInstagramActorId('')
@@ -251,10 +280,26 @@ export function CreateCreativeDialog({
     }
   }, [open, isMeta, workspaceId, clientId, listMetaPageActors])
 
+  const handleClearImage = useCallback(() => {
+    revokeBlobPreview(imagePreviewRef.current)
+    imagePreviewRef.current = null
+    setImagePreviewUrl(null)
+    setImageUrl('')
+    setImageHash('')
+  }, [])
+
+  const handleClearVideo = useCallback(() => {
+    revokeBlobPreview(videoPreviewRef.current)
+    videoPreviewRef.current = null
+    setVideoPreviewUrl(null)
+    setVideoId('')
+  }, [])
+
   const handleImageUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (!file) return
+      e.target.value = ''
 
       if (providerId !== 'facebook') {
         notifyFailure({
@@ -263,6 +308,11 @@ export function CreateCreativeDialog({
       })
         return
       }
+
+      revokeBlobPreview(imagePreviewRef.current)
+      const blobUrl = URL.createObjectURL(file)
+      imagePreviewRef.current = blobUrl
+      setImagePreviewUrl(blobUrl)
 
       setUploadingImage(true)
 
@@ -283,23 +333,26 @@ export function CreateCreativeDialog({
         clientId: clientId ?? null,
         fileName: file.name,
         fileData,
+        mimeType: file.type || undefined,
       })
         .then((result) => {
           if (!result.success) {
             throw new Error('Failed to upload media')
           }
 
-          // Extract creative spec which contains the image_hash
           if (result.creativeSpec) {
-            const spec = JSON.parse(result.creativeSpec as string) as { image_hash?: string; video_id?: string }
-            if (spec.image_hash) {
-              setImageHash(spec.image_hash)
+            const hash = parseImageHashFromCreativeSpec(String(result.creativeSpec))
+            if (hash) {
+              setImageHash(hash)
               toast({
                 title: 'Image uploaded',
-                description: 'Your image has been uploaded successfully.',
+                description: 'Your image is ready to use in this creative.',
               })
+              return
             }
           }
+
+          throw new Error('Upload succeeded but no image hash was returned')
         })
         .catch((error) => {
           reportConvexFailure({
@@ -315,6 +368,80 @@ export function CreateCreativeDialog({
     },
     [clientId, providerId, uploadMedia, workspaceId]
   )
+
+  const handleVideoUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      e.target.value = ''
+
+      if (providerId !== 'facebook') {
+        notifyFailure({
+          title: 'Platform not supported',
+          message: 'Video upload is currently only supported for Meta ads.',
+        })
+        return
+      }
+
+      revokeBlobPreview(videoPreviewRef.current)
+      const blobUrl = URL.createObjectURL(file)
+      videoPreviewRef.current = blobUrl
+      setVideoPreviewUrl(blobUrl)
+      setUploadingVideo(true)
+
+      if (!workspaceId) {
+        notifyFailure({ title: 'Upload failed', message: 'Sign in required' })
+        setUploadingVideo(false)
+        return
+      }
+
+      const fileData = await file.arrayBuffer()
+
+      await uploadMedia({
+        workspaceId,
+        providerId: 'facebook',
+        clientId: clientId ?? null,
+        fileName: file.name,
+        fileData,
+        mimeType: file.type || undefined,
+      })
+        .then((result) => {
+          if (!result.success) throw new Error('Failed to upload media')
+          if (result.videoId) {
+            setVideoId(result.videoId)
+            toast({
+              title: 'Video uploaded',
+              description: 'Your video is ready to use in this creative.',
+            })
+            return
+          }
+          throw new Error('Upload succeeded but no video ID was returned')
+        })
+        .catch((error) => {
+          reportConvexFailure({
+            error,
+            context: 'CreateCreativeDialog:handleVideoUpload',
+            title: 'Upload failed',
+            fallbackMessage: 'Upload failed',
+          })
+        })
+        .finally(() => {
+          setUploadingVideo(false)
+        })
+    },
+    [clientId, providerId, uploadMedia, workspaceId],
+  )
+
+  const imagePreviewSrc = useMemo(() => {
+    if (imagePreviewUrl) return imagePreviewUrl
+    const url = imageUrl.trim()
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
+      return url
+    }
+    return null
+  }, [imagePreviewUrl, imageUrl])
+
+  const videoPreviewSrc = useMemo(() => videoPreviewUrl, [videoPreviewUrl])
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -470,7 +597,9 @@ export function CreateCreativeDialog({
           callToActionType={callToActionType}
           description={description}
           imageHash={imageHash}
+          imagePreviewSrc={imagePreviewSrc}
           imageUrl={imageUrl}
+          onClearImage={handleClearImage}
           instagramActorId={instagramActorId}
           instagramActorOptions={instagramActorOptions}
           isMeta={isMeta}
@@ -485,7 +614,12 @@ export function CreateCreativeDialog({
           onClose={handleClose}
           onDescriptionChange={setDescription}
           onImageUpload={handleImageUpload}
+          onVideoUpload={handleVideoUpload}
           onImageUrlChange={setImageUrl}
+          onClearVideo={handleClearVideo}
+          videoPreviewSrc={videoPreviewSrc}
+          videoId={videoId}
+          uploadingVideo={uploadingVideo}
           onInstagramActorIdChange={setInstagramActorId}
           onLinkUrlChange={setLinkUrl}
           onNameChange={setName}
@@ -502,7 +636,6 @@ export function CreateCreativeDialog({
           status={status}
           title={title}
           uploadingImage={uploadingImage}
-          videoId={videoId}
         />
       </DialogContent>
     </Dialog>

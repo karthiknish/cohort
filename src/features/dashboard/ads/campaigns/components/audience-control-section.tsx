@@ -6,7 +6,8 @@ import { AlertTriangle, MapPin, RefreshCw, Sparkles, Target, Users, Plus } from 
 
 import { useAction } from 'convex/react'
 
-import { adsTargetingApi } from '@/lib/convex-api'
+import { adsAdSetsApi, adsTargetingApi } from '@/lib/convex-api'
+import { buildMetaTargetingFromNormalized } from '@/services/integrations/meta-ads/meta-targeting-serialize'
 import { logError } from '@/lib/convex-errors'
 import { useAuth } from '@/shared/contexts/auth-context'
 
@@ -66,6 +67,9 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   const { user } = useAuth()
 
   const getTargeting = useAction(adsTargetingApi.getTargeting)
+  const updateAdSetTargeting = useAction(adsAdSetsApi.updateAdSetTargeting)
+  const convexProviderId = toAdsProviderId(providerId)
+  const canEditMetaTargeting = convexProviderId === 'facebook' && !isPreviewMode
 
   const [targeting, setTargeting] = useState<TargetingData[]>([])
   const [insights, setInsights] = useState<Insights | null>(null)
@@ -75,6 +79,8 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   const [hasLoaded, setHasLoaded] = useState(false)
   const [editingSection, setEditingSection] = useState<string | null>(null)
   const [selectedTargetingId, setSelectedTargetingId] = useState<string>('all')
+  const [draftInterests, setDraftInterests] = useState<Array<{ id: string; name: string }> | null>(null)
+  const [savingTargeting, setSavingTargeting] = useState(false)
 
   const canLoad = !isPreviewMode
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
@@ -293,15 +299,112 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     }
   }, [visibleTargeting])
 
+  const activeAdSetId = useMemo(() => {
+    if (selectedTargetingId !== 'all') return selectedTargetingId
+    return targeting[0]?.entityId
+  }, [selectedTargetingId, targeting])
+
+  const handlePersistInterests = useCallback(async () => {
+    if (!canEditMetaTargeting || !workspaceId || !activeAdSetId) {
+      toast({
+        title: 'Select an ad set',
+        description: 'Choose a single ad set before saving interest targeting.',
+      })
+      return
+    }
+
+    const nextInterests = draftInterests ?? aggregatedData.interests
+    setSavingTargeting(true)
+    try {
+      const payload = buildMetaTargetingFromNormalized({
+        demographics: aggregatedData.demographics,
+        locations: {
+          included: aggregatedData.locations.included,
+          excluded: aggregatedData.locations.excluded.map((loc) => ({
+            id: loc.id,
+            name: loc.name,
+            type: 'country',
+          })),
+        },
+        interests: nextInterests,
+      })
+      await updateAdSetTargeting({
+        workspaceId,
+        providerId: 'facebook',
+        clientId: clientId ?? null,
+        adSetId: activeAdSetId,
+        targeting: payload,
+      })
+      toast({ title: 'Targeting saved', description: 'Interests updated on the ad set in Meta.' })
+      setDraftInterests(null)
+      setEditingSection(null)
+      await fetchTargeting()
+    } catch (error) {
+      logError(error, 'AudienceControlSection:saveTargeting')
+      notifyFailure({ title: 'Could not save targeting', message: 'Check Meta permissions and try again.' })
+    } finally {
+      setSavingTargeting(false)
+    }
+  }, [
+    activeAdSetId,
+    aggregatedData.demographics,
+    aggregatedData.interests,
+    aggregatedData.locations,
+    canEditMetaTargeting,
+    clientId,
+    draftInterests,
+    fetchTargeting,
+    updateAdSetTargeting,
+    workspaceId,
+  ])
+
+  const handleAddInterestDraft = useCallback((interest: { id: string; name: string }) => {
+    setDraftInterests((prev) => {
+      const base = prev ?? aggregatedData.interests
+      if (base.some((item) => item.id === interest.id || item.name === interest.name)) return base
+      return [...base, interest]
+    })
+  }, [aggregatedData.interests])
+
+  const handleRemoveInterestDraft = useCallback((interestName: string) => {
+    setDraftInterests((prev) => {
+      const base = prev ?? aggregatedData.interests
+      return base.filter((item) => item.name !== interestName)
+    })
+  }, [aggregatedData.interests])
+
+  const displayInterests = draftInterests ?? aggregatedData.interests
+
   const audienceEditorSection = useMemo(() => (
     <AudienceEditorSection
-      aggregatedData={aggregatedData}
+      aggregatedData={{ ...aggregatedData, interests: displayInterests }}
       expandedSections={expandedSections}
       toggleSection={toggleSection}
       editingSection={editingSection}
       onToggleEditing={handleToggleEditing}
+      canEditTargeting={canEditMetaTargeting}
+      workspaceId={workspaceId}
+      clientId={clientId}
+      onAddInterest={canEditMetaTargeting ? handleAddInterestDraft : undefined}
+      onRemoveInterest={canEditMetaTargeting ? handleRemoveInterestDraft : undefined}
+      onSaveTargeting={canEditMetaTargeting && editingSection === 'interests' ? handlePersistInterests : undefined}
+      savingTargeting={savingTargeting}
     />
-  ), [aggregatedData, editingSection, expandedSections, handleToggleEditing, toggleSection])
+  ), [
+    aggregatedData,
+    canEditMetaTargeting,
+    clientId,
+    displayInterests,
+    editingSection,
+    expandedSections,
+    handleAddInterestDraft,
+    handlePersistInterests,
+    handleRemoveInterestDraft,
+    handleToggleEditing,
+    savingTargeting,
+    toggleSection,
+    workspaceId,
+  ])
 
   const audienceStats = useMemo(
     () => [
@@ -454,6 +557,9 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
             onTargetingChange={setSelectedTargetingId}
             editingSection={editingSection}
               onToggleEditing={handleToggleEditing}
+              workspaceId={workspaceId}
+              clientId={clientId}
+              canSearchGeo={canEditMetaTargeting}
             />
           </div>
 

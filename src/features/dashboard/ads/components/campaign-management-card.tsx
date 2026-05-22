@@ -5,7 +5,7 @@ import { reportConvexFailure } from '@/lib/handle-convex-error'
 import type { CellContext, ColumnDef, HeaderContext } from '@tanstack/react-table'
 import { useAction } from 'convex/react'
 import { useRouter } from 'next/navigation'
-import { createContext, use, useCallback, useEffect, useEffectEvent, useMemo, useReducer, ViewTransition } from 'react'
+import { createContext, use, useCallback, useEffect, useEffectEvent, useMemo, useReducer, useState, ViewTransition } from 'react'
 
 import { Badge } from '@/shared/ui/badge'
 import { DataTableColumnHeader } from '@/shared/ui/data-table'
@@ -26,6 +26,8 @@ import {
 } from './campaign-management-card-sections'
 import type { BiddingDraft, Campaign, CampaignGroup, CampaignManagementView } from './campaign-management-card-types'
 import type { DateRange } from './date-range-picker'
+import { CreateMetaCampaignDialog } from './create-meta-campaign-dialog'
+import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
 
 // =============================================================================
 // TYPES
@@ -317,9 +319,16 @@ function CampaignActionsHeader() {
 
 function CampaignActionsCell({ row }: CellContext<Campaign, unknown>) {
   const { actionLoading, handleAction, openCampaignBiddingDialog, openCampaignBudgetDialog } = useCampaignManagementActions()
+  const isTikTok = toAdsProviderId(row.original.providerId) === 'tiktok'
   return (
     <CampaignRowActions
       actionLoading={actionLoading}
+      biddingDisabled={isTikTok}
+      biddingDisabledReason={
+        isTikTok
+          ? 'TikTok bidding is managed in TikTok Ads Manager (ad group level)'
+          : undefined
+      }
       campaign={row.original}
       onAction={handleAction}
       onOpenBiddingDialog={openCampaignBiddingDialog}
@@ -398,6 +407,8 @@ export function CampaignManagementCard({
   const updateCampaignGroup = useAction(adsCampaignGroupsApi.updateCampaignGroup)
 
   const [state, dispatch] = useReducer(campaignManagementReducer, INITIAL_CAMPAIGN_MANAGEMENT_STATE)
+  const [metaCreateOpen, setMetaCreateOpen] = useState(false)
+  const isMetaProvider = toAdsProviderId(providerId) === 'facebook'
   const {
     campaigns,
     loading,
@@ -857,6 +868,13 @@ export function CampaignManagementCard({
 
   return (
     <CampaignManagementActionContext.Provider value={actionContextValue}>
+      {isMetaProvider ? (
+        <CreateMetaCampaignDialog
+          open={metaCreateOpen}
+          onOpenChange={setMetaCreateOpen}
+          onCreated={() => void fetchCampaigns()}
+        />
+      ) : null}
       <CampaignManagementConnectedView
         actionLoading={actionLoading}
         biddingDialogOpen={biddingDialogOpen}
@@ -873,6 +891,7 @@ export function CampaignManagementCard({
         onBiddingOpenChange={handleBiddingOpenChange}
         onBudgetChange={handleBudgetChange}
         onBudgetOpenChange={handleBudgetOpenChange}
+        onCreateCampaign={isMetaProvider ? () => setMetaCreateOpen(true) : undefined}
         onRefresh={handleRefresh}
         onRowClick={openInsightsPage}
         onSubmitBidding={handleBiddingUpdate}

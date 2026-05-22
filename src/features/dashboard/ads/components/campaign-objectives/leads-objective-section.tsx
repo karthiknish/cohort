@@ -1,212 +1,281 @@
-// =============================================================================
-// LEADS OBJECTIVE SECTION - Lead generation with instant forms
-// =============================================================================
-
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useAction } from 'convex/react'
+import { CheckCircle, FileText, Loader2, Plus, Users } from 'lucide-react'
+
+import { adsMetaToolsApi } from '@/lib/convex-api'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
+import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
+import { Alert, AlertDescription } from '@/shared/ui/alert'
+import { Button } from '@/shared/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Switch } from '@/shared/ui/switch'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Button } from '@/shared/ui/button'
-import { Input } from '@/shared/ui/input'
-import { Textarea } from '@/shared/ui/textarea'
-import { Users, Plus, FileText, CheckCircle } from 'lucide-react'
+import { toast } from '@/shared/ui/use-toast'
+
 import type { ObjectiveComponentProps } from './types'
 
-// Mock lead forms - in real implementation, these would be fetched from the API
-const MOCK_LEAD_FORMS = [
-  { id: 'form_1', name: 'General Contact Form', fields: 4, leads: 156 },
-  { id: 'form_2', name: 'Quote Request Form', fields: 6, leads: 89 },
-  { id: 'form_3', name: 'Newsletter Signup', fields: 2, leads: 423 },
-]
+type LeadFormRow = {
+  id: string
+  name: string
+  status?: string
+  leadsCount?: number
+}
 
-export function LeadsObjectiveSection({ formData, onChange, disabled }: ObjectiveComponentProps) {
+export function LeadsObjectiveSection({
+  formData,
+  onChange,
+  disabled,
+  providerId,
+  metaContext,
+}: ObjectiveComponentProps) {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newFormName, setNewFormName] = useState('')
-  const [newFormFields, setNewFormFields] = useState('')
+  const [privacyPolicyUrl, setPrivacyPolicyUrl] = useState('')
+  const [forms, setForms] = useState<LeadFormRow[]>([])
+  const [loadingForms, setLoadingForms] = useState(false)
+  const [creatingForm, setCreatingForm] = useState(false)
+
+  const listLeadgenForms = useAction(adsMetaToolsApi.listLeadgenForms)
+  const createLeadgenForm = useAction(adsMetaToolsApi.createLeadgenForm)
+
+  const isMeta = toAdsProviderId(providerId) === 'facebook'
+  const canUseMetaApi = Boolean(
+    isMeta && metaContext?.workspaceId && metaContext.pageId,
+  )
+
+  useEffect(() => {
+    if (!canUseMetaApi || !metaContext?.workspaceId || !metaContext.pageId) {
+      setForms([])
+      return
+    }
+
+    let cancelled = false
+    setLoadingForms(true)
+
+    void listLeadgenForms({
+      workspaceId: metaContext.workspaceId,
+      clientId: metaContext.clientId ?? null,
+      pageId: metaContext.pageId,
+    })
+      .then((rows) => {
+        if (cancelled) return
+        setForms(
+          Array.isArray(rows)
+            ? rows.map((row) => ({
+                id: String(row.id),
+                name: String(row.name),
+                status: row.status as string | undefined,
+                leadsCount: row.leadsCount as number | undefined,
+              }))
+            : [],
+        )
+      })
+      .catch((error) => {
+        if (cancelled) return
+        reportConvexFailure({
+          error,
+          context: 'LeadsObjectiveSection:listLeadgenForms',
+          title: 'Could not load lead forms',
+          fallbackMessage: 'Could not load lead forms',
+        })
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingForms(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [canUseMetaApi, listLeadgenForms, metaContext?.clientId, metaContext?.pageId, metaContext?.workspaceId])
 
   const handleInstantFormToggle = useCallback(
     (checked: boolean | 'indeterminate' | undefined) => onChange({ instantFormEnabled: checked === true }),
-    [onChange]
+    [onChange],
   )
 
   const handleLeadFormSelect = useCallback(
     (leadFormId: string) => onChange({ leadFormId }),
-    [onChange]
+    [onChange],
   )
 
-  const handleOpenCreateForm = useCallback(() => {
-    setShowCreateForm(true)
-  }, [])
+  const handleCreateForm = useCallback(async () => {
+    if (!canUseMetaApi || !metaContext?.workspaceId || !metaContext.pageId) return
+    if (!newFormName.trim() || !privacyPolicyUrl.trim()) {
+      toast({
+        title: 'Missing fields',
+        description: 'Form name and privacy policy URL are required.',
+        variant: 'destructive',
+      })
+      return
+    }
 
-  const handleCloseCreateForm = useCallback(() => {
-    setShowCreateForm(false)
-  }, [])
-
-  const handleCreateFormNameChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setNewFormName(event.target.value)
-  }, [])
-
-  const handleCreateFormFieldsChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setNewFormFields(event.target.value)
-  }, [])
-
-  const handleCreateForm = useCallback(() => {
-    // In real implementation, this would create a lead form via API
-    console.log('Creating lead form:', { name: newFormName, fields: newFormFields })
-    setShowCreateForm(false)
-    setNewFormName('')
-    setNewFormFields('')
-  }, [newFormFields, newFormName])
+    setCreatingForm(true)
+    try {
+      const result = await createLeadgenForm({
+        workspaceId: metaContext.workspaceId,
+        clientId: metaContext.clientId ?? null,
+        pageId: metaContext.pageId,
+        name: newFormName.trim(),
+        privacyPolicyUrl: privacyPolicyUrl.trim(),
+      })
+      if (result.formId) {
+        onChange({ leadFormId: result.formId })
+        setForms((prev) => [
+          { id: result.formId!, name: newFormName.trim(), status: 'ACTIVE' },
+          ...prev,
+        ])
+        toast({ title: 'Lead form created', description: `"${newFormName.trim()}" is ready to use.` })
+      }
+      setShowCreateForm(false)
+      setNewFormName('')
+      setPrivacyPolicyUrl('')
+    } catch (error) {
+      reportConvexFailure({
+        error,
+        context: 'LeadsObjectiveSection:createLeadgenForm',
+        title: 'Could not create lead form',
+        fallbackMessage: 'Could not create lead form',
+      })
+    } finally {
+      setCreatingForm(false)
+    }
+  }, [
+    canUseMetaApi,
+    createLeadgenForm,
+    metaContext?.clientId,
+    metaContext?.pageId,
+    metaContext?.workspaceId,
+    newFormName,
+    onChange,
+    privacyPolicyUrl,
+  ])
 
   return (
     <div className="space-y-6">
-      {/* Instant Form Selection */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="w-4 h-4 text-info" />
+            <Users className="h-4 w-4 text-info" aria-hidden />
             Lead Form
           </CardTitle>
           <CardDescription>
-            Select an existing instant form or create a new one to collect leads.
+            Select an instant form from your connected Facebook Page, or create a new one.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Enable Instant Forms */}
+          {!isMeta ? (
+            <Alert>
+              <AlertDescription className="text-xs">
+                Lead forms are only available for Meta (Facebook/Instagram) campaigns.
+              </AlertDescription>
+            </Alert>
+          ) : !canUseMetaApi ? (
+            <Alert>
+              <AlertDescription className="text-xs">
+                Connect a Facebook Page with a Page ID to load and create instant lead forms. Until then, configure lead forms in Meta Ads Manager.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="instant-form">Use Instant Forms</Label>
               <p className="text-xs text-muted-foreground">
-                People can submit their info without leaving Facebook/Instagram
+                People submit without leaving Facebook or Instagram
               </p>
             </div>
             <Switch
               id="instant-form"
               checked={Boolean(formData.instantFormEnabled)}
               onCheckedChange={handleInstantFormToggle}
-              disabled={disabled}
+              disabled={disabled || !isMeta}
             />
           </div>
 
-          {formData.instantFormEnabled && (
+          {formData.instantFormEnabled && isMeta ? (
             <>
-              <div className="border-t pt-4 space-y-3">
-                <Label>Select Form</Label>
-                <div className="grid gap-2">
-                  {MOCK_LEAD_FORMS.map((form) => (
-                    <LeadFormOptionButton
-                      key={form.id}
-                      disabled={Boolean(disabled)}
-                      form={form}
-                      isSelected={formData.leadFormId === form.id}
-                      onSelect={handleLeadFormSelect}
-                    />
-                  ))}
-                </div>
+              <div className="space-y-3 border-t pt-4">
+                <Label>Select form</Label>
+                {loadingForms ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    Loading forms…
+                  </div>
+                ) : forms.length > 0 ? (
+                  <div className="grid gap-2">
+                    {forms.map((form) => (
+                      <LeadFormOptionButton
+                        key={form.id}
+                        disabled={Boolean(disabled)}
+                        form={form}
+                        isSelected={formData.leadFormId === form.id}
+                        onSelect={handleLeadFormSelect}
+                      />
+                    ))}
+                  </div>
+                ) : canUseMetaApi ? (
+                  <p className="text-xs text-muted-foreground">No lead forms on this page yet — create one below.</p>
+                ) : null}
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                    onClick={handleOpenCreateForm}
-                  disabled={disabled}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create New Form
-                </Button>
+                {canUseMetaApi ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setShowCreateForm((value) => !value)}
+                    disabled={disabled}
+                  >
+                    <Plus className="mr-2 h-4 w-4" aria-hidden />
+                    Create new form
+                  </Button>
+                ) : null}
               </div>
 
-              {/* Create Form Dialog */}
-              {showCreateForm && (
-                <div className="border rounded-lg p-4 space-y-4 bg-muted/50">
-                  <h4 className="font-medium">Create New Lead Form</h4>
+              {showCreateForm && canUseMetaApi ? (
+                <div className="space-y-4 rounded-lg border bg-muted/50 p-4">
+                  <h4 className="font-medium text-sm">Create lead form</h4>
                   <div className="space-y-2">
-                    <Label htmlFor="form-name">Form Name</Label>
+                    <Label htmlFor="form-name">Form name</Label>
                     <Input
                       id="form-name"
-                      placeholder="e.g., Free Consultation Request"
                       value={newFormName}
-                      onChange={handleCreateFormNameChange}
+                      onChange={(e) => setNewFormName(e.target.value)}
+                      placeholder="Free consultation"
+                      disabled={disabled || creatingForm}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="form-fields">Fields (one per line)</Label>
-                    <Textarea
-                      id="form-fields"
-                      placeholder="Full Name&#10;Email&#10;Phone Number&#10;Company"
-                      value={newFormFields}
-                      onChange={handleCreateFormFieldsChange}
-                      rows={4}
+                    <Label htmlFor="privacy-url">Privacy policy URL</Label>
+                    <Input
+                      id="privacy-url"
+                      type="url"
+                      value={privacyPolicyUrl}
+                      onChange={(e) => setPrivacyPolicyUrl(e.target.value)}
+                      placeholder="https://yoursite.com/privacy"
+                      disabled={disabled || creatingForm}
                     />
                   </div>
                   <div className="flex gap-2">
                     <Button
                       type="button"
                       size="sm"
-                      onClick={handleCreateForm}
-                      disabled={!newFormName.trim()}
+                      onClick={() => void handleCreateForm()}
+                      disabled={disabled || creatingForm || !newFormName.trim() || !privacyPolicyUrl.trim()}
                     >
-                      Create Form
+                      {creatingForm ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Create form
                     </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleCloseCreateForm}
-                    >
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setShowCreateForm(false)}>
                       Cancel
                     </Button>
                   </div>
                 </div>
-              )}
+              ) : null}
             </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Lead Quality Settings */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Lead Quality Optimization</CardTitle>
-          <CardDescription>
-            Higher quality leads may cost more but convert better.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="higher-intent">Higher Intent Leads</Label>
-              <p className="text-xs text-muted-foreground">
-                Optimize for people more likely to become customers
-              </p>
-            </div>
-            <Switch
-              id="higher-intent"
-              defaultChecked
-              disabled={disabled}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Lead Gen Tips */}
-      <Card className="border-info/20 bg-info/10">
-        <CardContent className="pt-6">
-          <div className="flex gap-3">
-            <CheckCircle className="w-5 h-5 text-info flex-shrink-0 mt-0.5" />
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm">Lead Generation Best Practices</h4>
-              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                <li>Keep forms short - ask only essential questions</li>
-                <li>Offer something valuable (ebook, discount, free consultation)</li>
-                <li>Use clear, compelling call-to-action buttons</li>
-                <li>Set up automated email responses</li>
-                <li>Follow up with leads within 24 hours</li>
-              </ul>
-            </div>
-          </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>
@@ -219,34 +288,31 @@ function LeadFormOptionButton({
   isSelected,
   onSelect,
 }: {
-  form: (typeof MOCK_LEAD_FORMS)[number]
+  form: LeadFormRow
   disabled: boolean
   isSelected: boolean
   onSelect: (leadFormId: string) => void
 }) {
-  const handleClick = useCallback(() => {
-    onSelect(form.id)
-  }, [form.id, onSelect])
-
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={() => onSelect(form.id)}
       disabled={disabled}
       className={`flex items-center justify-between rounded-lg border p-3 text-left motion-chromatic ${
         isSelected ? 'border-info/20 bg-info/10' : 'border-border hover:border-info/50'
       }`}
     >
       <div className="flex items-center gap-3">
-        <FileText className="h-5 w-5 text-muted-foreground" />
+        <FileText className="h-5 w-5 text-muted-foreground" aria-hidden />
         <div>
           <p className="text-sm font-medium">{form.name}</p>
           <p className="text-xs text-muted-foreground">
-            {form.fields} fields • {form.leads} leads collected
+            {form.status ?? 'unknown'}
+            {form.leadsCount != null ? ` · ${form.leadsCount} leads` : ''}
           </p>
         </div>
       </div>
-      {isSelected && <CheckCircle className="h-5 w-5 text-info" />}
+      {isSelected ? <CheckCircle className="h-5 w-5 text-info" aria-hidden /> : null}
     </button>
   )
 }

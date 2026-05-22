@@ -23,6 +23,7 @@ import {
 import { toast } from '@/shared/ui/use-toast'
 import { cn } from '@/lib/utils'
 
+import { MetaTargetingSearchCombobox } from '@/features/dashboard/ads/components/meta-targeting-search-combobox'
 import type { AggregatedTargetingData, TargetingData } from './audience-control-types'
 
 type LocationTargetingSectionProps = {
@@ -33,6 +34,9 @@ type LocationTargetingSectionProps = {
   onTargetingChange: (value: string) => void
   editingSection: string | null
   onToggleEditing: (section: string) => void
+  workspaceId?: string | null
+  clientId?: string | null
+  canSearchGeo?: boolean
 }
 
 export function LocationTargetingSection({
@@ -43,6 +47,9 @@ export function LocationTargetingSection({
   onTargetingChange,
   editingSection,
   onToggleEditing,
+  workspaceId,
+  clientId,
+  canSearchGeo,
 }: LocationTargetingSectionProps) {
   const [selectedLocation, setSelectedLocation] = useState<LocationMarker | null>(null)
   const isEditing = editingSection === 'locations'
@@ -81,8 +88,8 @@ export function LocationTargetingSection({
           (event: MouseEvent<HTMLButtonElement>) => {
             event.stopPropagation()
             toast({
-              title: 'Location would be removed',
-              description: `${loc.name} removal requires API integration`,
+              title: 'Read-only geography',
+              description: `${loc.name} is synced from Meta. Edit locations in Ads Manager or when creating an ad set.`,
             })
           },
         ]),
@@ -128,7 +135,7 @@ export function LocationTargetingSection({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={isEditing ? 'secondary' : 'outline'}
+                variant={isEditing ? 'default' : 'outline'}
                 size="sm"
                 className="h-9 gap-1.5"
                 onClick={handleToggleEditing}
@@ -145,6 +152,21 @@ export function LocationTargetingSection({
           </Tooltip>
         </TooltipProvider>
       </div>
+
+      {isEditing && canSearchGeo && workspaceId ? (
+        <MetaTargetingSearchCombobox
+          workspaceId={workspaceId}
+          clientId={clientId}
+          mode="geolocations"
+          placeholder="Search Meta geo targets (reference for Ads Manager)…"
+          onSelect={(item) => {
+            toast({
+              title: 'Geo target found',
+              description: `${item.name} (${item.id}) — add via Meta Ads Manager or ad set creation. Map pins here are for planning only.`,
+            })
+          }}
+        />
+      ) : null}
 
       <div className={ADS_PAGE_THEME.controlMapFrame}>
         <LocationMap

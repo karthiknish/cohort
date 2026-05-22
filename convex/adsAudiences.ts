@@ -1,4 +1,7 @@
+'use node'
+
 import { action } from './_generated/server'
+import { internal } from './_generated/api'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from './errors'
 
@@ -54,7 +57,6 @@ export const createAudience = action({
     requireIdentity(identity)
 
     const clientId = normalizeClientId(args.clientId ?? null)
-    const { internal } = await import('./_generated/api')
 
     const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
@@ -147,3 +149,4 @@ export const createAudience = action({
     }
   }, 'adsAudiences:createAudience'),
 })
+

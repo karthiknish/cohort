@@ -64,12 +64,16 @@ const trash2Icon = <Trash2 className="h-4 w-4" />
 
 function CampaignRowActions({
   actionLoading,
+  biddingDisabled,
+  biddingDisabledReason,
   campaign,
   onAction,
   onOpenBiddingDialog,
   onOpenBudgetDialog,
 }: {
   actionLoading: string | null
+  biddingDisabled?: boolean
+  biddingDisabledReason?: string
   campaign: Campaign
   onAction: (campaignId: string, action: 'enable' | 'pause' | 'remove') => Promise<void>
   onOpenBiddingDialog: (campaign: Campaign) => void
@@ -127,8 +131,8 @@ function CampaignRowActions({
           onClick={handleOpenBudget}
         />
         <ActionTooltipButton
-          actionLabel="Bidding strategy"
-          disabled={actionLoading === campaign.id}
+          actionLabel={biddingDisabledReason ?? 'Bidding strategy'}
+          disabled={actionLoading === campaign.id || biddingDisabled}
           icon={trendingUpIcon}
           onClick={handleOpenBidding}
         />
@@ -201,6 +205,7 @@ function CampaignGroupRowActions({
 
 function CampaignManagementHeader({
   isRefreshing,
+  onCreateCampaign,
   onRefresh,
   onViewChange,
   providerId,
@@ -208,6 +213,7 @@ function CampaignManagementHeader({
   view,
 }: {
   isRefreshing: boolean
+  onCreateCampaign?: () => void
   onRefresh: () => void
   onViewChange: (view: CampaignManagementView) => void
   providerId: string
@@ -237,10 +243,17 @@ function CampaignManagementHeader({
           </Tabs>
         ) : null}
       </div>
-      <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing}>
-        <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-        Refresh
-      </Button>
+      <div className="flex items-center gap-2">
+        {onCreateCampaign ? (
+          <Button variant="default" size="sm" onClick={onCreateCampaign}>
+            New campaign
+          </Button>
+        ) : null}
+        <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing}>
+          <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
     </CardHeader>
   )
 }
@@ -605,6 +618,7 @@ function CampaignManagementConnectedView({
   onBiddingOpenChange,
   onBudgetChange,
   onBudgetOpenChange,
+  onCreateCampaign,
   onRefresh,
   onRowClick,
   onSubmitBidding,
@@ -633,6 +647,7 @@ function CampaignManagementConnectedView({
   onBiddingOpenChange: (open: boolean) => void
   onBudgetChange: (value: string) => void
   onBudgetOpenChange: (open: boolean) => void
+  onCreateCampaign?: () => void
   onRefresh: () => void
   onRowClick: (id: string, name: string) => void
   onSubmitBidding: () => void
@@ -651,6 +666,7 @@ function CampaignManagementConnectedView({
       <Card className="w-full">
         <CampaignManagementHeader
           isRefreshing={loading || groupsLoading}
+          onCreateCampaign={onCreateCampaign}
           onRefresh={onRefresh}
           onViewChange={onViewChange}
           providerId={providerId}

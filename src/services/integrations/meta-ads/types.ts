@@ -386,6 +386,7 @@ export type MetaAdSet = {
   lifetimeBudget?: number
   bidAmount?: number
   optimization_goal?: string
+  targeting?: Record<string, unknown>
   // v24.0 fields
   placementSoftOptOut?: PlacementSoftOptOut
 }

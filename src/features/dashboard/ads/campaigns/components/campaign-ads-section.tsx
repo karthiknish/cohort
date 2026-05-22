@@ -55,8 +55,9 @@ import { resolveMetaSocialPermalink } from '@/services/integrations/meta-ads'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
-import { adsAdMetricsApi, adsCreativesApi } from '@/lib/convex-api'
+import { adsAdMetricsApi, adsAdSetsApi, adsCreativesApi } from '@/lib/convex-api'
 import { CreateCreativeDialog } from './create-creative-dialog'
+import { CreateMetaAdSetDialog } from './create-meta-ad-set-dialog'
 import {
   computeCreativeTotals,
   deriveCreativeMetrics,
@@ -86,6 +87,7 @@ type Summary = {
 type Props = {
   providerId: string
   campaignId: string
+  campaignObjective?: string | null
   clientId?: string | null
   isPreviewMode?: boolean
   currency?: string | null
@@ -178,8 +180,10 @@ function CampaignAdsHeader({
   convexProviderId,
   fetchAds,
   firstAdSetId,
+  isMeta,
   isPreviewMode,
   loading,
+  onCreateAdSet,
   setViewMode,
   summaryStats,
   viewMode,
@@ -192,8 +196,10 @@ function CampaignAdsHeader({
   convexProviderId: string
   fetchAds: () => Promise<void>
   firstAdSetId?: string
+  isMeta?: boolean
   isPreviewMode?: boolean
   loading: boolean
+  onCreateAdSet?: () => void
   setViewMode: (viewMode: ViewMode) => void
   summaryStats: { total: number; totalTypes: number; activeCount: number } | null
   viewMode: ViewMode
@@ -225,6 +231,11 @@ function CampaignAdsHeader({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {isMeta && canLoad ? (
+            <Button variant="outline" size="sm" onClick={onCreateAdSet}>
+              New ad set
+            </Button>
+          ) : null}
           <CreateCreativeDialog
             key={`creative-${campaignId}-${firstAdSetId ?? 'none'}`}
             workspaceId={workspaceId}
@@ -358,17 +369,8 @@ function AdGridItem({
   const handleToggleStatus = useCallback((nextStatus: string) => onToggleStatus(ad, nextStatus), [onToggleStatus, ad])
   const metrics = getMetricsForAd(ad, adMetrics)
   const spendShare = metrics && maxSpend > 0 ? (metrics.spend / maxSpend) * 100 : 0
-  const handleImageError = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
-    const target = event.target as HTMLImageElement
-    target.style.display = 'none'
-    const parent = target.parentElement
-    if (parent && !parent.querySelector('.fallback-icon')) {
-      const fallback = document.createElement('div')
-      fallback.className = 'fallback-icon flex h-full items-center justify-center'
-      fallback.innerHTML = '<svg class="h-10 w-10 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>'
-      parent.appendChild(fallback)
-    }
-  }, [])
+  const [imageFailed, setImageFailed] = useState(false)
+  const handleImageError = useCallback(() => setImageFailed(true), [])
 
   return (
     <div
@@ -380,7 +382,7 @@ function AdGridItem({
         className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
       >
         <div className="relative aspect-square overflow-hidden bg-muted">
-          {ad.imageUrl ? (
+          {ad.imageUrl && !imageFailed ? (
             <NextImage
               src={ad.imageUrl}
               alt={ad.name || 'Creative preview'}
@@ -390,6 +392,11 @@ function AdGridItem({
               className="object-cover transition-transform group-hover:scale-105"
               onError={handleImageError}
             />
+          ) : ad.imageUrl && imageFailed ? (
+            <div className="flex h-full flex-col items-center justify-center gap-1.5 px-3 text-center text-muted-foreground">
+              <ImageIcon className="h-8 w-8 opacity-40" aria-hidden />
+              <span className="text-[10px] font-medium">Preview unavailable</span>
+            </div>
           ) : ad.videoUrl ? (
             <div className="flex h-full items-center justify-center bg-muted">
               <div className="flex flex-col items-center gap-1 text-muted-foreground">
@@ -510,9 +517,11 @@ function AdListRow({
   onToggleStatus: (ad: CampaignAd, nextStatus: string) => void
   providerId: string
 }) {
+  const [listImageFailed, setListImageFailed] = useState(false)
   const handleClick = useCallback(() => onCreativeClick(ad), [onCreativeClick, ad])
   const handleStopPropagation = useCallback((event: React.MouseEvent) => event.stopPropagation(), [])
   const handleToggleStatus = useCallback((nextStatus: string) => onToggleStatus(ad, nextStatus), [onToggleStatus, ad])
+  const handleListImageError = useCallback(() => setListImageFailed(true), [])
   const metrics = getMetricsForAd(ad, adMetrics)
   const permalink =
     providerId === 'facebook'
@@ -529,7 +538,7 @@ function AdListRow({
     >
       <TableCell>
         <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border bg-muted">
-          {ad.imageUrl ? (
+          {ad.imageUrl && !listImageFailed ? (
             <NextImage
               src={ad.imageUrl}
               alt=""
@@ -537,7 +546,10 @@ function AdListRow({
               unoptimized
               sizes="56px"
               className="object-cover"
+              onError={handleListImageError}
             />
+          ) : ad.imageUrl && listImageFailed ? (
+            <ImageIcon className="h-5 w-5 text-muted-foreground/50" aria-hidden />
           ) : ad.videoUrl ? (
             <Play className="h-5 w-5 text-muted-foreground" />
           ) : (
@@ -675,7 +687,7 @@ function CampaignAdsList({
   )
 }
 
-export function CampaignAdsSection({ providerId, campaignId, clientId, isPreviewMode, currency }: Props) {
+export function CampaignAdsSection({ providerId, campaignId, campaignObjective, clientId, isPreviewMode, currency }: Props) {
   const { push } = useRouter()
   const { user } = useAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
@@ -684,8 +696,11 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   const isMeta = convexProviderId === 'facebook'
 
   const listCreatives = useAction(adsCreativesApi.listCreatives)
+  const listAdSets = useAction(adsAdSetsApi.listAdSets)
   const updateCreativeStatus = useAction(adsCreativesApi.updateCreativeStatus)
   const listAdMetrics = useAction(adsAdMetricsApi.listAdMetrics)
+  const [adSets, setAdSets] = useState<Array<{ id: string; name: string }>>([])
+  const [adSetDialogOpen, setAdSetDialogOpen] = useState(false)
   const [ads, setAds] = useState<CampaignAd[]>([])
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<Summary | null>(null)
@@ -740,6 +755,26 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
         setLoading(false)
       })
   }, [canLoad, campaignId, clientId, convexProviderId, listCreatives, workspaceId])
+
+  const fetchAdSets = useCallback(async () => {
+    if (!canLoad || !workspaceId || !isMeta) return
+    await listAdSets({
+      workspaceId,
+      providerId: 'facebook',
+      clientId: clientId ?? null,
+      campaignId,
+    })
+      .then((rows) => {
+        setAdSets(
+          Array.isArray(rows)
+            ? rows.map((row) => ({ id: row.id, name: row.name || row.id }))
+            : [],
+        )
+      })
+      .catch((error) => {
+        logError(error, 'CampaignAdsSection:fetchAdSets')
+      })
+  }, [campaignId, canLoad, clientId, isMeta, listAdSets, workspaceId])
 
   const fetchMetrics = useCallback(async () => {
     if (!canLoad) return
@@ -796,7 +831,8 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   useEffect(() => {
     if (!canLoad || !workspaceId) return
     void fetchAds()
-  }, [canLoad, campaignId, clientId, convexProviderId, fetchAds, workspaceId])
+    void fetchAdSets()
+  }, [canLoad, campaignId, clientId, convexProviderId, fetchAdSets, fetchAds, workspaceId])
 
   useEffect(() => {
     if (!hasLoaded) return
@@ -814,17 +850,18 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   }, [ads])
 
   const availableAdSets = useMemo(() => {
+    if (adSets.length > 0) return adSets
     const adSetMap = new Map<string, string>()
-    ads.forEach(ad => {
+    ads.forEach((ad) => {
       if (ad.adGroupId && !adSetMap.has(ad.adGroupId)) {
         adSetMap.set(ad.adGroupId, ad.adGroupId)
       }
     })
-    return Array.from(adSetMap.values()).map(id => ({
+    return Array.from(adSetMap.values()).map((id) => ({
       id,
       name: `Ad Set ${id.slice(-6)}`,
     }))
-  }, [ads])
+  }, [adSets, ads])
 
   const firstAdSetId = useMemo(() => {
     return availableAdSets[0]?.id
@@ -942,8 +979,12 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   }, [])
 
   const handleRefreshAll = useCallback(async () => {
-    await Promise.all([fetchAds(), fetchMetrics()])
-  }, [fetchAds, fetchMetrics])
+    await Promise.all([fetchAds(), fetchMetrics(), fetchAdSets()])
+  }, [fetchAdSets, fetchAds, fetchMetrics])
+
+  const handleAdSetCreated = useCallback(() => {
+    void fetchAdSets()
+  }, [fetchAdSets])
 
   return (
     <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
@@ -955,13 +996,24 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
         convexProviderId={convexProviderId}
         fetchAds={handleRefreshAll}
         firstAdSetId={firstAdSetId}
+        isMeta={isMeta}
         isPreviewMode={isPreviewMode}
         loading={loading}
+        onCreateAdSet={() => setAdSetDialogOpen(true)}
         setViewMode={setViewMode}
         summaryStats={summaryStats}
         viewMode={viewMode}
         workspaceId={workspaceId}
       />
+      {isMeta ? (
+        <CreateMetaAdSetDialog
+          open={adSetDialogOpen}
+          onOpenChange={setAdSetDialogOpen}
+          campaignId={campaignId}
+          campaignObjective={campaignObjective}
+          onCreated={handleAdSetCreated}
+        />
+      ) : null}
 
       <CardContent className="space-y-4 pt-6">
         {loading && !hasLoaded ? (

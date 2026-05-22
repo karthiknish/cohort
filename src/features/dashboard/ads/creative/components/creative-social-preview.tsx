@@ -27,6 +27,7 @@ import {
   Play,
   Pause,
   ThumbsUp,
+  Maximize2,
 } from 'lucide-react'
 
 import type { AdMetricsSummary } from '@/lib/ad-algorithms'
@@ -38,6 +39,12 @@ import { isDirectVideoUrl, formatCTALabel } from './helpers'
 
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/shared/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 
 const crispEdgesStyle: React.CSSProperties = { imageRendering: 'crisp-edges' }
@@ -152,6 +159,7 @@ export function CreativeSocialPreview(props: {
   } = props
 
   const [imageLoadFailed, setImageLoadFailed] = useState(false)
+  const [imageLightboxOpen, setImageLightboxOpen] = useState(false)
   const [profileImageError, setProfileImageError] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<'feed' | 'reel'>('feed')
   const [isPlaying, setIsPlaying] = useState(false)
@@ -163,6 +171,7 @@ export function CreativeSocialPreview(props: {
   const handlePause = useCallback(() => setIsPlaying(false), [])
   const handleEnded = useCallback(() => setIsPlaying(false), [])
   const handleImageLoadFailed = useCallback(() => setImageLoadFailed(true), [])
+  const handleOpenImageLightbox = useCallback(() => setImageLightboxOpen(true), [])
   const handleProfileImageError = useCallback(() => setProfileImageError(true), [])
   const handleSetFeed = useCallback(() => setAspectRatio('feed'), [])
   const handleSetReel = useCallback(() => setAspectRatio('reel'), [])
@@ -272,26 +281,68 @@ export function CreativeSocialPreview(props: {
 
     if (creative.imageUrl) {
       return (
-        <div className={cn("relative bg-muted/10 group overflow-hidden", mediaAspectClass)}>
-          {imageLoadFailed ? (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-              <ImageIcon className="h-8 w-8 mb-2 opacity-20" />
-              <p className="text-[10px] uppercase font-bold tracking-tighter">Asset Unavailable</p>
-            </div>
-          ) : (
-            <NextImage
-              src={creative.imageUrl}
-              alt={displayName}
-              fill
-              unoptimized
-              sizes="(max-width: 768px) 100vw, 640px"
-              className="object-cover transition-transform duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-110"
-              onError={handleImageLoadFailed}
-              style={crispEdgesStyle}
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none" />
-        </div>
+        <>
+          <div className={cn('relative overflow-hidden bg-muted/10 group', mediaAspectClass)}>
+            {imageLoadFailed ? (
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                <ImageIcon className="mb-2 h-8 w-8 opacity-20" aria-hidden />
+                <p className="text-[10px] font-bold uppercase tracking-tighter">Asset Unavailable</p>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="relative block h-full w-full cursor-zoom-in"
+                onClick={handleOpenImageLightbox}
+                aria-label={`View full image for ${displayName}`}
+              >
+                <NextImage
+                  src={creative.imageUrl}
+                  alt={displayName}
+                  fill
+                  unoptimized
+                  sizes="(max-width: 768px) 100vw, 640px"
+                  className="object-cover transition-transform duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-110"
+                  onError={handleImageLoadFailed}
+                  style={crispEdgesStyle}
+                />
+              </button>
+            )}
+            {!imageLoadFailed ? (
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-foreground/20 to-transparent opacity-0 transition-opacity duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] group-hover:opacity-100 motion-reduce:opacity-0" />
+            ) : null}
+            {!imageLoadFailed ? (
+              <div className="absolute bottom-3 right-3 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="pointer-events-auto h-8 gap-1.5 bg-background/95 shadow-md"
+                  onClick={handleOpenImageLightbox}
+                >
+                  <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+                  Expand
+                </Button>
+              </div>
+            ) : null}
+          </div>
+          <Dialog open={imageLightboxOpen} onOpenChange={setImageLightboxOpen}>
+            <DialogContent className="max-w-4xl gap-0 overflow-hidden border-border/60 p-0">
+              <DialogTitle className="sr-only">{displayName}</DialogTitle>
+              <DialogDescription className="sr-only">Full-size creative preview</DialogDescription>
+              <div className="relative max-h-[85vh] min-h-[240px] w-full bg-foreground/95">
+                <NextImage
+                  src={creative.imageUrl}
+                  alt={displayName}
+                  width={1200}
+                  height={1200}
+                  unoptimized
+                  className="mx-auto h-auto max-h-[85vh] w-full object-contain"
+                  onError={handleImageLoadFailed}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+        </>
       )
     }
 

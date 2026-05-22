@@ -15,6 +15,7 @@ import {
 import { toast } from '@/shared/ui/use-toast'
 
 import type { AggregatedTargetingData } from './audience-control-types'
+import { MetaTargetingSearchCombobox } from '@/features/dashboard/ads/components/meta-targeting-search-combobox'
 import { TargetingCollapsiblePanel } from './targeting-collapsible-panel'
 
 type AudienceEditorSectionProps = {
@@ -23,6 +24,13 @@ type AudienceEditorSectionProps = {
   toggleSection: (section: string) => void
   editingSection: string | null
   onToggleEditing: (section: string) => void
+  canEditTargeting?: boolean
+  workspaceId?: string | null
+  clientId?: string | null
+  onAddInterest?: (interest: { id: string; name: string }) => void
+  onRemoveInterest?: (interestName: string) => void
+  onSaveTargeting?: () => void | Promise<void>
+  savingTargeting?: boolean
 }
 
 export function AudienceEditorSection({
@@ -31,6 +39,13 @@ export function AudienceEditorSection({
   toggleSection,
   editingSection,
   onToggleEditing,
+  canEditTargeting,
+  workspaceId,
+  clientId,
+  onAddInterest,
+  onRemoveInterest,
+  onSaveTargeting,
+  savingTargeting,
 }: AudienceEditorSectionProps) {
   const [newInterest, setNewInterest] = useState('')
   const isEditing = editingSection === 'interests'
@@ -53,27 +68,35 @@ export function AudienceEditorSection({
 
   const handleAddInterest = useCallback(() => {
     if (!newInterest.trim()) return
-
+    if (onAddInterest) {
+      onAddInterest({ id: newInterest.trim(), name: newInterest.trim() })
+      setNewInterest('')
+      return
+    }
     toast({
       title: 'Interest would be added',
-      description: `"${newInterest}" — requires API integration`,
+      description: `"${newInterest}" — editing is only available for Meta ad sets.`,
     })
     setNewInterest('')
-  }, [newInterest])
+  }, [newInterest, onAddInterest])
 
   const handleRemoveInterest = useCallback((interestName: string) => {
+    if (onRemoveInterest) {
+      onRemoveInterest(interestName)
+      return
+    }
     toast({
       title: 'Interest would be removed',
       description: `"${interestName}" removal requires API integration`,
     })
-  }, [])
+  }, [onRemoveInterest])
 
   const editButton = (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant={isEditing ? 'secondary' : 'ghost'}
+            variant={isEditing ? 'default' : 'ghost'}
             size="icon"
             className="h-8 w-8"
             onClick={handleEditInterests}
@@ -100,18 +123,32 @@ export function AudienceEditorSection({
     >
       <div className="space-y-3">
         {isEditing ? (
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add interest…"
-              value={newInterest}
-              onChange={handleNewInterestChange}
-              className="h-9 flex-1 text-sm"
+          canEditTargeting && workspaceId ? (
+            <MetaTargetingSearchCombobox
+              workspaceId={workspaceId}
+              clientId={clientId}
+              mode="interests"
+              disabled={savingTargeting}
+              onSelect={(item) => {
+                if (onAddInterest) {
+                  onAddInterest({ id: item.id, name: item.name })
+                }
+              }}
             />
-            <Button size="sm" className="h-9 shrink-0 px-3" onClick={handleAddInterest}>
-              <Plus className="h-4 w-4" aria-hidden />
-              <span className="sr-only">Add interest</span>
-            </Button>
-          </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add interest (ID or name)…"
+                value={newInterest}
+                onChange={handleNewInterestChange}
+                className="h-9 flex-1 text-sm"
+              />
+              <Button size="sm" className="h-9 shrink-0 px-3" onClick={handleAddInterest}>
+                <Plus className="h-4 w-4" aria-hidden />
+                <span className="sr-only">Add interest</span>
+              </Button>
+            </div>
+          )
         ) : null}
 
         {aggregatedData.interests.length > 0 ? (
@@ -125,6 +162,24 @@ export function AudienceEditorSection({
             No interests configured.{isEditing ? ' Add one above.' : ''}
           </p>
         )}
+
+        {isEditing && onSaveTargeting ? (
+          <div className="flex flex-col gap-2 border-t border-border/60 pt-3">
+            {canEditTargeting ? (
+              <p className="text-xs text-muted-foreground">
+                Search Meta interests above, then save to the selected ad set.
+              </p>
+            ) : null}
+            <Button
+              size="sm"
+              className="w-full sm:w-auto"
+              disabled={savingTargeting}
+              onClick={() => void onSaveTargeting()}
+            >
+              {savingTargeting ? 'Saving…' : 'Save to ad set'}
+            </Button>
+          </div>
+        ) : null}
       </div>
     </TargetingCollapsiblePanel>
   )
