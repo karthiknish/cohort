@@ -3,7 +3,7 @@
 import { useAction, useConvex, useMutation } from 'convex/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { readFileAsBase64 } from '@/lib/agent-attachments'
+import { readFileAsBase64, getPdfUploadSizeError } from '@/lib/agent-attachments'
 import { asErrorMessage } from '@/lib/convex-errors'
 import { agentApi, filesApi, tasksDocumentImportApi } from '@/lib/convex-api'
 import { notifyFailure, notifySuccess } from '@/lib/notifications'
@@ -113,6 +113,10 @@ export function useTasksDocumentImport({
   const extractPdfOnServer = useCallback(
     async (file: File) => {
       if (!workspaceId || isPreviewModeEnabled()) return null
+      const sizeError = getPdfUploadSizeError(file)
+      if (sizeError) {
+        return { extractionStatus: 'failed' as const, errorMessage: sizeError }
+      }
       try {
         const dataBase64 = await readFileAsBase64(file)
         return await extractPdfTextAction({

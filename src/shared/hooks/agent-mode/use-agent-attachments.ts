@@ -7,6 +7,7 @@ import { agentApi } from '@/lib/convex-api'
 import {
   buildAgentAttachmentContext,
   createPendingAttachmentPlaceholder,
+  getPdfUploadSizeError,
   readFileAsBase64,
   type AgentAttachmentContext,
   type ServerPdfExtractionResult,
@@ -22,6 +23,10 @@ export function useAgentAttachments(workspaceId: string | null) {
   const extractPdfOnServer = useCallback(
     async (file: File): Promise<ServerPdfExtractionResult | null> => {
       if (!workspaceId || isPreviewModeEnabled()) return null
+      const sizeError = getPdfUploadSizeError(file)
+      if (sizeError) {
+        return { extractionStatus: 'failed', errorMessage: sizeError }
+      }
       try {
         const dataBase64 = await readFileAsBase64(file)
         const result = (await extractPdfTextAction({

@@ -3,6 +3,9 @@
 const MAX_ATTACHMENT_TEXT_LENGTH = 12000
 const MAX_ATTACHMENT_EXCERPT_LENGTH = 1800
 
+/** Matches convex/agentAttachments.ts — Convex action args cap base64 PDF uploads. */
+export const MAX_PDF_UPLOAD_BYTES = 750 * 1024
+
 const TEXT_MIME_TYPES = new Set([
   'text/plain',
   'text/csv',
@@ -274,6 +277,14 @@ export type ServerPdfExtractionResult = {
   extractionStatus: 'ready' | 'limited' | 'failed'
   extractedText?: string
   errorMessage?: string
+}
+
+export function getPdfUploadSizeError(file: File): string | null {
+  const extension = getFileExtension(file.name)
+  const mimeType = file.type || 'application/octet-stream'
+  const isPdf = extension === 'pdf' || mimeType === 'application/pdf'
+  if (!isPdf || file.size <= MAX_PDF_UPLOAD_BYTES) return null
+  return 'PDF is too large for import. Try a file under 750 KB or save as .docx.'
 }
 
 export async function buildAgentAttachmentContext(

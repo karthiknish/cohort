@@ -151,6 +151,7 @@ import type * as socialMetrics from "../socialMetrics.js";
 import type * as socialSyncWorkerActions from "../socialSyncWorkerActions.js";
 import type * as taskComments from "../taskComments.js";
 import type * as taskDocumentImport from "../taskDocumentImport.js";
+import type * as taskDocumentImportParsing from "../taskDocumentImportParsing.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 import type * as workforce from "../workforce.js";
@@ -305,6 +306,7 @@ declare const fullApi: ApiFromModules<{
   socialSyncWorkerActions: typeof socialSyncWorkerActions;
   taskComments: typeof taskComments;
   taskDocumentImport: typeof taskDocumentImport;
+  taskDocumentImportParsing: typeof taskDocumentImportParsing;
   tasks: typeof tasks;
   users: typeof users;
   workforce: typeof workforce;
