@@ -1,19 +1,13 @@
-import { ConvexHttpClient } from 'convex/browser'
+import type { FunctionReference } from 'convex/server'
 
-import { api } from '/_generated/api'
+import { getSystemConvexClient } from '@/lib/convex-system-client'
+
+import { internal } from '/_generated/api'
+
+type MutationReference = FunctionReference<'mutation'>
 
 const ALERT_WEBHOOK_URL = process.env.SCHEDULER_ALERT_WEBHOOK_URL
 const DEFAULT_FAILURE_THRESHOLD = Number(process.env.SCHEDULER_ALERT_FAILURE_THRESHOLD ?? '3')
-
-// Lazy-init Convex client
-let _convexClient: ConvexHttpClient | null = null
-function getConvexClient(): ConvexHttpClient | null {
-  if (_convexClient) return _convexClient
-  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
-  if (!url) return null
-  _convexClient = new ConvexHttpClient(url)
-  return _convexClient
-}
 
 export type SchedulerEventSource = 'worker' | 'cron'
 export type SchedulerEventSeverity = 'info' | 'warning' | 'critical'
@@ -179,9 +173,9 @@ export async function recordSchedulerEvent(input: SchedulerEventInput): Promise<
   }
 
   try {
-    const convex = getConvexClient()
+    const convex = getSystemConvexClient()
     if (convex) {
-      await convex.mutation(api.schedulerEvents.insert, payload)
+      await convex.mutation(internal.schedulerEvents.insert as unknown as MutationReference, payload)
     }
   } catch (error) {
     console.error('[scheduler-monitor] failed to persist event', error)

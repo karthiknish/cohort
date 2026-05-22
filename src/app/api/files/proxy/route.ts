@@ -25,7 +25,7 @@ const querySchema = z.object({
 })
 
 export const HEAD = createApiHandler({
-  auth: 'none',
+  auth: 'required',
   querySchema
 }, async (req, { query }) => {
   const { url } = query
@@ -66,7 +66,7 @@ export const HEAD = createApiHandler({
 })
 
 export const GET = createApiHandler({
-  auth: 'none',
+  auth: 'required',
   querySchema
 }, async (req, { query }) => {
   const { url } = query

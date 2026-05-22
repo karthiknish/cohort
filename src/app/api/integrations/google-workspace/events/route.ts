@@ -391,6 +391,10 @@ export const POST = createApiHandler(
     const configuredSecret = process.env.GOOGLE_WORKSPACE_EVENTS_SECRET || process.env.EXTERNAL_WEBHOOK_SECRET
     const providedSecret = req.headers.get('x-webhook-secret')
 
+    if (process.env.NODE_ENV === 'production' && !configuredSecret) {
+      throw new UnauthorizedError('Webhook secret is not configured')
+    }
+
     if (configuredSecret && providedSecret !== configuredSecret) {
       throw new UnauthorizedError('Invalid webhook signature')
     }

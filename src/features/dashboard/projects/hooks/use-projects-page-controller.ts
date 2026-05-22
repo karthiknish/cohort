@@ -14,6 +14,7 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
 import { projectMilestonesApi, projectsApi, tasksApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import { buildProjectTasksRoute } from '@/lib/project-routes'
 import { getPreviewProjectMilestones, getPreviewProjects } from '@/lib/preview-data'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
@@ -162,6 +163,29 @@ export function useProjectsPageController() {
           projectIds: projects.map((project) => project.id),
         }
   ) as Record<string, unknown[]> | undefined
+
+  const projectsQueryError = useConvexQueryError({
+    data: projectsRealtime,
+    skipped: isPreviewMode || !workspaceId || !user?.id,
+    fallbackMessage: 'Unable to load projects.',
+  })
+  const tasksQueryError = useConvexQueryError({
+    data: tasksRealtime,
+    skipped: isPreviewMode || !workspaceId || !user?.id,
+    fallbackMessage: 'Unable to load project tasks.',
+  })
+  const milestonesQueryError = useConvexQueryError({
+    data: milestonesRealtime,
+    skipped: isPreviewMode || viewMode !== 'gantt' || !workspaceId || !user?.id,
+    fallbackMessage: 'Unable to load milestones.',
+  })
+  const convexProjectsListError = mergeQueryErrors(projectsQueryError, tasksQueryError, milestonesQueryError)
+
+  useEffect(() => {
+    if (convexProjectsListError && !isPreviewMode && workspaceId && user?.id) {
+      setError(convexProjectsListError)
+    }
+  }, [convexProjectsListError, isPreviewMode, user?.id, workspaceId])
 
   const loadProjects = useCallback(async (): Promise<number> => {
     if (isPreviewMode) {

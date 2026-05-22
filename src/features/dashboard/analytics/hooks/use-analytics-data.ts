@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { analyticsInsightsApi, analyticsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
 import { buildProviderIdsKey, normalizeProviderIds } from '../lib/insight-utils'
 import type { AlgorithmicInsight, MetricRecord, ProviderInsight } from './types'
@@ -98,6 +99,13 @@ export function useAnalyticsData(
         }
       : 'skip'
   )
+
+  const gaMetricsQueryError = useConvexQueryError({
+    data: gaMetricsRealtime,
+    skipped: isPreviewMode || !gaOnly || !workspaceId || !canQueryConvex,
+    loading: isConvexLoading,
+    fallbackMessage: 'Unable to load analytics metrics.',
+  })
 
   const generateInsights = useAction(analyticsInsightsApi.generateInsights)
 
@@ -201,6 +209,7 @@ export function useAnalyticsData(
   }
 
   const metricsLoading = gaMetricsRealtime === undefined && !isPreviewMode && !!workspaceId && canQueryConvex && gaOnly
+  const metricsError = gaMetricsQueryError ? new Error(gaMetricsQueryError) : undefined
 
   return {
     metricsData: mappedMetrics,
@@ -208,7 +217,7 @@ export function useAnalyticsData(
     metricsNextCursor: null,
     metricsLoadingMore: false,
     loadMoreMetrics,
-    metricsError: undefined,
+    metricsError,
     metricsLoading,
     metricsRefreshing: false,
     mutateMetrics: async () => undefined,

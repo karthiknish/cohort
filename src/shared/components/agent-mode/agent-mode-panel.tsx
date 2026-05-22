@@ -17,12 +17,7 @@ import {
   type AgentContextIds,
   type AgentSuggestion,
 } from '@/lib/agent-context'
-import {
-  formatAgentMentionMarkup,
-  mergeAgentMentions,
-  parseAgentMentionsFromText,
-  type AgentMentionEntity,
-} from '@/lib/agent-mentions'
+import type { AgentMentionEntity } from '@/lib/agent-mentions'
 import { AGENT_ATTACHMENT_ACCEPT, type AgentAttachmentContext } from '@/lib/agent-attachments'
 import { notifySuccess } from '@/lib/notifications'
 import {
@@ -44,7 +39,7 @@ import {
   AgentModePanelShell,
   type AgentComposerSectionProps,
 } from './agent-mode-panel-sections'
-import { type MentionDropdownHandle, type MentionItem } from './mention-dropdown'
+import { useAgentPanelComposer } from './use-agent-panel-composer'
 
 const noop = () => {}
 
@@ -173,15 +168,9 @@ export function AgentModePanel({
   const [panelLayout, setPanelLayout] = useState<AgentPanelLayout>(() =>
     typeof window === 'undefined' ? 'fullscreen' : readAgentPanelLayout(),
   )
-  const [inputValue, setInputValue] = useState('')
-  const [composerMentions, setComposerMentions] = useState<AgentMentionEntity[]>([])
-  const [showMentions, setShowMentions] = useState(false)
-  const [mentionQuery, setMentionQuery] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
-  const inputRef = useRef<HTMLTextAreaElement>(null)
-  const mentionDropdownRef = useRef<MentionDropdownHandle>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const localScrollRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = scrollContainerRefProp ?? localScrollRef
@@ -195,29 +184,26 @@ export function AgentModePanel({
     () => getAgentSuggestions(pathname, { role: user?.role }),
     [pathname, user?.role],
   )
-  const handleVoiceTranscript = useCallback((text: string) => {
-    if (text.trim()) {
-      onSendMessage(text)
-      setInputValue('')
-    }
-  }, [onSendMessage])
-
-  const handleVoiceInterim = useCallback((text: string) => {
-    setInputValue(text)
-  }, [])
-
-  // Focus input when panel opens
-  useEffect(() => {
-    if (!isOpen || !inputRef.current) {
-      return
-    }
-
-    const focusTimeoutId = window.setTimeout(() => inputRef.current?.focus(), 100)
-
-    return () => {
-      window.clearTimeout(focusTimeoutId)
-    }
-  }, [isOpen])
+  const {
+    inputValue,
+    setInputValue,
+    showMentions,
+    mentionQuery,
+    inputRef,
+    mentionDropdownRef,
+    handleVoiceTranscript,
+    handleVoiceInterim,
+    handleSubmit,
+    handleInputChange,
+    handleMentionSelect,
+    clearComposer,
+    closeMentions,
+  } = useAgentPanelComposer({
+    isOpen,
+    isProcessing,
+    isExtractingAttachments,
+    onSendMessage,
+  })
 
   const handleRetryUserMessage = useCallback(
     (clientId: string, content: string) => {
@@ -225,74 +211,6 @@ export function AgentModePanel({
     },
     [onRetryUserMessage],
   )
-
-  const handleSubmit = useCallback(() => {
-    if (inputValue.trim() && !isProcessing && !isExtractingAttachments) {
-      const mentions = mergeAgentMentions(parseAgentMentionsFromText(inputValue), composerMentions)
-      onSendMessage(inputValue.trim(), { mentions })
-      setInputValue('')
-      setComposerMentions([])
-      setShowMentions(false)
-    }
-  }, [composerMentions, inputValue, isProcessing, isExtractingAttachments, onSendMessage])
-
-  // Detect @ character and extract query
-  const handleInputChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value
-    setInputValue(value)
-
-    // Check for @ mention trigger
-    const cursorPos = e.target.selectionStart ?? value.length
-    const textBeforeCursor = value.slice(0, cursorPos)
-    const atIndex = textBeforeCursor.lastIndexOf('@')
-
-    if (atIndex !== -1) {
-      // Check if @ is at start or preceded by space
-      const charBefore = atIndex > 0 ? textBeforeCursor[atIndex - 1] : ' '
-      if (charBefore === ' ' || atIndex === 0) {
-        const query = textBeforeCursor.slice(atIndex + 1)
-        // Only show dropdown if query doesn't contain space (still typing mention)
-        if (!query.includes(' ')) {
-          setMentionQuery(query)
-          setShowMentions(true)
-          return
-        }
-      }
-    }
-    setShowMentions(false)
-    setComposerMentions((prev) => mergeAgentMentions(parseAgentMentionsFromText(value), prev))
-  }, [])
-
-  // Handle mention selection
-  const handleMentionSelect = useCallback((item: MentionItem) => {
-    // Find the @ position and replace with formatted mention
-    const cursorPos = inputRef.current?.selectionStart ?? inputValue.length
-    const textBeforeCursor = inputValue.slice(0, cursorPos)
-    const atIndex = textBeforeCursor.lastIndexOf('@')
-
-    if (atIndex !== -1) {
-      const beforeMention = inputValue.slice(0, atIndex)
-      const afterMention = inputValue.slice(cursorPos)
-      const entity: AgentMentionEntity = {
-        id: item.id,
-        name: item.name,
-        type: item.type,
-        subtitle: item.subtitle,
-      }
-      const insertedMention = `${formatAgentMentionMarkup(entity)} `
-      const newValue = `${beforeMention}${insertedMention}${afterMention}`
-      const nextCursorPos = beforeMention.length + insertedMention.length
-      setInputValue(newValue)
-      setComposerMentions((prev) => mergeAgentMentions([entity], prev))
-
-      requestAnimationFrame(() => {
-        inputRef.current?.focus()
-        inputRef.current?.setSelectionRange(nextCursorPos, nextCursorPos)
-      })
-    }
-
-    setShowMentions(false)
-  }, [inputValue])
 
   const handleSetPanelLayout = useCallback((layout: AgentPanelLayout) => {
     setPanelLayout(layout)
@@ -373,9 +291,7 @@ export function AgentModePanel({
     onSendMessage(suggestion.prompt)
   }, [onSendMessage, pathname])
 
-  const handleCloseMentions = useCallback(() => {
-    setShowMentions(false)
-  }, [])
+  const handleCloseMentions = closeMentions
 
   const handleOpenFilePicker = useCallback(() => {
     fileInputRef.current?.click()
@@ -417,14 +333,12 @@ export function AgentModePanel({
 
   const handleStartNewChat = useCallback(() => {
     onClear()
-    setInputValue('')
-    setShowMentions(false)
-    setMentionQuery('')
+    clearComposer()
     closeHistoryView()
     setEditingConversationId(null)
     setEditingTitle('')
     setTimeout(() => inputRef.current?.focus(), 0)
-  }, [closeHistoryView, onClear])
+  }, [clearComposer, closeHistoryView, inputRef, onClear])
 
   const handleToggleHistory = useCallback(() => {
     if (showHistory) {

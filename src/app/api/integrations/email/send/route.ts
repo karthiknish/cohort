@@ -6,7 +6,8 @@
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
-import { ServiceUnavailableError } from '@/lib/api-errors'
+import { ForbiddenError, ServiceUnavailableError } from '@/lib/api-errors'
+import { isCollaborationEmailEnabledForRecipient } from '@/lib/notifications/collaboration-email-server'
 
 const sendMessageSchema = z.object({
   messageType: z.enum(['task', 'collaboration', 'custom']).default('custom'),
@@ -30,8 +31,24 @@ export const POST = createApiHandler(
     rateLimit: 'sensitive',
     skipIdempotency: true,
   },
-  async (_request, { body }) => {
+  async (_request, { auth, body }) => {
     const validated = body
+
+    if (validated.messageType === 'collaboration') {
+      const recipientEmail = auth.email?.trim()
+      if (!recipientEmail) {
+        throw new ForbiddenError('Collaboration email requires an account email')
+      }
+
+      const enabled = await isCollaborationEmailEnabledForRecipient(recipientEmail)
+      if (!enabled) {
+        return {
+          success: true,
+          data: { sent: false, skipped: 'notification_preferences' as const },
+        }
+      }
+    }
+
     const emailWebhookUrl = process.env.EMAIL_WEBHOOK_URL
 
     if (!emailWebhookUrl) {

@@ -81,6 +81,13 @@ describe('isWithinQuietHours', () => {
   })
 })
 
+describe('kindToCategory', () => {
+  it('maps meeting notification kinds to meetings category', () => {
+    expect(kindToCategory('meeting.reminder')).toBe('meetings')
+    expect(kindToCategory('meeting.started')).toBe('meetings')
+  })
+})
+
 describe('applyPreferencesPatch', () => {
   it('merges partial category updates', () => {
     const next = applyPreferencesPatch(migrateLegacyPreferences({}), {

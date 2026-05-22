@@ -34,7 +34,7 @@ describe('CampaignAdsSection composition', () => {
       <CampaignAdsSection providerId="meta" campaignId="campaign-1" clientId="client-1" isPreviewMode />,
     )
 
-    expect(markup).toContain('Ad Creatives')
+    expect(markup).toContain('Ad creatives')
     expect(markup).toContain('Ads list is not available in preview mode.')
     expect(markup).toContain('Create creative')
   })

@@ -405,14 +405,9 @@ export const bulkUpsert = zAdminMutation({
         agencyId: (user.agencyId ?? null) as string | null,
         phoneNumber: (user.phoneNumber ?? null) as string | null,
         photoUrl: (user.photoUrl ?? null) as string | null,
-        notificationPreferences: (user.notificationPreferences ?? undefined) as
-          | {
-              emailAdAlerts: boolean
-              emailPerformanceDigest: boolean
-              emailTaskActivity: boolean
-              emailCollaboration: boolean
-            }
-          | undefined,
+        notificationPreferences: user.notificationPreferences
+          ? normalizePreferences(user.notificationPreferences as StoredNotificationPreferences)
+          : undefined,
         regionalPreferences: (user.regionalPreferences ?? undefined) as
           | { currency?: string | null; timezone?: string | null; locale?: string | null }
           | undefined,

@@ -30,6 +30,7 @@ import { ValidationError, NotFoundError, ApiError } from '@/lib/api-errors'
 import { processWorkspaceAlerts } from '@/lib/alerts'
 import { createConvexAdminClient } from '@/lib/convex-admin'
 import { logger } from '@/lib/logger'
+import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 
 async function getIntegrationForJob(options: { userId: string; providerId: string; clientId?: string | null }) {
   if (options.providerId === 'google-analytics') {
@@ -341,9 +342,11 @@ export const POST = createApiHandler(
             }
 
             if (recipientEmail) {
+              const workspaceId = await resolveWorkspaceIdForUser(targetUserId)
               await processWorkspaceAlerts({
                 userId: targetUserId,
-                workspaceId: clientId,
+                workspaceId,
+                clientId,
                 recipientEmail,
               })
             }

@@ -1,4 +1,4 @@
-import { query } from './_generated/server'
+import { internalQuery } from './_generated/server'
 import { workspaceQuery } from './functions'
 import { v } from 'convex/values'
 import { resolveMetricCurrency, assessComparability } from '@/domain/ads/money'
@@ -191,10 +191,10 @@ export const listMetrics = workspaceQuery({
  * Fetches recent metrics for alert evaluation (no auth - server-side use).
  * Filters by workspaceId and clientId, returns in chronological order.
  */
-export const listRecentForAlerts = query({
+export const listRecentForAlerts = internalQuery({
   args: {
     workspaceId: v.string(),
-    clientId: v.string(),
+    clientId: v.union(v.string(), v.null()),
     limit: v.optional(v.number()),
   },
   returns: v.array(derivedMetricValidator),
@@ -214,7 +214,8 @@ export const listRecentForAlerts = query({
       .order('desc')
       .take(2000)
 
-    const filtered = recent.filter((row) => row.clientId === args.clientId)
+    const filterClientId = args.clientId ?? null
+    const filtered = recent.filter((row) => (row.clientId ?? null) === filterClientId)
 
     // Sort by date descending (newest first) for limiting
     filtered.sort((a, b) => {

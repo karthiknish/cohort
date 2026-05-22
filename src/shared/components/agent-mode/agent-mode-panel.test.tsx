@@ -78,6 +78,7 @@ vi.mock('./mention-dropdown', () => ({
 
 vi.mock('@/shared/ui/motion', () => ({
   domAnimation: {},
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
   LazyMotion: ({ children }: { children: React.ReactNode }) => <div data-lazy-motion="">{children}</div>,
   m: {
     div: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

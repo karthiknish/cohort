@@ -108,6 +108,7 @@ import type * as geminiRateLimit from "../geminiRateLimit.js";
 import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as httpActions from "../httpActions.js";
+import type * as lib_webhookAuth from "../lib/webhookAuth.js";
 import type * as meetingIntegrations from "../meetingIntegrations.js";
 import type * as meetings from "../meetings.js";
 import type * as notificationTargeting from "../notificationTargeting.js";
@@ -255,6 +256,7 @@ declare const fullApi: ApiFromModules<{
   health: typeof health;
   http: typeof http;
   httpActions: typeof httpActions;
+  "lib/webhookAuth": typeof lib_webhookAuth;
   meetingIntegrations: typeof meetingIntegrations;
   meetings: typeof meetings;
   notificationTargeting: typeof notificationTargeting;

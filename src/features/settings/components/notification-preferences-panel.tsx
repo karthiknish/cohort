@@ -16,6 +16,8 @@ import {
 import { settingsApi } from '@/lib/convex-api'
 import { getPreviewSettingsNotificationPreferences } from '@/lib/preview-data'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
+import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { FormField } from '@/shared/ui/form-field'
@@ -33,6 +35,11 @@ export function NotificationPreferencesPanel() {
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
   const serverPrefs = useQuery(settingsApi.getMyNotificationPreferences)
+  const prefsQueryError = useConvexQueryError({
+    data: serverPrefs,
+    skipped: isPreviewMode,
+    fallbackMessage: 'Unable to load notification preferences.',
+  })
   const updatePrefs = useMutation(settingsApi.updateMyNotificationPreferences)
 
   const [previewPrefs, setPreviewPrefs] = useState(() => getPreviewSettingsNotificationPreferences())
@@ -40,6 +47,7 @@ export function NotificationPreferencesPanel() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const displayError = mergeQueryErrors(error, prefsQueryError)
   const isMountedRef = useRef(true)
 
   useEffect(() => {
@@ -285,10 +293,11 @@ export function NotificationPreferencesPanel() {
             onChannelChange={handleChannelChange}
           />
 
-          {error ? (
-            <p className="text-sm font-medium text-destructive" role="alert">
-              {error}
-            </p>
+          {displayError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Preferences unavailable</AlertTitle>
+              <AlertDescription>{displayError}</AlertDescription>
+            </Alert>
           ) : null}
         </CardContent>
       </Card>

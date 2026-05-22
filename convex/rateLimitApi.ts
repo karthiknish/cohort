@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { rateLimiter } from "./rateLimit";
 
@@ -18,7 +18,7 @@ function isPresetLimitName(name: string): name is PresetLimitName {
   return (PRESET_LIMIT_NAMES as readonly string[]).includes(name)
 }
 
-export const limit = mutation({
+export const limit = internalMutation({
   args: {
     name: v.string(),
     key: v.string(),

@@ -7,20 +7,17 @@ import { useAction } from 'convex/react'
 import { agentApi } from '@/lib/convex-api'
 import type { AgentContextIds } from '@/lib/agent-context'
 import {
-  hasUsableAttachmentContext,
   serializeAgentAttachmentsForStorage,
   toAgentRequestAttachmentContext,
   type AgentAttachmentContext,
 } from '@/lib/agent-attachments'
 import type { AgentError } from '@/lib/agent-errors'
 import { AgentValidationError, parseAgentError, ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
-import { readAgentPanelLayout, shouldKeepAgentOpenOnNavigate } from '@/lib/agent-panel-layout'
 import { getPreviewAgentModeResponse, isPreviewModeEnabled } from '@/lib/preview-data'
 import { notifyError, notifyFailure } from '@/lib/notifications'
 import {
   buildCompletedStepsFromResponse,
   buildProcessingSteps,
-  deriveAgentStatusFromResponse,
   filterMessagesForAgentContext,
   operationProcessingLabel,
   type AgentExecutionStep,
@@ -35,6 +32,7 @@ import {
   type AgentMentionEntity,
 } from '@/lib/agent-mentions'
 
+import { applyAgentResponse as applyAgentResponseCore } from './agent-send-response'
 import { useAgentTaskUndo } from './use-agent-task-undo'
 import { generateId, PREVIEW_AGENT_CONVERSATION_ID, validateInput } from './stored-message-utils'
 import type { AgentMessage, ConnectionStatus } from './types'
@@ -160,78 +158,22 @@ export function useAgentSend({
 
   const applyAgentResponse = useCallback(
     (response: AgentSendResponse, trimmedText: string, sentAttachments: AgentAttachmentContext[]) => {
-      const derived = deriveAgentStatusFromResponse(response)
-      const steps = response.steps ?? buildCompletedStepsFromResponse(response)
-      const attachmentNames = sentAttachments.map((attachment) => attachment.name)
-      const usedContext =
-        attachmentNames.length > 0 ? { attachmentNames } : undefined
-
-      if (response.action === 'navigate' && response.route) {
-        addMessage(
-          'agent',
-          response.message || 'Navigating...',
-          response.route,
-          derived.status,
-          { ...derived, usedContext },
-          { persistedId: response.agentMessageId, steps },
-        )
-        setTimeout(() => {
-          router.push(response.route!)
-          if (!shouldKeepAgentOpenOnNavigate(readAgentPanelLayout())) {
-            setOpen(false)
-          }
-        }, 800)
-      } else if (response.action === 'execute' && response.executeResult) {
-        const executeRoute =
-          typeof response.route === 'string' && response.route.length > 0
-            ? response.route
-            : typeof response.executeResult.data?.route === 'string' && response.executeResult.data.route.length > 0
-              ? response.executeResult.data.route
-              : null
-
-        addMessage(
-          'agent',
-          response.message || 'Action completed',
-          executeRoute,
-          derived.status,
-          { ...derived, usedContext },
-          { persistedId: response.agentMessageId, steps },
-        )
-        if (response.executeResult.success) {
-          setPendingAttachments([])
-        }
-      } else {
-        addMessage(
-          'agent',
-          response.message || "I didn't quite understand that.",
-          response.route ?? null,
-          derived.status,
-          { ...derived, usedContext },
-          { persistedId: response.agentMessageId, steps },
-        )
-        if (!hasUsableAttachmentContext(sentAttachments)) {
-          setPendingAttachments([])
-        }
-      }
-
-      if (response.conversationId && !conversationId) {
-        setConversationId(response.conversationId)
-      }
-
-      if (response.userMessageId) {
-        upsertMessage({
-          id: response.userMessageId,
-          clientId: activeRequestRef.current ?? response.userMessageId,
-          type: 'user',
-          content: trimmedText,
-          timestamp: new Date(),
-          lifecycle: 'sent',
-        })
-      }
-
-      setLastFailedMessage(null)
+      applyAgentResponseCore({
+        response,
+        trimmedText,
+        sentAttachments,
+        conversationId,
+        activeRequestClientId: activeRequestRef.current,
+        addMessage,
+        upsertMessage,
+        setConversationId,
+        setPendingAttachments,
+        setLastFailedMessage,
+        router,
+        setOpen,
+      })
     },
-    [addMessage, conversationId, router, setConversationId, setOpen, setPendingAttachments, upsertMessage],
+    [addMessage, conversationId, router, setConversationId, setLastFailedMessage, setOpen, setPendingAttachments, upsertMessage],
   )
 
   const buildAgentRequestContext = useCallback(

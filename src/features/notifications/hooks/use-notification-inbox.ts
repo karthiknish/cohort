@@ -15,7 +15,7 @@ import { useToast } from '@/shared/ui/use-toast'
 import { groupNotificationsByDate } from '@/features/notifications/lib/group-notifications'
 import { useNotificationNavigation } from '@/features/notifications/hooks/use-notification-navigation'
 
-const PAGE_SIZE = 20
+import { NOTIFICATIONS_INBOX_PAGE_SIZE } from '@/lib/notifications/pagination'
 
 type NotificationsCursor = {
   createdAtMs: number
@@ -67,7 +67,10 @@ export function useNotificationInbox() {
 
       return (await convex.query(notificationsApi.list, {
         workspaceId,
-        pageSize: parsePageSize(PAGE_SIZE, { defaultValue: PAGE_SIZE, max: 100 }),
+        pageSize: parsePageSize(NOTIFICATIONS_INBOX_PAGE_SIZE, {
+          defaultValue: NOTIFICATIONS_INBOX_PAGE_SIZE,
+          max: 100,
+        }),
         role: user?.role ?? undefined,
         clientId: user?.role === 'client' ? selectedClientId ?? undefined : undefined,
         afterCreatedAtMs: pageParam?.createdAtMs,

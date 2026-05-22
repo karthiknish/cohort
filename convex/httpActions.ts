@@ -1,5 +1,6 @@
 import { httpAction } from './_generated/server'
 import { internal } from '/_generated/api'
+import { assertWebhookSecret } from './lib/webhookAuth'
 
 function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
@@ -20,12 +21,10 @@ export const adSyncNotification = httpAction(async (ctx, request) => {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
 
-  const secret = process.env.ADS_SYNC_WEBHOOK_SECRET
-  if (secret) {
-    const provided = getHeader(request, 'x-webhook-secret')
-    if (provided !== secret) {
-      return jsonResponse({ error: 'Unauthorized' }, 401)
-    }
+  try {
+    assertWebhookSecret('ADS_SYNC_WEBHOOK_SECRET', getHeader(request, 'x-webhook-secret'))
+  } catch {
+    return jsonResponse({ error: 'Unauthorized' }, 401)
   }
 
   let payload: Record<string, unknown> | null = null
@@ -74,12 +73,10 @@ export const externalWebhook = httpAction(async (_ctx, request) => {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
 
-  const secret = process.env.EXTERNAL_WEBHOOK_SECRET
-  if (secret) {
-    const provided = getHeader(request, 'x-webhook-secret')
-    if (provided !== secret) {
-      return jsonResponse({ error: 'Unauthorized' }, 401)
-    }
+  try {
+    assertWebhookSecret('EXTERNAL_WEBHOOK_SECRET', getHeader(request, 'x-webhook-secret'))
+  } catch {
+    return jsonResponse({ error: 'Unauthorized' }, 401)
   }
 
   // Generic endpoint: just acknowledge receipt.

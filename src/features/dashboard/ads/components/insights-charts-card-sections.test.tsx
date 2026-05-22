@@ -33,7 +33,7 @@ describe('insights charts card sections', () => {
     const connectedEmpty = renderToStaticMarkup(<InsightsChartsEmptyState hasConnections />)
 
     expect(loadingMarkup).toContain('skeleton-shimmer')
-    expect(emptyMarkup).toContain('Performance Insights')
+    expect(emptyMarkup).toContain('Performance insights')
     expect(emptyMarkup).toContain('Connect ad platforms first')
     expect(connectedEmpty).toContain('Waiting for synced metrics')
   })
@@ -61,7 +61,7 @@ describe('insights charts card sections', () => {
       </InsightsChartsTabs>,
     )
 
-    expect(headerMarkup).toContain('Visual analysis across 2 platforms')
+    expect(headerMarkup).toContain('Charts across 2 platforms')
     expect(headerMarkup).toContain('All platforms')
     expect(tabsMarkup).toContain('Funnel')
     expect(tabsMarkup).toContain('Funnel panel')

@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from 'convex/react'
+import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import dynamic from 'next/dynamic'
 import { usePathname, useRouter } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
@@ -229,6 +230,19 @@ function TasksPageContent({
         }
       : 'skip'
   ) as TaskParticipant[] | undefined
+
+  const workspaceMembersQueryError = useConvexQueryError({
+    data: workspaceMembers,
+    skipped: !user?.agencyId || isPreviewMode,
+    fallbackMessage: 'Unable to load workspace members.',
+  })
+  const platformUsersQueryError = useConvexQueryError({
+    data: platformUsers,
+    skipped: !user?.agencyId || isPreviewMode,
+    fallbackMessage: 'Unable to load platform users.',
+  })
+  const participantsQueryError = mergeQueryErrors(workspaceMembersQueryError, platformUsersQueryError)
+  const displayError = mergeQueryErrors(error, participantsQueryError)
 
   const taskParticipants = useMemo(() => {
     const platformAdmins = (platformUsers ?? []).filter((member) => member.role?.toLowerCase() === 'admin')
@@ -611,7 +625,7 @@ function TasksPageContent({
                   tasks={filters.sortedTasks}
                   loading={loading}
                   initialLoading={initialLoading}
-                  error={error}
+                  error={displayError}
                   pendingStatusUpdates={pendingStatusUpdates}
                   onEdit={form.handleEditOpen}
                   onDelete={form.handleDeleteClick}
@@ -636,7 +650,7 @@ function TasksPageContent({
                   viewMode={filters.viewMode}
                   loading={loading}
                   initialLoading={initialLoading}
-                  error={error}
+                  error={displayError}
                   pendingStatusUpdates={pendingStatusUpdates}
                   onEdit={form.handleEditOpen}
                   onDelete={form.handleDeleteClick}
@@ -660,7 +674,7 @@ function TasksPageContent({
               )}
               </div>
 
-              {!initialLoading && !error && (
+              {!initialLoading && !displayError && (
                 <TaskResultsCount
                   sortedCount={filters.sortedTasks.length}
                   totalCount={tasks.length}

@@ -1,7 +1,8 @@
-import { mutation } from './_generated/server'
+import { internalMutation } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
 import { adminQuery } from './functions'
+import { assertWebhookSecret, isDeployedConvexEnvironment } from './lib/webhookAuth'
 
 const providerFailureThresholdValidator = v.object({
   providerId: v.string(),
@@ -32,7 +33,7 @@ const schedulerEventValidator = v.object({
  * Called from trusted server routes (cron/worker) via ConvexHttpClient.
  * When env `SCHEDULER_EVENTS_SECRET` is set, `authSecret` must match (set same value in Convex + app server).
  */
-export const insert = mutation({
+export const insert = internalMutation({
   args: {
     /** Must match Convex env SCHEDULER_EVENTS_SECRET when that variable is set. */
     authSecret: v.optional(v.string()),
@@ -61,9 +62,13 @@ export const insert = mutation({
     id: v.id('schedulerEvents'),
   }),
   handler: async (ctx, args) => {
-    const expected = process.env.SCHEDULER_EVENTS_SECRET
-    if (typeof expected === 'string' && expected.length > 0 && args.authSecret !== expected) {
-      throw Errors.auth.unauthorized('Invalid scheduler event credentials')
+    if (isDeployedConvexEnvironment()) {
+      assertWebhookSecret('SCHEDULER_EVENTS_SECRET', args.authSecret ?? null)
+    } else {
+      const expected = process.env.SCHEDULER_EVENTS_SECRET
+      if (typeof expected === 'string' && expected.length > 0 && args.authSecret !== expected) {
+        throw Errors.auth.unauthorized('Invalid scheduler event credentials')
+      }
     }
 
     const id = await ctx.db.insert('schedulerEvents', {

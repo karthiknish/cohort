@@ -4,7 +4,7 @@ export const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview'
 
 export function resolveGeminiApiKey(): string {
   const processEnv = typeof process !== 'undefined' ? process.env : undefined
-  return (processEnv?.GEMINI_API_KEY || processEnv?.GOOGLE_API_KEY || processEnv?.NEXT_PUBLIC_GEMINI_API_KEY || '').trim()
+  return (processEnv?.GEMINI_API_KEY || processEnv?.GOOGLE_API_KEY || '').trim()
 }
 
 export function resolveGeminiModel(): string {

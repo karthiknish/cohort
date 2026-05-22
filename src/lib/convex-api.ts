@@ -175,7 +175,6 @@ export const adminNotificationsApi = {
 }
 
 export const schedulerEventsApi = {
-  insert: looseApi.schedulerEvents.insert,
   list: looseApi.schedulerEvents.list,
 }
 

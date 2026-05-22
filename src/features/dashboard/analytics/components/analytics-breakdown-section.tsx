@@ -107,8 +107,8 @@ function BreakdownCard({
   )
 }
 
-export function AnalyticsBreakdownSection({ breakdowns }: { breakdowns: AnalyticsBreakdownRow[] }) {
-  if (breakdowns.length === 0) return null
+export function AnalyticsBreakdownSection({ breakdowns }: { breakdowns?: AnalyticsBreakdownRow[] }) {
+  if (!breakdowns?.length) return null
 
   return (
     <section className="space-y-4">

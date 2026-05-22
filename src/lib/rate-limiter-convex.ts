@@ -1,21 +1,10 @@
 import { checkRateLimit, RATE_LIMITS } from './rate-limiter'
 import type { RateLimitConfig, RateLimitResult, RateLimitPreset } from './rate-limiter'
-import { ConvexHttpClient } from 'convex/browser'
-import { api } from '/_generated/api'
+import { internal } from '/_generated/api'
+import type { FunctionReference } from 'convex/server'
+import { getSystemConvexClient } from './convex-system-client'
 
-let convexClient: ConvexHttpClient | null = null
-
-function getConvexUrl(): string | null {
-  return process.env.NEXT_PUBLIC_CONVEX_URL ?? process.env.CONVEX_URL ?? null
-}
-
-function getClient(): ConvexHttpClient | null {
-  if (convexClient) return convexClient
-  const url = getConvexUrl()
-  if (!url) return null
-  convexClient = new ConvexHttpClient(url)
-  return convexClient
-}
+type MutationReference = FunctionReference<'mutation'>
 
 export async function checkConvexRateLimit(
   key: string,
@@ -23,7 +12,7 @@ export async function checkConvexRateLimit(
 ): Promise<RateLimitResult> {
   const config = typeof configOrPreset === 'string' ? RATE_LIMITS[configOrPreset] : configOrPreset
 
-  const client = getClient()
+  const client = getSystemConvexClient()
 
   // If Convex isn't configured on the server, fall back to in-memory.
   if (!client) {
@@ -33,7 +22,7 @@ export async function checkConvexRateLimit(
   try {
     const name = typeof configOrPreset === 'string' ? configOrPreset : `custom:${config.maxRequests}:${config.windowMs}`
 
-    const result = (await client.mutation(api.rateLimitApi.limit, {
+    const result = (await client.mutation(internal.rateLimitApi.limit as unknown as MutationReference, {
       name,
       key,
       config:

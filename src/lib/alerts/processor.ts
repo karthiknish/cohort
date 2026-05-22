@@ -57,13 +57,15 @@ const fetchCustomFormulas = cache(async (convex: ConvexHttpClient, workspaceId: 
     return await convex.query(internal.customFormulas.listActiveForAlerts as unknown as QueryReference, { workspaceId })
 })
 
-const fetchRecentMetrics = cache(async (convex: ConvexHttpClient, workspaceId: string, limit: number) => {
-    return await convex.query(api.adsMetrics.listRecentForAlerts, {
-        workspaceId,
-        clientId: workspaceId,
-        limit,
-    }) as DailyMetricData[]
-})
+const fetchRecentMetrics = cache(
+    async (convex: ConvexHttpClient, workspaceId: string, clientId: string | null, limit: number) => {
+        return await convex.query(internal.adsMetrics.listRecentForAlerts as unknown as QueryReference, {
+            workspaceId,
+            clientId,
+            limit,
+        }) as DailyMetricData[]
+    },
+)
 
 const fetchNotificationPreferences = cache(async (convex: ConvexHttpClient, email: string) => {
     return await convex.query(internal.users.getNotificationPreferencesByEmail as unknown as QueryReference, { email })
@@ -75,9 +77,10 @@ const fetchNotificationPreferences = cache(async (convex: ConvexHttpClient, emai
 export async function processWorkspaceAlerts(options: {
     userId: string
     workspaceId: string
+    clientId?: string | null
     recipientEmail?: string
 }) {
-    const { userId, workspaceId, recipientEmail } = options
+    const { userId, workspaceId, clientId = null, recipientEmail } = options
 
     const convex = getConvexClient()
     if (!convex) {
@@ -109,8 +112,7 @@ export async function processWorkspaceAlerts(options: {
             return 0
         }), 7)
 
-        // Use workspaceId as clientId for metrics lookup (legacy pattern)
-        const metricsData = await fetchRecentMetrics(convex, workspaceId, maxBaseline + 1)
+        const metricsData = await fetchRecentMetrics(convex, workspaceId, clientId, maxBaseline + 1)
 
         if (metricsData.length === 0) {
             return { evaluated: rules.length, triggered: 0, results: [] }

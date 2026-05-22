@@ -130,7 +130,7 @@ async function isEmailNotificationEnabled(
 ): Promise<boolean> {
   try {
     const convex = getConvexClient()
-    if (!convex) return true
+    if (!convex) return false
 
     const result = await fetchNotificationPreferences(convex, recipientEmail)
     if (!result?.notificationPreferences) return true
@@ -138,7 +138,7 @@ async function isEmailNotificationEnabled(
     return isEmailPrefEnabled(result.notificationPreferences, prefKey)
   } catch (error) {
     console.error('[brevo] error checking preferences', error)
-    return true
+    return false
   }
 }
 

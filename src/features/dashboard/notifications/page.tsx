@@ -49,7 +49,7 @@ import { NotificationItem } from '@/features/notifications/components/notificati
 import { NotificationEmptyState } from '@/features/notifications/components/notification-empty-state'
 import { useNotificationNavigation } from '@/features/notifications/hooks/use-notification-navigation'
 
-const PAGE_SIZE = 25
+import { NOTIFICATIONS_PAGE_PAGE_SIZE } from '@/lib/notifications/pagination'
 const MAX_NOTIFICATION_PAGES = 10
 const VIRTUAL_NOTIFICATIONS_THRESHOLD = 24
 const FILTER_VALUES = ['all', 'unread', 'mentions', 'tasks', 'collaboration', 'system'] as const
@@ -189,7 +189,10 @@ function NotificationsPageContent() {
 
       return convex.query(notificationsApi.list, {
         workspaceId,
-        pageSize: parsePageSize(PAGE_SIZE, { defaultValue: PAGE_SIZE, max: 100 }),
+        pageSize: parsePageSize(NOTIFICATIONS_PAGE_PAGE_SIZE, {
+          defaultValue: NOTIFICATIONS_PAGE_PAGE_SIZE,
+          max: 100,
+        }),
         role: user?.role ?? undefined,
         clientId: user?.role === 'client' ? selectedClientId ?? undefined : undefined,
         unread: activeFilter === 'unread' ? true : undefined,

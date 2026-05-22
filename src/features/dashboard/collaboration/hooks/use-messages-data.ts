@@ -3,28 +3,26 @@
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useConvex, useMutation, useQuery } from 'convex/react'
-import { v4 as uuidv4 } from 'uuid'
+import { useConvex, useQuery } from 'convex/react'
 
-import { useToast } from '@/shared/ui/use-toast'
 import { usePreview } from '@/shared/contexts/preview-context'
-import { api, collaborationApi } from '@/lib/convex-api'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { decodeTimestampIdCursor, encodeTimestampIdCursor } from '@/lib/pagination'
-import { getPreviewCollaborationAutoReply, getPreviewCollaborationMessages } from '@/lib/preview-data'
+import { collaborationApi } from '@/lib/convex-api'
+import { getPreviewCollaborationMessages } from '@/lib/preview-data'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 
 import type { Channel } from '../types'
 import { formatConversationSnippet } from '../lib/chat-text'
-import { extractMentionsFromContent } from '../utils/mentions'
-import { mapCollaborationMessageRow, previewPendingAttachmentToCollaborationAttachment } from './message-mappers'
 import { useChannelMessageSearch } from './use-channel-message-search'
 import { useMessageActions } from './use-message-actions'
 import { useRealtimeMessages, useRealtimeTyping } from './use-realtime'
 import { useThreads } from './use-threads'
 import { useTyping } from './use-typing'
-import type { ChannelSummary, MessagesByChannelState, PendingAttachment, SendMessageOptions } from './types'
+import { useCollaborationExternalNotify } from './use-collaboration-external-notify'
+import { useChannelMessageSend } from './use-channel-message-send'
+import { useChannelMessagesQuery } from './use-channel-messages-query'
+import { useChannelReadReceipts } from './use-channel-read-receipts'
+import type { ChannelSummary, MessagesByChannelState, PendingAttachment } from './types'
 
 interface UseMessagesDataOptions {
   workspaceId: string | null
@@ -53,14 +51,8 @@ export function useMessagesData({
   clearAttachments,
   uploadAttachments,
 }: UseMessagesDataOptions) {
-  const { toast } = useToast()
   const { isPreviewMode } = usePreview()
   const convex = useConvex()
-  const createMessage = useMutation(collaborationApi.createMessage)
-  const updateSharedTo = useMutation(collaborationApi.updateSharedTo)
-  const markChannelAsRead = useMutation(collaborationApi.markChannelAsRead)
-  const markThreadAsReadMutation = useMutation(collaborationApi.markThreadAsRead)
-
   const [messagesByChannel, setMessagesByChannel] = useState<MessagesByChannelState>({})
   const [nextCursorByChannel, setNextCursorByChannel] = useState<Record<string, string | null>>({})
   const [loadingMoreChannelId, setLoadingMoreChannelId] = useState<string | null>(null)
@@ -68,12 +60,9 @@ export function useMessagesData({
   const [messagesError, setMessagesError] = useState<string | null>(null)
   const [channelListRetryNonce, setChannelListRetryNonce] = useState(0)
   const [messageInput, setMessageInputState] = useState('')
-  const [sending, setSending] = useState(false)
-  const [markChannelReadPending, setMarkChannelReadPending] = useState(false)
   const [messageSearchQuery, setMessageSearchQuery] = useState('')
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
-  const lastMarkedMessageByChannelRef = useRef<Record<string, string>>({})
   const previewReplyTimersRef = useRef<number[]>([])
   const lastRealtimeErrorToastKeyRef = useRef<string | null>(null)
 
@@ -392,622 +381,49 @@ export function useMessagesData({
     [handleToggleReactionBase]
   )
 
-  const handleMarkSelectedChannelAsRead = useCallback(
-    async (options?: { force?: boolean }): Promise<boolean> => {
-      const force = Boolean(options?.force)
-      if (!currentUserId || !selectedChannel || (!isPreviewMode && !workspaceId)) {
-        return false
-      }
-
-      const markPreviewLoadedMessagesRead = () => {
-        mutateChannelMessages(selectedChannel.id, (messages) =>
-          messages.map((message) => {
-            if (message.isDeleted || message.senderId === currentUserId) {
-              return message
-            }
-
-            const readBy = Array.isArray(message.readBy) ? message.readBy : []
-            if (readBy.includes(currentUserId)) {
-              return message
-            }
-
-            return {
-              ...message,
-              readBy: [...readBy, currentUserId],
-            }
-          }),
-        )
-      }
-
-      const latestUnread = [...channelMessages]
-        .reverse()
-        .find((message) => {
-          if (message.isDeleted) return false
-          if (message.senderId === currentUserId) return false
-
-          const readBy = Array.isArray(message.readBy) ? message.readBy : []
-          return !readBy.includes(currentUserId)
-        })
-
-      if (!latestUnread) {
-        if (!force) {
-          return false
-        }
-
-        try {
-          if (isPreviewMode) {
-            markPreviewLoadedMessagesRead()
-            lastMarkedMessageByChannelRef.current[selectedChannel.id] = '__all__'
-            return true
-          }
-
-          await markChannelAsRead({
-            workspaceId: String(workspaceId),
-            channelId: selectedChannel.isCustom ? selectedChannel.id : null,
-            channelType: selectedChannel.type,
-            clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
-            projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
-            userId: String(currentUserId),
-          })
-          lastMarkedMessageByChannelRef.current[selectedChannel.id] = '__all__'
-          return true
-        } catch (error) {
-          logError(error, 'useCollaborationData:handleMarkSelectedChannelAsRead')
-          if (force) {
-            throw error
-          }
-          return false
-        }
-      }
-
-      const alreadyMarked = lastMarkedMessageByChannelRef.current[selectedChannel.id]
-      if (!force && alreadyMarked === latestUnread.id) {
-        return false
-      }
-
-      const createdAtMs = latestUnread.createdAt ? Date.parse(latestUnread.createdAt) : NaN
-
-      try {
-        if (isPreviewMode) {
-          markPreviewLoadedMessagesRead()
-          lastMarkedMessageByChannelRef.current[selectedChannel.id] = latestUnread.id
-          return true
-        }
-
-        await markChannelAsRead({
-          workspaceId: String(workspaceId),
-          channelId: selectedChannel.isCustom ? selectedChannel.id : null,
-          channelType: selectedChannel.type,
-          clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
-          projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
-          userId: String(currentUserId),
-          beforeMs: Number.isFinite(createdAtMs) ? createdAtMs : undefined,
-        })
-
-        lastMarkedMessageByChannelRef.current[selectedChannel.id] = latestUnread.id
-        return true
-      } catch (error) {
-        logError(error, 'useCollaborationData:handleMarkSelectedChannelAsRead')
-        if (force) {
-          throw error
-        }
-        return false
-      }
-    },
-    [channelMessages, currentUserId, isPreviewMode, markChannelAsRead, mutateChannelMessages, selectedChannel, workspaceId],
-  )
-
-  const markChannelRead = useCallback(async () => {
-    setMarkChannelReadPending(true)
-    try {
-      const didMark = await handleMarkSelectedChannelAsRead({ force: true })
-      if (didMark) {
-        toast({ title: 'Marked as read', description: 'Channel read state updated for you.' })
-      }
-    } catch (error) {
-      reportConvexFailure({
-        error: error,
-        context: 'useMessagesData:markChannelRead',
-        title: 'Could not mark read',
-        fallbackMessage: 'Could not mark read',
-        })
-    } finally {
-      setMarkChannelReadPending(false)
-    }
-  }, [handleMarkSelectedChannelAsRead, toast])
-
-  const handleMarkThreadAsRead = useCallback(
-    async (threadRootId: string, beforeMs?: number) => {
-      if (!currentUserId || !selectedChannel || (!isPreviewMode && !workspaceId)) {
-        return
-      }
-
-      const normalizedThreadRootId = typeof threadRootId === 'string' ? threadRootId.trim() : ''
-      if (!normalizedThreadRootId) {
-        return
-      }
-
-      try {
-        if (isPreviewMode) {
-          return
-        }
-
-        await markThreadAsReadMutation({
-          workspaceId: String(workspaceId),
-          channelId: selectedChannel.isCustom ? selectedChannel.id : null,
-          channelType: selectedChannel.type,
-          clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
-          projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
-          threadRootId: normalizedThreadRootId,
-          userId: String(currentUserId),
-          beforeMs,
-        })
-      } catch (error) {
-        reportConvexFailure({
-        error: error,
-        context: 'useCollaborationData:handleMarkThreadAsRead',
-        title: 'Could not mark thread read',
-        fallbackMessage: 'Could not mark thread read',
-        })
-      }
-    },
-    [currentUserId, isPreviewMode, markThreadAsReadMutation, selectedChannel,  workspaceId],
-  )
-
-  useEffect(() => {
-    if (!selectedChannel) {
-      return
-    }
-
-    const timer = window.setTimeout(() => {
-      void handleMarkSelectedChannelAsRead()
-    }, 250)
-
-    return () => {
-      window.clearTimeout(timer)
-    }
-  }, [handleMarkSelectedChannelAsRead, selectedChannel])
-
-  // Send message to external channels based on notification preferences
-  const sendToExternalPlatforms = useCallback(
-    async (message: CollaborationMessage, wsId: string) => {
-      try {
-        // Fetch notification preferences
-        const prefs = await convex.query(api.settings.getMyNotificationPreferences, {})
-
-        if (!prefs) return
-
-        // Send to Email if enabled
-        if (!prefs.categories?.collaboration?.email) {
-          return
-        }
-
-        try {
-          const response = await fetch('/api/integrations/email/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messageType: 'collaboration',
-              text: message.content,
-              metadata: {
-                senderName: message.senderName,
-                conversationUrl: `${window.location.origin}/dashboard/collaboration`,
-              },
-            }),
-          })
-
-          if (!response.ok) {
-            const detail =
-              typeof response.status === 'number' ? `Server returned ${response.status}.` : 'Request failed.'
-            notifyFailure({
-        title: 'Email collaboration copy failed',
-        message: detail,
-      })
-            return
-          }
-
-          try {
-            await updateSharedTo({
-              workspaceId: wsId,
-              legacyId: message.id,
-              sharedTo: ['email'],
-            })
-          } catch (error) {
-            reportConvexFailure({
-        error: error,
-        context: 'useCollaborationData:sendToExternalPlatforms:updateSharedTo',
-        title: 'Could not tag message as emailed',
-        fallbackMessage: 'Could not tag message as emailed',
-        })
-          }
-        } catch (error) {
-          reportConvexFailure({
-        error: error,
-        context: 'useCollaborationData:sendToExternalPlatforms:email',
-        title: 'Email collaboration copy failed',
-        fallbackMessage: 'Email collaboration copy failed',
-        })
-        }
-      } catch (error) {
-        reportConvexFailure({
-        error: error,
-        context: 'useCollaborationData:sendToExternalPlatforms',
-        title: 'Collaboration email unavailable',
-        fallbackMessage: 'Collaboration email unavailable',
-        })
-      }
-    },
-    [convex,  updateSharedTo]
-  )
-
-  const isSendDisabled = useMemo(() => {
-    if (sending || uploading) return true
-    const hasContent = messageInput.trim().length > 0
-    const hasAttachments = pendingAttachments.length > 0
-    return !hasContent && !hasAttachments
-  }, [messageInput, pendingAttachments.length, sending, uploading])
-
-  const schedulePreviewAutoReply = useCallback((params: {
-    channelId: string
-    channelType: Channel['type']
-    clientId: string | null
-    projectId: string | null
-    content: string
-    parentMessageId?: string | null
-    threadRootId?: string | null
-  }) => {
-    if (typeof window === 'undefined') return
-
-    const timerId = window.setTimeout(() => {
-      previewReplyTimersRef.current = previewReplyTimersRef.current.filter((id) => id !== timerId)
-
-      const reply = getPreviewCollaborationAutoReply({
-        channelType: params.channelType,
-        clientId: params.clientId,
-        projectId: params.projectId,
-        content: params.content,
-        viewerId: currentUserId,
-        parentMessageId: params.parentMessageId ?? null,
-        threadRootId: params.threadRootId ?? null,
-      })
-
-      mutateChannelMessages(params.channelId, (messages) => {
-        if (reply.parentMessageId && reply.threadRootId) {
-          return messages.map((message) => {
-            if (message.id !== reply.threadRootId) {
-              return message
-            }
-
-            return {
-              ...message,
-              threadReplyCount: (message.threadReplyCount ?? 0) + 1,
-              threadLastReplyAt: reply.createdAt,
-            }
-          })
-        }
-
-        return [...messages, reply]
-      })
-
-      if (reply.threadRootId) {
-        addThreadReplyToState(reply.threadRootId, reply)
-      }
-    }, 900)
-
-    previewReplyTimersRef.current.push(timerId)
-  }, [addThreadReplyToState, currentUserId, mutateChannelMessages])
-
-  const handleSendMessage = useCallback(
-    async (options?: SendMessageOptions) => {
-      const trimmedContent = messageInput.trim()
-      const channelId = selectedChannel?.id
-
-      if (!trimmedContent && pendingAttachments.length === 0) {
-        notifyFailure({
-        title: 'Message required',
-        message: 'Enter a message before sending.',
-      })
-        return
-      }
-
-      if (!channelId || !channels.some((c) => c.id === channelId)) {
-        notifyFailure({
-        title: 'Channel unavailable',
-        message: 'Select a channel and try again.',
-      })
-        return
-      }
-
-      setSending(true)
-
-      try {
-        await stopTyping()
-
-        const senderDetails = resolveSenderDetails()
-        const uploadedAttachments = isPreviewMode
-          ? pendingAttachments.map(previewPendingAttachmentToCollaborationAttachment)
-          : await uploadAttachments(pendingAttachments)
-
-        const mentionMatches = extractMentionsFromContent(trimmedContent)
-        const mentionMetadata = mentionMatches.map((mention) => {
-          const participant = participantNameMap.get(mention.name.toLowerCase())
-          return { slug: mention.slug, name: participant?.name ?? mention.name, role: participant?.role ?? null }
-        })
-
-        if (!currentUserId || (!isPreviewMode && !workspaceId)) {
-          return
-        }
-
-        const parentMessage = options?.parentMessageId
-          ? channelMessages.find((message) => message.id === options.parentMessageId)
-          : null
-        const resolvedThreadRootId = options?.parentMessageId
-          ? (parentMessage?.threadRootId || parentMessage?.id || options.parentMessageId)
-          : null
-
-        if (isPreviewMode) {
-          const messageId = uuidv4()
-          const createdMessage: CollaborationMessage = {
-            id: messageId,
-            channelType: selectedChannel.type,
-            clientId: selectedChannel.clientId ?? null,
-            projectId: selectedChannel.projectId ?? null,
-            senderId: String(currentUserId),
-            senderName: senderDetails.senderName,
-            senderRole: senderDetails.senderRole,
-            content: trimmedContent,
-            createdAt: new Date().toISOString(),
-            updatedAt: null,
-            isEdited: false,
-            deletedAt: null,
-            deletedBy: null,
-            isDeleted: false,
-            attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-            format: 'markdown',
-            mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
-            reactions: [],
-            readBy: [String(currentUserId)],
-            deliveredTo: [String(currentUserId)],
-            isPinned: false,
-            pinnedAt: null,
-            pinnedBy: null,
-            sharedTo: undefined,
-            parentMessageId: options?.parentMessageId ?? null,
-            threadRootId: resolvedThreadRootId,
-            threadReplyCount: undefined,
-            threadLastReplyAt: null,
-          }
-
-          mutateChannelMessages(channelId, (messages) => {
-            if (createdMessage.parentMessageId) {
-              return messages.map((message) => {
-                if (message.id !== resolvedThreadRootId) {
-                  return message
-                }
-
-                return {
-                  ...message,
-                  threadReplyCount: (message.threadReplyCount ?? 0) + 1,
-                  threadLastReplyAt: createdMessage.createdAt,
-                }
-              })
-            }
-
-            return [...messages, createdMessage]
-          })
-
-          if (resolvedThreadRootId) {
-            addThreadReplyToState(resolvedThreadRootId, createdMessage)
-          }
-
-          schedulePreviewAutoReply({
-            channelId,
-            channelType: selectedChannel.type,
-            clientId: selectedChannel.clientId ?? null,
-            projectId: selectedChannel.projectId ?? null,
-            content: trimmedContent,
-            parentMessageId: options?.parentMessageId ? createdMessage.id : null,
-            threadRootId: resolvedThreadRootId,
-          })
-
-          clearAttachments()
-          setMessageInputState('')
-          toast({ title: 'Preview message sent', description: 'This only updates the sample collaboration feed.' })
-          return
-        }
-
-        const messageId = uuidv4()
-        await createMessage({
-          workspaceId: String(workspaceId),
-          legacyId: messageId,
-          channelId: selectedChannel.isCustom ? selectedChannel.id : null,
-          channelType: selectedChannel.type,
-          clientId: selectedChannel.clientId ?? null,
-          projectId: selectedChannel.projectId ?? null,
-          senderId: String(currentUserId),
-          senderName: senderDetails.senderName,
-          senderRole: senderDetails.senderRole,
-          content: trimmedContent,
-          attachments: (uploadedAttachments as CollaborationAttachment[]) ?? [],
-          format: 'markdown',
-          mentions: mentionMetadata,
-          parentMessageId: options?.parentMessageId ?? null,
-          threadRootId: resolvedThreadRootId,
-          isThreadRoot: !options?.parentMessageId,
-        })
-
-        const createdRow = await convex.query(collaborationApi.getByLegacyId, {
-          workspaceId: String(workspaceId),
-          legacyId: messageId,
-        })
-
-        const createdMessage = createdRow
-          ? mapCollaborationMessageRow(createdRow, {
-              fallbackChannelType: selectedChannel.type,
-              fallbackClientId: selectedChannel.clientId ?? null,
-              fallbackProjectId: selectedChannel.projectId ?? null,
-              fallbackSenderId: String(currentUserId),
-              fallbackSenderName: senderDetails.senderName,
-              fallbackSenderRole: senderDetails.senderRole,
-              fallbackThreadRootId: resolvedThreadRootId,
-              fallbackCreatedAtIso: new Date().toISOString(),
-            })
-          : null
-
-        const safeCreatedMessage: CollaborationMessage = createdMessage ?? {
-              id: messageId,
-              channelType: selectedChannel.type,
-              clientId: selectedChannel.clientId ?? null,
-              projectId: selectedChannel.projectId ?? null,
-              senderId: String(currentUserId),
-              senderName: senderDetails.senderName,
-              senderRole: senderDetails.senderRole,
-              content: trimmedContent,
-              createdAt: new Date().toISOString(),
-              updatedAt: null,
-              isEdited: false,
-              deletedAt: null,
-              deletedBy: null,
-              isDeleted: false,
-              attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-              format: 'markdown',
-              mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
-              reactions: [],
-              readBy: [String(currentUserId)],
-              deliveredTo: [String(currentUserId)],
-              isPinned: false,
-              pinnedAt: null,
-              pinnedBy: null,
-              sharedTo: undefined,
-              parentMessageId: options?.parentMessageId ?? null,
-              threadRootId: resolvedThreadRootId,
-            }
-
-        mutateChannelMessages(channelId, (messages) => {
-          if (messages.some((m) => m.id === safeCreatedMessage.id)) return messages
-          return [...messages, safeCreatedMessage]
-        })
-
-        // Also add to thread replies if this is a reply
-        if (resolvedThreadRootId) {
-          addThreadReplyToState(resolvedThreadRootId, safeCreatedMessage)
-        }
-
-        clearAttachments()
-        setMessageInputState('')
-
-        // Send to external platforms based on notification preferences
-        if (workspaceId) {
-          void sendToExternalPlatforms(safeCreatedMessage, workspaceId)
-        }
-
-        toast({ title: 'Message sent', description: 'Your message is live for the team.' })
-      } catch (error) {
-        reportConvexFailure({
-        error: error,
-        context: 'useCollaborationData:handleSendMessage',
-        title: 'Collaboration error',
-        fallbackMessage: 'Collaboration error',
-        })
-      } finally {
-        setSending(false)
-      }
-    },
-    [
-      addThreadReplyToState,
-      channels,
-      channelMessages,
-      clearAttachments,
-      createMessage,
-      convex,
-      currentUserId,
-      isPreviewMode,
-      messageInput,
-      mutateChannelMessages,
-      pendingAttachments,
-      participantNameMap,
-      resolveSenderDetails,
-      sendToExternalPlatforms,
-      selectedChannel,
-      stopTyping,
-      toast,
-      uploadAttachments,
-      workspaceId,
-      schedulePreviewAutoReply,
-    ]
-  )
-
-  const handleLoadMore = useCallback(
-    async (channelId: string) => {
-      if (isPreviewMode) {
-        return
-      }
-
-      const nextCursor = nextCursorByChannel[channelId]
-      if (!nextCursor) return
-
-      setLoadingMoreChannelId(channelId)
-
-      try {
-        const channel = channels.find((c) => c.id === channelId)
-        if (!channel) throw new Error('Channel not found')
-
-        if (!workspaceId) throw new Error('Workspace unavailable')
-
-        const decoded = decodeTimestampIdCursor(nextCursor)
-
-        const listResult = await convex.query(collaborationApi.listChannel, {
-          workspaceId: String(workspaceId),
-          channelId: channel.isCustom ? channel.id : null,
-          channelType: channel.type,
-          clientId: channel.type === 'client' ? (channel.clientId ?? null) : null,
-          projectId: channel.type === 'project' ? (channel.projectId ?? null) : null,
-          limit: 50 + 1,
-          cursor: decoded
-            ? { legacyId: decoded.id, fieldValue: decoded.time.getTime() }
-            : undefined,
-        })
-
-        const pageRows = listResult.items as Array<Record<string, unknown>>
-        const hasMore = pageRows.length > 50
-        const trimmedRows = hasMore ? pageRows.slice(0, 50) : pageRows
-
-        const mapped: CollaborationMessage[] = trimmedRows
-          .map((row) => mapCollaborationMessageRow(row, { fallbackChannelType: channel.type }))
-          .filter((message): message is CollaborationMessage => Boolean(message))
-          .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
-
-        const oldestRow = trimmedRows.length ? trimmedRows[trimmedRows.length - 1] : null
-        const oldestCreatedAtMs = oldestRow && typeof oldestRow.createdAtMs === 'number' ? oldestRow.createdAtMs : null
-        const oldestLegacyId = oldestRow && typeof oldestRow.legacyId === 'string' ? oldestRow.legacyId : ''
-        const newCursor =
-          hasMore && oldestCreatedAtMs !== null
-            ? encodeTimestampIdCursor(
-                new Date(oldestCreatedAtMs).toISOString(),
-                String(oldestLegacyId)
-              )
-            : null
-
-        mutateChannelMessages(channelId, (existing) => {
-          const existingIds = new Set(existing.map((m) => m.id))
-          const newMessages = mapped.filter((m) => !existingIds.has(m.id))
-          return [...newMessages, ...existing]
-        })
-
-        setNextCursorByChannel((prev) => ({ ...prev, [channelId]: newCursor }))
-      } catch (error) {
-        reportConvexFailure({
-        error: error,
-        context: 'useCollaborationData:handleLoadMore',
-        title: 'Load error',
-        fallbackMessage: 'Load error',
-        })
-      } finally {
-        setLoadingMoreChannelId(null)
-      }
-    },
-    [channels, convex, isPreviewMode, mutateChannelMessages, nextCursorByChannel,  workspaceId]
-  )
+  const { markChannelRead, markChannelReadPending, markThreadAsRead } = useChannelReadReceipts({
+    workspaceId,
+    currentUserId,
+    selectedChannel,
+    channelMessages,
+    isPreviewMode,
+    mutateChannelMessages,
+  })
+
+  const { sendCollaborationEmailCopy } = useCollaborationExternalNotify()
+
+  const { handleSendMessage, sending, isSendDisabled } = useChannelMessageSend({
+    workspaceId,
+    currentUserId,
+    selectedChannel,
+    channels,
+    channelMessages,
+    channelParticipants,
+    fallbackDisplayName,
+    fallbackRole,
+    messageInput,
+    setMessageInput: setMessageInputState,
+    pendingAttachments,
+    uploading,
+    clearAttachments,
+    uploadAttachments,
+    isPreviewMode,
+    stopTyping,
+    mutateChannelMessages,
+    addThreadReplyToState,
+    sendToExternalPlatforms: sendCollaborationEmailCopy,
+  })
+
+  const { handleLoadMore } = useChannelMessagesQuery({
+    convex,
+    workspaceId,
+    channels,
+    isPreviewMode,
+    nextCursorByChannel,
+    setLoadingMoreChannelId,
+    mutateChannelMessages,
+    setNextCursorByChannel,
+  })
 
   const setMessageInput = useCallback(
     (value: string) => {
@@ -1052,7 +468,7 @@ export function useMessagesData({
     threadUnreadCountsByRootId,
     loadThreadReplies,
     loadMoreThreadReplies,
-    markThreadAsRead: handleMarkThreadAsRead,
+    markThreadAsRead,
     clearThreadReplies,
     reactionPendingByMessage: reactionUpdatingByMessage,
     channelUnreadCounts,

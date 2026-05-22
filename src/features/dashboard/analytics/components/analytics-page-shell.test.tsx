@@ -112,6 +112,8 @@ describe('AnalyticsPageShell', () => {
         comparison: null,
       },
       totals: { users: 180, sessions: 240, conversions: 12, revenue: 6400 },
+      breakdowns: [],
+      filteredBreakdowns: [],
     }
   })
 

@@ -30,6 +30,7 @@ vi.mock('@/shared/ui/sheet', () => ({
 
 vi.mock('@/shared/ui/motion', () => ({
   domAnimation: {},
+  AnimatePresence: ({ children }: { children: ReactNode }) => children,
   LazyMotion: ({ children }: { children: ReactNode }) => <div data-lazy-motion="">{children}</div>,
   m: {
     div: ({ children }: { children: ReactNode }) => <div>{children}</div>,

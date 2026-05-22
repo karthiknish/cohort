@@ -1,5 +1,6 @@
 import { internal } from '/_generated/api'
 
+import { requireWorkspaceAccess } from '../functions'
 import {
   Errors,
   assertCronKey,
@@ -110,7 +111,9 @@ export const writeMetricsBatch = mutation({
   },
   handler: async (ctx, args): Promise<{ ok: boolean; inserted: number }> => {
     const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
+    if (identity) {
+      await requireWorkspaceAccess(ctx, args.workspaceId)
+    } else {
       assertCronKey(ctx, { cronKey: args.cronKey ?? null })
     }
     return await ctx.runMutation(internal.adsIntegrations.writeMetricsBatchInternal, {
@@ -131,6 +134,7 @@ export const deleteAdIntegration = mutation({
     if (!identity) {
       throw Errors.auth.unauthorized()
     }
+    await requireWorkspaceAccess(ctx, args.workspaceId)
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
@@ -159,6 +163,7 @@ export const deleteSyncJobs = mutation({
     if (!identity) {
       throw Errors.auth.unauthorized()
     }
+    await requireWorkspaceAccess(ctx, args.workspaceId)
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
@@ -193,6 +198,7 @@ export const deleteProviderMetrics = mutation({
     if (!identity) {
       throw Errors.auth.unauthorized()
     }
+    await requireWorkspaceAccess(ctx, args.workspaceId)
 
     const clientId = normalizeClientId(args.clientId ?? null)
     const rows = await ctx.db

@@ -16,7 +16,7 @@ import { getPreviewNotifications } from '@/lib/preview-data'
 import { cn, getWorkspaceId } from '@/lib/utils'
 import type { WorkspaceNotification } from '@/types/notifications'
 
-const PAGE_SIZE = 20
+import { NOTIFICATIONS_FOR_YOU_PAGE_SIZE } from '@/lib/notifications/pagination'
 
 function sortNotifications(items: WorkspaceNotification[]): WorkspaceNotification[] {
   return [...items].sort((a, b) => {
@@ -93,7 +93,7 @@ export function ForYouNotifications() {
     canQuery && !isPreviewMode
       ? {
           workspaceId,
-          pageSize: PAGE_SIZE,
+          pageSize: NOTIFICATIONS_FOR_YOU_PAGE_SIZE,
           role: user?.role ?? undefined,
         }
       : 'skip',
@@ -104,7 +104,7 @@ export function ForYouNotifications() {
       ? getPreviewNotifications(null)
       : (livePage?.notifications ?? [])
 
-    return sortNotifications(items).slice(0, PAGE_SIZE)
+    return sortNotifications(items).slice(0, NOTIFICATIONS_FOR_YOU_PAGE_SIZE)
   }, [isPreviewMode, livePage?.notifications])
 
   const unreadCount = notifications.filter((n) => !n.read).length

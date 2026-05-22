@@ -7,6 +7,7 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { collaborationChannelAvatarsApi, collaborationChannelsApi } from '@/lib/convex-api'
+import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 
 import { collectSharedFiles } from '../utils'
 
@@ -78,6 +79,18 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     collaborationChannelAvatarsApi.listForWorkspace,
     !isPreviewMode && workspaceId ? { workspaceId: String(workspaceId) } : 'skip',
   ) as Array<{ channelKey?: string; avatarUrl?: string | null }> | undefined
+
+  const customChannelsQueryError = useConvexQueryError({
+    data: customChannelsResult,
+    skipped: isPreviewMode || !workspaceId,
+    fallbackMessage: 'Unable to load collaboration channels.',
+  })
+  const channelAvatarsQueryError = useConvexQueryError({
+    data: channelAvatarsResult,
+    skipped: isPreviewMode || !workspaceId,
+    fallbackMessage: 'Unable to load channel avatars.',
+  })
+  const channelsQueryError = mergeQueryErrors(customChannelsQueryError, channelAvatarsQueryError)
 
   const channelAvatars = useMemo(() => {
     const map = new Map<string, string>()
@@ -188,7 +201,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     searchHighlights: messages.searchHighlights,
     isCurrentChannelLoading: messages.isCurrentChannelLoading,
     isBootstrapping,
-    messagesError: messages.messagesError,
+    messagesError: mergeQueryErrors(messages.messagesError, channelsQueryError),
     retryMessagesError: messages.retryMessagesError,
     messageSearchQuery: messages.messageSearchQuery,
     setMessageSearchQuery: messages.setMessageSearchQuery,

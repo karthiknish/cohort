@@ -155,6 +155,7 @@ function mergeCategories(
 export function kindToCategory(kind: WorkspaceNotificationKind | string): NotificationCategory {
   if (kind.startsWith('task.')) return 'tasks'
   if (kind.startsWith('collaboration.')) return 'collaboration'
+  if (kind.startsWith('meeting.')) return 'meetings'
   if (kind === 'project.created' || kind === 'proposal.deck.ready') return 'projects'
   if (kind === 'report.generated') return 'ads'
   return 'tasks'
