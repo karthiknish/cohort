@@ -1,10 +1,17 @@
 import type { ProposedImportTask } from './tasks-document-import-types'
+import { resolveAssigneeUserIds } from './task-types'
 
 export function taskNeedsAssigneeReview(task: ProposedImportTask): boolean {
-  return (
-    task.assignmentStatus === 'ambiguous' ||
-    (task.assignmentStatus === 'unassigned' && task.suggestions.length > 0)
-  )
+  if (task.assignmentStatus === 'ambiguous') return true
+
+  if (task.documentAssigneeNames.length > 0) {
+    if (task.assignmentStatus === 'unassigned') return true
+    if (task.assignmentStatus === 'resolved' && task.assignedToUserIds.length === 0) return true
+  }
+
+  return task.assignmentStatus === 'resolved' &&
+    task.assignedToUserIds.length === 0 &&
+    task.suggestions.length > 0
 }
 
 export function taskNeedsDueDateReview(task: ProposedImportTask): boolean {
@@ -19,17 +26,65 @@ export function needsImportReview(tasks: ProposedImportTask[]): boolean {
   return tasks.some(taskNeedsImportReview)
 }
 
+export function buildAssigneeReviewPrompt(task: ProposedImportTask): string {
+  const documentNames = task.documentAssigneeNames.join(', ')
+
+  if (task.assignmentStatus === 'ambiguous') {
+    if (task.suggestions.length > 0) {
+      return documentNames
+        ? `The document assigns this to “${documentNames}”, but that name matches multiple teammates. Did you mean ${task.suggestions.join(', ')}?`
+        : `The assignee is unclear — did you mean ${task.suggestions.join(', ')}?`
+    }
+
+    return documentNames
+      ? `The document assigns this to “${documentNames}”, but we couldn't match that name confidently. Pick the right teammate below.`
+      : 'The assignee is unclear. Pick the right teammate below.'
+  }
+
+  if (task.documentAssigneeNames.length > 0) {
+    if (task.suggestions.length > 0) {
+      return `The document assigns this to “${documentNames}”. Match it to a workspace profile — suggestions: ${task.suggestions.join(', ')}.`
+    }
+
+    return `The document assigns this to “${documentNames}”, but that person isn't in your workspace. Pick a teammate below or leave unassigned.`
+  }
+
+  if (task.suggestions.length > 0) {
+    return `Pick a workspace teammate — suggestions: ${task.suggestions.join(', ')}.`
+  }
+
+  return 'Pick a workspace teammate from the list below.'
+}
+
 export function getImportReviewBlocker(tasks: ProposedImportTask[]): string | null {
   const selected = tasks.filter((task) => task.include && task.title.trim())
   if (selected.length === 0) {
     return 'Select at least one task to create.'
   }
 
-  const missingAssignee = selected.filter(
-    (task) => taskNeedsAssigneeReview(task) && parseAssigneeDraft(task.assignedTo).length === 0,
-  )
-  if (missingAssignee.length > 0) {
-    return `Pick assignees for ${missingAssignee.length} task${missingAssignee.length === 1 ? '' : 's'}.`
+  const assigneeReviewTasks = selected.filter((task) => taskNeedsAssigneeReview(task))
+  if (assigneeReviewTasks.length > 0) {
+    const ambiguousCount = assigneeReviewTasks.filter((task) => task.assignmentStatus === 'ambiguous').length
+    const unmatchedCount = assigneeReviewTasks.length - ambiguousCount
+
+    if (ambiguousCount > 0 && unmatchedCount > 0) {
+      return `Confirm assignees for ${assigneeReviewTasks.length} tasks — some names were unclear or couldn't be matched.`
+    }
+
+    if (ambiguousCount > 0) {
+      return `Confirm assignees for ${ambiguousCount} task${ambiguousCount === 1 ? '' : 's'} — the document name matched multiple teammates.`
+    }
+
+    return `Pick workspace teammates for ${assigneeReviewTasks.length} task${assigneeReviewTasks.length === 1 ? '' : 's'}.`
+  }
+
+  const invalidAssignee = selected.filter((task) => {
+    const mentionCount = task.assignedTo.trim().length > 0 ? task.assignedTo.match(/@\[[^\]]+\]/g)?.length ?? 0 : 0
+    if (mentionCount === 0) return false
+    return task.assignedToUserIds.length !== mentionCount
+  })
+  if (invalidAssignee.length > 0) {
+    return `Use the teammate picker for ${invalidAssignee.length} task${invalidAssignee.length === 1 ? '' : 's'} — free-text assignees are not allowed.`
   }
 
   const missingDueDate = selected.filter(
@@ -42,29 +97,6 @@ export function getImportReviewBlocker(tasks: ProposedImportTask[]): string | nu
   return null
 }
 
-function parseAssigneeDraft(value: string): string[] {
-  const mentionRegex = /@\[([^\]]+)\]/g
-  const names: string[] = []
-  let match = mentionRegex.exec(value)
-
-  while (match !== null) {
-    const name = match[1]?.trim()
-    if (name) names.push(name)
-    match = mentionRegex.exec(value)
-  }
-
-  if (names.length === 0) {
-    return value
-      .split(',')
-      .flatMap((entry) => {
-        const trimmed = entry.trim()
-        return trimmed.length > 0 ? [trimmed] : []
-      })
-  }
-
-  return names
-}
-
 export function buildImportReviewDescription(
   documentSummary: string | null,
   tasks: ProposedImportTask[],
@@ -75,12 +107,19 @@ export function buildImportReviewDescription(
   const needsDueDates = tasks.some(taskNeedsDueDateReview)
 
   if (needsAssignees && needsDueDates) {
-    return 'Some assignees and due dates need your input. Review the highlighted tasks below.'
+    return 'Some assignees and due dates need clarification. Confirm teammates and deadlines below before creating tasks.'
   }
 
   if (needsDueDates) {
     return 'Some due dates were missing or unclear in the document. Add deadlines before creating tasks.'
   }
 
-  return 'Some assignees need your input. Edit tasks below, then create the ones you want to keep.'
+  return 'Some assignees were unclear or could not be matched to workspace members. Confirm who each task belongs to below.'
+}
+
+export function resolveImportAssigneeUserIds(
+  value: string,
+  participants: Parameters<typeof resolveAssigneeUserIds>[1],
+): string[] {
+  return resolveAssigneeUserIds(value, participants)
 }

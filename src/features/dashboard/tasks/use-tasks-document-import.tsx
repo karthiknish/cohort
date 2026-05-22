@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { readFileAsBase64, getPdfUploadSizeError } from '@/lib/agent-attachments'
 import { asErrorMessage } from '@/lib/convex-errors'
 import { agentApi, filesApi, tasksDocumentImportApi } from '@/lib/convex-api'
-import { notifyFailure, notifySuccess } from '@/lib/notifications'
+import { notifyFailure, notifySuccess, notifyWarning } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { isPreviewModeEnabled } from '@/lib/preview-data'
 import { uploadTaskAttachment } from '@/services/task-attachments'
@@ -21,7 +21,7 @@ import {
   prepareTaskImportDocument,
 } from './lib/extract-document-text'
 import { uploadTaskImportDocument } from './lib/upload-import-document'
-import { parseMentionNames, type TaskParticipant } from './task-types'
+import { formatAssigneeDraftFromUserIds, type TaskParticipant } from './task-types'
 import type {
   ProposedImportTask,
   ProposedImportTaskFromServer,
@@ -30,6 +30,9 @@ import type {
 import {
   getImportReviewBlocker,
   needsImportReview,
+  resolveImportAssigneeUserIds,
+  taskNeedsAssigneeReview,
+  taskNeedsDueDateReview,
 } from './tasks-document-import-review'
 
 function formatDueDateInput(dueDateMs: number | null): string {
@@ -39,17 +42,19 @@ function formatDueDateInput(dueDateMs: number | null): string {
   return date.toISOString().slice(0, 10)
 }
 
-function formatAssigneeDraft(names: string[]): string {
-  return names.map((name) => `@[${name}]`).join(' ')
-}
-
-function mapServerProposal(task: ProposedImportTaskFromServer, index: number): ProposedImportTask {
+function mapServerProposal(
+  task: ProposedImportTaskFromServer,
+  index: number,
+  participants: TaskParticipant[],
+): ProposedImportTask {
   return {
     localId: `import-${index}-${crypto.randomUUID()}`,
     title: task.title,
     description: task.description ?? '',
     priority: task.priority,
-    assignedTo: formatAssigneeDraft(task.assignedTo),
+    assignedToUserIds: task.assignedToUserIds,
+    assignedTo: formatAssigneeDraftFromUserIds(task.assignedToUserIds, participants),
+    documentAssigneeNames: task.documentAssigneeNames,
     dueDate: formatDueDateInput(task.dueDateMs),
     assignmentStatus: task.assignmentStatus,
     dueDateStatus: task.dueDateStatus,
@@ -63,6 +68,7 @@ function mapServerProposal(task: ProposedImportTaskFromServer, index: number): P
 export type UseTasksDocumentImportArgs = {
   workspaceId: string | null
   userId: string | undefined
+  participants: TaskParticipant[]
   clientId: string | undefined
   clientName: string | undefined
   projectId: string | null | undefined
@@ -75,6 +81,7 @@ export type UseTasksDocumentImportArgs = {
 export function useTasksDocumentImport({
   workspaceId,
   userId,
+  participants,
   clientId,
   clientName,
   projectId,
@@ -206,7 +213,7 @@ export function useTasksDocumentImport({
             description: task.description.trim() || undefined,
             status: 'todo',
             priority: task.priority,
-            assignedTo: parseMentionNames(task.assignedTo),
+            assignedTo: task.assignedToUserIds,
             clientId,
             client: clientName,
             projectId: projectId ?? undefined,
@@ -322,13 +329,33 @@ export function useTasksDocumentImport({
           projectId: projectId ?? null,
         })
 
-        const mapped = result.proposedTasks.map(mapServerProposal)
+        const mapped = result.proposedTasks.map((task, index) =>
+          mapServerProposal(task, index, participants),
+        )
         setDocumentSummary(result.documentSummary ?? null)
 
         if (needsImportReview(mapped)) {
           setProposedTasks(mapped)
           setPhase('review')
           setStatusMessage(null)
+          const assigneeIssues = mapped.filter((task) => taskNeedsAssigneeReview(task)).length
+          const dueDateIssues = mapped.filter((task) => taskNeedsDueDateReview(task)).length
+          if (assigneeIssues > 0 && dueDateIssues > 0) {
+            notifyWarning({
+              title: 'Review imported tasks',
+              message: `${assigneeIssues} task${assigneeIssues === 1 ? '' : 's'} need assignee confirmation and ${dueDateIssues} need due dates before creating.`,
+            })
+          } else if (assigneeIssues > 0) {
+            notifyWarning({
+              title: 'Assignees need confirmation',
+              message: `${assigneeIssues} task${assigneeIssues === 1 ? '' : 's'} have unclear or unmatched assignees. Pick teammates in the review sheet.`,
+            })
+          } else if (dueDateIssues > 0) {
+            notifyWarning({
+              title: 'Due dates need confirmation',
+              message: `${dueDateIssues} task${dueDateIssues === 1 ? '' : 's'} have missing or unclear deadlines. Add dates in the review sheet.`,
+            })
+          }
           return
         }
 
@@ -357,6 +384,7 @@ export function useTasksDocumentImport({
       projectId,
       uploadForVision,
       workspaceId,
+      participants,
     ],
   )
 

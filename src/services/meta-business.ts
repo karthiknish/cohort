@@ -246,7 +246,8 @@ export async function completeMetaOAuthFlow(options: {
     scopes: ['ads_management', 'ads_read', 'business_management'],
     accountId: null,
     accountName: null,
-    status: 'pending',
+    // OAuth only stores tokens — no sync runs until an ad account is selected.
+    status: 'never',
     accessTokenExpiresAt: adsExpiresAt,
   })
 

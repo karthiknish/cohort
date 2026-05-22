@@ -41,6 +41,7 @@ import { TASK_STATUSES } from '@/types/tasks'
 
 import { TaskCommentsPanel } from './task-comments'
 import { TASKS_THEME } from './tasks-theme'
+import { useTaskAssigneeList } from './task-participants-context'
 import {
   formatDate,
   formatPriorityLabel,
@@ -120,7 +121,7 @@ export function TaskViewDialogHeader({
   onDelete?: () => void
   onQuickStatusChange?: (status: TaskStatus) => void
 }) {
-  const assignee = assignedTo.length > 0 ? assignedTo.join(', ') : 'Unassigned'
+  const assignee = useTaskAssigneeList(assignedTo)
   const showMenu = Boolean(onEdit || onDelete || onQuickStatusChange)
 
   return (

@@ -51,7 +51,6 @@ const AXIS_TICK_STYLE = {
 const CHART_TOOLTIP_CURSOR = { strokeDasharray: '3 3' } as const
 const CONVERSIONS_BAR_CURSOR = { fill: 'hsl(var(--muted))', opacity: 0.2 } as const
 const CHART_ACTIVE_DOT = { r: 5, strokeWidth: 0 } as const
-const CHART_LEGEND_CONTENT = <ChartLegendContent className="pt-3 text-xs text-muted-foreground" />
 const CHART_MARGIN = { top: 8, right: 12, left: 4, bottom: 4 } as const
 const CHART_CARD_CLASS = 'border border-border/60 bg-card shadow-sm'
 const CHART_HEADER_CLASS = 'border-b border-border/60 bg-muted/30 px-6 py-4'
@@ -137,6 +136,11 @@ export function AnalyticsCharts({
     [chartData],
   )
 
+  const chartLegendContent = useMemo(
+    () => <ChartLegendContent className="pt-3 text-xs text-muted-foreground" />,
+    [],
+  )
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <Card className={CHART_CARD_CLASS}>
@@ -189,7 +193,7 @@ export function AnalyticsCharts({
                   cursor={CHART_TOOLTIP_CURSOR}
                   content={usersSessionsTooltipContent}
                 />
-                <ChartLegend content={CHART_LEGEND_CONTENT} />
+                <ChartLegend content={chartLegendContent} />
                 <Area
                   type="monotone"
                   dataKey="users"
@@ -261,7 +265,7 @@ export function AnalyticsCharts({
                   cursor={CHART_TOOLTIP_CURSOR}
                   content={revenueTooltipContent}
                 />
-                <ChartLegend content={CHART_LEGEND_CONTENT} />
+                <ChartLegend content={chartLegendContent} />
                 <Area
                   type="monotone"
                   dataKey="revenue"
@@ -323,7 +327,7 @@ export function AnalyticsCharts({
                   cursor={CONVERSIONS_BAR_CURSOR}
                   content={conversionsTooltipContent}
                 />
-                <ChartLegend content={CHART_LEGEND_CONTENT} />
+                <ChartLegend content={chartLegendContent} />
                 <Bar dataKey="conversions" fill="url(#fillConversionsAnalytics)" radius={[4, 4, 0, 0]} barSize={20} />
               </BarChart>
             </ChartContainer>
@@ -377,7 +381,7 @@ export function AnalyticsCharts({
                   cursor={CHART_TOOLTIP_CURSOR}
                   content={conversionRateTooltipContent}
                 />
-                <ChartLegend content={CHART_LEGEND_CONTENT} />
+                <ChartLegend content={chartLegendContent} />
                 <Area
                   type="monotone"
                   dataKey="conversionRate"

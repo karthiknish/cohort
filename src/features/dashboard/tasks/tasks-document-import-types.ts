@@ -17,6 +17,8 @@ export type ProposedImportTask = {
   description: string
   priority: string
   assignedTo: string
+  assignedToUserIds: string[]
+  documentAssigneeNames: string[]
   dueDate: string
   assignmentStatus: TaskAssignmentStatus
   dueDateStatus: TaskDueDateStatus
@@ -30,7 +32,8 @@ export type ProposedImportTaskFromServer = {
   title: string
   description: string | null
   priority: 'low' | 'medium' | 'high'
-  assignedTo: string[]
+  assignedToUserIds: string[]
+  documentAssigneeNames: string[]
   dueDateMs: number | null
   assignmentStatus: TaskAssignmentStatus
   dueDateStatus: TaskDueDateStatus

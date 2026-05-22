@@ -83,9 +83,17 @@ const STALE_SYNC_THRESHOLD_MS = 30 * 60 * 1000
 
 function isSyncStale(statusInfo: IntegrationStatusInfo | undefined): boolean {
   if (statusInfo?.status !== 'pending') return false
+  if (!statusInfo.accountId) return false
   const requestedAt = statusInfo.lastSyncRequestedAt
   if (!requestedAt) return false
   return Date.now() - new Date(requestedAt).getTime() > STALE_SYNC_THRESHOLD_MS
+}
+
+function needsAccountSetup(
+  statusInfo: IntegrationStatusInfo | undefined,
+  isConnected: boolean,
+): boolean {
+  return isConnected && !statusInfo?.accountId && statusInfo?.status !== 'success'
 }
 
 function formatLastSync(dateString: string | null | undefined): string {
@@ -109,9 +117,11 @@ function formatLastSync(dateString: string | null | undefined): string {
 function getStatusBadgeVariant(
   status: string | undefined,
   isConnected: boolean,
-  stale?: boolean
+  stale?: boolean,
+  setupRequired?: boolean,
 ): 'default' | 'secondary' | 'destructive' | 'outline' {
   if (!isConnected) return 'outline'
+  if (setupRequired) return 'outline'
   if (status === 'error' || stale) return 'destructive'
   if (status === 'pending') return 'secondary'
   return 'default'
@@ -120,11 +130,14 @@ function getStatusBadgeVariant(
 function getStatusLabel(
   status: string | undefined,
   isConnected: boolean,
-  stale?: boolean
+  stale?: boolean,
+  setupRequired?: boolean,
 ): string {
   if (!isConnected) return 'Not connected'
+  if (setupRequired) return 'Finish setup'
   if (status === 'error') return 'Sync failed'
   if (status === 'pending') return stale ? 'Sync stalled' : 'Syncing...'
+  if (status === 'never') return 'Finish setup'
   return 'Connected'
 }
 
@@ -458,6 +471,7 @@ const ProviderCard = memo(function ProviderCard({
   const providerInfo = PROVIDER_INFO[provider.id as keyof typeof PROVIDER_INFO]
 
   const stale = isSyncStale(statusInfo)
+  const setupRequired = needsAccountSetup(statusInfo, isConnected)
 
   const handleConnectClick = useCallback(() => {
     onConnect(provider)
@@ -475,8 +489,8 @@ const ProviderCard = memo(function ProviderCard({
     onSyncNow(provider)
   }, [onSyncNow, provider])
 
-  const statusVariant = getStatusBadgeVariant(statusInfo?.status, isConnected, stale)
-  const statusLabel = getStatusLabel(statusInfo?.status, isConnected, stale)
+  const statusVariant = getStatusBadgeVariant(statusInfo?.status, isConnected, stale, setupRequired)
+  const statusLabel = getStatusLabel(statusInfo?.status, isConnected, stale, setupRequired)
   const lastSyncLabel = formatLastSync(statusInfo?.lastSyncedAt)
   const accountLabel =
     typeof statusInfo?.accountName === 'string' && statusInfo.accountName.length > 0
@@ -501,9 +515,10 @@ const ProviderCard = memo(function ProviderCard({
       {isConnected && (
         <div className={cn(
           'absolute left-0 top-0 h-1 w-full',
+          setupRequired && 'bg-primary',
           (statusInfo?.status === 'error' || stale) && 'bg-destructive',
-          statusInfo?.status === 'pending' && !stale && 'bg-warning',
-          statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && !stale && (theme?.indicator || 'bg-primary')
+          statusInfo?.status === 'pending' && !stale && !setupRequired && 'bg-warning',
+          statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && !stale && !setupRequired && (theme?.indicator || 'bg-primary')
         )} />
       )}
 
@@ -532,13 +547,13 @@ const ProviderCard = memo(function ProviderCard({
         {/* Status badge and last sync */}
         <div className="flex items-center justify-between">
           <Badge variant={statusVariant} className="rounded-full text-xs">
-            {statusInfo?.status === 'pending' && !stale && (
+            {statusInfo?.status === 'pending' && !stale && !setupRequired && (
               <Loader2 className="mr-1 size-3 animate-spin" />
             )}
             {(statusInfo?.status === 'error' || stale) && (
               <AlertTriangle className="mr-1 size-3" />
             )}
-            {isConnected && statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && !stale && (
+            {isConnected && statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && !stale && !setupRequired && (
               <Check className="mr-1 size-3" />
             )}
             {statusLabel}

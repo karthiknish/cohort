@@ -38,7 +38,8 @@ export type ProposedImportTask = {
   title: string
   description: string | null
   priority: 'low' | 'medium' | 'high'
-  assignedTo: string[]
+  assignedToUserIds: string[]
+  documentAssigneeNames: string[]
   dueDateMs: number | null
   assignmentStatus: TaskAssignmentStatus
   dueDateStatus: TaskDueDateStatus
@@ -176,7 +177,7 @@ async function resolveTaskAssignment(
   ctx: Parameters<typeof listWorkspaceMembers>[0],
   workspaceId: string,
   rawTask: RawExtractedTask,
-): Promise<Pick<ProposedImportTask, 'assignedTo' | 'assignmentStatus' | 'suggestions'>> {
+): Promise<Pick<ProposedImportTask, 'assignedToUserIds' | 'assignmentStatus' | 'suggestions'>> {
   const assignedToNames = asStringArray(rawTask.assignedToNames)
   const members = await listWorkspaceMembers(ctx, workspaceId)
 
@@ -243,6 +244,9 @@ async function mapRawTasksToProposals(
 
       const assignment = await resolveTaskAssignment(ctx, workspaceId, rawTask)
       const dueDate = await resolveTaskDueDate(rawTask, nowMs)
+      const documentAssigneeNames = asStringArray(rawTask.assignedToNames)
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0)
 
       return {
         title,
@@ -252,7 +256,8 @@ async function mapRawTasksToProposals(
           dueDateMs: dueDate.dueDateMs,
           nowMs,
         }),
-        assignedTo: assignment.assignedTo,
+        assignedToUserIds: assignment.assignedToUserIds,
+        documentAssigneeNames,
         dueDateMs: dueDate.dueDateMs,
         assignmentStatus: assignment.assignmentStatus,
         dueDateStatus: dueDate.dueDateStatus,

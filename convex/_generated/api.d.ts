@@ -149,6 +149,7 @@ import type * as socialIntegrations_settings from "../socialIntegrations/setting
 import type * as socialIntegrations_syncJobs from "../socialIntegrations/syncJobs.js";
 import type * as socialMetrics from "../socialMetrics.js";
 import type * as socialSyncWorkerActions from "../socialSyncWorkerActions.js";
+import type * as taskAssignees from "../taskAssignees.js";
 import type * as taskComments from "../taskComments.js";
 import type * as taskDocumentImport from "../taskDocumentImport.js";
 import type * as taskDocumentImportParsing from "../taskDocumentImportParsing.js";
@@ -304,6 +305,7 @@ declare const fullApi: ApiFromModules<{
   "socialIntegrations/syncJobs": typeof socialIntegrations_syncJobs;
   socialMetrics: typeof socialMetrics;
   socialSyncWorkerActions: typeof socialSyncWorkerActions;
+  taskAssignees: typeof taskAssignees;
   taskComments: typeof taskComments;
   taskDocumentImport: typeof taskDocumentImport;
   taskDocumentImportParsing: typeof taskDocumentImportParsing;

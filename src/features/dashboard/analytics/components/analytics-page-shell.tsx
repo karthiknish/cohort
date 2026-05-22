@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useCallback } from 'react'
 import { BarChart3, CheckCircle2, Link2, LoaderCircle, RotateCw, Unlink } from 'lucide-react'
 
@@ -17,9 +18,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Skeleton } from '@/shared/ui/skeleton'
 
 import { AnalyticsBreakdownSection } from './analytics-breakdown-section'
-import { AnalyticsCharts } from './analytics-charts'
 import { AnalyticsDateRangePicker } from './analytics-date-range-picker'
 import { AnalyticsDeepDiveSection } from './analytics-deep-dive-section'
 import { AnalyticsExportButton } from './analytics-export-button'
@@ -28,6 +29,20 @@ import { AnalyticsMetricCards } from './analytics-metric-cards'
 import { useAnalyticsPageContext } from './analytics-page-provider'
 import { AnalyticsSummaryCards } from './analytics-summary-cards'
 import { GoogleAnalyticsSetupDialog } from './google-analytics-setup-dialog'
+
+const AnalyticsCharts = dynamic(
+  () => import('./analytics-charts').then((mod) => ({ default: mod.AnalyticsCharts })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={index} className="h-[360px] w-full rounded-lg" />
+        ))}
+      </div>
+    ),
+  },
+)
 
 export function AnalyticsPageShell() {
   const { initialMetricsLoading } = useAnalyticsPageContext()
@@ -289,9 +304,14 @@ function AnalyticsErrorAlert() {
 function AnalyticsBodySection() {
   const { gaConnected, isGaSelectedWithoutData, isSyncPending } = useAnalyticsPageContext()
 
-  if (isSyncPending) return <AnalyticsSyncingState />
-  if (isGaSelectedWithoutData || !gaConnected) return <AnalyticsEmptyState />
-  return <AnalyticsPerformanceSection />
+  if (!gaConnected || isGaSelectedWithoutData) return <AnalyticsEmptyState />
+
+  return (
+    <div className="space-y-6">
+      {isSyncPending ? <AnalyticsSyncingBanner /> : null}
+      <AnalyticsPerformanceSection />
+    </div>
+  )
 }
 
 function AnalyticsEmptyState() {
@@ -358,19 +378,15 @@ function AnalyticsEmptyState() {
   )
 }
 
-function AnalyticsSyncingState() {
+function AnalyticsSyncingBanner() {
   return (
-    <Card className={DASHBOARD_THEME.cards.base}>
-      <CardContent className="flex flex-col items-center px-6 py-16 text-center">
-        <div className={cn(getIconContainerClasses('large'), 'mb-6 size-20 rounded-full')}>
-          <LoaderCircle className="size-10 animate-spin" />
-        </div>
-        <h3 className="mb-2 text-base font-semibold text-foreground">Syncing analytics data</h3>
-        <p className="max-w-md text-sm text-muted-foreground">
-          Importing your Google Analytics data. This may take a moment…
-        </p>
-      </CardContent>
-    </Card>
+    <Alert className="border-accent/40 bg-accent/5">
+      <LoaderCircle className="size-4 animate-spin text-primary" />
+      <AlertTitle className="text-sm font-semibold">Syncing analytics data</AlertTitle>
+      <AlertDescription className="text-xs text-muted-foreground">
+        Importing the latest Google Analytics metrics. Charts below may update as new data arrives.
+      </AlertDescription>
+    </Alert>
   )
 }
 

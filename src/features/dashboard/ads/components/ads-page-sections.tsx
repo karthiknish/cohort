@@ -10,6 +10,7 @@ import { CrossChannelOverviewCard } from '@/features/dashboard/ads/components/cr
 import { MetricsTableCard } from '@/features/dashboard/ads/components/metrics-table-card'
 import { PerformanceSummaryCard } from '@/features/dashboard/ads/components/performance-summary-card'
 import { WorkflowCard } from '@/features/dashboard/ads/components/workflow-card'
+import { AdSetupPanel } from '@/features/dashboard/ads/components/ad-setup-panel'
 import type { DateRange } from '@/features/dashboard/ads/components/date-range-picker'
 import type {
   useAdsConnections,
@@ -117,6 +118,17 @@ export function AdsPageSetupSection({
     googleNeedsAccountSelection,
     metaNeedsAccountSelection,
     tiktokNeedsAccountSelection,
+    googleSetupMessage,
+    metaSetupMessage,
+    tiktokSetupMessage,
+    initializingGoogle,
+    initializingMeta,
+    initializingTikTok,
+    metaAccountOptions,
+    selectedMetaAccountId,
+    setSelectedMetaAccountId,
+    loadingMetaAccountOptions,
+    reloadMetaAccountOptions,
   } = connections
   const { handleManualRefresh } = metrics
   const pendingSetupCount = [
@@ -159,6 +171,32 @@ export function AdsPageSetupSection({
             pendingSetupCount={pendingSetupCount}
           />
         </div>
+      </FadeIn>
+
+      <FadeIn>
+        <AdSetupPanel
+          connectedCount={connectedAccountCount}
+          totalProviders={adPlatforms.length}
+          googleNeedsAccountSelection={googleNeedsAccountSelection}
+          googleSetupMessage={googleSetupMessage}
+          onOpenGoogleSetup={openGoogleCampaignSetup}
+          metaSetupMessage={metaSetupMessage}
+          metaNeedsAccountSelection={metaNeedsAccountSelection}
+          initializingMeta={initializingMeta}
+          onInitializeMeta={handleInitializeMeta}
+          metaAccountOptions={metaAccountOptions}
+          selectedMetaAccountId={selectedMetaAccountId}
+          onMetaAccountSelectionChange={setSelectedMetaAccountId}
+          loadingMetaAccountOptions={loadingMetaAccountOptions}
+          onReloadMetaAccountOptions={() => {
+            void reloadMetaAccountOptions()
+          }}
+          tiktokSetupMessage={tiktokSetupMessage}
+          tiktokNeedsAccountSelection={tiktokNeedsAccountSelection}
+          initializingTikTok={initializingTikTok}
+          onInitializeTikTok={handleInitializeTikTok}
+          initializingGoogle={initializingGoogle}
+        />
       </FadeIn>
 
       {connectedAccountCount > 0 ? (

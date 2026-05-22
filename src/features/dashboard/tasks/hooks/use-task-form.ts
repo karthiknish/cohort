@@ -10,8 +10,8 @@ import {
   type PendingTaskAttachment,
   uploadTaskAttachment,
 } from '@/services/task-attachments'
-import { buildInitialFormState, isFutureTaskDueDateValue, parseMentionNames } from '../task-types'
-import type { TaskFormState } from '../task-types'
+import { buildInitialFormState, formatAssigneeDraftFromUserIds, getAssigneeDraftIssue, isFutureTaskDueDateValue, resolveAssigneeUserIds } from '../task-types'
+import type { TaskFormState, TaskParticipant } from '../task-types'
 import type { CreateTaskPayload, UpdateTaskPayload } from './use-tasks'
 
 export type UseTaskFormOptions = {
@@ -19,6 +19,7 @@ export type UseTaskFormOptions = {
   selectedClientId: string | undefined
   projectContext?: { id: string | null; name: string | null }
   userId: string | undefined
+  participants?: TaskParticipant[]
   initialCreateOpen?: boolean
   onCreateOpenChange?: (open: boolean) => void
   onCreateTask: (payload: CreateTaskPayload) => Promise<TaskRecord | null>
@@ -63,6 +64,7 @@ export function useTaskForm({
   selectedClientId,
   projectContext,
   userId,
+  participants = [],
   initialCreateOpen = false,
   onCreateOpenChange,
   onCreateTask,
@@ -177,10 +179,16 @@ export function useTaskForm({
       return
     }
 
+    const assigneeIssue = getAssigneeDraftIssue(formState.assignedTo, participants)
+    if (assigneeIssue) {
+      setCreateError(assigneeIssue)
+      return
+    }
+
     setCreating(true)
     setCreateError(null)
 
-    const assignedMembers = parseMentionNames(formState.assignedTo)
+    const assignedMembers = resolveAssigneeUserIds(formState.assignedTo, participants)
 
     const normalizedClientName = (selectedClient?.name ?? formState.clientName).trim()
     const normalizedProjectName = formState.projectName.trim()
@@ -233,7 +241,7 @@ export function useTaskForm({
       description: task.description || '',
       status: task.status,
       priority: task.priority,
-      assignedTo: (task.assignedTo ?? []).map((name) => `@[${name}]`).join(' '),
+      assignedTo: formatAssigneeDraftFromUserIds(task.assignedTo ?? [], participants),
       clientId: task.clientId || null,
       clientName: task.client || '',
       projectId: task.projectId || null,
@@ -242,7 +250,7 @@ export function useTaskForm({
     })
     setUpdateError(null)
     setIsEditOpen(true)
-  }, [])
+  }, [participants])
 
   const handleEditClose = useCallback(() => {
     setIsEditOpen(false)
@@ -267,10 +275,16 @@ export function useTaskForm({
       return
     }
 
+    const assigneeIssue = getAssigneeDraftIssue(editFormState.assignedTo, participants)
+    if (assigneeIssue) {
+      setUpdateError(assigneeIssue)
+      return
+    }
+
     setUpdating(true)
     setUpdateError(null)
 
-    const assignedMembers = parseMentionNames(editFormState.assignedTo)
+    const assignedMembers = resolveAssigneeUserIds(editFormState.assignedTo, participants)
 
     const payload: UpdateTaskPayload = {
       title: trimmedTitle,

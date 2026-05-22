@@ -37,6 +37,7 @@ import {
   statusTablePillClass,
 } from './task-types'
 import { formatTaskKey } from './task-table'
+import { useTaskAssigneeLabel } from './task-participants-context'
 
 type TaskDataTableActions = {
   pendingStatusUpdates: Set<string>
@@ -192,9 +193,10 @@ function TaskAssigneeHeader({ column }: HeaderContext<TaskRecord, unknown>) {
 }
 
 function TaskAssigneeCell({ row }: CellContext<TaskRecord, unknown>) {
-  const assignee = (row.original.assignedTo ?? [])[0] ?? null
+  const rawAssignee = (row.original.assignedTo ?? [])[0] ?? null
+  const assignee = useTaskAssigneeLabel(rawAssignee ?? '')
 
-  if (!assignee) {
+  if (!rawAssignee) {
     return <span className="text-xs text-muted-foreground">Unassigned</span>
   }
 

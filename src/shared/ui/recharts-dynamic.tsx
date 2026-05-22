@@ -6,10 +6,19 @@ import type * as Recharts from 'recharts'
 
 type RechartsModule = typeof Recharts
 
+let rechartsModulePromise: Promise<RechartsModule> | null = null
+
+function loadRechartsModule(): Promise<RechartsModule> {
+  if (!rechartsModulePromise) {
+    rechartsModulePromise = import('recharts')
+  }
+  return rechartsModulePromise
+}
+
 function createRechartsComponent<K extends keyof RechartsModule>(exportName: K) {
   return dynamic(
     () =>
-      import('recharts').then((module) => ({
+      loadRechartsModule().then((module) => ({
         default: module[exportName] as ComponentType<Record<string, unknown>>,
       })),
     { ssr: false },

@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 import { AlertTriangle } from 'lucide-react'
 
+import { Button } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
@@ -11,7 +12,12 @@ import { Textarea } from '@/shared/ui/textarea'
 import { cn } from '@/lib/utils'
 
 import type { ProposedImportTask } from './tasks-document-import-types'
-import { taskNeedsAssigneeReview, taskNeedsDueDateReview } from './tasks-document-import-review'
+import {
+  buildAssigneeReviewPrompt,
+  resolveImportAssigneeUserIds,
+  taskNeedsAssigneeReview,
+  taskNeedsDueDateReview,
+} from './tasks-document-import-review'
 
 type ImportReviewTaskRowProps = {
   task: ProposedImportTask
@@ -71,10 +77,24 @@ export function ImportReviewTaskRow({
 
   const handleAssigneesChange = useCallback(
     (value: string) => {
-      onUpdateTask(task.localId, { assignedTo: value })
+      const assignedToUserIds = resolveImportAssigneeUserIds(value, mentionableUsers)
+      onUpdateTask(task.localId, {
+        assignedTo: value,
+        assignedToUserIds,
+        assignmentStatus:
+          assignedToUserIds.length > 0
+            ? 'resolved'
+            : task.suggestions.length > 0
+              ? 'unassigned'
+              : task.assignmentStatus,
+      })
     },
-    [onUpdateTask, task.localId],
+    [mentionableUsers, onUpdateTask, task.assignmentStatus, task.localId, task.suggestions.length],
   )
+
+  const handleConfirmAssignees = useCallback(() => {
+    onUpdateTask(task.localId, { assignmentStatus: 'resolved' })
+  }, [onUpdateTask, task.localId])
 
   const needsAssigneeReview = taskNeedsAssigneeReview(task)
   const needsDueDateReview = taskNeedsDueDateReview(task)
@@ -110,11 +130,9 @@ export function ImportReviewTaskRow({
         ) : null}
       </div>
 
-      {needsAssigneeReview && task.suggestions.length > 0 ? (
-        <p className="text-xs text-muted-foreground">
-          {task.assignmentStatus === 'ambiguous'
-            ? `Did you mean: ${task.suggestions.join(', ')}?`
-            : `Match to a workspace profile: ${task.suggestions.join(', ')}`}
+      {needsAssigneeReview ? (
+        <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground">
+          {buildAssigneeReviewPrompt(task)}
         </p>
       ) : null}
 
@@ -177,8 +195,15 @@ export function ImportReviewTaskRow({
         value={task.assignedTo}
         onChange={handleAssigneesChange}
         users={mentionableUsers}
-        placeholder="@[Name] or comma-separated names"
+        placeholder="Pick teammates from the list"
+        className={needsAssigneeReview ? 'border-warning/60 bg-warning/5' : undefined}
       />
+
+      {needsAssigneeReview && task.assignedToUserIds.length > 0 && task.assignmentStatus === 'ambiguous' ? (
+        <Button type="button" size="sm" variant="outline" onClick={handleConfirmAssignees}>
+          Confirm these assignees
+        </Button>
+      ) : null}
     </div>
   )
 }

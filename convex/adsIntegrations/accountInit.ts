@@ -1,6 +1,7 @@
 'use node'
 
 import { internal } from '/_generated/api'
+import type { ActionCtx } from '../_generated/server'
 
 import {
   Errors,
@@ -13,6 +14,35 @@ import {
   v,
   withErrorHandling,
 } from './shared'
+
+async function enqueueInitialSyncAndRun(
+  ctx: ActionCtx,
+  args: {
+    workspaceId: string
+    providerId: 'google' | 'linkedin' | 'facebook' | 'tiktok'
+    clientId: string | null
+  },
+): Promise<void> {
+  await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
+    workspaceId: args.workspaceId,
+    providerId: args.providerId,
+    clientId: args.clientId,
+    jobType: 'initial-backfill',
+    timeframeDays: 90,
+  })
+
+  await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+    workspaceId: args.workspaceId,
+    providerId: args.providerId,
+    clientId: args.clientId,
+    status: 'pending',
+    message: null,
+  })
+
+  await ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
+    workspaceId: args.workspaceId,
+  })
+}
 
 export const initializeAdAccount = action({
   args: {
@@ -90,12 +120,10 @@ export const initializeAdAccount = action({
         linkedAtMs,
       })
 
-      await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
+      await enqueueInitialSyncAndRun(ctx, {
         workspaceId: args.workspaceId,
         providerId: 'google',
         clientId,
-        jobType: 'initial-backfill',
-        timeframeDays: 90,
       })
 
       return {
@@ -135,12 +163,10 @@ export const initializeAdAccount = action({
         linkedAtMs,
       })
 
-      await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
+      await enqueueInitialSyncAndRun(ctx, {
         workspaceId: args.workspaceId,
         providerId: 'linkedin',
         clientId,
-        jobType: 'initial-backfill',
-        timeframeDays: 90,
       })
 
       return {
@@ -188,12 +214,10 @@ export const initializeAdAccount = action({
         linkedAtMs,
       })
 
-      await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
+      await enqueueInitialSyncAndRun(ctx, {
         workspaceId: args.workspaceId,
         providerId: 'facebook',
         clientId,
-        jobType: 'initial-backfill',
-        timeframeDays: 90,
       })
 
       return {
@@ -231,13 +255,11 @@ export const initializeAdAccount = action({
       linkedAtMs,
     })
 
-      await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
-        workspaceId: args.workspaceId,
-        providerId: 'tiktok',
-        clientId,
-        jobType: 'initial-backfill',
-        timeframeDays: 90,
-      })
+    await enqueueInitialSyncAndRun(ctx, {
+      workspaceId: args.workspaceId,
+      providerId: 'tiktok',
+      clientId,
+    })
 
     return {
       accountId: preferredAccount.id,

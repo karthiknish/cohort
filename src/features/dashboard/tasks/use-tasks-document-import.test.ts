@@ -10,6 +10,8 @@ function buildTask(overrides: Partial<ProposedImportTask>): ProposedImportTask {
     description: '',
     priority: 'medium',
     assignedTo: '',
+    assignedToUserIds: [],
+    documentAssigneeNames: [],
     dueDate: '',
     assignmentStatus: 'resolved',
     dueDateStatus: 'resolved',
@@ -26,12 +28,15 @@ describe('tasks document import hybrid routing', () => {
     const tasks: ProposedImportTask[] = [
       buildTask({
         localId: '1',
-        assignedTo: '@[Alex]',
+        assignedTo: '@[Alex Kim]',
+        assignedToUserIds: ['user-alex'],
+        documentAssigneeNames: ['Alex Kim'],
         dueDate: '2026-05-28',
       }),
       buildTask({
         localId: '2',
         assignmentStatus: 'unassigned',
+        documentAssigneeNames: [],
         dueDateStatus: 'resolved',
       }),
     ]
@@ -44,6 +49,7 @@ describe('tasks document import hybrid routing', () => {
       needsImportReview([
         buildTask({
           assignmentStatus: 'ambiguous',
+          documentAssigneeNames: ['Alex'],
           suggestions: ['Alex Kim', 'Alex Johnson'],
         }),
       ]),
@@ -55,7 +61,20 @@ describe('tasks document import hybrid routing', () => {
       needsImportReview([
         buildTask({
           assignmentStatus: 'unassigned',
+          documentAssigneeNames: ['Deepak'],
           suggestions: ['Deepak Sharma'],
+        }),
+      ]),
+    ).toBe(true)
+  })
+
+  it('opens review when document assignees have no workspace match', () => {
+    expect(
+      needsImportReview([
+        buildTask({
+          assignmentStatus: 'unassigned',
+          documentAssigneeNames: ['Someone New'],
+          suggestions: [],
         }),
       ]),
     ).toBe(true)

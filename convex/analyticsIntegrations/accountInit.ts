@@ -65,6 +65,18 @@ export const initializeGoogleAnalyticsProperty = action({
         timeframeDays: 90,
       }),
     ])
+
+    await ctx.runMutation(internal.analyticsIntegrations.updateGoogleAnalyticsStatusInternal, {
+      workspaceId: args.workspaceId,
+      clientId,
+      status: 'pending',
+      message: null,
+    })
+
+    await ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
+      workspaceId: args.workspaceId,
+    })
+
     return {
       accountId: selectedProperty.id,
       accountName: selectedProperty.name,

@@ -3,8 +3,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import { TASK_STATUSES } from '@/types/tasks'
 import type { TaskRecord, TaskStatus } from '@/types/tasks'
-import { PRIORITY_ORDER } from '../task-types'
-import type { SortField, SortDirection } from '../task-types'
+import { PRIORITY_ORDER, resolveAssigneeLabel } from '../task-types'
+import type { SortField, SortDirection, TaskParticipant } from '../task-types'
 
 const TASK_VIEW_MODE_STORAGE_KEY = 'dashboard:tasks:view-mode'
 
@@ -23,7 +23,9 @@ function getInitialTaskViewMode(): 'list' | 'grid' | 'board' {
 
 export type UseTaskFiltersOptions = {
   tasks: TaskRecord[]
+  userId: string | undefined
   userName: string | undefined
+  participants?: TaskParticipant[]
   selectedClient: { id: string | null; name: string | null } | null
   selectedClientId: string | undefined
   projectFilterId: string | null
@@ -74,7 +76,9 @@ export type UseTaskFiltersReturn = {
 
 export function useTaskFilters({
   tasks,
+  userId,
   userName,
+  participants = [],
   selectedClient,
   selectedClientId,
   projectFilterId,
@@ -165,9 +169,11 @@ export function useTaskFilters({
 
       let matchesAssignee = true
       if (activeTab === 'my-tasks') {
-        if (userName) {
+        if (userName || userId) {
           matchesAssignee = (task.assignedTo ?? []).some(
-            (a) => a.toLowerCase() === userName.toLowerCase()
+            (assignee) =>
+              (userId ? assignee === userId : false) ||
+              (userName ? assignee.toLowerCase() === userName.toLowerCase() : false),
           )
         } else {
           matchesAssignee = false
@@ -175,12 +181,18 @@ export function useTaskFilters({
       } else {
         matchesAssignee =
           selectedAssignee === 'all' ||
-          (task.assignedTo ?? []).some((a) => a.toLowerCase().includes(selectedAssignee.toLowerCase()))
+          (task.assignedTo ?? []).some((assignee) => {
+            const label = resolveAssigneeLabel(assignee, participants)
+            return (
+              label.toLowerCase().includes(selectedAssignee.toLowerCase()) ||
+              assignee.toLowerCase().includes(selectedAssignee.toLowerCase())
+            )
+          })
       }
 
       return matchesStatus && matchesSearch && matchesAssignee
     })
-  }, [projectScopedTasks, selectedStatus, searchQuery, selectedAssignee, activeTab, userName])
+  }, [projectScopedTasks, selectedStatus, searchQuery, selectedAssignee, activeTab, userId, userName, participants])
 
   // Sort tasks
   const sortedTasks = useMemo(() => {
@@ -247,13 +259,14 @@ export function useTaskFilters({
     const options = new Set<string>()
     projectScopedTasks.forEach((task) => {
       (task.assignedTo ?? []).forEach((member) => {
-        if (member && member.trim().length > 0) {
-          options.add(member)
+        const label = resolveAssigneeLabel(member, participants)
+        if (label && label.trim().length > 0) {
+          options.add(label)
         }
       })
     })
     return Array.from(options).toSorted((a, b) => a.localeCompare(b))
-  }, [projectScopedTasks])
+  }, [participants, projectScopedTasks])
 
   const effectiveSelectedAssignee = useMemo(() => {
     if (selectedAssignee !== 'all' && !assigneeOptions.includes(selectedAssignee)) {

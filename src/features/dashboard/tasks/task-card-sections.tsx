@@ -40,6 +40,7 @@ import {
 } from '@/shared/ui/tooltip'
 import { buildProjectRoute } from '@/lib/project-routes'
 import { cn } from '@/lib/utils'
+import { useTaskAssigneeList } from './task-participants-context'
 import { TASK_STATUSES, type TaskRecord, type TaskStatus } from '@/types/tasks'
 
 import {
@@ -454,8 +455,7 @@ export function TaskCardCompactMeta({
   dueSoon: boolean
   compact?: boolean
 }) {
-  const assignee =
-    (task.assignedTo ?? []).length > 0 ? (task.assignedTo ?? []).join(', ') : 'Unassigned'
+  const assignee = useTaskAssigneeList(task.assignedTo)
 
   return (
     <div

@@ -251,17 +251,74 @@ export function parseMentionNames(value: string): string[] {
     match = mentionRegex.exec(value)
   }
 
-  // If no @[...] mentions found, fall back to comma-separated parsing
-  if (names.length === 0) {
-    return value
-      .split(',')
-      .flatMap((n) => {
-        const trimmed = n.trim()
-        return trimmed.length > 0 ? [trimmed] : []
-      })
+  if (names.length > 0) return names
+
+  return []
+}
+
+export function formatAssigneeDraftFromUserIds(
+  userIds: string[],
+  participants: TaskParticipant[],
+): string {
+  return userIds
+    .flatMap((userId) => {
+      const member = participants.find((participant) => participant.id === userId)
+      return member?.name ? [`@[${member.name}]`] : []
+    })
+    .join(' ')
+}
+
+export function resolveAssigneeUserIds(
+  value: string,
+  participants: TaskParticipant[],
+): string[] {
+  const names = parseMentionNames(value)
+  const resolved: string[] = []
+
+  for (const name of names) {
+    const member = participants.find(
+      (participant) => participant.name.trim().toLowerCase() === name.toLowerCase(),
+    )
+    if (member?.id && !resolved.includes(member.id)) {
+      resolved.push(member.id)
+    }
   }
 
-  return names
+  return resolved
+}
+
+export function getAssigneeDraftIssue(
+  value: string,
+  participants: TaskParticipant[],
+): string | null {
+  const names = parseMentionNames(value)
+  if (names.length === 0) return null
+
+  const resolved = resolveAssigneeUserIds(value, participants)
+  if (resolved.length === names.length) return null
+
+  return 'Pick assignees from your teammate list — unrecognized names cannot be saved.'
+}
+
+export function resolveAssigneeLabel(
+  value: string,
+  participants: TaskParticipant[],
+): string {
+  const byId = participants.find((participant) => participant.id === value)
+  if (byId?.name) return byId.name
+
+  const byName = participants.find(
+    (participant) => participant.name.trim().toLowerCase() === value.trim().toLowerCase(),
+  )
+  return byName?.name ?? value
+}
+
+export function formatAssigneeList(
+  assignees: string[],
+  participants: TaskParticipant[],
+): string {
+  if (assignees.length === 0) return 'Unassigned'
+  return assignees.map((assignee) => resolveAssigneeLabel(assignee, participants)).join(', ')
 }
 
 

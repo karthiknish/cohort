@@ -6,4 +6,5 @@ export const ANALYTICS_CHART_TOOLTIP_PROPS = {
   isAnimationActive: false,
 } as const
 
-export const ANALYTICS_CHART_CONTAINER_CLASS = 'aspect-auto h-[280px] min-h-[280px] w-full'
+export const ANALYTICS_CHART_CONTAINER_CLASS =
+  'flex w-full aspect-auto h-[280px] min-h-[280px] flex-col [&_.recharts-responsive-container]:min-h-[280px]'

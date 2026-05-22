@@ -197,7 +197,7 @@ describe('resolveDocumentImportAssignees', () => {
     const result = resolveDocumentImportAssignees(['Deepak'], members)
 
     expect(result).toEqual({
-      assignedTo: ['Deepak Sharma'],
+      assignedToUserIds: ['user-deepak'],
       assignmentStatus: 'resolved',
       suggestions: [],
     })
@@ -207,7 +207,7 @@ describe('resolveDocumentImportAssignees', () => {
     const result = resolveDocumentImportAssignees(['Patel'], members)
 
     expect(result).toEqual({
-      assignedTo: ['Archana Patel'],
+      assignedToUserIds: ['user-archana'],
       assignmentStatus: 'resolved',
       suggestions: [],
     })
@@ -216,7 +216,7 @@ describe('resolveDocumentImportAssignees', () => {
   it('does not store raw names when no workspace profile matches', () => {
     const result = resolveDocumentImportAssignees(['Arch'], members)
 
-    expect(result.assignedTo).toEqual([])
+    expect(result.assignedToUserIds).toEqual([])
     expect(result.assignmentStatus).toBe('unassigned')
     expect(result.suggestions).toContain('Archana Patel')
   })
@@ -228,7 +228,7 @@ describe('resolveDocumentImportAssignees', () => {
     ])
 
     expect(result).toEqual({
-      assignedTo: [],
+      assignedToUserIds: [],
       assignmentStatus: 'ambiguous',
       suggestions: ['Deepak Sharma', 'Deepak Singh'],
     })
@@ -238,7 +238,7 @@ describe('resolveDocumentImportAssignees', () => {
     const result = resolveDocumentImportAssignees(['Deepak'], [{ id: '1', name: 'Karthik Deepak Singh' }])
 
     expect(result).toEqual({
-      assignedTo: [],
+      assignedToUserIds: [],
       assignmentStatus: 'unassigned',
       suggestions: [],
     })

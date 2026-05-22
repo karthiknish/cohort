@@ -175,7 +175,7 @@ export function resolveDocumentImportAssignees(
   assignedToNames: string[],
   members: DocumentImportWorkspaceMember[],
 ): {
-  assignedTo: string[]
+  assignedToUserIds: string[]
   assignmentStatus: DocumentImportAssignmentStatus
   suggestions: string[]
 } {
@@ -184,10 +184,10 @@ export function resolveDocumentImportAssignees(
     .filter((name) => name.length > 0)
 
   if (trimmedNames.length === 0) {
-    return { assignedTo: [], assignmentStatus: 'unassigned', suggestions: [] }
+    return { assignedToUserIds: [], assignmentStatus: 'unassigned', suggestions: [] }
   }
 
-  const resolvedNames: string[] = []
+  const resolvedUserIds: string[] = []
   const ambiguousQueries: string[] = []
   const unmatchedQueries: string[] = []
 
@@ -195,7 +195,10 @@ export function resolveDocumentImportAssignees(
     const matches = findWorkspaceMemberMatches(name, members)
 
     if (matches.length === 1) {
-      resolvedNames.push(matches[0]!.name)
+      const member = matches[0]
+      if (member && !resolvedUserIds.includes(member.id)) {
+        resolvedUserIds.push(member.id)
+      }
       continue
     }
 
@@ -207,8 +210,6 @@ export function resolveDocumentImportAssignees(
     unmatchedQueries.push(name)
   }
 
-  const uniqueResolvedNames = [...new Set(resolvedNames)]
-
   if (ambiguousQueries.length > 0) {
     const suggestions = [
       ...new Set(
@@ -219,7 +220,7 @@ export function resolveDocumentImportAssignees(
     ].slice(0, 5)
 
     return {
-      assignedTo: uniqueResolvedNames,
+      assignedToUserIds: resolvedUserIds,
       assignmentStatus: 'ambiguous',
       suggestions: suggestions.length > 0 ? suggestions : findSimilarMemberSuggestions(ambiguousQueries, members),
     }
@@ -227,14 +228,14 @@ export function resolveDocumentImportAssignees(
 
   if (unmatchedQueries.length > 0) {
     return {
-      assignedTo: uniqueResolvedNames,
-      assignmentStatus: uniqueResolvedNames.length > 0 ? 'ambiguous' : 'unassigned',
+      assignedToUserIds: resolvedUserIds,
+      assignmentStatus: resolvedUserIds.length > 0 ? 'ambiguous' : 'unassigned',
       suggestions: findSimilarMemberSuggestions(unmatchedQueries, members),
     }
   }
 
   return {
-    assignedTo: uniqueResolvedNames,
+    assignedToUserIds: resolvedUserIds,
     assignmentStatus: 'resolved',
     suggestions: [],
   }

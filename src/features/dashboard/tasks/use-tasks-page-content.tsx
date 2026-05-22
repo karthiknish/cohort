@@ -8,8 +8,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
+  formatAssigneeList,
   formatDate,
   mergeTaskParticipants,
+  resolveAssigneeUserIds,
   ProjectFilterBanner,
   TaskBulkToolbar,
   TaskFilters,
@@ -45,6 +47,7 @@ import type { TaskStatus } from '@/types/tasks'
 import { useTasksDocumentImport } from './use-tasks-document-import'
 import { TasksDocumentImportOverlay } from './tasks-document-import-overlay'
 import { TasksDocumentImportReviewSheet } from './tasks-document-import-review-sheet'
+import { TaskParticipantsProvider } from './task-participants-context'
 
 
 const TaskList = dynamic(() => import('@/features/dashboard/tasks/task-list').then((mod) => mod.TaskList), {
@@ -224,7 +227,9 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
   // Filters hook
   const filters = useTaskFilters({
     tasks,
+    userId: user?.id,
     userName: user?.name,
+    participants: taskParticipants,
     selectedClient,
     selectedClientId: selectedClientId ?? undefined,
     projectFilterId: projectFilter.id,
@@ -251,6 +256,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     selectedClientId: taskFormClientId,
     projectContext: projectFilter,
     userId: user?.id,
+    participants: taskParticipants,
     initialCreateOpen: actionParam === 'create',
     onCreateOpenChange: (open) => {
       if (open || actionParam !== 'create') return
@@ -289,13 +295,13 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
       Status: task.status,
       Priority: task.priority,
       Client: task.client || 'Internal',
-      'Assigned To': (task.assignedTo ?? []).join(', '),
+      'Assigned To': formatAssigneeList(task.assignedTo ?? [], taskParticipants),
       'Due Date': task.dueDate ? formatDate(task.dueDate) : 'No due date',
       Description: task.description || '',
     }))
 
     exportToCsv(data, `tasks-export-${new Date().toISOString().split('T')[0]}.csv`)
-  }, [filters.filteredTasks])
+  }, [filters.filteredTasks, taskParticipants])
 
   const handleNewTaskClick = useCallback(() => {
     form.handleCreateOpenChange(true)
@@ -404,9 +410,19 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
   const handleBulkAssign = useCallback(
     async (assignees: string[]) => {
       if (!hasSelection) return
-      const normalized = assignees.flatMap((name) => {
-        const trimmed = name.trim()
-        return trimmed.length > 0 ? [trimmed] : []
+      const normalized = assignees.flatMap((entry) => {
+        const trimmed = entry.trim()
+        if (trimmed.length === 0) return []
+
+        const byId = taskParticipants.find((participant) => participant.id === trimmed)
+        if (byId?.id) return [byId.id]
+
+        const byName = taskParticipants.find(
+          (participant) => participant.name.trim().toLowerCase() === trimmed.toLowerCase(),
+        )
+        if (byName?.id) return [byName.id]
+
+        return resolveAssigneeUserIds(`@[${trimmed}]`, taskParticipants)
       })
       const ids = Array.from(selectedTaskIds)
       setBulkState({ active: true, label: 'Updating assignees', progress: 0 })
@@ -414,7 +430,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
       setBulkState({ active: false, label: '', progress: 0 })
       if (ok) setRawSelectedTaskIds(new Set())
     },
-    [handleBulkUpdate, hasSelection, selectedTaskIds],
+    [handleBulkUpdate, hasSelection, selectedTaskIds, taskParticipants],
   )
 
   const handleBulkDueDate = useCallback(
@@ -476,6 +492,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
   const documentImport = useTasksDocumentImport({
     workspaceId: user?.agencyId ? String(user.agencyId) : null,
     userId: user?.id,
+    participants: taskParticipants,
     clientId: taskFormClientId,
     clientName: taskFormClient?.name ?? undefined,
     projectId: projectFilter.id ?? undefined,
@@ -487,6 +504,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
 
   return (
     <TooltipProvider>
+      <TaskParticipantsProvider participants={taskParticipants}>
       <BoneyardSkeletonBoundary
         name="dashboard-tasks-page"
         loading={initialLoading}
@@ -717,6 +735,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
 
       </div>
       </BoneyardSkeletonBoundary>
+      </TaskParticipantsProvider>
     </TooltipProvider>
   )
 }

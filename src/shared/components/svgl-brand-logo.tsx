@@ -1,5 +1,4 @@
 import type { ComponentType } from 'react'
-import Image from 'next/image'
 
 import { cn } from '@/lib/utils'
 
@@ -40,8 +39,6 @@ const BRAND_SRC: Record<Exclude<SvglBrandSlug, 'tiktok' | 'x'>, string> = {
   youtube: '/svgl/youtube.svg',
 }
 
-const LOGO_SIZE = 24
-
 function BrandImage({
   src,
   className,
@@ -54,13 +51,14 @@ function BrandImage({
   title: string
 }) {
   return (
-    <Image
+    // Native img — static SVGs from /public render reliably without the Image optimizer.
+    <img
       src={src}
-      alt=""
-      width={LOGO_SIZE}
-      height={LOGO_SIZE}
-      unoptimized
-      className={cn('inline-block h-auto w-auto shrink-0', className)}
+      alt={labeled ? title : ''}
+      width={24}
+      height={24}
+      decoding="async"
+      className={cn('inline-block size-6 shrink-0 object-contain', className)}
       aria-hidden={labeled ? undefined : true}
       role={labeled ? 'img' : undefined}
       aria-label={labeled ? title : undefined}

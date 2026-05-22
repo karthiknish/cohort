@@ -12,6 +12,7 @@ import { getDayKeyFormatter } from '@/lib/intl/cached-datetime'
 
 import { Errors } from './errors'
 import { resolveTaskNotificationRecipientUserIds } from './notificationTargeting'
+import { normalizeTaskAssignees } from './taskAssignees'
 
 const taskAttachmentZ = z.object({
   name: z.string(),
@@ -247,6 +248,7 @@ export const createTask = zAuthenticatedMutation({
     assertFutureDueDateMs(args.dueDateMs, ctx.now, ctx.user.regionalPreferences?.timezone ?? null)
 
     const legacyId = `task_${ctx.now}_${Math.random().toString(16).slice(2)}`
+    const assignedTo = await normalizeTaskAssignees(ctx, args.workspaceId, args.assignedTo)
 
     await ctx.db.insert('tasks', {
       workspaceId: args.workspaceId,
@@ -255,7 +257,7 @@ export const createTask = zAuthenticatedMutation({
       description: args.description,
       status: args.status,
       priority: args.priority,
-      assignedTo: args.assignedTo,
+      assignedTo,
       clientId: args.clientId,
       client: args.client,
       projectId: args.projectId ?? null,
@@ -270,7 +272,7 @@ export const createTask = zAuthenticatedMutation({
 
     const nowMs = ctx.now
     const segments = [`Priority: ${args.priority}`, `Status: ${args.status}`]
-    if (args.assignedTo?.length) segments.push(`Assigned: ${args.assignedTo.join(', ')}`)
+    if (args.assignedTo?.length) segments.push(`Assigned: ${assignedTo.join(', ')}`)
     if (args.dueDateMs) {
       segments.push(`Due: ${new Date(args.dueDateMs).toLocaleDateString()}`)
     }
@@ -283,7 +285,7 @@ export const createTask = zAuthenticatedMutation({
     const clientId = typeof args.clientId === 'string' && args.clientId.length > 0 ? args.clientId : null
     const recipientUserIds = (await resolveTaskNotificationRecipientUserIds(ctx, {
       workspaceId: args.workspaceId,
-      assignedTo: args.assignedTo,
+      assignedTo,
       createdBy: ctx.legacyId,
       projectId: args.projectId ?? null,
     })).filter((userId) => userId !== ctx.legacyId)
@@ -306,7 +308,7 @@ export const createTask = zAuthenticatedMutation({
         metadata: {
           status: args.status,
           priority: args.priority,
-          assignedTo: args.assignedTo,
+          assignedTo,
           clientId,
           clientName: args.client ?? null,
           projectId: args.projectId ?? null,
@@ -351,7 +353,9 @@ export const patchTask = zAuthenticatedMutation({
     if (args.update.description !== undefined) patch.description = args.update.description
     if (args.update.status !== undefined) patch.status = args.update.status
     if (args.update.priority !== undefined) patch.priority = args.update.priority
-    if (args.update.assignedTo !== undefined) patch.assignedTo = args.update.assignedTo
+    if (args.update.assignedTo !== undefined) {
+      patch.assignedTo = await normalizeTaskAssignees(ctx, args.workspaceId, args.update.assignedTo)
+    }
     if (args.update.dueDateMs !== undefined) {
       assertFutureDueDateMs(args.update.dueDateMs, ctx.now, ctx.user.regionalPreferences?.timezone ?? null)
       patch.dueDateMs = args.update.dueDateMs
@@ -363,7 +367,10 @@ export const patchTask = zAuthenticatedMutation({
     if (args.update.status !== undefined) changes.push(`Status → ${args.update.status}`)
     if (args.update.priority !== undefined) changes.push(`Priority → ${args.update.priority}`)
     if (args.update.title !== undefined) changes.push(`Title → ${args.update.title}`)
-    if (args.update.assignedTo !== undefined) changes.push(`Assigned → ${args.update.assignedTo.join(', ') || 'unassigned'}`)
+    if (args.update.assignedTo !== undefined) {
+      const normalizedAssignedTo = patch.assignedTo as string[]
+      changes.push(`Assigned → ${normalizedAssignedTo.join(', ') || 'unassigned'}`)
+    }
     if (args.update.dueDateMs !== undefined) {
       changes.push(args.update.dueDateMs ? `Due → ${new Date(args.update.dueDateMs).toLocaleDateString()}` : 'Due date removed')
     }
@@ -373,7 +380,7 @@ export const patchTask = zAuthenticatedMutation({
       const clientId = typeof row.clientId === 'string' && row.clientId.length > 0 ? row.clientId : null
       const recipientUserIds = (await resolveTaskNotificationRecipientUserIds(ctx, {
         workspaceId: args.workspaceId,
-        assignedTo: args.update.assignedTo ?? row.assignedTo,
+        assignedTo: (patch.assignedTo as string[] | undefined) ?? row.assignedTo,
         createdBy: row.createdBy,
         projectId: typeof row.projectId === 'string' ? row.projectId : null,
         taskLegacyId: args.legacyId,
@@ -444,7 +451,9 @@ export const bulkPatchTasks = zAuthenticatedMutation({
         const patch: Record<string, unknown> = { updatedAtMs: ctx.now }
         if (args.update.status !== undefined) patch.status = args.update.status
         if (args.update.priority !== undefined) patch.priority = args.update.priority
-        if (args.update.assignedTo !== undefined) patch.assignedTo = args.update.assignedTo
+        if (args.update.assignedTo !== undefined) {
+          patch.assignedTo = await normalizeTaskAssignees(ctx, args.workspaceId, args.update.assignedTo)
+        }
         if (args.update.dueDateMs !== undefined) patch.dueDateMs = args.update.dueDateMs
         await ctx.db.patch(row._id, patch)
       }),

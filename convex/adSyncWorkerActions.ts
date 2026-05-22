@@ -376,6 +376,70 @@ export const processAllQueuedJobs = internalAction({
   },
 })
 
+async function processNextQueuedSyncJob(
+  ctx: ActionCtx,
+  workspaceId: string,
+): Promise<{ synced: boolean }> {
+  const job = await ctx.runMutation(internal.adsIntegrations.claimNextSyncJobInternal, {
+    workspaceId,
+  })
+
+  if (!job) {
+    return { synced: false }
+  }
+
+  try {
+    await ctx.runAction(internal.adSyncWorkerActions.processClaimedJob, {
+      workspaceId,
+      jobId: job.id,
+      providerId: job.providerId,
+      clientId: job.clientId,
+      timeframeDays: job.timeframeDays,
+    })
+
+    await Promise.all([
+      ctx.runMutation(internal.adsIntegrations.completeSyncJobInternal, {
+        jobId: job.id,
+      }),
+      updateJobIntegrationStatus(ctx, {
+        workspaceId,
+        providerId: job.providerId,
+        clientId: normalizeClientId(job.clientId),
+        status: 'success',
+        message: null,
+      }),
+    ])
+
+    return { synced: true }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+
+    await Promise.all([
+      ctx.runMutation(internal.adsIntegrations.failSyncJobInternal, {
+        jobId: job.id,
+        message,
+      }),
+      updateJobIntegrationStatus(ctx, {
+        workspaceId,
+        providerId: job.providerId,
+        clientId: normalizeClientId(job.clientId),
+        status: 'error',
+        message,
+      }),
+    ])
+
+    throw err
+  }
+}
+
+export const processNextQueuedSyncJobInternal = internalAction({
+  args: {
+    workspaceId: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ synced: boolean }> =>
+    processNextQueuedSyncJob(ctx, args.workspaceId),
+})
+
 // =============================================================================
 // MANUAL SYNC ACTION (UI-callable)
 // =============================================================================
@@ -409,56 +473,6 @@ export const runManualSync = action({
       timeframeDays: 30,
     })
 
-    const job = await ctx.runMutation(
-      internal.adsIntegrations.claimNextSyncJobInternal,
-      { workspaceId: args.workspaceId }
-    )
-
-    if (!job) {
-      return { synced: false }
-    }
-
-    try {
-      await ctx.runAction(internal.adSyncWorkerActions.processClaimedJob, {
-        workspaceId: args.workspaceId,
-        jobId: job.id,
-        providerId: job.providerId,
-        clientId: job.clientId,
-        timeframeDays: job.timeframeDays,
-      })
-
-      await Promise.all([
-        ctx.runMutation(internal.adsIntegrations.completeSyncJobInternal, {
-          jobId: job.id,
-        }),
-        updateJobIntegrationStatus(ctx, {
-          workspaceId: args.workspaceId,
-          providerId: job.providerId,
-          clientId: normalizeClientId(job.clientId),
-          status: 'success',
-          message: null,
-        }),
-      ])
-
-      return { synced: true }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error'
-
-      await Promise.all([
-        ctx.runMutation(internal.adsIntegrations.failSyncJobInternal, {
-          jobId: job.id,
-          message,
-        }),
-        updateJobIntegrationStatus(ctx, {
-          workspaceId: args.workspaceId,
-          providerId: job.providerId,
-          clientId: normalizeClientId(job.clientId),
-          status: 'error',
-          message,
-        }),
-      ])
-
-      throw err
-    }
+    return await processNextQueuedSyncJob(ctx, args.workspaceId)
   },
 })

@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import type { ProposedImportTask } from './tasks-document-import-types'
 import {
+  buildAssigneeReviewPrompt,
   buildImportReviewDescription,
   getImportReviewBlocker,
   needsImportReview,
-  taskNeedsDueDateReview,
+  taskNeedsAssigneeReview,
 } from './tasks-document-import-review'
 
 function buildTask(overrides: Partial<ProposedImportTask>): ProposedImportTask {
@@ -15,6 +16,8 @@ function buildTask(overrides: Partial<ProposedImportTask>): ProposedImportTask {
     description: '',
     priority: 'medium',
     assignedTo: '',
+    assignedToUserIds: [],
+    documentAssigneeNames: [],
     dueDate: '',
     assignmentStatus: 'resolved',
     dueDateStatus: 'resolved',
@@ -27,42 +30,109 @@ function buildTask(overrides: Partial<ProposedImportTask>): ProposedImportTask {
 }
 
 describe('tasks document import review helpers', () => {
-  it('opens review when due dates are missing or unclear', () => {
+  it('opens review when assignees need workspace matching', () => {
     expect(
       needsImportReview([
-        buildTask({ dueDateStatus: 'missing' }),
-        buildTask({ localId: '2', dueDateStatus: 'resolved' }),
+        buildTask({
+          assignmentStatus: 'unassigned',
+          documentAssigneeNames: ['Deepak'],
+          suggestions: ['Deepak Sharma'],
+        }),
       ]),
     ).toBe(true)
   })
 
-  it('blocks confirm until unclear due dates are filled in', () => {
+  it('opens review when document assignees cannot be matched at all', () => {
     expect(
-      getImportReviewBlocker([
-        buildTask({ dueDateStatus: 'unclear', dueDateHint: 'next week' }),
+      needsImportReview([
+        buildTask({
+          assignmentStatus: 'unassigned',
+          documentAssigneeNames: ['Unknown Person'],
+          suggestions: [],
+        }),
       ]),
-    ).toBe('Add due dates for 1 task.')
+    ).toBe(true)
   })
 
-  it('clears blockers after the user sets a due date', () => {
+  it('blocks confirm until ambiguous assignees are cleared', () => {
     expect(
       getImportReviewBlocker([
         buildTask({
-          dueDateStatus: 'resolved',
-          dueDate: '2026-05-28',
+          assignmentStatus: 'ambiguous',
+          documentAssigneeNames: ['Deepak'],
+          suggestions: ['Deepak Sharma', 'Deepak Singh'],
+          assignedToUserIds: ['user-deepak'],
+        }),
+      ]),
+    ).toContain('matched multiple teammates')
+  })
+
+  it('blocks confirm until workspace teammates are selected', () => {
+    expect(
+      getImportReviewBlocker([
+        buildTask({
+          assignmentStatus: 'unassigned',
+          documentAssigneeNames: ['Deepak'],
+          suggestions: ['Deepak Sharma'],
+          assignedToUserIds: [],
+        }),
+      ]),
+    ).toBe('Pick workspace teammates for 1 task.')
+  })
+
+  it('blocks free-text assignees that are not workspace members', () => {
+    expect(
+      getImportReviewBlocker([
+        buildTask({
+          assignedTo: '@[Random Person]',
+          assignedToUserIds: [],
+          assignmentStatus: 'resolved',
+        }),
+      ]),
+    ).toBe('Use the teammate picker for 1 task — free-text assignees are not allowed.')
+  })
+
+  it('clears blockers after valid workspace user ids are set', () => {
+    expect(
+      getImportReviewBlocker([
+        buildTask({
+          assignedTo: '@[Deepak Sharma]',
+          assignedToUserIds: ['user-deepak'],
+          assignmentStatus: 'resolved',
         }),
       ]),
     ).toBeNull()
   })
 
-  it('describes due-date review in the sheet copy', () => {
+  it('describes assignee review in the sheet copy', () => {
     expect(
-      buildImportReviewDescription(null, [buildTask({ dueDateStatus: 'missing' })]),
-    ).toContain('due dates were missing or unclear')
+      buildImportReviewDescription(null, [
+        buildTask({ assignmentStatus: 'ambiguous', documentAssigneeNames: ['Deepak'] }),
+      ]),
+    ).toContain('unclear')
   })
 
-  it('detects due-date review tasks', () => {
-    expect(taskNeedsDueDateReview(buildTask({ dueDateStatus: 'unclear' }))).toBe(true)
-    expect(taskNeedsDueDateReview(buildTask({ dueDateStatus: 'resolved' }))).toBe(false)
+  it('builds a prompt when a document name matches multiple teammates', () => {
+    expect(
+      buildAssigneeReviewPrompt(
+        buildTask({
+          assignmentStatus: 'ambiguous',
+          documentAssigneeNames: ['Deepak'],
+          suggestions: ['Deepak Sharma', 'Deepak Singh'],
+        }),
+      ),
+    ).toContain('multiple teammates')
+  })
+
+  it('requires resolved tasks with suggestions to pick a teammate', () => {
+    expect(
+      taskNeedsAssigneeReview(
+        buildTask({
+          assignmentStatus: 'resolved',
+          assignedToUserIds: [],
+          suggestions: ['Deepak Sharma'],
+        }),
+      ),
+    ).toBe(true)
   })
 })
