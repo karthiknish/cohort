@@ -8,6 +8,7 @@ export const workspaceTables = {
     emailLower: v.union(v.string(), v.null()),
     name: v.union(v.string(), v.null()),
     role: v.union(v.string(), v.null()),
+    clientTeamRole: v.optional(v.union(v.string(), v.null())),
     status: v.union(v.string(), v.null()),
     agencyId: v.union(v.string(), v.null()),
     phoneNumber: v.optional(v.union(v.string(), v.null())),

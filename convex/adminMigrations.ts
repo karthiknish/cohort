@@ -15,8 +15,12 @@ import {
   normalizeSurfaceId,
 } from '@/domain/ads/provider'
 import {
-  loadWorkspaceAdminMembers,
+  clientTeamMembersChanged,
+  inferAdminClientTeamRolesFromClients,
+  isGenericClientTeamRole,
+  loadEffectiveClientAdminMembers,
   mergeTeamMembersWithAdmins,
+  resolveClientTeamRoleForAdmin,
 } from './clientAdminTeamSync'
 
 // =============================================================================
@@ -187,7 +191,7 @@ async function backfillClientAdminTeamMembersBatch(
     .order('asc')
     .paginate({ numItems: batchSize, cursor: args.cursor ?? null })
 
-  const adminMembersByWorkspace = new Map<string, Awaited<ReturnType<typeof loadWorkspaceAdminMembers>>>()
+  const adminMembersByWorkspace = new Map<string, Awaited<ReturnType<typeof loadEffectiveClientAdminMembers>>>()
   let patched = 0
 
   for (const client of result.page) {
@@ -197,7 +201,7 @@ async function backfillClientAdminTeamMembersBatch(
 
     let adminMembers = adminMembersByWorkspace.get(client.workspaceId)
     if (!adminMembers) {
-      adminMembers = await loadWorkspaceAdminMembers(ctx, client.workspaceId)
+      adminMembers = await loadEffectiveClientAdminMembers(ctx, client.workspaceId)
       adminMembersByWorkspace.set(client.workspaceId, adminMembers)
     }
 
@@ -206,7 +210,7 @@ async function backfillClientAdminTeamMembersBatch(
     }
 
     const merged = mergeTeamMembersWithAdmins(client.teamMembers, adminMembers)
-    if (merged.length === client.teamMembers.length) {
+    if (!clientTeamMembersChanged(client.teamMembers, merged)) {
       continue
     }
 
@@ -289,7 +293,7 @@ export const auditClientAdminTeamMembersInternal = internalQuery({
     const clients = await ctx.db.query('clients').collect()
     const activeClients = clients.filter((client) => client.deletedAtMs === null)
 
-    const adminMembersByWorkspace = new Map<string, Awaited<ReturnType<typeof loadWorkspaceAdminMembers>>>()
+    const adminMembersByWorkspace = new Map<string, Awaited<ReturnType<typeof loadEffectiveClientAdminMembers>>>()
     const workspaceIds = new Set<string>()
     const issues: Array<{
       workspaceId: string
@@ -304,7 +308,7 @@ export const auditClientAdminTeamMembersInternal = internalQuery({
 
       let adminMembers = adminMembersByWorkspace.get(client.workspaceId)
       if (!adminMembers) {
-        adminMembers = await loadWorkspaceAdminMembers(ctx, client.workspaceId)
+        adminMembers = await loadEffectiveClientAdminMembers(ctx, client.workspaceId)
         adminMembersByWorkspace.set(client.workspaceId, adminMembers)
       }
 
@@ -364,6 +368,65 @@ export const auditClientAdminTeamMembersInternal = internalQuery({
       workspacesWithoutNamedAdmins: workspacesMissingAdminNames.length,
       issues: issues.slice(0, 50),
       workspacesMissingAdminNames,
+    }
+  },
+})
+
+export const seedAdminClientTeamRolesInternal = internalMutation({
+  args: {},
+  returns: v.object({
+    adminCount: v.number(),
+    patched: v.number(),
+    roles: v.array(
+      v.object({
+        legacyId: v.string(),
+        name: v.string(),
+        clientTeamRole: v.string(),
+      }),
+    ),
+  }),
+  handler: async (ctx) => {
+    const now = Date.now()
+    const adminUsers = (await ctx.db.query('users').take(1000)).filter((row) => {
+      if (row.role !== 'admin') return false
+      if (row.status === 'disabled' || row.status === 'suspended') return false
+      const name = typeof row.name === 'string' ? row.name.trim() : ''
+      return name.length > 0
+    })
+
+    const inferredRoles = await inferAdminClientTeamRolesFromClients(
+      ctx,
+      adminUsers.map((row) => row.name?.trim() ?? ''),
+    )
+
+    let patched = 0
+    const roles: Array<{ legacyId: string; name: string; clientTeamRole: string }> = []
+
+    for (const admin of adminUsers) {
+      const name = admin.name?.trim() ?? ''
+      const resolvedRole = resolveClientTeamRoleForAdmin(admin, inferredRoles.get(name.toLowerCase()))
+      const existingRole = typeof admin.clientTeamRole === 'string' ? admin.clientTeamRole.trim() : ''
+
+      roles.push({
+        legacyId: admin.legacyId,
+        name,
+        clientTeamRole: existingRole || resolvedRole,
+      })
+
+      if (existingRole) continue
+      if (isGenericClientTeamRole(resolvedRole)) continue
+
+      await ctx.db.patch(admin._id, {
+        clientTeamRole: resolvedRole,
+        updatedAtMs: now,
+      })
+      patched += 1
+    }
+
+    return {
+      adminCount: adminUsers.length,
+      patched,
+      roles,
     }
   },
 })

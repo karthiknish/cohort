@@ -11,7 +11,8 @@ import {
 import { z } from 'zod/v4'
 import { Errors } from './errors'
 import {
-  loadWorkspaceAdminMembers,
+  loadEffectiveClientAdminMembers,
+  clientTeamMembersChanged,
   mergeTeamMembersWithAdmins,
   syncWorkspaceClientAdminMembers,
 } from './clientAdminTeamSync'
@@ -189,7 +190,7 @@ export const create = zWorkspaceMutation({
       normalizedTeamMembers.unshift({ name: normalizedAccountManager, role: 'Account Manager' })
     }
 
-    const adminMembers = await loadWorkspaceAdminMembers(ctx, args.workspaceId)
+    const adminMembers = await loadEffectiveClientAdminMembers(ctx, args.workspaceId)
     const teamMembersWithAdmins = mergeTeamMembersWithAdmins(normalizedTeamMembers, adminMembers)
 
     const baseId = slugify(normalizedName)
@@ -252,11 +253,11 @@ export const addTeamMember = zWorkspaceMutation({
       throw Errors.resource.notFound('Client')
     }
 
-    const adminMembers = await loadWorkspaceAdminMembers(ctx, args.workspaceId)
+    const adminMembers = await loadEffectiveClientAdminMembers(ctx, args.workspaceId)
     const teamMembersWithAdmins = mergeTeamMembersWithAdmins(client.teamMembers, adminMembers)
     let currentTeamMembers = client.teamMembers
 
-    if (teamMembersWithAdmins.length !== client.teamMembers.length) {
+    if (clientTeamMembersChanged(client.teamMembers, teamMembersWithAdmins)) {
       await ctx.db.patch(client._id, {
         teamMembers: teamMembersWithAdmins,
         updatedAtMs: ctx.now,
