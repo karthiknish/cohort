@@ -1,9 +1,11 @@
-import type { MutationCtx } from './_generated/server'
+import type { MutationCtx, QueryCtx } from './_generated/server'
 
 export type ClientTeamMemberRow = {
   name: string
   role: string
 }
+
+type DbReaderCtx = Pick<QueryCtx, 'db'>
 
 export function mergeTeamMembersWithAdmins(
   teamMembers: ClientTeamMemberRow[],
@@ -20,7 +22,7 @@ export function mergeTeamMembersWithAdmins(
 }
 
 export async function loadWorkspaceAdminMembers(
-  ctx: Pick<MutationCtx, 'db'>,
+  ctx: DbReaderCtx,
   workspaceId: string,
 ): Promise<ClientTeamMemberRow[]> {
   const [membersByAgency, agencyAdmin] = await Promise.all([

@@ -6,7 +6,7 @@
  */
 
 import { v } from 'convex/values'
-import { internalMutation } from './_generated/server'
+import { internalMutation, internalQuery, type MutationCtx } from './_generated/server'
 import { adminMutation } from './functions'
 import { resolveMetricCurrency } from '@/domain/ads/money'
 import {
@@ -175,7 +175,7 @@ type BackfillClientAdminTeamMembersResult = {
 }
 
 async function backfillClientAdminTeamMembersBatch(
-  ctx: { db: Parameters<typeof loadWorkspaceAdminMembers>[0]['db'] },
+  ctx: Pick<MutationCtx, 'db'>,
   args: BackfillClientAdminTeamMembersArgs,
   now: number,
 ): Promise<BackfillClientAdminTeamMembersResult> {
@@ -251,4 +251,119 @@ export const backfillClientAdminTeamMembersInternal = internalMutation({
     nextCursor: v.union(v.string(), v.null()),
   }),
   handler: async (ctx, args) => backfillClientAdminTeamMembersBatch(ctx, args, Date.now()),
+})
+
+function rosterHasAdminName(
+  teamMembers: Array<{ name: string; role: string }>,
+  adminName: string,
+): boolean {
+  const normalized = adminName.trim().toLowerCase()
+  return teamMembers.some((member) => member.name.trim().toLowerCase() === normalized)
+}
+
+export const auditClientAdminTeamMembersInternal = internalQuery({
+  args: {},
+  returns: v.object({
+    workspaceCount: v.number(),
+    clientCount: v.number(),
+    clientsMissingAdmins: v.number(),
+    workspacesWithoutNamedAdmins: v.number(),
+    issues: v.array(
+      v.object({
+        workspaceId: v.string(),
+        clientLegacyId: v.string(),
+        clientName: v.string(),
+        missingAdminNames: v.array(v.string()),
+        expectedAdminNames: v.array(v.string()),
+      }),
+    ),
+    workspacesMissingAdminNames: v.array(
+      v.object({
+        workspaceId: v.string(),
+        adminCount: v.number(),
+        unnamedAdminCount: v.number(),
+      }),
+    ),
+  }),
+  handler: async (ctx) => {
+    const clients = await ctx.db.query('clients').collect()
+    const activeClients = clients.filter((client) => client.deletedAtMs === null)
+
+    const adminMembersByWorkspace = new Map<string, Awaited<ReturnType<typeof loadWorkspaceAdminMembers>>>()
+    const workspaceIds = new Set<string>()
+    const issues: Array<{
+      workspaceId: string
+      clientLegacyId: string
+      clientName: string
+      missingAdminNames: string[]
+      expectedAdminNames: string[]
+    }> = []
+
+    for (const client of activeClients) {
+      workspaceIds.add(client.workspaceId)
+
+      let adminMembers = adminMembersByWorkspace.get(client.workspaceId)
+      if (!adminMembers) {
+        adminMembers = await loadWorkspaceAdminMembers(ctx, client.workspaceId)
+        adminMembersByWorkspace.set(client.workspaceId, adminMembers)
+      }
+
+      const expectedAdminNames = adminMembers.map((member) => member.name)
+      const missingAdminNames = expectedAdminNames.filter(
+        (adminName) => !rosterHasAdminName(client.teamMembers, adminName),
+      )
+
+      if (missingAdminNames.length > 0) {
+        issues.push({
+          workspaceId: client.workspaceId,
+          clientLegacyId: client.legacyId,
+          clientName: client.name,
+          missingAdminNames,
+          expectedAdminNames,
+        })
+      }
+    }
+
+    const workspacesMissingAdminNames: Array<{
+      workspaceId: string
+      adminCount: number
+      unnamedAdminCount: number
+    }> = []
+
+    for (const workspaceId of workspaceIds) {
+      const [membersByAgency, agencyAdmin] = await Promise.all([
+        ctx.db.query('users').withIndex('by_agencyId', (q) => q.eq('agencyId', workspaceId)).take(500),
+        ctx.db.query('users').withIndex('by_legacyId', (q) => q.eq('legacyId', workspaceId)).unique(),
+      ])
+
+      const rows = agencyAdmin
+        ? [agencyAdmin, ...membersByAgency.filter((row) => row.legacyId !== agencyAdmin.legacyId)]
+        : membersByAgency
+
+      const adminRows = rows.filter(
+        (row) =>
+          row.role === 'admin' &&
+          row.status !== 'disabled' &&
+          row.status !== 'suspended',
+      )
+
+      const unnamedAdminCount = adminRows.filter((row) => !(typeof row.name === 'string' && row.name.trim())).length
+      if (unnamedAdminCount > 0) {
+        workspacesMissingAdminNames.push({
+          workspaceId,
+          adminCount: adminRows.length,
+          unnamedAdminCount,
+        })
+      }
+    }
+
+    return {
+      workspaceCount: workspaceIds.size,
+      clientCount: activeClients.length,
+      clientsMissingAdmins: issues.length,
+      workspacesWithoutNamedAdmins: workspacesMissingAdminNames.length,
+      issues: issues.slice(0, 50),
+      workspacesMissingAdminNames,
+    }
+  },
 })
