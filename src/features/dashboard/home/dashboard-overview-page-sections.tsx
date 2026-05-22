@@ -479,11 +479,10 @@ export function useDashboardOverviewPage() {
 
   const isInitialLoading =
     !isPreviewMode &&
-    metrics.length === 0 &&
-    rawTasks.length === 0 &&
-    proposals.length === 0 &&
-    statsLoading &&
-    clientStatsLoading
+    (convexAuthLoading ||
+      (!!user?.id && !canQueryConvex) ||
+      (canQueryConvex &&
+        (metricsLoading || tasksLoading || proposalsLoading || clientStatsLoading)))
 
   const displayStats = useMemo(
     () =>

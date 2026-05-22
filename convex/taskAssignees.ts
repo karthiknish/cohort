@@ -1,6 +1,11 @@
 import type { MutationCtx, QueryCtx } from './_generated/server'
 
 import { Errors } from './errors'
+import {
+  buildAssigneeMemberPool,
+  dedupeClientRosterNames,
+  resolveProfilesForRosterNames,
+} from './taskDocumentImportParsing'
 
 type WorkspaceMember = {
   legacyId: string
@@ -45,6 +50,126 @@ async function loadWorkspaceMembers(
   return [...unique.values()]
 }
 
+async function loadClientRosterNamesFromDb(
+  ctx: Pick<QueryCtx | MutationCtx, 'db'>,
+  workspaceId: string,
+  clientId: string | null | undefined,
+): Promise<string[]> {
+  const normalizedClientId = clientId?.trim()
+  if (!normalizedClientId) return []
+
+  const client = await ctx.db
+    .query('clients')
+    .withIndex('by_workspace_legacyId', (q) =>
+      q.eq('workspaceId', workspaceId).eq('legacyId', normalizedClientId),
+    )
+    .unique()
+
+  if (!client || client.deletedAtMs !== null) return []
+
+  const names: string[] = []
+  const accountManager = client.accountManager?.trim()
+  if (accountManager) names.push(accountManager)
+
+  for (const member of client.teamMembers ?? []) {
+    const name = member.name?.trim()
+    if (name) names.push(name)
+  }
+
+  return dedupeClientRosterNames(names)
+}
+
+async function loadDirectoryMembersForRosterLinking(
+  ctx: Pick<QueryCtx | MutationCtx, 'db'>,
+): Promise<Array<{ id: string; name: string; email?: string }>> {
+  const rows = await ctx.db.query('users').take(1000)
+
+  return rows.flatMap((row) => {
+    if (row.status === 'disabled' || row.status === 'suspended') return []
+
+    const name = typeof row.name === 'string' ? row.name.trim() : ''
+    if (!name) return []
+
+    return [
+      {
+        id: row.legacyId,
+        name,
+        email: typeof row.email === 'string' ? row.email.trim() || undefined : undefined,
+      },
+    ]
+  })
+}
+
+function mergeAssigneeProfileLists(
+  ...memberLists: Array<Array<{ id: string; name: string; email?: string | null }>>
+): Array<{ id: string; name: string; email?: string }> {
+  const byId = new Map<string, { id: string; name: string; email?: string }>()
+
+  for (const members of memberLists) {
+    for (const member of members) {
+      const id = member.id.trim()
+      const name = member.name.trim()
+      if (!id || !name) continue
+
+      const existing = byId.get(id)
+      if (!existing || name.length > existing.name.length) {
+        byId.set(id, {
+          id,
+          name,
+          email: typeof member.email === 'string' ? member.email : undefined,
+        })
+      }
+    }
+  }
+
+  return [...byId.values()]
+}
+
+export async function buildTaskAssigneeMemberPool(
+  ctx: Pick<QueryCtx | MutationCtx, 'db'>,
+  workspaceId: string,
+  clientId?: string | null,
+): Promise<WorkspaceMember[]> {
+  const workspaceMembers = await loadWorkspaceMembers(ctx, workspaceId)
+  const rosterNames = await loadClientRosterNamesFromDb(ctx, workspaceId, clientId)
+
+  if (rosterNames.length === 0) {
+    return workspaceMembers
+  }
+
+  const rosterProfiles = resolveProfilesForRosterNames(
+    rosterNames,
+    await loadDirectoryMembersForRosterLinking(ctx),
+  )
+
+  const linkedProfiles = mergeAssigneeProfileLists(
+    workspaceMembers.map((member) => ({
+      id: member.legacyId,
+      name: member.name,
+      email: member.email,
+    })),
+    rosterProfiles,
+  )
+
+  const pool = buildAssigneeMemberPool(linkedProfiles, rosterNames)
+  const validMembers: WorkspaceMember[] = []
+  const seen = new Set<string>()
+
+  for (const member of pool) {
+    const legacyId = member.id.trim()
+    const name = member.name.trim()
+    if (!legacyId || seen.has(legacyId)) continue
+    seen.add(legacyId)
+    validMembers.push({
+      legacyId,
+      name,
+      email: member.email ?? null,
+    })
+  }
+
+  return validMembers
+}
+
 function findWorkspaceMemberMatches(
   query: string,
   members: WorkspaceMember[],
@@ -75,10 +200,30 @@ function findWorkspaceMemberMatches(
   return []
 }
 
+async function formatAssigneeLabel(
+  ctx: Pick<QueryCtx | MutationCtx, 'db'>,
+  assignee: string,
+  membersById: Map<string, WorkspaceMember>,
+): Promise<string> {
+  const fromPool = membersById.get(assignee)
+  if (fromPool?.name) return fromPool.name
+
+  const row = await ctx.db
+    .query('users')
+    .withIndex('by_legacyId', (q) => q.eq('legacyId', assignee))
+    .unique()
+
+  const name = typeof row?.name === 'string' ? row.name.trim() : ''
+  if (name) return name
+
+  return assignee
+}
+
 export async function normalizeTaskAssignees(
   ctx: Pick<MutationCtx, 'db'>,
   workspaceId: string,
   assignees: string[],
+  clientId?: string | null,
 ): Promise<string[]> {
   const trimmedAssignees: string[] = []
   for (const assignee of assignees) {
@@ -88,8 +233,10 @@ export async function normalizeTaskAssignees(
 
   if (trimmedAssignees.length === 0) return []
 
-  const members = await loadWorkspaceMembers(ctx, workspaceId)
+  const members = await buildTaskAssigneeMemberPool(ctx, workspaceId, clientId)
   const membersById = new Map(members.map((member) => [member.legacyId, member]))
+  const hasClientScope = Boolean(clientId?.trim())
+  const teamScopeLabel = hasClientScope ? "this client's team" : 'your workspace team'
   const resolvedIds = new Set<string>()
 
   for (const assignee of trimmedAssignees) {
@@ -106,14 +253,16 @@ export async function normalizeTaskAssignees(
       continue
     }
 
+    const label = await formatAssigneeLabel(ctx, assignee, membersById)
+
     if (matches.length > 1) {
       throw Errors.validation.invalidInput(
-        `Assignee "${assignee}" matches multiple workspace members. Pick one from your team list.`,
+        `Assignee "${label}" matches multiple teammates. Pick one from ${teamScopeLabel}.`,
       )
     }
 
     throw Errors.validation.invalidInput(
-      `Assignee "${assignee}" is not a workspace member. Pick someone from your team list.`,
+      `Assignee "${label}" is not on ${teamScopeLabel}. Pick someone from your team list.`,
     )
   }
 

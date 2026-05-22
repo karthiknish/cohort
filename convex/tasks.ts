@@ -248,7 +248,7 @@ export const createTask = zAuthenticatedMutation({
     assertFutureDueDateMs(args.dueDateMs, ctx.now, ctx.user.regionalPreferences?.timezone ?? null)
 
     const legacyId = `task_${ctx.now}_${Math.random().toString(16).slice(2)}`
-    const assignedTo = await normalizeTaskAssignees(ctx, args.workspaceId, args.assignedTo)
+    const assignedTo = await normalizeTaskAssignees(ctx, args.workspaceId, args.assignedTo, args.clientId)
 
     await ctx.db.insert('tasks', {
       workspaceId: args.workspaceId,
@@ -354,7 +354,14 @@ export const patchTask = zAuthenticatedMutation({
     if (args.update.status !== undefined) patch.status = args.update.status
     if (args.update.priority !== undefined) patch.priority = args.update.priority
     if (args.update.assignedTo !== undefined) {
-      patch.assignedTo = await normalizeTaskAssignees(ctx, args.workspaceId, args.update.assignedTo)
+      const clientId =
+        typeof row.clientId === 'string' && row.clientId.trim().length > 0 ? row.clientId.trim() : null
+      patch.assignedTo = await normalizeTaskAssignees(
+        ctx,
+        args.workspaceId,
+        args.update.assignedTo,
+        clientId,
+      )
     }
     if (args.update.dueDateMs !== undefined) {
       assertFutureDueDateMs(args.update.dueDateMs, ctx.now, ctx.user.regionalPreferences?.timezone ?? null)
@@ -452,7 +459,14 @@ export const bulkPatchTasks = zAuthenticatedMutation({
         if (args.update.status !== undefined) patch.status = args.update.status
         if (args.update.priority !== undefined) patch.priority = args.update.priority
         if (args.update.assignedTo !== undefined) {
-          patch.assignedTo = await normalizeTaskAssignees(ctx, args.workspaceId, args.update.assignedTo)
+          const clientId =
+            typeof row.clientId === 'string' && row.clientId.trim().length > 0 ? row.clientId.trim() : null
+          patch.assignedTo = await normalizeTaskAssignees(
+            ctx,
+            args.workspaceId,
+            args.update.assignedTo,
+            clientId,
+          )
         }
         if (args.update.dueDateMs !== undefined) patch.dueDateMs = args.update.dueDateMs
         await ctx.db.patch(row._id, patch)

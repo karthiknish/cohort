@@ -1,9 +1,10 @@
 'use client'
 
-import { AlertTriangle, BarChart3, Loader2 } from 'lucide-react'
+import { AlertTriangle, Loader2 } from 'lucide-react'
 
 import { getIconContainerClasses } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
+import { SvglBrandLogo } from '@/shared/components/svgl-brand-logo'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import {
@@ -55,8 +56,8 @@ export function GoogleAnalyticsSetupDialog({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <span className={cn(getIconContainerClasses('small'), 'size-10 rounded-full')}>
-              <BarChart3 className="size-5" />
+            <span className={cn(getIconContainerClasses('small'), 'flex size-10 items-center justify-center rounded-full')}>
+              <SvglBrandLogo brand="google" className="size-5" labeled={false} />
             </span>
             <div>
               <DialogTitle>Select Google Analytics property</DialogTitle>

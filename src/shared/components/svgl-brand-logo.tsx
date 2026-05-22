@@ -1,5 +1,4 @@
 import type { ComponentType } from 'react'
-import Image from 'next/image'
 
 import { cn } from '@/lib/utils'
 
@@ -52,16 +51,15 @@ function BrandImage({
   title: string
 }) {
   return (
-    <Image
+    // eslint-disable-next-line @next/next/no-img-element -- static SVGs in /public render reliably via native img
+    <img
       src={src}
       alt={labeled ? title : ''}
-      width={24}
-      height={24}
-      unoptimized
       className={cn('inline-block size-6 shrink-0 object-contain', className)}
       aria-hidden={labeled ? undefined : true}
       role={labeled ? 'img' : undefined}
       aria-label={labeled ? title : undefined}
+      decoding="async"
     />
   )
 }

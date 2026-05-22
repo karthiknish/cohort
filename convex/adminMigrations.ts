@@ -22,6 +22,7 @@ import {
   mergeTeamMembersWithAdmins,
   resolveClientTeamRoleForAdmin,
 } from './clientAdminTeamSync'
+import { buildTaskAssigneeMemberPool } from './taskAssignees'
 
 // =============================================================================
 // backfillAdMetricsCurrency
@@ -427,6 +428,80 @@ export const seedAdminClientTeamRolesInternal = internalMutation({
       adminCount: adminUsers.length,
       patched,
       roles,
+    }
+  },
+})
+
+export const auditTaskAssigneePoolsInternal = internalQuery({
+  args: {
+    userLegacyId: v.optional(v.string()),
+  },
+  returns: v.object({
+    clients: v.array(
+      v.object({
+        workspaceId: v.string(),
+        clientLegacyId: v.string(),
+        clientName: v.string(),
+        rosterNames: v.array(v.string()),
+        eligibleAssigneeIds: v.array(v.string()),
+        eligibleAssigneeNames: v.array(v.string()),
+      }),
+    ),
+    userLookup: v.union(
+      v.null(),
+      v.object({
+        legacyId: v.string(),
+        name: v.string(),
+        role: v.union(v.string(), v.null()),
+        agencyId: v.union(v.string(), v.null()),
+        status: v.union(v.string(), v.null()),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const clients = (await ctx.db.query('clients').collect()).filter((client) => client.deletedAtMs === null)
+    const clientAudits = []
+
+    for (const client of clients) {
+      const rosterNames = [
+        client.accountManager?.trim(),
+        ...(client.teamMembers ?? []).map((member) => member.name?.trim()).filter(Boolean),
+      ].filter((name): name is string => Boolean(name))
+
+      const members = await buildTaskAssigneeMemberPool(ctx, client.workspaceId, client.legacyId)
+
+      clientAudits.push({
+        workspaceId: client.workspaceId,
+        clientLegacyId: client.legacyId,
+        clientName: client.name,
+        rosterNames,
+        eligibleAssigneeIds: members.map((member) => member.legacyId),
+        eligibleAssigneeNames: members.map((member) => member.name),
+      })
+    }
+
+    let userLookup = null
+    const userLegacyId = args.userLegacyId?.trim()
+    if (userLegacyId) {
+      const row = await ctx.db
+        .query('users')
+        .withIndex('by_legacyId', (q) => q.eq('legacyId', userLegacyId))
+        .unique()
+
+      if (row) {
+        userLookup = {
+          legacyId: row.legacyId,
+          name: typeof row.name === 'string' ? row.name : '',
+          role: row.role ?? null,
+          agencyId: row.agencyId ?? null,
+          status: row.status ?? null,
+        }
+      }
+    }
+
+    return {
+      clients: clientAudits,
+      userLookup,
     }
   },
 })

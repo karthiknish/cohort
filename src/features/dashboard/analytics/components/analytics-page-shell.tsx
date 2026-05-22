@@ -19,6 +19,7 @@ import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { SvglBrandLogo } from '@/shared/components/svgl-brand-logo'
 
 import { AnalyticsBreakdownSection } from './analytics-breakdown-section'
 import { AnalyticsDateRangePicker } from './analytics-date-range-picker'
@@ -140,7 +141,9 @@ function GoogleAnalyticsConnectionSection() {
     <Card className={DASHBOARD_THEME.cards.base}>
       <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <GoogleAnalyticsIcon />
+          <span className={cn(getIconContainerClasses('small'), 'flex size-10 shrink-0 items-center justify-center rounded-full')}>
+            <SvglBrandLogo brand="google" className="size-8" labeled={false} />
+          </span>
           <div>
             <CardTitle className="text-base font-semibold text-foreground">Google Analytics</CardTitle>
             <CardDescription className="mt-1 text-sm text-muted-foreground">
@@ -343,8 +346,8 @@ function AnalyticsEmptyState() {
   return (
     <Card className={DASHBOARD_THEME.cards.base}>
       <CardContent className="flex flex-col items-center px-6 py-16 text-center">
-        <div className={cn(getIconContainerClasses('large'), 'mb-6 size-20 rounded-full')}>
-          <GoogleAnalyticsIcon className="size-10" />
+        <div className={cn(getIconContainerClasses('large'), 'mb-6 flex size-20 items-center justify-center rounded-full')}>
+          <SvglBrandLogo brand="google" className="size-10" labeled={false} />
         </div>
         <h3 className="mb-2 text-base font-semibold text-foreground">No analytics data yet</h3>
         <p className="mb-6 max-w-md text-sm text-muted-foreground">
@@ -505,27 +508,3 @@ function AnalyticsPerformanceSection() {
   )
 }
 
-function GoogleAnalyticsIcon({ className = 'size-8' }: { className?: string }) {
-  return (
-    <div className={cn(getIconContainerClasses('small'), 'size-10 shrink-0 rounded-full')}>
-      <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-        <path
-          d="M21.805 10.023H12v4.042h5.615c-.242 1.304-.967 2.409-2.056 3.147v2.617h3.33c1.948-1.793 3.076-4.434 3.076-7.564 0-.739-.067-1.449-.16-2.242Z"
-          fill="currentColor"
-        />
-        <path
-          d="M12 22c2.79 0 5.13-.925 6.84-2.51l-3.33-2.617c-.925.62-2.109.986-3.51.986-2.698 0-4.983-1.821-5.804-4.27H2.754v2.698A9.999 9.999 0 0 0 12 22Z"
-          fill="currentColor"
-        />
-        <path
-          d="M6.196 13.59A5.996 5.996 0 0 1 5.87 11.9c0-.587.105-1.155.326-1.69V7.512H2.754A9.998 9.998 0 0 0 2 11.9c0 1.61.386 3.131 1.07 4.388l3.126-2.698Z"
-          fill="currentColor"
-        />
-        <path
-          d="M12 5.94c1.517 0 2.88.522 3.95 1.547l2.96-2.96C17.125 2.865 14.786 2 12 2A9.999 9.999 0 0 0 2.754 7.512l3.442 2.698C7.017 7.761 9.302 5.94 12 5.94Z"
-          fill="currentColor"
-        />
-      </svg>
-    </div>
-  )
-}
