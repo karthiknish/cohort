@@ -223,31 +223,62 @@ export function buildAssigneeMemberPool(
   workspaceMembers: DocumentImportWorkspaceMember[],
   clientRosterNames: string[],
 ): DocumentImportWorkspaceMember[] {
-  const pool = new Map<string, DocumentImportWorkspaceMember>()
-
-  for (const member of workspaceMembers) {
-    const name = member.name.trim()
-    if (!name) continue
-    pool.set(normalizeAssigneeLookup(name), member)
-  }
+  const pool: DocumentImportWorkspaceMember[] = []
+  const seen = new Set<string>()
 
   for (const rawName of clientRosterNames) {
     const name = rawName.trim()
     if (!name) continue
 
     const key = normalizeAssigneeLookup(name)
-    if (pool.has(key)) continue
+    if (seen.has(key)) continue
+    seen.add(key)
 
     const linked = linkRosterNameToWorkspaceMember(name, workspaceMembers)
-    if (linked) {
-      pool.set(key, linked)
-      continue
-    }
-
-    pool.set(key, { id: '', name })
+    pool.push(linked ?? { id: '', name })
   }
 
-  return [...pool.values()]
+  return pool
+}
+
+export function dedupeClientRosterNames(names: string[]): string[] {
+  const deduped: string[] = []
+  const seen = new Set<string>()
+
+  for (const rawName of names) {
+    const name = rawName.trim()
+    if (!name) continue
+
+    const key = normalizeAssigneeLookup(name)
+    if (seen.has(key)) continue
+    seen.add(key)
+    deduped.push(name)
+  }
+
+  return deduped
+}
+
+export function resolveProfilesForRosterNames(
+  rosterNames: string[],
+  directoryMembers: DocumentImportWorkspaceMember[],
+): DocumentImportWorkspaceMember[] {
+  const profiles: DocumentImportWorkspaceMember[] = []
+  const seenIds = new Set<string>()
+
+  for (const rawName of dedupeClientRosterNames(rosterNames)) {
+    const linked = linkRosterNameToWorkspaceMember(rawName, directoryMembers)
+    const id = linked?.id.trim() ?? ''
+    if (!id || seenIds.has(id)) continue
+
+    seenIds.add(id)
+    profiles.push({
+      id,
+      name: linked?.name.trim() || rawName,
+      email: linked?.email,
+    })
+  }
+
+  return profiles
 }
 
 export function resolveDocumentImportAssignees(

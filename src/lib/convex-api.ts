@@ -16,6 +16,7 @@ export const settingsApi = {
 
 export const usersApi = {
   listWorkspaceMembers: looseApi.users.listWorkspaceMembers,
+  resolveProfilesForNames: looseApi.users.resolveProfilesForNames,
   listAllUsers: looseApi.users.listAllUsers,
   ensureProfileOnSignIn: looseApi.users.ensureProfileOnSignIn,
   ensureProfileOnSignInFromApp: looseApi.users.ensureProfileOnSignInFromApp,

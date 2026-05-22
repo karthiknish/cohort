@@ -18,6 +18,10 @@ import {
   normalizePreferences,
   type StoredNotificationPreferences,
 } from '../src/lib/notifications/preferences'
+import {
+  dedupeClientRosterNames,
+  resolveProfilesForRosterNames,
+} from './taskDocumentImportParsing'
 
 
 function nowMs() {
@@ -205,6 +209,41 @@ export const listWorkspaceMembers = zWorkspaceQuery({
         ? [serializeDirectoryUser(row)]
         : [],
     )
+  },
+})
+
+export const resolveProfilesForNames = zWorkspaceQuery({
+  args: {
+    workspaceId: z.string(),
+    names: z.array(z.string()),
+  },
+  returns: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      email: z.string().optional(),
+      role: z.string().optional(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    void ctx
+    void args.workspaceId
+
+    const rosterNames = dedupeClientRosterNames(args.names).slice(0, 100)
+    if (rosterNames.length === 0) return []
+
+    const rows = await ctx.db.query('users').take(1000)
+    const directory = rows.flatMap((row) =>
+      row.status !== 'disabled' && row.status !== 'suspended' ? [serializeDirectoryUser(row)] : [],
+    )
+
+    return resolveProfilesForRosterNames(rosterNames, directory).map((profile) => {
+      const row = rows.find((candidate) => candidate.legacyId === profile.id)
+      return {
+        ...profile,
+        role: row?.role ?? undefined,
+      }
+    })
   },
 })
 

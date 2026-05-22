@@ -3,12 +3,14 @@ import { describe, expect, it } from 'vitest'
 import {
   assessDocumentImportDueDate,
   buildAssigneeMemberPool,
+  dedupeClientRosterNames,
   enrichExtractedTasksWithDocumentAssignees,
   normalizePriority,
   parseExplicitDocumentPriority,
   parseExtractedTasksResponse,
   resolveDocumentImportAssignees,
   resolveDocumentImportPriority,
+  resolveProfilesForRosterNames,
   stripMarkdownFences,
 } from './taskDocumentImportParsing'
 
@@ -192,6 +194,18 @@ describe('buildAssigneeMemberPool', () => {
     { id: 'user-aaa', name: 'aaa', email: 'aaa@example.com' },
   ]
 
+  it('only includes names from the client roster in the assignee pool', () => {
+    const pool = buildAssigneeMemberPool(
+      [
+        { id: 'user-aaa', name: 'aaa' },
+        { id: 'admin-deepak', name: 'Deepak Karnan' },
+      ],
+      ['Deepak Karnan'],
+    )
+
+    expect(pool).toEqual([{ id: 'admin-deepak', name: 'Deepak Karnan' }])
+  })
+
   it('adds client roster names for suggestions when no workspace profile matches', () => {
     const pool = buildAssigneeMemberPool(workspaceMembers, ['Deepak Karnan', 'Archana Ravi Kumar'])
 
@@ -202,7 +216,7 @@ describe('buildAssigneeMemberPool', () => {
     })
   })
 
-  it('resolves roster assignees when platform admin profiles are included in the pool', () => {
+  it('resolves roster assignees when roster profiles are linked into the pool', () => {
     const pool = buildAssigneeMemberPool(
       [
         { id: 'admin-deepak', name: 'Deepak Karnan' },
@@ -252,6 +266,20 @@ describe('buildAssigneeMemberPool', () => {
       assignmentStatus: 'resolved',
       suggestions: [],
     })
+  })
+})
+
+describe('resolveProfilesForRosterNames', () => {
+  it('resolves roster names to user profiles without including unrelated users', () => {
+    const directory = [
+      { id: 'admin-deepak', name: 'Deepak Karnan', email: 'deepak@agency.com' },
+      { id: 'admin-archana', name: 'Archana Ravi Kumar', email: 'archana@agency.com' },
+      { id: 'other-user', name: 'Someone Else', email: 'other@agency.com' },
+    ]
+
+    expect(resolveProfilesForRosterNames(['Deepak Karnan'], directory)).toEqual([
+      { id: 'admin-deepak', name: 'Deepak Karnan', email: 'deepak@agency.com' },
+    ])
   })
 })
 

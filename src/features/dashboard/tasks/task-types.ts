@@ -211,6 +211,35 @@ export function assignableImportParticipants(participants: TaskParticipant[]): T
   })
 }
 
+export function clientRosterAssigneeNames(
+  client:
+    | {
+        accountManager?: string | null
+        teamMembers?: Array<{ name: string }>
+      }
+    | null
+    | undefined,
+): string[] {
+  if (!client) return []
+
+  const names: string[] = []
+  const accountManager = client.accountManager?.trim()
+  if (accountManager) names.push(accountManager)
+
+  for (const member of client.teamMembers ?? []) {
+    const name = member.name?.trim()
+    if (name) names.push(name)
+  }
+
+  const seen = new Set<string>()
+  return names.filter((name) => {
+    const key = name.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 // Convert ClientTeamMember[] to MentionableUser[] for MentionInput
 export function teamMembersToMentionable(
   members: TaskParticipant[]

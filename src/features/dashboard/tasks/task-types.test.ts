@@ -21,15 +21,12 @@ describe('task form helpers', () => {
     expect(taskPillColors.project).toContain('bg-accent/10')
   })
 
-  it('merges client members, workspace users, and platform admins for assignment', () => {
+  it('merges client roster members with resolved profiles for assignment', () => {
     expect(mergeTaskParticipants([
-      [{ name: 'Account Lead', role: 'Account Manager' }],
-      [{ id: 'u-1', name: 'Workspace Teammate', role: 'team', email: 'team@example.com' }],
-      [{ id: 'u-2', name: 'Platform Admin', role: 'admin', email: 'admin@example.com' }],
+      [{ name: 'Deepak Karnan', role: 'Paid' }],
+      [{ id: 'u-1', name: 'Deepak Karnan', role: 'admin', email: 'deepak@agency.com' }],
     ])).toEqual([
-      { name: 'Account Lead', role: 'Account Manager', id: undefined, email: undefined },
-      { id: 'u-2', name: 'Platform Admin', role: 'admin', email: 'admin@example.com' },
-      { id: 'u-1', name: 'Workspace Teammate', role: 'team', email: 'team@example.com' },
+      { id: 'u-1', name: 'Deepak Karnan', role: 'Paid', email: 'deepak@agency.com' },
     ])
   })
 

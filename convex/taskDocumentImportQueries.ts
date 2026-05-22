@@ -1,8 +1,15 @@
 import { internalQuery } from './_generated/server'
 import { v } from 'convex/values'
 
-export const listPlatformAdminMembersInternal = internalQuery({
-  args: {},
+import {
+  dedupeClientRosterNames,
+  resolveProfilesForRosterNames,
+} from './taskDocumentImportParsing'
+
+export const resolveUserProfilesForNamesInternal = internalQuery({
+  args: {
+    names: v.array(v.string()),
+  },
   returns: v.array(
     v.object({
       id: v.string(),
@@ -10,11 +17,12 @@ export const listPlatformAdminMembersInternal = internalQuery({
       email: v.optional(v.string()),
     }),
   ),
-  handler: async (ctx) => {
-    const rows = await ctx.db.query('users').take(1000)
+  handler: async (ctx, args) => {
+    const rosterNames = dedupeClientRosterNames(args.names).slice(0, 100)
+    if (rosterNames.length === 0) return []
 
-    return rows.flatMap((row) => {
-      if (row.role !== 'admin') return []
+    const rows = await ctx.db.query('users').take(1000)
+    const directory = rows.flatMap((row) => {
       if (row.status === 'disabled' || row.status === 'suspended') return []
 
       const name = typeof row.name === 'string' ? row.name.trim() : ''
@@ -28,5 +36,7 @@ export const listPlatformAdminMembersInternal = internalQuery({
         },
       ]
     })
+
+    return resolveProfilesForRosterNames(rosterNames, directory)
   },
 })

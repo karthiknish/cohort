@@ -10,6 +10,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import {
   formatAssigneeList,
   formatDate,
+  clientRosterAssigneeNames,
   mergeTaskParticipants,
   resolveAssigneeUserIds,
   ProjectFilterBanner,
@@ -196,13 +197,19 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
       : 'skip'
   ) as TaskParticipant[] | undefined
 
-  const platformUsers = useQuery(
-    usersApi.listAllUsers,
-    user?.agencyId && !isPreviewMode
+  const clientRosterNames = useMemo(
+    () => clientRosterAssigneeNames(effectiveTaskClient ?? selectedClient),
+    [effectiveTaskClient, selectedClient],
+  )
+
+  const rosterProfiles = useQuery(
+    usersApi.resolveProfilesForNames,
+    taskWorkspaceId && clientRosterNames.length > 0 && !isPreviewMode
       ? {
-          limit: 500,
+          workspaceId: taskWorkspaceId,
+          names: clientRosterNames,
         }
-      : 'skip'
+      : 'skip',
   ) as TaskParticipant[] | undefined
 
   const workspaceMembersQueryError = useConvexQueryError({
@@ -210,23 +217,32 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     skipped: !taskWorkspaceId || isPreviewMode,
     fallbackMessage: 'Unable to load workspace members.',
   })
-  const platformUsersQueryError = useConvexQueryError({
-    data: platformUsers,
-    skipped: !user?.agencyId || isPreviewMode,
-    fallbackMessage: 'Unable to load platform users.',
+  const rosterProfilesQueryError = useConvexQueryError({
+    data: rosterProfiles,
+    skipped: !taskWorkspaceId || clientRosterNames.length === 0 || isPreviewMode,
+    fallbackMessage: 'Unable to load client assignees.',
   })
-  const participantsQueryError = mergeQueryErrors(workspaceMembersQueryError, platformUsersQueryError)
+  const participantsQueryError = mergeQueryErrors(workspaceMembersQueryError, rosterProfilesQueryError)
   const displayError = mergeQueryErrors(error, participantsQueryError)
 
   const taskParticipants = useMemo(() => {
-    const platformAdmins = (platformUsers ?? []).filter((member) => member.role?.toLowerCase() === 'admin')
+    const clientTeamMembers = (effectiveTaskClient?.teamMembers ?? selectedClient?.teamMembers ?? []).map(
+      (member) => ({
+        name: member.name,
+        role: member.role,
+      }),
+    )
 
-    return mergeTaskParticipants([
-      effectiveTaskClient?.teamMembers ?? selectedClient?.teamMembers ?? [],
-      workspaceMembers ?? [],
-      platformAdmins,
-    ])
-  }, [effectiveTaskClient?.teamMembers, platformUsers, selectedClient?.teamMembers, workspaceMembers])
+    if (clientTeamMembers.length > 0 || (rosterProfiles?.length ?? 0) > 0) {
+      return mergeTaskParticipants([
+        clientTeamMembers,
+        workspaceMembers ?? [],
+        rosterProfiles ?? [],
+      ])
+    }
+
+    return mergeTaskParticipants([workspaceMembers ?? []])
+  }, [effectiveTaskClient?.teamMembers, rosterProfiles, selectedClient?.teamMembers, workspaceMembers])
 
   // Debounced search for filters
   const [rawSearchQuery, setRawSearchQuery] = useState('')

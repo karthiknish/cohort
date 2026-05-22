@@ -237,16 +237,26 @@ function mergeDocumentImportAssigneeProfiles(
   return [...byId.values()]
 }
 
-async function listDocumentImportAssigneeProfiles(
+async function buildDocumentImportAssigneePool(
   ctx: Parameters<typeof listWorkspaceMembers>[0],
   workspaceId: string,
+  clientId: string | null,
 ): Promise<DocumentImportWorkspaceMember[]> {
-  const [workspaceMembers, platformAdmins] = await Promise.all([
+  const rosterNames = await loadClientRosterNames(ctx, workspaceId, clientId)
+
+  if (rosterNames.length === 0) {
+    return listWorkspaceMembers(ctx, workspaceId)
+  }
+
+  const [workspaceMembers, rosterProfiles] = await Promise.all([
     listWorkspaceMembers(ctx, workspaceId),
-    ctx.runQuery(internal.taskDocumentImportQueries.listPlatformAdminMembersInternal, {}),
+    ctx.runQuery(internal.taskDocumentImportQueries.resolveUserProfilesForNamesInternal, {
+      names: rosterNames,
+    }),
   ])
 
-  return mergeDocumentImportAssigneeProfiles(workspaceMembers, platformAdmins)
+  const linkProfiles = mergeDocumentImportAssigneeProfiles(workspaceMembers, rosterProfiles)
+  return buildAssigneeMemberPool(linkProfiles, rosterNames)
 }
 
 async function resolveTaskAssignment(
@@ -309,9 +319,7 @@ async function mapRawTasksToProposals(
   rawTasks: RawExtractedTask[],
 ): Promise<ProposedImportTask[]> {
   const nowMs = Date.now()
-  const assigneeProfiles = await listDocumentImportAssigneeProfiles(ctx, workspaceId)
-  const clientRosterNames = await loadClientRosterNames(ctx, workspaceId, clientId)
-  const assigneeMemberPool = buildAssigneeMemberPool(assigneeProfiles, clientRosterNames)
+  const assigneeMemberPool = await buildDocumentImportAssigneePool(ctx, workspaceId, clientId)
 
   const proposals = await Promise.all(
     rawTasks.slice(0, 25).map(async (rawTask) => {
@@ -387,8 +395,12 @@ export const extractTasksFromDocument = action({
         scope: args.clientId ?? null,
       })
 
-      const members = await listDocumentImportAssigneeProfiles(ctx, workspaceId)
-      const memberNames = members.map((member) => member.name)
+      const assigneeMemberPool = await buildDocumentImportAssigneePool(
+        ctx,
+        workspaceId,
+        args.clientId ?? null,
+      )
+      const memberNames = assigneeMemberPool.map((member) => member.name)
 
       let raw: string
       if (hasVisual) {
