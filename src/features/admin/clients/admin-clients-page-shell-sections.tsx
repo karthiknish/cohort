@@ -80,6 +80,7 @@ export function AdminClientsWorkspaceManagementCard({
   onRequestAddTeamMember,
   onRequestDeleteClient,
   onRemoveTeamMember,
+  onEditTeamMemberRole,
   onLoadMore,
 }: AdminClientsWorkspaceManagementCardProps) {
   return (
