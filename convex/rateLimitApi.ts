@@ -1,5 +1,6 @@
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { Errors } from "./errors";
 import { rateLimiter } from "./rateLimit";
 
 type LimitConfig = {
@@ -53,7 +54,9 @@ export const limit = internalMutation({
       : isPresetLimitName(args.name)
         ? await rateLimiter.limit(ctx, args.name, baseOpts)
         : (() => {
-            throw new Error(`Unknown rate limit name '${args.name}' without custom config`)
+            throw Errors.validation.invalidInput(
+              `Unknown rate limit name '${args.name}' without custom config`,
+            )
           })()
 
     // `retryAfter` is a delay in milliseconds.

@@ -20,6 +20,7 @@ import type { RateLimitPreset } from './rate-limiter'
 import { checkConvexRateLimit } from './rate-limiter-convex'
 import { sanitizeInput } from './utils'
 import { logger } from './logger'
+import { resolveConvexApiErrorResponse } from './convex-errors'
 import { api } from '/_generated/api'
 
 // Lazy-init Convex client for idempotency
@@ -611,6 +612,35 @@ export function createApiHandler<
           status: 400,
           headers: { 'X-Request-ID': requestId }
         })
+      }
+
+      const convexApiError = resolveConvexApiErrorResponse(error)
+      if (convexApiError) {
+        after(async () => {
+          logApiError(error, req, { ...logContext, includeStack: process.env.NODE_ENV === 'development' })
+
+          if (idempotencyKey) {
+            await runBestEffortIdempotencyCleanup({
+              operation: 'release',
+              key: idempotencyKey,
+              requestId,
+              path: req.nextUrl.pathname,
+            })
+          }
+        })
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: convexApiError.message,
+            code: convexApiError.code,
+            requestId,
+          },
+          {
+            status: convexApiError.status,
+            headers: { 'X-Request-ID': requestId },
+          },
+        )
       }
 
       // Log and handle unknown errors

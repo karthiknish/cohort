@@ -279,7 +279,15 @@ export function AgentModePanel({
       }
       requestClose()
     }
-  }, [closeHistoryView, editingConversationId, handleSubmit, requestClose, showHistory, showMentions])
+  }, [
+    closeHistoryView,
+    editingConversationId,
+    handleSubmit,
+    mentionDropdownRef,
+    requestClose,
+    showHistory,
+    showMentions,
+  ])
 
   const handleSuggestionClick = useCallback((suggestion: AgentSuggestion) => {
     trackAgentSuggestionClick({
@@ -514,6 +522,7 @@ export function AgentModePanel({
       inputRef,
       inputValue,
       isExtractingAttachments,
+      mentionDropdownRef,
       mentionLabels,
       mentionQuery,
       mentionsLoading,

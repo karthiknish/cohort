@@ -8,7 +8,7 @@ import { buildAgentConversationShareLink } from '@/lib/agent-conversation-export
 import type { AgentError } from '@/lib/agent-errors'
 import { parseAgentError } from '@/lib/agent-errors'
 import { isPreviewModeEnabled } from '@/lib/preview-data'
-import { notifyFailure } from '@/lib/notifications'
+import { convexErrorMessage, reportConvexFailure } from '@/lib/handle-convex-error'
 
 import { mapStoredMessagesToAgentMessages } from './map-stored-messages'
 import { PREVIEW_AGENT_CONVERSATION_ID, type StoredAgentMessage } from './stored-message-utils'
@@ -99,8 +99,9 @@ export function useAgentConversationHistory({
       setHistoryCursor(result.nextCursor)
     } catch (err) {
       console.error('[useAgentMode] Failed to fetch history:', err)
-      const message = err instanceof Error ? err.message : 'Failed to load conversation history.'
-      setHistoryError(message)
+      setHistoryError(
+        convexErrorMessage(err, 'Failed to load conversation history.'),
+      )
     } finally {
       setIsHistoryLoading(false)
     }
@@ -225,10 +226,10 @@ export function useAgentConversationHistory({
       await updateTitle({ workspaceId, conversationId: targetConversationId, title: trimmed })
       setHistory((prev) => prev.map((c) => (c.id === targetConversationId ? { ...c, title: trimmed } : c)))
     } catch (err) {
-      console.error('[useAgentMode] Failed to update title:', err)
-      notifyFailure({
-        title: 'Could not update chat title',
+      reportConvexFailure({
         error: err,
+        context: 'useAgentConversationHistory:updateTitle',
+        title: 'Could not update chat title',
         fallbackMessage: 'Sorry — we could not update that chat title. Please try again.',
       })
       addMessage('agent', 'Sorry — I couldn\'t update that chat title. Please try again.')
@@ -260,10 +261,10 @@ export function useAgentConversationHistory({
         setConversationId(null)
       }
     } catch (err) {
-      console.error('[useAgentMode] Failed to delete conversation:', err)
-      notifyFailure({
-        title: 'Could not delete chat',
+      reportConvexFailure({
         error: err,
+        context: 'useAgentConversationHistory:deleteConversation',
+        title: 'Could not delete chat',
         fallbackMessage: 'Sorry — we could not delete that chat. Please try again.',
       })
       addMessage('agent', 'Sorry — I couldn\'t delete that chat. Please try again.')
@@ -282,9 +283,10 @@ export function useAgentConversationHistory({
         await fetchHistory({ reset: true })
         return result.conversationId
       } catch (err) {
-        notifyFailure({
-          title: 'Could not duplicate chat',
+        reportConvexFailure({
           error: err,
+          context: 'useAgentConversationHistory:duplicateConversation',
+          title: 'Could not duplicate chat',
           fallbackMessage: 'Sorry — we could not duplicate that chat.',
         })
         return null
@@ -304,9 +306,10 @@ export function useAgentConversationHistory({
         })) as { content: string; title: string }
         return result
       } catch (err) {
-        notifyFailure({
-          title: 'Could not export chat',
+        reportConvexFailure({
           error: err,
+          context: 'useAgentConversationHistory:exportConversation',
+          title: 'Could not export chat',
           fallbackMessage: 'Sorry — we could not export that chat.',
         })
         return null
@@ -327,9 +330,10 @@ export function useAgentConversationHistory({
         const deepLink = buildAgentConversationShareLink(targetConversationId)
         return { markdown: result.markdown, deepLink }
       } catch (err) {
-        notifyFailure({
-          title: 'Could not share chat',
+        reportConvexFailure({
           error: err,
+          context: 'useAgentConversationHistory:shareConversation',
+          title: 'Could not share chat',
           fallbackMessage: 'Sorry — we could not prepare a share link for that chat.',
         })
         return null

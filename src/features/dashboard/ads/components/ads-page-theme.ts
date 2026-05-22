@@ -39,8 +39,10 @@ export const ADS_PAGE_THEME = {
     'flex flex-col items-center justify-center gap-4 rounded-2xl',
     'border border-dashed border-border/70 bg-muted/15 p-10 text-center',
   ),
-  mobileTabs: 'grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-muted/40 p-1',
-  mobileTabTrigger: 'gap-1.5 rounded-lg text-xs sm:text-sm data-[state=active]:shadow-sm',
+  mobileTabs:
+    'inline-flex h-auto w-full flex-nowrap items-stretch gap-1 rounded-xl bg-muted/40 p-1',
+  mobileTabTrigger:
+    'min-w-0 flex-1 gap-1.5 rounded-lg px-2 text-xs sm:px-3 sm:text-sm data-[state=active]:shadow-sm',
   advancedPanel: cn(
     'overflow-hidden rounded-2xl border border-border/60',
     'bg-card/50 shadow-sm ring-1 ring-border/30',

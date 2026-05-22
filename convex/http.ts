@@ -1,38 +1,14 @@
 import { httpRouter } from 'convex/server'
 import { httpAction } from './_generated/server'
 
-import { authComponent, createAuth } from './betterAuth/auth'
+import { authComponent, buildTrustedOrigins, createAuth } from './betterAuth/auth'
 import { adSyncNotification, externalWebhook } from './httpActions'
 import { run as adSyncWorker } from './adSyncWorker'
 
 const http = httpRouter()
 
-const LOCAL_DEV_AUTH_ORIGIN = 'http://localhost:3000'
-
-function isLocalDevUrl(value: string | undefined | null): value is string {
-  return typeof value === 'string' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(value)
-}
-
-function shouldForceLocalhostAuthOrigin(): boolean {
-  return [
-    process.env.BETTER_AUTH_URL,
-    process.env.NEXT_PUBLIC_APP_URL,
-    process.env.SITE_URL,
-    process.env.NEXT_PUBLIC_SITE_URL,
-  ].some(isLocalDevUrl)
-}
-
-// Allowed origins for CORS (add your production URL when deploying)
-const ALLOWED_ORIGINS = shouldForceLocalhostAuthOrigin()
-  ? [LOCAL_DEV_AUTH_ORIGIN]
-  : [
-      process.env.BETTER_AUTH_URL,
-      process.env.NEXT_PUBLIC_APP_URL,
-      process.env.NEXT_PUBLIC_SITE_URL,
-      process.env.NEXT_PUBLIC_CONVEX_SITE_URL,
-      process.env.NEXT_PUBLIC_CONVEX_HTTP_URL,
-      process.env.SITE_URL,
-    ].filter(Boolean) as string[]
+// Allowed origins for CORS — keep in sync with betterAuth/auth.ts trustedOrigins
+const ALLOWED_ORIGINS = buildTrustedOrigins()
 
 function getCorsHeaders(origin: string | null): HeadersInit {
   const allowedOrigin = origin && ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed.replace(/\/$/, '')))

@@ -69,27 +69,45 @@ async function rewriteConvexAuthResponse(response: Response): Promise<Response> 
  * @see https://labs.convex.dev/better-auth/framework-guides/next
  */
 async function proxyAuthToConvex(request: Request): Promise<Response> {
-  const requestUrl = new URL(request.url)
-  const targetUrl = `${convexSiteUrl}${requestUrl.pathname}${requestUrl.search}`
-  const headers = new Headers(request.headers)
-  headers.set('accept-encoding', 'application/json')
-  headers.set('host', new URL(convexSiteUrl).host)
-  headers.set('x-forwarded-host', requestUrl.host)
-  headers.set('x-forwarded-proto', requestUrl.protocol.replace(':', ''))
+  try {
+    const requestUrl = new URL(request.url)
+    const targetUrl = `${convexSiteUrl}${requestUrl.pathname}${requestUrl.search}`
+    const headers = new Headers(request.headers)
+    headers.set('accept-encoding', "application/json")
+    headers.set("host", new URL(convexSiteUrl).host)
+    headers.set("x-forwarded-host", requestUrl.host)
+    headers.set("x-forwarded-proto", requestUrl.protocol.replace(":", ""))
 
-  const init: RequestInit & { duplex?: 'half' } = {
-    method: request.method,
-    headers,
-    redirect: 'manual',
-  }
-  if (request.method !== 'GET' && request.method !== 'HEAD' && request.body != null) {
-    init.body = request.body
-    // Node/undici requires duplex when forwarding a streaming request body.
-    init.duplex = 'half'
-  }
+    const init: RequestInit & { duplex?: "half" } = {
+      method: request.method,
+      headers,
+      redirect: "manual",
+    }
+    if (request.method !== "GET" && request.method !== "HEAD" && request.body != null) {
+      init.body = request.body
+      // Node/undici requires duplex when forwarding a streaming request body.
+      init.duplex = "half"
+    }
 
-  const response = await fetch(targetUrl, init)
-  return rewriteConvexAuthResponse(response)
+    const response = await fetch(targetUrl, init)
+    if (!response.ok) {
+      const errorBody = await response.clone().text()
+      console.error(
+        `[auth-server] Convex auth ${request.method} ${requestUrl.pathname} → ${response.status}`,
+        errorBody.slice(0, 500),
+      )
+    }
+    return rewriteConvexAuthResponse(response)
+  } catch (error) {
+    console.error("[auth-server] Failed to proxy auth request to Convex:", error)
+    return Response.json(
+      {
+        error: "AUTH_PROXY_FAILED",
+        message: "Authentication service is unavailable. Check Convex env and deployment logs.",
+      },
+      { status: 502 },
+    )
+  }
 }
 
 export const handler = {

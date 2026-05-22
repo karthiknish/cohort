@@ -13,6 +13,7 @@ function isAuthError(error: unknown): boolean {
 }
 
 import { FadeIn } from '@/shared/ui/animate-in'
+import { QueryErrorAlert } from '@/shared/ui/query-error-alert'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { AdConnectionsCard } from '@/features/dashboard/home/components/ad-connections-card'
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -25,7 +26,6 @@ import {
   PerformanceSummaryCard,
   MetricsTableCard,
   WorkflowCard,
-  AdSetupPanel,
 } from './components'
 import { AdsPageHeader } from './components/ads-page-header'
 import { AdsPageLayout } from './components/ads-page-shell-sections'
@@ -115,15 +115,14 @@ export default function AdsPage() {
 
   const {
     connectedProviders,
+    connectionsQueryError,
     connectingProvider,
     connectionErrors,
     integrationStatuses,
     integrationStatusMap,
     automationStatuses,
     syncingProviders,
-    metaSetupMessage,
     googleSetupMessage,
-    tiktokSetupMessage,
     initializingGoogle,
     initializingMeta,
     initializingTikTok,
@@ -215,17 +214,9 @@ export default function AdsPage() {
     [automationStatuses],
   )
 
-  const scrollToSetupAlerts = useCallback(() => {
-    document.getElementById('ads-setup-alerts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [])
-
   const handleInitializeMeta = useCallback(() => {
     void initializeMetaIntegration(undefined, selectedMetaAccountId || null)
   }, [initializeMetaIntegration, selectedMetaAccountId])
-
-  const handleReloadMetaAccountOptions = useCallback(() => {
-    void reloadMetaAccountOptions()
-  }, [reloadMetaAccountOptions])
 
   const handleInitializeTikTok = useCallback(() => {
     void initializeTikTokIntegration()
@@ -289,32 +280,6 @@ export default function AdsPage() {
           />
         </FadeIn>
       ) : null}
-
-      <FadeIn>
-        <div id="ads-setup-alerts">
-          <AdSetupPanel
-            connectedCount={connectedAccountCount}
-            totalProviders={adPlatforms.length}
-            googleNeedsAccountSelection={googleNeedsAccountSelection}
-            googleSetupMessage={googleSetupMessage}
-            onOpenGoogleSetup={openGoogleCampaignSetup}
-            initializingGoogle={initializingGoogle}
-            metaSetupMessage={metaSetupMessage}
-            metaNeedsAccountSelection={metaNeedsAccountSelection}
-            initializingMeta={initializingMeta}
-            onInitializeMeta={handleInitializeMeta}
-            metaAccountOptions={metaAccountOptions}
-            selectedMetaAccountId={selectedMetaAccountId}
-            onMetaAccountSelectionChange={setSelectedMetaAccountId}
-            loadingMetaAccountOptions={loadingMetaAccountOptions}
-            onReloadMetaAccountOptions={handleReloadMetaAccountOptions}
-            tiktokSetupMessage={tiktokSetupMessage}
-            tiktokNeedsAccountSelection={tiktokNeedsAccountSelection}
-            initializingTikTok={initializingTikTok}
-            onInitializeTikTok={handleInitializeTikTok}
-          />
-        </div>
-      </FadeIn>
 
       <FadeIn>
         <div id="connect-ad-platforms">
@@ -389,9 +354,11 @@ export default function AdsPage() {
                       onSetupAction={
                         platform.id === 'google'
                           ? openGoogleCampaignSetup
-                          : platform.id === 'facebook' || platform.id === 'tiktok'
-                            ? scrollToSetupAlerts
-                            : undefined
+                          : platform.id === 'facebook'
+                            ? handleInitializeMeta
+                            : platform.id === 'tiktok'
+                              ? handleInitializeTikTok
+                              : undefined
                       }
                     />
                   ))}
@@ -407,22 +374,11 @@ export default function AdsPage() {
     hasSuccessfulSync,
     hasPendingSetup,
     adPlatforms,
-    setSelectedMetaAccountId,
     googleNeedsAccountSelection,
-    googleSetupMessage,
-    openGoogleCampaignSetup,
-    initializingGoogle,
-    metaSetupMessage,
     metaNeedsAccountSelection,
-    initializingMeta,
-    handleInitializeMeta,
-    metaAccountOptions,
-    selectedMetaAccountId,
-    loadingMetaAccountOptions,
-    handleReloadMetaAccountOptions,
-    tiktokSetupMessage,
     tiktokNeedsAccountSelection,
-    initializingTikTok,
+    openGoogleCampaignSetup,
+    handleInitializeMeta,
     handleInitializeTikTok,
     connectedProviders,
     connectingProvider,
@@ -437,7 +393,6 @@ export default function AdsPage() {
     metricsLoading,
     pendingSetupCount,
     dateRange,
-    scrollToSetupAlerts,
   ])
 
   const renderAnalytics = useCallback(() => (
@@ -608,6 +563,11 @@ export default function AdsPage() {
               pendingSetupCount={pendingSetupCount}
             />
           </FadeIn>
+
+          <QueryErrorAlert
+            error={connectionsQueryError}
+            title="Unable to load ad connections"
+          />
 
           <AdsPageLayout
             renderSetup={renderSetup}

@@ -88,6 +88,42 @@ export function isIntegrationScopeAppError(error: unknown): boolean {
   return extractErrorCode(error) === 'INTEGRATION_INSUFFICIENT_SCOPE'
 }
 
+/** Map ConvexError to HTTP status for API routes (createApiHandler). */
+export function resolveConvexApiErrorResponse(error: unknown): {
+  status: number
+  code: string
+  message: string
+} | null {
+  if (!(error instanceof ConvexError)) {
+    return null
+  }
+
+  const data = error.data as AppErrorData
+  const code = data?.code ?? 'INTERNAL_ERROR'
+  const message = data?.message ?? 'An error occurred'
+
+  const statusByCode: Record<string, number> = {
+    TOO_MANY_REQUESTS: 429,
+    READ_LIMIT: 429,
+    CONFLICT: 409,
+    UNAUTHORIZED: 401,
+    FORBIDDEN: 403,
+    NOT_FOUND: 404,
+    BAD_REQUEST: 400,
+    INVALID_INPUT: 400,
+    VALIDATION_ERROR: 400,
+    INVALID_STATE: 400,
+    WORKSPACE_ACCESS_DENIED: 403,
+    ADMIN_REQUIRED: 403,
+  }
+
+  return {
+    status: statusByCode[code] ?? 500,
+    code,
+    message,
+  }
+}
+
 export function mapGoogleAnalyticsIntegrationError(error: unknown): string {
   if (isIntegrationScopeAppError(error)) {
     return 'Google Analytics needs updated permissions. Disconnect the integration, then connect again and approve all requested access.'

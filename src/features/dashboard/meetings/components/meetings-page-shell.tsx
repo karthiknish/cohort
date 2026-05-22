@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from 'react'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { QueryErrorAlert } from '@/shared/ui/query-error-alert'
 import { useMeetingsPageContext } from './meetings-page-provider'
 import {
   ActiveMeetingRoomSection,
@@ -28,6 +29,7 @@ export function MeetingsPageShell() {
     handleScheduleMeeting,
     handleSubmitQuickMeet,
     googleWorkspaceStatusLoading,
+    meetingsQueryError,
     isPreviewMode,
     meetingDate,
     meetingTime,
@@ -328,6 +330,9 @@ export function MeetingsPageShell() {
       name="dashboard-meetings-page"
       loading={isInitialLoading}
     >
+      {meetingsQueryError ? (
+        <QueryErrorAlert error={meetingsQueryError} title="Unable to load meetings" />
+      ) : null}
       {pageContent}
     </BoneyardSkeletonBoundary>
   )

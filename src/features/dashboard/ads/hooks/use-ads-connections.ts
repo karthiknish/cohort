@@ -10,6 +10,8 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { normalizeAdsProviderId } from '@/domain/ads/provider'
 import { adsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { convexErrorMessage, reportConvexFailure } from '@/lib/handle-convex-error'
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import { notifyFailure } from '@/lib/notifications'
 import { getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
 import { useToast } from '@/shared/ui/use-toast'
@@ -92,6 +94,7 @@ export interface UseAdsConnectionsReturn {
   connectedProviders: Record<string, boolean>
   connectingProvider: string | null
   connectionErrors: Record<string, string>
+  connectionsQueryError: string | null
   integrationStatuses: IntegrationStatusResponse | null
   integrationStatusMap: Record<string, IntegrationStatusInfo>
   automationStatuses: IntegrationStatus[]
@@ -165,6 +168,13 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       ? 'skip'
       : { workspaceId, clientId: selectedClientId ?? null }
   ) as ConvexIntegrationStatusRow[] | undefined
+
+  const connectionsQueryError = useConvexQueryError({
+    data: convexStatuses,
+    skipped: isPreviewMode || !workspaceId || !canQueryConvex,
+    loading: convexAuthLoading,
+    fallbackMessage: 'Unable to load ad integration statuses.',
+  })
 
   const mappedStatuses = useMemo<IntegrationStatusResponse | null>(() => {
     if (isPreviewMode) {
@@ -415,10 +425,13 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       setGoogleSetupDialogOpen(false)
       triggerRefresh()
     } catch (error: unknown) {
-      logError(error, 'useAdsConnections:initializeGoogleIntegration')
-      const message = asErrorMessage(error)
-      setGoogleSetupMessage(message)
-      notifyFailure({ title: TOAST_TITLES.CONNECTION_FAILED, message })
+      reportConvexFailure({
+        error,
+        context: 'useAdsConnections:initializeGoogleIntegration',
+        title: TOAST_TITLES.CONNECTION_FAILED,
+        fallbackMessage: 'Unable to connect Google Ads.',
+      })
+      setGoogleSetupMessage(convexErrorMessage(error, 'Unable to connect Google Ads.'))
     } finally {
       setInitializingGoogle(false)
     }
@@ -477,10 +490,13 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       triggerRefresh()
 
     } catch (error: unknown) {
-      logError(error, 'useAdsConnections:initializeMetaIntegration')
-      const message = asErrorMessage(error)
-      setMetaSetupMessage(message)
-      notifyFailure({ title: TOAST_TITLES.META_SETUP_FAILED, message })
+      reportConvexFailure({
+        error,
+        context: 'useAdsConnections:initializeMetaIntegration',
+        title: TOAST_TITLES.META_SETUP_FAILED,
+        fallbackMessage: 'Unable to connect Meta Ads.',
+      })
+      setMetaSetupMessage(convexErrorMessage(error, 'Unable to connect Meta Ads.'))
     } finally {
       setInitializingMeta(false)
     }
@@ -510,10 +526,13 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       triggerRefresh()
 
     } catch (error: unknown) {
-      logError(error, 'useAdsConnections:initializeTikTokIntegration')
-      const message = asErrorMessage(error)
-      setTiktokSetupMessage(message)
-      notifyFailure({ title: TOAST_TITLES.TIKTOK_SETUP_FAILED, message })
+      reportConvexFailure({
+        error,
+        context: 'useAdsConnections:initializeTikTokIntegration',
+        title: TOAST_TITLES.TIKTOK_SETUP_FAILED,
+        fallbackMessage: 'Unable to connect TikTok Ads.',
+      })
+      setTiktokSetupMessage(convexErrorMessage(error, 'Unable to connect TikTok Ads.'))
     } finally {
       setInitializingTikTok(false)
     }
@@ -575,10 +594,13 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
             triggerRefresh()
           })
           .catch((error) => {
-            logError(error, 'useAdsConnections:oauthSuccess:facebook')
-            const message = asErrorMessage(error)
-            setMetaSetupMessage(message)
-            notifyFailure({ title: TOAST_TITLES.META_SETUP_FAILED, message })
+            reportConvexFailure({
+              error,
+              context: 'useAdsConnections:oauthSuccess:facebook',
+              title: TOAST_TITLES.META_SETUP_FAILED,
+              fallbackMessage: 'Unable to load Meta ad accounts.',
+            })
+            setMetaSetupMessage(convexErrorMessage(error, 'Unable to load Meta ad accounts.'))
           })
       } else if (providerId === PROVIDER_IDS.TIKTOK) {
         void initializeTikTokIntegration(oauthClientId)
@@ -594,18 +616,25 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
             triggerRefresh()
           })
           .catch((error) => {
-            logError(error, 'useAdsConnections:oauthSuccess:google')
-            const errorMessage = asErrorMessage(error)
-            setGoogleSetupMessage(errorMessage)
-            notifyFailure({ title: TOAST_TITLES.CONNECTION_FAILED, message: errorMessage })
+            reportConvexFailure({
+              error,
+              context: 'useAdsConnections:oauthSuccess:google',
+              title: TOAST_TITLES.CONNECTION_FAILED,
+              fallbackMessage: 'Unable to load Google ad accounts.',
+            })
+            setGoogleSetupMessage(convexErrorMessage(error, 'Unable to load Google ad accounts.'))
           })
        } else if (providerId === PROVIDER_IDS.LINKEDIN) {
         void initializeLinkedInIntegration().then(async () => {
           toast({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, description: 'Syncing your ad data.' })
           triggerRefresh()
-        }).catch(err => {
-          logError(err, 'useAdsConnections:oauthSuccess:linkedin')
-          notifyFailure({ title: TOAST_TITLES.CONNECTION_FAILED, error: err })
+        }).catch((err) => {
+          reportConvexFailure({
+            error: err,
+            context: 'useAdsConnections:oauthSuccess:linkedin',
+            title: TOAST_TITLES.CONNECTION_FAILED,
+            fallbackMessage: 'Unable to connect LinkedIn Ads.',
+          })
         })
       } else {
         toast({
@@ -677,11 +706,17 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       setConnectedProviders((prev) => ({ ...prev, [providerId]: true }))
       triggerRefresh()
     } catch (error: unknown) {
-      logError(error, 'useAdsConnections:handleConnect')
-      const message = asErrorMessage(error)
-      setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
+      reportConvexFailure({
+        error,
+        context: 'useAdsConnections:handleConnect',
+        title: TOAST_TITLES.CONNECTION_FAILED,
+        fallbackMessage: 'Connection failed.',
+      })
+      setConnectionErrors((prev) => ({
+        ...prev,
+        [providerId]: convexErrorMessage(error, 'Connection failed.'),
+      }))
       setConnectedProviders((prev) => ({ ...prev, [providerId]: false }))
-      notifyFailure({ title: TOAST_TITLES.CONNECTION_FAILED, message })
     } finally {
       setConnectingProvider(null)
     }
@@ -741,7 +776,6 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       }
       throw new Error('This provider does not support OAuth yet.')
     } catch (error: unknown) {
-      logError(error, 'useAdsConnections:handleOauthRedirect')
       const rawMessage = error instanceof Error ? error.message : ''
 
       const isMetaConfigError =
@@ -763,7 +797,13 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       if (providerId === PROVIDER_IDS.TIKTOK && (isTikTokConfigError || message.toLowerCase().includes('tiktok oauth is not configured'))) {
         setTiktokSetupMessage('TikTok OAuth is not configured. Add TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET, and TIKTOK_OAUTH_REDIRECT_URI environment variables.')
       }
-      notifyFailure({ title: TOAST_TITLES.CONNECTION_FAILED, message })
+      reportConvexFailure({
+        error,
+        context: 'useAdsConnections:handleOauthRedirect',
+        title: TOAST_TITLES.CONNECTION_FAILED,
+        message,
+        fallbackMessage: 'Connection failed.',
+      })
     } finally {
       setConnectingProvider(null)
     }
@@ -803,10 +843,16 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       })
       triggerRefresh()
     } catch (error: unknown) {
-      logError(error, 'useAdsConnections:handleDisconnect')
-      const message = asErrorMessage(error)
-      setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
-      notifyFailure({ title: TOAST_TITLES.DISCONNECT_FAILED, message })
+      reportConvexFailure({
+        error,
+        context: 'useAdsConnections:handleDisconnect',
+        title: TOAST_TITLES.DISCONNECT_FAILED,
+        fallbackMessage: 'Disconnect failed.',
+      })
+      setConnectionErrors((prev) => ({
+        ...prev,
+        [providerId]: convexErrorMessage(error, 'Disconnect failed.'),
+      }))
     } finally {
       setConnectingProvider(null)
     }
@@ -838,9 +884,12 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       toast({ title: 'Sync complete', description: `${formatProviderName(providerId)} data has been refreshed.` })
       triggerRefresh()
     } catch (error: unknown) {
-      logError(error, 'useAdsConnections:handleSyncNow')
-      const message = asErrorMessage(error)
-      notifyFailure({ title: 'Sync failed', message })
+      reportConvexFailure({
+        error,
+        context: 'useAdsConnections:handleSyncNow',
+        title: 'Sync failed',
+        fallbackMessage: 'Unable to sync ad data.',
+      })
     } finally {
       setSyncingProviders((prev) => ({ ...prev, [providerId]: false }))
     }
@@ -852,6 +901,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     connectingProvider,
     connectionErrors,
     integrationStatuses: mappedStatuses,
+    connectionsQueryError,
     integrationStatusMap,
     automationStatuses,
     syncingProviders,

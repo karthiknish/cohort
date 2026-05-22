@@ -1,6 +1,11 @@
 'use client'
 
-import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
+import {
+  mergeQueryErrors,
+  queryErrorFromUnknown,
+  useConvexQueryError,
+} from '@/lib/hooks/use-convex-query-error'
 import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
 
 import { useInfiniteQuery } from '@tanstack/react-query'
@@ -53,6 +58,12 @@ export function useNotificationInbox() {
       : 'skip',
   ) as { unreadCount: number } | undefined
 
+  const unreadCountQueryError = useConvexQueryError({
+    data: unreadCountQuery,
+    skipped: !workspaceId,
+    fallbackMessage: 'Unable to load notification count.',
+  })
+
   const notificationsInfiniteQuery = useInfiniteQuery({
     queryKey: ['notifications', workspaceId, user?.role, selectedClientId],
     enabled: Boolean(open && workspaceId),
@@ -92,6 +103,26 @@ export function useNotificationInbox() {
     [notifications],
   )
 
+  const notificationsListQueryError = useMemo(() => {
+    if (!open || !workspaceId) {
+      return null
+    }
+    if (!notificationsInfiniteQuery.isError) {
+      return null
+    }
+    return queryErrorFromUnknown(
+      notificationsInfiniteQuery.error,
+      'Unable to load notifications.',
+    )
+  }, [
+    notificationsInfiniteQuery.error,
+    notificationsInfiniteQuery.isError,
+    open,
+    workspaceId,
+  ])
+
+  const inboxQueryError = mergeQueryErrors(unreadCountQueryError, notificationsListQueryError)
+
   const unreadCount = unreadCountQuery?.unreadCount ?? notifications.filter((item) => !item.read).length
 
   const ackNotifications = useMutation(notificationsApi.ack)
@@ -117,10 +148,11 @@ export function useNotificationInbox() {
           }
         })
         .catch((error) => {
-          const message = error instanceof Error ? error.message : 'Notification update failed'
-          notifyFailure({
+          reportConvexFailure({
+            error,
+            context: 'useNotificationInbox:ack',
             title: 'Update failed',
-            message: message,
+            fallbackMessage: 'Notification update failed',
           })
         })
         .finally(() => {
@@ -198,5 +230,6 @@ export function useNotificationInbox() {
     handleLoadMore,
     hasNextPage: notificationsInfiniteQuery.hasNextPage,
     isFetchingNextPage: notificationsInfiniteQuery.isFetchingNextPage,
+    inboxQueryError,
   }
 }

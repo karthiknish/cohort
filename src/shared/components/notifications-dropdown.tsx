@@ -13,6 +13,7 @@ import { Drawer, DrawerContent } from '@/shared/ui/drawer'
 import { cn } from '@/lib/utils'
 
 import { NotificationsInboxPanel } from '@/features/notifications/components/notifications-inbox-panel'
+import { QueryErrorAlert } from '@/shared/ui/query-error-alert'
 import { useNotificationInbox } from '@/features/notifications/hooks/use-notification-inbox'
 import { useIsMobile } from '@/shared/hooks/use-is-mobile'
 import { HEADER_DROPDOWN_THEME } from '@/shared/layout/header-dropdown-theme'
@@ -35,6 +36,7 @@ export function NotificationsDropdown() {
     handleLoadMore,
     hasNextPage,
     isFetchingNextPage,
+    inboxQueryError,
   } = useNotificationInbox()
 
   const handleMobileOpen = useCallback(() => {
@@ -42,7 +44,9 @@ export function NotificationsDropdown() {
   }, [handleOpenChange])
 
   const inboxPanel = (
-    <NotificationsInboxPanel
+    <>
+      <QueryErrorAlert error={inboxQueryError} title="Unable to load notifications" />
+      <NotificationsInboxPanel
       unreadCount={unreadCount}
       ackInFlight={ackInFlight}
       isLoadingInitial={isLoadingInitial}
@@ -56,6 +60,7 @@ export function NotificationsDropdown() {
       onDismiss={handleDismiss}
       variant={isMobile ? 'drawer' : 'dropdown'}
     />
+    </>
   )
 
   const triggerButton = (

@@ -9,6 +9,8 @@ import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { apiFetch } from '@/lib/api-client'
 import { meetingIntegrationsApi, meetingsApi, usersApi } from '@/lib/convex-api'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
+import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import { notifyFailure } from '@/lib/notifications'
 import { getWorkspaceId } from '@/lib/utils'
 
@@ -130,6 +132,29 @@ export function useMeetingsPageController() {
       ? { workspaceId, roomName: sharedRoomName }
       : 'skip',
   ) as MeetingRecord | undefined
+
+  const meetingsQueryError = mergeQueryErrors(
+    useConvexQueryError({
+      data: meetings,
+      skipped: isPreviewMode || !workspaceId,
+      fallbackMessage: 'Unable to load meetings.',
+    }),
+    useConvexQueryError({
+      data: googleWorkspaceStatus,
+      skipped: isPreviewMode || !workspaceId,
+      fallbackMessage: 'Unable to load Google Workspace status.',
+    }),
+    useConvexQueryError({
+      data: workspaceMembers,
+      skipped: isPreviewMode || !workspaceId,
+      fallbackMessage: 'Unable to load workspace members.',
+    }),
+    useConvexQueryError({
+      data: platformUsers,
+      skipped: isPreviewMode || !workspaceId,
+      fallbackMessage: 'Unable to load users.',
+    }),
+  )
 
   const previewTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', [])
   const previewMeetings = useMemo(
@@ -255,7 +280,12 @@ export function useMeetingsPageController() {
       const { url } = await startGoogleWorkspaceOauth(redirect)
       window.location.href = url
     } catch (error) {
-      notifyFailure({ title: 'Unable to connect Google Workspace', error })
+      reportConvexFailure({
+        error,
+        context: 'useMeetingsPageController:connectGoogleWorkspace',
+        title: 'Unable to connect Google Workspace',
+        fallbackMessage: 'Unable to connect Google Workspace.',
+      })
     }
   }, [canSchedule, isPreviewMode, startGoogleWorkspaceOauth, toast])
 
@@ -276,7 +306,12 @@ export function useMeetingsPageController() {
       await disconnectGoogleWorkspace({ workspaceId })
       toast({ title: 'Google Workspace disconnected', description: 'Meeting scheduling is disabled until you reconnect.' })
     } catch (error) {
-      notifyFailure({ title: 'Disconnect failed', error })
+      reportConvexFailure({
+        error,
+        context: 'useMeetingsPageController:disconnectGoogleWorkspace',
+        title: 'Disconnect failed',
+        fallbackMessage: 'Unable to disconnect Google Workspace.',
+      })
     }
   }, [canSchedule, disconnectGoogleWorkspace, isPreviewMode, toast, workspaceId])
 
@@ -417,7 +452,12 @@ export function useMeetingsPageController() {
         })
       })
       .catch((error) => {
-        notifyFailure({ title: 'Meeting launch failed', error, fallbackMessage: 'Unable to start meeting room.' })
+        reportConvexFailure({
+          error,
+          context: 'useMeetingsPageController:openInSiteMeeting',
+          title: 'Meeting launch failed',
+          fallbackMessage: 'Unable to start meeting room.',
+        })
       })
       .finally(() => {
         setQuickStarting(false)
@@ -487,7 +527,12 @@ export function useMeetingsPageController() {
         })
       })
       .catch((error) => {
-        notifyFailure({ title: 'Cancel failed', error, fallbackMessage: 'Unable to cancel meeting.' })
+        reportConvexFailure({
+          error,
+          context: 'useMeetingsPageController:cancelMeeting',
+          title: 'Cancel failed',
+          fallbackMessage: 'Unable to cancel meeting.',
+        })
       })
       .finally(() => {
         setCancellingMeetingId(null)
@@ -636,9 +681,10 @@ export function useMeetingsPageController() {
         resetScheduleForm()
       })
       .catch((error) => {
-        notifyFailure({
-          title: isEditing ? 'Reschedule failed' : 'Schedule failed',
+        reportConvexFailure({
           error,
+          context: 'useMeetingsPageController:scheduleMeeting',
+          title: isEditing ? 'Reschedule failed' : 'Schedule failed',
           fallbackMessage: 'Unable to schedule meeting.',
         })
       })
@@ -709,7 +755,12 @@ export function useMeetingsPageController() {
       setActiveInSiteMeeting((current) => (current?.legacyId === legacyId ? { ...current, status: 'completed' } : current))
       toast({ title: 'Meeting updated', description: 'Status marked as completed.' })
     } catch (error) {
-      notifyFailure({ title: 'Status update failed', error })
+      reportConvexFailure({
+        error,
+        context: 'useMeetingsPageController:markCompleted',
+        title: 'Status update failed',
+        fallbackMessage: 'Unable to update meeting status.',
+      })
     }
   }, [canSchedule, isPreviewMode, toast, upcomingMeetings, updateMeetingStatus, workspaceId])
 
@@ -743,6 +794,7 @@ export function useMeetingsPageController() {
     scheduleDisabled,
     upcomingMeetings,
     upcomingMeetingsLoading,
+    meetingsQueryError,
     setTitle,
     setDescription,
     setMeetingDate,

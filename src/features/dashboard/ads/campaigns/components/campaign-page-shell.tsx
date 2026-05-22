@@ -98,7 +98,7 @@ export function CampaignPageLayout({
   return (
     <Tabs value={tab} onValueChange={setTab} className="w-full">
       <div className={ADS_PAGE_THEME.stickyTabBar}>
-        <TabsList className={cn(ADS_PAGE_THEME.mobileTabs, 'max-w-2xl')}>
+        <TabsList className={ADS_PAGE_THEME.mobileTabs}>
           <TabsTrigger value="performance" className={ADS_PAGE_THEME.mobileTabTrigger}>
             <BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Performance

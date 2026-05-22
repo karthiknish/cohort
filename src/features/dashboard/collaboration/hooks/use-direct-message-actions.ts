@@ -104,7 +104,14 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
         throw error
       }
     },
-    [getOrCreateConversationMutation, isPreviewMode, previewConversations,  workspaceId]
+    [
+      getOrCreateConversationMutation,
+      isPreviewMode,
+      previewConversations,
+      setPreviewConversations,
+      setPreviewMessagesByConversation,
+      workspaceId,
+    ],
   )
 
   const startNewDM = useCallback(
@@ -250,7 +257,19 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
         setIsSending(false)
       }
     },
-    [currentUserId, currentUserName, currentUserRole, isPreviewMode, selectedConversation, sendMessageMutation, workspaceId]
+    [
+      currentUserId,
+      currentUserName,
+      currentUserRole,
+      isPreviewMode,
+      previewReplyTimersRef,
+      selectedConversation,
+      sendMessageMutation,
+      setIsSending,
+      setPreviewConversations,
+      setPreviewMessagesByConversation,
+      workspaceId,
+    ],
   )
 
   const markAsRead = useCallback(async () => {
@@ -280,7 +299,7 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
         fallbackMessage: 'Unable to mark read',
         })
     }
-  }, [isPreviewMode, markAsReadMutation, selectedConversation,  workspaceId])
+  }, [isPreviewMode, markAsReadMutation, selectedConversation, setPreviewConversations, workspaceId])
 
   const editMessage = useCallback(
     async (messageLegacyId: string, newContent: string) => {
@@ -333,7 +352,7 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
         })
       }
     },
-    [editMessageMutation, isPreviewMode,  workspaceId]
+    [editMessageMutation, isPreviewMode, setPreviewMessagesByConversation, workspaceId],
   )
 
   const deleteMessage = useCallback(
@@ -387,7 +406,7 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
         })
       }
     },
-    [currentUserId, deleteMessageMutation, isPreviewMode,  workspaceId]
+    [currentUserId, deleteMessageMutation, isPreviewMode, setPreviewMessagesByConversation, workspaceId],
   )
 
   const toggleReaction = useCallback(
@@ -469,7 +488,7 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
         })
       }
     },
-    [currentUserId, isPreviewMode,  toggleReactionMutation, workspaceId]
+    [currentUserId, isPreviewMode, setPreviewMessagesByConversation, toggleReactionMutation, workspaceId],
   )
 
   const archiveConversation = useCallback(
@@ -506,7 +525,14 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
         })
       }
     },
-    [isPreviewMode, selectedConversation, setArchiveStatusMutation,  workspaceId]
+    [
+      isPreviewMode,
+      selectedConversation,
+      setArchiveStatusMutation,
+      setPreviewConversations,
+      setSelectedConversation,
+      workspaceId,
+    ],
   )
 
   const muteConversation = useCallback(
@@ -543,7 +569,14 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
         })
       }
     },
-    [isPreviewMode, selectedConversation, setMuteStatusMutation,  workspaceId]
+    [
+      isPreviewMode,
+      selectedConversation,
+      setMuteStatusMutation,
+      setPreviewConversations,
+      setSelectedConversation,
+      workspaceId,
+    ],
   )
 
   useEffect(() => {

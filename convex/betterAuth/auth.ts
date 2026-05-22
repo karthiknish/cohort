@@ -19,6 +19,11 @@ type AuthOptionsConfig = {
 
 const LOCAL_DEV_AUTH_ORIGIN = "http://localhost:3000";
 
+function isConvexDevDeployment(): boolean {
+  const deployment = process.env.CONVEX_DEPLOYMENT ?? "";
+  return deployment.startsWith("dev:") || deployment === "local";
+}
+
 function isStaticAuthBootstrap(ctx: GenericCtx<DataModel>): boolean {
   return Object.keys((ctx ?? {}) as object).length === 0;
 }
@@ -31,18 +36,35 @@ function isLocalDevUrl(value: string | undefined | null): value is string {
   return typeof value === "string" && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(value);
 }
 
-function shouldForceLocalhostAuthOrigin(): boolean {
+function authOriginCandidates(): Array<string | undefined> {
   return [
     process.env.BETTER_AUTH_URL,
-    process.env.NEXT_PUBLIC_APP_URL,
     process.env.SITE_URL,
     process.env.NEXT_PUBLIC_SITE_URL,
-  ].some(isLocalDevUrl);
+    process.env.NEXT_PUBLIC_APP_URL,
+  ];
+}
+
+function shouldForceLocalhostAuthOrigin(): boolean {
+  return authOriginCandidates().some(isLocalDevUrl);
+}
+
+function buildLocalDevOrigins(): string[] {
+  const origins = new Set<string>([LOCAL_DEV_AUTH_ORIGIN, "http://127.0.0.1:3000"]);
+
+  for (const value of authOriginCandidates()) {
+    if (isLocalDevUrl(value)) {
+      origins.add(value.replace(/\/$/, ""));
+    }
+  }
+
+  return [...origins];
 }
 
 /** Public app origin for OAuth — must be the Next.js URL, never *.convex.site. */
 function resolveAuthBaseUrl(): string {
-  if (shouldForceLocalhostAuthOrigin()) return LOCAL_DEV_AUTH_ORIGIN;
+  const localDev = authOriginCandidates().find(isLocalDevUrl);
+  if (localDev) return localDev.replace(/\/$/, "");
 
   const siteUrl =
     process.env.SITE_URL
@@ -102,9 +124,9 @@ function buildSocialProviders() {
 }
 
 // Build trusted origins from env
-function buildTrustedOrigins(): string[] {
+export function buildTrustedOrigins(): string[] {
   if (shouldForceLocalhostAuthOrigin()) {
-    return [LOCAL_DEV_AUTH_ORIGIN];
+    return buildLocalDevOrigins();
   }
 
   const origins = new Set<string>();
@@ -137,11 +159,22 @@ export const createAuthOptions = (
   const isSecureBaseUrl = isSecureUrl(baseURL);
   const isLocalDev = isLocalDevUrl(baseURL);
   const shouldEnforceSecureProductionUrl =
-    enforceSecureProductionUrl && !isStaticAuthBootstrap(ctx);
+    enforceSecureProductionUrl
+    && !isStaticAuthBootstrap(ctx)
+    && !isConvexDevDeployment();
+
+  if (!isStaticAuthBootstrap(ctx) && (!secret || secret.length < 32)) {
+    throw new Error(
+      "[betterAuth] BETTER_AUTH_SECRET must be set on the Convex deployment (32+ chars). "
+      + 'Run: npx convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"',
+    );
+  }
 
   // Convex cloud sets NODE_ENV=production even for dev deployments; allow http://localhost.
   if (shouldEnforceSecureProductionUrl && isProduction && !isSecureBaseUrl && !isLocalDev) {
-    throw new Error("BETTER_AUTH_URL or SITE_URL must use https:// in production.");
+    throw new Error(
+      "BETTER_AUTH_URL or SITE_URL must use https:// in production.",
+    );
   }
 
   if (!isStaticAuthBootstrap(ctx) && !resolveGoogleOAuthCredentials()) {

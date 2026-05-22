@@ -15,6 +15,29 @@ export type UseConvexQueryErrorOptions = {
   fallbackMessage?: string
 }
 
+/** Pure resolver used by useConvexQueryError (testable without React). */
+export function resolveConvexQueryErrorMessage(
+  data: unknown,
+  options: Pick<UseConvexQueryErrorOptions, 'skipped' | 'loading' | 'fallbackMessage'> = {},
+): string | null {
+  const {
+    skipped = false,
+    loading = false,
+    fallbackMessage = 'Unable to load data. Please try again.',
+  } = options
+
+  if (skipped) {
+    return null
+  }
+  if (loading || data === undefined) {
+    return null
+  }
+  if (data === null) {
+    return fallbackMessage
+  }
+  return null
+}
+
 /**
  * Surfaces Convex query failures as a stable error string for inline Alerts.
  * Convex queries that throw surface as `null` once loading completes.
@@ -30,19 +53,9 @@ export function useConvexQueryError(options: UseConvexQueryErrorOptions): string
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (skipped) {
-      setError(null)
-      return
-    }
-    if (loading || data === undefined) {
-      setError(null)
-      return
-    }
-    if (data === null) {
-      setError(fallbackMessage)
-      return
-    }
-    setError(null)
+    setError(
+      resolveConvexQueryErrorMessage(data, { skipped, loading, fallbackMessage }),
+    )
   }, [data, skipped, loading, fallbackMessage])
 
   return error
