@@ -1,17 +1,12 @@
 'use client'
 
 import { useCallback } from 'react'
-import { ChevronDown, Users } from 'lucide-react'
+import { Users } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/shared/ui/collapsible'
-import { cn } from '@/lib/utils'
 
 import type { AggregatedTargetingData } from './audience-control-types'
+import { TargetingCollapsiblePanel } from './targeting-collapsible-panel'
 
 type DemographicSectionProps = {
   aggregatedData: AggregatedTargetingData
@@ -32,50 +27,62 @@ export function DemographicSection({
     toggleSection('demographics')
   }, [toggleSection])
 
-  if (
-    aggregatedData.demographics.ageRanges.length === 0 &&
-    aggregatedData.demographics.genders.length === 0 &&
-    aggregatedData.demographics.languages.length === 0
-  ) {
+  const ageCount = aggregatedData.demographics.ageRanges.length
+  const genderCount = aggregatedData.demographics.genders.length
+  const langCount = aggregatedData.demographics.languages.length
+  const totalCount = ageCount + genderCount + langCount
+
+  if (totalCount === 0) {
     return null
   }
 
   return (
-    <Collapsible
-      open={expandedSections.has('demographics')}
-      onOpenChange={handleToggleDemographics}
+    <TargetingCollapsiblePanel
+      sectionId="demographics"
+      icon={Users}
+      title="Demographics"
+      count={totalCount}
+      expanded={expandedSections.has('demographics')}
+      onToggle={handleToggleDemographics}
     >
-      <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Demographics</span>
-        </div>
-        <ChevronDown
-          className={cn(
-            'h-4 w-4 text-muted-foreground transition-transform',
-            expandedSections.has('demographics') && 'rotate-180'
-          )}
-        />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="pt-2">
-        <div className="flex flex-wrap gap-1.5 p-3 rounded-lg border bg-muted/20">
-            {aggregatedData.demographics.ageRanges.map((age) => (
-              <Badge key={`age-${age}`} variant="secondary" className="text-xs">
-              {formatAgeRange(age)}
-            </Badge>
-          ))}
-            {aggregatedData.demographics.genders.map((gender) => (
-              <Badge key={`gender-${gender}`} variant="outline" className="text-xs capitalize">
-              {gender.toLowerCase()}
-            </Badge>
-          ))}
-            {aggregatedData.demographics.languages.map((lang) => (
-              <Badge key={`lang-${lang}`} variant="outline" className="text-xs">
-              {lang}
-            </Badge>
-          ))}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+      <div className="space-y-3">
+        {ageCount > 0 ? (
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Age ranges</p>
+            <div className="flex flex-wrap gap-1.5">
+              {aggregatedData.demographics.ageRanges.map((age) => (
+                <Badge key={`age-${age}`} variant="secondary" className="text-xs tabular-nums">
+                  {formatAgeRange(age)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {genderCount > 0 ? (
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Gender</p>
+            <div className="flex flex-wrap gap-1.5">
+              {aggregatedData.demographics.genders.map((gender) => (
+                <Badge key={`gender-${gender}`} variant="outline" className="text-xs capitalize">
+                  {gender.toLowerCase()}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {langCount > 0 ? (
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Languages</p>
+            <div className="flex flex-wrap gap-1.5">
+              {aggregatedData.demographics.languages.map((lang) => (
+                <Badge key={`lang-${lang}`} variant="outline" className="text-xs">
+                  {lang}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </TargetingCollapsiblePanel>
   )
 }

@@ -172,6 +172,7 @@ export type MetaAdCreative = {
     titles?: Array<{ text?: string }>
     descriptions?: Array<{ text?: string }>
     link_urls?: Array<{ website_url?: string }>
+    call_to_action_types?: string[]
   }
   ad_disclaimer_spec?: {
     text?: string

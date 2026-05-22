@@ -68,4 +68,44 @@ export const ADS_PAGE_THEME = {
   chartCardHeader: 'border-b border-border/50 pb-4',
   sectionBlock: 'space-y-5',
   sectionHeader: 'space-y-1 border-b border-border/50 pb-4',
+  /** Campaign budget / audience control panels */
+  controlHeaderIcon: cn(
+    'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
+    'bg-linear-to-br from-primary/15 via-primary/8 to-transparent',
+    'ring-1 ring-primary/20 shadow-sm',
+  ),
+  controlPreviewBanner: cn(
+    'flex items-start gap-3 rounded-xl border border-amber-500/25',
+    'bg-amber-500/[0.06] px-4 py-3 text-sm text-muted-foreground',
+  ),
+  controlHighlightTile: cn(
+    'relative overflow-hidden rounded-2xl border border-primary/15',
+    'bg-linear-to-br from-primary/[0.08] via-card to-card/80',
+    'px-5 py-4 shadow-sm ring-1 ring-primary/10',
+  ),
+  controlFormPanel: cn(
+    'rounded-2xl border border-border/60 bg-muted/15 p-5',
+    'ring-1 ring-border/30',
+  ),
+  controlStatChip: cn(
+    'inline-flex min-w-0 flex-col gap-0.5 rounded-xl border border-border/50',
+    'bg-card/80 px-3 py-2 shadow-sm',
+  ),
+  controlStatChipLabel: 'text-[10px] font-semibold uppercase tracking-wider text-muted-foreground',
+  controlStatChipValue: 'text-sm font-semibold tabular-nums text-foreground',
+  controlMapFrame: cn(
+    'overflow-hidden rounded-2xl border border-border/60',
+    'bg-linear-to-b from-muted/30 to-card shadow-inner ring-1 ring-border/40',
+  ),
+  controlCollapsibleTrigger: cn(
+    'flex w-full items-center justify-between gap-3 rounded-xl border border-border/60',
+    'bg-card/60 px-4 py-3 text-left shadow-sm transition-colors',
+    'hover:border-primary/25 hover:bg-card',
+    'motion-reduce:transition-none',
+  ),
+  controlCollapsibleBody: cn(
+    'rounded-xl border border-border/50 bg-muted/10 p-4',
+    'ring-1 ring-border/20',
+  ),
+  controlSectionLabel: 'text-xs font-semibold uppercase tracking-wider text-muted-foreground',
 } as const

@@ -53,7 +53,23 @@ describe('extractMetaCreativeContent', () => {
     expect(result.primaryTexts).toEqual(['Video primary text'])
     expect(result.headlines).toEqual(['Video headline'])
     expect(result.landingPageUrl).toBe('https://example.com/signup')
-    expect(result.callToAction).toBe('Sign Up (SIGN_UP)')
+    expect(result.callToAction).toBe('SIGN_UP')
+  })
+
+  it('prefers BOOK_NOW type over localized CTA name from Meta', () => {
+    const result = extractMetaCreativeContent({
+      call_to_action_type: 'BOOK_NOW',
+      object_story_spec: {
+        link_data: {
+          call_to_action: {
+            type: 'BOOK_NOW',
+            name: 'Book Travel',
+          },
+        },
+      },
+    })
+
+    expect(result.callToAction).toBe('BOOK_NOW')
   })
 
   it('merges carousel child_attachments into copy and landing URLs', () => {

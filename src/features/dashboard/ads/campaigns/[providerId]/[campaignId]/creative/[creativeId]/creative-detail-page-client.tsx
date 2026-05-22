@@ -17,6 +17,8 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { calculateAlgorithmicInsights, calculateEfficiencyScore } from '@/lib/ad-algorithms'
 import { mergeMetaDestinationSpec } from '@/services/integrations/meta-ads'
+import { formatMetaCallToActionLabel } from '@/services/integrations/meta-ads/meta-call-to-action'
+import { toAdsProviderId, type AdsConvexProviderId } from '@/features/dashboard/ads/components/utils'
 import { useAction } from 'convex/react'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsAdMetricsApi, adsCreativesApi, creativesCopyApi } from '@/lib/convex-api'
@@ -31,6 +33,7 @@ import {
   mergeMetaAssetFeedSpecForSave,
   normalizeStringList,
 } from '@/features/dashboard/ads/creative/components/creative-editing-utils'
+import { normalizeCreativeCtaValue } from '@/features/dashboard/ads/creative/components/helpers'
 import type { Creative } from '@/features/dashboard/ads/creative/components/types'
 
 type NormalizedAdMetric = {
@@ -50,10 +53,20 @@ type NormalizedAdMetric = {
   roas?: number
 }
 
-type ProviderId = 'google' | 'tiktok' | 'linkedin' | 'facebook'
+type ProviderId = AdsConvexProviderId
 
-function isProviderId(value: string): value is ProviderId {
-  return value === 'google' || value === 'tiktok' || value === 'linkedin' || value === 'facebook'
+function resolveRouteProviderId(value: string): ProviderId | null {
+  if (value === 'google' || value === 'tiktok' || value === 'linkedin' || value === 'facebook') {
+    return value
+  }
+  if (value === 'meta') {
+    return 'facebook'
+  }
+  try {
+    return toAdsProviderId(value)
+  } catch {
+    return null
+  }
 }
 
 function buildPreviewCreative(
@@ -252,11 +265,15 @@ export default function CreativeDetailPageClient({
 
   const campaignName = initialCampaignName || 'Campaign'
   const displayCurrency = normalizeCurrencyCode(currency ?? null)
+  const convexProviderId = useMemo(
+    () => resolveRouteProviderId(params.providerId),
+    [params.providerId],
+  )
 
   const fetchCreative = useCallback(async () => {
     setLoading(true)
 
-    if (!isProviderId(params.providerId)) {
+    if (!convexProviderId) {
       setLoading(false)
       notifyFailure({
         title: 'Unsupported provider',
@@ -266,7 +283,7 @@ export default function CreativeDetailPageClient({
     }
 
     if (isPreviewMode) {
-      setCreative(buildPreviewCreative(params.providerId, params.campaignId, params.creativeId, campaignName))
+      setCreative(buildPreviewCreative(convexProviderId, params.campaignId, params.creativeId, campaignName))
       setLoading(false)
       return
     }
@@ -278,12 +295,12 @@ export default function CreativeDetailPageClient({
 
     await listCreatives({
       workspaceId,
-      providerId: params.providerId,
+      providerId: convexProviderId,
       clientId: selectedClientId ?? null,
       campaignId: params.campaignId,
-      includeMedia: params.providerId === 'facebook',
-      maxMetaCreativePages: params.providerId === 'facebook' ? 40 : undefined,
-      maxGoogleAdsSearchPages: params.providerId === 'google' ? 15 : undefined,
+      includeMedia: convexProviderId === 'facebook',
+      maxMetaCreativePages: convexProviderId === 'facebook' ? 40 : undefined,
+      maxGoogleAdsSearchPages: convexProviderId === 'google' ? 15 : undefined,
     })
       .then((creatives) => {
         const normalizedCreatives = Array.isArray(creatives) ? (creatives as Creative[]) : []
@@ -310,10 +327,10 @@ export default function CreativeDetailPageClient({
       .finally(() => {
         setLoading(false)
       })
-  }, [campaignName, isPreviewMode, listCreatives, params.providerId, params.campaignId, params.creativeId, selectedClientId, workspaceId])
+  }, [campaignName, convexProviderId, isPreviewMode, listCreatives, params.campaignId, params.creativeId, selectedClientId, workspaceId])
 
   const fetchMetrics = useCallback(async () => {
-    if (!isProviderId(params.providerId)) {
+    if (!convexProviderId) {
       setCreativeMetrics(null)
       setMetricsError('Unsupported provider')
       setMetricsLoading(false)
@@ -323,16 +340,11 @@ export default function CreativeDetailPageClient({
     if (isPreviewMode) {
       setMetricsLoading(true)
       setMetricsError(null)
-      setCreativeMetrics(buildPreviewCreativeMetrics(params.providerId, params.creativeId, params.campaignId, days))
+      setCreativeMetrics(buildPreviewCreativeMetrics(convexProviderId, params.creativeId, params.campaignId, days))
       setMetricsLoading(false)
       return
     }
 
-    if (params.providerId === 'facebook') {
-      setCreativeMetrics(null)
-      setMetricsError(null)
-      return
-    }
     setMetricsLoading(true)
     setMetricsError(null)
 
@@ -346,12 +358,12 @@ export default function CreativeDetailPageClient({
 
     await listAdMetrics({
       workspaceId,
-      providerId: params.providerId,
+      providerId: convexProviderId,
       clientId: selectedClientId ?? null,
       campaignId: params.campaignId,
       adGroupId: creative?.adGroupId,
       days,
-      level: params.providerId === 'linkedin' ? 'creative' : 'ad',
+      level: convexProviderId === 'linkedin' ? 'creative' : 'ad',
     })
       .then((response) => {
         const record = response && typeof response === 'object' ? (response as { metrics?: unknown }) : null
@@ -368,7 +380,7 @@ export default function CreativeDetailPageClient({
       .finally(() => {
         setMetricsLoading(false)
       })
-  }, [days, isPreviewMode, listAdMetrics, params.providerId, params.campaignId, params.creativeId, selectedClientId, creative?.adGroupId, creative?.adId, workspaceId])
+  }, [convexProviderId, days, isPreviewMode, listAdMetrics, params.campaignId, params.creativeId, selectedClientId, creative?.adGroupId, creative?.adId, workspaceId])
 
   useEffect(() => {
     const frameId = requestAnimationFrame(() => {
@@ -385,7 +397,7 @@ export default function CreativeDetailPageClient({
 
     setEditedHeadlines(creative.headlines ?? [])
     setEditedDescriptions(creative.descriptions ?? [])
-    setEditedCta(creative.callToAction ?? '')
+    setEditedCta(normalizeCreativeCtaValue(creative.callToAction))
     setEditedLandingPage(creative.landingPageUrl ?? '')
     setPreviewHeadlineIndex(0)
     setPreviewDescriptionIndex(0)
@@ -508,7 +520,7 @@ export default function CreativeDetailPageClient({
     if (!creative) return
     setEditedHeadlines(creative.headlines ?? [])
     setEditedDescriptions(creative.descriptions ?? [])
-    setEditedCta(creative.callToAction ?? '')
+    setEditedCta(normalizeCreativeCtaValue(creative.callToAction))
     setEditedLandingPage(creative.landingPageUrl ?? '')
     setPreviewHeadlineIndex(0)
     setPreviewDescriptionIndex(0)
@@ -565,15 +577,38 @@ export default function CreativeDetailPageClient({
 
     setLoading(true)
 
+    if (!convexProviderId) {
+      setLoading(false)
+      notifyFailure({
+        title: 'Unsupported provider',
+        message: 'AI copy generation is not available for this ad platform.',
+      })
+      return
+    }
+
+    if (!workspaceId) {
+      setLoading(false)
+      notifyFailure({
+        title: 'Sign in required',
+        message: 'You need to be signed in to generate AI copy.',
+      })
+      return
+    }
+
+    const ctaForPrompt =
+      formatMetaCallToActionLabel(editedCta || creative.callToAction)
+      || editedCta
+      || creative.callToAction
+
     await generateCopyAction({
-      providerId: params.providerId as 'google' | 'tiktok' | 'linkedin' | 'facebook',
+      providerId: convexProviderId,
       clientId: selectedClientId ?? undefined,
       campaignId: params.campaignId,
       creativeId: params.creativeId,
       campaignName,
       creativeName: creative.name,
       landingPageUrl: editedLandingPage || creative.landingPageUrl,
-      callToAction: editedCta || creative.callToAction,
+      callToAction: ctaForPrompt,
       creativeType: creative.type,
       pageName: creative.pageName,
       existingHeadlines: (editedHeadlines.length ? editedHeadlines : (creative.headlines ?? [])).filter(Boolean),
@@ -636,7 +671,7 @@ export default function CreativeDetailPageClient({
       .finally(() => {
         setLoading(false)
       })
-  }, [campaignName, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isPreviewMode, params.campaignId, params.creativeId, params.providerId, selectedClientId, generateCopyAction])
+  }, [campaignName, convexProviderId, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isPreviewMode, params.campaignId, params.creativeId, selectedClientId, generateCopyAction, workspaceId])
 
   const handleSave = useCallback(async () => {
     if (isPreviewMode) {
@@ -686,7 +721,7 @@ export default function CreativeDetailPageClient({
       return
     }
 
-    if (!isProviderId(params.providerId)) {
+    if (!convexProviderId) {
       notifyFailure({
         title: 'Unsupported provider',
         message: 'This provider is not supported for updates.',
@@ -698,10 +733,10 @@ export default function CreativeDetailPageClient({
 
     const normalizedHeadlines = normalizeStringList(editedHeadlines)
     const normalizedDescriptions = normalizeStringList(editedDescriptions)
-    const normalizedCta = editedCta.trim()
+    const normalizedCta = normalizeCreativeCtaValue(editedCta)
     const normalizedLandingPage = editedLandingPage.trim()
     const mergedAssetFeedSpec =
-      params.providerId === 'facebook'
+      convexProviderId === 'facebook'
         ? mergeMetaAssetFeedSpecForSave(
             creative.assetFeedSpec,
             normalizedHeadlines,
@@ -712,7 +747,7 @@ export default function CreativeDetailPageClient({
 
     await updateCreative({
       workspaceId,
-      providerId: params.providerId,
+      providerId: convexProviderId,
       clientId: selectedClientId ?? null,
       creativeId: creative.platformCreativeId ?? creative.creativeId,
       adId: creative.adId ?? creative.creativeId,
@@ -770,7 +805,7 @@ export default function CreativeDetailPageClient({
       .finally(() => {
         setIsSaving(false)
       })
-  }, [creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, fetchCreative, isPreviewMode, params.providerId, selectedClientId, updateCreative, workspaceId])
+  }, [convexProviderId, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, fetchCreative, isPreviewMode, selectedClientId, updateCreative, workspaceId])
 
   const addHeadline = useCallback(() => {
     setEditedHeadlines((current) => [...current, ''])
@@ -844,7 +879,7 @@ export default function CreativeDetailPageClient({
   }, [creative, params.creativeId])
 
   const performanceSummary = useMemo(() => {
-    if (!creativeMetrics) return null
+    if (!creativeMetrics || !convexProviderId) return null
 
     const totals = creativeMetrics.reduce(
       (acc, m) => {
@@ -862,7 +897,7 @@ export default function CreativeDetailPageClient({
     const averageCpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0
 
     return {
-      providerId: params.providerId,
+      providerId: convexProviderId,
       totalSpend: totals.spend,
       totalRevenue: totals.revenue,
       totalClicks: totals.clicks,
@@ -878,7 +913,7 @@ export default function CreativeDetailPageClient({
       roas: averageRoaS,
       cpc: averageCpc,
     }
-  }, [creativeMetrics, days, params.providerId])
+  }, [convexProviderId, creativeMetrics, days, params.providerId])
 
   const efficiencyScore = useMemo(() => {
     if (!performanceSummary) return null

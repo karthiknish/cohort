@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, type MouseEvent } from 'react'
 import { Edit2, Globe, MapPin, X } from 'lucide-react'
 
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { LocationMap, type LocationMarker } from '@/shared/ui/location-map'
@@ -44,6 +45,7 @@ export function LocationTargetingSection({
   onToggleEditing,
 }: LocationTargetingSectionProps) {
   const [selectedLocation, setSelectedLocation] = useState<LocationMarker | null>(null)
+  const isEditing = editingSection === 'locations'
 
   const handleToggleEditing = useCallback(() => {
     onToggleEditing('locations')
@@ -53,43 +55,62 @@ export function LocationTargetingSection({
     setSelectedLocation(loc)
     toast({
       title: 'Location selected',
-      description: `${loc.name} - Click on the map to add more locations`,
+      description: `${loc.name} — use the map search to add more when editing.`,
     })
   }, [])
 
   const locationSelectHandlers = useMemo(
     () =>
       Object.fromEntries(
-        aggregatedData.locations.included.map((loc) => [loc.id, () => {
-          const marker = locationMarkers.find((item) => item.id === loc.id)
-          if (marker) setSelectedLocation(marker)
-        }]),
+        aggregatedData.locations.included.map((loc) => [
+          loc.id,
+          () => {
+            const marker = locationMarkers.find((item) => item.id === loc.id)
+            if (marker) setSelectedLocation(marker)
+          },
+        ]),
       ) as Record<string, () => void>,
-    [aggregatedData.locations.included, locationMarkers]
+    [aggregatedData.locations.included, locationMarkers],
   )
 
   const locationRemoveHandlers = useMemo(
     () =>
       Object.fromEntries(
-        aggregatedData.locations.included.map((loc) => [loc.id, (event: MouseEvent<HTMLButtonElement>) => {
-          event.stopPropagation()
-          toast({
-            title: 'Location would be removed',
-            description: `${loc.name} removal requires API integration`,
-          })
-        }]),
+        aggregatedData.locations.included.map((loc) => [
+          loc.id,
+          (event: MouseEvent<HTMLButtonElement>) => {
+            event.stopPropagation()
+            toast({
+              title: 'Location would be removed',
+              description: `${loc.name} removal requires API integration`,
+            })
+          },
+        ]),
       ) as Record<string, (event: MouseEvent<HTMLButtonElement>) => void>,
-    [aggregatedData.locations.included]
+    [aggregatedData.locations.included],
   )
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Globe className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium">Target Locations</span>
-        {targeting.length > 1 && (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-info/10 ring-1 ring-info/20">
+            <Globe className="h-4 w-4 text-info" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold tracking-tight text-foreground">Geography</p>
+            <p className="text-xs text-muted-foreground">
+              {aggregatedData.locations.included.length} included
+              {aggregatedData.locations.excluded.length > 0
+                ? ` · ${aggregatedData.locations.excluded.length} excluded`
+                : ''}
+            </p>
+          </div>
+        </div>
+
+        {targeting.length > 1 ? (
           <Select value={selectedTargetingId} onValueChange={onTargetingChange}>
-            <SelectTrigger className="h-8 w-[220px]">
+            <SelectTrigger className="h-9 w-full min-w-[200px] max-w-[240px] sm:w-[220px]">
               <SelectValue placeholder="Select ad set" />
             </SelectTrigger>
             <SelectContent>
@@ -101,38 +122,40 @@ export function LocationTargetingSection({
               ))}
             </SelectContent>
           </Select>
-        )}
-        {aggregatedData.locations.included.length > 0 && (
-          <Badge variant="secondary" className="ml-auto">
-            {aggregatedData.locations.included.length}
-          </Badge>
-        )}
+        ) : null}
+
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
+                variant={isEditing ? 'secondary' : 'outline'}
+                size="sm"
+                className="h-9 gap-1.5"
                 onClick={handleToggleEditing}
+                aria-pressed={isEditing}
                 aria-label="Edit locations"
               >
                 <Edit2 className="h-3.5 w-3.5" aria-hidden />
+                {isEditing ? 'Done' : 'Edit'}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Edit locations</TooltipContent>
+            <TooltipContent>
+              {isEditing ? 'Exit map editing' : 'Search and pin locations on the map'}
+            </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
-      <div className="rounded-lg border overflow-hidden">
+
+      <div className={ADS_PAGE_THEME.controlMapFrame}>
         <LocationMap
           locations={locationMarkers}
-          height="280px"
-          interactive={editingSection === 'locations'}
-          showSearch={editingSection === 'locations'}
+          height="300px"
+          interactive={isEditing}
+          showSearch={isEditing}
           onLocationSelect={handleLocationSelect}
         />
       </div>
+
       {aggregatedData.locations.included.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
           {aggregatedData.locations.included.map((loc) => (
@@ -140,26 +163,30 @@ export function LocationTargetingSection({
               key={loc.id}
               variant={selectedLocation?.id === loc.id ? 'default' : 'outline'}
               className={cn(
-                'text-xs cursor-pointer transition-colors',
-                selectedLocation?.id === loc.id && 'ring-2 ring-primary'
+                'cursor-pointer text-xs transition-[box-shadow,opacity]',
+                selectedLocation?.id === loc.id && 'ring-2 ring-primary ring-offset-1',
               )}
               onClick={locationSelectHandlers[loc.id]}
             >
-              <MapPin className="h-3 w-3 mr-1" />
+              <MapPin className="mr-1 h-3 w-3 shrink-0" aria-hidden />
               {loc.name}
-              {editingSection === 'locations' && (
+              {isEditing ? (
                 <button
+                  type="button"
                   onClick={locationRemoveHandlers[loc.id]}
-                  className="ml-1 hover:text-destructive"
+                  className="ml-1 rounded-sm p-0.5 hover:bg-destructive/15 hover:text-destructive"
+                  aria-label={`Remove ${loc.name}`}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden />
                 </button>
-              )}
+              ) : null}
             </Badge>
           ))}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">No location targeting configured</p>
+        <p className="rounded-xl border border-dashed border-border/60 bg-muted/10 px-4 py-6 text-center text-xs text-muted-foreground">
+          No location targeting configured for this view.
+        </p>
       )}
     </div>
   )

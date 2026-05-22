@@ -2,7 +2,7 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, RefreshCw, Target, Users, Plus } from 'lucide-react'
+import { AlertTriangle, MapPin, RefreshCw, Sparkles, Target, Users, Plus } from 'lucide-react'
 
 import { useAction } from 'convex/react'
 
@@ -14,8 +14,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
-import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { CardContent } from '@/shared/ui/card'
 import { MotionCard } from '@/shared/ui/motion-primitives'
+import { CampaignControlHeader } from './campaign-control-header'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { toast } from '@/shared/ui/use-toast'
 import { cn } from '@/lib/utils'
@@ -302,25 +303,68 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     />
   ), [aggregatedData, editingSection, expandedSections, handleToggleEditing, toggleSection])
 
+  const audienceStats = useMemo(
+    () => [
+      {
+        label: 'Configs',
+        value: insights?.totalEntities ?? targeting.length,
+      },
+      {
+        label: 'Locations',
+        value: aggregatedData.locations.included.length,
+      },
+      {
+        label: 'Interests',
+        value: aggregatedData.interests.length,
+      },
+      {
+        label: 'Audiences',
+        value: aggregatedData.audiences.included.length,
+      },
+    ],
+    [
+      aggregatedData.audiences.included.length,
+      aggregatedData.interests.length,
+      aggregatedData.locations.included.length,
+      insights?.totalEntities,
+      targeting.length,
+    ],
+  )
+
+  const headerActions = (
+    <>
+      <Button variant="outline" size="sm" className="gap-1.5" onClick={handleOpenBuilder}>
+        <Plus className="h-4 w-4" aria-hidden />
+        Create audience
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9"
+        onClick={fetchTargeting}
+        disabled={loading}
+        aria-label="Refresh audience targeting"
+      >
+        <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} aria-hidden />
+      </Button>
+    </>
+  )
+
   if (loading && !hasLoaded) {
     return (
       <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
-        <CardHeader className="border-b border-border/50 pb-5">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-10 rounded-xl" />
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-4 w-60" />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Skeleton className="h-[300px] rounded-lg" />
+        <CampaignControlHeader
+          icon={Target}
+          title="Audience targeting"
+          description="Loading targeting from the ad platform…"
+        />
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <Skeleton className={cn(ADS_PAGE_THEME.controlMapFrame, 'h-[300px]')} />
             <div className="space-y-3">
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
+              <Skeleton className="h-14 rounded-xl" />
+              <Skeleton className="h-14 rounded-xl" />
+              <Skeleton className="h-14 rounded-xl" />
             </div>
           </div>
         </CardContent>
@@ -331,12 +375,17 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   if (!canLoad) {
     return (
       <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
-        <CardContent className={cn(ADS_PAGE_THEME.emptyState, 'py-16')}>
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/50 ring-1 ring-border/50">
-            <Target className="h-6 w-6 text-muted-foreground" aria-hidden />
+        <CampaignControlHeader icon={Target} title="Audience targeting" />
+        <CardContent className="pt-2">
+          <div className={cn(ADS_PAGE_THEME.emptyState, 'py-14')}>
+            <div className={ADS_PAGE_THEME.controlHeaderIcon}>
+              <Sparkles className="h-5 w-5 text-muted-foreground" aria-hidden />
+            </div>
+            <p className="text-sm font-medium">Preview mode</p>
+            <p className="max-w-sm text-xs text-muted-foreground">
+              Enable live mode to load geography, demographics, and audiences from your ad account.
+            </p>
           </div>
-          <p className="text-sm font-medium">Preview Mode</p>
-          <p className="text-xs text-muted-foreground mt-1">Enable live mode to view audience targeting</p>
         </CardContent>
       </MotionCard>
     )
@@ -345,16 +394,23 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   if (targeting.length === 0 && hasLoaded) {
     return (
       <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
-        <CardContent className={cn(ADS_PAGE_THEME.emptyState, 'py-16')}>
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/50 ring-1 ring-border/50">
-            <Users className="h-6 w-6 text-muted-foreground" aria-hidden />
+        <CampaignControlHeader
+          icon={Target}
+          title="Audience targeting"
+          description="No targeting data returned for this campaign yet."
+          actions={headerActions}
+        />
+        <CardContent className="pt-2">
+          <div className={cn(ADS_PAGE_THEME.emptyState, 'py-14')}>
+            <div className={ADS_PAGE_THEME.controlHeaderIcon}>
+              <Users className="h-5 w-5 text-primary" aria-hidden />
+            </div>
+            <p className="text-sm font-medium">No targeting configured</p>
+            <p className="max-w-sm text-xs text-muted-foreground">
+              Create a custom audience or confirm ad sets have location and interest criteria on the
+              platform.
+            </p>
           </div>
-          <p className="text-sm font-medium">No Targeting Data</p>
-          <p className="text-xs text-muted-foreground mt-1 mb-4">Create an audience to start targeting</p>
-            <Button variant="outline" onClick={handleOpenBuilder}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Audience
-          </Button>
           <AudienceBuilderDialog isOpen={builderOpen} onOpenChange={setBuilderOpen} providerId={providerId} />
         </CardContent>
       </MotionCard>
@@ -363,42 +419,19 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
 
   return (
     <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
-      <CardHeader className="border-b border-border/50 pb-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/15">
-              <Target className="h-5 w-5 text-primary" aria-hidden />
-            </div>
-            <div className="space-y-0.5">
-              <p className={ADS_PAGE_THEME.sectionEyebrow}>Campaign settings</p>
-              <CardTitle className="text-lg font-semibold tracking-tight">Audience targeting</CardTitle>
-              <CardDescription>
-                {insights?.totalEntities || targeting.length} targeting configurations
-              </CardDescription>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-                onClick={handleOpenBuilder}
-            >
-              <Plus className="h-4 w-4 mr-1.5" />
-              Create Audience
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={fetchTargeting}
-              disabled={loading}
-              aria-label="Refresh audience targeting"
-            >
-              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} aria-hidden />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
+      <CampaignControlHeader
+        icon={Target}
+        title="Audience targeting"
+        description={
+          <>
+            {insights?.totalEntities ?? targeting.length} configuration
+            {(insights?.totalEntities ?? targeting.length) === 1 ? '' : 's'} across ad sets — map,
+            demographics, and segments in one view.
+          </>
+        }
+        actions={headerActions}
+        stats={audienceStats}
+      />
 
       <CardContent className="space-y-6 pt-6">
         {geocodeFailedNames.length > 0 ? (
@@ -411,8 +444,9 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
             </AlertDescription>
           </Alert>
         ) : null}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <LocationTargetingSection
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+          <div className={cn(ADS_PAGE_THEME.controlFormPanel, 'p-5')}>
+            <LocationTargetingSection
             targeting={targeting}
             aggregatedData={aggregatedData}
             locationMarkers={locationMarkers}
@@ -420,9 +454,11 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
             onTargetingChange={setSelectedTargetingId}
             editingSection={editingSection}
               onToggleEditing={handleToggleEditing}
-          />
+            />
+          </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
+            <p className={cn(ADS_PAGE_THEME.controlSectionLabel, 'px-0.5')}>Segments & criteria</p>
             <DemographicSection
               aggregatedData={aggregatedData}
               expandedSections={expandedSections}
@@ -437,10 +473,14 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
           </div>
         </div>
 
-        {aggregatedData.locations.excluded.length > 0 && (
-          <div className="pt-4 border-t">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Excluded Locations</span>
+        {aggregatedData.locations.excluded.length > 0 ? (
+          <div className="rounded-2xl border border-destructive/20 bg-destructive/[0.04] px-5 py-4">
+            <div className="mb-3 flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-destructive" aria-hidden />
+              <span className="text-sm font-medium text-foreground">Excluded locations</span>
+              <Badge variant="outline" className="border-destructive/30 text-xs text-destructive">
+                {aggregatedData.locations.excluded.length}
+              </Badge>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {aggregatedData.locations.excluded.map((loc) => (
@@ -450,7 +490,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
               ))}
             </div>
           </div>
-        )}
+        ) : null}
       </CardContent>
 
       <AudienceBuilderDialog isOpen={builderOpen} onOpenChange={setBuilderOpen} providerId={providerId} />

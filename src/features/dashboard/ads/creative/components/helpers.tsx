@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react'
 import { Image as ImageIcon, Video, FileText, GalleryHorizontal, Layers, Link2, ShoppingBag } from 'lucide-react'
 
+import {
+  formatMetaCallToActionLabel,
+  normalizeMetaCallToActionType,
+} from '@/services/integrations/meta-ads/meta-call-to-action'
+
 export function unwrapApiData(payload: unknown): unknown {
   const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
   return record && 'data' in record ? record.data : payload
@@ -38,34 +43,25 @@ export function isDirectVideoUrl(url: string | undefined): boolean {
   }
 }
 
+/** Human-readable CTA for previews; accepts Meta enum or legacy stored strings. */
 export function formatCTALabel(cta: string | undefined): string {
   if (!cta) return ''
 
-  const mapping: Record<string, string> = {
-    'LEARN_MORE': 'Learn More',
-    'SHOP_NOW': 'Shop Now',
-    'BOOK_TRAVEL': 'Book Now',
-    'BOOK_NOW': 'Book Now',
-    'SIGN_UP': 'Sign Up',
-    'APPLY_NOW': 'Apply Now',
-    'INSTALL_NOW': 'Install Now',
-    'GET_OFFER': 'Get Offer',
-    'DOWNLOAD': 'Download',
-    'WATCH_MORE': 'Watch More',
-    'WATCH_VIDEO': 'Watch Video',
-    'CONTACT_US': 'Contact Us',
-    'SEND_MESSAGE': 'Send Message',
-    'LISTEN_NOW': 'Listen Now',
-    'SUBSCRIBE': 'Subscribe',
-    'GET_QUOTE': 'Get Quote',
-    'GET_SHOWTIMES': 'Get Showtimes',
-  }
+  const label = formatMetaCallToActionLabel(cta)
+  if (label) return label
 
-  const upperCta = cta.toUpperCase()
-  if (mapping[upperCta]) return mapping[upperCta]
+  const normalized = normalizeMetaCallToActionType(cta)
+  if (normalized) {
+    return formatMetaCallToActionLabel(normalized) ?? normalized
+  }
 
   return cta
     .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ')
+}
+
+/** Canonical Meta CTA enum for selects and API payloads. */
+export function normalizeCreativeCtaValue(cta: string | undefined | null): string {
+  return normalizeMetaCallToActionType(cta) ?? (typeof cta === 'string' ? cta.trim() : '')
 }

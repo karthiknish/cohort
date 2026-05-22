@@ -1,4 +1,7 @@
+import { META_CTA_LABELS } from '@/services/integrations/meta-ads/meta-call-to-action'
+
 import type { Creative } from './types'
+import { normalizeCreativeCtaValue } from './helpers'
 
 export function normalizeStringList(items: string[]): string[] {
   return items.flatMap((item) => {
@@ -25,7 +28,12 @@ export function creativeCopyIsDirty(
 ): boolean {
   if (!listsEqual(edited.headlines, creative.headlines ?? [])) return true
   if (!listsEqual(edited.descriptions, creative.descriptions ?? [])) return true
-  if (edited.cta.trim() !== (creative.callToAction ?? '').trim()) return true
+  if (
+    normalizeCreativeCtaValue(edited.cta)
+    !== normalizeCreativeCtaValue(creative.callToAction)
+  ) {
+    return true
+  }
   if (edited.landingPage.trim() !== (creative.landingPageUrl ?? '').trim()) return true
   return false
 }
@@ -73,18 +81,25 @@ export function mergeMetaAssetFeedSpecForSave(
   return JSON.stringify(spec)
 }
 
-export const META_CTA_OPTIONS = [
-  { value: 'LEARN_MORE', label: 'Learn More' },
-  { value: 'SHOP_NOW', label: 'Shop Now' },
-  { value: 'SIGN_UP', label: 'Sign Up' },
-  { value: 'BOOK_NOW', label: 'Book Now' },
-  { value: 'BOOK_TRAVEL', label: 'Book Travel' },
-  { value: 'DOWNLOAD', label: 'Download' },
-  { value: 'GET_OFFER', label: 'Get Offer' },
-  { value: 'APPLY_NOW', label: 'Apply Now' },
-  { value: 'CONTACT_US', label: 'Contact Us' },
-  { value: 'SEND_MESSAGE', label: 'Send Message' },
-  { value: 'WATCH_MORE', label: 'Watch More' },
-  { value: 'GET_QUOTE', label: 'Get Quote' },
-  { value: 'SUBSCRIBE', label: 'Subscribe' },
-] as const
+export const META_CTA_OPTIONS = (
+  [
+    'LEARN_MORE',
+    'SHOP_NOW',
+    'SIGN_UP',
+    'BOOK_NOW',
+    'BOOK_TRAVEL',
+    'DOWNLOAD',
+    'GET_OFFER',
+    'APPLY_NOW',
+    'CONTACT_US',
+    'SEND_MESSAGE',
+    'WATCH_MORE',
+    'GET_QUOTE',
+    'SUBSCRIBE',
+    'ORDER_NOW',
+    'GET_DIRECTIONS',
+  ] as const
+).map((value) => ({
+  value,
+  label: META_CTA_LABELS[value] ?? value,
+}))

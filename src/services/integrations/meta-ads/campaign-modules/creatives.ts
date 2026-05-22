@@ -12,6 +12,7 @@ import { metaAdsClient } from '@/services/integrations/shared/base-client'
 import type { MetaCreative, MetaAdsListResponse, MetaAdData, MetaAdCreative } from '../types'
 import { extractLeadGenFormId } from './objectives/leads'
 import { sanitizeMetaDestinationSpec } from '../creatives'
+import { resolveMetaCallToActionType } from '../meta-call-to-action'
 
 function collectUniqueStrings(values: Array<string | null | undefined>): string[] {
   const seen = new Set<string>()
@@ -33,17 +34,6 @@ function collectUniqueStrings(values: Array<string | null | undefined>): string[
 
 function collectAssetText(entries?: Array<{ text?: string }>): string[] {
   return collectUniqueStrings((entries ?? []).map((entry) => entry.text))
-}
-
-function formatMetaCallToAction(callToAction?: {
-  type?: string
-  name?: string
-} | null, fallbackType?: string): string | undefined {
-  const type = callToAction?.type ?? fallbackType
-  const name = callToAction?.name
-
-  if (type && name) return `${name} (${type})`
-  return type || name || undefined
 }
 
 export function extractMetaCreativeContent(creative?: MetaAdCreative) {
@@ -94,12 +84,14 @@ export function extractMetaCreativeContent(creative?: MetaAdCreative) {
     creative?.destination_spec?.fallback_url,
   ])[0]
 
-  const callToAction = formatMetaCallToAction(
+  const assetFeedCtaType = creative?.asset_feed_spec?.call_to_action_types?.[0]
+
+  const callToAction = resolveMetaCallToActionType(
     storySpec?.link_data?.call_to_action
       ?? storySpec?.video_data?.call_to_action
       ?? storySpec?.template_data?.call_to_action
-      ?? childAttachments[0]?.call_to_action,
-    creative?.call_to_action_type
+      ?? childAttachments.find((c) => c?.call_to_action)?.call_to_action,
+    creative?.call_to_action_type ?? assetFeedCtaType,
   )
 
   return {

@@ -3,8 +3,15 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
 
+import { formatMetaCallToActionLabel } from '../src/services/integrations/meta-ads/meta-call-to-action'
 import { geminiAI } from '../src/services/gemini'
 import { Errors, withErrorHandling } from './errors'
+
+function requireIdentity(identity: unknown): asserts identity {
+  if (!identity) {
+    throw Errors.auth.unauthorized()
+  }
+}
 import { enforceGeminiActionRateLimit } from './geminiRateLimit'
 
 const providerIdValidator = v.union(
@@ -20,16 +27,46 @@ const kindValidator = v.union(
   v.literal('both')
 )
 
+function stripMarkdownFences(text: string): string {
+  return text
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim()
+}
+
 function extractJsonObject(text: string): string | null {
-  const start = text.indexOf('{')
-  const end = text.lastIndexOf('}')
+  const cleaned = stripMarkdownFences(text)
+  const start = cleaned.indexOf('{')
+  const end = cleaned.lastIndexOf('}')
   if (start === -1 || end === -1 || end <= start) return null
-  return text.slice(start, end + 1)
+  return cleaned.slice(start, end + 1)
+}
+
+function extractStringArrayFromRaw(raw: string, key: 'headlines' | 'captions'): string[] {
+  const pattern = new RegExp(`"${key}"\\s*:\\s*\\[([\\s\\S]*?)\\]`, 'i')
+  const match = raw.match(pattern)
+  if (!match?.[1]) return []
+
+  const values: string[] = []
+  const itemPattern = /"((?:\\.|[^"\\])*)"/g
+  let itemMatch: RegExpExecArray | null = itemPattern.exec(match[1])
+  while (itemMatch) {
+    const captured = itemMatch[1]
+    if (captured) {
+      try {
+        values.push(JSON.parse(`"${captured}"`) as string)
+      } catch {
+        values.push(captured.replace(/\\"/g, '"'))
+      }
+    }
+    itemMatch = itemPattern.exec(match[1])
+  }
+  return values
 }
 
 function parseGeneratedCopyResponse(raw: string, providerId: GenerateCopyInput['providerId']) {
   const jsonCandidate = extractJsonObject(raw)
-  const payloads = [jsonCandidate, raw].filter(
+  const payloads = [jsonCandidate, stripMarkdownFences(raw), raw].filter(
     (value, index, values): value is string => typeof value === 'string' && values.indexOf(value) === index
   )
 
@@ -44,6 +81,12 @@ function parseGeneratedCopyResponse(raw: string, providerId: GenerateCopyInput['
     } catch (error) {
       lastError = error
     }
+  }
+
+  const headlines = extractStringArrayFromRaw(raw, 'headlines')
+  const captions = extractStringArrayFromRaw(raw, 'captions')
+  if (headlines.length > 0 || captions.length > 0) {
+    return { headlines, captions }
   }
 
   console.error('[creativesCopy:generateCopy] Failed to parse Gemini response', {
@@ -132,7 +175,10 @@ function buildPrompt(input: GenerateCopyInput): string {
     creativeName: input.creativeName,
     creativeType: input.creativeType,
     pageName: input.pageName,
-    callToAction: input.callToAction,
+    callToAction:
+      input.providerId === 'facebook'
+        ? formatMetaCallToActionLabel(input.callToAction) ?? input.callToAction
+        : input.callToAction,
     landingPageUrl: input.landingPageUrl,
     existingHeadlines: input.existingHeadlines?.slice(0, 10),
     existingCaptions: input.existingCaptions?.slice(0, 10),
@@ -189,6 +235,8 @@ export const generateCopy = action({
   handler: async (ctx, args) =>
     withErrorHandling(async () => {
       const identity = await ctx.auth.getUserIdentity()
+      requireIdentity(identity)
+
       await enforceGeminiActionRateLimit(ctx, {
         name: 'creativeCopy',
         userId: identity?.subject ?? null,
