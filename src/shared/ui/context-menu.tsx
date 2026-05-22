@@ -6,6 +6,7 @@ import { Check, ChevronRight, Circle } from 'lucide-react'
 
 import { interactiveTransitionClass, surfaceMotionClasses } from '@/lib/motion'
 import { cn } from '@/lib/utils'
+import { menuItemHighlightClass } from '@/shared/ui/menu-highlight'
 
 function ContextMenu({ ...props }: React.ComponentProps<typeof ContextMenuPrimitive.Root>) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />
@@ -51,7 +52,8 @@ function ContextMenuSubTrigger({
     <ContextMenuPrimitive.SubTrigger
       data-slot="context-menu-sub-trigger"
       className={cn(
-        'flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent',
+        menuItemHighlightClass,
+        'text-popover-foreground flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[state=open]:bg-muted data-[state=open]:text-foreground',
         inset && 'pl-8',
         interactiveTransitionClass,
         className,
@@ -113,9 +115,11 @@ function ContextMenuItem({
     <ContextMenuPrimitive.Item
       data-slot="context-menu-item"
       className={cn(
-        'relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        menuItemHighlightClass,
+        'text-popover-foreground relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         inset && 'pl-8',
-        variant === 'destructive' && 'text-destructive focus:bg-destructive/10 focus:text-destructive',
+        variant === 'destructive' &&
+          'text-destructive focus:bg-destructive/10 focus:text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive',
         interactiveTransitionClass,
         className,
       )}
@@ -134,7 +138,8 @@ function ContextMenuCheckboxItem({
     <ContextMenuPrimitive.CheckboxItem
       data-slot="context-menu-checkbox-item"
       className={cn(
-        'relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        menuItemHighlightClass,
+        'text-popover-foreground relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         interactiveTransitionClass,
         className,
       )}
@@ -160,7 +165,8 @@ function ContextMenuRadioItem({
     <ContextMenuPrimitive.RadioItem
       data-slot="context-menu-radio-item"
       className={cn(
-        'relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        menuItemHighlightClass,
+        'text-popover-foreground relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         interactiveTransitionClass,
         className,
       )}

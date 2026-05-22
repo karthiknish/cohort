@@ -4,6 +4,7 @@ import * as React from 'react'
 
 import { interactiveTransitionClass, surfaceMotionClasses } from '@/lib/motion'
 import { cn } from '@/lib/utils'
+import { menuItemHighlightClass } from '@/shared/ui/menu-highlight'
 
 const Select = SelectPrimitive.Root
 
@@ -69,7 +70,8 @@ const SelectItem = ({ className, children, hideIndicator = false, ref, ...props 
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pr-2 text-sm outline-none focus:bg-muted focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      menuItemHighlightClass,
+      'text-popover-foreground relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       hideIndicator ? 'pl-2' : 'pl-8',
       className
     )}

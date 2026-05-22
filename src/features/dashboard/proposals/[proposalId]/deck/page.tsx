@@ -17,6 +17,7 @@ import { proposalsApi } from '@/lib/convex-api'
 import { getPreviewProposals } from '@/lib/preview-data'
 import { DirectionalPageTransition } from '@/shared/ui/page-transition'
 import { BackLink } from '@/shared/components/back-link'
+import { DeckPageViewerSection } from '@/features/dashboard/proposals/[proposalId]/deck/deck-page-viewer-section'
 
 export default function ProposalDeckPage() {
   const params = useParams<{ proposalId: string }>()
@@ -85,6 +86,12 @@ export default function ProposalDeckPage() {
   const pdfViewerUrl = useMemo(() => {
     return pdfStorageUrl ?? pdfUrl
   }, [pdfStorageUrl, pdfUrl])
+
+  const pptxViewerUrl = useMemo(() => {
+    if (!proposal) return null
+    const deck = proposal.presentationDeck
+    return proposal.pptUrl ?? deck?.storageUrl ?? deck?.pptxUrl ?? null
+  }, [proposal])
 
   // Best PDF download URL (prefer storage URL for reliability)
   const pdfDownloadUrl = useMemo(() => {
@@ -227,29 +234,29 @@ export default function ProposalDeckPage() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                {pdfDownloadUrl && (
-                  <Button asChild>
+                {pdfDownloadUrl ? (
+                  <Button variant="outline" asChild>
                     <a href={pdfDownloadUrl} target="_blank" rel="noreferrer">
                       <Download className="mr-2 h-4 w-4" />
                       Download PDF
                     </a>
                   </Button>
-                )}
+                ) : null}
+                {pptxViewerUrl ? (
+                  <Button variant="outline" asChild>
+                    <a href={pptxViewerUrl} target="_blank" rel="noreferrer">
+                      <Download className="mr-2 h-4 w-4" />
+                      Download PowerPoint
+                    </a>
+                  </Button>
+                ) : null}
               </div>
 
-              {pdfViewerUrl ? (
-                <div className="aspect-[16/9] w-full overflow-hidden rounded-lg border bg-muted">
-                  <iframe
-                    src={pdfViewerUrl}
-                    title="Proposal presentation preview"
-                    className="h-full w-full"
-                  />
-                </div>
-              ) : (
-                <div className="rounded-md border border-dashed border-muted p-6 text-center text-sm text-muted-foreground">
-                  <p>No PDF file available for this proposal.</p>
-                </div>
-              )}
+              <DeckPageViewerSection
+                pdfUrl={pdfViewerUrl}
+                pptxUrl={pptxViewerUrl}
+                proposalDisplayName={proposalDisplayName}
+              />
             </CardContent>
           </Card>
         </div>

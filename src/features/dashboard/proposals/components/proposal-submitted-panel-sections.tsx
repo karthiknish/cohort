@@ -215,7 +215,7 @@ function ProposalDeckReadyState({
             <div className="scale-0 rounded-full bg-primary p-4 shadow-2xl shadow-primary/40 transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-100">
               <Presentation className="h-8 w-8 text-primary-foreground" />
             </div>
-            <p className="mt-4 text-xs font-black uppercase tracking-widest text-foreground">Launch Interactive Viewer</p>
+            <p className="mt-4 text-xs font-black uppercase tracking-widest text-foreground">Open deck preview</p>
           </div>
           {presentationHref ? <Link href={presentationHref} className="absolute inset-0 z-10" /> : null}
         </div>
@@ -244,8 +244,8 @@ function ProposalDeckReadyState({
                     <ExternalLink className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
                   </div>
                   <div className="text-left">
-                    <p className="text-[13px] font-bold tracking-tight">Microsoft Online</p>
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Open in Cloud Editor</p>
+                    <p className="text-[13px] font-bold tracking-tight">In-app preview</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Slides & PDF in browser</p>
                   </div>
                 </Link>
               </Button>

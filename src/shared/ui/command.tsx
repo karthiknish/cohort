@@ -8,6 +8,7 @@ import { Search } from "lucide-react"
 import { interactiveTransitionClass } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/ui/dialog"
+import { menuItemHighlightClass } from "@/shared/ui/menu-highlight"
 
 type CommandProps = React.ComponentPropsWithRef<typeof CommandPrimitive>
 type CommandInputProps = React.ComponentPropsWithRef<typeof CommandPrimitive.Input>
@@ -111,7 +112,8 @@ const CommandItem = ({ className, ref, ...props }: CommandItemProps) => (
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm focus-visible:bg-accent focus-visible:text-accent-foreground data-[disabled=true]:pointer-events-none data-[selected='true']:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50",
+      menuItemHighlightClass,
+      "text-popover-foreground relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm data-[disabled=true]:pointer-events-none data-[selected=true]:bg-muted data-[selected=true]:text-foreground data-[disabled=true]:opacity-50",
       className
     )}
     {...props}

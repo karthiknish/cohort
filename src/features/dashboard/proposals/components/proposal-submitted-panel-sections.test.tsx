@@ -44,7 +44,7 @@ describe('proposal submitted panel sections', () => {
         onCopyShareLink={vi.fn()}
         onRecheckDeck={vi.fn()}
           presentationDeck={readyDeck}
-        viewerHref="/dashboard/proposals/viewer?src=test"
+        viewerHref="/dashboard/proposals/p1/deck"
       />,
     )
 
@@ -61,6 +61,7 @@ describe('proposal submitted panel sections', () => {
 
     expect(readyMarkup).toContain('Asset Delivery')
     expect(readyMarkup).toContain('PowerPoint (PPTX)')
+    expect(readyMarkup).toContain('In-app preview')
     expect(readyMarkup).toContain('Copy Share Link')
     expect(pendingMarkup).toContain('Architecting Your Deck')
   })

@@ -120,7 +120,7 @@ function MentionCategoryButton({
 				"flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
 				activeCategory === type
 					? "bg-primary text-primary-foreground"
-					: "text-muted-foreground hover:bg-muted",
+					: "text-muted-foreground hover:bg-muted hover:text-foreground",
 			)}
 		>
 			<Icon className="h-3 w-3" />
@@ -155,7 +155,9 @@ function MentionResultButton({
 			onClick={handleClick}
 			className={cn(
 				"flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
-				index === clampedSelectedIndex ? "bg-accent/10" : "hover:bg-muted",
+				index === clampedSelectedIndex
+					? "bg-muted text-foreground"
+					: "hover:bg-muted hover:text-foreground",
 			)}
 		>
 			<div
@@ -385,7 +387,7 @@ export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdown
 								"rounded-md px-2 py-1 text-xs font-medium transition-colors",
 								activeCategory === null
 									? "bg-primary text-primary-foreground"
-									: "text-muted-foreground hover:bg-muted",
+									: "text-muted-foreground hover:bg-muted hover:text-foreground",
 							)}
 						>
 							All

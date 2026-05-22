@@ -33,7 +33,14 @@ export function ProposalSubmittedPanel({
   isSubmitting,
 }: ProposalSubmittedPanelProps) {
   const { toast } = useToast()
-  const viewerHref = deckDownloadUrl ? `/dashboard/proposals/viewer?src=${encodeURIComponent(deckDownloadUrl)}` : null
+  const viewerHref = activeProposalIdForDeck
+    ? withPreviewModeSearchParamIfEnabled(
+        `/dashboard/proposals/${activeProposalIdForDeck}/deck`,
+        isPreviewModeEnabled(),
+      )
+    : deckDownloadUrl
+      ? `/dashboard/proposals/viewer?src=${encodeURIComponent(deckDownloadUrl)}`
+      : null
 
   const handleCopySummary = useCallback(() => {
     const text = `

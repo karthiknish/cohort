@@ -297,7 +297,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                   key={client.id}
                   value={client.id}
                   hideIndicator
-                  className="cursor-pointer py-2.5 px-3 rounded-md mx-1 my-0.5 transition-colors hover:bg-accent/5 focus:bg-accent/5 data-[state=checked]:bg-accent/10 data-[state=checked]:font-medium"
+                  className="cursor-pointer rounded-md mx-1 my-0.5 px-3 py-2.5 text-popover-foreground transition-colors hover:bg-muted focus:bg-muted focus:text-foreground data-[highlighted]:bg-muted data-[highlighted]:text-foreground data-[state=checked]:bg-accent/10 data-[state=checked]:font-medium data-[state=checked]:text-foreground"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">

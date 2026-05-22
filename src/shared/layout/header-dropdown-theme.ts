@@ -21,7 +21,7 @@ export const HEADER_DROPDOWN_THEME = {
   inboxBody: 'px-1.5 py-1',
   menuBody: 'p-1.5',
   menuItem:
-    'cursor-pointer gap-2.5 rounded-lg px-2.5 py-2 text-sm focus:bg-muted/50 data-[variant=destructive]:focus:bg-destructive/10',
+    'cursor-pointer gap-2.5 rounded-lg px-2.5 py-2 text-sm text-popover-foreground focus:bg-muted/80 focus:text-foreground data-[highlighted]:bg-muted/80 data-[highlighted]:text-foreground data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:data-[highlighted]:bg-destructive/10',
   menuItemIcon:
     'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground',
   menuItemIconDestructive: 'border-destructive/20 bg-destructive/10 text-destructive',
