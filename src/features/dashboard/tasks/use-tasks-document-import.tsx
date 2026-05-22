@@ -14,11 +14,13 @@ import type { TaskAttachment } from '@/types/tasks'
 
 import type { CreateTaskPayload } from './hooks/use-tasks'
 import {
+  buildTaskImportFileName,
   combineExtractedDocumentText,
-  extractTasksDocumentText,
   filterTasksDocumentFiles,
   isFileDragEvent,
+  prepareTaskImportDocument,
 } from './lib/extract-document-text'
+import { uploadTaskImportDocument } from './lib/upload-import-document'
 import { parseMentionNames, type TaskParticipant } from './task-types'
 import type {
   ProposedImportTask,
@@ -129,6 +131,16 @@ export function useTasksDocumentImport({
       }
     },
     [extractPdfTextAction, workspaceId],
+  )
+
+  const uploadForVision = useCallback(
+    async (file: File) => {
+      return await uploadTaskImportDocument({
+        file,
+        generateUploadUrl: () => generateUploadUrl({}),
+      })
+    },
+    [generateUploadUrl],
   )
 
   const uploadSourceAttachment = useCallback(
@@ -242,7 +254,7 @@ export function useTasksDocumentImport({
       if (documentFiles.length === 0) {
         notifyFailure({
           title: 'Unsupported file',
-          message: 'Drop a PDF or Word file (.pdf, .docx, or .doc).',
+          message: 'Drop a PDF, Word file, or image (including photos of handwritten notes).',
         })
         return
       }
@@ -254,31 +266,42 @@ export function useTasksDocumentImport({
       setStatusMessage('Reading document…')
 
       try {
-        const extractedDocuments = await Promise.all(
-          documentFiles.map(async (file) => {
-            const context = await extractTasksDocumentText(file, { extractPdfOnServer })
-            return {
-              fileName: file.name,
-              text: context.extractedText ?? context.excerpt,
-            }
-          }),
+        const preparedDocuments = await Promise.all(
+          documentFiles.map((file) =>
+            prepareTaskImportDocument(file, { extractPdfOnServer, uploadForVision }),
+          ),
         )
 
         if (abortRef.current) return
 
-        const combinedText = combineExtractedDocumentText(extractedDocuments)
-        const primaryFileName =
-          documentFiles.length === 1
-            ? (documentFiles[0]?.name ?? 'document')
-            : `${documentFiles.length} documents`
+        const textDocuments = preparedDocuments.flatMap((document) =>
+          document.kind === 'text' ? [{ fileName: document.fileName, text: document.text }] : [],
+        )
+        const visualDocuments = preparedDocuments.flatMap((document) =>
+          document.kind === 'vision'
+            ? [{
+                fileName: document.fileName,
+                mimeType: document.mimeType,
+                storageId: document.storageId,
+              }]
+            : [],
+        )
+
+        const combinedText =
+          textDocuments.length > 0 ? combineExtractedDocumentText(textDocuments) : undefined
+        const primaryFileName = buildTaskImportFileName(documentFiles)
+        const usesVision = visualDocuments.length > 0
 
         setPhase('analyzing')
-        setStatusMessage('Finding action items and assignees…')
+        setStatusMessage(
+          usesVision ? 'Reading handwriting and finding action items…' : 'Finding action items and assignees…',
+        )
 
         const result = await extractTasksFromDocument({
           workspaceId,
           fileName: primaryFileName,
           extractedText: combinedText,
+          visualDocuments: visualDocuments.length > 0 ? visualDocuments : undefined,
           clientId: clientId ?? null,
           projectId: projectId ?? null,
         })
@@ -318,6 +341,7 @@ export function useTasksDocumentImport({
       extractTasksFromDocument,
       isPreviewMode,
       projectId,
+      uploadForVision,
       workspaceId,
     ],
   )

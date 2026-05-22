@@ -19,7 +19,7 @@ type TasksDocumentImportOverlayProps = {
 function phaseLabel(phase: TaskDocumentImportPhase, statusMessage: string | null, errorMessage: string | null) {
   if (phase === 'error') return errorMessage ?? 'Import failed'
   if (statusMessage) return statusMessage
-  if (phase === 'dragging') return 'Drop PDF or Word files to create tasks from notes'
+  if (phase === 'dragging') return 'Drop PDF, Word, or image files to create tasks from notes'
   return null
 }
 

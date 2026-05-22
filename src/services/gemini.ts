@@ -23,6 +23,10 @@ export interface GeminiPrompt {
   }
 }
 
+export type GeminiRequestPart =
+  | { text: string }
+  | { inlineData: { mimeType: string; data: string } }
+
 export class GeminiAIService {
   private apiKey: string
   private model: string
@@ -35,10 +39,18 @@ export class GeminiAIService {
   }
 
   async generateContent(prompt: string): Promise<string> {
+    return this.generateContentWithParts([{ text: prompt }])
+  }
+
+  async generateContentWithParts(parts: GeminiRequestPart[]): Promise<string> {
     const apiKey = this.resolveApiKey()
 
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY (or GOOGLE_API_KEY) is not configured')
+    }
+
+    if (parts.length === 0) {
+      throw new Error('Gemini request requires at least one content part')
     }
 
     try {
@@ -50,11 +62,18 @@ export class GeminiAIService {
         },
         body: JSON.stringify({
           contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }]
-        })
+            parts: parts.map((part) =>
+              'text' in part
+                ? { text: part.text }
+                : {
+                    inline_data: {
+                      mime_type: part.inlineData.mimeType,
+                      data: part.inlineData.data,
+                    },
+                  },
+            ),
+          }],
+        }),
       })
 
       if (!response.ok) {

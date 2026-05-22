@@ -82,7 +82,6 @@ export function DataTable<TData, TValue>({
   const { replace } = useRouter()
   const pathname = usePathname()
   const searchParams = useUrlSearchParams()
-  const { get } = searchParams
 
   const usesUrlPagination = syncPaginationToUrl && showPagination && !manualPagination
 
@@ -94,13 +93,13 @@ export function DataTable<TData, TValue>({
   const urlPagination = React.useMemo(
     () =>
       parsePaginationFromSearchParams(
-        (key) => get(key),
+        (key) => searchParams.get(key),
         pageSize,
         urlPageParam,
         urlPageSizeParam,
         isValidUrlPageSize,
       ),
-    [get, isValidUrlPageSize, pageSize, urlPageParam, urlPageSizeParam],
+    [isValidUrlPageSize, pageSize, searchParams, urlPageParam, urlPageSizeParam],
   )
 
   const [tableState, dispatch] = React.useReducer(

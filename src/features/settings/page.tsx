@@ -44,8 +44,7 @@ function SettingsPageInner() {
   const { replace } = router
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { get } = searchParams
-  const activeTab = parseSettingsTab(get('tab'))
+  const activeTab = parseSettingsTab(searchParams.get('tab'))
 
   const handleSettingsTabChange = useCallback(
     (value: string) => {

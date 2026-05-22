@@ -2,8 +2,9 @@
 
 import { action } from './_generated/server'
 import { v } from 'convex/values'
+import type { Id } from './_generated/dataModel'
 
-import { geminiAI } from '../src/services/gemini'
+import { geminiAI, type GeminiRequestPart } from '../src/services/gemini'
 import { enforceGeminiActionRateLimit } from './geminiRateLimit'
 import { Errors, withErrorHandling } from './errors'
 import {
@@ -19,6 +20,13 @@ import {
 } from './taskDocumentImportParsing'
 
 const MAX_EXTRACTED_CHARS = 12_000
+const MAX_VISUAL_DOCUMENT_BYTES = 15 * 1024 * 1024
+
+const visualDocumentValidator = v.object({
+  fileName: v.string(),
+  mimeType: v.string(),
+  storageId: v.id('_storage'),
+})
 
 export type TaskAssignmentStatus = 'resolved' | 'ambiguous' | 'unassigned'
 
@@ -39,26 +47,13 @@ function requireIdentity(identity: { subject: string } | null): asserts identity
   }
 }
 
-function buildExtractionPrompt(args: {
-  fileName: string
-  extractedText: string
-  memberNames: string[]
-  clientId?: string | null
-  projectId?: string | null
-}): string {
+function buildTaskExtractionRules(memberNames: string[]): string {
   const memberBlock =
-    args.memberNames.length > 0
-      ? `Workspace members (use exact names when possible): ${args.memberNames.join(', ')}`
+    memberNames.length > 0
+      ? `Workspace members (use exact names when possible): ${memberNames.join(', ')}`
       : 'No workspace member list was provided.'
 
-  const contextHints = [
-    args.clientId ? `Preferred clientId: ${args.clientId}` : null,
-    args.projectId ? `Preferred projectId: ${args.projectId}` : null,
-  ]
-    .filter(Boolean)
-    .join('\n')
-
-  return `You extract actionable tasks from meeting notes, briefs, and planning documents.
+  return `You extract actionable tasks from meeting notes, briefs, planning documents, and handwritten notes.
 
 Return ONLY valid JSON: an array of objects with this shape:
 [
@@ -76,15 +71,97 @@ Rules:
 - Extract distinct tasks only; merge duplicates.
 - Infer assignees from phrases like "owner", "assigned to", "@name", or section headers.
 - If no assignee is mentioned, use an empty assignedToNames array.
-- Prefer ${args.memberNames.length > 0 ? 'names from the workspace member list when they match' : 'names exactly as written in the document'}.
+- Prefer ${memberNames.length > 0 ? 'names from the workspace member list when they match' : 'names exactly as written in the document'}.
+- For handwriting, whiteboards, or photos, do your best to read messy text and still extract clear tasks.
 - Maximum 25 tasks.
 
-${memberBlock}
+${memberBlock}`
+}
+
+function buildTextExtractionPrompt(args: {
+  fileName: string
+  extractedText: string
+  memberNames: string[]
+  clientId?: string | null
+  projectId?: string | null
+}): string {
+  const contextHints = [
+    args.clientId ? `Preferred clientId: ${args.clientId}` : null,
+    args.projectId ? `Preferred projectId: ${args.projectId}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  return `${buildTaskExtractionRules(args.memberNames)}
 ${contextHints ? `${contextHints}\n` : ''}
 Document file: ${args.fileName}
 
 Document text:
 ${args.extractedText}`
+}
+
+function buildVisualExtractionPrompt(args: {
+  fileNames: string[]
+  memberNames: string[]
+  clientId?: string | null
+  projectId?: string | null
+  supplementalText?: string | null
+}): string {
+  const contextHints = [
+    args.clientId ? `Preferred clientId: ${args.clientId}` : null,
+    args.projectId ? `Preferred projectId: ${args.projectId}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  const fileList =
+    args.fileNames.length === 1
+      ? args.fileNames[0]
+      : args.fileNames.map((name, index) => `${index + 1}. ${name}`).join('\n')
+
+  const supplementalBlock = args.supplementalText?.trim()
+    ? `\nSupplemental extracted text:\n${args.supplementalText.trim()}`
+    : ''
+
+  return `${buildTaskExtractionRules(args.memberNames)}
+${contextHints ? `${contextHints}\n` : ''}
+Read the attached file${args.fileNames.length === 1 ? '' : 's'} (handwritten notes, whiteboard photos, scans, or image-only PDFs are expected).
+Document file${args.fileNames.length === 1 ? '' : 's'}:
+${fileList}${supplementalBlock}`
+}
+
+async function loadVisualGeminiParts(
+  ctx: { storage: { get: (id: Id<'_storage'>) => Promise<Blob | null> } },
+  documents: Array<{ fileName: string; mimeType: string; storageId: Id<'_storage'> }>,
+): Promise<GeminiRequestPart[]> {
+  const parts: GeminiRequestPart[] = []
+
+  for (const document of documents) {
+    const blob = await ctx.storage.get(document.storageId)
+    if (!blob) {
+      throw Errors.validation.invalidInput(`Could not read uploaded file "${document.fileName}".`)
+    }
+
+    const buffer = Buffer.from(await blob.arrayBuffer())
+    if (buffer.length <= 0) {
+      throw Errors.validation.invalidInput(`Uploaded file "${document.fileName}" is empty.`)
+    }
+
+    if (buffer.length > MAX_VISUAL_DOCUMENT_BYTES) {
+      throw Errors.validation.invalidInput(
+        `"${document.fileName}" is too large. Try a file under 15 MB.`,
+      )
+    }
+
+    parts.push({
+      inlineData: {
+        mimeType: document.mimeType,
+        data: buffer.toString('base64'),
+      },
+    })
+  }
+
+  return parts
 }
 
 async function resolveTaskAssignment(
@@ -123,11 +200,47 @@ async function resolveTaskAssignment(
   }
 }
 
+async function mapRawTasksToProposals(
+  ctx: Parameters<typeof resolveWorkspaceAssignments>[0],
+  workspaceId: string,
+  rawTasks: RawExtractedTask[],
+): Promise<ProposedImportTask[]> {
+  const proposedTasks: ProposedImportTask[] = []
+  const nowMs = Date.now()
+
+  for (const rawTask of rawTasks.slice(0, 25)) {
+    const title = asNonEmptyString(rawTask.title)
+    if (!title) continue
+
+    const assignment = await resolveTaskAssignment(ctx, workspaceId, rawTask)
+    const dueDateMs = resolveAgentDueDateMs({
+      dueDateMs: null,
+      dueDate: rawTask.dueDate,
+      rawMessage: asNonEmptyString(rawTask.description) ?? title,
+      nowMs,
+    })
+
+    proposedTasks.push({
+      title,
+      description: asNonEmptyString(rawTask.description) ?? null,
+      priority: normalizePriority(rawTask.priority),
+      assignedTo: assignment.assignedTo,
+      dueDateMs,
+      assignmentStatus: assignment.assignmentStatus,
+      suggestions: assignment.suggestions,
+      sourceExcerpt: asNonEmptyString(rawTask.sourceExcerpt) ?? null,
+    })
+  }
+
+  return proposedTasks
+}
+
 export const extractTasksFromDocument = action({
   args: {
     workspaceId: v.string(),
     fileName: v.string(),
-    extractedText: v.string(),
+    extractedText: v.optional(v.string()),
+    visualDocuments: v.optional(v.array(visualDocumentValidator)),
     clientId: v.optional(v.union(v.string(), v.null())),
     projectId: v.optional(v.union(v.string(), v.null())),
   },
@@ -141,8 +254,12 @@ export const extractTasksFromDocument = action({
         throw Errors.validation.invalidInput('Workspace is required')
       }
 
-      const extractedText = args.extractedText.replace(/\s+/g, ' ').trim().slice(0, MAX_EXTRACTED_CHARS)
-      if (!extractedText) {
+      const extractedText = args.extractedText?.replace(/\s+/g, ' ').trim().slice(0, MAX_EXTRACTED_CHARS) ?? ''
+      const visualDocuments = args.visualDocuments ?? []
+      const hasText = extractedText.length > 0
+      const hasVisual = visualDocuments.length > 0
+
+      if (!hasText && !hasVisual) {
         throw Errors.validation.invalidInput('Could not read any text from this document.')
       }
 
@@ -156,43 +273,30 @@ export const extractTasksFromDocument = action({
       const members = await listWorkspaceMembers(ctx, workspaceId)
       const memberNames = members.map((member) => member.name)
 
-      const prompt = buildExtractionPrompt({
-        fileName: args.fileName,
-        extractedText,
-        memberNames,
-        clientId: args.clientId ?? null,
-        projectId: args.projectId ?? null,
-      })
-
-      const raw = await geminiAI.generateContent(prompt)
-      const rawTasks = parseExtractedTasksResponse(raw)
-      const nowMs = Date.now()
-
-      const proposedTasks: ProposedImportTask[] = []
-
-      for (const rawTask of rawTasks.slice(0, 25)) {
-        const title = asNonEmptyString(rawTask.title)
-        if (!title) continue
-
-        const assignment = await resolveTaskAssignment(ctx, workspaceId, rawTask)
-        const dueDateMs = resolveAgentDueDateMs({
-          dueDateMs: null,
-          dueDate: rawTask.dueDate,
-          rawMessage: asNonEmptyString(rawTask.description) ?? title,
-          nowMs,
+      let raw: string
+      if (hasVisual) {
+        const prompt = buildVisualExtractionPrompt({
+          fileNames: visualDocuments.map((document) => document.fileName),
+          memberNames,
+          clientId: args.clientId ?? null,
+          projectId: args.projectId ?? null,
+          supplementalText: hasText ? extractedText : null,
         })
-
-        proposedTasks.push({
-          title,
-          description: asNonEmptyString(rawTask.description) ?? null,
-          priority: normalizePriority(rawTask.priority),
-          assignedTo: assignment.assignedTo,
-          dueDateMs,
-          assignmentStatus: assignment.assignmentStatus,
-          suggestions: assignment.suggestions,
-          sourceExcerpt: asNonEmptyString(rawTask.sourceExcerpt) ?? null,
+        const visualParts = await loadVisualGeminiParts(ctx, visualDocuments)
+        raw = await geminiAI.generateContentWithParts([{ text: prompt }, ...visualParts])
+      } else {
+        const prompt = buildTextExtractionPrompt({
+          fileName: args.fileName,
+          extractedText,
+          memberNames,
+          clientId: args.clientId ?? null,
+          projectId: args.projectId ?? null,
         })
+        raw = await geminiAI.generateContent(prompt)
       }
+
+      const rawTasks = parseExtractedTasksResponse(raw)
+      const proposedTasks = await mapRawTasksToProposals(ctx, workspaceId, rawTasks)
 
       if (proposedTasks.length === 0) {
         throw Errors.validation.invalidInput(

@@ -43,8 +43,8 @@ function getStatusCopy(status: string): { title: string; message: string } {
 export function PendingApprovalContent() {
   const { user, authPhase, authError, retrySync, signOut } = useAuth()
   const { replace } = useRouter()
-  const { get } = useUrlSearchParams()
-  const requestedStatus = get('status') ?? ''
+  const searchParams = useUrlSearchParams()
+  const requestedStatus = searchParams.get('status') ?? ''
 
   useEffect(() => {
     if (isLoadingPhase(authPhase)) {
