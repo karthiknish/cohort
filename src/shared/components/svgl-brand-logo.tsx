@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import Image from 'next/image'
 
 import { cn } from '@/lib/utils'
 
@@ -51,13 +52,12 @@ function BrandImage({
   title: string
 }) {
   return (
-    // Native img — static SVGs from /public render reliably without the Image optimizer.
-    <img
+    <Image
       src={src}
       alt={labeled ? title : ''}
       width={24}
       height={24}
-      decoding="async"
+      unoptimized
       className={cn('inline-block size-6 shrink-0 object-contain', className)}
       aria-hidden={labeled ? undefined : true}
       role={labeled ? 'img' : undefined}

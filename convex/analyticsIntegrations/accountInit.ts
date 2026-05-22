@@ -27,26 +27,31 @@ export const initializeGoogleAnalyticsProperty = action({
       clientId,
     })
     const propertiesModulePromise = import('@/services/integrations/google-analytics/properties')
-    const integration = await integrationPromise
+    const [integration, { fetchGoogleAnalyticsProperties, fetchGoogleAnalyticsPropertyCurrency }] =
+      await Promise.all([integrationPromise, propertiesModulePromise])
     if (!integration?.accessToken) throw Errors.integration.missingToken('Google Analytics')
-    const { fetchGoogleAnalyticsProperties, fetchGoogleAnalyticsPropertyCurrency } =
-      await propertiesModulePromise
-    const properties = await fetchGoogleAnalyticsProperties({ accessToken: integration.accessToken })
-    if (!properties.length) {
-      throw Errors.integration.notConfigured('Google Analytics', 'No Google Analytics properties available')
-    }
+
     const selectedPropertyId = normalizeGoogleAnalyticsPropertyId(args.accountId ?? null)
     if (!selectedPropertyId) {
       throw Errors.validation.invalidInput('Please select a Google Analytics property to finish setup')
     }
+
+    const [properties, currencyCode] = await Promise.all([
+      fetchGoogleAnalyticsProperties({ accessToken: integration.accessToken }),
+      fetchGoogleAnalyticsPropertyCurrency({
+        accessToken: integration.accessToken,
+        propertyId: selectedPropertyId,
+      }),
+    ])
+
+    if (!properties.length) {
+      throw Errors.integration.notConfigured('Google Analytics', 'No Google Analytics properties available')
+    }
+
     const selectedProperty = properties.find((property) => normalizeGoogleAnalyticsPropertyId(property.id) === selectedPropertyId) ?? null
     if (!selectedProperty) {
       throw Errors.validation.invalidInput('Selected Google Analytics property is not available for this integration token')
     }
-    const currencyCode = await fetchGoogleAnalyticsPropertyCurrency({
-      accessToken: integration.accessToken,
-      propertyId: selectedProperty.id,
-    })
 
     await Promise.all([
       ctx.runMutation(internal.analyticsIntegrations.updateGoogleAnalyticsCredentialsInternal, {
@@ -66,16 +71,17 @@ export const initializeGoogleAnalyticsProperty = action({
       }),
     ])
 
-    await ctx.runMutation(internal.analyticsIntegrations.updateGoogleAnalyticsStatusInternal, {
-      workspaceId: args.workspaceId,
-      clientId,
-      status: 'pending',
-      message: null,
-    })
-
-    await ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
-      workspaceId: args.workspaceId,
-    })
+    await Promise.all([
+      ctx.runMutation(internal.analyticsIntegrations.updateGoogleAnalyticsStatusInternal, {
+        workspaceId: args.workspaceId,
+        clientId,
+        status: 'pending',
+        message: null,
+      }),
+      ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
+        workspaceId: args.workspaceId,
+      }),
+    ])
 
     return {
       accountId: selectedProperty.id,

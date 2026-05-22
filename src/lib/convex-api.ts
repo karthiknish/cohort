@@ -35,6 +35,7 @@ export const clientsApi = {
   create: looseApi.clients.create,
   addTeamMember: looseApi.clients.addTeamMember,
   removeTeamMember: looseApi.clients.removeTeamMember,
+  syncAdminTeamMembers: looseApi.clients.syncAdminTeamMembers,
   softDelete: looseApi.clients.softDelete,
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { lazy, Suspense, useMemo, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useMemo, type ReactNode } from 'react'
 
 import { FadeIn } from '@/shared/ui/animate-in'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -131,6 +131,9 @@ export function AdsPageSetupSection({
     reloadMetaAccountOptions,
   } = connections
   const { handleManualRefresh } = metrics
+  const handleReloadMetaAccountOptions = useCallback(() => {
+    void reloadMetaAccountOptions()
+  }, [reloadMetaAccountOptions])
   const pendingSetupCount = [
     googleNeedsAccountSelection,
     metaNeedsAccountSelection,
@@ -188,9 +191,7 @@ export function AdsPageSetupSection({
           selectedMetaAccountId={selectedMetaAccountId}
           onMetaAccountSelectionChange={setSelectedMetaAccountId}
           loadingMetaAccountOptions={loadingMetaAccountOptions}
-          onReloadMetaAccountOptions={() => {
-            void reloadMetaAccountOptions()
-          }}
+          onReloadMetaAccountOptions={handleReloadMetaAccountOptions}
           tiktokSetupMessage={tiktokSetupMessage}
           tiktokNeedsAccountSelection={tiktokNeedsAccountSelection}
           initializingTikTok={initializingTikTok}

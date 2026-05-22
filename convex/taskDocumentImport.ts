@@ -242,11 +242,15 @@ async function mapRawTasksToProposals(
       const title = asNonEmptyString(rawTask.title)
       if (!title) return null
 
-      const assignment = await resolveTaskAssignment(ctx, workspaceId, rawTask)
-      const dueDate = await resolveTaskDueDate(rawTask, nowMs)
-      const documentAssigneeNames = asStringArray(rawTask.assignedToNames)
-        .map((name) => name.trim())
-        .filter((name) => name.length > 0)
+      const [assignment, dueDate] = await Promise.all([
+        resolveTaskAssignment(ctx, workspaceId, rawTask),
+        resolveTaskDueDate(rawTask, nowMs),
+      ])
+      const documentAssigneeNames: string[] = []
+      for (const name of asStringArray(rawTask.assignedToNames)) {
+        const trimmed = name.trim()
+        if (trimmed.length > 0) documentAssigneeNames.push(trimmed)
+      }
 
       return {
         title,

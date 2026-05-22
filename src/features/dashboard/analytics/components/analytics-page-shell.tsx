@@ -30,14 +30,21 @@ import { useAnalyticsPageContext } from './analytics-page-provider'
 import { AnalyticsSummaryCards } from './analytics-summary-cards'
 import { GoogleAnalyticsSetupDialog } from './google-analytics-setup-dialog'
 
+const ANALYTICS_CHART_SKELETON_KEYS = [
+  'users-sessions',
+  'revenue',
+  'conversions',
+  'conversion-rate',
+] as const
+
 const AnalyticsCharts = dynamic(
   () => import('./analytics-charts').then((mod) => ({ default: mod.AnalyticsCharts })),
   {
     ssr: false,
     loading: () => (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Skeleton key={index} className="h-[360px] w-full rounded-lg" />
+        {ANALYTICS_CHART_SKELETON_KEYS.map((key) => (
+          <Skeleton key={key} className="h-[360px] w-full rounded-lg" />
         ))}
       </div>
     ),

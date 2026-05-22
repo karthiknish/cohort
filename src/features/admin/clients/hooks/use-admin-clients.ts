@@ -1,7 +1,7 @@
 'use client'
 
 import { notifyFailure } from '@/lib/notifications'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@convex/_generated/api'
 import { useConvex, useQuery as useConvexQuery } from 'convex/react'
@@ -20,11 +20,16 @@ type ConvexArgs = Record<string, unknown>
 
 type ClientRow = {
     legacyId?: string
+    workspaceId?: string
     name?: string
     accountManager?: string
     teamMembers?: ClientTeamMember[]
     createdAtMs?: number | null
     updatedAtMs?: number | null
+}
+
+function resolveClientWorkspaceId(client: ClientRecord, fallbackWorkspaceId: string | null) {
+    return client.workspaceId ?? fallbackWorkspaceId
 }
 
 export interface TeamMemberField extends ClientTeamMember {
@@ -157,6 +162,17 @@ export function useAdminClients(): UseAdminClientsReturn {
         },
     })
 
+    const syncAdminTeamMembersMutation = useMutation({
+        mutationFn: async (args: ConvexArgs) =>
+            await convex.mutation(clientsApi.syncAdminTeamMembers as never, args as never),
+        onSuccess: () => {
+            void clientsInfiniteQuery.refetch()
+            void queryClient.invalidateQueries({ queryKey: ['adminClients'] })
+        },
+    })
+
+    const hasSyncedAdminTeamMembersRef = useRef(false)
+
     // Delete dialog state
     const [clientPendingDelete, setClientPendingDelete] = useState<ClientRecord | null>(null)
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -183,6 +199,7 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         const list: ClientRecord[] = rows.map((row) => ({
             id: row.legacyId ?? '',
+            workspaceId: typeof row.workspaceId === 'string' ? row.workspaceId : null,
             name: row.name ?? '',
             accountManager: row.accountManager ?? '',
             teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
@@ -214,6 +231,54 @@ export function useAdminClients(): UseAdminClientsReturn {
           : null
     const loadingMore = !isPreviewMode && clientsInfiniteQuery.isFetchingNextPage
     const nextCursor = !isPreviewMode && clientsInfiniteQuery.hasNextPage ? 'more' : null
+
+    useEffect(() => {
+        hasSyncedAdminTeamMembersRef.current = false
+    }, [workspaceId, includeAllWorkspaces])
+
+    useEffect(() => {
+        if (isPreviewMode || !workspaceId || clientsLoading || hasSyncedAdminTeamMembersRef.current) {
+            return
+        }
+
+        const workspaceIds = includeAllWorkspaces
+            ? [...new Set(
+                clients
+                    .map((client) => client.workspaceId)
+                    .filter((value): value is string => typeof value === 'string' && value.length > 0),
+            )]
+            : [workspaceId]
+
+        if (workspaceIds.length === 0) {
+            return
+        }
+
+        hasSyncedAdminTeamMembersRef.current = true
+
+        void (async () => {
+            try {
+                await Promise.all(
+                    workspaceIds.map((targetWorkspaceId) =>
+                        syncAdminTeamMembersMutation.mutateAsync({ workspaceId: targetWorkspaceId }),
+                    ),
+                )
+            } catch (err: unknown) {
+                hasSyncedAdminTeamMembersRef.current = false
+                reportConvexFailure({
+                    error: err,
+                    context: 'useAdminClients:syncAdminTeamMembers',
+                    title: 'Could not sync admin teammates',
+                })
+            }
+        })()
+    }, [
+        clients,
+        clientsLoading,
+        includeAllWorkspaces,
+        isPreviewMode,
+        syncAdminTeamMembersMutation,
+        workspaceId,
+    ])
 
     const existingTeamMembers = useMemo(
         () => clients.reduce((total, client) => total + client.teamMembers.length, 0),
@@ -278,10 +343,13 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         if (!workspaceId) return
 
+        const targetWorkspaceId = resolveClientWorkspaceId(clientPendingDelete, workspaceId)
+        if (!targetWorkspaceId) return
+
         try {
             setDeletingClientId(clientPendingDelete.id)
             await softDeleteClientMutation.mutateAsync({
-                workspaceId,
+                workspaceId: targetWorkspaceId,
                 legacyId: clientPendingDelete.id,
                 deletedAtMs: Date.now(),
             })
@@ -336,7 +404,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         if (alreadyAssigned) {
             notifyFailure({
         title: 'Already assigned',
-        message: '${name} is already on ${clientPendingMembers.name}.',
+        message: `${name} is already on ${clientPendingMembers.name}.`,
       })
             return
         }
@@ -367,10 +435,13 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         if (!workspaceId) return
 
+        const targetWorkspaceId = resolveClientWorkspaceId(clientPendingMembers, workspaceId)
+        if (!targetWorkspaceId) return
+
         try {
             setAddingMember(true)
             await addTeamMemberMutation.mutateAsync({
-                workspaceId,
+                workspaceId: targetWorkspaceId,
                 legacyId: clientPendingMembers.id,
                 name,
                 role: role || undefined,
@@ -425,12 +496,15 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         if (!workspaceId) return
 
+        const targetWorkspaceId = resolveClientWorkspaceId(client, workspaceId)
+        if (!targetWorkspaceId) return
+
         const removeKey = `${client.id}:${normalizedName.toLowerCase()}`
 
         try {
             setRemovingTeamMemberKey(removeKey)
             await removeTeamMemberMutation.mutateAsync({
-                workspaceId,
+                workspaceId: targetWorkspaceId,
                 legacyId: client.id,
                 name: normalizedName,
             })

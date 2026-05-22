@@ -1,4 +1,4 @@
-import { internalQuery, query } from './_generated/server'
+import { internalQuery, query, type MutationCtx } from './_generated/server'
 import { v } from 'convex/values'
 import {
   zWorkspaceMutation,
@@ -25,6 +25,53 @@ const clientZ = z.object({
   updatedAtMs: z.number(),
   deletedAtMs: z.number().nullable(),
 })
+
+type ClientTeamMemberRow = {
+  name: string
+  role: string
+}
+
+async function loadWorkspaceAdminMembers(
+  ctx: Pick<MutationCtx, 'db'>,
+  workspaceId: string,
+): Promise<ClientTeamMemberRow[]> {
+  const [membersByAgency, agencyAdmin] = await Promise.all([
+    ctx.db.query('users').withIndex('by_agencyId', (q) => q.eq('agencyId', workspaceId)).take(500),
+    ctx.db.query('users').withIndex('by_legacyId', (q) => q.eq('legacyId', workspaceId)).unique(),
+  ])
+
+  const rows = agencyAdmin
+    ? [agencyAdmin, ...membersByAgency.filter((row) => row.legacyId !== agencyAdmin.legacyId)]
+    : membersByAgency
+
+  const admins: ClientTeamMemberRow[] = []
+
+  for (const row of rows) {
+    if (row.status === 'disabled' || row.status === 'suspended') continue
+    if (row.role !== 'admin') continue
+
+    const name = typeof row.name === 'string' ? row.name.trim() : ''
+    if (!name) continue
+
+    admins.push({ name, role: 'Admin' })
+  }
+
+  return admins
+}
+
+function mergeTeamMembersWithAdmins(
+  teamMembers: ClientTeamMemberRow[],
+  adminMembers: ClientTeamMemberRow[],
+): ClientTeamMemberRow[] {
+  const existingNames = new Set(teamMembers.map((member) => member.name.toLowerCase()))
+  const additions = adminMembers.filter((member) => !existingNames.has(member.name.toLowerCase()))
+
+  if (additions.length === 0) {
+    return teamMembers
+  }
+
+  return [...teamMembers, ...additions]
+}
 
 function slugify(value: string): string {
   const base = value
@@ -184,6 +231,9 @@ export const create = zWorkspaceMutation({
       normalizedTeamMembers.unshift({ name: normalizedAccountManager, role: 'Account Manager' })
     }
 
+    const adminMembers = await loadWorkspaceAdminMembers(ctx, args.workspaceId)
+    const teamMembersWithAdmins = mergeTeamMembersWithAdmins(normalizedTeamMembers, adminMembers)
+
     const baseId = slugify(normalizedName)
     let candidateId = baseId
     let attempt = 1
@@ -214,7 +264,7 @@ export const create = zWorkspaceMutation({
       name: normalizedName,
       nameLower: normalizedName.toLowerCase(),
       accountManager: normalizedAccountManager,
-      teamMembers: normalizedTeamMembers,
+      teamMembers: teamMembersWithAdmins,
       createdBy: args.createdBy,
       createdAtMs: ctx.now,
       updatedAtMs: ctx.now,
@@ -244,6 +294,18 @@ export const addTeamMember = zWorkspaceMutation({
       throw Errors.resource.notFound('Client')
     }
 
+    const adminMembers = await loadWorkspaceAdminMembers(ctx, args.workspaceId)
+    const teamMembersWithAdmins = mergeTeamMembersWithAdmins(client.teamMembers, adminMembers)
+    let currentTeamMembers = client.teamMembers
+
+    if (teamMembersWithAdmins.length !== client.teamMembers.length) {
+      await ctx.db.patch(client._id, {
+        teamMembers: teamMembersWithAdmins,
+        updatedAtMs: ctx.now,
+      })
+      currentTeamMembers = teamMembersWithAdmins
+    }
+
     const normalizedName = args.name.trim()
     const normalizedRole = (args.role ?? '').trim() || 'Contributor'
 
@@ -251,17 +313,62 @@ export const addTeamMember = zWorkspaceMutation({
       throw Errors.validation.invalidInput('Team member name is required')
     }
 
-    const exists = client.teamMembers.some((member) => member.name.toLowerCase() === normalizedName.toLowerCase())
+    const exists = currentTeamMembers.some((member) => member.name.toLowerCase() === normalizedName.toLowerCase())
     if (exists) {
       throw Errors.resource.alreadyExists('Team member')
     }
 
     await ctx.db.patch(client._id, {
-      teamMembers: [...client.teamMembers, { name: normalizedName, role: normalizedRole }],
+      teamMembers: [...currentTeamMembers, { name: normalizedName, role: normalizedRole }],
       updatedAtMs: ctx.now,
     })
 
     return client.legacyId
+  },
+})
+
+export const syncAdminTeamMembers = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    legacyId: z.string().optional(),
+  },
+  returns: z.object({ updatedCount: z.number() }),
+  handler: async (ctx, args) => {
+    const adminMembers = await loadWorkspaceAdminMembers(ctx, args.workspaceId)
+    if (adminMembers.length === 0) {
+      return { updatedCount: 0 }
+    }
+
+    const clients = args.legacyId
+      ? await ctx.db
+          .query('clients')
+          .withIndex('by_workspace_legacyId', (q) =>
+            q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId!),
+          )
+          .unique()
+          .then((row) => (row && row.deletedAtMs === null ? [row] : []))
+      : await ctx.db
+          .query('clients')
+          .withIndex('by_workspace_nameLower_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+          .collect()
+          .then((rows) => rows.filter((row) => row.deletedAtMs === null))
+
+    let updatedCount = 0
+
+    for (const client of clients) {
+      const merged = mergeTeamMembersWithAdmins(client.teamMembers, adminMembers)
+      if (merged.length === client.teamMembers.length) {
+        continue
+      }
+
+      await ctx.db.patch(client._id, {
+        teamMembers: merged,
+        updatedAtMs: ctx.now,
+      })
+      updatedCount += 1
+    }
+
+    return { updatedCount }
   },
 })
 

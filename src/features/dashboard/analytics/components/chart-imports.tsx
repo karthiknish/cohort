@@ -12,10 +12,10 @@ import {
   LineChart,
   Pie,
   PieChart,
-  Tooltip as RechartsTooltip,
+  RechartsTooltip,
   XAxis,
   YAxis,
-} from 'recharts'
+} from '@/shared/ui/recharts-dynamic'
 
 export {
   Area,

@@ -31,17 +31,18 @@ async function enqueueInitialSyncAndRun(
     timeframeDays: 90,
   })
 
-  await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
-    workspaceId: args.workspaceId,
-    providerId: args.providerId,
-    clientId: args.clientId,
-    status: 'pending',
-    message: null,
-  })
-
-  await ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
-    workspaceId: args.workspaceId,
-  })
+  await Promise.all([
+    ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId: args.clientId,
+      status: 'pending',
+      message: null,
+    }),
+    ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
+      workspaceId: args.workspaceId,
+    }),
+  ])
 }
 
 export const initializeAdAccount = action({

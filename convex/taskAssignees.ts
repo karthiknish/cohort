@@ -80,30 +80,29 @@ export async function normalizeTaskAssignees(
   workspaceId: string,
   assignees: string[],
 ): Promise<string[]> {
-  const trimmedAssignees = assignees
-    .map((assignee) => assignee.trim())
-    .filter((assignee) => assignee.length > 0)
+  const trimmedAssignees: string[] = []
+  for (const assignee of assignees) {
+    const trimmed = assignee.trim()
+    if (trimmed.length > 0) trimmedAssignees.push(trimmed)
+  }
 
   if (trimmedAssignees.length === 0) return []
 
   const members = await loadWorkspaceMembers(ctx, workspaceId)
-  const resolvedIds: string[] = []
+  const membersById = new Map(members.map((member) => [member.legacyId, member]))
+  const resolvedIds = new Set<string>()
 
   for (const assignee of trimmedAssignees) {
-    const directMatch = members.find((member) => member.legacyId === assignee)
+    const directMatch = membersById.get(assignee)
     if (directMatch) {
-      if (!resolvedIds.includes(directMatch.legacyId)) {
-        resolvedIds.push(directMatch.legacyId)
-      }
+      resolvedIds.add(directMatch.legacyId)
       continue
     }
 
     const matches = findWorkspaceMemberMatches(assignee, members)
     if (matches.length === 1) {
       const member = matches[0]
-      if (member && !resolvedIds.includes(member.legacyId)) {
-        resolvedIds.push(member.legacyId)
-      }
+      if (member) resolvedIds.add(member.legacyId)
       continue
     }
 
@@ -118,7 +117,7 @@ export async function normalizeTaskAssignees(
     )
   }
 
-  return resolvedIds
+  return [...resolvedIds]
 }
 
 export { findWorkspaceMemberMatches, loadWorkspaceMembers, normalizeAssigneeLookup }

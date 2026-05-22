@@ -146,21 +146,20 @@ function findSimilarMemberSuggestions(
     const normalizedQuery = normalizeAssigneeLookup(query)
     if (!normalizedQuery) continue
 
-    const scored = members
-      .map((member) => {
-        const normalizedName = normalizeAssigneeLookup(member.name)
-        const firstName = nameTokens(member.name)[0] ?? ''
-        let score = 0
+    const scored: Array<{ member: DocumentImportWorkspaceMember; score: number }> = []
+    for (const member of members) {
+      const normalizedName = normalizeAssigneeLookup(member.name)
+      const firstName = nameTokens(member.name)[0] ?? ''
+      let score = 0
 
-        if (normalizedName === normalizedQuery) score = 100
-        else if (firstName === normalizedQuery) score = 90
-        else if (normalizedName.startsWith(`${normalizedQuery} `)) score = 85
-        else if (firstName.startsWith(normalizedQuery) || normalizedQuery.startsWith(firstName)) score = 70
+      if (normalizedName === normalizedQuery) score = 100
+      else if (firstName === normalizedQuery) score = 90
+      else if (normalizedName.startsWith(`${normalizedQuery} `)) score = 85
+      else if (firstName.startsWith(normalizedQuery) || normalizedQuery.startsWith(firstName)) score = 70
 
-        return { member, score }
-      })
-      .filter((entry) => entry.score > 0)
-      .toSorted((a, b) => b.score - a.score)
+      if (score > 0) scored.push({ member, score })
+    }
+    scored.sort((a, b) => b.score - a.score)
 
     for (const entry of scored) {
       suggestions.add(entry.member.name)
@@ -179,15 +178,17 @@ export function resolveDocumentImportAssignees(
   assignmentStatus: DocumentImportAssignmentStatus
   suggestions: string[]
 } {
-  const trimmedNames = assignedToNames
-    .map((name) => name.trim())
-    .filter((name) => name.length > 0)
+  const trimmedNames: string[] = []
+  for (const name of assignedToNames) {
+    const trimmed = name.trim()
+    if (trimmed.length > 0) trimmedNames.push(trimmed)
+  }
 
   if (trimmedNames.length === 0) {
     return { assignedToUserIds: [], assignmentStatus: 'unassigned', suggestions: [] }
   }
 
-  const resolvedUserIds: string[] = []
+  const resolvedUserIds = new Set<string>()
   const ambiguousQueries: string[] = []
   const unmatchedQueries: string[] = []
 
@@ -196,9 +197,7 @@ export function resolveDocumentImportAssignees(
 
     if (matches.length === 1) {
       const member = matches[0]
-      if (member && !resolvedUserIds.includes(member.id)) {
-        resolvedUserIds.push(member.id)
-      }
+      if (member) resolvedUserIds.add(member.id)
       continue
     }
 
@@ -220,7 +219,7 @@ export function resolveDocumentImportAssignees(
     ].slice(0, 5)
 
     return {
-      assignedToUserIds: resolvedUserIds,
+      assignedToUserIds: [...resolvedUserIds],
       assignmentStatus: 'ambiguous',
       suggestions: suggestions.length > 0 ? suggestions : findSimilarMemberSuggestions(ambiguousQueries, members),
     }
@@ -228,14 +227,14 @@ export function resolveDocumentImportAssignees(
 
   if (unmatchedQueries.length > 0) {
     return {
-      assignedToUserIds: resolvedUserIds,
-      assignmentStatus: resolvedUserIds.length > 0 ? 'ambiguous' : 'unassigned',
+      assignedToUserIds: [...resolvedUserIds],
+      assignmentStatus: resolvedUserIds.size > 0 ? 'ambiguous' : 'unassigned',
       suggestions: findSimilarMemberSuggestions(unmatchedQueries, members),
     }
   }
 
   return {
-    assignedToUserIds: resolvedUserIds,
+    assignedToUserIds: [...resolvedUserIds],
     assignmentStatus: 'resolved',
     suggestions: [],
   }
@@ -465,8 +464,8 @@ function findTitlePosition(extractedText: string, title: string): number {
     const normalizedLine = normalizeTitleKey(trimmedLine)
     if (
       normalizedLine === normalizedTitle ||
-      normalizedLine.includes(normalizedTitle) ||
-      normalizedTitle.includes(normalizedLine)
+      normalizedLine.startsWith(normalizedTitle) ||
+      normalizedTitle.startsWith(normalizedLine)
     ) {
       return lowerText.indexOf(trimmedLine.toLowerCase())
     }

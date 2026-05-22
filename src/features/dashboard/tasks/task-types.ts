@@ -273,18 +273,17 @@ export function resolveAssigneeUserIds(
   participants: TaskParticipant[],
 ): string[] {
   const names = parseMentionNames(value)
-  const resolved: string[] = []
+  const participantsByName = new Map(
+    participants.map((participant) => [participant.name.trim().toLowerCase(), participant]),
+  )
+  const resolved = new Set<string>()
 
   for (const name of names) {
-    const member = participants.find(
-      (participant) => participant.name.trim().toLowerCase() === name.toLowerCase(),
-    )
-    if (member?.id && !resolved.includes(member.id)) {
-      resolved.push(member.id)
-    }
+    const member = participantsByName.get(name.toLowerCase())
+    if (member?.id) resolved.add(member.id)
   }
 
-  return resolved
+  return [...resolved]
 }
 
 export function getAssigneeDraftIssue(
