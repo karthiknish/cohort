@@ -320,14 +320,17 @@ export function useTasksDocumentImport({
 
         if (abortRef.current) return
 
-        const result = await extractTasksFromDocument({
+        const result = (await extractTasksFromDocument({
           workspaceId,
           fileName: primaryFileName,
           extractedText: combinedText,
           visualDocuments: visualDocuments.length > 0 ? visualDocuments : undefined,
           clientId: clientId ?? null,
           projectId: projectId ?? null,
-        })
+        })) as {
+          proposedTasks: ProposedImportTaskFromServer[]
+          documentSummary: string | null
+        }
 
         const mapped = result.proposedTasks.map((task, index) =>
           mapServerProposal(task, index, participants),

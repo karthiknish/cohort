@@ -47,4 +47,5 @@ export const XAxis = createRechartsComponent('XAxis')
 export const YAxis = createRechartsComponent('YAxis')
 export const ResponsiveContainer = createRechartsComponent('ResponsiveContainer')
 export const Tooltip = createRechartsComponent('Tooltip')
+export const RechartsTooltip = Tooltip
 export const Legend = createRechartsComponent('Legend')
