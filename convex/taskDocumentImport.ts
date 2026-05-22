@@ -134,34 +134,32 @@ async function loadVisualGeminiParts(
   ctx: { storage: { get: (id: Id<'_storage'>) => Promise<Blob | null> } },
   documents: Array<{ fileName: string; mimeType: string; storageId: Id<'_storage'> }>,
 ): Promise<GeminiRequestPart[]> {
-  const parts: GeminiRequestPart[] = []
+  return Promise.all(
+    documents.map(async (document) => {
+      const blob = await ctx.storage.get(document.storageId)
+      if (!blob) {
+        throw Errors.validation.invalidInput(`Could not read uploaded file "${document.fileName}".`)
+      }
 
-  for (const document of documents) {
-    const blob = await ctx.storage.get(document.storageId)
-    if (!blob) {
-      throw Errors.validation.invalidInput(`Could not read uploaded file "${document.fileName}".`)
-    }
+      const buffer = Buffer.from(await blob.arrayBuffer())
+      if (buffer.length <= 0) {
+        throw Errors.validation.invalidInput(`Uploaded file "${document.fileName}" is empty.`)
+      }
 
-    const buffer = Buffer.from(await blob.arrayBuffer())
-    if (buffer.length <= 0) {
-      throw Errors.validation.invalidInput(`Uploaded file "${document.fileName}" is empty.`)
-    }
+      if (buffer.length > MAX_VISUAL_DOCUMENT_BYTES) {
+        throw Errors.validation.invalidInput(
+          `"${document.fileName}" is too large. Try a file under 15 MB.`,
+        )
+      }
 
-    if (buffer.length > MAX_VISUAL_DOCUMENT_BYTES) {
-      throw Errors.validation.invalidInput(
-        `"${document.fileName}" is too large. Try a file under 15 MB.`,
-      )
-    }
-
-    parts.push({
-      inlineData: {
-        mimeType: document.mimeType,
-        data: buffer.toString('base64'),
-      },
-    })
-  }
-
-  return parts
+      return {
+        inlineData: {
+          mimeType: document.mimeType,
+          data: buffer.toString('base64'),
+        },
+      } satisfies GeminiRequestPart
+    }),
+  )
 }
 
 async function resolveTaskAssignment(
@@ -205,34 +203,35 @@ async function mapRawTasksToProposals(
   workspaceId: string,
   rawTasks: RawExtractedTask[],
 ): Promise<ProposedImportTask[]> {
-  const proposedTasks: ProposedImportTask[] = []
   const nowMs = Date.now()
 
-  for (const rawTask of rawTasks.slice(0, 25)) {
-    const title = asNonEmptyString(rawTask.title)
-    if (!title) continue
+  const proposals = await Promise.all(
+    rawTasks.slice(0, 25).map(async (rawTask) => {
+      const title = asNonEmptyString(rawTask.title)
+      if (!title) return null
 
-    const assignment = await resolveTaskAssignment(ctx, workspaceId, rawTask)
-    const dueDateMs = resolveAgentDueDateMs({
-      dueDateMs: null,
-      dueDate: rawTask.dueDate,
-      rawMessage: asNonEmptyString(rawTask.description) ?? title,
-      nowMs,
-    })
+      const assignment = await resolveTaskAssignment(ctx, workspaceId, rawTask)
+      const dueDateMs = resolveAgentDueDateMs({
+        dueDateMs: null,
+        dueDate: rawTask.dueDate,
+        rawMessage: asNonEmptyString(rawTask.description) ?? title,
+        nowMs,
+      })
 
-    proposedTasks.push({
-      title,
-      description: asNonEmptyString(rawTask.description) ?? null,
-      priority: normalizePriority(rawTask.priority),
-      assignedTo: assignment.assignedTo,
-      dueDateMs,
-      assignmentStatus: assignment.assignmentStatus,
-      suggestions: assignment.suggestions,
-      sourceExcerpt: asNonEmptyString(rawTask.sourceExcerpt) ?? null,
-    })
-  }
+      return {
+        title,
+        description: asNonEmptyString(rawTask.description) ?? null,
+        priority: normalizePriority(rawTask.priority),
+        assignedTo: assignment.assignedTo,
+        dueDateMs,
+        assignmentStatus: assignment.assignmentStatus,
+        suggestions: assignment.suggestions,
+        sourceExcerpt: asNonEmptyString(rawTask.sourceExcerpt) ?? null,
+      } satisfies ProposedImportTask
+    }),
+  )
 
-  return proposedTasks
+  return proposals.filter((task): task is ProposedImportTask => task !== null)
 }
 
 export const extractTasksFromDocument = action({

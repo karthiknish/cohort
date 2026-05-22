@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, startTransition, useCallback } from 'react'
+import { Suspense, startTransition, useCallback, useMemo } from 'react'
 import { Bell, LoaderCircle, Shield, User } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
@@ -44,7 +44,8 @@ function SettingsPageInner() {
   const { replace } = router
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const activeTab = parseSettingsTab(searchParams.get('tab'))
+  const getSearchParam = useMemo(() => searchParams.get.bind(searchParams), [searchParams])
+  const activeTab = parseSettingsTab(getSearchParam('tab'))
 
   const handleSettingsTabChange = useCallback(
     (value: string) => {

@@ -1,5 +1,7 @@
 'use client'
 
+import { useMemo, type CSSProperties } from 'react'
+
 import { cn } from '@/lib/utils'
 
 const SIZE_THRESHOLD_SMALL = 50
@@ -29,6 +31,13 @@ const CONTRAST_TINY = 1.1
 const CONTRAST_MULTIPLIER_FINAL = 1.2
 const CONTRAST_MIN_FINAL = 1.3
 
+const DEFAULT_SIRI_ORB_COLORS = {
+  bg: 'var(--background)',
+  c1: 'var(--chart-5)',
+  c2: 'var(--chart-2)',
+  c3: 'var(--chart-1)',
+} as const
+
 export type SiriOrbProps = {
   animationDuration?: number
   className?: string
@@ -47,14 +56,7 @@ export function SiriOrb({
   colors,
   animationDuration = 20,
 }: SiriOrbProps) {
-  const defaultColors = {
-    bg: 'oklch(95% 0.02 264.695)',
-    c1: 'oklch(75% 0.15 350)',
-    c2: 'oklch(80% 0.12 200)',
-    c3: 'oklch(78% 0.14 280)',
-  }
-
-  const finalColors = { ...defaultColors, ...colors }
+  const finalColors = { ...DEFAULT_SIRI_ORB_COLORS, ...colors }
   const sizeValue = Number.parseInt(size.replace('px', ''), 10)
 
   const blurAmount =
@@ -96,26 +98,39 @@ export function SiriOrb({
 
   const finalContrast = getFinalContrast(sizeValue)
 
+  const orbStyle = useMemo(
+    () =>
+      ({
+        width: size,
+        height: size,
+        '--bg': finalColors.bg,
+        '--c1': finalColors.c1,
+        '--c2': finalColors.c2,
+        '--c3': finalColors.c3,
+        '--animation-duration': `${animationDuration}s`,
+        '--blur-amount': `${blurAmount}px`,
+        '--contrast-amount': finalContrast,
+        '--dot-size': `${dotSize}px`,
+        '--shadow-spread': `${shadowSpread}px`,
+        '--mask-radius': maskRadius,
+      }) as CSSProperties,
+    [
+      animationDuration,
+      blurAmount,
+      dotSize,
+      finalColors.bg,
+      finalColors.c1,
+      finalColors.c2,
+      finalColors.c3,
+      finalContrast,
+      maskRadius,
+      shadowSpread,
+      size,
+    ],
+  )
+
   return (
-    <div
-      className={cn('siri-orb', className)}
-      style={
-        {
-          width: size,
-          height: size,
-          '--bg': finalColors.bg,
-          '--c1': finalColors.c1,
-          '--c2': finalColors.c2,
-          '--c3': finalColors.c3,
-          '--animation-duration': `${animationDuration}s`,
-          '--blur-amount': `${blurAmount}px`,
-          '--contrast-amount': finalContrast,
-          '--dot-size': `${dotSize}px`,
-          '--shadow-spread': `${shadowSpread}px`,
-          '--mask-radius': maskRadius,
-        } as React.CSSProperties
-      }
-    >
+    <div className={cn('siri-orb', className)} style={orbStyle}>
       <style>{`
         @property --angle {
           syntax: "<angle>";

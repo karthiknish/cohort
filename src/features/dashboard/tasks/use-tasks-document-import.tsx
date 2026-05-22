@@ -174,38 +174,45 @@ export function useTasksDocumentImport({
       setPhase('creating')
       setStatusMessage(`Creating ${selected.length} task${selected.length === 1 ? '' : 's'}…`)
 
+      if (abortRef.current) {
+        resetImport()
+        return
+      }
+
       let attachment: TaskAttachment | undefined
       if (attachSourceDocuments && sourceFiles[0] && userId) {
         const uploaded = await uploadSourceAttachment(sourceFiles[0])
         if (uploaded) attachment = uploaded
       }
 
-      let createdCount = 0
-      for (const task of selected) {
-        if (abortRef.current) break
-
-        const payload: CreateTaskPayload = {
-          title: task.title.trim(),
-          description: task.description.trim() || undefined,
-          status: 'todo',
-          priority: task.priority,
-          assignedTo: parseMentionNames(task.assignedTo),
-          clientId,
-          client: clientName,
-          projectId: projectId ?? undefined,
-          projectName: projectName ?? undefined,
-          dueDate: task.dueDate || undefined,
-          attachments: attachment ? [attachment] : undefined,
-        }
-
-        const created = await onCreateTask(payload)
-        if (created) createdCount += 1
-      }
-
       if (abortRef.current) {
         resetImport()
         return
       }
+
+      const creationResults = await Promise.all(
+        selected.map(async (task) => {
+          if (abortRef.current) return false
+
+          const payload: CreateTaskPayload = {
+            title: task.title.trim(),
+            description: task.description.trim() || undefined,
+            status: 'todo',
+            priority: task.priority,
+            assignedTo: parseMentionNames(task.assignedTo),
+            clientId,
+            client: clientName,
+            projectId: projectId ?? undefined,
+            projectName: projectName ?? undefined,
+            dueDate: task.dueDate || undefined,
+            attachments: attachment ? [attachment] : undefined,
+          }
+
+          const created = await onCreateTask(payload)
+          return Boolean(created)
+        }),
+      )
+      const createdCount = creationResults.filter(Boolean).length
 
       notifySuccess({
         title: 'Tasks imported',
@@ -266,13 +273,13 @@ export function useTasksDocumentImport({
       setStatusMessage('Reading document…')
 
       try {
+        if (abortRef.current) return
+
         const preparedDocuments = await Promise.all(
           documentFiles.map((file) =>
             prepareTaskImportDocument(file, { extractPdfOnServer, uploadForVision }),
           ),
         )
-
-        if (abortRef.current) return
 
         const textDocuments = preparedDocuments.flatMap((document) =>
           document.kind === 'text' ? [{ fileName: document.fileName, text: document.text }] : [],
@@ -297,6 +304,8 @@ export function useTasksDocumentImport({
           usesVision ? 'Reading handwriting and finding action items…' : 'Finding action items and assignees…',
         )
 
+        if (abortRef.current) return
+
         const result = await extractTasksFromDocument({
           workspaceId,
           fileName: primaryFileName,
@@ -305,8 +314,6 @@ export function useTasksDocumentImport({
           clientId: clientId ?? null,
           projectId: projectId ?? null,
         })
-
-        if (abortRef.current) return
 
         const mapped = result.proposedTasks.map(mapServerProposal)
         setDocumentSummary(result.documentSummary ?? null)
