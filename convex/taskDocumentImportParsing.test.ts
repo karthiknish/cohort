@@ -192,13 +192,39 @@ describe('buildAssigneeMemberPool', () => {
     { id: 'user-aaa', name: 'aaa', email: 'aaa@example.com' },
   ]
 
-  it('adds client roster names for first-name matching and suggestions', () => {
+  it('adds client roster names for suggestions when no workspace profile matches', () => {
     const pool = buildAssigneeMemberPool(workspaceMembers, ['Deepak Karnan', 'Archana Ravi Kumar'])
 
     expect(resolveDocumentImportAssignees(['Deepak'], pool)).toEqual({
       assignedToUserIds: [],
       assignmentStatus: 'unassigned',
       suggestions: ['Deepak Karnan'],
+    })
+  })
+
+  it('links roster names to admin workspace profiles via first-name matching', () => {
+    const pool = buildAssigneeMemberPool(
+      [{ id: 'admin-deepak', name: 'Deepak Karnan', email: 'deepak@agency.com' }],
+      ['Deepak Karnan'],
+    )
+
+    expect(resolveDocumentImportAssignees(['Deepak'], pool)).toEqual({
+      assignedToUserIds: ['admin-deepak'],
+      assignmentStatus: 'resolved',
+      suggestions: [],
+    })
+  })
+
+  it('links roster full names to short admin workspace profiles', () => {
+    const pool = buildAssigneeMemberPool(
+      [{ id: 'admin-deepak', name: 'Deepak', email: 'deepak@agency.com' }],
+      ['Deepak Karnan'],
+    )
+
+    expect(resolveDocumentImportAssignees(['Deepak'], pool)).toEqual({
+      assignedToUserIds: ['admin-deepak'],
+      assignmentStatus: 'resolved',
+      suggestions: [],
     })
   })
 

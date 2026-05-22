@@ -170,6 +170,55 @@ function findSimilarMemberSuggestions(
   return [...suggestions].slice(0, limit)
 }
 
+function membersWithIds(members: DocumentImportWorkspaceMember[]): DocumentImportWorkspaceMember[] {
+  return members.filter((member) => member.id.trim().length > 0)
+}
+
+function uniqueLinkedMembers(members: DocumentImportWorkspaceMember[]): DocumentImportWorkspaceMember[] {
+  const byId = new Map<string, DocumentImportWorkspaceMember>()
+
+  for (const member of members) {
+    const id = member.id.trim()
+    if (!id) continue
+
+    const existing = byId.get(id)
+    if (!existing || member.name.trim().length > existing.name.trim().length) {
+      byId.set(id, member)
+    }
+  }
+
+  return [...byId.values()]
+}
+
+function linkRosterNameToWorkspaceMember(
+  rosterName: string,
+  workspaceMembers: DocumentImportWorkspaceMember[],
+): DocumentImportWorkspaceMember | null {
+  const linked = membersWithIds(workspaceMembers)
+  if (linked.length === 0) return null
+
+  const byFullName = findWorkspaceMemberMatches(rosterName, linked)
+  if (byFullName.length === 1) return byFullName[0] ?? null
+
+  const rosterTokens = nameTokens(rosterName)
+  const rosterFirst = rosterTokens[0]
+  const rosterLast = rosterTokens[rosterTokens.length - 1]
+  if (!rosterFirst) return null
+
+  const byFirst = linked.filter((member) => nameTokens(member.name)[0] === rosterFirst)
+  if (byFirst.length === 1) return byFirst[0] ?? null
+
+  if (rosterLast && rosterLast !== rosterFirst) {
+    const byFirstLast = linked.filter((member) => {
+      const tokens = nameTokens(member.name)
+      return tokens[0] === rosterFirst && tokens[tokens.length - 1] === rosterLast
+    })
+    if (byFirstLast.length === 1) return byFirstLast[0] ?? null
+  }
+
+  return null
+}
+
 export function buildAssigneeMemberPool(
   workspaceMembers: DocumentImportWorkspaceMember[],
   clientRosterNames: string[],
@@ -189,9 +238,9 @@ export function buildAssigneeMemberPool(
     const key = normalizeAssigneeLookup(name)
     if (pool.has(key)) continue
 
-    const linked = findWorkspaceMemberMatches(name, workspaceMembers)
-    if (linked.length === 1 && linked[0]?.id) {
-      pool.set(key, linked[0])
+    const linked = linkRosterNameToWorkspaceMember(name, workspaceMembers)
+    if (linked) {
+      pool.set(key, linked)
       continue
     }
 
@@ -209,6 +258,7 @@ export function resolveDocumentImportAssignees(
   assignmentStatus: DocumentImportAssignmentStatus
   suggestions: string[]
 } {
+  const linkedMembers = uniqueLinkedMembers(membersWithIds(members))
   const trimmedNames: string[] = []
   for (const name of assignedToNames) {
     const trimmed = name.trim()
@@ -224,7 +274,7 @@ export function resolveDocumentImportAssignees(
   const unmatchedQueries: string[] = []
 
   for (const name of trimmedNames) {
-    const matches = findWorkspaceMemberMatches(name, members)
+    const matches = findWorkspaceMemberMatches(name, linkedMembers)
 
     if (matches.length === 1) {
       const member = matches[0]
@@ -248,7 +298,7 @@ export function resolveDocumentImportAssignees(
     const suggestions = [
       ...new Set(
         ambiguousQueries.flatMap((query) =>
-          findWorkspaceMemberMatches(query, members).map((member) => member.name),
+          findWorkspaceMemberMatches(query, linkedMembers).map((member) => member.name),
         ),
       ),
     ].slice(0, 5)

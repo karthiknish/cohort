@@ -80,7 +80,7 @@ describe('tasks document import review helpers', () => {
     ).toBe('Pick workspace teammates for 1 task.')
   })
 
-  it('describes client roster matches in the assignee prompt', () => {
+  it('describes unmatched roster suggestions in the assignee prompt', () => {
     expect(
       buildAssigneeReviewPrompt(
         buildTask({
@@ -89,7 +89,7 @@ describe('tasks document import review helpers', () => {
           suggestions: ['Deepak Karnan'],
         }),
       ),
-    ).toContain('client roster')
+    ).toContain('workspace profile')
   })
 
   it('blocks free-text assignees that are not workspace members', () => {

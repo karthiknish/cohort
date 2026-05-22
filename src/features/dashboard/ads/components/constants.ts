@@ -27,8 +27,11 @@ export const HTTP_NO_CONTENT = 204
 // DATE RANGE DEFAULTS
 // =============================================================================
 
-/** Default number of days to show in date range (30 days) */
-export const DEFAULT_DATE_RANGE_DAYS = 30
+/** Maximum preset in the ads date range picker (default on the main ads page). */
+export const MAX_DATE_RANGE_DAYS = 90
+
+/** Default number of days to show in date range on the main ads page */
+export const DEFAULT_DATE_RANGE_DAYS = MAX_DATE_RANGE_DAYS
 
 // =============================================================================
 // API ENDPOINTS
