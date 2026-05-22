@@ -51,8 +51,8 @@ function subscribeNow(onStoreChange: () => void) {
   return () => window.clearInterval(intervalId)
 }
 
-function getNowSnapshot() {
-  return new Date()
+function getNowMsSnapshot() {
+  return Date.now()
 }
 
 /** Milliseconds since epoch on the client; `0` during SSR. */
@@ -65,7 +65,7 @@ export function useClientNowMs(): number {
 
   const nowMs = useSyncExternalStore(
     subscribeNow,
-    () => Date.now(),
+    getNowMsSnapshot,
     () => 0,
   )
 
@@ -74,17 +74,7 @@ export function useClientNowMs(): number {
 
 /** Current time, null during SSR and until mount. */
 export function useClientNow(): Date | null {
-  const isMounted = useSyncExternalStore(
-    subscribeClientMounted,
-    getClientMountedSnapshot,
-    getServerMountedSnapshot,
-  )
-
-  const now = useSyncExternalStore(
-    subscribeNow,
-    getNowSnapshot,
-    () => null,
-  )
-
-  return isMounted ? now : null
+  const nowMs = useClientNowMs()
+  if (nowMs === 0) return null
+  return new Date(nowMs)
 }
