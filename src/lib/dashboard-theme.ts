@@ -8,6 +8,17 @@ export const DASHBOARD_THEME = {
     title: 'text-3xl font-bold tracking-tight text-foreground',
     subtitle: 'text-muted-foreground',
   },
+  pageHero: cn(
+    'relative overflow-hidden rounded-2xl border border-border/50',
+    'bg-linear-to-br from-primary/[0.07] via-card/80 to-info/[0.05]',
+    'p-5 sm:px-6 sm:py-6',
+    'shadow-sm ring-1 ring-border/40',
+  ),
+  pageHeroGlow:
+    'pointer-events-none absolute -right-12 -top-12 size-40 rounded-full bg-primary/12 blur-3xl',
+  pageHeroInner: 'relative flex flex-col justify-between gap-4 md:flex-row md:items-center',
+  sectionEyebrow: 'text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80',
+  sectionDescription: 'max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-[15px]',
   cards: {
     base: 'border-muted/60 bg-background shadow-sm',
     header: 'border-b border-muted/40 pb-4',

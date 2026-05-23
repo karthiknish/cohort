@@ -2,10 +2,11 @@
 
 import { useCallback } from 'react'
 import Link from 'next/link'
-import { Download, Filter, Info, X } from 'lucide-react'
+import { Filter, Info, X } from 'lucide-react'
 
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { FadeInItem, FadeInStagger } from '@/shared/ui/animate-in'
+import { SvglExcelIcon } from '@/shared/components/svgl-brand-logo'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -25,7 +26,7 @@ import { cn } from '@/lib/utils'
 
 import type { MetricRecord, SummaryCard } from './types'
 import { DateRangePicker, type DateRange } from './date-range-picker'
-import { PROVIDER_ICON_MAP, formatProviderName } from './utils'
+import { getProviderIcon, formatProviderName } from './utils'
 import {
   adsMetricsEmptyCopy,
   type AdsMetricsDisplayState,
@@ -40,7 +41,7 @@ function ProviderFilterOption({
   selectedProviders: string[]
   onToggleProvider: (providerId: string) => void
 }) {
-  const ProviderIcon = PROVIDER_ICON_MAP[providerId]
+  const ProviderIcon = getProviderIcon(providerId)
   const handleCheckedChange = useCallback(() => {
     onToggleProvider(providerId)
   }, [onToggleProvider, providerId])
@@ -151,9 +152,9 @@ export function CrossChannelOverviewHeader({
                 size="icon"
                 onClick={onExport}
                 disabled={!hasMetricData}
-                aria-label="Export metrics as CSV"
+                aria-label="Export metrics as Excel"
               >
-                <Download className="size-4" />
+                <SvglExcelIcon className="size-4" />
               </Button>
             </>
           ) : null}

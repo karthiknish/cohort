@@ -49,10 +49,10 @@ export {
   describeFrequency,
   describeTimeframe,
   formatDisplayDate,
-  exportMetricsToCsv,
   ApiError,
   NetworkError,
 } from './utils'
+export { exportMetricsToCsv } from './ads-metrics-export'
 
 // Retry utilities
 export { retryFetch, getRetryableErrorMessage } from './retry-fetch'

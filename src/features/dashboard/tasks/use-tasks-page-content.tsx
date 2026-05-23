@@ -40,9 +40,13 @@ import { useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
 import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
 import { usersApi } from '@/lib/convex-api'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import {
+  buildCategoryCountChart,
+} from '@/lib/export/cohorts-spreadsheet-charts'
 import { TASKS_THEME } from './tasks-theme'
 import { isFeatureEnabled } from '@/lib/features'
-import { cn, exportToCsv } from '@/lib/utils'
+import { exportToCsv } from '@/lib/export/export-to-spreadsheet'
+import { cn } from '@/lib/utils'
 import type { TaskStatus } from '@/types/tasks'
 
 import { useTasksDocumentImport } from './use-tasks-document-import'
@@ -314,7 +318,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
   const handleExport = useCallback(() => {
     if (filters.filteredTasks.length === 0) return
 
-    const data = filters.filteredTasks.map((task) => ({
+    const exportRows = filters.filteredTasks.map((task) => ({
       Title: task.title,
       Status: task.status,
       Priority: task.priority,
@@ -324,7 +328,21 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
       Description: task.description || '',
     }))
 
-    exportToCsv(data, `tasks-export-${new Date().toISOString().split('T')[0]}.csv`)
+    const charts = [
+      buildCategoryCountChart(exportRows, 'Status', 'Tasks by status', 'pie'),
+      buildCategoryCountChart(exportRows, 'Priority', 'Tasks by priority', 'bar'),
+    ].filter((chart): chart is NonNullable<typeof chart> => chart !== null)
+
+    void exportToCsv(
+      exportRows,
+      `tasks-export-${new Date().toISOString().split('T')[0]}.xlsx`,
+      undefined,
+      {
+        title: 'Tasks export',
+        subtitle: `${filters.filteredTasks.length} task${filters.filteredTasks.length === 1 ? '' : 's'}`,
+        charts,
+      },
+    )
   }, [filters.filteredTasks, taskParticipants])
 
   const handleNewTaskClick = useCallback(() => {

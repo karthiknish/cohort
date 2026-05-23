@@ -1,0 +1,77 @@
+[    2665ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[    3746ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[    7570ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/dashboard..." notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <LoadingBoundaryProvider loading={[...]}>
+                      <SegmentViewNode type="layout" pagePath="layout.tsx">
+                        <SegmentTrieNode>
+                        <link>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <RootLayout>
+                          <html
+                            lang="en"
+-                           className="light"
+-                           style={{color-scheme:"light"}}
+                          >
+                  ...
+ @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[    7572ms] [LOG] [ConvexAuth] State: {isLoading: true, isAuthenticated: false} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[    7860ms] [WARNING] Image with src "http://localhost:3000/logo.svg" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[    8198ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[    8305ms] [LOG] [Fast Refresh] done in 208ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[    9906ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   10802ms] [LOG] [Fast Refresh] done in 997ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   10970ms] [LOG] [ConvexAuth] State: {isLoading: false, isAuthenticated: false} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   11150ms] [LOG] [AuthService] getSession result: {hasResult: true, hasData: true, disableCookieCache: true, result: Object} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   11151ms] [LOG] [AuthService] Parsed session: {hasSession: false, hasUser: false, userEmail: undefined, disableCookieCache: true} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   12724ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   12839ms] [LOG] [Fast Refresh] done in 216ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   12948ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   12983ms] [LOG] [Fast Refresh] done in 136ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   13341ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   13526ms] [LOG] [Fast Refresh] done in 286ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   16603ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ https://accounts.google.com/v3/signin/identifier?opparams=%253F&dsh=S-1258133156%3A1779511087144543&client_id=535339091424-9ajhk5nv16tf2j8304b6d3tv3ocgrap1.apps.googleusercontent.com&code_challenge=mlnwf20p9VYQdFmZzt2xknn1L7UsD2pQOcXH0zg6_Jg&code_challenge_method=S256&include_granted_scopes=true&o2v=2&prompt=select_account&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback%2Fgoogle&response_type=code&scope=email+profile+openid&service=lso&state=pvU6eNYbrtF1oyECNdG9sbzeh8I043AB&flowName=GeneralOAuthFlow&continue=https%3A%2F%2Faccounts.google.com%2Fsignin%2Foauth%2Fconsent%3Fauthuser%3Dunknown%26part%3DAJi8hANquoRvex8oy_Hc0o86ybP-Atoi0ZaSFrb-Ow9_Gxt_Ge9zcmgLVUCQBbyFJS-2w44o9tn0OWACca09ZypNtpVGG6EVQk29pT31bbF1lpymmf5PpgUleSVDBUyauB-Jp3XjGH7GBn2U9klG4wtOWrRkoUtVljKsDjNPP7pQwdd2vg5PURTc6-Vcb0x7_lh4QiLvGO6Hu884g4Hjd8b4pwkTDw06ihXmhz8Ust9-FIvWd0RsQ--kibHVZTUnKYF8yfhl75A1Armaxd0DEqjrvhmCBkdJR335RNMhT1y-V3OS_pV9pW5E0KxsqVxSYckLwKvHEEjQYThaUcIJryJhmC-8ViGk_NFSb2THXDWZiwtrP4xEcKhkgsH5H5c5-Sh0lhNrp6aL8ffOaMkHUOsQnhXz-RQbnj-U8_e4baZpERaf7R-FT4XXJLLWjJCMh-USQ9Iukh2D6N-XVFFtRbFFYIoo2v9-2g%26flowName%3DGeneralOAuthFlow%26as%3DS-1258133156%253A1779511087144543%26client_id%3D535339091424-9ajhk5nv16tf2j8304b6d3tv3ocgrap1.apps.googleusercontent.com%26requestPath%3D%252Fsignin%252Foauth%252Fconsent%23&app_domain=http%3A%2F%2Flocalhost%3A3000&rart=ANgoxcfqbanYppyH27OzYPXkyDuvZQlgo3ZMCDEXmJTfCGjrm9AhUbD-if-yVX-WhQLa2JJweRG_F3DnErREYJdIhKVICxLUG4-7nTpQF9WX4nICHAshkWE:0
+[   16607ms] [LOG] %c%s color: red; background: yellow; font-size: 24px; WARNING! @ https://www.gstatic.com/_/mss/boq-identity/_/js/k=boq-identity.AccountsSignInUi.en_US.alsf3k9Xrdw.es5.O/am=iW8AAACE4hchA4D__38DAAggiA74ngVoAoQMAAAAAAAAAABYAgAAjQ/d=1/excm=_b,_tp,identifierview/ed=1/dg=0/wt=2/ujg=1/rs=AOaEmlGV3XGCbuUBFqCKzrvtPRHCkSP72Q/dti=1/m=_b,_tp:545
+[   16608ms] [LOG] %c%s font-size: 18px; Using this console may allow attackers to impersonate you and steal your information using an attack called Self-XSS.
+Do not enter or paste code that you do not understand. @ https://www.gstatic.com/_/mss/boq-identity/_/js/k=boq-identity.AccountsSignInUi.en_US.alsf3k9Xrdw.es5.O/am=iW8AAACE4hchA4D__38DAAggiA74ngVoAoQMAAAAAAAAAABYAgAAjQ/d=1/excm=_b,_tp,identifierview/ed=1/dg=0/wt=2/ujg=1/rs=AOaEmlGV3XGCbuUBFqCKzrvtPRHCkSP72Q/dti=1/m=_b,_tp:545
+[   26897ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ https://accounts.google.com/v3/signin/challenge/pwd?TL=APouJz5hxU4_DhAOpGyQJ0gX6Fvr-pBoB__T7hTvMn4mPhAmAxGEofg3DFJzfdIA&app_domain=http%3A%2F%2Flocalhost%3A3000&checkConnection=youtube%3A442&checkedDomains=youtube&cid=2&client_id=535339091424-9ajhk5nv16tf2j8304b6d3tv3ocgrap1.apps.googleusercontent.com&code_challenge=mlnwf20p9VYQdFmZzt2xknn1L7UsD2pQOcXH0zg6_Jg&code_challenge_method=S256&continue=https%3A%2F%2Faccounts.google.com%2Fsignin%2Foauth%2Fconsent%3Fauthuser%3Dunknown%26part%3DAJi8hANquoRvex8oy_Hc0o86ybP-Atoi0ZaSFrb-Ow9_Gxt_Ge9zcmgLVUCQBbyFJS-2w44o9tn0OWACca09ZypNtpVGG6EVQk29pT31bbF1lpymmf5PpgUleSVDBUyauB-Jp3XjGH7GBn2U9klG4wtOWrRkoUtVljKsDjNPP7pQwdd2vg5PURTc6-Vcb0x7_lh4QiLvGO6Hu884g4Hjd8b4pwkTDw06ihXmhz8Ust9-FIvWd0RsQ--kibHVZTUnKYF8yfhl75A1Armaxd0DEqjrvhmCBkdJR335RNMhT1y-V3OS_pV9pW5E0KxsqVxSYckLwKvHEEjQYThaUcIJryJhmC-8ViGk_NFSb2THXDWZiwtrP4xEcKhkgsH5H5c5-Sh0lhNrp6aL8ffOaMkHUOsQnhXz-RQbnj-U8_e4baZpERaf7R-FT4XXJLLWjJCMh-USQ9Iukh2D6N-XVFFtRbFFYIoo2v9-2g%26flowName%3DGeneralOAuthFlow%26as%3DS-1258133156%253A1779511087144543%26client_id%3D535339091424-9ajhk5nv16tf2j8304b6d3tv3ocgrap1.apps.googleusercontent.com%26requestPath%3D%252Fsignin%252Foauth%252Fconsent%23&dsh=S-1258133156%3A1779511087144543&flowName=GeneralOAuthFlow&include_granted_scopes=true&o2v=2&opparams=%253F&prompt=select_account&pstMsg=1&rart=ANgoxcfqbanYppyH27OzYPXkyDuvZQlgo3ZMCDEXmJTfCGjrm9AhUbD-if-yVX-WhQLa2JJweRG_F3DnErREYJdIhKVICxLUG4-7nTpQF9WX4nICHAshkWE&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback%2Fgoogle&response_type=code&scope=email%20profile%20openid&service=lso&state=pvU6eNYbrtF1oyECNdG9sbzeh8I043AB:0
+[   48961ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://accounts.google.com/svgl/google.svg?1779511119848:0
+[   49097ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://accounts.google.com/svgl/meta.svg?1779511119989:0
+[   49235ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://accounts.google.com/svgl/microsoft-excel.svg?1779511120123:0
+[   49371ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://accounts.google.com/svgl/pdf.svg?1779511120260:0
+[   49511ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://accounts.google.com/svgl/linkedin.svg?1779511120395:0

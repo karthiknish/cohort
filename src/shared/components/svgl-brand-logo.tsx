@@ -1,3 +1,5 @@
+'use client'
+
 import type { ComponentType } from 'react'
 
 import { cn } from '@/lib/utils'
@@ -14,6 +16,8 @@ export type SvglBrandSlug =
   | 'twitter'
   | 'x'
   | 'youtube'
+  | 'excel'
+  | 'pdf'
 
 const BRAND_TITLES: Record<SvglBrandSlug, string> = {
   google: 'Google',
@@ -26,6 +30,8 @@ const BRAND_TITLES: Record<SvglBrandSlug, string> = {
   twitter: 'Twitter',
   x: 'X',
   youtube: 'YouTube',
+  excel: 'Microsoft Excel',
+  pdf: 'PDF',
 }
 
 const BRAND_SRC: Record<Exclude<SvglBrandSlug, 'tiktok' | 'x'>, string> = {
@@ -37,6 +43,8 @@ const BRAND_SRC: Record<Exclude<SvglBrandSlug, 'tiktok' | 'x'>, string> = {
   linkedin: '/svgl/linkedin.svg',
   twitter: '/svgl/twitter.svg',
   youtube: '/svgl/youtube.svg',
+  excel: '/svgl/microsoft-excel.svg',
+  pdf: '/svgl/pdf.svg',
 }
 
 function BrandImage({
@@ -60,6 +68,7 @@ function BrandImage({
       role={labeled ? 'img' : undefined}
       aria-label={labeled ? title : undefined}
       decoding="async"
+      loading="lazy"
     />
   )
 }
@@ -110,3 +119,6 @@ export function createSvglBrandIcon(brand: SvglBrandSlug): ComponentType<{ class
   BrandIcon.displayName = `SvglBrandIcon(${brand})`
   return BrandIcon
 }
+
+export const SvglExcelIcon = createSvglBrandIcon('excel')
+export const SvglPdfIcon = createSvglBrandIcon('pdf')

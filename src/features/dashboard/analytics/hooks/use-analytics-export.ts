@@ -1,6 +1,9 @@
 'use client'
 
 import { useMemo } from 'react'
+
+import { buildAnalyticsExportCharts } from '@/lib/export/cohorts-spreadsheet-charts'
+
 import type { MetricRecord } from './types'
 
 export function useAnalyticsExport(metrics: MetricRecord[]) {
@@ -28,12 +31,11 @@ export function useAnalyticsExport(metrics: MetricRecord[]) {
     })
   }, [metrics])
 
-  const exportToCSV = (filename?: string) => {
+  const exportToSpreadsheet = async (filename?: string) => {
     if (exportData.length === 0) {
       throw new Error('No data to export')
     }
 
-    // CSV header
     const headers = [
       'Date',
       'Platform',
@@ -48,7 +50,6 @@ export function useAnalyticsExport(metrics: MetricRecord[]) {
       'Conv Rate (%)',
     ]
 
-    // CSV rows
     const rows = exportData.map((row) => [
       row.date,
       row.platform,
@@ -63,23 +64,18 @@ export function useAnalyticsExport(metrics: MetricRecord[]) {
       row.convRate.toFixed(2),
     ])
 
-    // Combine header and rows
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((r) => r.join(',')),
-    ].join('\n')
-
-    // Create blob and download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', filename || `analytics-export-${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.display = 'none'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    await (async () => {
+      const { exportCohortsSpreadsheetRows } = await import('@/lib/export/cohorts-spreadsheet')
+      await exportCohortsSpreadsheetRows({
+        filename: filename || `analytics-export-${new Date().toISOString().split('T')[0]}.xlsx`,
+        title: 'Analytics export',
+        subtitle: `${exportData.length} metric row${exportData.length === 1 ? '' : 's'}`,
+        sheetName: 'Analytics',
+        headers,
+        rows,
+        charts: buildAnalyticsExportCharts(exportData),
+      })
+    })()
   }
 
   const exportToJSON = (filename?: string) => {
@@ -102,7 +98,9 @@ export function useAnalyticsExport(metrics: MetricRecord[]) {
 
   return {
     exportData,
-    exportToCSV,
+    exportToSpreadsheet,
+    /** @deprecated Use exportToSpreadsheet */
+    exportToCSV: exportToSpreadsheet,
     exportToJSON,
     canExport: exportData.length > 0,
   }

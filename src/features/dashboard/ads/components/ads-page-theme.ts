@@ -3,17 +3,11 @@ import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
 /** Paid-media workspace — command-center surfaces aligned with dashboard tokens. */
 export const ADS_PAGE_THEME = {
-  hero: cn(
-    'relative overflow-hidden rounded-2xl border border-border/50',
-    'bg-linear-to-br from-primary/[0.07] via-card/80 to-info/[0.05]',
-    'p-5 sm:px-6 sm:py-6',
-    'shadow-sm ring-1 ring-border/40',
-  ),
-  heroGlow:
-    'pointer-events-none absolute -right-12 -top-12 size-40 rounded-full bg-primary/12 blur-3xl',
-  sectionEyebrow: 'text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80',
+  hero: DASHBOARD_THEME.pageHero,
+  heroGlow: DASHBOARD_THEME.pageHeroGlow,
+  sectionEyebrow: DASHBOARD_THEME.sectionEyebrow,
   sectionTitle: 'text-lg font-semibold tracking-tight text-foreground',
-  sectionDescription: 'max-w-2xl text-sm leading-relaxed text-muted-foreground',
+  sectionDescription: DASHBOARD_THEME.sectionDescription,
   surfaceCard: cn(
     DASHBOARD_THEME.cards.base,
     'overflow-hidden border-border/60 shadow-sm ring-1 ring-border/30',

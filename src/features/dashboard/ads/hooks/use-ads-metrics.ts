@@ -14,7 +14,8 @@ import { getPreviewAdsMetrics } from '@/lib/preview-data'
 import { DEFAULT_DATE_RANGE_DAYS, ERROR_MESSAGES } from '../components/constants'
 import type { DateRange } from '../components/date-range-picker'
 import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '../components/types'
-import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+import { exportMetricsToCsv } from '../components/ads-metrics-export'
+import { METRICS_PAGE_SIZE } from '../components/utils'
 
 import {
   buildProviderSummariesFromServer,
@@ -283,7 +284,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   }, [loadingMore, metricsLoading, nextCursor, visibleCount])
 
   const handleExport = useCallback(() => {
-    exportMetricsToCsv(processedMetrics)
+    void exportMetricsToCsv(processedMetrics)
   }, [processedMetrics])
 
   const triggerRefresh = useCallback(() => {

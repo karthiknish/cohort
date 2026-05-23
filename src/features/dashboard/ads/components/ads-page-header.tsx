@@ -1,8 +1,10 @@
 'use client'
 
-import { Download, Megaphone, RefreshCw } from 'lucide-react'
+import { Megaphone, RefreshCw } from 'lucide-react'
 
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
+import { SvglExcelIcon } from '@/shared/components/svgl-brand-logo'
 import { DASHBOARD_THEME, PAGE_TITLES, getIconContainerClasses } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
 import { Button } from '@/shared/ui/button'
@@ -35,10 +37,8 @@ export function AdsPageHeader({
   const allConnected = totalProviders > 0 && connectedCount >= totalProviders && pendingSetupCount === 0
 
   return (
-    <header className={ADS_PAGE_THEME.hero}>
-      <div className={ADS_PAGE_THEME.heroGlow} aria-hidden />
-      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0 flex-1 space-y-3">
+    <DashboardPageHero innerClassName="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="min-w-0 flex-1 space-y-3">
           <p className={ADS_PAGE_THEME.sectionEyebrow}>Paid media</p>
           <div className="flex flex-wrap items-center gap-3">
             <div className={getIconContainerClasses('medium')}>
@@ -95,13 +95,12 @@ export function AdsPageHeader({
               className="size-10 shrink-0 rounded-xl border-border/70"
               onClick={onExport}
               disabled={!canExport}
-              aria-label="Export metrics as CSV"
+              aria-label="Export metrics as Excel"
             >
-              <Download className="size-4" />
+              <SvglExcelIcon className="size-4" />
             </Button>
           </div>
         </div>
-      </div>
-    </header>
+    </DashboardPageHero>
   )
 }

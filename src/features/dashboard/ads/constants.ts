@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react'
 
+import { normalizeAdsProviderId } from '@/domain/ads/provider'
+
 import { createSvglBrandIcon } from '@/shared/components/svgl-brand-logo'
 
 export const METRICS_PAGE_SIZE = 100
@@ -31,6 +33,11 @@ export const PROVIDER_ICON_MAP: Record<string, ComponentType<{ className?: strin
     meta: createSvglBrandIcon('meta'),
     linkedin: createSvglBrandIcon('linkedin'),
     tiktok: createSvglBrandIcon('tiktok'),
+}
+
+export function getProviderIcon(providerId: string): ComponentType<{ className?: string }> | undefined {
+    const canonical = normalizeAdsProviderId(providerId) ?? providerId
+    return PROVIDER_ICON_MAP[canonical]
 }
 
 export const DISPLAY_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {

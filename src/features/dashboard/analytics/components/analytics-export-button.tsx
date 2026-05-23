@@ -3,6 +3,7 @@
 import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useState, useRef } from 'react'
 import { Download, Loader2 } from 'lucide-react'
+import { SvglExcelIcon } from '@/shared/components/svgl-brand-logo'
 import { Button } from '@/shared/ui/button'
 import {
   DropdownMenu,
@@ -20,12 +21,12 @@ interface AnalyticsExportButtonProps {
 }
 
 export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButtonProps) {
-  const { exportToCSV, exportToJSON, canExport } = useAnalyticsExport(metrics)
+  const { exportToSpreadsheet, exportToJSON, canExport } = useAnalyticsExport(metrics)
   const { toast } = useToast()
   const [isExporting, setIsExporting] = useState(false)
   const exportTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
-  const handleExport = useCallback(async (format: 'csv' | 'json') => {
+  const handleExport = useCallback(async (format: 'excel' | 'json') => {
     if (!canExport || isExporting) return
 
     setIsExporting(true)
@@ -36,15 +37,15 @@ export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButt
     }
 
     try {
-      if (format === 'csv') {
-        exportToCSV()
+      if (format === 'excel') {
+        await exportToSpreadsheet()
       } else {
         exportToJSON()
       }
 
       toast({
         title: 'Export successful',
-        description: `Your data has been exported as ${format.toUpperCase()}.`,
+        description: `Your data has been exported as ${format === 'excel' ? 'Excel' : 'JSON'}.`,
       })
 
       // Reset loading state after a short delay
@@ -58,10 +59,10 @@ export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButt
         message: 'There was a problem exporting your data. Please try again.',
       })
     }
-  }, [canExport, exportToCSV, exportToJSON, isExporting, toast])
+  }, [canExport, exportToSpreadsheet, exportToJSON, isExporting, toast])
 
-  const handleExportCsv = useCallback(() => {
-    void handleExport('csv')
+  const handleExportExcel = useCallback(() => {
+    void handleExport('excel')
   }, [handleExport])
 
   const handleExportJson = useCallback(() => {
@@ -86,9 +87,9 @@ export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButt
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={handleExportCsv}>
-          <Download className="mr-2 size-4" />
-          Export as CSV
+        <DropdownMenuItem onClick={handleExportExcel}>
+          <SvglExcelIcon className="mr-2 size-4" />
+          Export as Excel
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleExportJson}>
           <Download className="mr-2 size-4" />

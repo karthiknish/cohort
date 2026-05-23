@@ -21,6 +21,7 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import type { WorkspaceNotification } from '@/types/notifications'
 import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { LiveRegion } from '@/shared/ui/live-region'
@@ -119,7 +120,7 @@ export function NotificationsPageHeader({
   ackInFlight: boolean
 }) {
   return (
-    <div className="flex items-center justify-between">
+    <DashboardPageHero>
       <div>
         <h1 className={DASHBOARD_THEME.layout.title}>
           {PAGE_TITLES.notifications?.title ?? 'Notifications'}
@@ -166,7 +167,7 @@ export function NotificationsPageHeader({
           Clear all
         </Button>
       </div>
-    </div>
+    </DashboardPageHero>
   )
 }
 

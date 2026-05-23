@@ -3,6 +3,7 @@
 import { CalendarRange, Share2, Sparkles } from 'lucide-react'
 
 import { DateRangePicker, type DateRange } from '@/features/dashboard/ads/components/date-range-picker'
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { FadeIn } from '@/shared/ui/animate-in'
 import { Badge } from '@/shared/ui/badge'
 import { DASHBOARD_THEME, PAGE_TITLES, getBadgeClasses } from '@/lib/dashboard-theme'
@@ -23,16 +24,7 @@ export function SocialsHeader({
 }: SocialsHeaderProps) {
   return (
     <FadeIn>
-      <header
-        className={cn(
-          DASHBOARD_THEME.layout.header,
-          'relative overflow-hidden rounded-2xl border border-muted/40 bg-linear-to-br from-info/[0.06] via-background to-accent/[0.04] p-5 shadow-sm sm:p-6',
-        )}
-      >
-        <div
-          className="pointer-events-none absolute -right-8 -top-8 size-32 rounded-full bg-info/10 blur-3xl"
-          aria-hidden
-        />
+      <DashboardPageHero>
         <div className="relative space-y-3">
           <div className="flex flex-wrap items-start gap-4">
             <div className={cn(DASHBOARD_THEME.icons.container, 'bg-info/10 text-info border-info/25')}>
@@ -71,7 +63,7 @@ export function SocialsHeader({
           </Badge>
           <DateRangePicker value={dateRange} onChange={onDateRangeChange} />
         </div>
-      </header>
+      </DashboardPageHero>
     </FadeIn>
   )
 }

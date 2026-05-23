@@ -118,7 +118,7 @@ export function InteractiveChartHeader({
 }: {
   chartType: ChartType
   description?: string
-  handleExport: (format: 'csv' | 'png' | 'json') => void
+  handleExport: (format: 'excel' | 'png' | 'json') => void
   isRefreshing: boolean
   onRefresh?: () => void
   setChartType: (type: ChartType) => void
@@ -138,7 +138,7 @@ export function InteractiveChartHeader({
     [setTimeRange],
   )
 
-  const handleExportCsv = useCallback(() => handleExport('csv'), [handleExport])
+  const handleExportExcel = useCallback(() => handleExport('excel'), [handleExport])
   const handleExportJson = useCallback(() => handleExport('json'), [handleExport])
   const handleExportPng = useCallback(() => handleExport('png'), [handleExport])
 
@@ -195,7 +195,7 @@ export function InteractiveChartHeader({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportCsv}>Export as CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportExcel}>Export as Excel</DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportJson}>Export as JSON</DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportPng}>Export as Image</DropdownMenuItem>
             </DropdownMenuContent>

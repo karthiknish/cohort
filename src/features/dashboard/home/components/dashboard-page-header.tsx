@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME, PAGE_TITLES, getIconContainerClasses, getStatCardClasses } from '@/lib/dashboard-theme'
 import type { LucideIcon } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { Button } from '@/shared/ui/button'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { useId, type ReactNode } from 'react'
@@ -31,7 +32,7 @@ export function DashboardPageHeader({
   className,
 }: DashboardPageHeaderProps) {
   return (
-    <div className={cn(DASHBOARD_THEME.layout.header, className)}>
+    <DashboardPageHero className={className}>
       <div className="flex items-center gap-4">
         {Icon && (
           <div className={getIconContainerClasses(iconSize)}>
@@ -71,7 +72,7 @@ export function DashboardPageHeader({
           {actions}
         </div>
       )}
-    </div>
+    </DashboardPageHero>
   )
 }
 

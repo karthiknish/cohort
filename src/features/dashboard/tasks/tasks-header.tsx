@@ -9,6 +9,7 @@ import {
   getIconContainerClasses,
 } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { Button } from '@/shared/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
 import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
@@ -37,7 +38,7 @@ export function TasksHeader({
   const description = PAGE_TITLES.tasks?.description ?? 'Track and manage work items across projects.'
 
   return (
-    <header className={DASHBOARD_THEME.layout.header}>
+    <DashboardPageHero>
       <div className="min-w-0 space-y-2">
         <div className="flex items-center gap-3">
           <div className={getIconContainerClasses('medium')}>
@@ -109,6 +110,6 @@ export function TasksHeader({
           </TooltipContent>
         </Tooltip>
       </div>
-    </header>
+    </DashboardPageHero>
   )
 }

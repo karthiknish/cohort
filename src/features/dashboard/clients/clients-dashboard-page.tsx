@@ -12,12 +12,15 @@ import {
 } from 'lucide-react'
 
 import { ClientAccessGate } from '@/features/dashboard/home/components/client-access-gate'
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { useToast } from '@/shared/ui/use-toast'
-import { exportToCsv, cn } from '@/lib/utils'
+import { buildMetricSnapshotChart } from '@/lib/export/cohorts-spreadsheet-charts'
+import { exportToCsv } from '@/lib/export/export-to-spreadsheet'
+import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME, getButtonClasses } from '@/lib/dashboard-theme'
 import {
   Card,
@@ -161,20 +164,41 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
     if (!selectedClient) return
 
     const teamMembers = selectedClient?.teamMembers ?? []
+    const stats = clientsData.stats
     const data = [
       {
         Name: selectedClient.name,
         'Account Manager': selectedClient.accountManager || 'Unassigned',
         'Team Size': teamMembers.length,
-        'Active Projects': clientsData.stats?.activeProjects ?? '—',
-        'Total Projects': clientsData.stats?.totalProjects ?? '—',
-        'Open Tasks': clientsData.stats?.openTasks ?? '—',
-        'Completed Tasks': clientsData.stats?.completedTasks ?? '—',
+        'Active Projects': stats?.activeProjects ?? '—',
+        'Total Projects': stats?.totalProjects ?? '—',
+        'Open Tasks': stats?.openTasks ?? '—',
+        'Completed Tasks': stats?.completedTasks ?? '—',
         'Created At': selectedClient.createdAt ? formatDate(selectedClient.createdAt) : '—',
       },
     ]
 
-    exportToCsv(data, `client-${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-overview.csv`)
+    const snapshotChart = buildMetricSnapshotChart(
+      {
+        'Team Size': teamMembers.length,
+        'Active Projects': typeof stats?.activeProjects === 'number' ? stats.activeProjects : 0,
+        'Total Projects': typeof stats?.totalProjects === 'number' ? stats.totalProjects : 0,
+        'Open Tasks': typeof stats?.openTasks === 'number' ? stats.openTasks : 0,
+        'Completed Tasks': typeof stats?.completedTasks === 'number' ? stats.completedTasks : 0,
+      },
+      'Client workload snapshot',
+    )
+
+    void exportToCsv(
+      data,
+      `client-${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-overview.xlsx`,
+      undefined,
+      {
+        title: `${selectedClient.name} overview`,
+        subtitle: 'Client workspace snapshot',
+        charts: snapshotChart ? [snapshotChart] : [],
+      },
+    )
     toast({
       title: 'Export complete',
       description: 'Client overview has been downloaded.',
@@ -217,7 +241,7 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
 
   const readyContent = selectedClient ? (
     <div className={cn(DASHBOARD_THEME.layout.container, DASHBOARD_THEME.animations.fadeIn)}>
-      <div className={DASHBOARD_THEME.layout.header}>
+      <DashboardPageHero>
         <div className="flex items-center gap-4">
           <div className="space-y-2">
             <BackLink label="Back to clients" onClick={handleBackToClients} />
@@ -282,7 +306,7 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
             <TooltipContent className="rounded-lg border-muted/40 font-bold uppercase tracking-widest text-[10px]">Refresh data</TooltipContent>
           </Tooltip>
         </div>
-      </div>
+      </DashboardPageHero>
 
       {clientsData.workspaceMissing ? (
         <Alert variant="destructive">

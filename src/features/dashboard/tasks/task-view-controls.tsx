@@ -46,7 +46,7 @@ export function TaskViewControls({
         className="h-9 gap-1.5 border-border/60 bg-background/80 text-xs shadow-sm"
         onClick={onExport}
         disabled={!canExport}
-        aria-label="Export tasks to CSV"
+        aria-label="Export tasks to Excel"
       >
         <Download className="size-3.5" aria-hidden />
         <span className="hidden sm:inline">Export</span>

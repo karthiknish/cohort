@@ -22,7 +22,7 @@ import { EN_US_NUMBER_FORMATTER } from '@/lib/intl/formatters'
 import { cn, formatCurrency } from '@/lib/utils'
 
 import type { ProviderSummary } from './types'
-import { PROVIDER_ICON_MAP } from '../constants'
+import { getProviderIcon } from '../constants'
 
 function formatNumber(value: number): string {
   return EN_US_NUMBER_FORMATTER.format(value)
@@ -99,7 +99,7 @@ export function PerformanceSummaryCard({
               className="h-10 px-4 inline-flex items-center gap-2 motion-chromatic hover:shadow-md"
             >
               <Download className="size-4" />
-              Export CSV
+              Export Excel
             </Button>
           </div>
         ) : null}
@@ -135,7 +135,7 @@ export function PerformanceSummaryCard({
               const cpa = summary.conversions > 0 ? summary.spend / summary.conversions : null
               const roas =
                 summary.spend > 0 && Number.isFinite(summary.revenue) ? summary.revenue / summary.spend : null
-              const ProviderIcon = PROVIDER_ICON_MAP[normalizeAdsProviderId(providerId) ?? providerId]
+              const ProviderIcon = getProviderIcon(providerId)
 
               const dynamicStats = [
                 { id: 'impressions', label: 'Impressions', value: formatNumber(summary.impressions) },

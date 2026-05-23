@@ -2,8 +2,8 @@
 
 import { useCallback } from 'react'
 
-import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import type { ProposalFormData } from '@/lib/proposals'
 import type { ProposalDraft } from '@/types/proposals'
 import { FadeIn } from '@/shared/ui/animate-in'
@@ -62,34 +62,20 @@ export function ProposalsPageHeroSection({
 }) {
   const { canManageProposals, isSubmitting, isCreatingDraft } = workflow
   return (
-    <section
-      className={cn(
-        'relative overflow-hidden rounded-2xl border border-muted/40 bg-linear-to-br from-primary/[0.07] via-background to-info/[0.05] p-5 shadow-sm sm:p-6',
-      )}
-    >
-      <div
-        className="pointer-events-none absolute -left-8 top-0 size-32 rounded-full bg-primary/10 blur-3xl"
-        aria-hidden
+    <DashboardPageHero innerClassName="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+      <ProposalWizardHeader clientName={clientName} />
+      <ProposalPageActions
+        canManage={canManageProposals}
+        currentFormData={formState}
+        draftId={draftId}
+        isSubmitting={isSubmitting}
+        selectedClientId={selectedClientId}
+        isCreatingDraft={isCreatingDraft}
+        onApplyTemplate={onApplyTemplate}
+        onVersionRestored={onVersionRestored}
+        onStartProposal={onStartProposal}
       />
-      <div
-        className="pointer-events-none absolute -right-10 -bottom-8 size-36 rounded-full bg-info/10 blur-3xl"
-        aria-hidden
-      />
-      <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-        <ProposalWizardHeader clientName={clientName} />
-        <ProposalPageActions
-          canManage={canManageProposals}
-          currentFormData={formState}
-          draftId={draftId}
-          isSubmitting={isSubmitting}
-          selectedClientId={selectedClientId}
-          isCreatingDraft={isCreatingDraft}
-          onApplyTemplate={onApplyTemplate}
-          onVersionRestored={onVersionRestored}
-          onStartProposal={onStartProposal}
-        />
-      </div>
-    </section>
+    </DashboardPageHero>
   )
 }
 

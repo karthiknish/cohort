@@ -1,8 +1,11 @@
 'use client'
 
+import { exportCohortsSpreadsheet } from '@/lib/export/cohorts-spreadsheet'
+import { buildSpreadsheetChartsFromTableData } from '@/lib/export/cohorts-spreadsheet-charts'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
+import { SvglExcelIcon, SvglPdfIcon } from '@/shared/components/svgl-brand-logo'
 import { useCallback, useState } from 'react'
-import { Download, FileImage, FileJson, FileSpreadsheet, LoaderCircle } from 'lucide-react'
+import { Download, FileImage, FileJson, LoaderCircle } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Label } from '@/shared/ui/label'
 import {
@@ -102,21 +105,15 @@ function DashboardExportGridOption({
 
 const EXPORT_OPTIONS: ExportOption[] = [
   {
-    value: 'csv',
-    label: 'CSV',
-    icon: FileSpreadsheet,
-    description: 'Comma-separated values for spreadsheets',
-  },
-  {
     value: 'excel',
     label: 'Excel',
-    icon: FileSpreadsheet,
-    description: 'Excel formatted spreadsheet',
+    icon: SvglExcelIcon,
+    description: 'Branded Cohorts spreadsheet',
   },
   {
     value: 'pdf',
     label: 'PDF',
-    icon: FileSpreadsheet,
+    icon: SvglPdfIcon,
     description: 'PDF document',
   },
   {
@@ -303,62 +300,53 @@ export function QuickExportButton({
 
   const handleExport = useCallback(async () => {
     setIsExporting(true)
-    await Promise.resolve()
-      .then(() => {
-        let content: string
-        let mimeType: string
-        let extension: string
 
-        switch (format) {
-          case 'csv': {
-            const headers = Object.keys(data[0] as Record<string, unknown>)
-            const rows = data.map((row) =>
-              headers.map((h) => {
-                const value = (row as Record<string, unknown>)[h]
-                return escapeCsvValue(value)
-              })
-            )
-            content = [headers.join(','), ...rows].join('\n')
-            mimeType = 'text/csv;charset=utf-8;'
-            extension = 'csv'
-            break
-          }
+    try {
+      if (format === 'excel' || format === 'csv') {
+        const rows = data as Record<string, unknown>[]
+        await exportCohortsSpreadsheet({
+          data: rows,
+          filename: `${filename || 'export'}.xlsx`,
+          title: filename || 'Dashboard export',
+          charts: buildSpreadsheetChartsFromTableData(rows, filename || 'Dashboard export'),
+        })
+        toast({
+          title: 'Export complete',
+          description: 'Your data has been exported as XLSX.',
+        })
+        onComplete?.()
+        return
+      }
 
-          case 'json':
-            content = JSON.stringify(data, null, 2)
-            mimeType = 'application/json;charset=utf-8;'
-            extension = 'json'
-            break
-
-          default:
-            throw new Error(`Unsupported format: ${format}`)
-        }
-
-        const blob = new Blob([content], { type: mimeType })
+      if (format === 'json') {
+        const content = JSON.stringify(data, null, 2)
+        const blob = new Blob([content], { type: 'application/json;charset=utf-8;' })
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.download = `${filename || 'export'}.${extension}`
+        link.download = `${filename || 'export'}.json`
         link.click()
         URL.revokeObjectURL(url)
 
         toast({
           title: 'Export complete',
-          description: `Your data has been exported as ${extension.toUpperCase()}.`,
+          description: 'Your data has been exported as JSON.',
         })
         onComplete?.()
-      })
-      .catch((error) => {
-        reportConvexFailure({
-        error: error,
+        return
+      }
+
+      throw new Error(`Unsupported format: ${format}`)
+    } catch (error) {
+      reportConvexFailure({
+        error,
         context: 'QuickExportButton:handleExport',
         title: 'Export failed',
         fallbackMessage: 'Export failed',
-        })
       })
-      .finally(() => {
-        setIsExporting(false)
-      })
+    } finally {
+      setIsExporting(false)
+    }
   }, [data, filename, format, toast, onComplete])
 
   return (
@@ -380,16 +368,6 @@ export function QuickExportButton({
   )
 }
 
-// Helper function to escape CSV values
-function escapeCsvValue(value: unknown): string {
-  if (value === null || value === undefined) return ''
-  const str = String(value)
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`
-  }
-  return str
-}
-
 /**
  * Scheduled export configuration dialog
  */
@@ -406,7 +384,7 @@ export function ScheduledExportDialog({
 }) {
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
-  const [format, setFormat] = useState<ExportFormat>('csv')
+  const [format, setFormat] = useState<ExportFormat>('excel')
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('weekly')
   const [isScheduling, setIsScheduling] = useState(false)
   const handleClose = useCallback(() => {
@@ -471,7 +449,6 @@ export function ScheduledExportDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="csv">CSV</SelectItem>
                 <SelectItem value="excel">Excel</SelectItem>
                 <SelectItem value="pdf">PDF</SelectItem>
                 <SelectItem value="json">JSON</SelectItem>

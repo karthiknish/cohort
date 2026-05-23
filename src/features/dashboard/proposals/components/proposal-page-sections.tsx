@@ -12,8 +12,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader } from '@/shared/ui/card'
 import { getButtonClasses } from '@/lib/dashboard-theme'
-import type { ProposalFormData } from '@/lib/proposals'
 import { cn } from '@/lib/utils'
+import type { ProposalFormData } from '@/lib/proposals'
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import type { ProposalDraft } from '@/types/proposals'
 
 import { ProposalBuilderJourneyBar } from './proposal-builder-journey-bar'
@@ -397,24 +398,10 @@ export function ProposalsPageHeroSection({
   pageActions: React.ReactNode
 }) {
   return (
-    <section
-      className={cn(
-        'relative overflow-hidden rounded-2xl border border-muted/40 bg-linear-to-br from-primary/[0.07] via-background to-info/[0.05] p-5 shadow-sm sm:p-6',
-      )}
-    >
-      <div
-        className="pointer-events-none absolute -left-8 top-0 size-32 rounded-full bg-primary/10 blur-3xl"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -right-10 -bottom-8 size-36 rounded-full bg-info/10 blur-3xl"
-        aria-hidden
-      />
-      <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-        <ProposalWizardHeader clientName={clientName} />
-        {pageActions}
-      </div>
-    </section>
+    <DashboardPageHero innerClassName="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+      <ProposalWizardHeader clientName={clientName} />
+      {pageActions}
+    </DashboardPageHero>
   )
 }
 

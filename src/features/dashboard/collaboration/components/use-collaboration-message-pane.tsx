@@ -11,6 +11,9 @@ import { TaskCreationModal } from '@/features/dashboard/tasks/task-creation-moda
 import type { CollaborationMessage } from '@/types/collaboration'
 import type { TaskRecord } from '@/types/tasks'
 
+import { buildCollaborationExportCharts } from '@/lib/export/cohorts-spreadsheet-charts'
+import { exportCohortsSpreadsheetRows } from '@/lib/export/cohorts-spreadsheet'
+
 import { groupMessages } from '../utils'
 
 import {
@@ -335,31 +338,28 @@ export function useCollaborationMessagePane({
       const date = msg.createdAt ? new Date(msg.createdAt).toLocaleString() : ''
       const sender = msg.senderName
       const role = msg.senderRole || ''
-      const content = (msg.content || '').replace(/"/g, '""')
+      const content = msg.content || ''
       const attachments = (msg.attachments || []).map((a) => a.url).join('; ')
       const reactions = (msg.reactions || []).map((r) => `${r.emoji}(${r.count})`).join(' ')
       const replies = msg.threadReplyCount || 0
 
-      return [
-        `"${date}"`,
-        `"${sender}"`,
-        `"${role}"`,
-        `"${content}"`,
-        `"${attachments}"`,
-        `"${reactions}"`,
-        `"${replies}"`,
-      ].join(',')
+      return [date, sender, role, content, attachments, reactions, replies]
     })
 
-    const csvContent = [headers.join(','), ...rows].join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', `${channel.name.replace(/[^a-z0-9]/gi, '_')}_export.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const chartRows = channelMessages.map((msg) => ({
+      date: msg.createdAt ? new Date(msg.createdAt).toLocaleString() : '',
+      sender: msg.senderName,
+    }))
+
+    void exportCohortsSpreadsheetRows({
+      filename: `${channel.name.replace(/[^a-z0-9]/gi, '_')}_export.xlsx`,
+      title: `${channel.name} messages`,
+      subtitle: `${rows.length} message${rows.length === 1 ? '' : 's'}`,
+      sheetName: 'Messages',
+      headers,
+      rows,
+      charts: buildCollaborationExportCharts(chartRows),
+    })
   }, [channel, channelMessages])
 
   const handleSendWithReply = useCallback(() => {

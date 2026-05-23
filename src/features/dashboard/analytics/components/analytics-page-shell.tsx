@@ -18,6 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { SvglBrandLogo } from '@/shared/components/svgl-brand-logo'
 
@@ -76,7 +77,7 @@ function AnalyticsHeaderSection() {
   const { dateRange, handleDateRangeChange } = useAnalyticsPageContext()
 
   return (
-    <div className={DASHBOARD_THEME.layout.header}>
+    <DashboardPageHero>
       <div>
         <div className="mb-2 flex items-center gap-3">
           <div className={getIconContainerClasses('medium')}>
@@ -90,7 +91,7 @@ function AnalyticsHeaderSection() {
         </p>
       </div>
       <AnalyticsDateRangePicker value={dateRange} onChange={handleDateRangeChange} />
-    </div>
+    </DashboardPageHero>
   )
 }
 

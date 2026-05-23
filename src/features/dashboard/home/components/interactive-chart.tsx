@@ -1,5 +1,7 @@
 'use client'
 
+import { buildInteractiveChartExportSpec } from '@/lib/export/cohorts-spreadsheet-charts'
+import { exportCohortsSpreadsheetRows } from '@/lib/export/cohorts-spreadsheet'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useState, useCallback, useMemo } from 'react'
 import {
@@ -42,7 +44,7 @@ interface InteractiveChartProps {
   valueFormatter?: (value: number) => string
   className?: string
   height?: number
-  onExport?: (format: 'csv' | 'png' | 'json') => void
+  onExport?: (format: 'excel' | 'png' | 'json') => void
   showExport?: boolean
   showRefresh?: boolean
   onRefresh?: () => void
@@ -150,27 +152,42 @@ export function InteractiveChart({
 
   // Handle export
   const handleExport = useCallback(
-    async (format: 'csv' | 'png' | 'json') => {
+    async (format: 'excel' | 'png' | 'json') => {
       if (!onExport) return
 
       try {
-        if (format === 'csv') {
-          // Export as CSV
-          const headers = [xAxisKey, dataKey]
-          const csvContent = [
-            headers.join(','),
-            ...filteredData.map((d) => `${d[xAxisKey]},${d[dataKey]}`),
-          ].join('\n')
+        if (format === 'excel') {
+          const chartRows =
+            chartType === 'pie'
+              ? categoryData.map((entry) => ({ name: entry.name, value: entry.value }))
+              : filteredData
 
-          const blob = new Blob([csvContent], { type: 'text/csv' })
-          const url = URL.createObjectURL(blob)
-          const link = document.createElement('a')
-          link.href = url
-          link.download = `${title.replace(/\s+/g, '-').toLowerCase()}-${timeRange}.csv`
-          link.click()
-          URL.revokeObjectURL(url)
+          const chartXAxisKey = chartType === 'pie' ? 'name' : xAxisKey
+          const chartDataKey = chartType === 'pie' ? 'value' : dataKey
+          const exportChartKind = chartType === 'area' ? 'area' : chartType
 
-          toast({ title: 'Exported as CSV', description: 'Your data has been downloaded.' })
+          const chartSpec = buildInteractiveChartExportSpec({
+            title,
+            kind: exportChartKind,
+            xAxisKey: String(chartXAxisKey),
+            dataKey: String(chartDataKey),
+            rows: chartRows as Array<Record<string, unknown>>,
+          })
+
+          await exportCohortsSpreadsheetRows({
+            filename: `${title.replace(/\s+/g, '-').toLowerCase()}-${timeRange}.xlsx`,
+            title,
+            subtitle: `Time range: ${timeRange}`,
+            sheetName: title.slice(0, 31),
+            headers: [String(chartXAxisKey), String(chartDataKey)],
+            rows: chartRows.map((d) => [
+              String((d as Record<string, unknown>)[chartXAxisKey as string] ?? ''),
+              String((d as Record<string, unknown>)[chartDataKey as string] ?? ''),
+            ]),
+            charts: chartSpec ? [chartSpec] : [],
+          })
+
+          toast({ title: 'Exported as Excel', description: 'Your data has been downloaded.' })
         } else if (format === 'json') {
           // Export as JSON
           const jsonContent = JSON.stringify(filteredData, null, 2)
@@ -203,7 +220,7 @@ export function InteractiveChart({
         })
       }
     },
-    [filteredData, xAxisKey, dataKey, title, timeRange, onExport, toast]
+    [categoryData, chartType, filteredData, xAxisKey, dataKey, title, timeRange, onExport, toast]
   )
 
   return (

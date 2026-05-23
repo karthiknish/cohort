@@ -2,6 +2,7 @@
 
 import { LoaderCircle, Video } from 'lucide-react'
 
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
@@ -41,7 +42,7 @@ export function MeetingsHeader(props: MeetingsHeaderProps) {
         : undefined
 
   return (
-    <header className={cn(DASHBOARD_THEME.layout.header, 'border-b border-border/60 pb-6')}>
+    <DashboardPageHero>
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <div className={cn(DASHBOARD_THEME.icons.container, 'size-11 shrink-0 rounded-xl')}>
           <Video className="size-6" aria-hidden />
@@ -101,6 +102,6 @@ export function MeetingsHeader(props: MeetingsHeaderProps) {
           {googleWorkspaceStatusLoading ? 'Checking…' : 'Quick Meet'}
         </Button>
       </div>
-    </header>
+    </DashboardPageHero>
   )
 }

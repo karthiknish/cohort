@@ -16,6 +16,7 @@ import { isFeatureEnabled } from '@/lib/features'
 
 import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { CreateChannelDialog } from './create-channel-dialog'
 import { ChannelMembersDialog } from './channel-members-dialog'
 
@@ -181,7 +182,7 @@ function CollaborationHeaderSection() {
     useCollaborationDashboardContext()
 
   return (
-    <div className="flex flex-col gap-4 border-b border-border/60 pb-6 sm:flex-row sm:items-start sm:justify-between">
+    <DashboardPageHero innerClassName="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
         <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.collaboration?.title ?? 'Team Collaboration'}</h1>
         <p className={cn(DASHBOARD_THEME.layout.subtitle, 'max-w-2xl text-pretty')}>
@@ -200,7 +201,7 @@ function CollaborationHeaderSection() {
           ) : null}
         </div>
       ) : null}
-    </div>
+    </DashboardPageHero>
   )
 }
 

@@ -1,8 +1,8 @@
 'use client'
 
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { Skeleton } from '@/shared/ui/skeleton'
-
-import { PROJECTS_THEME } from './projects-theme'
 
 export function ProjectsPageSkeleton() {
   const summarySlots = ['sum-1', 'sum-2', 'sum-3', 'sum-4']
@@ -11,7 +11,7 @@ export function ProjectsPageSkeleton() {
 
   return (
     <div className={PROJECTS_THEME.page}>
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <DashboardPageHero>
         <div className="flex items-center gap-3">
           <Skeleton className="size-12 shrink-0 rounded-2xl" />
           <div className="space-y-2">
@@ -24,7 +24,7 @@ export function ProjectsPageSkeleton() {
           <Skeleton className="h-9 w-24" />
           <Skeleton className="h-9 w-28" />
         </div>
-      </div>
+      </DashboardPageHero>
 
       <div className={PROJECTS_THEME.summaryStrip}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

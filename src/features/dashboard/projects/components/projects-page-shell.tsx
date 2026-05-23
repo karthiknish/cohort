@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog'
+import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { Button } from '@/shared/ui/button'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip'
@@ -69,7 +70,7 @@ function ProjectsHeaderSection() {
   }, [handleRefreshProjects])
 
   return (
-    <header className={DASHBOARD_THEME.layout.header}>
+    <DashboardPageHero>
       <div className="min-w-0 space-y-2">
         <div className="flex items-center gap-3">
           <div className={getIconContainerClasses('medium')}>
@@ -139,7 +140,7 @@ function ProjectsHeaderSection() {
         </Tooltip>
         <CreateProjectDialog onProjectCreated={handleProjectCreated} />
       </div>
-    </header>
+    </DashboardPageHero>
   )
 }
 

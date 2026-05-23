@@ -1,0 +1,2498 @@
+[   13629ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard/ads:0
+[   16178ms] [ERROR] Refused to execute script from 'http://localhost:3000/_next/static/development/_clientMiddlewareManifest.js' because its MIME type ('application/json') is not executable, and strict MIME type checking is enabled. @ http://localhost:3000/dashboard/ads:0
+[   16255ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_react-dom_0bruynb._.js:15305
+[   16355ms] Error: Failed to load external module rimraf-db59f5e6067b4075: ResolveMessage: Cannot find package 'rimraf-db59f5e6067b4075' from '/Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[externals]_rimraf_0j0ssu0._.js'
+    at externalRequire (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:624:19)
+    at module evaluation (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[externals]_rimraf_0j0ssu0._.js:4:35)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1291:27)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1554:9)
+    at instantiateModuleShared (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1289:9)
+    at instantiateModule (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1557:23)
+    at getOrInstantiateModuleFromParent (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1593:23)
+    at commonJsRequire (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:302:12)
+    at module evaluation (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/node_modules_06k4yre._.js:28026:36)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1291:27)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1554:9)
+    at instantiateModuleShared (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1289:9)
+    at instantiateModule (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1557:23)
+    at getOrInstantiateModuleFromParent (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1593:23)
+    at commonJsRequire (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:302:12)
+    at module evaluation (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/node_modules_06k4yre._.js:28333:40)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1291:27)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1554:9)
+    at instantiateModuleShared (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1289:9)
+    at instantiateModule (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1557:23)
+    at getOrInstantiateModuleFromParent (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1593:23)
+    at commonJsRequire (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:302:12)
+    at module evaluation (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/node_modules_06k4yre._.js:2935:36)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1291:27)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1554:9)
+    at instantiateModuleShared (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1289:9)
+    at instantiateModule (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1557:23)
+    at getOrInstantiateModuleFromParent (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1593:23)
+    at commonJsRequire (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:302:12)
+    at module evaluation (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/node_modules_06k4yre._.js:3357:41)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1291:27)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1554:9)
+    at instantiateModuleShared (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1289:9)
+    at instantiateModule (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1557:23)
+    at getOrInstantiateModuleFromParent (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1593:23)
+    at commonJsRequire (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:302:12)
+    at module evaluation (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/node_modules_exceljs_0yo8v6h._.js:17301:37)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1291:27)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1554:9)
+    at instantiateModuleShared (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1289:9)
+    at instantiateModule (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1557:23)
+    at getOrInstantiateModuleFromParent (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1593:23)
+    at commonJsRequire (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:302:12)
+    at module evaluation (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/node_modules_exceljs_0yo8v6h._.js:17661:51)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1291:27)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1554:9)
+    at instantiateModuleShared (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1289:9)
+    at instantiateModule (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1557:23)
+    at getOrInstantiateModuleFromParent (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1593:23)
+    at commonJsRequire (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:302:12)
+    at module evaluation (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/node_modules_exceljs_0yo8v6h._.js:17677:40)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1291:27)
+    at <anonymous> (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1554:9)
+    at instantiateModuleShared (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1289:9)
+    at instantiateModule (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1557:23)
+    at getOrInstantiateModuleFromParent (file:///Users/karthik/React-projects/cohort/.next/dev/server/chunks/ssr/[turbopack]_runtime.js:1593:23)
+[   16317ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   16528ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   16694ms] [LOG] [Fast Refresh] done in 267ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   39380ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   39646ms] [LOG] [Fast Refresh] done in 368ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   39953ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   40187ms] [LOG] [Fast Refresh] done in 335ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   41153ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   41155ms] [LOG] [Fast Refresh] done in 104ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   43034ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   43129ms] [LOG] [Fast Refresh] done in 200ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   43866ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   43939ms] [LOG] [Fast Refresh] done in 175ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   49771ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   55801ms] [LOG] [Fast Refresh] done in 6131ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   55904ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   56409ms] [LOG] [Fast Refresh] done in 606ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   57672ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   57677ms] [LOG] [Fast Refresh] done in 105ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_13rdevn._.js:1380
+[   61520ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   62493ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   62509ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   62510ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   63506ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   63506ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   63645ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   64127ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   64127ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   64128ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   64128ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   64228ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   64950ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   64950ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   64951ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   64951ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   65051ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   65064ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   65064ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   65163ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   65483ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   65483ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   65484ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   65484ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   65584ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   65811ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   65811ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   65811ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   65812ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   65912ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   66098ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66098ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66098ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66098ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66199ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   66309ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66309ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66310ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66310ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66410ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   66420ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66420ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66420ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66421ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66536ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   66540ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66540ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66669ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66669ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   66789ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   67001ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67002ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67002ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67002ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67047ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67047ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67148ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   67272ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67272ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67272ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67273ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67374ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   67476ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67476ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67476ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67476ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   67632ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   68281ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   68281ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   68282ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   68282ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   68282ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   68283ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   68383ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   68571ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   68571ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   68670ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   69535ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   71185ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   71186ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   72835ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/dashboard..." notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <LoadingBoundaryProvider loading={[...]}>
+                      <SegmentViewNode type="layout" pagePath="layout.tsx">
+                        <SegmentTrieNode>
+                        <link>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <script>
+                        <RootLayout>
+                          <html
+                            lang="en"
+-                           className="light"
+-                           style={{color-scheme:"light"}}
+                          >
+                            <body
+                              className="geist_a71539c9-module__T19VSG__variable geist_mono_8d43a2aa-module__8Li5zG__v..."
+-                             style={{overflow-x:"hidden",overflow-y:"hidden"}}
+                            >
+                  ...
+ @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   72837ms] [LOG] [ConvexAuth] State: {isLoading: true, isAuthenticated: false} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   84853ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   84853ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   84859ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   84859ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   84962ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   84969ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   84969ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   85069ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   86031ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   86031ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   86045ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/auth/get-session?disableCookieCache=true:0
+[   86092ms] [LOG] [AuthService] getSession result: {hasResult: true, hasData: true, disableCookieCache: true, result: Object} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   86093ms] [LOG] [AuthService] Parsed session: {hasSession: false, hasUser: false, userEmail: undefined, disableCookieCache: true} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   86185ms] [WARNING] Image with src "http://localhost:3000/logo.svg" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   86194ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   88540ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   88540ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   88546ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-client] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   88546ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export exportMetricsToCsv doesn't exist in target module
+  15 | import type { DateRange } from '../components/date-range-picker'
+  16 | import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '.....
+> 17 | import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 |
+  19 | import {
+  20 |   buildProviderSummariesFromServer,
+
+The export exportMetricsToCsv was not found in module [project]/src/features/dashboard/ads/components/utils.ts [app-ssr] (ecmascript).
+Did you mean to import getErrorMessage?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   88647ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   92630ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/auth/get-session:0
+[   92801ms] [LOG] [ConvexAuth] State: {isLoading: false, isAuthenticated: false} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   92861ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-client] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   92861ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-ssr] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   92963ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   93467ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-client] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   93468ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-ssr] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   93929ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-client] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   93929ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-ssr] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   94059ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   94129ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-client] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   94129ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-ssr] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   94236ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   94337ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard/ads?_rsc=SYAIMYOfSrdt-fld:0
+[   94339ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-client] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   94340ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-ssr] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   97141ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   97829ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-client] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   97830ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-ssr] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   97832ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-client] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   97832ms] [ERROR] ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-ssr] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[   97931ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   97967ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard/ads?_rsc=SYAIMYOfSrdt-fld:0
+[   97989ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard/ads:0
+[  113360ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_react-dom_0bruynb._.js:15305
+[  113403ms] Error: ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1
+Export METRICS_PAGE_SIZE doesn't exist in target module
+  15 | ...mport type { DateRange } from '../components/date-range-picker'
+  16 | ...mport type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '...
+> 17 | ...mport { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/ads-metrics-export'
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  18 | ...
+  19 | ...mport {
+  20 | ... buildProviderSummariesFromServer,
+
+The export METRICS_PAGE_SIZE was not found in module [project]/src/features/dashboard/ads/components/ads-metrics-export.ts [app-client] (ecmascript).
+Did you mean to import exportMetricsToCsv?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Client Component Browser]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/features/dashboard/ads/hooks/use-ads-metrics.ts [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Client Component SSR]
+    ./src/features/dashboard/ads/page.tsx [Server Component]
+    ./src/app/dashboard/ads/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./src/features/dashboard/ads/hooks/use-ads-metrics.ts:17:1)
+    at getCompilationErrors (file:///Users/karthik/React-projects/cohort/node_modules/next/dist/server/dev/hot-reloader-turbopack.js:1186:63)
+    at getCompilationErrors (file:///Users/karthik/React-projects/cohort/node_modules/next/dist/server/dev/hot-reloader-turbopack.js:1146:43)
+    at getCompilationError (file:///Users/karthik/React-projects/cohort/node_modules/next/dist/server/lib/dev-bundler-service.js:44:55)
+    at getCompilationError (file:///Users/karthik/React-projects/cohort/node_modules/next/dist/server/lib/dev-bundler-service.js:43:31)
+    at getCompilationError (file:///Users/karthik/React-projects/cohort/node_modules/next/dist/server/dev/next-dev-server.js:720:42)
+    at getCompilationError (file:///Users/karthik/React-projects/cohort/node_modules/next/dist/server/dev/next-dev-server.js:719:31)
+    at findPageComponents (file:///Users/karthik/React-projects/cohort/node_modules/next/dist/server/dev/next-dev-server.js:690:43)
+    at renderErrorToResponseImpl (file:///Users/karthik/React-projects/cohort/node_modules/next/dist/server/base-server.js:1753:37)
+    at processTicksAndRejections
+[  113470ms] [ERROR] Refused to execute script from 'http://localhost:3000/_next/static/development/_clientMiddlewareManifest.js' because its MIME type ('application/json') is not executable, and strict MIME type checking is enabled. @ http://localhost:3000/dashboard/ads:0

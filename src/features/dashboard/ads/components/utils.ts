@@ -46,6 +46,7 @@ import {
   FREQUENCY_OPTIONS,
   METRICS_PAGE_SIZE,
   PROVIDER_ICON_MAP,
+  getProviderIcon,
   TIMEFRAME_OPTIONS,
 } from '@/features/dashboard/ads/constants'
 
@@ -57,6 +58,7 @@ export {
   FREQUENCY_OPTIONS,
   METRICS_PAGE_SIZE,
   PROVIDER_ICON_MAP,
+  getProviderIcon,
   TIMEFRAME_OPTIONS,
 }
 
@@ -171,36 +173,11 @@ export function describeTimeframe(days: number): string {
   return `Last ${days} days`
 }
 
+
 export function formatDisplayDate(value: string): string {
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) {
     return value
   }
   return DISPLAY_DATE_FORMATTER.format(parsed)
-}
-
-export function exportMetricsToCsv(
-  processedMetrics: MetricRecord[],
-  formatProviderNameFn: (id: string) => string = formatProviderName
-): void {
-  const headers = ['Date', 'Provider', 'Spend', 'Impressions', 'Clicks', 'Conversions', 'Revenue']
-  const rows = processedMetrics.map((m) => [
-    m.date,
-    formatProviderNameFn(m.providerId),
-    m.spend.toFixed(2),
-    m.impressions,
-    m.clicks,
-    m.conversions,
-    (m.revenue || 0).toFixed(2),
-  ])
-
-  const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n')
-
-  const blob = new Blob([csvContent], { type: 'text/csv' })
-  const url = window.URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `ads-metrics-${new Date().toISOString().split('T')[0]}.csv`
-  a.click()
-  window.URL.revokeObjectURL(url)
 }
