@@ -284,8 +284,8 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   }, [loadingMore, metricsLoading, nextCursor, visibleCount])
 
   const handleExport = useCallback(() => {
-    void exportMetricsToCsv(processedMetrics)
-  }, [processedMetrics])
+    void exportMetricsToCsv(processedMetrics, { providerSummaries })
+  }, [processedMetrics, providerSummaries])
 
   const triggerRefresh = useCallback(() => {
     setVisibleCount(METRICS_PAGE_SIZE)

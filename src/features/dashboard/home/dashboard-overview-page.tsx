@@ -11,6 +11,8 @@ import {
   useDashboardOverviewPage,
 } from './dashboard-overview-page-sections'
 
+const dashboardOverviewLoadingContent = <DashboardSkeleton />
+
 export function DashboardOverviewPage() {
   const {
     isInitialLoading,
@@ -65,7 +67,7 @@ export function DashboardOverviewPage() {
       <BoneyardSkeletonBoundary
         name="dashboard-overview-page"
         loading={isInitialLoading}
-        loadingContent={<DashboardSkeleton />}
+        loadingContent={dashboardOverviewLoadingContent}
       >
         <DashboardOverviewPageView
           clientName={clientName}

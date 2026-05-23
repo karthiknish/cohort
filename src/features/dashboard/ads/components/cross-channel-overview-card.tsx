@@ -26,6 +26,7 @@ import {
   type AdsMetricsDisplayState,
 } from './ads-metrics-display-state'
 import { parseMetricDate } from '../hooks/use-ads-metrics.helpers'
+import type { CrossChannelConnectionState } from './cross-channel-overview-card-types'
 
 const EMPTY_CONNECTED_PROVIDER_IDS: string[] = []
 
@@ -35,6 +36,7 @@ interface CrossChannelOverviewCardProps {
   currency?: string
   /** Canonical or alias ids for platforms currently linked in this workspace. */
   connectedProviderIds?: string[]
+  connection: CrossChannelConnectionState
   hasMetricData: boolean
   initialMetricsLoading: boolean
   metricsLoading: boolean
@@ -43,10 +45,6 @@ interface CrossChannelOverviewCardProps {
   onExport: () => void
   /** When false, date range and export live in the page header instead of this card. */
   showDateAndExport?: boolean
-  /** At least one ad platform is linked (used for chart empty-state copy). */
-  hasConnectedAds?: boolean
-  /** At least one linked platform has completed a successful sync. */
-  hasSuccessfulSync?: boolean
 }
 
 export function CrossChannelOverviewCard({
@@ -61,9 +59,9 @@ export function CrossChannelOverviewCard({
   onDateRangeChange,
   onExport,
   showDateAndExport = true,
-  hasConnectedAds = false,
-  hasSuccessfulSync = false,
+  connection,
 }: CrossChannelOverviewCardProps) {
+  const { hasConnectedAds, hasSuccessfulSync } = connection
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
 
   const canonicalConnected = useMemo(

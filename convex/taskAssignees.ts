@@ -130,8 +130,10 @@ export async function buildTaskAssigneeMemberPool(
   workspaceId: string,
   clientId?: string | null,
 ): Promise<WorkspaceMember[]> {
-  const workspaceMembers = await loadWorkspaceMembers(ctx, workspaceId)
-  const rosterNames = await loadClientRosterNamesFromDb(ctx, workspaceId, clientId)
+  const [workspaceMembers, rosterNames] = await Promise.all([
+    loadWorkspaceMembers(ctx, workspaceId),
+    loadClientRosterNamesFromDb(ctx, workspaceId, clientId),
+  ])
 
   if (rosterNames.length === 0) {
     return workspaceMembers
@@ -238,6 +240,7 @@ export async function normalizeTaskAssignees(
   const hasClientScope = Boolean(clientId?.trim())
   const teamScopeLabel = hasClientScope ? "this client's team" : 'your workspace team'
   const resolvedIds = new Set<string>()
+  const pendingLabels: Array<{ assignee: string; matches: typeof members }> = []
 
   for (const assignee of trimmedAssignees) {
     const directMatch = membersById.get(assignee)
@@ -253,17 +256,27 @@ export async function normalizeTaskAssignees(
       continue
     }
 
-    const label = await formatAssigneeLabel(ctx, assignee, membersById)
+    pendingLabels.push({ assignee, matches })
+  }
 
-    if (matches.length > 1) {
-      throw Errors.validation.invalidInput(
-        `Assignee "${label}" matches multiple teammates. Pick one from ${teamScopeLabel}.`,
-      )
-    }
-
-    throw Errors.validation.invalidInput(
-      `Assignee "${label}" is not on ${teamScopeLabel}. Pick someone from your team list.`,
+  if (pendingLabels.length > 0) {
+    const labels = await Promise.all(
+      pendingLabels.map(async ({ assignee }) => formatAssigneeLabel(ctx, assignee, membersById)),
     )
+
+    pendingLabels.forEach(({ assignee, matches }, index) => {
+      const label = labels[index] ?? assignee
+
+      if (matches.length > 1) {
+        throw Errors.validation.invalidInput(
+          `Assignee "${label}" matches multiple teammates. Pick one from ${teamScopeLabel}.`,
+        )
+      }
+
+      throw Errors.validation.invalidInput(
+        `Assignee "${label}" is not on ${teamScopeLabel}. Pick someone from your team list.`,
+      )
+    })
   }
 
   return [...resolvedIds]

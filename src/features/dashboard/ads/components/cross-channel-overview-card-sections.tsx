@@ -224,7 +224,7 @@ function CrossChannelOverviewStatusBanner({
   const copy = adsMetricsEmptyCopy(displayState)
 
   return (
-    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-muted-foreground">
+    <div className="rounded-2xl border border-warning/20 bg-warning/5 px-4 py-3 text-sm text-muted-foreground">
       <p className="font-medium text-foreground">{copy.title}</p>
       <p className="mt-1 leading-relaxed">{copy.description}</p>
     </div>

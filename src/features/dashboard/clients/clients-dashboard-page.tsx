@@ -1,18 +1,11 @@
 'use client'
 
 import { notifyFailure } from '@/lib/notifications'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Suspense, createElement, useCallback, useMemo, useRef, useState } from 'react'
-import {
-  Download,
-  RefreshCcw,
-  Settings,
-  Users as UsersIcon,
-} from 'lucide-react'
+import { Users as UsersIcon } from 'lucide-react'
 
 import { ClientAccessGate } from '@/features/dashboard/home/components/client-access-gate'
-import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -21,39 +14,20 @@ import { useToast } from '@/shared/ui/use-toast'
 import { buildMetricSnapshotChart } from '@/lib/export/cohorts-spreadsheet-charts'
 import { exportToCsv } from '@/lib/export/export-to-spreadsheet'
 import { cn } from '@/lib/utils'
-import { DASHBOARD_THEME, getButtonClasses } from '@/lib/dashboard-theme'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
 } from '@/shared/ui/card'
-import { Alert, AlertDescription } from '@/shared/ui/alert'
-import { Button } from '@/shared/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/shared/ui/tooltip'
+import { TooltipProvider } from '@/shared/ui/tooltip'
 
-import { ClientDetailsCard } from './components/client-details-card'
-import { ClientOnboardingChecklist } from './components/client-onboarding-card'
-import { ClientStatsGrid } from './components/client-stats-grid'
 import { ClientsDashboardSkeleton } from './components/clients-dashboard-skeleton'
-import { TeamMembersCard } from './components/team-members-card'
-import { ClientPipelineBoard } from './components/client-pipeline-board'
+import { ClientsDashboardReadyView } from './clients-dashboard-ready-view'
 import { useClientsData } from './use-clients-data'
-import { formatDate, getRelativeTimeString } from './utils'
+import { formatDate } from './utils'
 import type { OnboardingItem } from './types'
-import { BackLink } from '@/shared/components/back-link'
 
 type ClientsDashboardPageClientProps = {
   initialClientId?: string | null
@@ -88,12 +62,10 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
     selectClient(initialClientId)
   }
 
-  // Onboarding items
   const onboardingItems: OnboardingItem[] = useMemo(() => {
     if (!selectedClient) return []
 
-    const teamMembers = selectedClient?.teamMembers ?? []
-
+    const teamMembers = selectedClient.teamMembers ?? []
     const contactInfoComplete = Boolean(selectedClient.accountManager)
     const teamMembersInvited = teamMembers.length > 0
     const firstProjectCreated = (clientsData.stats?.totalProjects ?? 0) > 0
@@ -146,9 +118,9 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
       })
       .catch(() => {
         notifyFailure({
-        title: 'Refresh failed',
-        message: 'Unable to update client data. Please try again.',
-      })
+          title: 'Refresh failed',
+          message: 'Unable to update client data. Please try again.',
+        })
       })
       .finally(() => {
         setRefreshing(false)
@@ -163,7 +135,7 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
   const handleExport = useCallback(() => {
     if (!selectedClient) return
 
-    const teamMembers = selectedClient?.teamMembers ?? []
+    const teamMembers = selectedClient.teamMembers ?? []
     const stats = clientsData.stats
     const data = [
       {
@@ -212,7 +184,7 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
     return teamMembers.filter(
       (member) =>
         member.name.toLowerCase().includes(query) ||
-        member.role?.toLowerCase().includes(query)
+        member.role?.toLowerCase().includes(query),
     )
   }, [teamMembers, teamSearch])
 
@@ -233,145 +205,21 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
     )
   }
 
-  const clientIndex = selectedClient ? clients.findIndex((record) => record.id === selectedClient.id) : -1
-  const clientAge = selectedClient?.createdAt
-    ? getRelativeTimeString(new Date(selectedClient.createdAt))
-    : null
-  const managersCount = teamMembers.filter((m) => m.role?.toLowerCase().includes('manager')).length
-
   const readyContent = selectedClient ? (
-    <div className={cn(DASHBOARD_THEME.layout.container, DASHBOARD_THEME.animations.fadeIn)}>
-      <DashboardPageHero>
-        <div className="flex items-center gap-4">
-          <div className="space-y-2">
-            <BackLink label="Back to clients" onClick={handleBackToClients} />
-            <div className="flex items-center gap-4">
-              <div className={DASHBOARD_THEME.icons.container}>
-                <UsersIcon className={DASHBOARD_THEME.icons.small} />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-3">
-                  <h1 className={DASHBOARD_THEME.layout.title}>{selectedClient.name}</h1>
-                </div>
-                <p className={DASHBOARD_THEME.layout.subtitle}>
-                  Managed by <span className="font-bold text-foreground/80">{selectedClient.accountManager || 'your team'}</span>
-                  {clientAge && <span className="font-normal text-muted-foreground/70"> · Partnered {clientAge}</span>}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className={cn(getButtonClasses('outline'), 'h-10 px-4')}>
-                <Settings className="mr-2 size-3.5" />
-                Settings
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 rounded-xl border-muted/40 shadow-xl backdrop-blur-md">
-              <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-accent/5 focus:text-primary">
-                <Link href="/admin/clients" className="flex items-center">
-                  <Settings className="mr-2 size-4 opacity-70" />
-                  Manage client
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExport} className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-accent/5 focus:text-primary">
-                <Download className="mr-2 size-4 opacity-70" />
-                Export data
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-accent/5 focus:text-primary">
-                <Link href={`/dashboard/collaboration?clientId=${selectedClient.id}`} className="flex items-center">
-                  <UsersIcon className="mr-2 size-4 opacity-70" />
-                  Collaboration
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className={cn(getButtonClasses('outline'), 'size-10 p-0')}
-              >
-                <RefreshCcw className={cn('size-4', refreshing && DASHBOARD_THEME.animations.pulse)} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="rounded-lg border-muted/40 font-bold uppercase tracking-widest text-[10px]">Refresh data</TooltipContent>
-          </Tooltip>
-        </div>
-      </DashboardPageHero>
-
-      {clientsData.workspaceMissing ? (
-        <Alert variant="destructive">
-          <AlertDescription>
-            Sign in again to load live project and task stats for this client.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      <ClientStatsGrid
-        stats={clientsData.stats}
-        statsLoading={clientsData.statsLoading}
-        teamMembersCount={teamMembers.length}
-        managersCount={managersCount}
-      />
-
-      <div className="flex flex-wrap gap-2">
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          className={cn(getButtonClasses('outline'), 'h-9 px-4')}
-        >
-          <Link href={`/dashboard/projects?clientId=${selectedClient.id}`}>Projects</Link>
-        </Button>
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          className={cn(getButtonClasses('outline'), 'h-9 px-4')}
-        >
-          <Link href={`/dashboard/tasks?clientId=${selectedClient.id}`}>Tasks</Link>
-        </Button>
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          className={cn(getButtonClasses('outline'), 'h-9 px-4')}
-        >
-          <Link href={`/dashboard/proposals?clientId=${selectedClient.id}`}>Proposals</Link>
-        </Button>
-      </div>
-
-      <ClientPipelineBoard clients={clients} selectedClientId={selectedClient.id} />
-
-      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <TeamMembersCard
-          teamMembers={teamMembers}
-          filteredTeamMembers={filteredTeamMembers}
-          teamSearch={teamSearch}
-          onTeamSearchChange={setTeamSearch}
-        />
-
-        <div className="space-y-6">
-          <ClientOnboardingChecklist items={onboardingItems} />
-
-          <ClientDetailsCard
-            teamMembersCount={teamMembers.length}
-            clientIndex={clientIndex}
-            totalClients={clients.length}
-            createdAt={selectedClient.createdAt ?? null}
-          />
-        </div>
-      </div>
-    </div>
+    <ClientsDashboardReadyView
+      selectedClient={selectedClient}
+      clients={clients}
+      clientsData={clientsData}
+      onboardingItems={onboardingItems}
+      teamMembers={teamMembers}
+      filteredTeamMembers={filteredTeamMembers}
+      teamSearch={teamSearch}
+      onTeamSearchChange={setTeamSearch}
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
+      onBackToClients={handleBackToClients}
+      onExport={handleExport}
+    />
   ) : null
 
   return (

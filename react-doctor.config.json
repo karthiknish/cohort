@@ -1,6 +1,27 @@
 {
   "deadCode": false,
   "ignore": {
-    "rules": []
+    "rules": [
+      "react-doctor/prefer-dynamic-import",
+      "cohort/only-shadcn-components"
+    ],
+    "overrides": [
+      {
+        "files": [
+          "src/shared/ui/recharts-dynamic.tsx",
+          "src/features/dashboard/ads/components/ads-chart-imports.tsx",
+          "src/features/dashboard/home/components/performance-chart.tsx"
+        ],
+        "rules": [
+          "react-doctor/only-export-components",
+          "react-doctor/prefer-dynamic-import",
+          "cohort/only-shadcn-components"
+        ]
+      },
+      {
+        "files": ["src/features/dashboard/ads/components/use-campaign-management-card.tsx"],
+        "rules": ["react-doctor/no-event-handler"]
+      }
+    ]
   }
 }

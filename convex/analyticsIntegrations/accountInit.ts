@@ -3,11 +3,9 @@
 import { internal } from '/_generated/api'
 import type { ActionCtx } from '../_generated/server'
 import type { GoogleAnalyticsPropertyOption } from '@/services/integrations/google-analytics/properties'
-import { z } from 'zod/v4'
 
 import {
   action,
-  adIntegrationZ,
   Errors,
   normalizeClientId,
   normalizeGoogleAnalyticsPropertyId,
@@ -15,8 +13,6 @@ import {
   v,
   withErrorHandling,
 } from './shared'
-
-type GoogleAnalyticsIntegration = z.infer<typeof adIntegrationZ>
 
 type InitializeGoogleAnalyticsPropertyResult = {
   accountId: string
@@ -35,16 +31,14 @@ async function runInitializeGoogleAnalyticsProperty(
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) throw Errors.auth.unauthorized()
   const clientId = normalizeClientId(args.clientId ?? null)
-  const integration: GoogleAnalyticsIntegration | null = await ctx.runQuery(
-    internal.analyticsIntegrations.getGoogleAnalyticsIntegrationInternal,
-    {
-      workspaceId: args.workspaceId,
-      clientId,
-    },
-  )
-  const { fetchGoogleAnalyticsProperties, fetchGoogleAnalyticsPropertyCurrency } = await import(
-    '@/services/integrations/google-analytics/properties'
-  )
+  const [integration, { fetchGoogleAnalyticsProperties, fetchGoogleAnalyticsPropertyCurrency }] =
+    await Promise.all([
+      ctx.runQuery(internal.analyticsIntegrations.getGoogleAnalyticsIntegrationInternal, {
+        workspaceId: args.workspaceId,
+        clientId,
+      }),
+      import('@/services/integrations/google-analytics/properties'),
+    ])
   if (!integration?.accessToken) throw Errors.integration.missingToken('Google Analytics')
 
   const selectedPropertyId = normalizeGoogleAnalyticsPropertyId(args.accountId ?? null)

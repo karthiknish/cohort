@@ -18,10 +18,10 @@ import {
   PolarRadiusAxis,
   Radar,
   RadarChart,
-  Tooltip as RechartsTooltip,
+  RechartsTooltip,
   XAxis,
   YAxis,
-} from 'recharts'
+} from '@/shared/ui/recharts-dynamic'
 
 export {
   Area,

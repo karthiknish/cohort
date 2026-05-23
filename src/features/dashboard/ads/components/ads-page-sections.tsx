@@ -327,8 +327,10 @@ export function AdsPageAnalyticsSection({
           serverSideSummary={effectiveServerSummary}
           currency={activeCurrency}
           connectedProviderIds={connectedProviderIds}
-          hasConnectedAds={connectedAccountCount > 0}
-          hasSuccessfulSync={hasSuccessfulSync}
+          connection={{
+            hasConnectedAds: connectedAccountCount > 0,
+            hasSuccessfulSync,
+          }}
           hasMetricData={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}

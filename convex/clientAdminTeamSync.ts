@@ -12,6 +12,21 @@ type AdminUserRow = {
   clientTeamRole?: string | null | undefined
 }
 
+type WorkspaceUserRow = {
+  role?: string | null
+  status?: string | null
+  name?: string | null
+}
+
+function activeAdminNamesFromWorkspaceRows(rows: WorkspaceUserRow[]): string[] {
+  return rows.flatMap((row) => {
+    if (row.status === 'disabled' || row.status === 'suspended') return []
+    if (row.role !== 'admin') return []
+    const name = typeof row.name === 'string' ? row.name.trim() : ''
+    return name ? [name] : []
+  })
+}
+
 const GENERIC_CLIENT_TEAM_ROLES = new Set([
   'admin',
   'contributor',
@@ -58,7 +73,7 @@ export function resolveClientTeamRoleForAdmin(
 export function pickMostCommonClientTeamRole(roleCounts: Array<[string, number]>): string | null {
   if (roleCounts.length === 0) return null
 
-  const sorted = [...roleCounts].sort((left, right) => {
+  const sorted = roleCounts.toSorted((left, right) => {
     const leftGeneric = isGenericClientTeamRole(left[0]) ? 1 : 0
     const rightGeneric = isGenericClientTeamRole(right[0]) ? 1 : 0
     if (leftGeneric !== rightGeneric) return leftGeneric - rightGeneric
@@ -72,7 +87,12 @@ export async function inferAdminClientTeamRolesFromClients(
   ctx: DbReaderCtx,
   adminNames: string[],
 ): Promise<Map<string, string>> {
-  const adminNameSet = new Set(adminNames.map((name) => name.trim().toLowerCase()).filter(Boolean))
+  const adminNameSet = new Set(
+    adminNames.flatMap((name) => {
+      const normalized = name.trim().toLowerCase()
+      return normalized ? [normalized] : []
+    }),
+  )
   const roleCounts = new Map<string, Map<string, number>>()
 
   const clients = await ctx.db.query('clients').collect()
@@ -238,9 +258,7 @@ export async function loadWorkspaceAdminMembers(
   const workspaceAdmins: ClientTeamMemberRow[] = []
   const inferredRoles = await inferAdminClientTeamRolesFromClients(
     ctx,
-    rows
-      .filter((row) => row.role === 'admin' && row.status !== 'disabled' && row.status !== 'suspended')
-      .map((row) => row.name?.trim() ?? ''),
+    activeAdminNamesFromWorkspaceRows(rows),
   )
 
   for (const row of rows) {
@@ -280,9 +298,7 @@ export async function loadEffectiveClientAdminMembers(
   const workspaceAdmins: ClientTeamMemberRow[] = []
   const inferredRoles = await inferAdminClientTeamRolesFromClients(
     ctx,
-    rows
-      .filter((row) => row.role === 'admin' && row.status !== 'disabled' && row.status !== 'suspended')
-      .map((row) => row.name?.trim() ?? ''),
+    activeAdminNamesFromWorkspaceRows(rows),
   )
 
   for (const row of rows) {
@@ -326,20 +342,20 @@ export async function syncWorkspaceClientAdminMembers(
         .collect()
         .then((rows) => rows.filter((row) => row.deletedAtMs === null))
 
-  let updatedCount = 0
+  const patchResults = await Promise.all(
+    clients.map(async (client) => {
+      const merged = mergeTeamMembersWithAdmins(client.teamMembers, adminMembers)
+      if (!clientTeamMembersChanged(client.teamMembers, merged)) {
+        return false
+      }
 
-  for (const client of clients) {
-    const merged = mergeTeamMembersWithAdmins(client.teamMembers, adminMembers)
-    if (!clientTeamMembersChanged(client.teamMembers, merged)) {
-      continue
-    }
+      await ctx.db.patch(client._id, {
+        teamMembers: merged,
+        updatedAtMs: now,
+      })
+      return true
+    }),
+  )
 
-    await ctx.db.patch(client._id, {
-      teamMembers: merged,
-      updatedAtMs: now,
-    })
-    updatedCount += 1
-  }
-
-  return { updatedCount }
+  return { updatedCount: patchResults.filter(Boolean).length }
 }

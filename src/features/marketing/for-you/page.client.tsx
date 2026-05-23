@@ -16,6 +16,8 @@ import { ForYouQuickLinks } from './components/for-you-quick-links'
 import { ForYouWhatsNext } from './components/for-you-whats-next'
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
 
+const forYouLoadingContent = <ForYouPageSkeleton />
+
 export default function ForYouPage() {
   const { user } = useAuth()
   const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
@@ -47,7 +49,7 @@ export default function ForYouPage() {
     <BoneyardSkeletonBoundary
       name="for-you-page"
       loading={isInitialLoading}
-      loadingContent={<ForYouPageSkeleton />}
+      loadingContent={forYouLoadingContent}
     >
       <PageMotionShell reveal={false} className="w-full">
         <main id="for-you-page" className="w-full">

@@ -5,6 +5,7 @@ import { v } from 'convex/values'
 import { Errors, withErrorHandling } from './errors'
 import { META_API_BASE } from '@/services/integrations/meta-ads/constants'
 import type { GoogleCampaignObjective } from '@/services/integrations/google-ads/campaign-modules/types'
+import { requireFacebookAdAccount, resolveFacebookAccessToken } from './lib/facebookAdsAccess'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -72,7 +73,10 @@ export const listCampaigns = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+    let accessToken = integration.accessToken
+    if (args.providerId === 'facebook' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+      accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
+    } else if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       throw Errors.integration.expired(args.providerId)
     }
 
@@ -85,7 +89,7 @@ export const listCampaigns = action({
       const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
 
       const googleCampaigns = await listGoogleCampaigns({
-        accessToken: integration.accessToken,
+        accessToken,
         developerToken,
         customerId,
         loginCustomerId: integration.loginCustomerId,
@@ -124,7 +128,7 @@ export const listCampaigns = action({
       if (!advertiserId) throw Errors.integration.notConfigured('TikTok', 'TikTok advertiser ID not configured')
 
       const tiktokCampaigns = await listTikTokCampaigns({
-        accessToken: integration.accessToken,
+        accessToken,
         advertiserId,
       })
 
@@ -151,7 +155,7 @@ export const listCampaigns = action({
       if (!accountId) throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn account ID not configured')
 
       const linkedInCampaigns = await listLinkedInCampaigns({
-        accessToken: integration.accessToken,
+        accessToken,
         accountId,
       })
 
@@ -174,17 +178,14 @@ export const listCampaigns = action({
     // facebook
     const { listMetaCampaigns } = await import('@/services/integrations/meta-ads')
 
-    const adAccountId = integration.accountId
-    if (!adAccountId) {
-      throw Errors.integration.notConfigured('Meta', 'Meta ad account ID not configured. Finish setup to select an ad account.')
-    }
+    const adAccountId = await requireFacebookAdAccount(integration)
 
     const [metaCampaigns, accountMeta] = await Promise.all([
-      listMetaCampaigns({ accessToken: integration.accessToken, adAccountId }),
+      listMetaCampaigns({ accessToken, adAccountId }),
       (async () => {
         try {
           const res = await fetch(
-            `${META_API_BASE}/${adAccountId}?fields=currency,name,promote_pages{name,picture}&access_token=${integration.accessToken}`
+            `${META_API_BASE}/${adAccountId}?fields=currency,name,promote_pages{name,picture}&access_token=${accessToken}`
           )
           const data =
             (await res.json().catch(() => ({}))) as {
@@ -341,7 +342,10 @@ export const updateCampaign = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+    let accessToken = integration.accessToken
+    if (args.providerId === 'facebook' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+      accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
+    } else if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       throw Errors.integration.expired(args.providerId)
     }
 
@@ -362,7 +366,7 @@ export const updateCampaign = action({
 
       if (args.action === 'enable' || args.action === 'pause') {
         await updateGoogleCampaignStatus({
-          accessToken: integration.accessToken,
+          accessToken,
           developerToken,
           customerId,
           campaignId: args.campaignId,
@@ -371,7 +375,7 @@ export const updateCampaign = action({
         })
       } else if (args.action === 'updateBudget' && args.budget !== undefined) {
         await updateGoogleCampaignBudgetByCampaign({
-          accessToken: integration.accessToken,
+          accessToken,
           developerToken,
           customerId,
           campaignId: args.campaignId,
@@ -380,7 +384,7 @@ export const updateCampaign = action({
         })
       } else if (args.action === 'updateBidding' && args.biddingType) {
         await updateGoogleCampaignBidding({
-          accessToken: integration.accessToken,
+          accessToken,
           developerToken,
           customerId,
           campaignId: args.campaignId,
@@ -390,7 +394,7 @@ export const updateCampaign = action({
         })
       } else if (args.action === 'remove') {
         await removeGoogleCampaign({
-          accessToken: integration.accessToken,
+          accessToken,
           developerToken,
           customerId,
           campaignId: args.campaignId,
@@ -414,7 +418,7 @@ export const updateCampaign = action({
 
       if (args.action === 'enable' || args.action === 'pause') {
         await updateTikTokCampaignStatus({
-          accessToken: integration.accessToken,
+          accessToken,
           advertiserId,
           campaignId: args.campaignId,
           status: args.action === 'enable' ? 'ENABLE' : 'DISABLE',
@@ -429,7 +433,7 @@ export const updateCampaign = action({
               : (args.budgetMode as 'BUDGET_MODE_DAY' | 'BUDGET_MODE_TOTAL' | undefined)
 
         await updateTikTokCampaignBudget({
-          accessToken: integration.accessToken,
+          accessToken,
           advertiserId,
           campaignId: args.campaignId,
           budget: args.budget,
@@ -437,7 +441,7 @@ export const updateCampaign = action({
         })
       } else if (args.action === 'updateBidding' && args.biddingType) {
         const biddingResult = await updateTikTokCampaignBidding({
-          accessToken: integration.accessToken,
+          accessToken,
           advertiserId,
           campaignId: args.campaignId,
           biddingType: args.biddingType,
@@ -451,7 +455,7 @@ export const updateCampaign = action({
         }
       } else if (args.action === 'remove') {
         await removeTikTokCampaign({
-          accessToken: integration.accessToken,
+          accessToken,
           advertiserId,
           campaignId: args.campaignId,
         })
@@ -470,7 +474,7 @@ export const updateCampaign = action({
 
       if (args.action === 'enable' || args.action === 'pause') {
         await updateLinkedInCampaignStatus({
-          accessToken: integration.accessToken,
+          accessToken,
           campaignId: args.campaignId,
           status: args.action === 'enable' ? 'ACTIVE' : 'PAUSED',
         })
@@ -478,19 +482,19 @@ export const updateCampaign = action({
         const mode = normalizedBudgetMode
         await updateLinkedInCampaignBudget(
           mode === 'total'
-            ? { accessToken: integration.accessToken, campaignId: args.campaignId, totalBudget: args.budget }
-            : { accessToken: integration.accessToken, campaignId: args.campaignId, dailyBudget: args.budget }
+            ? { accessToken, campaignId: args.campaignId, totalBudget: args.budget }
+            : { accessToken, campaignId: args.campaignId, dailyBudget: args.budget }
         )
       } else if (args.action === 'updateBidding' && args.biddingType) {
         await updateLinkedInCampaignBidding({
-          accessToken: integration.accessToken,
+          accessToken,
           campaignId: args.campaignId,
           biddingType: args.biddingType,
           biddingValue: args.biddingValue ?? 0,
         })
       } else if (args.action === 'remove') {
         await removeLinkedInCampaign({
-          accessToken: integration.accessToken,
+          accessToken,
           campaignId: args.campaignId,
         })
       }
@@ -504,7 +508,7 @@ export const updateCampaign = action({
 
     if (args.action === 'enable' || args.action === 'pause') {
       await updateMetaCampaignStatus({
-        accessToken: integration.accessToken,
+        accessToken,
         campaignId: args.campaignId,
         status: args.action === 'enable' ? 'ACTIVE' : 'PAUSED',
       })
@@ -512,19 +516,19 @@ export const updateCampaign = action({
       const mode = normalizedBudgetMode
       await updateMetaCampaignBudget(
         mode === 'lifetime'
-          ? { accessToken: integration.accessToken, campaignId: args.campaignId, lifetimeBudget: args.budget }
-          : { accessToken: integration.accessToken, campaignId: args.campaignId, dailyBudget: args.budget }
+          ? { accessToken, campaignId: args.campaignId, lifetimeBudget: args.budget }
+          : { accessToken, campaignId: args.campaignId, dailyBudget: args.budget }
       )
     } else if (args.action === 'updateBidding' && args.biddingType) {
       await updateMetaCampaignBidding({
-        accessToken: integration.accessToken,
+        accessToken,
         campaignId: args.campaignId,
         biddingType: args.biddingType,
         biddingValue: args.biddingValue ?? 0,
       })
     } else if (args.action === 'remove') {
       await removeMetaCampaign({
-        accessToken: integration.accessToken,
+        accessToken,
         campaignId: args.campaignId,
       })
     }

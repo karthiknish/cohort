@@ -40,7 +40,7 @@ interface InsightsChartsCardProps {
 
 export function InsightsChartsCard({
   analysis,
-  currency = 'USD',
+  currency,
   providerCurrencies,
   loading = false,
   hasConnections = false,

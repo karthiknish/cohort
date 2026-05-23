@@ -341,10 +341,12 @@ export const updateTeamMemberRole = zWorkspaceMutation({
       throw Errors.resource.notFound('Team member')
     }
 
-    const unchanged = client.teamMembers.every((member, index) => {
-      const next = nextTeamMembers[index]
-      return next && member.name === next.name && member.role === next.role
-    })
+    const unchanged =
+      nextTeamMembers.length === client.teamMembers.length &&
+      client.teamMembers.every((member, index) => {
+        const next = nextTeamMembers[index]
+        return next && member.name === next.name && member.role === next.role
+      })
 
     if (unchanged) {
       return client.legacyId

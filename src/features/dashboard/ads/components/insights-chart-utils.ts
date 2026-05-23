@@ -1,4 +1,5 @@
 import { normalizeAdsProviderId } from '@/domain/ads/provider'
+import { normalizeCurrencyCode } from '@/constants/currencies'
 import { normalizeProviderId } from '@/lib/themes'
 
 import type { MetricRecord, ProviderSummary } from './types'
@@ -25,15 +26,16 @@ export function resolveInsightsChartCurrency(
 ): string {
   if (selectedProvider !== 'all') {
     const key = normalizeAdsProviderId(selectedProvider) ?? selectedProvider
-    return providerCurrencyMap[key] ?? fallbackCurrency ?? 'USD'
+    const providerCurrency = providerCurrencyMap[key]
+    return normalizeCurrencyCode(providerCurrency ?? fallbackCurrency)
   }
 
   const currencies = [...new Set(Object.values(providerCurrencyMap).filter(Boolean))]
   if (currencies.length === 1) {
-    return currencies[0]!
+    return normalizeCurrencyCode(currencies[0])
   }
 
-  return fallbackCurrency ?? currencies[0] ?? 'USD'
+  return normalizeCurrencyCode(fallbackCurrency ?? currencies[0])
 }
 
 /** Map UI selection to chart-data keys (handles meta/facebook aliases and "all"). */

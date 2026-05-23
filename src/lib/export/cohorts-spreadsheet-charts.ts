@@ -34,6 +34,10 @@ const CHART_HEIGHT = 320
 const CHART_PADDING = { top: 52, right: 24, bottom: 48, left: 56 }
 const DEFAULT_COLORS = CHART_COLORS.primary
 
+const MIN_TIME_SERIES_POINTS = 3
+const MIN_CATEGORY_POINTS = 2
+const MIN_TOTAL_VALUE = 0.0001
+
 function parseNumeric(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string') {
@@ -43,6 +47,60 @@ function parseNumeric(value: unknown): number {
   return 0
 }
 
+function positivePoints(points: SpreadsheetChartPoint[]): SpreadsheetChartPoint[] {
+  return points.filter((point) => Number.isFinite(point.value) && point.value > MIN_TOTAL_VALUE)
+}
+
+function sumPointValues(points: SpreadsheetChartPoint[]): number {
+  return points.reduce((sum, point) => sum + point.value, 0)
+}
+
+export function computeAxisMax(values: number[]): number {
+  const filtered = values.filter((value) => Number.isFinite(value) && value >= 0)
+  const max = filtered.length > 0 ? Math.max(...filtered) : 0
+  if (max <= 0) return 1
+  if (max < 1) {
+    return Math.ceil(max * 20) / 20 || 0.05
+  }
+  const magnitude = Math.pow(10, Math.floor(Math.log10(max)))
+  const niceMax = Math.ceil(max / magnitude) * magnitude
+  return niceMax > max ? niceMax : max * 1.15
+}
+
+export function createAxisValueFormatter(maxValue: number): (value: number) => string {
+  if (maxValue < 1) {
+    return (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+  }
+  if (maxValue < 1000) {
+    return (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 })
+  }
+  return (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 0 })
+}
+
+export function isChartSpecMeaningful(spec: SpreadsheetChartSpec): boolean {
+  const series = spec.series[0]
+  if (!series) return false
+
+  const points = positivePoints(series.points)
+  if (points.length === 0) return false
+  if (sumPointValues(points) < MIN_TOTAL_VALUE) return false
+
+  switch (spec.kind) {
+    case 'line':
+    case 'area':
+      return points.length >= MIN_TIME_SERIES_POINTS
+    case 'pie':
+    case 'bar':
+      return points.length >= MIN_CATEGORY_POINTS
+    default:
+      return points.length >= MIN_CATEGORY_POINTS
+  }
+}
+
+export function filterMeaningfulCharts(specs: SpreadsheetChartSpec[]): SpreadsheetChartSpec[] {
+  return specs.filter(isChartSpecMeaningful)
+}
+
 function truncateLabel(label: string, max = 14): string {
   const trimmed = label.trim()
   if (trimmed.length <= max) return trimmed
@@ -50,7 +108,7 @@ function truncateLabel(label: string, max = 14): string {
 }
 
 function sortByLabel(points: SpreadsheetChartPoint[]): SpreadsheetChartPoint[] {
-  return [...points].sort((a, b) => {
+  return points.toSorted((a, b) => {
     const aTime = Date.parse(a.label)
     const bTime = Date.parse(b.label)
     if (!Number.isNaN(aTime) && !Number.isNaN(bTime)) return aTime - bTime
@@ -124,30 +182,36 @@ export function buildCategoryCountChart(
     10,
   )
 
-  if (chartPoints.length === 0) return null
+  const points = positivePoints(chartPoints)
+  if (points.length < MIN_CATEGORY_POINTS) return null
 
-  return {
+  const spec: SpreadsheetChartSpec = {
     title,
     kind,
-    series: [{ name: field, points: chartPoints }],
+    series: [{ name: field, points }],
   }
+
+  return isChartSpecMeaningful(spec) ? spec : null
 }
 
 export function buildMetricSnapshotChart(
   metrics: Record<string, number>,
   title: string,
 ): SpreadsheetChartSpec | null {
-  const points = Object.entries(metrics)
-    .filter(([, value]) => Number.isFinite(value) && value > 0)
-    .map(([label, value]) => ({ label, value }))
+  const points = Object.entries(metrics).flatMap(([label, value]) =>
+    Number.isFinite(value) && value > 0 ? [{ label, value }] : [],
+  )
 
-  if (points.length === 0) return null
+  const positive = positivePoints(limitPoints(points, 8))
+  if (positive.length < MIN_CATEGORY_POINTS) return null
 
-  return {
+  const spec: SpreadsheetChartSpec = {
     title,
     kind: 'bar',
-    series: [{ name: 'Count', points: limitPoints(points, 8) }],
+    series: [{ name: 'Count', points: positive }],
   }
+
+  return isChartSpecMeaningful(spec) ? spec : null
 }
 
 export function buildTimeSeriesChart(
@@ -157,14 +221,16 @@ export function buildTimeSeriesChart(
   title: string,
   kind: SpreadsheetChartKind = 'line',
 ): SpreadsheetChartSpec | null {
-  const points = aggregateByDate(rows, dateField, valueField)
-  if (points.length === 0) return null
+  const points = positivePoints(aggregateByDate(rows, dateField, valueField))
+  if (points.length < MIN_TIME_SERIES_POINTS) return null
 
-  return {
+  const spec: SpreadsheetChartSpec = {
     title,
     kind,
     series: [{ name: valueField, points }],
   }
+
+  return isChartSpecMeaningful(spec) ? spec : null
 }
 
 export function buildMultiMetricTimeSeriesCharts(
@@ -198,7 +264,7 @@ export function buildAnalyticsExportCharts(
     })
   }
 
-  return charts
+  return filterMeaningfulCharts(charts)
 }
 
 export function buildAdsMetricsCharts(
@@ -224,7 +290,7 @@ export function buildAdsMetricsCharts(
     })
   }
 
-  return charts
+  return filterMeaningfulCharts(charts)
 }
 
 export function buildCollaborationExportCharts(
@@ -271,7 +337,7 @@ export function buildCollaborationExportCharts(
     })
   }
 
-  return charts
+  return filterMeaningfulCharts(charts)
 }
 
 export function buildSpreadsheetChartsFromTableData(
@@ -316,7 +382,7 @@ export function buildSpreadsheetChartsFromTableData(
     charts.push(...buildAnalyticsExportCharts(rows))
   }
 
-  return charts.slice(0, 3)
+  return filterMeaningfulCharts(charts).slice(0, 3)
 }
 
 export function buildInteractiveChartExportSpec(options: {
@@ -326,12 +392,11 @@ export function buildInteractiveChartExportSpec(options: {
   dataKey: string
   rows: Array<Record<string, unknown>>
 }): SpreadsheetChartSpec | null {
-  const points = options.rows
-    .map((row) => ({
-      label: String(row[options.xAxisKey] ?? ''),
-      value: parseNumeric(row[options.dataKey]),
-    }))
-    .filter((point) => point.label.length > 0)
+  const points = options.rows.flatMap((row) => {
+    const label = String(row[options.xAxisKey] ?? '')
+    if (!label.length) return []
+    return [{ label, value: parseNumeric(row[options.dataKey]) }]
+  })
 
   if (points.length === 0) return null
 
@@ -345,7 +410,7 @@ export function buildInteractiveChartExportSpec(options: {
 function drawChartFrame(ctx: CanvasRenderingContext2D, title: string) {
   const theme = COHORTS_SPREADSHEET_THEME
 
-  ctx.fillStyle = '#FFFFFF'
+  ctx.fillStyle = `#${theme.colors.white.slice(2)}`
   ctx.fillRect(0, 0, CHART_WIDTH, CHART_HEIGHT)
 
   ctx.strokeStyle = `#${theme.colors.border.slice(2)}`
@@ -423,9 +488,11 @@ function renderLineLikeChart(
   const series = spec.series[0]
   if (!series || series.points.length === 0) return
 
-  const points = sortByLabel(series.points)
+  const points = sortByLabel(positivePoints(series.points))
+  if (points.length < MIN_TIME_SERIES_POINTS) return
+
   const labels = points.map((point) => point.label)
-  const maxValue = Math.max(...points.map((point) => point.value), 1)
+  const maxValue = computeAxisMax(points.map((point) => point.value))
   const plot = getPlotArea()
   const color = series.color ?? DEFAULT_COLORS[0]!
 
@@ -476,9 +543,11 @@ function renderBarChart(
   const series = spec.series[0]
   if (!series || series.points.length === 0) return
 
-  const points = series.points
+  const points = positivePoints(series.points)
+  if (points.length < MIN_CATEGORY_POINTS) return
+
   const labels = points.map((point) => point.label)
-  const maxValue = Math.max(...points.map((point) => point.value), 1)
+  const maxValue = computeAxisMax(points.map((point) => point.value))
   const plot = getPlotArea()
 
   drawAxes(ctx, labels, maxValue, valueFormatter)
@@ -552,10 +621,10 @@ export function renderSpreadsheetChartToBase64(spec: SpreadsheetChartSpec): stri
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
 
-  const valueFormatter = spec.valueFormatter ?? ((value: number) => {
-    if (Math.abs(value) >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 0 })
-    return value.toLocaleString(undefined, { maximumFractionDigits: 1 })
-  })
+  const primarySeries = spec.series[0]
+  const axisValues = primarySeries?.points.map((point) => point.value) ?? []
+  const axisMax = computeAxisMax(axisValues)
+  const valueFormatter = spec.valueFormatter ?? createAxisValueFormatter(axisMax)
 
   drawChartFrame(ctx, spec.title)
 
@@ -580,7 +649,7 @@ export function renderSpreadsheetChartToBase64(spec: SpreadsheetChartSpec): stri
 }
 
 export function renderSpreadsheetCharts(specs: SpreadsheetChartSpec[]): SpreadsheetChartImage[] {
-  return specs
+  return filterMeaningfulCharts(specs)
     .map((spec) => {
       const base64 = renderSpreadsheetChartToBase64(spec)
       if (!base64) return null

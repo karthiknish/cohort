@@ -6,7 +6,14 @@
  */
 
 import { v } from 'convex/values'
-import { internalMutation, internalQuery, type MutationCtx } from './_generated/server'
+import { internal } from './_generated/api'
+import {
+  internalAction,
+  internalMutation,
+  internalQuery,
+  type MutationCtx,
+  type QueryCtx,
+} from './_generated/server'
 import { adminMutation } from './functions'
 import { resolveMetricCurrency } from '@/domain/ads/money'
 import {
@@ -192,35 +199,32 @@ async function backfillClientAdminTeamMembersBatch(
     .order('asc')
     .paginate({ numItems: batchSize, cursor: args.cursor ?? null })
 
-  const adminMembersByWorkspace = new Map<string, Awaited<ReturnType<typeof loadEffectiveClientAdminMembers>>>()
-  let patched = 0
+  const activeClients = result.page.filter((client) => client.deletedAtMs === null)
+  const adminMembersByWorkspace = await preloadAdminMembersByWorkspace(
+    ctx,
+    activeClients.map((client) => client.workspaceId),
+  )
 
-  for (const client of result.page) {
-    if (client.deletedAtMs !== null) {
-      continue
-    }
+  const patchResults = await Promise.all(
+    activeClients.map(async (client) => {
+      const adminMembers = adminMembersByWorkspace.get(client.workspaceId) ?? []
+      if (adminMembers.length === 0) {
+        return false
+      }
 
-    let adminMembers = adminMembersByWorkspace.get(client.workspaceId)
-    if (!adminMembers) {
-      adminMembers = await loadEffectiveClientAdminMembers(ctx, client.workspaceId)
-      adminMembersByWorkspace.set(client.workspaceId, adminMembers)
-    }
+      const merged = mergeTeamMembersWithAdmins(client.teamMembers, adminMembers)
+      if (!clientTeamMembersChanged(client.teamMembers, merged)) {
+        return false
+      }
 
-    if (adminMembers.length === 0) {
-      continue
-    }
-
-    const merged = mergeTeamMembersWithAdmins(client.teamMembers, adminMembers)
-    if (!clientTeamMembersChanged(client.teamMembers, merged)) {
-      continue
-    }
-
-    await ctx.db.patch(client._id, {
-      teamMembers: merged,
-      updatedAtMs: now,
-    })
-    patched += 1
-  }
+      await ctx.db.patch(client._id, {
+        teamMembers: merged,
+        updatedAtMs: now,
+      })
+      return true
+    }),
+  )
+  const patched = patchResults.filter(Boolean).length
 
   return {
     processed: result.page.length,
@@ -266,6 +270,23 @@ function rosterHasAdminName(
   return teamMembers.some((member) => member.name.trim().toLowerCase() === normalized)
 }
 
+type DbCtx = Pick<MutationCtx, 'db'> | Pick<QueryCtx, 'db'>
+
+async function preloadAdminMembersByWorkspace(
+  ctx: DbCtx,
+  workspaceIds: Iterable<string>,
+): Promise<Map<string, Awaited<ReturnType<typeof loadEffectiveClientAdminMembers>>>> {
+  const uniqueWorkspaceIds = [...new Set(workspaceIds)]
+  const entries = await Promise.all(
+    uniqueWorkspaceIds.map(async (workspaceId) => {
+      const adminMembers = await loadEffectiveClientAdminMembers(ctx, workspaceId)
+      return [workspaceId, adminMembers] as const
+    }),
+  )
+
+  return new Map(entries)
+}
+
 export const auditClientAdminTeamMembersInternal = internalQuery({
   args: {},
   returns: v.object({
@@ -294,8 +315,8 @@ export const auditClientAdminTeamMembersInternal = internalQuery({
     const clients = await ctx.db.query('clients').collect()
     const activeClients = clients.filter((client) => client.deletedAtMs === null)
 
-    const adminMembersByWorkspace = new Map<string, Awaited<ReturnType<typeof loadEffectiveClientAdminMembers>>>()
-    const workspaceIds = new Set<string>()
+    const workspaceIds = new Set(activeClients.map((client) => client.workspaceId))
+    const adminMembersByWorkspace = await preloadAdminMembersByWorkspace(ctx, workspaceIds)
     const issues: Array<{
       workspaceId: string
       clientLegacyId: string
@@ -305,14 +326,7 @@ export const auditClientAdminTeamMembersInternal = internalQuery({
     }> = []
 
     for (const client of activeClients) {
-      workspaceIds.add(client.workspaceId)
-
-      let adminMembers = adminMembersByWorkspace.get(client.workspaceId)
-      if (!adminMembers) {
-        adminMembers = await loadEffectiveClientAdminMembers(ctx, client.workspaceId)
-        adminMembersByWorkspace.set(client.workspaceId, adminMembers)
-      }
-
+      const adminMembers = adminMembersByWorkspace.get(client.workspaceId) ?? []
       const expectedAdminNames = adminMembers.map((member) => member.name)
       const missingAdminNames = expectedAdminNames.filter(
         (adminName) => !rosterHasAdminName(client.teamMembers, adminName),
@@ -413,16 +427,25 @@ export const seedAdminClientTeamRolesInternal = internalMutation({
         name,
         clientTeamRole: existingRole || resolvedRole,
       })
-
-      if (existingRole) continue
-      if (isGenericClientTeamRole(resolvedRole)) continue
-
-      await ctx.db.patch(admin._id, {
-        clientTeamRole: resolvedRole,
-        updatedAtMs: now,
-      })
-      patched += 1
     }
+
+    const patchResults = await Promise.all(
+      adminUsers.map(async (admin) => {
+        const name = admin.name?.trim() ?? ''
+        const resolvedRole = resolveClientTeamRoleForAdmin(admin, inferredRoles.get(name.toLowerCase()))
+        const existingRole = typeof admin.clientTeamRole === 'string' ? admin.clientTeamRole.trim() : ''
+
+        if (existingRole) return false
+        if (isGenericClientTeamRole(resolvedRole)) return false
+
+        await ctx.db.patch(admin._id, {
+          clientTeamRole: resolvedRole,
+          updatedAtMs: now,
+        })
+        return true
+      }),
+    )
+    patched = patchResults.filter(Boolean).length
 
     return {
       adminCount: adminUsers.length,
@@ -460,25 +483,28 @@ export const auditTaskAssigneePoolsInternal = internalQuery({
   }),
   handler: async (ctx, args) => {
     const clients = (await ctx.db.query('clients').collect()).filter((client) => client.deletedAtMs === null)
-    const clientAudits = []
+    const clientAudits = await Promise.all(
+      clients.map(async (client) => {
+        const rosterNames = [
+          client.accountManager?.trim(),
+          ...(client.teamMembers ?? []).flatMap((member) => {
+            const name = member.name?.trim()
+            return name ? [name] : []
+          }),
+        ].filter((name): name is string => Boolean(name))
 
-    for (const client of clients) {
-      const rosterNames = [
-        client.accountManager?.trim(),
-        ...(client.teamMembers ?? []).map((member) => member.name?.trim()).filter(Boolean),
-      ].filter((name): name is string => Boolean(name))
+        const members = await buildTaskAssigneeMemberPool(ctx, client.workspaceId, client.legacyId)
 
-      const members = await buildTaskAssigneeMemberPool(ctx, client.workspaceId, client.legacyId)
-
-      clientAudits.push({
-        workspaceId: client.workspaceId,
-        clientLegacyId: client.legacyId,
-        clientName: client.name,
-        rosterNames,
-        eligibleAssigneeIds: members.map((member) => member.legacyId),
-        eligibleAssigneeNames: members.map((member) => member.name),
-      })
-    }
+        return {
+          workspaceId: client.workspaceId,
+          clientLegacyId: client.legacyId,
+          clientName: client.name,
+          rosterNames,
+          eligibleAssigneeIds: members.map((member) => member.legacyId),
+          eligibleAssigneeNames: members.map((member) => member.name),
+        }
+      }),
+    )
 
     let userLookup = null
     const userLegacyId = args.userLegacyId?.trim()
@@ -503,5 +529,35 @@ export const auditTaskAssigneePoolsInternal = internalQuery({
       clients: clientAudits,
       userLookup,
     }
+  },
+})
+
+/** Convex dashboard entry point for admin audits and optional role seeding. */
+type AdminDiagnosticsResult = {
+  teamAudit: unknown
+  taskPoolAudit: unknown
+  seedRoles: unknown | null
+}
+
+export const runAdminDiagnosticsInternal = internalAction({
+  args: {
+    seedRoles: v.optional(v.boolean()),
+  },
+  returns: v.object({
+    teamAudit: v.any(),
+    taskPoolAudit: v.any(),
+    seedRoles: v.union(v.null(), v.any()),
+  }),
+  handler: async (ctx, args): Promise<AdminDiagnosticsResult> => {
+    const [teamAudit, taskPoolAudit]: [unknown, unknown] = await Promise.all([
+      ctx.runQuery(internal.adminMigrations.auditClientAdminTeamMembersInternal, {}),
+      ctx.runQuery(internal.adminMigrations.auditTaskAssigneePoolsInternal, {}),
+    ])
+
+    const seedRoles: unknown | null = args.seedRoles
+      ? await ctx.runMutation(internal.adminMigrations.seedAdminClientTeamRolesInternal, {})
+      : null
+
+    return { teamAudit, taskPoolAudit, seedRoles }
   },
 })
