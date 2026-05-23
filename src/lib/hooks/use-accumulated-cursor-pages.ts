@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 export type ParsedCursorPage<TItem, TCursor> = {
   items: TItem[]
@@ -18,6 +18,17 @@ type UseAccumulatedCursorPagesArgs<TItem, TCursor> = {
   mergePages: (firstPage: TItem[], olderPages: TItem[]) => TItem[]
 }
 
+/** @internal Exported for unit tests. */
+export function areCursorsEqual<TCursor>(left: TCursor | null, right: TCursor | null): boolean {
+  if (left === right) {
+    return true
+  }
+  if (left === null || right === null) {
+    return false
+  }
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
 export function useAccumulatedCursorPages<TItem, TCursor>({
   scopeKey,
   queryData,
@@ -31,6 +42,15 @@ export function useAccumulatedCursorPages<TItem, TCursor>({
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [nextPageCursor, setNextPageCursor] = useState<TCursor | null>(null)
   const [olderItems, setOlderItems] = useState<TItem[]>([])
+
+  const parsePageRef = useRef(parsePage)
+  parsePageRef.current = parsePage
+
+  const mergePagesRef = useRef(mergePages)
+  mergePagesRef.current = mergePages
+
+  const getItemKeyRef = useRef(getItemKey)
+  getItemKeyRef.current = getItemKey
 
   const reset = useCallback(() => {
     setLoadCursor(null)
@@ -47,8 +67,8 @@ export function useAccumulatedCursorPages<TItem, TCursor>({
     if (!enabled || queryData === undefined) {
       return null
     }
-    return parsePage(queryData)
-  }, [enabled, parsePage, queryData])
+    return parsePageRef.current(queryData)
+  }, [enabled, queryData])
 
   useEffect(() => {
     if (!enabled || queryData === undefined || !parsedPage) {
@@ -58,32 +78,39 @@ export function useAccumulatedCursorPages<TItem, TCursor>({
     const { items, nextCursor } = parsedPage
 
     if (loadCursor === null) {
-      setNextPageCursor(nextCursor)
+      setNextPageCursor((previous) =>
+        areCursorsEqual(previous, nextCursor) ? previous : nextCursor,
+      )
       return
     }
 
+    const resolveItemKey = getItemKeyRef.current
     setOlderItems((previous) => {
-      const seen = new Set(previous.map(getItemKey))
+      const seen = new Set(previous.map(resolveItemKey))
       const appended = [...previous]
+      let didAppend = false
       for (const item of items) {
-        const key = getItemKey(item)
+        const key = resolveItemKey(item)
         if (seen.has(key)) {
           continue
         }
         seen.add(key)
         appended.push(item)
+        didAppend = true
       }
-      return appended
+      return didAppend ? appended : previous
     })
-    setNextPageCursor(nextCursor)
+    setNextPageCursor((previous) =>
+      areCursorsEqual(previous, nextCursor) ? previous : nextCursor,
+    )
     setLoadCursor(null)
     setIsLoadingMore(false)
-  }, [enabled, getItemKey, loadCursor, parsedPage, queryData, setLoadCursor])
+  }, [enabled, loadCursor, parsedPage, queryData, setLoadCursor])
 
   const firstPageItems = parsedPage?.items ?? []
   const mergedItems = useMemo(
-    () => mergePages(firstPageItems, olderItems),
-    [firstPageItems, mergePages, olderItems],
+    () => mergePagesRef.current(firstPageItems, olderItems),
+    [firstPageItems, olderItems],
   )
 
   const isInitialLoading = enabled && queryData === undefined && loadCursor === null

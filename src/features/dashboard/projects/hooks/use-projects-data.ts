@@ -69,7 +69,14 @@ export function useProjectsData({
     fallbackMessage: 'Unable to load projects.',
   })
 
-  const projectPagination = useAccumulatedCursorPages<ProjectRecord, ProjectPageCursor>({
+  const {
+    mergedItems: paginatedProjects,
+    nextCursor: projectsNextCursor,
+    isInitialLoading: projectsInitialLoading,
+    isLoadingMore: projectsLoadingMore,
+    loadMore: loadMoreProjects,
+    reset: resetProjectPagination,
+  } = useAccumulatedCursorPages<ProjectRecord, ProjectPageCursor>({
     scopeKey: paginationScopeKey,
     queryData: projectsRealtime,
     loadCursor,
@@ -91,8 +98,8 @@ export function useProjectsData({
   })
 
   const loadedProjectIds = useMemo(
-    () => projectPagination.mergedItems.map((project) => project.id),
-    [projectPagination.mergedItems],
+    () => paginatedProjects.map((project) => project.id),
+    [paginatedProjects],
   )
 
   const taskCountsRealtime = useQuery(
@@ -129,10 +136,10 @@ export function useProjectsData({
         ? (taskCountsRealtime as Record<string, { taskCount: number; openTaskCount: number }>)
         : {}
 
-    return projectPagination.mergedItems.map((project) => mergeProjectTaskCounts(project, counts))
+    return paginatedProjects.map((project) => mergeProjectTaskCounts(project, counts))
   }, [
     isPreviewMode,
-    projectPagination.mergedItems,
+    paginatedProjects,
     searchQuery,
     selectedClientId,
     statusFilter,
@@ -143,21 +150,13 @@ export function useProjectsData({
     setProjects(projectsWithTaskCounts)
   }, [projectsWithTaskCounts])
 
-  const loading = queryEnabled && projectPagination.isInitialLoading
-  const loadingMore = projectPagination.isLoadingMore
+  const loading = queryEnabled && projectsInitialLoading
+  const loadingMore = projectsLoadingMore
   const error = projectsQueryError ?? null
 
-  const resetPagination = useCallback(() => {
-    projectPagination.reset()
-  }, [projectPagination])
-
-  const handleLoadMore = useCallback(() => {
-    projectPagination.loadMore()
-  }, [projectPagination])
-
   const handleRefresh = useCallback(() => {
-    resetPagination()
-  }, [resetPagination])
+    resetProjectPagination()
+  }, [resetProjectPagination])
 
   return {
     projects,
@@ -165,9 +164,9 @@ export function useProjectsData({
     loading,
     loadingMore,
     error,
-    hasMoreProjects: Boolean(projectPagination.nextCursor),
-    handleLoadMore,
+    hasMoreProjects: Boolean(projectsNextCursor),
+    handleLoadMore: loadMoreProjects,
     handleRefresh,
-    resetPagination,
+    resetPagination: resetProjectPagination,
   }
 }
