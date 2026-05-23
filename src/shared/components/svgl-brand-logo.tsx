@@ -1,8 +1,8 @@
 'use client'
 
-import Image from 'next/image'
-import type { ComponentType } from 'react'
+import { useCallback, useMemo, useState, type ComponentType } from 'react'
 
+import { getPublicAssetUrl } from '@/lib/public-assets'
 import { cn } from '@/lib/utils'
 
 /** Brand slugs mapped to logos from https://svgl.app (stored under /public/svgl). */
@@ -59,17 +59,44 @@ function BrandImage({
   labeled: boolean
   title: string
 }) {
+  const resolvedSrc = useMemo(() => getPublicAssetUrl(src), [src])
+  const [failed, setFailed] = useState(false)
+
+  const handleError = useCallback(() => {
+    setFailed(true)
+  }, [])
+
+  if (failed) {
+    return (
+      <span
+        className={cn(
+          'inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-[10px] font-semibold uppercase text-muted-foreground',
+          className,
+        )}
+        aria-hidden={labeled ? undefined : true}
+        role={labeled ? 'img' : undefined}
+        aria-label={labeled ? title : undefined}
+        title={title}
+      >
+        {title.charAt(0)}
+      </span>
+    )
+  }
+
   return (
-    <Image
-      src={src}
+    // eslint-disable-next-line @next/next/no-img-element -- local SVGL assets; absolute URLs avoid wrong OAuth origins
+    <img
+      src={resolvedSrc}
       alt={labeled ? title : ''}
       width={24}
       height={24}
-      unoptimized
+      loading="lazy"
+      decoding="async"
       className={cn('inline-block size-6 shrink-0 object-contain', className)}
       aria-hidden={labeled ? undefined : true}
       role={labeled ? 'img' : undefined}
       aria-label={labeled ? title : undefined}
+      onError={handleError}
     />
   )
 }

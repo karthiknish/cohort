@@ -5,7 +5,7 @@ import { useCallback, useRef, useState, useTransition } from 'react'
 import { ListTodo } from 'lucide-react'
 import { format } from 'date-fns'
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { ResponsiveFormSheet } from '@/shared/ui/responsive-form-sheet'
 import { getIconContainerClasses } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
 import { TASKS_THEME } from './tasks-theme'
@@ -235,28 +235,39 @@ export function TaskCreationModal({
     setFormData((prev) => ({ ...prev, priority: value }))
   }, [])
 
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) onClose()
+    },
+    [onClose],
+  )
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={TASKS_THEME.dialog.content}>
-        <DialogHeader className={TASKS_THEME.dialog.header}>
+    <ResponsiveFormSheet
+      open={isOpen}
+      onOpenChange={handleOpenChange}
+      contentClassName={TASKS_THEME.sheet.content}
+    >
+      <form className="flex h-full min-h-0 flex-col" onSubmit={handleSubmit}>
+        <div className={TASKS_THEME.sheet.header}>
           <div className="flex items-start gap-3">
             <div className={cn(getIconContainerClasses('medium'), 'size-10 shrink-0')}>
               <ListTodo className="size-5" aria-hidden />
             </div>
             <div className="min-w-0 space-y-1">
-              <DialogTitle className="text-left text-lg">Create task</DialogTitle>
-              <DialogDescription className="text-left text-sm">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">Create task</h2>
+              <p className="text-sm text-muted-foreground">
                 {contextInfo.isAutoPopulated ? (
                   <span className="text-success">Pre-filled from your current workspace context.</span>
                 ) : (
                   'Add a task without leaving this screen.'
-            )}
-          </DialogDescription>
+                )}
+              </p>
             </div>
           </div>
-        </DialogHeader>
+        </div>
 
-        <form onSubmit={handleSubmit} className={TASKS_THEME.dialog.body}>
+        <div className={TASKS_THEME.sheet.body}>
           <TaskCreationModalFormFields
             title={formData.title}
             description={formData.description}
@@ -277,8 +288,8 @@ export function TaskCreationModal({
             onRemoveAttachment={handleRemoveAttachment}
             onCancel={onClose}
           />
-        </form>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </form>
+    </ResponsiveFormSheet>
   )
 }

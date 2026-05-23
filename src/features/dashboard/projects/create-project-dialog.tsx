@@ -4,31 +4,25 @@ import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useReducer, useRef, useState } from 'react'
 import { useMutation } from 'convex/react'
-import { LoaderCircle, Plus } from 'lucide-react'
+import { Briefcase, LoaderCircle, Plus } from 'lucide-react'
 import { format } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 
 import { projectsApi } from '@/lib/convex-api'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
+import { getIconContainerClasses } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useToast } from '@/shared/ui/use-toast'
-import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 import { Button } from '@/shared/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/shared/ui/dialog'
+import { FormSheetClose, ResponsiveFormSheet } from '@/shared/ui/responsive-form-sheet'
+import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 
+import { PROJECTS_THEME } from './components/projects-theme'
 import { CreateProjectFormFields } from './create-project-dialog-form'
 
-type CreateProjectDialogProps = {
+type CreateProjectSheetProps = {
   onProjectCreated?: (project: ProjectRecord) => void
   trigger?: React.ReactNode
 }
@@ -115,7 +109,7 @@ function formatStatusLabel(value: ProjectStatus): string {
     .join(' ')
 }
 
-export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProjectDialogProps) {
+export function CreateProjectSheet({ onProjectCreated, trigger }: CreateProjectSheetProps) {
   const { user } = useAuth()
   const workspaceId = user?.agencyId ?? null
 
@@ -131,21 +125,23 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
   const [formState, dispatch] = useReducer(
     projectFormReducer,
     selectedClientId,
-    createInitialFormState
+    createInitialFormState,
   )
 
   const resetForm = useCallback(() => {
     dispatch({ type: 'reset', clientId: selectedClientId ?? '' })
   }, [selectedClientId])
 
-  const handleOpenChange = useCallback((value: boolean) => {
-    setOpen(value)
-    if (value) {
-      // Reset form when opening
-      setNameError(null)
-      resetForm()
-    }
-  }, [resetForm])
+  const handleOpenChange = useCallback(
+    (value: boolean) => {
+      setOpen(value)
+      if (value) {
+        setNameError(null)
+        resetForm()
+      }
+    },
+    [resetForm],
+  )
 
   const handleAddTag = useCallback(() => {
     const trimmed = formState.tagInput.trim()
@@ -158,47 +154,51 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
     dispatch({ type: 'removeTag', value: tag })
   }, [])
 
-  const handleTagKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
+  const handleTagKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        handleAddTag()
+      }
+    },
+    [handleAddTag],
+  )
+
+  const handleSubmit = useCallback(
+    (event: React.FormEvent) => {
       event.preventDefault()
-      handleAddTag()
-    }
-  }, [handleAddTag])
 
-  const handleSubmit = useCallback((event: React.FormEvent) => {
-    event.preventDefault()
+      if (!user?.id || !workspaceId) {
+        notifyFailure({
+          title: 'Authentication required',
+          message: 'Please sign in to create a project.',
+        })
+        return
+      }
 
-    if (!user?.id || !workspaceId) {
-      notifyFailure({
-        title: 'Authentication required',
-        message: 'Please sign in to create a project.',
-      })
-      return
-    }
+      if (!formState.name.trim()) {
+        setNameError('Give your project a name to get started.')
+        nameInputRef.current?.focus()
+        return
+      }
 
-    if (!formState.name.trim()) {
-      setNameError('Give your project a name to get started.')
-      nameInputRef.current?.focus()
-      return
-    }
+      setLoading(true)
 
-    setLoading(true)
+      const selectedClientData = clients.find((c) => c.id === formState.clientId)
 
-    const selectedClientData = clients.find((c) => c.id === formState.clientId)
+      const payload: CreateProjectPayload = {
+        name: formState.name.trim(),
+        description: formState.description.trim() || undefined,
+        status: formState.status,
+        clientId: formState.clientId && formState.clientId !== 'none' ? formState.clientId : undefined,
+        clientName: selectedClientData?.name || undefined,
+        startDate: formState.startDate ? format(formState.startDate, 'yyyy-MM-dd') : undefined,
+        endDate: formState.endDate ? format(formState.endDate, 'yyyy-MM-dd') : undefined,
+        tags: formState.tags,
+      }
 
-    const payload: CreateProjectPayload = {
-      name: formState.name.trim(),
-      description: formState.description.trim() || undefined,
-      status: formState.status,
-      clientId: (formState.clientId && formState.clientId !== 'none') ? formState.clientId : undefined,
-      clientName: selectedClientData?.name || undefined,
-      startDate: formState.startDate ? format(formState.startDate, 'yyyy-MM-dd') : undefined,
-      endDate: formState.endDate ? format(formState.endDate, 'yyyy-MM-dd') : undefined,
-      tags: formState.tags,
-    }
-
-    const legacyId = uuidv4()
-    void createProject({
+      const legacyId = uuidv4()
+      void createProject({
         workspaceId,
         legacyId,
         name: payload.name,
@@ -211,124 +211,116 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
         tags: payload.tags,
         ownerId: user?.id ?? null,
       })
+        .then(() => {
+          const nowMs = Date.now()
+          const createdProject: ProjectRecord = {
+            id: legacyId,
+            name: payload.name,
+            description: payload.description ?? null,
+            status: payload.status,
+            clientId: payload.clientId ?? null,
+            clientName: payload.clientName ?? null,
+            startDate: payload.startDate ? new Date(payload.startDate).toISOString() : null,
+            endDate: payload.endDate ? new Date(payload.endDate).toISOString() : null,
+            tags: payload.tags,
+            ownerId: user?.id ?? null,
+            createdAt: new Date(nowMs).toISOString(),
+            updatedAt: new Date(nowMs).toISOString(),
+            taskCount: 0,
+            openTaskCount: 0,
+            recentActivityAt: null,
+            deletedAt: null,
+          }
 
-      .then(() => {
-        const nowMs = Date.now()
-        const createdProject: ProjectRecord = {
-          id: legacyId,
-          name: payload.name,
-          description: payload.description ?? null,
-          status: payload.status,
-          clientId: payload.clientId ?? null,
-          clientName: payload.clientName ?? null,
-          startDate: payload.startDate ? new Date(payload.startDate).toISOString() : null,
-          endDate: payload.endDate ? new Date(payload.endDate).toISOString() : null,
-          tags: payload.tags,
-          ownerId: user?.id ?? null,
-          createdAt: new Date(nowMs).toISOString(),
-          updatedAt: new Date(nowMs).toISOString(),
-          taskCount: 0,
-          openTaskCount: 0,
-          recentActivityAt: null,
-          deletedAt: null,
-        }
+          toast({
+            title: 'Project created!',
+            description: `"${createdProject.name}" is ready. Start adding tasks and collaborating.`,
+          })
 
-        toast({
-          title: 'Project created!',
-          description: `"${createdProject.name}" is ready. Start adding tasks and collaborating.`,
+          onProjectCreated?.(createdProject)
+          emitDashboardRefresh({ reason: 'project-mutated', clientId: createdProject.clientId ?? null })
+          setOpen(false)
+          resetForm()
         })
-
-        onProjectCreated?.(createdProject)
-        emitDashboardRefresh({ reason: 'project-mutated', clientId: createdProject.clientId ?? null })
-        setOpen(false)
-        resetForm()
-      })
-      .catch((error) => {
-        reportConvexFailure({
-        error: error,
-        context: 'CreateProjectDialog:handleSubmit',
-        title: 'Creation failed',
-        fallbackMessage: 'Creation failed',
+        .catch((error) => {
+          reportConvexFailure({
+            error,
+            context: 'CreateProjectSheet:handleSubmit',
+            title: 'Creation failed',
+            fallbackMessage: 'Creation failed',
+          })
         })
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [user?.id, workspaceId, clients, formState, toast, onProjectCreated, resetForm, createProject])
-
-  const handleNameChange = useCallback(
-    (value: string) => {
-      setNameError(null)
-      dispatch({ type: 'setName', value })
+        .finally(() => {
+          setLoading(false)
+        })
     },
-    [dispatch]
+    [user?.id, workspaceId, clients, formState, toast, onProjectCreated, resetForm, createProject],
   )
 
-  const handleDescriptionChange = useCallback(
-    (value: string) => {
-      dispatch({ type: 'setDescription', value })
-    },
-    [dispatch]
-  )
-
-  const handleStatusChange = useCallback(
-    (value: ProjectStatus) => {
-      dispatch({ type: 'setStatus', value })
-    },
-    [dispatch]
-  )
-
-  const handleClientChange = useCallback(
-    (value: string) => {
-      dispatch({ type: 'setClientId', value })
-    },
-    [dispatch]
-  )
-
-  const handleStartDateChange = useCallback(
-    (value: Date | undefined) => {
-      dispatch({ type: 'setStartDate', value })
-    },
-    [dispatch]
-  )
-
-  const handleEndDateChange = useCallback(
-    (value: Date | undefined) => {
-      dispatch({ type: 'setEndDate', value })
-    },
-    [dispatch]
-  )
-
-  const handleTagInputChange = useCallback(
-    (value: string) => {
-      dispatch({ type: 'setTagInput', value })
-    },
-    [dispatch]
-  )
-
-  const handleCancel = useCallback(() => {
-    setOpen(false)
+  const handleNameChange = useCallback((value: string) => {
+    setNameError(null)
+    dispatch({ type: 'setName', value })
   }, [])
 
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button id="create-project-trigger" type="button" className="gap-2 shadow-sm transition-shadow hover:shadow-md">
-            <Plus className="size-4" aria-hidden />
-            New project
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[540px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Create new project</DialogTitle>
-            <DialogDescription>
-              Add a new project to track work, tasks, and team collaboration.
-            </DialogDescription>
-          </DialogHeader>
+  const handleDescriptionChange = useCallback((value: string) => {
+    dispatch({ type: 'setDescription', value })
+  }, [])
 
+  const handleStatusChange = useCallback((value: ProjectStatus) => {
+    dispatch({ type: 'setStatus', value })
+  }, [])
+
+  const handleClientChange = useCallback((value: string) => {
+    dispatch({ type: 'setClientId', value })
+  }, [])
+
+  const handleStartDateChange = useCallback((value: Date | undefined) => {
+    dispatch({ type: 'setStartDate', value })
+  }, [])
+
+  const handleEndDateChange = useCallback((value: Date | undefined) => {
+    dispatch({ type: 'setEndDate', value })
+  }, [])
+
+  const handleTagInputChange = useCallback((value: string) => {
+    dispatch({ type: 'setTagInput', value })
+  }, [])
+
+  const triggerNode =
+    trigger ?? (
+      <Button
+        id="create-project-trigger"
+        type="button"
+        className="gap-2 shadow-sm transition-shadow hover:shadow-md"
+      >
+        <Plus className="size-4" aria-hidden />
+        New project
+      </Button>
+    )
+
+  return (
+    <ResponsiveFormSheet
+      open={open}
+      onOpenChange={handleOpenChange}
+      trigger={triggerNode}
+      contentClassName={PROJECTS_THEME.sheet.content}
+    >
+      <form className="flex h-full min-h-0 flex-col" onSubmit={handleSubmit}>
+        <div className={PROJECTS_THEME.sheet.header}>
+          <div className="flex items-start gap-3">
+            <div className={cn(getIconContainerClasses('medium'), 'size-10 shrink-0')}>
+              <Briefcase className="size-5" aria-hidden />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">Create new project</h2>
+              <p className="text-sm text-muted-foreground">
+                Add a new project to track work, tasks, and team collaboration.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className={PROJECTS_THEME.sheet.body}>
           <CreateProjectFormFields
             loading={loading}
             clients={clients}
@@ -347,18 +339,23 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
             onRemoveTag={handleRemoveTag}
             formatStatusLabel={formatStatusLabel}
           />
+        </div>
 
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
+        <div className={PROJECTS_THEME.sheet.footer}>
+          <Button type="submit" disabled={loading || !formState.name.trim()} className="h-9 min-w-[7.5rem] font-medium">
+            {loading && <LoaderCircle className="mr-2 size-4 animate-spin" />}
+            Create project
+          </Button>
+          <FormSheetClose asChild>
+            <Button type="button" variant="outline" className="h-9" disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !formState.name.trim()}>
-              {loading && <LoaderCircle className="mr-2 size-4 animate-spin" />}
-              Create project
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </FormSheetClose>
+        </div>
+      </form>
+    </ResponsiveFormSheet>
   )
 }
+
+/** @deprecated Use CreateProjectSheet */
+export const CreateProjectDialog = CreateProjectSheet

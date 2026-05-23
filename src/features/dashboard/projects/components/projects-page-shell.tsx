@@ -4,7 +4,7 @@ import { useCallback, useMemo } from 'react'
 import { Briefcase, CircleX, ListChecks, LoaderCircle, Plus, RefreshCw, Users } from 'lucide-react'
 import Link from 'next/link'
 
-import { CreateProjectDialog } from '@/features/dashboard/projects/create-project-dialog'
+import { CreateProjectSheet } from '@/features/dashboard/projects/create-project-dialog'
 import { EditProjectDialog } from '@/features/dashboard/projects/edit-project-dialog'
 import { ProjectsDocumentImportOverlay } from '@/features/dashboard/projects/projects-document-import-overlay'
 import { ProjectsDocumentImportReviewSheet } from '@/features/dashboard/projects/projects-document-import-review-sheet'
@@ -192,7 +192,7 @@ function ProjectsHeaderSection() {
           </TooltipTrigger>
           <TooltipContent>Refresh projects list</TooltipContent>
         </Tooltip>
-        <CreateProjectDialog onProjectCreated={handleProjectCreated} />
+        <CreateProjectSheet onProjectCreated={handleProjectCreated} />
       </div>
     </DashboardPageHero>
   )
