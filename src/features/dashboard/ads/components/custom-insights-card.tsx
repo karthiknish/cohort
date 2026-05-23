@@ -46,6 +46,7 @@ function isAnomaly(value: number | null, benchmark: number | undefined | null, t
 // =============================================================================
 
 export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency = 'USD', loading }: CustomInsightsCardProps) {
+export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency, loading }: CustomInsightsCardProps) {
     const computedBenchmarks = useMemo(() => {
         if (!derivedMetrics) return null
 

@@ -10,12 +10,14 @@ export type Campaign = {
   name: string
   providerId: string
   status: string
+  campaignName?: string
   budget?: number
   budgetType?: string
   currency?: string
   objective?: string
   startTime?: string
   stopTime?: string
+  isHistorical?: boolean
   biddingStrategy?: {
     type: string
     targetCpa?: number

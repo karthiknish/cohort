@@ -15,13 +15,15 @@ interface ComparisonViewCardProps {
     periodComparison: PeriodComparison | null
     providerComparison: ProviderComparison[]
     currency?: string
+    providerCurrencies?: Record<string, string>
     loading?: boolean
 }
 
 export function ComparisonViewCard({
     periodComparison,
     providerComparison,
-    currency = 'USD',
+    currency,
+    providerCurrencies,
     loading,
 }: ComparisonViewCardProps) {
     const viewTabs = usePersistedTab({
@@ -34,5 +36,5 @@ export function ComparisonViewCard({
 
     return loading
         ? <ComparisonViewLoadingCard />
-        : <ComparisonViewCardShell currency={currency} onTabChange={viewTabs.setValue} periodComparison={periodComparison} providerComparison={providerComparison} selectedTab={viewTabs.value} />
+        : <ComparisonViewCardShell currency={currency} onTabChange={viewTabs.setValue} periodComparison={periodComparison} providerComparison={providerComparison} providerCurrencies={providerCurrencies} selectedTab={viewTabs.value} />
 }

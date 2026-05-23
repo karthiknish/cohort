@@ -44,6 +44,7 @@ describe('comparison view card sections', () => {
         onTabChange={vi.fn()}
         periodComparison={periodComparison}
         providerComparison={[{ providerId: 'google_ads', metrics: { spend: 650, ctr: 0.031, roas: 3.4, cpa: 18.2, conversions: 42 } }]}
+        providerCurrencies={{ google_ads: 'GBP' }}
         selectedTab="platform"
       />,
     )
@@ -53,5 +54,19 @@ describe('comparison view card sections', () => {
     expect(markup).toContain('Google')
     expect(markup).toContain('£650')
     expect(markup).toContain('3.40')
+  })
+
+  it('does not fall back to USD when no comparable currency exists', () => {
+    const markup = renderToStaticMarkup(
+      <ComparisonViewCardShell
+        onTabChange={vi.fn()}
+        periodComparison={periodComparison}
+        providerComparison={[]}
+        selectedTab="period"
+      />,
+    )
+
+    expect(markup).toContain('1,000')
+    expect(markup).not.toContain('$1,000')
   })
 })

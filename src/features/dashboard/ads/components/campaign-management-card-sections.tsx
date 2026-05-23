@@ -32,6 +32,10 @@ function isActiveStatus(status: string) {
   return normalized === 'enabled' || normalized === 'enable' || normalized === 'active'
 }
 
+function isHistoricalCampaign(campaign: Campaign) {
+  return campaign.isHistorical === true
+}
+
 function ActionTooltipButton({
   actionLabel,
   buttonVariant = 'outline',
@@ -83,6 +87,8 @@ export function CampaignRowActions({
   onOpenBudgetDialog: (campaign: Campaign) => void
 }) {
   const isActive = isActiveStatus(campaign.status)
+  const isHistorical = isHistoricalCampaign(campaign)
+  const historicalActionLabel = 'Historical campaign rows are read-only'
 
   const handleToggleActive = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -122,27 +128,27 @@ export function CampaignRowActions({
     <TooltipProvider>
       <div className="flex items-center justify-end gap-1">
         <ActionTooltipButton
-          actionLabel={isActive ? 'Pause campaign' : 'Enable campaign'}
-          disabled={actionLoading === campaign.id}
+          actionLabel={isHistorical ? historicalActionLabel : isActive ? 'Pause campaign' : 'Enable campaign'}
+          disabled={isHistorical || actionLoading === campaign.id}
           icon={toggleIcon}
           onClick={handleToggleActive}
         />
         <ActionTooltipButton
-          actionLabel="Update budget"
-          disabled={actionLoading === campaign.id}
+          actionLabel={isHistorical ? historicalActionLabel : 'Update budget'}
+          disabled={isHistorical || actionLoading === campaign.id}
           icon={dollarSignIcon}
           onClick={handleOpenBudget}
         />
         <ActionTooltipButton
-          actionLabel={biddingDisabledReason ?? 'Bidding strategy'}
-          disabled={actionLoading === campaign.id || Boolean(biddingDisabled)}
+          actionLabel={isHistorical ? historicalActionLabel : biddingDisabledReason ?? 'Bidding strategy'}
+          disabled={isHistorical || actionLoading === campaign.id || Boolean(biddingDisabled)}
           icon={trendingUpIcon}
           onClick={handleOpenBidding}
         />
         <ActionTooltipButton
-          actionLabel="Remove campaign"
+          actionLabel={isHistorical ? historicalActionLabel : 'Remove campaign'}
           buttonVariant="destructive"
-          disabled={actionLoading === campaign.id}
+          disabled={isHistorical || actionLoading === campaign.id}
           icon={trash2Icon}
           onClick={handleRemove}
         />

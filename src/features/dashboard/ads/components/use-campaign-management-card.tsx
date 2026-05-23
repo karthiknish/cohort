@@ -3,9 +3,10 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useAction, useConvexAuth } from 'convex/react'
+import { useAction, useConvexAuth, useQuery } from 'convex/react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { api } from '/_generated/api'
 
 import { toast } from '@/shared/ui/use-toast'
 import { getCurrencyInfo, isSupportedCurrency, normalizeCurrencyCode } from '@/constants/currencies'
@@ -38,6 +39,81 @@ import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
 
 function toIsoDateOnly(date: Date): string {
   return date.toISOString().split('T')[0] ?? ''
+}
+
+type HistoricalMetricRow = {
+  campaignId?: string | null
+  campaignName?: string | null
+  currency?: string | null
+  date: string
+}
+
+function buildHistoricalCampaigns(
+  metrics: HistoricalMetricRow[] | undefined,
+  providerId: string,
+): Campaign[] {
+  if (!Array.isArray(metrics) || metrics.length === 0) return []
+
+  const historicalCampaignMap = new Map<string, Campaign>()
+
+  metrics.forEach((metric) => {
+    const campaignId = typeof metric.campaignId === 'string' ? metric.campaignId.trim() : ''
+    if (!campaignId) return
+
+    const campaignName = typeof metric.campaignName === 'string' ? metric.campaignName.trim() : ''
+    const existing = historicalCampaignMap.get(campaignId)
+
+    if (!existing) {
+      historicalCampaignMap.set(campaignId, {
+        id: campaignId,
+        name: campaignName || campaignId,
+        campaignName: campaignName || undefined,
+        providerId,
+        status: 'Historical',
+        currency: metric.currency ?? undefined,
+        startTime: metric.date,
+        stopTime: metric.date,
+        isHistorical: true,
+      })
+      return
+    }
+
+    if (!existing.currency && metric.currency) {
+      existing.currency = metric.currency
+    }
+    if (!existing.campaignName && campaignName) {
+      existing.campaignName = campaignName
+      existing.name = campaignName
+    }
+    if (!existing.startTime || metric.date < existing.startTime) {
+      existing.startTime = metric.date
+    }
+    if (!existing.stopTime || metric.date > existing.stopTime) {
+      existing.stopTime = metric.date
+    }
+  })
+
+  return Array.from(historicalCampaignMap.values()).sort((left, right) =>
+    (right.stopTime ?? '').localeCompare(left.stopTime ?? ''),
+  )
+}
+
+function mergeCampaigns(liveCampaigns: Campaign[], historicalCampaigns: Campaign[]): Campaign[] {
+  if (historicalCampaigns.length === 0) return liveCampaigns
+  if (liveCampaigns.length === 0) return historicalCampaigns
+
+  const merged = new Map<string, Campaign>()
+  liveCampaigns.forEach((campaign) => {
+    merged.set(campaign.id, campaign)
+  })
+
+  historicalCampaigns.forEach((campaign) => {
+    if (!merged.has(campaign.id)) {
+      merged.set(campaign.id, campaign)
+    }
+  })
+
+  return Array.from(merged.values())
 }
 
 export function useCampaignManagementCard(props: CampaignManagementCardProps) {
@@ -85,6 +161,23 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
 
   const startDate = useMemo(() => toIsoDateOnly(dateRange.start), [dateRange.start])
   const endDate = useMemo(() => toIsoDateOnly(dateRange.end), [dateRange.end])
+  const historicalMetrics = useQuery(
+    api.adsMetrics.listMetrics,
+    !isConnected || setupRequired || !workspaceId || !canQueryConvex
+      ? 'skip'
+      : {
+          workspaceId,
+          clientId: selectedClientId ?? null,
+          providerIds: [adsProviderId],
+          startDate,
+          endDate,
+          limit: 2000,
+        },
+  ) as HistoricalMetricRow[] | undefined
+  const historicalCampaigns = useMemo(
+    () => buildHistoricalCampaigns(historicalMetrics, adsProviderId),
+    [adsProviderId, historicalMetrics],
+  )
 
   const selectedBudgetTarget = selectedGroup ?? selectedCampaign
   const selectedCurrencyCode = useMemo(
@@ -126,7 +219,8 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
       clientId: selectedClientId ?? null,
     })
       .then((result) => {
-        dispatch({ type: 'setCampaigns', campaigns: Array.isArray(result) ? (result as Campaign[]) : [] })
+        const liveCampaigns = Array.isArray(result) ? (result as Campaign[]) : []
+        dispatch({ type: 'setCampaigns', campaigns: mergeCampaigns(liveCampaigns, historicalCampaigns) })
       })
       .catch((error) => {
         reportConvexFailure({
@@ -139,7 +233,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
       .finally(() => {
         dispatch({ type: 'setLoading', loading: false })
       })
-  }, [adsProviderId, canQueryConvex, isConnected, listCampaigns, selectedClientId, setupRequired, workspaceId])
+  }, [adsProviderId, canQueryConvex, historicalCampaigns, isConnected, listCampaigns, selectedClientId, setupRequired, workspaceId])
 
   const fetchGroups = useCallback(async () => {
     if (!isConnected || setupRequired || adsProviderId !== 'linkedin' || !canQueryConvex) return

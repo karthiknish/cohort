@@ -46,4 +46,24 @@ describe('custom insights card sections', () => {
     expect(markup).toContain('12.0%')
     expect(markup).toContain('ring-warning/50')
   })
+
+  it('does not invent a USD symbol when no currency is provided', () => {
+    const markup = renderToStaticMarkup(
+      <CustomInsightsGrid
+        items={[
+          {
+            label: 'Profit',
+            value: 42,
+            format: 'currency',
+            icon: <Target className="size-4" />,
+            trend: null,
+            theme: 'success',
+          },
+        ]}
+      />,
+    )
+
+    expect(markup).toContain('42')
+    expect(markup).not.toContain('$42')
+  })
 })

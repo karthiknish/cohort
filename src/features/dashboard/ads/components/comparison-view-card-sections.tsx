@@ -14,9 +14,17 @@ import { PROVIDER_ICON_MAP, formatProviderName } from './utils'
 
 type MetricFormat = 'currency' | 'percent' | 'number'
 
-function formatValue(value: number | null, format: MetricFormat, currency = 'USD') {
+function formatMoneyValue(value: number, currency?: string) {
+  if (!currency) {
+    return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+  }
+
+  return formatCurrency(value, currency)
+}
+
+function formatValue(value: number | null, format: MetricFormat, currency?: string) {
   if (value === null || !Number.isFinite(value)) return '—'
-  if (format === 'currency') return formatCurrency(value, currency)
+  if (format === 'currency') return formatMoneyValue(value, currency)
   if (format === 'percent') return `${(value * 100).toFixed(2)}%`
   return value.toLocaleString(undefined, { maximumFractionDigits: 0 })
 }
@@ -29,13 +37,13 @@ function TrendIndicator({ delta, invertTrend }: { delta: number | null; invertTr
   return isPositive ? <TrendingUp className={cn('size-4', isGood ? 'text-success' : 'text-destructive')} aria-label={label} /> : <TrendingDown className={cn('size-4', isGood ? 'text-success' : 'text-destructive')} aria-label={label} />
 }
 
-function MetricRow({ current, currency = 'USD', delta, deltaPercent, format, invertTrend, label, previous }: { current: number | null; currency?: string; delta: number | null; deltaPercent: number | null; format: MetricFormat; invertTrend?: boolean; label: string; previous: number | null }) {
+function MetricRow({ current, currency, delta, deltaPercent, format, invertTrend, label, previous }: { current: number | null; currency?: string; delta: number | null; deltaPercent: number | null; format: MetricFormat; invertTrend?: boolean; label: string; previous: number | null }) {
   const isPositive = delta !== null && delta > 0
   const isGood = invertTrend ? !isPositive : isPositive
   return <div className="flex items-center justify-between border-b border-muted/40 py-3 last:border-0"><span className="text-sm font-medium text-muted-foreground">{label}</span><div className="flex items-center gap-4"><div className="text-right"><div className="text-sm text-muted-foreground">Previous</div><div className="font-medium">{formatValue(previous, format, currency)}</div></div><ArrowRight className="size-4 text-muted-foreground" /><div className="text-right"><div className="text-sm text-muted-foreground">Current</div><div className="font-semibold">{formatValue(current, format, currency)}</div></div><div className="flex min-w-[100px] items-center gap-2"><TrendIndicator delta={delta} invertTrend={invertTrend} />{deltaPercent !== null && Math.abs(deltaPercent) >= 0.01 ? <Badge variant="secondary" className={cn('text-xs', isGood ? 'bg-success/10 text-success border border-success/20' : 'bg-destructive/10 text-destructive border border-destructive/20')}>{deltaPercent > 0 ? '+' : ''}{deltaPercent.toFixed(1)}%</Badge> : null}</div></div></div>
 }
 
-function PeriodComparisonView({ comparison, currency = 'USD' }: { comparison: PeriodComparison; currency?: string }) {
+function PeriodComparisonView({ comparison, currency }: { comparison: PeriodComparison; currency?: string }) {
   const metrics = [
     { label: 'Spend', current: comparison.current.spend, previous: comparison.previous.spend, delta: comparison.delta.spend, deltaPercent: comparison.deltaPercent.spend, format: 'currency' as const, invertTrend: true },
     { label: 'Impressions', current: comparison.current.impressions, previous: comparison.previous.impressions, delta: comparison.delta.impressions, deltaPercent: comparison.deltaPercent.impressions, format: 'number' as const },
@@ -48,19 +56,19 @@ function PeriodComparisonView({ comparison, currency = 'USD' }: { comparison: Pe
   return <div className="space-y-1">{metrics.map((metric) => <MetricRow key={metric.label} currency={currency} {...metric} />)}</div>
 }
 
-function ProviderComparisonView({ currency = 'USD', providers }: { currency?: string; providers: ProviderComparison[] }) {
+function ProviderComparisonView({ currency, providerCurrencies, providers }: { currency?: string; providerCurrencies?: Record<string, string>; providers: ProviderComparison[] }) {
   if (providers.length === 0) return <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground"><p>No provider data available for comparison.</p></div>
-  return <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{providers.map((provider) => { const ProviderIcon = PROVIDER_ICON_MAP[provider.providerId]; return <Card key={provider.providerId} className="border-muted/60 bg-background"><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base">{ProviderIcon ? <ProviderIcon className="size-4" /> : null}{formatProviderName(provider.providerId)}</CardTitle></CardHeader><CardContent className="space-y-3"><div className="text-2xl font-semibold">{formatCurrency(provider.metrics.spend, currency)}</div><div className="grid grid-cols-2 gap-3 text-xs"><div><div className="font-medium text-muted-foreground">CTR</div><div className="text-foreground">{provider.metrics.ctr !== null ? `${(provider.metrics.ctr * 100).toFixed(2)}%` : '—'}</div></div><div><div className="font-medium text-muted-foreground">ROAS</div><div className="text-foreground">{provider.metrics.roas !== null ? provider.metrics.roas.toFixed(2) : '—'}</div></div><div><div className="font-medium text-muted-foreground">CPA</div><div className="text-foreground">{provider.metrics.cpa !== null ? formatCurrency(provider.metrics.cpa, currency) : '—'}</div></div><div><div className="font-medium text-muted-foreground">Conversions</div><div className="text-foreground">{provider.metrics.conversions.toLocaleString()}</div></div></div></CardContent></Card> })}</div>
+  return <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{providers.map((provider) => { const ProviderIcon = PROVIDER_ICON_MAP[provider.providerId]; const providerCurrency = providerCurrencies?.[provider.providerId] ?? currency; return <Card key={provider.providerId} className="border-muted/60 bg-background"><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base">{ProviderIcon ? <ProviderIcon className="size-4" /> : null}{formatProviderName(provider.providerId)}</CardTitle></CardHeader><CardContent className="space-y-3"><div className="text-2xl font-semibold">{formatMoneyValue(provider.metrics.spend, providerCurrency)}</div><div className="grid grid-cols-2 gap-3 text-xs"><div><div className="font-medium text-muted-foreground">CTR</div><div className="text-foreground">{provider.metrics.ctr !== null ? `${(provider.metrics.ctr * 100).toFixed(2)}%` : '—'}</div></div><div><div className="font-medium text-muted-foreground">ROAS</div><div className="text-foreground">{provider.metrics.roas !== null ? provider.metrics.roas.toFixed(2) : '—'}</div></div><div><div className="font-medium text-muted-foreground">CPA</div><div className="text-foreground">{provider.metrics.cpa !== null ? formatMoneyValue(provider.metrics.cpa, providerCurrency) : '—'}</div></div><div><div className="font-medium text-muted-foreground">Conversions</div><div className="text-foreground">{provider.metrics.conversions.toLocaleString()}</div></div></div></CardContent></Card> })}</div>
 }
 
 export function ComparisonViewLoadingCard() {
   return <Card className="shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Layers className="size-5" />Comparison View</CardTitle><CardDescription>Compare performance across periods and platforms</CardDescription></CardHeader><CardContent><div className="space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-64 w-full" /></div></CardContent></Card>
 }
 
-export function ComparisonViewCardShell({ currency = 'USD', onTabChange, periodComparison, providerComparison, selectedTab }: { currency?: string; onTabChange: (value: 'period' | 'platform') => void; periodComparison: PeriodComparison | null; providerComparison: ProviderComparison[]; selectedTab: 'period' | 'platform' }) {
+export function ComparisonViewCardShell({ currency, onTabChange, periodComparison, providerComparison, providerCurrencies, selectedTab }: { currency?: string; onTabChange: (value: 'period' | 'platform') => void; periodComparison: PeriodComparison | null; providerComparison: ProviderComparison[]; providerCurrencies?: Record<string, string>; selectedTab: 'period' | 'platform' }) {
   const handleTabChange = useCallback((value: string) => {
     onTabChange(value as 'period' | 'platform')
   }, [onTabChange])
 
-  return <Card className="shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Layers className="size-5" />Comparison View</CardTitle><CardDescription>Compare performance across periods and platforms</CardDescription></CardHeader><CardContent><Tabs value={selectedTab} onValueChange={handleTabChange} className="w-full"><TabsList className="grid w-full grid-cols-2"><TabsTrigger value="period" className="gap-2"><Calendar className="size-4" />Period</TabsTrigger><TabsTrigger value="platform" className="gap-2"><Layers className="size-4" />Platform</TabsTrigger></TabsList><TabsContent value="period" className="mt-4">{periodComparison ? <PeriodComparisonView comparison={periodComparison} currency={currency} /> : <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground"><Calendar className="size-8 opacity-50" /><p>Not enough data for period comparison. Need at least two periods of data.</p></div>}</TabsContent><TabsContent value="platform" className="mt-4"><ProviderComparisonView currency={currency} providers={providerComparison} /></TabsContent></Tabs></CardContent></Card>
+  return <Card className="shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Layers className="size-5" />Comparison View</CardTitle><CardDescription>Compare performance across periods and platforms</CardDescription></CardHeader><CardContent><Tabs value={selectedTab} onValueChange={handleTabChange} className="w-full"><TabsList className="grid w-full grid-cols-2"><TabsTrigger value="period" className="gap-2"><Calendar className="size-4" />Period</TabsTrigger><TabsTrigger value="platform" className="gap-2"><Layers className="size-4" />Platform</TabsTrigger></TabsList><TabsContent value="period" className="mt-4">{periodComparison ? <PeriodComparisonView comparison={periodComparison} currency={currency} /> : <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground"><Calendar className="size-8 opacity-50" /><p>Not enough data for period comparison. Need at least two periods of data.</p></div>}</TabsContent><TabsContent value="platform" className="mt-4"><ProviderComparisonView currency={currency} providerCurrencies={providerCurrencies} providers={providerComparison} /></TabsContent></Tabs></CardContent></Card>
 }

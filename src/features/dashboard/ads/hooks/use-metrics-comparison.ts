@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 
 import type { MetricRecord } from '../components/types'
 import type { DateRange } from '../components/date-range-picker'
+import { parseMetricDate } from './use-ads-metrics.helpers'
 
 // =============================================================================
 // TYPES
@@ -102,8 +103,8 @@ function filterMetricsByDateRange(
     range: DateRange
 ): MetricRecord[] {
     return metrics.filter((m) => {
-        const date = new Date(m.date)
-        return date >= range.start && date <= range.end
+        const date = parseMetricDate(m.date)
+        return date !== null && date >= range.start && date <= range.end
     })
 }
 

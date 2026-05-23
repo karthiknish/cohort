@@ -32,6 +32,8 @@ export interface MetricRecord {
   publisherPlatform?: string | null
   /** Campaign identifier used for dedup and drill-down. */
   campaignId?: string | null
+  /** Campaign name from synced metric rows when available. */
+  campaignName?: string | null
   date: string
   spend: number
   impressions: number

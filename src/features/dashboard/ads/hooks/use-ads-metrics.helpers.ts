@@ -21,6 +21,7 @@ export type RealtimeMetricRow = {
   surfaceId?: string | null
   publisherPlatform?: string | null
   campaignId?: string | null
+  campaignName?: string | null
   date?: string | null
   spend?: number | null
   impressions?: number | null
@@ -51,6 +52,9 @@ export function mapRealtimeMetricRow(row: RealtimeMetricRow): MetricRecord {
   const campaignId = typeof row.campaignId === 'string' && row.campaignId.length > 0
     ? row.campaignId
     : null
+  const campaignName = typeof row.campaignName === 'string' && row.campaignName.length > 0
+    ? row.campaignName
+    : null
   const createdAtMs = typeof row.createdAtMs === 'number' ? row.createdAtMs : null
   const date = String(row.date ?? '')
 
@@ -66,6 +70,7 @@ export function mapRealtimeMetricRow(row: RealtimeMetricRow): MetricRecord {
     surfaceId,
     publisherPlatform,
     campaignId,
+    campaignName,
     date,
     spend: Number(row.spend ?? 0),
     impressions: Number(row.impressions ?? 0),

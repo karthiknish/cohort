@@ -427,6 +427,7 @@ export function AdsPageAdvancedAnalyticsSection({
             periodComparison={periodComparison}
             providerComparison={providerComparison}
             currency={activeCurrency}
+            providerCurrencies={providerCurrencyMap}
             loading={metricsLoading || initialMetricsLoading}
           />
         </AdsSuspenseReveal>
@@ -455,9 +456,10 @@ export function AdsPageAdvancedAnalyticsSection({
 
       <FadeIn>
         <MetricsTableCard
+          visibleMetrics={metrics.metrics}
           processedMetrics={processedMetrics}
           currency={activeCurrency}
-          hasMetrics={hasMetricData}
+          hasMetrics={processedMetrics.length > 0}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}
           metricError={suppressMetricsErrors ? null : metricError}

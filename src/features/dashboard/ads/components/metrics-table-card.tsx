@@ -15,6 +15,7 @@ import type { MetricRecord } from './types'
 import { formatProviderName } from './utils'
 
 interface MetricsTableCardProps {
+  visibleMetrics: MetricRecord[]
   processedMetrics: MetricRecord[]
   currency?: string
   hasMetrics: boolean
@@ -34,8 +35,9 @@ interface MetricsTableCardProps {
 }
 
 function MetricsTableCardComponent({
+  visibleMetrics,
   processedMetrics,
-  currency = 'USD',
+  currency,
   hasMetrics,
   initialMetricsLoading,
   metricsLoading,
@@ -62,13 +64,13 @@ function MetricsTableCardComponent({
 
   // Filter metrics based on search and provider selection
   const filteredMetrics = useMemo(() => {
-    return processedMetrics.filter((metric) => {
+    return visibleMetrics.filter((metric) => {
       const providerName = formatProviderName(metric.providerId).toLowerCase()
       const matchesSearch = !searchQuery || providerName.includes(searchQuery.toLowerCase())
       const matchesProvider = selectedProviders.length === 0 || selectedProviders.includes(metric.providerId)
       return matchesSearch && matchesProvider
     })
-  }, [processedMetrics, searchQuery, selectedProviders])
+  }, [searchQuery, selectedProviders, visibleMetrics])
 
   const toggleProvider = useCallback((providerId: string) => {
     setSelectedProviders((prev) =>

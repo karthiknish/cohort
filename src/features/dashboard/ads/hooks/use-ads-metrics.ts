@@ -184,12 +184,12 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
 
     const summary = !isPreviewMode && metricsRealtime?.summary ? metricsRealtime.summary : null
     const v2Summary = !isPreviewMode && metricsRealtimeV2?.summary ? metricsRealtimeV2.summary : null
-    const page = metricsSource.slice(0, visibleCount)
+    const page = processedMetrics.slice(0, visibleCount)
 
     return {
       metricsLoading: false,
       metrics: page,
-      nextCursor: metricsSource.length > visibleCount ? 'more' : null,
+      nextCursor: processedMetrics.length > visibleCount ? 'more' : null,
       serverSideSummary: summary,
       adsInsightsSummary: v2Summary as AdsInsightsSummary | null,
     }
@@ -199,7 +199,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     isPreviewMode,
     metricsRealtime,
     metricsRealtimeV2,
-    metricsSource,
+    processedMetrics,
     visibleCount,
     workspaceId,
   ])

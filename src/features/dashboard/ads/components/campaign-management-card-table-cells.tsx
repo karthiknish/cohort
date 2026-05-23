@@ -20,7 +20,14 @@ export function CampaignNameHeader({ column }: HeaderContext<Campaign, unknown>)
 export function CampaignNameCell({ row }: CellContext<Campaign, unknown>) {
   return (
     <ViewTransition name={`campaign-title-${row.original.providerId}-${row.original.id}`} share="text-morph" default="none">
-      <span className="font-medium hover:underline">{row.getValue('name')}</span>
+      <div className="flex items-center gap-2">
+        <span className="font-medium hover:underline">{row.getValue('name')}</span>
+        {row.original.isHistorical ? (
+          <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Historical
+          </span>
+        ) : null}
+      </div>
     </ViewTransition>
   )
 }
@@ -129,5 +136,4 @@ export function GroupActionsCell({ row }: CellContext<CampaignGroup, unknown>) {
     />
   )
 }
-
 
