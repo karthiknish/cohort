@@ -119,6 +119,7 @@ export function applyAgentResponse({
       content: trimmedText,
       timestamp: new Date(),
       lifecycle: 'sent',
+      attachments: sentAttachments.length > 0 ? sentAttachments : undefined,
     })
   }
 

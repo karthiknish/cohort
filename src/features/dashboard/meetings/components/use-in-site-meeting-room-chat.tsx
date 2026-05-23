@@ -14,7 +14,7 @@ import { validateAttachments } from '@/features/dashboard/collaboration/hooks/ut
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { filesApi } from '@/lib/convex-api'
-import { uploadStorageFile } from '@/lib/upload-storage-file'
+import { uploadStorageFileWithPublicUrl } from '@/lib/upload-storage-file'
 
 import {
   buildMeetingChatMessageContent,
@@ -168,23 +168,19 @@ export function useInSiteMeetingRoomChat(props: InSiteMeetingRoomChatProps) {
 
     return Promise.all(
       attachments.map(async (attachment) => {
-        const storageId = await uploadStorageFile({
+        const { url } = await uploadStorageFileWithPublicUrl({
           file: attachment.file,
           contentType: attachment.mimeType || 'application/octet-stream',
           generateUploadUrl: () => generateUploadUrl({}),
           syncMetadata: (args) => syncMetadata(args),
+          getPublicUrl: (args) => convex.query(filesApi.getPublicUrl, args),
         })
-
-        const publicUrl = await convex.query(filesApi.getPublicUrl, { storageId }) as { url?: string | null }
-        if (!publicUrl?.url) {
-          throw new Error('Unable to resolve uploaded file URL')
-        }
 
         return {
           name: attachment.name,
           size: attachment.sizeLabel,
           type: attachment.mimeType || 'application/octet-stream',
-          url: publicUrl.url,
+          url,
         } satisfies MeetingChatAttachment
       }),
     )

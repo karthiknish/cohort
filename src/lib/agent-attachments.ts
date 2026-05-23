@@ -41,6 +41,11 @@ export const AGENT_ATTACHMENT_ACCEPT = [
   '.ods',
   '.odp',
   '.pdf',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp',
+  '.gif',
 ].join(',')
 
 export type AgentAttachmentExtractionStatus = 'extracting' | 'ready' | 'limited' | 'failed'
@@ -54,6 +59,10 @@ export type AgentAttachmentContext = {
   extractedText?: string
   extractionStatus: AgentAttachmentExtractionStatus
   errorMessage?: string
+  /** R2 object reference (`r2:<key>`) when persisted to Cloudflare. */
+  storageId?: string
+  /** Signed or public URL for download/preview in chat. */
+  url?: string
 }
 
 export type AgentStoredAttachment = {
@@ -65,6 +74,8 @@ export type AgentStoredAttachment = {
   extractedText?: string
   extractionStatus: Exclude<AgentAttachmentExtractionStatus, 'extracting'>
   errorMessage?: string
+  storageId?: string
+  url?: string
 }
 
 export function createPendingAttachmentPlaceholder(file: File): AgentAttachmentContext {
@@ -97,6 +108,8 @@ export function serializeAgentAttachmentsForStorage(
         extractedText: attachment.extractedText,
         extractionStatus: attachment.extractionStatus,
         errorMessage: attachment.errorMessage,
+        storageId: attachment.storageId,
+        url: attachment.url,
       }]
     : [])
 }
@@ -150,10 +163,48 @@ export function parseAgentAttachmentsFromStored(value: unknown): AgentAttachment
       extractedText: typeof record.extractedText === 'string' ? record.extractedText : undefined,
       extractionStatus: status,
       errorMessage: typeof record.errorMessage === 'string' ? record.errorMessage : undefined,
+      storageId: typeof record.storageId === 'string' ? record.storageId : undefined,
+      url: typeof record.url === 'string' ? record.url : undefined,
     })
   }
 
   return attachments.length > 0 ? attachments : undefined
+}
+
+export async function hydrateAgentAttachmentUrls(
+  attachments: AgentAttachmentContext[] | undefined,
+  getPublicUrl: (args: { storageId: string }) => Promise<{ url: string | null }>,
+): Promise<AgentAttachmentContext[] | undefined> {
+  if (!attachments?.length) return attachments
+
+  const hydrated = await Promise.all(
+    attachments.map(async (attachment) => {
+      if (!attachment.storageId?.trim()) return attachment
+      if (attachment.url?.trim() && attachment.url !== 'about:blank') return attachment
+
+      const resolved = await getPublicUrl({ storageId: attachment.storageId })
+      if (!resolved?.url) return attachment
+
+      return { ...attachment, url: resolved.url }
+    }),
+  )
+
+  return hydrated
+}
+
+export function agentAttachmentsToChatMedia(
+  attachments: AgentAttachmentContext[],
+): Array<{ name: string; url: string; type?: string | null; size?: string | null }> {
+  return attachments.flatMap((attachment) => {
+    const url = attachment.url?.trim()
+    if (!url || url === '#' || url === 'about:blank') return []
+    return [{
+      name: attachment.name,
+      url,
+      type: attachment.mimeType,
+      size: attachment.sizeLabel,
+    }]
+  })
 }
 
 function formatFileSize(bytes: number): string {
@@ -248,6 +299,13 @@ async function extractTextFromAttachment(file: File): Promise<{
       return {
         extractionStatus: 'limited',
         errorMessage: 'PDF text could not be extracted. Add a short instruction if the important fields are not obvious.',
+      }
+    }
+
+    if (mimeType.startsWith('image/') || ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(extension)) {
+      return {
+        extractionStatus: 'limited',
+        errorMessage: 'Image attached — stored in this chat. Describe what you need from it in your message.',
       }
     }
 

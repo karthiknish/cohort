@@ -72,7 +72,7 @@ function tokenizeSearchValue(value: string | null | undefined): string[] {
 }
 
 async function hydrateAttachments(
-  ctx: { storage: { getUrl: (id: Id<'_storage'>) => Promise<string | null> } },
+  ctx: Parameters<typeof resolveStoredObjectUrl>[0],
   attachments: Array<{ name: string; url: string; storageId?: string | null; type?: string | null; size?: string | null }> | null,
 ) {
   if (!Array.isArray(attachments) || attachments.length === 0) return attachments
@@ -95,7 +95,7 @@ async function hydrateAttachments(
 }
 
 async function hydrateMessageRow<TRow extends { attachments?: Array<{ name: string; url: string; storageId?: string | null; type?: string | null; size?: string | null }> | null }>(
-  ctx: { storage: { getUrl: (id: Id<'_storage'>) => Promise<string | null> } },
+  ctx: Parameters<typeof resolveStoredObjectUrl>[0],
   row: TRow,
 ): Promise<TRow> {
   const attachments = Array.isArray(row.attachments) ? row.attachments : null

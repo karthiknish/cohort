@@ -7,6 +7,10 @@ const ALLOWED_DOMAINS = new Set([
   'storage.cloud.google.com',
 ])
 
+function isAllowedR2PublicHost(hostname: string): boolean {
+  return hostname.endsWith('.r2.dev') || hostname.endsWith('.r2.cloudflarestorage.com')
+}
+
 function sanitizeFilename(value: string): string {
   const sanitized = value
     .replace(/[\r\n]/g, '')
@@ -28,6 +32,8 @@ function encodeContentDispositionFilename(value: string): string {
 }
 
 function isAllowedHostname(hostname: string): boolean {
+  if (isAllowedR2PublicHost(hostname)) return true
+
   // Only allow exact matches or subdomains of the allowlist.
   for (const domain of ALLOWED_DOMAINS) {
     if (hostname === domain) return true

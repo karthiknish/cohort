@@ -1,9 +1,10 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { useAction, useMutation } from 'convex/react'
+import { useAction, useConvex, useMutation } from 'convex/react'
 
-import { agentApi } from '@/lib/convex-api'
+import { agentApi, filesApi } from '@/lib/convex-api'
+import { hydrateAgentAttachmentUrls } from '@/lib/agent-attachments'
 import { buildAgentConversationShareLink } from '@/lib/agent-conversation-export'
 import type { AgentError } from '@/lib/agent-errors'
 import { parseAgentError } from '@/lib/agent-errors'
@@ -44,6 +45,7 @@ export function useAgentConversationHistory({
   setIsProcessing,
   clearError,
 }: UseAgentConversationHistoryParams) {
+  const convex = useConvex()
   const listConversations = useAction(agentApi.listConversations)
   const getConversation = useAction(agentApi.getConversation)
   const duplicateConversationAction = useAction(agentApi.duplicateConversation)
@@ -192,7 +194,18 @@ export function useAgentConversationHistory({
         ? (result.messages as StoredAgentMessage[])
         : []
 
-      setMessages(mapStoredMessagesToAgentMessages(storedMessages))
+      const mapped = mapStoredMessagesToAgentMessages(storedMessages)
+      const hydrated = await Promise.all(
+        mapped.map(async (message) => {
+          if (!message.attachments?.length) return message
+          const attachments = await hydrateAgentAttachmentUrls(
+            message.attachments,
+            (args) => convex.query(filesApi.getPublicUrl, args),
+          )
+          return attachments ? { ...message, attachments } : message
+        }),
+      )
+      setMessages(hydrated)
       setConversationId(targetConversationId)
     } catch (err) {
       console.error('[useAgentMode] Failed to load conversation:', err)
@@ -203,7 +216,7 @@ export function useAgentConversationHistory({
       setIsConversationLoading(false)
       setIsProcessing(false)
     }
-  }, [clearError, getConversation, handleError, setConversationId, setIsProcessing, setMessages, workspaceId])
+  }, [clearError, convex, getConversation, handleError, setConversationId, setIsProcessing, setMessages, workspaceId])
 
   const updateConversationTitle = useCallback(async (targetConversationId: string, title: string) => {
     const trimmed = title.trim()

@@ -3,13 +3,13 @@
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState } from 'react'
-import { useMutation } from 'convex/react'
-import { collaborationApi } from '@/lib/convex-api'
+import { useConvex, useMutation } from 'convex/react'
+import { collaborationApi, filesApi } from '@/lib/convex-api'
 import type { CollaborationAttachment } from '@/types/collaboration'
 import type { PendingAttachment } from './types'
 import { MAX_ATTACHMENTS } from './constants'
 import { validateAttachments } from './utils'
-import { uploadStorageFile } from '@/lib/upload-storage-file'
+import { uploadStorageFileWithPublicUrl } from '@/lib/upload-storage-file'
 
 interface UseAttachmentsOptions {
   userId: string | null
@@ -17,8 +17,13 @@ interface UseAttachmentsOptions {
 }
 
 export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
+  const convex = useConvex()
   const generateUploadUrl = useMutation(collaborationApi.generateUploadUrl)
   const syncMetadata = useMutation(collaborationApi.syncMetadata)
+  const getPublicUrl = useCallback(
+    (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
+    [convex],
+  )
 
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
   const [uploading, setUploading] = useState(false)
@@ -56,16 +61,17 @@ export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
     try {
       const results = await Promise.all(
         attachments.map(async (attachment) => {
-          const storageId = await uploadStorageFile({
+          const { storageId, url } = await uploadStorageFileWithPublicUrl({
             file: attachment.file,
             contentType: attachment.mimeType || 'application/octet-stream',
             generateUploadUrl: () => generateUploadUrl({}),
             syncMetadata: (args) => syncMetadata(args),
+            getPublicUrl,
           })
 
           return {
             name: attachment.name,
-            url: 'about:blank',
+            url,
             storageId,
             type: attachment.mimeType,
             size: attachment.sizeLabel,
@@ -85,7 +91,7 @@ export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
     } finally {
       setUploading(false)
     }
-  }, [generateUploadUrl, syncMetadata, userId, workspaceId])
+  }, [generateUploadUrl, getPublicUrl, syncMetadata, userId, workspaceId])
 
   return {
     pendingAttachments,

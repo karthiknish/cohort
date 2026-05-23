@@ -193,6 +193,8 @@ const agentRequestContext = v.object({
         extractedText: v.optional(v.string()),
         extractionStatus: v.union(v.literal('ready'), v.literal('limited'), v.literal('failed')),
         errorMessage: v.optional(v.string()),
+        storageId: v.optional(v.string()),
+        url: v.optional(v.string()),
       }),
     ),
   ),

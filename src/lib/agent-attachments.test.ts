@@ -17,6 +17,8 @@ describe('agent-attachments storage', () => {
         excerpt: 'Project goals',
         extractedText: 'Project goals for Q2',
         extractionStatus: 'ready',
+        storageId: 'r2:agent/brief.md',
+        url: 'https://example.com/brief.md',
       },
       {
         id: 'a2',
@@ -35,5 +37,7 @@ describe('agent-attachments storage', () => {
     const parsed = parseAgentAttachmentsFromStored(stored)
     expect(parsed).toHaveLength(1)
     expect(parsed?.[0]?.extractionStatus).toBe('ready')
+    expect(parsed?.[0]?.storageId).toBe('r2:agent/brief.md')
+    expect(parsed?.[0]?.url).toBe('https://example.com/brief.md')
   })
 })

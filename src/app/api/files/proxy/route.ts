@@ -17,6 +17,10 @@ const ALLOWED_DOMAINS = [
 ]
 
 function validateProxiedHost(hostname: string): boolean {
+  if (hostname.endsWith('.r2.dev') || hostname.endsWith('.r2.cloudflarestorage.com')) {
+    return true
+  }
+
   return ALLOWED_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))
 }
 

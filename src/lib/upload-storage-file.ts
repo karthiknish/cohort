@@ -73,3 +73,24 @@ export async function uploadStorageFile({
 
   return `r2:${key}`
 }
+
+export type UploadStorageFileWithUrlOptions = UploadStorageFileOptions & {
+  getPublicUrl: (args: { storageId: string }) => Promise<{ url: string | null }>
+}
+
+/**
+ * Upload to R2 and resolve a signed download URL for immediate UI use (chat previews, etc.).
+ */
+export async function uploadStorageFileWithPublicUrl({
+  getPublicUrl,
+  ...uploadOptions
+}: UploadStorageFileWithUrlOptions): Promise<{ storageId: string; url: string }> {
+  const storageId = await uploadStorageFile(uploadOptions)
+  const publicUrl = await getPublicUrl({ storageId })
+
+  if (!publicUrl?.url) {
+    throw new Error('Unable to resolve uploaded file URL')
+  }
+
+  return { storageId, url: publicUrl.url }
+}

@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { useAction } from 'convex/react'
+import { useAction, useConvex, useMutation } from 'convex/react'
 
-import { agentApi } from '@/lib/convex-api'
+import { agentApi, filesApi } from '@/lib/convex-api'
 import {
   buildAgentAttachmentContext,
   createPendingAttachmentPlaceholder,
@@ -13,12 +13,21 @@ import {
   type ServerPdfExtractionResult,
 } from '@/lib/agent-attachments'
 import { isPreviewModeEnabled } from '@/lib/preview-data'
+import { uploadStorageFileWithPublicUrl } from '@/lib/upload-storage-file'
 
 export function useAgentAttachments(workspaceId: string | null) {
+  const convex = useConvex()
   const extractPdfTextAction = useAction(agentApi.extractPdfText)
+  const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const syncMetadata = useMutation(filesApi.syncMetadata)
 
   const [pendingAttachments, setPendingAttachments] = useState<AgentAttachmentContext[]>([])
   const [isExtractingAttachments, setIsExtractingAttachments] = useState(false)
+
+  const getPublicUrl = useCallback(
+    (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
+    [convex],
+  )
 
   const extractPdfOnServer = useCallback(
     async (file: File): Promise<ServerPdfExtractionResult | null> => {
@@ -43,6 +52,32 @@ export function useAgentAttachments(workspaceId: string | null) {
     [extractPdfTextAction, workspaceId],
   )
 
+  const persistAttachmentFile = useCallback(
+    async (file: File, attachment: AgentAttachmentContext): Promise<AgentAttachmentContext> => {
+      if (isPreviewModeEnabled() || !workspaceId) {
+        return attachment
+      }
+
+      try {
+        const { storageId, url } = await uploadStorageFileWithPublicUrl({
+          file,
+          contentType: file.type || 'application/octet-stream',
+          generateUploadUrl: () => generateUploadUrl({}),
+          syncMetadata: (args) => syncMetadata(args),
+          getPublicUrl,
+        })
+        return { ...attachment, storageId, url }
+      } catch (err) {
+        console.error('[useAgentMode] Attachment upload failed:', err, file.name)
+        return {
+          ...attachment,
+          errorMessage: attachment.errorMessage ?? 'File was read but could not be saved to storage.',
+        }
+      }
+    },
+    [generateUploadUrl, getPublicUrl, syncMetadata, workspaceId],
+  )
+
   const addAttachments = useCallback(async (files: FileList | File[]) => {
     const nextFiles = Array.from(files)
     if (nextFiles.length === 0) return
@@ -59,8 +94,9 @@ export function useAgentAttachments(workspaceId: string | null) {
 
           try {
             const extracted = await buildAgentAttachmentContext(file, { extractPdfOnServer })
+            const withStorage = await persistAttachmentFile(file, extracted)
             setPendingAttachments((prev) =>
-              prev.map((attachment) => (attachment.id === placeholderId ? extracted : attachment)),
+              prev.map((attachment) => (attachment.id === placeholderId ? withStorage : attachment)),
             )
           } catch (err) {
             console.error('[useAgentMode] Attachment processing failed:', err, file.name)
@@ -83,7 +119,7 @@ export function useAgentAttachments(workspaceId: string | null) {
     } finally {
       setIsExtractingAttachments(false)
     }
-  }, [extractPdfOnServer])
+  }, [extractPdfOnServer, persistAttachmentFile])
 
   const removeAttachment = useCallback((attachmentId: string) => {
     setPendingAttachments((prev) => prev.filter((attachment) => attachment.id !== attachmentId))
