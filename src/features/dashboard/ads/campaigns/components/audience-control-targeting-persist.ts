@@ -3,21 +3,21 @@ import type { Dispatch } from 'react'
 import { notifyFailure } from '@/lib/notifications'
 import { logError } from '@/lib/convex-errors'
 import { buildMetaTargetingFromNormalized } from '@/services/integrations/meta-ads/meta-targeting-serialize'
+
+type MetaTargetingPayload = Record<string, unknown>
 import { toast } from '@/shared/ui/use-toast'
 
 import type { AggregatedAudienceData } from './audience-control-aggregate'
-import { audienceControlSectionReducer } from './audience-control-section-state'
+import type { AudienceControlSectionAction } from './audience-control-section-state'
 
-export type AudienceControlDispatch = Dispatch<
-  Parameters<typeof audienceControlSectionReducer>[1]
->
+export type AudienceControlDispatch = Dispatch<AudienceControlSectionAction>
 
 type UpdateAdSetTargeting = (args: {
   workspaceId: string
   providerId: 'facebook'
   clientId: string | null
   adSetId: string
-  targeting: ReturnType<typeof buildMetaTargetingFromNormalized>
+  targeting: MetaTargetingPayload
 }) => Promise<unknown>
 
 export function mapMetaExcludedLocations(
@@ -56,7 +56,7 @@ type PersistAdSetTargetingArgs = {
   selectAdSetDescription: string
   successDescription: string
   logContext: string
-  targeting: ReturnType<typeof buildMetaTargetingFromNormalized>
+  targeting: MetaTargetingPayload
   clearDrafts: () => void
 }
 

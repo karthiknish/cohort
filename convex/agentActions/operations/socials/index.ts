@@ -50,44 +50,55 @@ async function processQueuedSocialSyncJobs(
   workspaceId: string,
   maxJobs = 3,
 ): Promise<void> {
-  for (let index = 0; index < maxJobs; index += 1) {
+  async function processNextJob(remaining: number): Promise<void> {
+    if (remaining <= 0) return
+
     const job = await ctx.runMutation(internal.socialIntegrations.syncJobs.claimNextSyncJobInternal, {
       workspaceId,
     })
     if (!job) return
 
     try {
-      await ctx.runAction(internal.socialSyncWorkerActions.processClaimedJob, {
-        workspaceId,
-        jobId: job.id,
-        clientId: job.clientId,
-        surface: job.surface,
-        timeframeDays: job.timeframeDays,
-      })
-      await ctx.runMutation(internal.socialIntegrations.syncJobs.completeSyncJobInternal, {
-        jobId: job.id,
-      })
-      await ctx.runMutation(internal.socialIntegrations.settings.updateIntegrationStatusInternal, {
-        workspaceId,
-        clientId: job.clientId,
-        status: 'success',
-        message: null,
-      })
+      await ctx
+        .runAction(internal.socialSyncWorkerActions.processClaimedJob, {
+          workspaceId,
+          jobId: job.id,
+          clientId: job.clientId,
+          surface: job.surface,
+          timeframeDays: job.timeframeDays,
+        })
+        .then(async () => {
+          await Promise.all([
+            ctx.runMutation(internal.socialIntegrations.syncJobs.completeSyncJobInternal, {
+              jobId: job.id,
+            }),
+            ctx.runMutation(internal.socialIntegrations.settings.updateIntegrationStatusInternal, {
+              workspaceId,
+              clientId: job.clientId,
+              status: 'success',
+              message: null,
+            }),
+          ])
+          await processNextJob(remaining - 1)
+        })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
-      await ctx.runMutation(internal.socialIntegrations.syncJobs.failSyncJobInternal, {
-        jobId: job.id,
-        message,
-      })
-      await ctx.runMutation(internal.socialIntegrations.settings.updateIntegrationStatusInternal, {
-        workspaceId,
-        clientId: job.clientId,
-        status: 'error',
-        message,
-      })
-      return
+      await Promise.all([
+        ctx.runMutation(internal.socialIntegrations.syncJobs.failSyncJobInternal, {
+          jobId: job.id,
+          message,
+        }),
+        ctx.runMutation(internal.socialIntegrations.settings.updateIntegrationStatusInternal, {
+          workspaceId,
+          clientId: job.clientId,
+          status: 'error',
+          message,
+        }),
+      ])
     }
   }
+
+  await processNextJob(maxJobs)
 }
 
 function formatSyncStatus(status: string | null): string {
@@ -168,22 +179,30 @@ export const socialOperationHandlers: Record<string, OperationHandler> = {
       const nextOverviews: Record<string, ReturnType<typeof toSocialOverviewSnapshot>> = {}
       const nextTopContent: Record<string, SocialTopContent[]> = {}
 
-      for (const surface of surfaces) {
-        const overviewRaw = await ctx.runQuery(api.socialMetrics.listOverview, {
-          workspaceId: input.workspaceId,
-          clientId: clientId ?? null,
-          surface,
-          startDate,
-          endDate,
-        })
-        nextOverviews[surface] = toSocialOverviewSnapshot(surface, asRecord(overviewRaw))
+      const surfaceResults = await Promise.all(
+        surfaces.map(async (surface) => {
+          const [overviewRaw, contentRaw] = await Promise.all([
+            ctx.runQuery(api.socialMetrics.listOverview, {
+              workspaceId: input.workspaceId,
+              clientId: clientId ?? null,
+              surface,
+              startDate,
+              endDate,
+            }),
+            ctx.runQuery(api.socialMetrics.listContent, {
+              workspaceId: input.workspaceId,
+              clientId: clientId ?? null,
+              surface,
+              limit: 3,
+            }),
+          ])
 
-        const contentRaw = await ctx.runQuery(api.socialMetrics.listContent, {
-          workspaceId: input.workspaceId,
-          clientId: clientId ?? null,
-          surface,
-          limit: 3,
-        })
+          return { surface, overviewRaw, contentRaw }
+        }),
+      )
+
+      for (const { surface, overviewRaw, contentRaw } of surfaceResults) {
+        nextOverviews[surface] = toSocialOverviewSnapshot(surface, asRecord(overviewRaw))
 
         nextTopContent[surface] = Array.isArray(contentRaw)
           ? contentRaw.flatMap((item) => {

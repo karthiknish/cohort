@@ -381,7 +381,7 @@ export function SalesObjectiveSection({ formData, onChange, disabled, metaContex
                     </Select>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      No product sets found — Meta will use the full catalog.
+                      No product sets found. Meta will use the full catalog.
                     </p>
                   )}
                 </div>

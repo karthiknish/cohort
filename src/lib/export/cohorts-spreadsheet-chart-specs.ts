@@ -508,8 +508,8 @@ function detectNumericFields(rows: Record<string, unknown>[], exclude: Set<strin
   if (!firstRow) return []
 
   return Object.keys(firstRow)
-    .filter((key) => !exclude.has(key))
     .flatMap((key) => {
+      if (exclude.has(key)) return []
       const total = rows.reduce((sum, row) => sum + parseNumeric(row[key]), 0)
       return total > MIN_TOTAL_VALUE ? [{ key, total }] : []
     })

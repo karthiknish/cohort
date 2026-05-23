@@ -165,54 +165,56 @@ export function useProjectsDocumentImport({
         return
       }
 
-      let createdCount = 0
-      for (const project of selected) {
-        if (abortRef.current) break
+      const clientsById = new Map(clients.map((client) => [client.id, client.name]))
 
-        const clientId = project.clientId || preferredClientId || undefined
-        const clientName =
-          clients.find((client) => client.id === clientId)?.name ??
-          preferredClientName ??
-          undefined
+      const createResults = await Promise.all(
+        selected.map(async (project) => {
+          if (abortRef.current) return false
 
-        const legacyId = uuidv4()
-        await createProject({
-          workspaceId,
-          legacyId,
-          name: project.name.trim(),
-          description: project.description.trim() || null,
-          status: project.status,
-          clientId: clientId ?? null,
-          clientName: clientName ?? null,
-          startDateMs: project.startDate ? new Date(project.startDate).getTime() : null,
-          endDateMs: project.endDate ? new Date(project.endDate).getTime() : null,
-          tags: project.tags,
-          ownerId,
-        })
+          const clientId = project.clientId || preferredClientId || undefined
+          const clientName = clientsById.get(clientId ?? '') ?? preferredClientName ?? undefined
 
-        const nowMs = Date.now()
-        onProjectCreated({
-          id: legacyId,
-          name: project.name.trim(),
-          description: project.description.trim() || null,
-          status: project.status,
-          clientId: clientId ?? null,
-          clientName: clientName ?? null,
-          startDate: project.startDate ? new Date(project.startDate).toISOString() : null,
-          endDate: project.endDate ? new Date(project.endDate).toISOString() : null,
-          tags: project.tags,
-          ownerId,
-          createdAt: new Date(nowMs).toISOString(),
-          updatedAt: new Date(nowMs).toISOString(),
-          taskCount: 0,
-          openTaskCount: 0,
-          recentActivityAt: null,
-          deletedAt: null,
-        })
+          const legacyId = uuidv4()
+          await createProject({
+            workspaceId,
+            legacyId,
+            name: project.name.trim(),
+            description: project.description.trim() || null,
+            status: project.status,
+            clientId: clientId ?? null,
+            clientName: clientName ?? null,
+            startDateMs: project.startDate ? new Date(project.startDate).getTime() : null,
+            endDateMs: project.endDate ? new Date(project.endDate).getTime() : null,
+            tags: project.tags,
+            ownerId,
+          })
 
-        emitDashboardRefresh({ reason: 'project-mutated', clientId: clientId ?? null })
-        createdCount += 1
-      }
+          const nowMs = Date.now()
+          onProjectCreated({
+            id: legacyId,
+            name: project.name.trim(),
+            description: project.description.trim() || null,
+            status: project.status,
+            clientId: clientId ?? null,
+            clientName: clientName ?? null,
+            startDate: project.startDate ? new Date(project.startDate).toISOString() : null,
+            endDate: project.endDate ? new Date(project.endDate).toISOString() : null,
+            tags: project.tags,
+            ownerId,
+            createdAt: new Date(nowMs).toISOString(),
+            updatedAt: new Date(nowMs).toISOString(),
+            taskCount: 0,
+            openTaskCount: 0,
+            recentActivityAt: null,
+            deletedAt: null,
+          })
+
+          emitDashboardRefresh({ reason: 'project-mutated', clientId: clientId ?? null })
+          return true
+        }),
+      )
+
+      const createdCount = createResults.filter(Boolean).length
 
       notifySuccess({
         title: 'Projects imported',

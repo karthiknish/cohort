@@ -85,8 +85,10 @@ export function applyPollVote(
     voters: option.voters.filter((voterId) => voterId !== userId),
   }))
 
+  const optionsById = new Map(nextOptions.map((option) => [option.id, option]))
+
   for (const optionId of uniqueOptionIds) {
-    const target = nextOptions.find((option) => option.id === optionId)
+    const target = optionsById.get(optionId)
     if (!target) continue
     target.voters = [...target.voters, userId]
   }

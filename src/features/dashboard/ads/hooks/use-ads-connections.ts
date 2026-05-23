@@ -88,7 +88,10 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     triggerRefresh,
   })
 
-  const automationStatuses = mappedStatuses?.statuses ?? []
+  const automationStatuses = useMemo(
+    () => mappedStatuses?.statuses ?? [],
+    [mappedStatuses?.statuses],
+  )
   const integrationStatusMap = useMemo(
     () => buildIntegrationStatusMap(automationStatuses),
     [automationStatuses],

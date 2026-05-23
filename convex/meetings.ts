@@ -526,19 +526,20 @@ export const attachTranscript = zWorkspaceMutation({
       updatedAtMs: ctx.now,
     })
 
-    await ctx.db.insert('meetingEvents', {
-      workspaceId: args.workspaceId,
-      meetingLegacyId: meeting.legacyId,
-      eventType: args.eventType ?? 'transcript.received',
-      payload: normalizeEventPayload(args.rawPayload),
-      receivedAtMs: ctx.now,
-    })
-
-    await scheduleMeetingTranscriptArchive(
-      ctx,
-      { workspaceId: args.workspaceId, legacyId: meeting.legacyId },
-      args.transcriptText,
-    )
+    await Promise.all([
+      ctx.db.insert('meetingEvents', {
+        workspaceId: args.workspaceId,
+        meetingLegacyId: meeting.legacyId,
+        eventType: args.eventType ?? 'transcript.received',
+        payload: normalizeEventPayload(args.rawPayload),
+        receivedAtMs: ctx.now,
+      }),
+      scheduleMeetingTranscriptArchive(
+        ctx,
+        { workspaceId: args.workspaceId, legacyId: meeting.legacyId },
+        args.transcriptText,
+      ),
+    ])
 
     return meeting.legacyId
   },
@@ -581,19 +582,20 @@ export const attachTranscriptByCalendarEventId = zWorkspaceMutation({
       updatedAtMs: ctx.now,
     })
 
-    await ctx.db.insert('meetingEvents', {
-      workspaceId: args.workspaceId,
-      meetingLegacyId: meeting.legacyId,
-      eventType: args.eventType ?? 'transcript.received',
-      payload: normalizeEventPayload(args.rawPayload),
-      receivedAtMs: ctx.now,
-    })
-
-    await scheduleMeetingTranscriptArchive(
-      ctx,
-      { workspaceId: args.workspaceId, legacyId: meeting.legacyId },
-      args.transcriptText,
-    )
+    await Promise.all([
+      ctx.db.insert('meetingEvents', {
+        workspaceId: args.workspaceId,
+        meetingLegacyId: meeting.legacyId,
+        eventType: args.eventType ?? 'transcript.received',
+        payload: normalizeEventPayload(args.rawPayload),
+        receivedAtMs: ctx.now,
+      }),
+      scheduleMeetingTranscriptArchive(
+        ctx,
+        { workspaceId: args.workspaceId, legacyId: meeting.legacyId },
+        args.transcriptText,
+      ),
+    ])
 
     return meeting.legacyId
   },
@@ -634,20 +636,21 @@ export const saveNotes = zWorkspaceMutation({
       updatedAtMs: ctx.now,
     })
 
-    await ctx.db.insert('meetingEvents', {
-      workspaceId: args.workspaceId,
-      meetingLegacyId: meeting.legacyId,
-      eventType: args.eventType ?? 'notes.generated',
-      payload: {
-        model: args.model ?? null,
-      },
-      receivedAtMs: ctx.now,
-    })
-
-    await scheduleMeetingNotesArchive(ctx, {
-      workspaceId: args.workspaceId,
-      legacyId: meeting.legacyId,
-    })
+    await Promise.all([
+      ctx.db.insert('meetingEvents', {
+        workspaceId: args.workspaceId,
+        meetingLegacyId: meeting.legacyId,
+        eventType: args.eventType ?? 'notes.generated',
+        payload: {
+          model: args.model ?? null,
+        },
+        receivedAtMs: ctx.now,
+      }),
+      scheduleMeetingNotesArchive(ctx, {
+        workspaceId: args.workspaceId,
+        legacyId: meeting.legacyId,
+      }),
+    ])
 
     return meeting.legacyId
   },

@@ -57,14 +57,21 @@ function findSimilarClientSuggestions(
   const normalizedQuery = normalizeClientLookup(query)
   if (!normalizedQuery) return []
 
-  const suggestions = clients
-    .map((client) => client.name.trim())
-    .filter((name) => {
-      const normalizedName = normalizeClientLookup(name)
-      if (!normalizedName) return false
-      const queryTokens = normalizedQuery.split(' ').filter(Boolean)
-      return queryTokens.some((token) => normalizedName.includes(token))
-    })
+  const queryTokens = normalizedQuery.split(' ').filter(Boolean)
+  const queryPattern =
+    queryTokens.length > 0
+      ? new RegExp(queryTokens.map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'))
+      : null
+
+  const suggestions: string[] = []
+  for (const client of clients) {
+    const name = client.name.trim()
+    const normalizedName = normalizeClientLookup(name)
+    if (!normalizedName) continue
+    if (queryPattern?.test(normalizedName)) {
+      suggestions.push(name)
+    }
+  }
 
   return [...new Set(suggestions)].slice(0, limit)
 }
@@ -214,7 +221,12 @@ export function resolveDocumentImportProjectDate(
 
 export function parseProjectTags(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return asStringArray(value).map((tag) => tag.trim()).filter(Boolean).slice(0, 12)
+    return asStringArray(value)
+      .flatMap((tag) => {
+        const trimmed = tag.trim()
+        return trimmed ? [trimmed] : []
+      })
+      .slice(0, 12)
   }
 
   const raw = asNonEmptyString(value)
@@ -222,7 +234,9 @@ export function parseProjectTags(value: unknown): string[] {
 
   return raw
     .split(/[,;#]+/)
-    .map((tag) => tag.trim())
-    .filter(Boolean)
+    .flatMap((tag) => {
+      const trimmed = tag.trim()
+      return trimmed ? [trimmed] : []
+    })
     .slice(0, 12)
 }

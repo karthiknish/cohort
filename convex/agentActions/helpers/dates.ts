@@ -13,6 +13,19 @@ function toIsoDate(value: Date): string {
   return value.toISOString().slice(0, 10)
 }
 
+const SHORT_MONTH_DAY_UTC = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+})
+
+const SHORT_MONTH_DAY_YEAR_UTC = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
+
 function getUtcCalendarMonthBounds(year: number, monthIndex: number): { startDate: string; endDate: string } {
   const start = new Date(Date.UTC(year, monthIndex, 1))
   const end = new Date(Date.UTC(year, monthIndex + 1, 0))
@@ -95,30 +108,23 @@ function getCurrentCalendarYearRange(nowMs: number = Date.now()): { startDate: s
 function formatShortDateRangeLabel(startDate: string, endDate: string): string {
   const start = new Date(`${startDate}T12:00:00.000Z`)
   const end = new Date(`${endDate}T12:00:00.000Z`)
-  const monthDay = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
-  const monthDayYear = new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  })
 
   if (startDate === endDate) {
-    return monthDayYear.format(start)
+    return SHORT_MONTH_DAY_YEAR_UTC.format(start)
   }
 
   const sameYear = start.getUTCFullYear() === end.getUTCFullYear()
   const sameMonth = sameYear && start.getUTCMonth() === end.getUTCMonth()
 
   if (sameMonth) {
-    return `${monthDay.format(start)}–${end.getUTCDate()}, ${end.getUTCFullYear()}`
+    return `${SHORT_MONTH_DAY_UTC.format(start)}–${end.getUTCDate()}, ${end.getUTCFullYear()}`
   }
 
   if (sameYear) {
-    return `${monthDay.format(start)} – ${monthDayYear.format(end)}`
+    return `${SHORT_MONTH_DAY_UTC.format(start)} – ${SHORT_MONTH_DAY_YEAR_UTC.format(end)}`
   }
 
-  return `${monthDayYear.format(start)} – ${monthDayYear.format(end)}`
+  return `${SHORT_MONTH_DAY_YEAR_UTC.format(start)} – ${SHORT_MONTH_DAY_YEAR_UTC.format(end)}`
 }
 
 function resolvePeriodLabelForExplicitRange(

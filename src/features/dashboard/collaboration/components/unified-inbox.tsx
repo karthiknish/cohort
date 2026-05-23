@@ -9,6 +9,8 @@ import type { CollaborationAttachment, CollaborationMessage } from '@/types/coll
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
 import type { ChannelSummary, PendingAttachment, ReactionPendingState, SendMessageOptions, ThreadCursorsState, ThreadErrorsState, ThreadLoadingState, ThreadMessagesState, TypingParticipant } from '../hooks/types'
 import type { Channel } from '../types'
+import type { MessagePoll } from './message-polls'
+import type { UnifiedMessage } from './message-list-types'
 import {
   ChannelConversationPane,
   type ChannelParticipant,
@@ -50,10 +52,10 @@ type UnifiedInboxChannelPaneProps = {
   messageInput: string
   onMessageInputChange: (value: string) => void
   onSendMessage: (options?: SendMessageOptions) => Promise<void>
-  onShareToPlatform?: (message: import('./message-list-types').UnifiedMessage, platform: 'email') => Promise<void>
-  onCreateTask?: (message: import('./message-list-types').UnifiedMessage) => void
-  onForwardMessage?: (message: import('./message-list-types').UnifiedMessage) => void
-  onCreatePoll?: (poll: Omit<import('./message-polls').MessagePoll, 'id' | 'createdAt'>) => Promise<void>
+  onShareToPlatform?: (message: UnifiedMessage, platform: 'email') => Promise<void>
+  onCreateTask?: (message: UnifiedMessage) => void
+  onForwardMessage?: (message: UnifiedMessage) => void
+  onCreatePoll?: (poll: Omit<MessagePoll, 'id' | 'createdAt'>) => Promise<void>
   onExportChannel?: () => void
   onOpenChannelMessage?: (messageId: string, options?: { threadId?: string | null }) => void
   sending: boolean
@@ -124,7 +126,7 @@ type UnifiedInboxDirectMessagePaneProps = {
   notifyDmTyping: () => void
   handleComposerFocus: () => void
   handleComposerBlur: () => void
-  onCreateTask?: (message: import('./message-list-types').UnifiedMessage) => void
+  onCreateTask?: (message: UnifiedMessage) => void
   currentUserRole?: string | null
   workspaceId?: string | null
   deepLinkMessageId?: string | null

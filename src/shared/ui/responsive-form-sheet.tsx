@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { createContext, useContext, useMemo } from 'react'
+import { createContext, use, useMemo } from 'react'
 
 import { useIsMobile } from '@/shared/hooks/use-is-mobile'
 import { cn } from '@/lib/utils'
@@ -72,7 +72,7 @@ type FormSheetCloseProps = React.ComponentProps<typeof SheetClose>
 
 /** Close control that works inside ResponsiveFormSheet (Sheet or Drawer). */
 export function FormSheetClose({ ...props }: FormSheetCloseProps) {
-  const kind = useContext(ResponsiveFormSheetContext)
+  const kind = use(ResponsiveFormSheetContext)
 
   if (kind === 'drawer') {
     return <DrawerClose {...props} />

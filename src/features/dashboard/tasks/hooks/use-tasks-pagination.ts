@@ -15,7 +15,7 @@ export type PaginatedTasksResult = {
 }
 
 export function sortTasksByUpdatedAt(tasks: TaskRecord[]): TaskRecord[] {
-  return [...tasks].sort((left, right) => {
+  return tasks.toSorted((left, right) => {
     const leftMs = left.updatedAt ? Date.parse(left.updatedAt) : 0
     const rightMs = right.updatedAt ? Date.parse(right.updatedAt) : 0
     return rightMs - leftMs

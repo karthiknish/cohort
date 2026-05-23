@@ -5,6 +5,7 @@ import { Fragment, type RefObject } from 'react'
 import { ArrowDown, Loader2 } from 'lucide-react'
 import { m } from '@/shared/ui/motion'
 
+import type { AgentAttachmentContext } from '@/lib/agent-attachments'
 import { useClientNow } from '@/lib/hooks/use-client-relative-time'
 import { cn } from '@/lib/utils'
 import type {
@@ -80,10 +81,7 @@ export function AgentMessagesSection({
   onJumpToLatest: () => void
   conversationId: string | null
   workspaceId: string | null
-  onStoreSpreadsheetExport?: (
-    messageId: string,
-    attachment: import('@/lib/agent-attachments').AgentAttachmentContext,
-  ) => void
+  onStoreSpreadsheetExport?: (messageId: string, attachment: AgentAttachmentContext) => void
 }) {
   const now = useClientNow()
 

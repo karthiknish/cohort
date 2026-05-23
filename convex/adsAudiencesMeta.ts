@@ -107,16 +107,15 @@ export const uploadAudienceUsers = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const [accessToken, { uploadMetaAudienceUsers }] = await Promise.all([
+      const [accessToken, { uploadMetaAudienceUsers }, { hashMetaCustomerEmail }] = await Promise.all([
         resolveFacebookAccessToken(args.workspaceId, integration, clientId),
         import('@/services/integrations/meta-ads/campaign-modules/audiences'),
+        import('@/lib/meta-audience-user-hash'),
       ])
-
-      const { hashMetaCustomerEmail } = await import('@/lib/meta-audience-user-hash')
-      const hashes = args.emails
-        .map((email) => email.trim().toLowerCase())
-        .filter((email) => email.includes('@'))
-        .map((email) => hashMetaCustomerEmail(email))
+      const hashes = args.emails.flatMap((email) => {
+        const normalized = email.trim().toLowerCase()
+        return normalized.includes('@') ? [hashMetaCustomerEmail(normalized)] : []
+      })
 
       if (hashes.length === 0) {
         throw Errors.base.badRequest('Add at least one valid email address.')

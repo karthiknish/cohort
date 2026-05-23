@@ -293,7 +293,8 @@ export function EngagementObjectiveSection({
                     key={post.id}
                     disabled={Boolean(disabled)}
                     isSelected={formData.postId === post.id}
-                    onSelect={() => handlePostSelect(post.id)}
+                    onSelectResource={handlePostSelect}
+                    resourceId={post.id}
                     title={formatPostPreview(post)}
                     subtitle={post.id}
                   />
@@ -336,7 +337,8 @@ export function EngagementObjectiveSection({
                     key={event.id}
                     disabled={Boolean(disabled)}
                     isSelected={formData.eventId === event.id}
-                    onSelect={() => handleEventSelect(event.id)}
+                    onSelectResource={handleEventSelect}
+                    resourceId={event.id}
                     title={event.name}
                     subtitle={formatEventWhen(event.startTime) ?? event.id}
                   />
@@ -392,22 +394,24 @@ function ResourceOptionButton({
   subtitle,
   disabled,
   isSelected,
-  onSelect,
+  resourceId,
+  onSelectResource,
 }: {
   title: string
   subtitle: string
   disabled: boolean
   isSelected: boolean
-  onSelect: () => void
+  resourceId: string
+  onSelectResource: (resourceId: string) => void
 }) {
-  const handleClick = useCallback(() => {
-    onSelect()
-  }, [onSelect])
+  const handleSelectResource = useCallback(() => {
+    onSelectResource(resourceId)
+  }, [onSelectResource, resourceId])
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={handleSelectResource}
       disabled={disabled}
       className={`flex items-center justify-between rounded-lg border p-3 text-left motion-chromatic ${
         isSelected ? 'border-primary/30 bg-primary/10' : 'border-border hover:border-primary/50'

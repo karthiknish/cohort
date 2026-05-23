@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { usePrevious } from '@/shared/hooks/use-previous'
 import type { ReactNode } from 'react'
 
@@ -74,6 +74,8 @@ export function ConversationListPane({
     [onSelectItem]
   )
 
+  const selectInboxItem = useEffectEvent(onSelectItem)
+
   useEffect(() => {
     const onGlobalKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
@@ -100,20 +102,20 @@ export function ConversationListPane({
       if (event.key === 'ArrowDown') {
         event.preventDefault()
         const nextIndex = selectedIndex < filteredItems.length - 1 ? selectedIndex + 1 : 0
-        onSelectItem(filteredItems[nextIndex]!)
+        selectInboxItem(filteredItems[nextIndex]!)
         return
       }
 
       if (event.key === 'ArrowUp') {
         event.preventDefault()
         const nextIndex = selectedIndex > 0 ? selectedIndex - 1 : filteredItems.length - 1
-        onSelectItem(filteredItems[nextIndex]!)
+        selectInboxItem(filteredItems[nextIndex]!)
       }
     }
 
     window.addEventListener('keydown', onGlobalKeyDown)
     return () => window.removeEventListener('keydown', onGlobalKeyDown)
-  }, [filteredItems, isSelected, onSelectItem])
+  }, [filteredItems, isSelected])
 
   const unreadAnnouncement = useMemo(() => {
     if (isLoading || previousUnread === undefined) {

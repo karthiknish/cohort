@@ -182,18 +182,27 @@ export function useMessagesData({
   )
   const [channelListRetryNonce, setChannelListRetryNonce] = useState(0)
   const selectedChannelId = selectedChannel?.id ?? null
-  const [prevSelectedChannelId, setPrevSelectedChannelId] = useState(selectedChannelId)
-  if (selectedChannelId !== prevSelectedChannelId) {
-    setPrevSelectedChannelId(selectedChannelId)
-    setChannelListRetryNonce(0)
-  }
   const [draftByChannelId, setDraftByChannelId] = useState<Record<string, string>>({})
+  const [messageSearchByChannelId, setMessageSearchByChannelId] = useState<Record<string, string>>({})
   const messageInput = selectedChannelId ? (draftByChannelId[selectedChannelId] ?? '') : ''
-  const [messageSearchQuery, setMessageSearchQuery] = useState('')
+  const messageSearchQuery = selectedChannelId
+    ? (messageSearchByChannelId[selectedChannelId] ?? '')
+    : ''
 
   useEffect(() => {
-    setMessageSearchQuery('')
+    setChannelListRetryNonce(0)
   }, [selectedChannelId])
+
+  const setMessageSearchQuery = useCallback(
+    (value: string) => {
+      if (!selectedChannelId) return
+      setMessageSearchByChannelId((prev) => ({
+        ...prev,
+        [selectedChannelId]: value,
+      }))
+    },
+    [selectedChannelId],
+  )
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const previewReplyTimersRef = useRef<number[]>([])

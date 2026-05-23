@@ -9,7 +9,7 @@ import { LinkPreviewCard } from './link-preview-card'
 import { MessageAttachments } from './message-attachments'
 import { MessageContent } from './message-content'
 import { DeletedMessageInfo, MessageEditForm } from './message-item-parts'
-import { PollCard } from './message-polls'
+import { MessagePollCardBlock } from './message-poll-card-block'
 import type { UnifiedMessage } from './message-list-types'
 
 export function getSharePlatformLabel(platform: 'email'): string {
@@ -53,32 +53,14 @@ export function renderMessageContentBlock({
   const poll = parsePollMessage(content)
 
   if (poll) {
-    const canEnd = Boolean(
-      onEndPoll &&
-        currentUserId &&
-        (poll.createdBy === currentUserId || isAdmin),
-    )
-
     return (
-      <PollCard
+      <MessagePollCardBlock
+        message={message}
         poll={poll}
-        userId={currentUserId ?? null}
-        showResults={false}
-        canEnd={canEnd}
-        onVote={
-          onVotePoll
-            ? async (_pollId, optionIds) => {
-                await onVotePoll(message.id, optionIds)
-              }
-            : undefined
-        }
-        onEndPoll={
-          onEndPoll
-            ? async () => {
-                await onEndPoll(message.id)
-              }
-            : undefined
-        }
+        currentUserId={currentUserId}
+        isAdmin={isAdmin}
+        onVotePoll={onVotePoll}
+        onEndPoll={onEndPoll}
       />
     )
   }

@@ -121,7 +121,9 @@ export function useDirectConversationsQuery({
   const { messageCursor, allMessages, hasMore, isLoadingMore } = pagination
   const { conversations: previewConversations, messagesByConversation: previewMessagesByConversation } = previewData
   const { results: searchResults, highlights: searchHighlights, searching: searchingMessages, error: searchError } = search
-  const [messageSearchQuery, setMessageSearchQuery] = useState('')
+  const [messageSearchByConversationId, setMessageSearchByConversationId] = useState<
+    Record<string, string>
+  >({})
   const [searchRetryNonce, setSearchRetryNonce] = useState(0)
   const previewReplyTimersRef = useRef<number[]>([])
 
@@ -188,11 +190,21 @@ export function useDirectConversationsQuery({
     [conversationsQuery]
   )
   const selectedConversationLegacyId = selectedConversation?.legacyId ?? null
+  const messageSearchQuery = selectedConversationLegacyId
+    ? (messageSearchByConversationId[selectedConversationLegacyId] ?? '')
+    : ''
   const normalizedMessageSearch = messageSearchQuery.trim()
 
-  useEffect(() => {
-    setMessageSearchQuery('')
-  }, [selectedConversationLegacyId])
+  const setMessageSearchQuery = useCallback(
+    (value: string) => {
+      if (!selectedConversationLegacyId) return
+      setMessageSearchByConversationId((prev) => ({
+        ...prev,
+        [selectedConversationLegacyId]: value,
+      }))
+    },
+    [selectedConversationLegacyId],
+  )
 
   useEffect(() => {
     const replyTimersRef = previewReplyTimersRef

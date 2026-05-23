@@ -313,7 +313,7 @@ export function SwipeableMessageRenderer({
       )
     }
 
-    return <>{children}</>
+    return children
   }
 
   return (

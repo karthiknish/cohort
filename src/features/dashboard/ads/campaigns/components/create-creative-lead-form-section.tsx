@@ -116,7 +116,7 @@ export function CreateCreativeLeadFormSection({
       <div>
         <Label>Instant lead form</Label>
         <p className="text-xs text-muted-foreground mt-1">
-          Required for lead ads — attached to the creative call-to-action in Meta.
+          Required for lead ads, attached to the creative call-to-action in Meta.
         </p>
       </div>
 
@@ -161,14 +161,14 @@ function LeadFormOption({
   isSelected: boolean
   onSelect: (id: string) => void
 }) {
-  const handleClick = useCallback(() => {
+  const handleSelectLeadForm = useCallback(() => {
     onSelect(form.id)
   }, [form.id, onSelect])
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={handleSelectLeadForm}
       disabled={disabled}
       className={`flex items-center justify-between rounded-lg border p-3 text-left text-sm motion-chromatic ${
         isSelected ? 'border-info/30 bg-info/10' : 'border-border hover:border-info/50'

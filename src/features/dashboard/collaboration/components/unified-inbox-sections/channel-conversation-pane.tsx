@@ -35,6 +35,7 @@ import {
 } from '../../utils'
 import { collaborationToUnifiedMessage } from '../message-list-utils'
 import { EmptyMessagesState, MessagesErrorState, NoSearchResultsState } from '../message-pane-parts'
+import type { MessagePoll } from '../message-polls'
 import type { UnifiedMessage } from '../message-list-types'
 import { UnifiedMessagePane } from '../unified-message-pane'
 
@@ -83,7 +84,11 @@ function hasRequestedDeepLinkTarget(
   })
 }
 
-export function ChannelConversationPane({
+export function ChannelConversationPane(props: ChannelConversationPaneProps) {
+  return <ChannelConversationPaneInner key={props.selectedChannel.id} {...props} />
+}
+
+function ChannelConversationPaneInner({
   listState,
   searchState,
   composerState,
@@ -147,9 +152,15 @@ export function ChannelConversationPane({
   const { sending, uploading } = composerState
   const [replyingToMessage, setReplyingToMessage] = useState<CollaborationMessage | null>(null)
 
-  useEffect(() => {
-    setReplyingToMessage(null)
-  }, [selectedChannel.id])
+  const threadMessagesById = useMemo(() => {
+    const byId = new Map<string, CollaborationMessage>()
+    for (const replies of Object.values(threadMessagesByRootId)) {
+      for (const entry of replies) {
+        byId.set(entry.id, entry)
+      }
+    }
+    return byId
+  }, [threadMessagesByRootId])
 
   const resolveCollaborationMessage = useCallback(
     (message: UnifiedMessage): CollaborationMessage | null => {
@@ -158,16 +169,9 @@ export function ChannelConversationPane({
         return fromChannel
       }
 
-      for (const replies of Object.values(threadMessagesByRootId)) {
-        const fromThread = replies.find((entry) => entry.id === message.id)
-        if (fromThread) {
-          return fromThread
-        }
-      }
-
-      return null
+      return threadMessagesById.get(message.id) ?? null
     },
-    [channelMessages, threadMessagesByRootId],
+    [channelMessages, threadMessagesById],
   )
 
   const handleReply = useCallback(
@@ -180,6 +184,13 @@ export function ChannelConversationPane({
   const handleCancelReply = useCallback(() => {
     setReplyingToMessage(null)
   }, [])
+
+  const handleCreatePoll = useCallback(
+    async (poll: Omit<MessagePoll, 'id' | 'createdAt'>) => {
+      await onCreatePoll?.(poll)
+    },
+    [onCreatePoll],
+  )
 
   const channelEmptyState = useMemo(() => {
     if (isCurrentChannelLoading || searchingMessages) {
@@ -366,7 +377,7 @@ export function ChannelConversationPane({
       onShareToPlatform={onShareToPlatform}
       onCreateTask={onCreateTask}
       onForwardMessage={onForwardMessage}
-      onCreatePoll={onCreatePoll ? async (poll) => onCreatePoll(poll) : undefined}
+      onCreatePoll={onCreatePoll ? handleCreatePoll : undefined}
       workspaceId={workspaceId}
       reactionPendingByMessage={reactionPendingByMessage}
       onDeleteMessage={handleDeleteMessage}

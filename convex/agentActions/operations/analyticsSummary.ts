@@ -12,11 +12,11 @@ import {
 import type { OperationHandler } from '../types'
 import {
   ANALYTICS_PROVIDER_ID,
-  computeAggregateMetrics,
   computeAggregateMetricsFromRows,
   filterAnalyticsMetricRows,
   getPreviousDateWindow,
   resolveAdsSyncTimeframeDays,
+  type AggregateMetrics,
 } from './shared'
 
 export type AnalyticsTotals = {
@@ -39,7 +39,7 @@ function resolveAnalyticsCurrencyCode(rows: Record<string, unknown>[]): string {
   return 'USD'
 }
 
-function metricsToAnalyticsTotals(metrics: ReturnType<typeof computeAggregateMetrics>): AnalyticsTotals {
+function metricsToAnalyticsTotals(metrics: AggregateMetrics): AnalyticsTotals {
   const users = metrics.impressions
   const sessions = metrics.clicks
   return {
@@ -310,7 +310,12 @@ export const summarizeAnalyticsPerformanceHandler: OperationHandler = async (ctx
 
   const previousTotals = metricsToAnalyticsTotals(computeAggregateMetricsFromRows(previousMetricsRows))
   const comparison = buildAnalyticsComparison(totals, previousTotals, previousWindow)
-  const dayCount = new Set(metricsRows.map((row) => asNonEmptyString(row.date)).filter(Boolean)).size
+  const dayCount = new Set(
+    metricsRows.flatMap((row) => {
+      const date = asNonEmptyString(row.date)
+      return date ? [date] : []
+    }),
+  ).size
   const currencyCode = resolveAnalyticsCurrencyCode(metricsRows)
   const currentSituation = buildAnalyticsSituation(totals, currencyCode)
 

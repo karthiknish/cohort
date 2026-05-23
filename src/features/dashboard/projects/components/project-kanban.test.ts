@@ -6,7 +6,7 @@ import {
   canDragProjectKanbanCard,
   projectKanbanReducer,
   resolveProjectKanbanMoveTarget,
-} from './project-kanban'
+} from './project-kanban-logic'
 
 const baseProject: ProjectRecord = {
   id: 'project-1',

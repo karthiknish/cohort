@@ -131,6 +131,10 @@ export function AgentSpreadsheetDownload({
     }
   }, [alreadyStored, isDownloading, payload, storeExport])
 
+  const handleDownloadClick = useCallback(() => {
+    void handleDownload()
+  }, [handleDownload])
+
   if (!payload) return null
 
   const busy = isDownloading || isStoring
@@ -154,7 +158,7 @@ export function AgentSpreadsheetDownload({
         variant="default"
         className="mt-2 gap-2"
         disabled={busy}
-        onClick={() => void handleDownload()}
+        onClick={handleDownloadClick}
       >
         {busy ? (
           <LoaderCircle className="size-3.5 animate-spin" aria-hidden />

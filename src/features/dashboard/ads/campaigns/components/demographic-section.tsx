@@ -45,6 +45,34 @@ const GENDER_OPTIONS = [
   { value: 'female', label: 'Women' },
 ] as const
 
+function GenderOptionButton({
+  label,
+  selected,
+  value,
+  onSelect,
+}: {
+  label: string
+  selected: boolean
+  value: string
+  onSelect: (value: string) => void
+}) {
+  const handleSelect = useCallback(() => {
+    onSelect(value)
+  }, [onSelect, value])
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant={selected ? 'default' : 'outline'}
+      className="h-8"
+      onClick={handleSelect}
+    >
+      {label}
+    </Button>
+  )
+}
+
 export function DemographicSection({
   aggregatedData,
   expandedSections,
@@ -186,16 +214,13 @@ export function DemographicSection({
               <p className="text-xs font-medium text-muted-foreground">Gender</p>
               <div className="flex flex-wrap gap-2">
                 {GENDER_OPTIONS.map((option) => (
-                  <Button
+                  <GenderOptionButton
                     key={option.value}
-                    type="button"
-                    size="sm"
-                    variant={selectedGender === option.value ? 'default' : 'outline'}
-                    className="h-8"
-                    onClick={() => handleGenderSelect(option.value)}
-                  >
-                    {option.label}
-                  </Button>
+                    label={option.label}
+                    value={option.value}
+                    selected={selectedGender === option.value}
+                    onSelect={handleGenderSelect}
+                  />
                 ))}
               </div>
             </div>

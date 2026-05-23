@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { ChevronDown, Loader2, type LucideIcon } from 'lucide-react'
 
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
@@ -94,6 +94,11 @@ export function MetaPixelPicker({
   const selected = pixels.rows.find((row) => row.id === pixelId)
   const hasList = pixels.rows.length > 0
 
+  const handlePixelIdInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onPixelIdChange(event.target.value),
+    [onPixelIdChange],
+  )
+
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
@@ -161,7 +166,7 @@ export function MetaPixelPicker({
               <Input
                 id="meta-pixel-manual"
                 value={pixelId}
-                onChange={(event) => onPixelIdChange(event.target.value)}
+                onChange={handlePixelIdInputChange}
                 placeholder="e.g. 123456789012345"
                 className="h-10 font-mono text-sm"
               />
@@ -176,7 +181,7 @@ export function MetaPixelPicker({
           <Input
             id="meta-pixel-manual"
             value={pixelId}
-            onChange={(event) => onPixelIdChange(event.target.value)}
+            onChange={handlePixelIdInputChange}
             placeholder="e.g. 123456789012345"
             className="h-10 font-mono text-sm"
           />

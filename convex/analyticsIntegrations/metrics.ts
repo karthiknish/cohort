@@ -81,7 +81,7 @@ function analyticsDailyRowsQuery(ctx: QueryCtx, args: AnalyticsDailyListArgs) {
   const { clientId, propertyId, startDate, endDate, cursor } = args
 
   if (clientId !== null && propertyId) {
-    let query = ctx.db
+    const query = ctx.db
       .query('analyticsMetricsDaily')
       .withIndex('by_workspace_client_property_date', (index) => {
         const base = index
@@ -202,9 +202,9 @@ async function loadAnalyticsBreakdowns(
     .order('desc')
     .take(ANALYTICS_BREAKDOWNS_MAX)
 
-  return breakdownRows
-    .filter((row) => !args.propertyId || row.propertyId === args.propertyId)
-    .map((row) => ({
+  return breakdownRows.flatMap((row) => {
+    if (args.propertyId && row.propertyId !== args.propertyId) return []
+    return [{
       propertyId: row.propertyId,
       date: row.date,
       dimension: row.dimension,
@@ -213,7 +213,8 @@ async function loadAnalyticsBreakdowns(
       sessions: row.sessions,
       conversions: row.conversions,
       revenue: row.revenue,
-    }))
+    }]
+  })
 }
 
 const metricRowValidator = v.object({

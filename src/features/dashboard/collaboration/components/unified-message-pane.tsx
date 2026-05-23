@@ -5,6 +5,7 @@ import type { CollaborationMessage } from '@/types/collaboration'
 import type { ClientTeamMember } from '@/types/clients'
 
 import type { PendingAttachment, SendMessageOptions } from '../hooks/types'
+import type { MessagePoll } from './message-polls'
 import type { UnifiedMessage } from './message-list-types'
 import {
   UnifiedMessagePaneConversationLayout,
@@ -55,7 +56,7 @@ export interface UnifiedMessagePaneProps {
   onShareToPlatform?: (message: UnifiedMessage, platform: 'email') => Promise<void>
   onCreateTask?: (message: UnifiedMessage) => void
   onForwardMessage?: (message: UnifiedMessage) => void
-  onCreatePoll?: (poll: Omit<import('./message-polls').MessagePoll, 'id' | 'createdAt'>) => Promise<void>
+  onCreatePoll?: (poll: Omit<MessagePoll, 'id' | 'createdAt'>) => Promise<void>
   workspaceId?: string | null
   dmParticipantName?: string | null
   typingIndicator?: string

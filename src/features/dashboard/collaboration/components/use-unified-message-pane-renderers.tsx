@@ -108,10 +108,23 @@ export function useUnifiedMessagePaneRenderers({
   handleStartEdit,
   handleThreadToggle,
 }: UseUnifiedMessagePaneRenderersArgs): MessageListRenderers {
-  const renderMessageExtras = useCallback(
-    (message: UnifiedMessage) => <SharedPlatformBadges platforms={message.sharedTo as Array<'email'> | undefined} />,
-    [],
-  )
+  const channelMemberNames = useMemo(() => {
+    if (headerType !== 'channel') return null
+    const names: Record<string, string> = {}
+    for (const entry of channelMessagesById.values()) {
+      if (entry.senderId && entry.senderName) {
+        names[entry.senderId] = entry.senderName
+      }
+    }
+    return names
+  }, [channelMessagesById, headerType])
+
+  const renderMessageExtras = useCallback((message: UnifiedMessage) => {
+    const platforms = message.sharedTo as Array<'email'> | undefined
+    return platforms && platforms.length > 0 ? (
+      <SharedPlatformBadges platforms={platforms} />
+    ) : null
+  }, [])
 
   const renderMessageFooter = useCallback(
     (message: UnifiedMessage) => {
@@ -120,14 +133,11 @@ export function useUnifiedMessagePaneRenderers({
         return null
       }
 
-      const memberNames: Record<string, string> = {}
-      if (headerType === 'channel') {
-        for (const entry of channelMessagesById.values()) {
-          if (entry.senderId && entry.senderName) {
-            memberNames[entry.senderId] = entry.senderName
-          }
-        }
-      } else if (dmParticipantName) {
+      const memberNames: Record<string, string> =
+        headerType === 'channel' && channelMemberNames
+          ? channelMemberNames
+          : {}
+      if (headerType === 'dm' && dmParticipantName) {
         for (const readerId of original.readBy ?? []) {
           if (readerId !== currentUserId) {
             memberNames[readerId] = dmParticipantName
@@ -144,7 +154,7 @@ export function useUnifiedMessagePaneRenderers({
         />
       )
     },
-    [channelMessagesById, currentUserId, dmParticipantName, headerType],
+    [channelMemberNames, channelMessagesById, currentUserId, dmParticipantName, headerType],
   )
 
   const renderMessageActions = useCallback(

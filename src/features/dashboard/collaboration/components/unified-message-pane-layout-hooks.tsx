@@ -13,7 +13,7 @@ import {
 import { MessageSearchBar } from './message-pane-parts'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
 
-type UseUnifiedMessagePaneSearchParams = {
+export type UseUnifiedMessagePaneSearchParams = {
   canSearchMessages: boolean
   conversationKey?: string
   headerType: MessagePaneHeaderInfo['type']
@@ -66,10 +66,6 @@ export function useUnifiedMessagePaneMessageSearch({
       return next
     })
   }, [onMessageSearchChange])
-
-  useEffect(() => {
-    setMessageSearchOpen(false)
-  }, [conversationKey])
 
   useEffect(() => {
     if (!isMessageSearchOpen) return

@@ -65,11 +65,13 @@ export async function uploadStorageFile({
         })
 
   await uploadWithProgress(uploadUrl, resolvedFile, onProgress)
-  await syncMetadata({ key })
 
-  if (payload.storageId?.trim()) {
-    return payload.storageId.trim()
+  const trimmedStorageId = payload.storageId?.trim()
+  if (trimmedStorageId) {
+    return trimmedStorageId
   }
+
+  await syncMetadata({ key })
 
   return `r2:${key}`
 }

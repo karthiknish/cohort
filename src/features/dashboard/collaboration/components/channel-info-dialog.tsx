@@ -17,7 +17,7 @@ import {
 } from '@/shared/ui/dialog'
 import { useToast } from '@/shared/ui/use-toast'
 import type { ClientTeamMember } from '@/types/clients'
-import type { CollaborationAttachment } from '@/types/collaboration'
+import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 
 import type { Channel } from '../types'
 import {
@@ -32,7 +32,7 @@ export type ChannelInfoDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   channel: Channel
-  channelMessages: import('@/types/collaboration').CollaborationMessage[]
+  channelMessages: CollaborationMessage[]
   channelParticipants: ClientTeamMember[]
   currentUserId: string | null
   onPinnedMessageClick?: (messageId: string) => void

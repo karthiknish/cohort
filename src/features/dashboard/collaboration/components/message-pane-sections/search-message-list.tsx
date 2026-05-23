@@ -42,12 +42,12 @@ import { ThreadSection } from '../thread-section'
 import { ImageUrlPreview } from '../image-url-preview'
 import { LinkPreviewCard } from '../link-preview-card'
 import { CollaborationMessageItem } from './message-item-bundle'
+import { getThreadRootId } from './message-thread-utils'
+import { SearchThreadReplyRenderer } from './search-thread-reply'
 import {
   SearchThreadReplyContext,
-  SearchThreadReplyRenderer,
   type SearchThreadReplyContextValue,
-  getThreadRootId,
-} from './message-item-bundle'
+} from './search-thread-reply-context'
 
 type SearchMessageActionsBarProps = {
   currentUserId?: string | null

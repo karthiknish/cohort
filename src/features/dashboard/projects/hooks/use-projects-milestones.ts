@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from 'convex/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { projectMilestonesApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
@@ -29,9 +29,7 @@ export function useProjectsMilestones({
   viewMode,
   projects,
 }: UseProjectsMilestonesArgs) {
-  const [milestonesByProject, setMilestonesByProject] = useState<Record<string, MilestoneRecord[]>>({})
-  const [milestonesLoading, setMilestonesLoading] = useState(false)
-  const [milestonesError, setMilestonesError] = useState<string | null>(null)
+  const [milestonePatches, setMilestonePatches] = useState<Record<string, MilestoneRecord[]>>({})
 
   const projectIds = useMemo(() => projects.map((project) => project.id), [projects])
   const milestonesQueryEnabled = !isPreviewMode && viewMode === 'gantt' && Boolean(workspaceId && userId)
@@ -79,64 +77,29 @@ export function useProjectsMilestones({
     return mapped
   }, [isPreviewMode, milestonesRealtime, projectIds, selectedClientId, viewMode])
 
-  useEffect(() => {
+  const milestonesByProject = useMemo(() => {
     if (viewMode !== 'gantt') {
-      setMilestonesByProject({})
-      setMilestonesLoading(false)
-      setMilestonesError(null)
-      return
+      return {}
     }
 
-    setMilestonesByProject(syncedMilestones)
-    setMilestonesLoading(milestonesQueryEnabled && milestonesRealtime === undefined)
-    setMilestonesError(milestonesQueryError)
-  }, [milestonesQueryEnabled, milestonesQueryError, milestonesRealtime, syncedMilestones, viewMode])
+    const merged = { ...syncedMilestones }
+    for (const [projectId, extras] of Object.entries(milestonePatches)) {
+      merged[projectId] = [...(merged[projectId] ?? []), ...extras]
+    }
+    return merged
+  }, [milestonePatches, syncedMilestones, viewMode])
 
-  const loadMilestones = useCallback(
-    async (targetProjectIds: string[]) => {
-      if (viewMode !== 'gantt') {
-        return
-      }
+  const milestonesLoading =
+    viewMode === 'gantt' && milestonesQueryEnabled && milestonesRealtime === undefined
 
-      setMilestonesLoading(true)
-      setMilestonesError(null)
+  const milestonesError = viewMode === 'gantt' ? milestonesQueryError : null
 
-      try {
-        if (isPreviewMode) {
-          setMilestonesByProject(getPreviewProjectMilestones(selectedClientId ?? null, targetProjectIds))
-          return
-        }
-
-        if (!milestonesRealtime || typeof milestonesRealtime !== 'object') {
-          setMilestonesByProject({})
-          return
-        }
-
-        const mapped: Record<string, MilestoneRecord[]> = {}
-        const projectIdSet = new Set(targetProjectIds)
-
-        for (const [projectId, rows] of Object.entries(milestonesRealtime)) {
-          if (projectIdSet.size > 0 && !projectIdSet.has(projectId)) {
-            continue
-          }
-
-          mapped[projectId] = (Array.isArray(rows) ? rows : []).map(mapMilestoneRecord)
-        }
-
-        setMilestonesByProject(mapped)
-      } catch (err) {
-        logError(err, 'useProjectsMilestones:loadMilestones')
-        setMilestonesError(asErrorMessage(err))
-        setMilestonesByProject({})
-      } finally {
-        setMilestonesLoading(false)
-      }
-    },
-    [isPreviewMode, milestonesRealtime, selectedClientId, viewMode],
-  )
+  const loadMilestones = useCallback(async (_targetProjectIds: string[]) => {
+    // Milestone rows refresh via `listByProjectIds` when `projectIds` changes.
+  }, [])
 
   const handleMilestoneCreated = useCallback((milestone: MilestoneRecord) => {
-    setMilestonesByProject((previous) => {
+    setMilestonePatches((previous) => {
       const existing = previous[milestone.projectId] ?? []
       return { ...previous, [milestone.projectId]: [...existing, milestone] }
     })

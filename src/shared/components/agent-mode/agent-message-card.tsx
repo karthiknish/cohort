@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
+import type { AgentAttachmentContext } from '@/lib/agent-attachments'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import type { AgentMessage, AgentPendingConfirmation } from '@/shared/hooks/use-agent-mode'
@@ -45,10 +46,7 @@ interface AgentMessageCardProps {
   mentionLabels?: string[]
   conversationId?: string | null
   workspaceId?: string | null
-  onStoreSpreadsheetExport?: (
-    messageId: string,
-    attachment: import('@/lib/agent-attachments').AgentAttachmentContext,
-  ) => void
+  onStoreSpreadsheetExport?: (messageId: string, attachment: AgentAttachmentContext) => void
   onRetryLastUserTurn?: () => void
   onRetryUserMessage?: (clientId: string, content: string) => void
   onConfirmPending?: (pending: AgentPendingConfirmation, decision: 'confirm' | 'cancel' | 'edit') => void

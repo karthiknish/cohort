@@ -126,9 +126,9 @@ export function buildAgentMessageCharts(
             : null,
         ])
 
-    const filteredDeltaPoints = deltaPoints
-      .filter((point) => Math.abs(point.value) >= 0.05)
-      .filter((point) => Math.abs(point.value) <= 300)
+    const filteredDeltaPoints = deltaPoints.filter(
+      (point) => Math.abs(point.value) >= 0.05 && Math.abs(point.value) <= 300,
+    )
 
     if (filteredDeltaPoints.length >= 2) {
       charts.push({

@@ -321,6 +321,14 @@ export function AdsPageAnalyticsSection({
         ? 'Your ad account is connected. Run a sync to populate spend, clicks, and conversions for this date range.'
         : undefined
 
+  const connection = useMemo(
+    () => ({
+      hasConnectedAds: connectedAccountCount > 0,
+      hasSuccessfulSync,
+    }),
+    [connectedAccountCount, hasSuccessfulSync],
+  )
+
   return (
     <>
       <FadeIn>
@@ -329,10 +337,7 @@ export function AdsPageAnalyticsSection({
           serverSideSummary={effectiveServerSummary}
           currency={activeCurrency}
           connectedProviderIds={connectedProviderIds}
-          connection={{
-            hasConnectedAds: connectedAccountCount > 0,
-            hasSuccessfulSync,
-          }}
+          connection={connection}
           hasMetricData={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}

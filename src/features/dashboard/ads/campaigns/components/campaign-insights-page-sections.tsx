@@ -3,8 +3,8 @@
 import { useMemo } from 'react'
 
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
-import { useFormulaEditor } from '@/features/dashboard/ads/hooks/use-formula-editor'
-import { calculateAlgorithmicInsights } from '@/lib/ad-algorithms'
+import type { UseFormulaEditorReturn } from '@/features/dashboard/ads/hooks/use-formula-editor'
+import type { AlgorithmicInsight } from '@/lib/ad-algorithms'
 import { type DateRange } from '@/features/dashboard/ads/components/date-range-picker'
 import { FormulaBuilderCard } from '@/features/dashboard/ads/components/formula-builder-card'
 import { Button } from '@/shared/ui/button'
@@ -21,7 +21,7 @@ import { CampaignInsightsError } from './campaign-insights-error'
 import { CampaignPageLayout, CampaignSection } from './campaign-page-shell'
 import { InsightsChartsSection } from './insights-charts-section'
 import { MetricCardsSection } from './metric-cards-section'
-import { useCampaignInsightsPage } from './use-campaign-insights-page'
+import { useCampaignInsightsPage, type UseCampaignInsightsPageReturn } from './use-campaign-insights-page'
 import type { Campaign, CampaignInsightsResponse } from './campaign-insights-page-types'
 
 export type { Campaign, CampaignInsightsResponse } from './campaign-insights-page-types'
@@ -58,7 +58,7 @@ export function CampaignInsightsPerformanceSection({
   algorithmicInsightsList,
   onRetryInsights,
 }: {
-  calculatedMetrics: ReturnType<typeof useCampaignInsightsPage>['calculatedMetrics']
+  calculatedMetrics: UseCampaignInsightsPageReturn['calculatedMetrics']
   insightsLoading: boolean
   displayCurrency: string
   efficiencyScore: number | null
@@ -85,7 +85,7 @@ export function CampaignInsightsPerformanceSection({
     reach: number
     impressions: number
   }>
-  algorithmicInsightsList: ReturnType<typeof calculateAlgorithmicInsights>
+  algorithmicInsightsList: AlgorithmicInsight[]
   onRetryInsights: () => void
 }) {
   return (
@@ -218,8 +218,8 @@ export function CampaignInsightsAdvancedSection({
   selectedClientId: string | null
   isPreviewMode: boolean
   campaign: Campaign | null
-  formulaEditor: ReturnType<typeof useFormulaEditor>
-  calculatedMetrics: ReturnType<typeof useCampaignInsightsPage>['calculatedMetrics']
+  formulaEditor: UseFormulaEditorReturn
+  calculatedMetrics: UseCampaignInsightsPageReturn['calculatedMetrics']
   insightsLoading: boolean
 }) {
   return (
@@ -243,7 +243,7 @@ export function CampaignInsightsAdvancedSection({
 export function CampaignInsightsPageBody({
   page,
 }: {
-  page: ReturnType<typeof useCampaignInsightsPage>
+  page: UseCampaignInsightsPageReturn
 }) {
   const performanceSection = useMemo(
     () => (

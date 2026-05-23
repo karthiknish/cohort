@@ -2,6 +2,7 @@
 
 import type { RefObject } from 'react'
 
+import type { AgentAttachmentContext } from '@/lib/agent-attachments'
 import type {
   AgentExecutionStep,
   AgentMessage,
@@ -61,10 +62,7 @@ export function AgentModePanelContent({
   onJumpToLatest: () => void
   conversationId: string | null
   workspaceId: string | null
-  onStoreSpreadsheetExport?: (
-    messageId: string,
-    attachment: import('@/lib/agent-attachments').AgentAttachmentContext,
-  ) => void
+  onStoreSpreadsheetExport?: (messageId: string, attachment: AgentAttachmentContext) => void
 }) {
   const {
     conversationLoading: isConversationLoading,

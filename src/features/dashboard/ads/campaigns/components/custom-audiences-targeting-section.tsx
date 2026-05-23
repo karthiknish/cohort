@@ -51,6 +51,31 @@ type CatalogState = {
   loading: boolean
 }
 
+function AudienceRemoveButton({
+  audienceId,
+  audienceName,
+  onRemove,
+}: {
+  audienceId: string
+  audienceName: string
+  onRemove: (audienceId: string) => void
+}) {
+  const handleRemove = useCallback(() => {
+    onRemove(audienceId)
+  }, [audienceId, onRemove])
+
+  return (
+    <button
+      type="button"
+      className="ml-0.5 rounded-sm hover:text-destructive"
+      aria-label={`Remove ${audienceName}`}
+      onClick={handleRemove}
+    >
+      ×
+    </button>
+  )
+}
+
 export function CustomAudiencesTargetingSection({
   aggregatedData,
   expandedSections,
@@ -178,6 +203,18 @@ export function CustomAudiencesTargetingSection({
       })
   }, [clientId, uploadAudienceId, uploadAudienceUsers, uploadEmailsRaw, workspaceId])
 
+  const handleAddAudienceSelect = useCallback(
+    (id: string) => {
+      const row = catalog.catalog.find((item) => item.id === id)
+      if (row) onAddAudience?.(row)
+    },
+    [catalog.catalog, onAddAudience],
+  )
+
+  const handleSaveTargetingClick = useCallback(() => {
+    void onSaveTargeting?.()
+  }, [onSaveTargeting])
+
   const editButton =
     canEdit && onAddAudience ? (
       <TooltipProvider>
@@ -216,13 +253,7 @@ export function CustomAudiencesTargetingSection({
               Loading audiences…
             </div>
           ) : availableToAdd.length > 0 ? (
-            <Select
-              onValueChange={(id) => {
-                const row = catalog.catalog.find((item) => item.id === id)
-                if (row) onAddAudience?.(row)
-              }}
-              disabled={savingTargeting}
-            >
+            <Select onValueChange={handleAddAudienceSelect} disabled={savingTargeting}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Add custom audience…" />
               </SelectTrigger>
@@ -249,14 +280,11 @@ export function CustomAudiencesTargetingSection({
               <Badge key={audience.id} variant="secondary" className="gap-1 text-xs">
                 {audience.name}
                 {isEditing && onRemoveAudience ? (
-                  <button
-                    type="button"
-                    className="ml-0.5 rounded-sm hover:text-destructive"
-                    aria-label={`Remove ${audience.name}`}
-                    onClick={() => onRemoveAudience(audience.id)}
-                  >
-                    ×
-                  </button>
+                  <AudienceRemoveButton
+                    audienceId={audience.id}
+                    audienceName={audience.name}
+                    onRemove={onRemoveAudience}
+                  />
                 ) : null}
               </Badge>
             ))}
@@ -316,7 +344,7 @@ export function CustomAudiencesTargetingSection({
 
         {isEditing && onSaveTargeting ? (
           <div className="flex justify-end border-t border-border/60 pt-3">
-            <Button size="sm" onClick={() => void onSaveTargeting()} disabled={savingTargeting}>
+            <Button size="sm" onClick={handleSaveTargetingClick} disabled={savingTargeting}>
               {savingTargeting ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />

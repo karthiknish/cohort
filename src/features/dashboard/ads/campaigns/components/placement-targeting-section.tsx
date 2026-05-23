@@ -44,6 +44,32 @@ type PlacementTargetingSectionProps = {
   savingTargeting?: boolean
 }
 
+function PositionOptionButton({
+  option,
+  active,
+  onToggle,
+}: {
+  option: MetaPlacementOption
+  active: boolean
+  onToggle: (id: string) => void
+}) {
+  const handleToggle = useCallback(() => {
+    onToggle(option.id)
+  }, [onToggle, option.id])
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant={active ? 'default' : 'outline'}
+      className="h-7 text-xs"
+      onClick={handleToggle}
+    >
+      {option.label}
+    </Button>
+  )
+}
+
 function PositionToggleGroup({
   label,
   options,
@@ -61,26 +87,45 @@ function PositionToggleGroup({
     <div className="space-y-1.5">
       <p className="text-xs font-medium text-foreground">{label}</p>
       <div className="flex flex-wrap gap-1.5">
-        {options.map((option) => {
-          const active = selected.includes(option.id)
-          return (
-            <Button
-              key={option.id}
-              type="button"
-              size="sm"
-              variant={active ? 'default' : 'outline'}
-              className="h-7 text-xs"
-              onClick={() => onToggle(option.id)}
-            >
-              {option.label}
-            </Button>
-          )
-        })}
+        {options.map((option) => (
+          <PositionOptionButton
+            key={option.id}
+            option={option}
+            active={selected.includes(option.id)}
+            onToggle={onToggle}
+          />
+        ))}
       </div>
       {selected.length === 0 ? (
-        <p className="text-[11px] text-muted-foreground">No restriction — Meta uses all positions for this surface.</p>
+        <p className="text-[11px] text-muted-foreground">No restriction: Meta uses all positions for this surface.</p>
       ) : null}
     </div>
+  )
+}
+
+function PublisherPlatformButton({
+  platform,
+  active,
+  onTogglePlatform,
+}: {
+  platform: { id: string; label: string }
+  active: boolean
+  onTogglePlatform: (platformId: string) => void
+}) {
+  const handleToggle = useCallback(() => {
+    onTogglePlatform(platform.id)
+  }, [onTogglePlatform, platform.id])
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant={active ? 'default' : 'outline'}
+      className="h-8"
+      onClick={handleToggle}
+    >
+      {platform.label}
+    </Button>
   )
 }
 
@@ -133,6 +178,31 @@ export function PlacementTargetingSection({
     void onSavePlacements?.()
   }, [onSavePlacements])
 
+  const handleToggleFacebookPosition = useCallback(
+    (id: string) => onTogglePlacementPosition?.('facebookPositions', id),
+    [onTogglePlacementPosition],
+  )
+
+  const handleToggleInstagramPosition = useCallback(
+    (id: string) => onTogglePlacementPosition?.('instagramPositions', id),
+    [onTogglePlacementPosition],
+  )
+
+  const handleToggleAudienceNetworkPosition = useCallback(
+    (id: string) => onTogglePlacementPosition?.('audienceNetworkPositions', id),
+    [onTogglePlacementPosition],
+  )
+
+  const handleToggleMessengerPosition = useCallback(
+    (id: string) => onTogglePlacementPosition?.('messengerPositions', id),
+    [onTogglePlacementPosition],
+  )
+
+  const handleToggleDevicePlatform = useCallback(
+    (id: string) => onTogglePlacementPosition?.('devicePlatforms', id),
+    [onTogglePlacementPosition],
+  )
+
   const showPanel =
     displayPlatforms.length > 0 || positionCount > 0 || Boolean(canEdit)
 
@@ -183,21 +253,14 @@ export function PlacementTargetingSection({
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-foreground">Publisher platforms</p>
               <div className="flex flex-wrap gap-2">
-                {META_PUBLISHER_PLATFORMS.map((platform) => {
-                  const active = displayPlatforms.includes(platform.id)
-                  return (
-                    <Button
-                      key={platform.id}
-                      type="button"
-                      size="sm"
-                      variant={active ? 'default' : 'outline'}
-                      className="h-8"
-                      onClick={() => onTogglePlatform(platform.id)}
-                    >
-                      {platform.label}
-                    </Button>
-                  )
-                })}
+                {META_PUBLISHER_PLATFORMS.map((platform) => (
+                  <PublisherPlatformButton
+                    key={platform.id}
+                    platform={platform}
+                    active={displayPlatforms.includes(platform.id)}
+                    onTogglePlatform={onTogglePlatform}
+                  />
+                ))}
               </div>
             </div>
             {onTogglePlacementPosition ? (
@@ -207,7 +270,7 @@ export function PlacementTargetingSection({
                     label="Facebook positions"
                     options={META_FACEBOOK_POSITIONS}
                     selected={displayDetail.facebookPositions}
-                    onToggle={(id) => onTogglePlacementPosition('facebookPositions', id)}
+                    onToggle={handleToggleFacebookPosition}
                   />
                 ) : null}
                 {showInstagram ? (
@@ -215,7 +278,7 @@ export function PlacementTargetingSection({
                     label="Instagram positions"
                     options={META_INSTAGRAM_POSITIONS}
                     selected={displayDetail.instagramPositions}
-                    onToggle={(id) => onTogglePlacementPosition('instagramPositions', id)}
+                    onToggle={handleToggleInstagramPosition}
                   />
                 ) : null}
                 {showAudienceNetwork ? (
@@ -223,7 +286,7 @@ export function PlacementTargetingSection({
                     label="Audience Network positions"
                     options={META_AUDIENCE_NETWORK_POSITIONS}
                     selected={displayDetail.audienceNetworkPositions}
-                    onToggle={(id) => onTogglePlacementPosition('audienceNetworkPositions', id)}
+                    onToggle={handleToggleAudienceNetworkPosition}
                   />
                 ) : null}
                 {showMessenger ? (
@@ -231,14 +294,14 @@ export function PlacementTargetingSection({
                     label="Messenger positions"
                     options={META_MESSENGER_POSITIONS}
                     selected={displayDetail.messengerPositions}
-                    onToggle={(id) => onTogglePlacementPosition('messengerPositions', id)}
+                    onToggle={handleToggleMessengerPosition}
                   />
                 ) : null}
                 <PositionToggleGroup
                   label="Devices"
                   options={META_DEVICE_PLATFORMS}
                   selected={displayDetail.devicePlatforms}
-                  onToggle={(id) => onTogglePlacementPosition('devicePlatforms', id)}
+                  onToggle={handleToggleDevicePlatform}
                 />
               </div>
             ) : null}

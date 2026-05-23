@@ -11,6 +11,12 @@ import { formatEnUsCurrency, AGENT_CHART_WHOLE_NUMBER_FORMATTER } from '@/lib/in
 import type { AgentChartSeries, AgentDataSection, MetricItem } from './agent-message-data'
 import { getAgentChartFill } from './agent-message-data'
 
+const AGENT_CHART_BAR_INITIAL = { width: 0 } as const
+const AGENT_CHART_BAR_TRANSITION = {
+  duration: motionDurationSeconds.slow,
+  ease: motionEasing.out,
+} as const
+
 function formatChartValue(
   value: number,
   format: AgentChartSeries['valueFormat'],
@@ -29,7 +35,8 @@ function formatChartValue(
 function AgentChartBarFill({ width, fill }: { width: number; fill: string }) {
   const prefersReducedMotion = useReducedMotion()
   const style = useMemo(() => ({ width: `${width}%`, backgroundColor: fill }), [fill, width])
-
+  const animate = useMemo(() => ({ width: `${width}%` }), [width])
+  const barColorStyle = useMemo(() => ({ backgroundColor: fill }), [fill])
   if (prefersReducedMotion) {
     return <div className="h-full rounded-full" style={style} />
   }
@@ -38,10 +45,10 @@ function AgentChartBarFill({ width, fill }: { width: number; fill: string }) {
     <LazyMotion features={domAnimation}>
       <m.div
         className="h-full rounded-full"
-        initial={{ width: 0 }}
-        animate={{ width: `${width}%` }}
-        transition={{ duration: motionDurationSeconds.slow, ease: motionEasing.out }}
-        style={{ backgroundColor: fill }}
+        initial={AGENT_CHART_BAR_INITIAL}
+        animate={animate}
+        transition={AGENT_CHART_BAR_TRANSITION}
+        style={barColorStyle}
       />
     </LazyMotion>
   )

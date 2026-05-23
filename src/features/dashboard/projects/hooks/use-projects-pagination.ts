@@ -15,7 +15,7 @@ export type PaginatedProjectsResult = {
 }
 
 export function sortProjectsByUpdatedAt(projects: ProjectRecord[]): ProjectRecord[] {
-  return [...projects].sort((left, right) => {
+  return projects.toSorted((left, right) => {
     const leftMs = left.updatedAt ? Date.parse(left.updatedAt) : 0
     const rightMs = right.updatedAt ? Date.parse(right.updatedAt) : 0
     return rightMs - leftMs

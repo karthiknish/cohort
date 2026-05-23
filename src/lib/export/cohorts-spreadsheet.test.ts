@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import type * as CohortsSpreadsheetChartsModule from './cohorts-spreadsheet-charts'
 import { buildAnalyticsExportCharts } from './cohorts-spreadsheet-charts'
 import { buildCohortsSpreadsheetWorkbook, ensureXlsxFilename } from './cohorts-spreadsheet'
 
 vi.mock('./cohorts-spreadsheet-charts', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./cohorts-spreadsheet-charts')>()
+  const actual = await importOriginal<typeof CohortsSpreadsheetChartsModule>()
   return {
     ...actual,
     renderSpreadsheetCharts: (specs: Parameters<typeof actual.renderSpreadsheetCharts>[0]) =>

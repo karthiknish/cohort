@@ -197,11 +197,13 @@ async function syncConnectedAdsProviders(
     ),
   )
 
-  for (let index = 0; index < connected.length; index += 1) {
-    await ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
-      workspaceId: args.workspaceId,
-    })
-  }
+  await Promise.all(
+    connected.map(() =>
+      ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
+        workspaceId: args.workspaceId,
+      }),
+    ),
+  )
 
   return timeframeDays
 }

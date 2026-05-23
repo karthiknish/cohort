@@ -9,7 +9,7 @@ import { useToast } from '@/shared/ui/use-toast'
 
 import type { TranscriptActionResult, TranscriptMode } from '../components/in-site-meeting-card.shared'
 import { postMeetingTranscriptAction } from '../lib/in-site-meeting-transcript-client'
-import type { MeetingRecord } from '../types'
+import type { MeetingProcessingState, MeetingRecord } from '../types'
 import { normalizeMeetingProcessingState } from '../utils'
 
 type UseInSiteMeetingRoomPostCallArgs = {
@@ -27,9 +27,9 @@ type UseInSiteMeetingRoomPostCallArgs = {
   setMarkCompleted: (value: boolean) => void
   setFinalizingSession: (value: boolean | ((prev: boolean) => boolean)) => void
   setTranscriptSource: (value: string | null | ((prev: string | null) => string | null)) => void
-  setTranscriptProcessingState: (value: ReturnType<typeof normalizeMeetingProcessingState>) => void
+  setTranscriptProcessingState: (value: MeetingProcessingState) => void
   setTranscriptProcessingError: (value: string | null) => void
-  setNotesProcessingState: (value: ReturnType<typeof normalizeMeetingProcessingState>) => void
+  setNotesProcessingState: (value: MeetingProcessingState) => void
   setNotesProcessingError: (value: string | null) => void
   setNotesReason: (value: 'ai_not_configured' | 'generation_failed' | null) => void
   setGeneratingNotes: (value: boolean) => void

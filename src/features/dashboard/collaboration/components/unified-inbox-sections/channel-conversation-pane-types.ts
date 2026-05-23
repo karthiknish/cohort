@@ -11,6 +11,7 @@ import type {
   ThreadMessagesState,
 } from '../../hooks/types'
 import type { Channel } from '../../types'
+import type { MessagePoll } from '../message-polls'
 import type { UnifiedMessage } from '../message-list-types'
 
 import type { ChannelParticipant } from './types'
@@ -70,7 +71,7 @@ export type ChannelConversationPaneProps = {
   onShareToPlatform?: (message: UnifiedMessage, platform: 'email') => Promise<void>
   onCreateTask?: (message: UnifiedMessage) => void
   onForwardMessage?: (message: UnifiedMessage) => void
-  onCreatePoll?: (poll: Omit<import('../message-polls').MessagePoll, 'id' | 'createdAt'>) => Promise<void>
+  onCreatePoll?: (poll: Omit<MessagePoll, 'id' | 'createdAt'>) => Promise<void>
   onExportChannel?: () => void
   onOpenChannelMessage?: (messageId: string, options?: { threadId?: string | null }) => void
   onToggleReaction: (channelId: string, messageId: string, emoji: string) => void

@@ -15,6 +15,8 @@ import type { AsyncViewState } from '@/shared/ui/state-wrapper'
 
 import { formatRelativeTime } from '../utils'
 
+const CHEVRON_ROTATE_TRANSITION = { duration: 0.18 } as const
+
 function ThreadPanelReveal({
   open,
   panelId,
@@ -95,7 +97,7 @@ export function ThreadToggleButton({
       ) : (
         <m.span
           animate={prefersReducedMotion ? undefined : { rotate: isOpen ? 90 : 0 }}
-          transition={{ duration: 0.18 }}
+          transition={CHEVRON_ROTATE_TRANSITION}
           className="inline-flex"
         >
           <ChevronRight className="size-3.5" />

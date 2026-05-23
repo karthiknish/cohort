@@ -14,9 +14,8 @@ import {
   downloadUrlArtifact,
 } from '@/lib/meeting-artifact-download'
 import { buildMeetingNotesPdfBlob } from '@/lib/meeting-notes-pdf'
-import { getWorkspaceId } from '@/lib/utils'
+import { cn, getWorkspaceId } from '@/lib/utils'
 import { Button } from '@/shared/ui/button'
-import { cn } from '@/lib/utils'
 
 type MeetingArtifactsDownloadProps = {
   className?: string
@@ -134,6 +133,14 @@ export function MeetingArtifactsDownload({
     }
   }, [artifactUrls?.transcriptDownloadUrl, meetingTitle])
 
+  const handleNotesCloudClick = useCallback(() => {
+    void handleDownloadNotesFromCloud()
+  }, [handleDownloadNotesFromCloud])
+
+  const handleTranscriptCloudClick = useCallback(() => {
+    void handleDownloadTranscriptFromCloud()
+  }, [handleDownloadTranscriptFromCloud])
+
   if (!hasNotes && !hasTranscript) {
     return null
   }
@@ -157,7 +164,7 @@ export function MeetingArtifactsDownload({
               type="button"
               size={compact ? 'sm' : 'default'}
               variant="ghost"
-              onClick={() => void handleDownloadNotesFromCloud()}
+              onClick={handleNotesCloudClick}
               disabled={downloading !== null || !notesArchived}
             >
               <CloudDownload className="size-4" />
@@ -184,7 +191,7 @@ export function MeetingArtifactsDownload({
               type="button"
               size={compact ? 'sm' : 'default'}
               variant="ghost"
-              onClick={() => void handleDownloadTranscriptFromCloud()}
+              onClick={handleTranscriptCloudClick}
               disabled={downloading !== null || !transcriptArchived}
             >
               <CloudDownload className="size-4" />

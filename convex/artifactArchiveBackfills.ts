@@ -20,7 +20,7 @@
 
 import { v } from 'convex/values'
 
-import { internalMutation } from './_generated/server'
+import { internalMutation, type MutationCtx } from './_generated/server'
 import { adminMutation } from './functions'
 import {
   MIN_TRANSCRIPT_CHARS,
@@ -45,7 +45,7 @@ type BackfillMeetingResult = {
 }
 
 async function backfillMeetingArchivesBatch(
-  ctx: import('./_generated/server').MutationCtx,
+  ctx: MutationCtx,
   args: { workspaceId: string; cursor?: string | null; batchSize?: number },
 ): Promise<BackfillMeetingResult> {
   const batchSize = clampBatchSize(args.batchSize)
@@ -56,26 +56,42 @@ async function backfillMeetingArchivesBatch(
 
   let scheduled = 0
 
-  for (const meeting of page.page) {
-    const notes = meeting.notesSummary?.trim()
-    if (notes && !meeting.notesStorageId) {
-      await scheduleMeetingNotesArchive(ctx, {
-        workspaceId: args.workspaceId,
-        legacyId: meeting.legacyId,
-      })
-      scheduled += 1
-    }
+  const scheduleCounts = await Promise.all(
+    page.page.map(async (meeting) => {
+      const tasks: Promise<unknown>[] = []
+      let meetingScheduled = 0
 
-    const transcript = meeting.transcriptText?.trim()
-    if (transcript && transcript.length >= MIN_TRANSCRIPT_CHARS && !meeting.transcriptStorageId) {
-      await scheduleMeetingTranscriptArchive(
-        ctx,
-        { workspaceId: args.workspaceId, legacyId: meeting.legacyId },
-        transcript,
-      )
-      scheduled += 1
-    }
-  }
+      const notes = meeting.notesSummary?.trim()
+      if (notes && !meeting.notesStorageId) {
+        tasks.push(
+          scheduleMeetingNotesArchive(ctx, {
+            workspaceId: args.workspaceId,
+            legacyId: meeting.legacyId,
+          }),
+        )
+        meetingScheduled += 1
+      }
+
+      const transcript = meeting.transcriptText?.trim()
+      if (transcript && transcript.length >= MIN_TRANSCRIPT_CHARS && !meeting.transcriptStorageId) {
+        tasks.push(
+          scheduleMeetingTranscriptArchive(
+            ctx,
+            { workspaceId: args.workspaceId, legacyId: meeting.legacyId },
+            transcript,
+          ),
+        )
+        meetingScheduled += 1
+      }
+
+      if (tasks.length > 0) {
+        await Promise.all(tasks)
+      }
+
+      return meetingScheduled
+    }),
+  )
+  scheduled = scheduleCounts.reduce<number>((total, count) => total + Number(count ?? 0), 0)
 
   return {
     scheduled,
@@ -93,7 +109,7 @@ type BackfillProposalResult = {
 }
 
 async function backfillProposalArchivesBatch(
-  ctx: import('./_generated/server').MutationCtx,
+  ctx: MutationCtx,
   args: { workspaceId: string; cursor?: string | null; batchSize?: number },
 ): Promise<BackfillProposalResult> {
   const batchSize = clampBatchSize(args.batchSize)
@@ -104,21 +120,25 @@ async function backfillProposalArchivesBatch(
 
   let scheduled = 0
 
-  for (const proposal of page.page) {
-    const needsPdf = !proposal.pdfStorageId && Boolean(proposal.pdfUrl?.trim())
-    const needsPpt = !proposal.pptStorageId && Boolean(proposal.pptUrl?.trim())
-    if (!needsPdf && !needsPpt) {
-      continue
-    }
+  const scheduleCounts = await Promise.all(
+    page.page.map(async (proposal) => {
+      const needsPdf = !proposal.pdfStorageId && Boolean(proposal.pdfUrl?.trim())
+      const needsPpt = !proposal.pptStorageId && Boolean(proposal.pptUrl?.trim())
+      if (!needsPdf && !needsPpt) {
+        return 0
+      }
 
-    await scheduleProposalDeckArchive(ctx, {
-      workspaceId: args.workspaceId,
-      legacyId: proposal.legacyId,
-      pdfUrl: proposal.pdfUrl,
-      pptxUrl: proposal.pptUrl,
-    })
-    scheduled += 1
-  }
+      await scheduleProposalDeckArchive(ctx, {
+        workspaceId: args.workspaceId,
+        legacyId: proposal.legacyId,
+        pdfUrl: proposal.pdfUrl,
+        pptxUrl: proposal.pptUrl,
+      })
+
+      return 1
+    }),
+  )
+  scheduled = scheduleCounts.reduce<number>((total, count) => total + Number(count ?? 0), 0)
 
   return {
     scheduled,

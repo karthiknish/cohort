@@ -1,5 +1,4 @@
-import type { CollaborationMessage } from '@/types/collaboration'
-import type { DirectMessage } from '@/types/collaboration'
+import type { CollaborationMessage, DirectMessage } from '@/types/collaboration'
 
 export function directMessageToCollaborationMessage(message: DirectMessage): CollaborationMessage {
   return {

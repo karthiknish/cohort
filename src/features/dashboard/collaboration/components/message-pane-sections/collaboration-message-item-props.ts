@@ -1,0 +1,32 @@
+import type { CollaborationMessage } from '@/types/collaboration'
+
+import type { CollaborationMessageDisplayState } from '../message-pane-display-state'
+
+export type CollaborationMessageItemProps = {
+  currentUserId?: string | null
+  currentUserRole?: string | null
+  editingMessageId: string | null
+  editingPreview: string
+  editingValue: string
+  expandedThreadIds: Record<string, boolean>
+  display?: CollaborationMessageDisplayState
+  message: CollaborationMessage
+  messageDeletingId: string | null
+  messageUpdatingId: string | null
+  onCancelEdit: () => void
+  onConfirmDelete: (messageId: string) => void
+  onConfirmEdit: () => void
+  onCreateTask: (message: CollaborationMessage) => void
+  onEditingValueChange: (value: string) => void
+  onLoadMoreThread: (threadRootId: string) => void
+  onReply: (message: CollaborationMessage) => void
+  onRetryThreadLoad: (threadRootId: string) => void
+  onStartEdit: (message: CollaborationMessage) => void
+  onThreadToggle: (threadRootId: string) => void
+  onToggleReaction: (messageId: string, emoji: string) => void
+  reactionPendingByMessage: Record<string, string | null>
+  threadErrorsByRootId: Record<string, string | null>
+  threadLoadingByRootId: Record<string, boolean>
+  threadMessagesByRootId: Record<string, CollaborationMessage[]>
+  threadNextCursorByRootId: Record<string, string | null>
+}

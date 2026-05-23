@@ -13,9 +13,9 @@ import {
   type SpreadsheetExportPayload,
 } from './builders'
 import { asNonEmptyString } from '../../helpers'
-import { normalizeIntentText } from '../../helpers/intents/parsing'
 import {
   extractClientReferenceFromIntent,
+  normalizeIntentText,
   resolveSpreadsheetSourceFromMessage,
 } from '../../helpers/intents/parsing'
 

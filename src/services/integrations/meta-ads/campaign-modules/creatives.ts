@@ -15,6 +15,8 @@ import { sanitizeMetaDestinationSpec } from '../creatives'
 import { resolveMetaCallToActionType } from '../meta-call-to-action'
 import { enrichMetaCreativesWithObjectStoryMedia } from './post-enrichment'
 
+export { enrichMetaCreativesWithObjectStoryMedia } from './post-enrichment'
+
 function collectUniqueStrings(values: Array<string | null | undefined>): string[] {
   const seen = new Set<string>()
   const result: string[] = []

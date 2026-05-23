@@ -123,6 +123,16 @@ export function useCollaborationChannelExtras({
     [toast],
   )
 
+  const handleTaskModalClose = useCallback(() => {
+    setTaskModalOpen(false)
+    setTaskSourceMessage(null)
+  }, [])
+
+  const handleForwardComplete = useCallback(() => {
+    setForwardDialogOpen(false)
+    setForwardSourceMessage(null)
+  }, [])
+
   const taskCreationInitialData = useMemo(
     () => ({
       title: taskSourceMessage ? `Task from: ${taskSourceMessage.content?.slice(0, 50)}...` : '',
@@ -136,10 +146,7 @@ export function useCollaborationChannelExtras({
   const taskModal = (
     <TaskCreationModal
       isOpen={taskModalOpen}
-      onClose={() => {
-        setTaskModalOpen(false)
-        setTaskSourceMessage(null)
-      }}
+      onClose={handleTaskModalClose}
       onTaskCreated={handleTaskCreated}
       initialData={taskCreationInitialData}
     />
@@ -153,10 +160,7 @@ export function useCollaborationChannelExtras({
       channels={forwardChannelOptions}
       workspaceId={workspaceId}
       userId={currentUserId}
-      onForward={() => {
-        setForwardDialogOpen(false)
-        setForwardSourceMessage(null)
-      }}
+      onForward={handleForwardComplete}
     />
   )
 

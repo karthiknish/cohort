@@ -274,6 +274,14 @@ function CollaborationHeaderSection() {
   } = useCollaborationDashboardContext()
   const searchAcrossChannels = useCrossChannelCollaborationSearch(workspaceId, collab.channels)
 
+  const handleSearchResultClick = useCallback(
+    (messageId: string, channelId: string, threadRootId?: string | null) => {
+      handleSelectChannel(channelId)
+      handleOpenChannelMessage(messageId, { threadId: threadRootId ?? null })
+    },
+    [handleOpenChannelMessage, handleSelectChannel],
+  )
+
   return (
     <DashboardPageHero innerClassName="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
@@ -286,10 +294,7 @@ function CollaborationHeaderSection() {
         <div className="flex w-full shrink-0 flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
           <CrossChannelSearch
             onSearch={searchAcrossChannels}
-            onResultClick={(messageId, channelId, threadRootId) => {
-              handleSelectChannel(channelId)
-              handleOpenChannelMessage(messageId, { threadId: threadRootId ?? null })
-            }}
+            onResultClick={handleSearchResultClick}
           />
           {isAdmin ? (
             <CreateChannelDialog

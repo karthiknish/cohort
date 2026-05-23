@@ -54,7 +54,7 @@ describe('enrichMetaCreativesWithObjectStoryMedia', () => {
       expect.objectContaining({ objectStoryId: '111_222', accessToken: 'token' }),
     )
     expect(result[0]?.imageUrl).toBe('https://cdn.example/post-thumb.jpg')
-    expect(result[0]?.videoUrl).toBe('https://cdn.example/post-video.mp4')
+    expect(result[0]?.videoSourceUrl).toBe('https://cdn.example/post-video.mp4')
     expect(result[0]?.landingPageUrl).toBe('https://www.facebook.com/page/posts/456')
     expect(result[0]?.descriptions).toEqual(['Boosted caption'])
   })

@@ -103,11 +103,11 @@ export async function fetchMetaObjectStoryMedia(options: {
 }
 
 export function needsObjectStoryMediaEnrichment(creative: MetaCreative): boolean {
-  const storyId =
-    (typeof creative.effectiveObjectStoryId === 'string' && creative.effectiveObjectStoryId.trim()) ||
-    (typeof creative.objectStoryId === 'string' && creative.objectStoryId.trim())
-      ? creative.objectStoryId.trim()
-      : ''
+  const effectiveObjectStoryId =
+    typeof creative.effectiveObjectStoryId === 'string' ? creative.effectiveObjectStoryId.trim() : ''
+  const objectStoryId =
+    typeof creative.objectStoryId === 'string' ? creative.objectStoryId.trim() : ''
+  const storyId = effectiveObjectStoryId || objectStoryId
 
   if (!storyId) return false
 
@@ -138,16 +138,18 @@ export async function enrichMetaCreativesWithObjectStoryMedia(
   const maxConcurrent = Math.max(1, Math.min(20, options?.maxConcurrent ?? 8))
   const maxRetries = options?.maxRetries ?? 2
 
-  const indices = creatives
-    .map((creative, index) => ({ creative, index }))
-    .filter(({ creative }) => needsObjectStoryMediaEnrichment(creative))
+  const indices = creatives.flatMap((creative, index) =>
+    needsObjectStoryMediaEnrichment(creative) ? [{ creative, index }] : [],
+  )
 
   if (indices.length === 0) return creatives
 
   const enriched = [...creatives]
 
-  for (let offset = 0; offset < indices.length; offset += maxConcurrent) {
-    const batch = indices.slice(offset, offset + maxConcurrent)
+  async function processBatch(batchIndex: number): Promise<void> {
+    if (batchIndex * maxConcurrent >= indices.length) return
+
+    const batch = indices.slice(batchIndex * maxConcurrent, (batchIndex + 1) * maxConcurrent)
     const results = await Promise.all(
       batch.map(async ({ creative, index }) => {
         const storyId =
@@ -175,7 +177,7 @@ export async function enrichMetaCreativesWithObjectStoryMedia(
             ? [message]
             : undefined
 
-        const videoUrl = media.videoUrl ?? creative.videoUrl
+        const videoUrl = media.videoUrl ?? creative.videoSourceUrl
 
         return {
           index,
@@ -183,7 +185,7 @@ export async function enrichMetaCreativesWithObjectStoryMedia(
             ...creative,
             imageUrl,
             thumbnailUrl,
-            videoUrl,
+            videoSourceUrl: videoUrl,
             message,
             descriptions,
             landingPageUrl:
@@ -198,7 +200,11 @@ export async function enrichMetaCreativesWithObjectStoryMedia(
     for (const { index, creative } of results) {
       if (creative) enriched[index] = creative
     }
+
+    await processBatch(batchIndex + 1)
   }
+
+  await processBatch(0)
 
   return enriched
 }

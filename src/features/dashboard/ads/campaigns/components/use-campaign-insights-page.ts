@@ -407,3 +407,5 @@ export function useCampaignInsightsPage() {
     handleRetryInsights,
   }
 }
+
+export type UseCampaignInsightsPageReturn = ReturnType<typeof useCampaignInsightsPage>

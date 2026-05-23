@@ -1,7 +1,5 @@
 'use client'
 
-'use client'
-
 import type { RefObject } from 'react'
 import { createContext, use, useCallback, useMemo } from 'react'
 
@@ -42,48 +40,14 @@ import { ThreadSection } from '../thread-section'
 import { ImageUrlPreview } from '../image-url-preview'
 import { LinkPreviewCard } from '../link-preview-card'
 import type { CollaborationMessageDisplayState } from '../message-pane-display-state'
-import { SEARCH_THREAD_REPLY_DISPLAY } from '../message-pane-display-state'
+import type { CollaborationMessageItemProps } from './collaboration-message-item-props'
+import { getThreadRootId } from './message-thread-utils'
 
 const DEFAULT_COLLABORATION_MESSAGE_DISPLAY: Required<CollaborationMessageDisplayState> = {
   isReply: false,
   isSearchResult: false,
   showAvatar: true,
   showHeader: true,
-}
-
-type CollaborationMessageItemProps = {
-  currentUserId?: string | null
-  currentUserRole?: string | null
-  editingMessageId: string | null
-  editingPreview: string
-  editingValue: string
-  expandedThreadIds: Record<string, boolean>
-  display?: CollaborationMessageDisplayState
-  message: CollaborationMessage
-  messageDeletingId: string | null
-  messageUpdatingId: string | null
-  onCancelEdit: () => void
-  onConfirmDelete: (messageId: string) => void
-  onConfirmEdit: () => void
-  onCreateTask: (message: CollaborationMessage) => void
-  onEditingValueChange: (value: string) => void
-  onLoadMoreThread: (threadRootId: string) => void
-  onReply: (message: CollaborationMessage) => void
-  onRetryThreadLoad: (threadRootId: string) => void
-  onStartEdit: (message: CollaborationMessage) => void
-  onThreadToggle: (threadRootId: string) => void
-  onToggleReaction: (messageId: string, emoji: string) => void
-  reactionPendingByMessage: Record<string, string | null>
-  threadErrorsByRootId: Record<string, string | null>
-  threadLoadingByRootId: Record<string, boolean>
-  threadMessagesByRootId: Record<string, CollaborationMessage[]>
-  threadNextCursorByRootId: Record<string, string | null>
-}
-
-export function getThreadRootId(message: CollaborationMessage): string {
-  return typeof message.threadRootId === 'string' && message.threadRootId.trim().length > 0
-    ? message.threadRootId.trim()
-    : message.id
 }
 
 type CollaborationThreadReplyContextValue = Omit<CollaborationMessageReplyItemProps, 'message'>
@@ -97,25 +61,6 @@ function CollaborationThreadReplyRenderer({ reply }: { reply: CollaborationMessa
   }
 
   return <CollaborationMessageReplyItem message={reply} {...context} />
-}
-
-export type SearchThreadReplyContextValue = Omit<CollaborationMessageItemProps, 'message'>
-
-export const SearchThreadReplyContext = createContext<SearchThreadReplyContextValue | null>(null)
-
-export function SearchThreadReplyRenderer({ reply }: { reply: CollaborationMessage }) {
-  const context = use(SearchThreadReplyContext)
-  if (!context) {
-    throw new Error('SearchThreadReplyRenderer requires SearchThreadReplyContext')
-  }
-
-  return (
-    <CollaborationMessageItem
-      {...context}
-      message={reply}
-      display={SEARCH_THREAD_REPLY_DISPLAY}
-    />
-  )
 }
 
 export function CollaborationMessageItem({

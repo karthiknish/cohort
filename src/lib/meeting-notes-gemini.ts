@@ -11,6 +11,10 @@ export const MEETING_NOTES_REQUIRED_HEADINGS = [
   '## Risks / Blockers',
 ] as const
 
+const REQUIRED_HEADINGS_LOWER = new Set(
+  MEETING_NOTES_REQUIRED_HEADINGS.map((heading) => heading.toLowerCase()),
+)
+
 export const MAX_TRANSCRIPT_CHARS_FOR_NOTES = 18_000
 export const MEETING_NOTES_MAX_WORDS = 320
 export const MEETING_NOTES_MAX_CHARS = 4_500
@@ -109,9 +113,11 @@ export function validateAndNormalizeMeetingNotes(raw: string): { ok: true; notes
   }
 
   const lower = notes.toLowerCase()
-  for (const heading of MEETING_NOTES_REQUIRED_HEADINGS) {
-    if (!lower.includes(heading.toLowerCase())) {
-      return { ok: false, reason: `Meeting notes response is missing required heading: ${heading}` }
+  const missingHeading = [...REQUIRED_HEADINGS_LOWER].find((heading) => !lower.includes(heading))
+  if (missingHeading) {
+    return {
+      ok: false,
+      reason: `Meeting notes response is missing required heading: ${missingHeading}`,
     }
   }
 

@@ -51,6 +51,38 @@ function isLookalikeSubtype(subtype?: string | null): boolean {
   return (subtype ?? '').toUpperCase() === 'LOOKALIKE'
 }
 
+function AudienceDeleteButton({
+  audience,
+  deletingId,
+  onRequestDelete,
+}: {
+  audience: MetaAudienceRow
+  deletingId: string | null
+  onRequestDelete: (audience: MetaAudienceRow) => void
+}) {
+  const handleRequestDelete = useCallback(() => {
+    onRequestDelete(audience)
+  }, [audience, onRequestDelete])
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="size-7 text-destructive hover:text-destructive"
+      disabled={deletingId === audience.id}
+      onClick={handleRequestDelete}
+      aria-label={`Delete ${audience.name}`}
+    >
+      {deletingId === audience.id ? (
+        <Loader2 className="size-3.5 animate-spin" aria-hidden />
+      ) : (
+        <Trash2 className="size-3.5" aria-hidden />
+      )}
+    </Button>
+  )
+}
+
 export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanelProps) {
   const listAudiences = useAction(adsAudiencesApi.listAudiences)
   const createLookalikeAudience = useAction(adsAudiencesApi.createLookalikeAudience)
@@ -133,6 +165,18 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
   const handleDeleteDialogOpenChange = useCallback((open: boolean) => {
     if (!open) setPendingDelete(null)
   }, [])
+
+  const handleLookalikeNameChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setLookalikeName(event.target.value)
+  }, [])
+
+  const handleRequestDelete = useCallback((audience: MetaAudienceRow) => {
+    setPendingDelete(audience)
+  }, [])
+
+  const handleConfirmDeleteClick = useCallback(() => {
+    void handleConfirmDelete()
+  }, [handleConfirmDelete])
 
   const handleCreateLookalike = useCallback(() => {
     const name = lookalikeName.trim()
@@ -221,7 +265,7 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
             <Input
               id="meta-lookalike-name"
               value={lookalikeName}
-              onChange={(event) => setLookalikeName(event.target.value)}
+              onChange={handleLookalikeNameChange}
               placeholder="Lookalike — VIP customers"
               className="h-9"
               disabled={creatingLookalike}
@@ -352,21 +396,11 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
                       {audience.status}
                     </Badge>
                   ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 text-destructive hover:text-destructive"
-                    disabled={deletingId === audience.id}
-                    onClick={() => setPendingDelete(audience)}
-                    aria-label={`Delete ${audience.name}`}
-                  >
-                    {deletingId === audience.id ? (
-                      <Loader2 className="size-3.5 animate-spin" aria-hidden />
-                    ) : (
-                      <Trash2 className="size-3.5" aria-hidden />
-                    )}
-                  </Button>
+                  <AudienceDeleteButton
+                    audience={audience}
+                    deletingId={deletingId}
+                    onRequestDelete={handleRequestDelete}
+                  />
                 </div>
               </li>
             ))}
@@ -388,9 +422,7 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                void handleConfirmDelete()
-              }}
+              onClick={handleConfirmDeleteClick}
             >
               Delete
             </AlertDialogAction>

@@ -270,6 +270,10 @@ export function MetaEventsToolsPanel({
       .finally(() => setRunningBatch(false))
   }, [batchJson, clientId, executeBatch, workspaceId])
 
+  const handleBatchJsonChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setBatchJson(event.target.value)
+  }, [])
+
   if (!hasMetaEventsTools(visibility) || eventTabs.length === 0) {
     return null
   }
@@ -421,7 +425,7 @@ export function MetaEventsToolsPanel({
               </div>
               <Textarea
                 value={batchJson}
-                onChange={(event) => setBatchJson(event.target.value)}
+                onChange={handleBatchJsonChange}
                 rows={8}
                 className="font-mono text-xs leading-relaxed"
                 placeholder={'[\n  { "method": "GET", "relativeUrl": "act_123/campaigns?fields=id,name" }\n]'}
@@ -483,6 +487,31 @@ function EventFields({
   onTestEventCodeChange: (value: string) => void
   showActionSource: boolean
 }) {
+  const handleEmailChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onEmailChange(event.target.value),
+    [onEmailChange],
+  )
+
+  const handleOrderIdChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onOrderIdChange(event.target.value),
+    [onOrderIdChange],
+  )
+
+  const handleValueChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onValueChange(event.target.value),
+    [onValueChange],
+  )
+
+  const handleCurrencyChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onCurrencyChange(event.target.value),
+    [onCurrencyChange],
+  )
+
+  const handleTestEventCodeChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onTestEventCodeChange(event.target.value),
+    [onTestEventCodeChange],
+  )
+
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
@@ -525,7 +554,7 @@ function EventFields({
           <Label className="text-xs font-medium">Email</Label>
           <Input
             value={email}
-            onChange={(event) => onEmailChange(event.target.value)}
+            onChange={handleEmailChange}
             placeholder="customer@example.com"
             className="h-10"
             autoComplete="off"
@@ -536,7 +565,7 @@ function EventFields({
           <Label className="text-xs font-medium">Order ID</Label>
           <Input
             value={orderId}
-            onChange={(event) => onOrderIdChange(event.target.value)}
+            onChange={handleOrderIdChange}
             placeholder="Optional deduplication key"
             className="h-10"
           />
@@ -545,7 +574,7 @@ function EventFields({
           <Label className="text-xs font-medium">Value</Label>
           <Input
             value={value}
-            onChange={(event) => onValueChange(event.target.value)}
+            onChange={handleValueChange}
             placeholder="0.00"
             inputMode="decimal"
             className="h-10 tabular-nums"
@@ -555,7 +584,7 @@ function EventFields({
           <Label className="text-xs font-medium">Currency</Label>
           <Input
             value={currency}
-            onChange={(event) => onCurrencyChange(event.target.value)}
+            onChange={handleCurrencyChange}
             placeholder="USD"
             className="h-10 uppercase"
             maxLength={3}
@@ -577,7 +606,7 @@ function EventFields({
             <Input
               id="meta-test-event-code"
               value={testEventCode}
-              onChange={(event) => onTestEventCodeChange(event.target.value)}
+              onChange={handleTestEventCodeChange}
               placeholder="TEST12345"
               className="h-10 font-mono text-sm"
             />

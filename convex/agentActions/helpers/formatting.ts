@@ -9,14 +9,29 @@ const WHOLE_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
 })
 
-function formatCurrency(value: number, currency = 'USD'): string {
+const currencyFormatters = new Map<string, Intl.NumberFormat>([['USD', USD_CURRENCY_FORMATTER]])
+
+for (const currency of Intl.supportedValuesOf('currency')) {
+  if (currencyFormatters.has(currency)) continue
   try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+    currencyFormatters.set(
       currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value)
+      new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+    )
+  } catch {
+    // Some currency codes are not supported by this runtime locale.
+  }
+}
+
+function formatCurrency(value: number, currency = 'USD'): string {
+  const formatter = currencyFormatters.get(currency) ?? USD_CURRENCY_FORMATTER
+  try {
+    return formatter.format(value)
   } catch {
     return USD_CURRENCY_FORMATTER.format(value)
   }

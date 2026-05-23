@@ -19,10 +19,11 @@ import {
   UnifiedMessagePaneMessagesSection,
   UnifiedMessagePaneShimmerBackdrop,
 } from './unified-message-pane-layout-sections'
+import { useUnifiedMessagePaneAttachHandler } from './unified-message-pane-layout-hooks'
 import {
-  useUnifiedMessagePaneAttachHandler,
-  useUnifiedMessagePaneMessageSearch,
-} from './unified-message-pane-layout-hooks'
+  UnifiedMessagePaneMessageSearchBindings,
+  type UnifiedMessagePaneMessageSearchApi,
+} from './unified-message-pane-message-search-slot'
 import { resolveUnifiedMessagePaneEmptyState } from './unified-message-pane-layout-utils'
 
 export { UnifiedMessagePaneEmptyState } from './unified-message-pane-layout-sections'
@@ -165,16 +166,6 @@ export function UnifiedMessagePaneConversationLayout({
     )
   }, [currentUserId, header.type, onCreatePoll, workspaceId])
 
-  const { messageSearchOpen, handleToggleMessageSearch, searchBar } = useUnifiedMessagePaneMessageSearch({
-    canSearchMessages,
-    conversationKey: header.conversationKey,
-    headerType: header.type,
-    messageSearchQuery,
-    messageSearchActive: isMessageSearchActive,
-    resultCount: messages.length,
-    onMessageSearchChange,
-  })
-
   const handleAttachClick = useUnifiedMessagePaneAttachHandler({ fileInputRef })
 
   const handleConfirmDeleteChange = useCallback(
@@ -188,17 +179,32 @@ export function UnifiedMessagePaneConversationLayout({
 
   const resolvedEmptyState = resolveUnifiedMessagePaneEmptyState(isMessageSearchActive, emptyState)
 
+  const messageSearchKey = header.conversationKey ?? header.type
+
   return (
+    <UnifiedMessagePaneMessageSearchBindings
+      key={messageSearchKey}
+      canSearchMessages={canSearchMessages}
+      conversationKey={header.conversationKey}
+      headerType={header.type}
+      messageSearchQuery={messageSearchQuery}
+      messageSearchActive={isMessageSearchActive}
+      resultCount={messages.length}
+      onMessageSearchChange={onMessageSearchChange}
+    >
+      {(messageSearch: UnifiedMessagePaneMessageSearchApi) => (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background/50 max-lg:min-h-[min(72dvh,640px)] lg:h-[640px]">
       <UnifiedMessagePaneShimmerBackdrop />
 
       <UnifiedMessagePaneConversationHeaderSection
         header={header}
         canSearchMessages={canSearchMessages}
-        messageSearchOpen={messageSearchOpen}
-        onToggleMessageSearch={canSearchMessages && onMessageSearchChange ? handleToggleMessageSearch : undefined}
+        messageSearchOpen={messageSearch.messageSearchOpen}
+        onToggleMessageSearch={
+          canSearchMessages && onMessageSearchChange ? messageSearch.handleToggleMessageSearch : undefined
+        }
         statusBanner={statusBanner}
-        searchBar={searchBar}
+        searchBar={messageSearch.searchBar}
       />
 
       <UnifiedMessagePaneMessagesSection
@@ -254,5 +260,7 @@ export function UnifiedMessagePaneConversationLayout({
         onCancelDelete={handleCancelDelete}
       />
     </div>
+      )}
+    </UnifiedMessagePaneMessageSearchBindings>
   )
 }

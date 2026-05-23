@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type MouseEvent } from 'react'
 import NextImage from 'next/image'
 import {
   RefreshCw,
@@ -84,6 +84,10 @@ function getNextAdStatus(providerId: string, checked: boolean) {
   if (providerId === 'google') return checked ? 'ENABLED' : 'PAUSED'
   if (providerId === 'tiktok') return checked ? 'ENABLE' : 'DISABLE'
   return checked ? 'ACTIVE' : 'PAUSED'
+}
+
+function stopNestedClickPropagation(event: MouseEvent) {
+  event.stopPropagation()
 }
 
 function CreativeStatusToggle({
@@ -396,7 +400,7 @@ function AdGridItem({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                  onClick={(event) => event.stopPropagation()}
+                  onClick={stopNestedClickPropagation}
                   aria-label="Open on Facebook or Instagram"
                 >
                   <ExternalLink className="size-3.5" />
@@ -497,7 +501,6 @@ function AdListRow({
 }) {
   const [listImageFailed, setListImageFailed] = useState(false)
   const onOpenCreative = useCallback(() => onCreativeClick(ad), [onCreativeClick, ad])
-  const handleStopPropagation = useCallback((event: React.MouseEvent) => event.stopPropagation(), [])
   const handleToggleStatus = useCallback((nextStatus: string) => onToggleStatus(ad, nextStatus), [onToggleStatus, ad])
   const handleListImageError = useCallback(() => setListImageFailed(true), [])
   const metrics = getMetricsForAd(ad, adMetrics)
@@ -554,7 +557,7 @@ function AdListRow({
           </div>
         </div>
       </TableCell>
-      <TableCell onClick={handleStopPropagation}>
+      <TableCell onClick={stopNestedClickPropagation}>
         <div className="flex items-center gap-2">
           <CreativeStatusToggle
             providerId={providerId}
@@ -587,7 +590,7 @@ function AdListRow({
           {ad.headlines?.[0] || ad.descriptions?.[0] || '—'}
         </p>
       </TableCell>
-      <TableCell onClick={handleStopPropagation}>
+      <TableCell onClick={stopNestedClickPropagation}>
         {permalink ? (
           <a
             href={permalink}

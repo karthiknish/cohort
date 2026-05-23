@@ -28,7 +28,10 @@ export async function searchMetaAdLibrary(options: {
 }): Promise<MetaAdLibraryAd[]> {
   const { accessToken, searchTerms, adReachedCountries, limit = 25, maxRetries = 3 } = options
 
-  const countries = adReachedCountries.map((code) => code.trim().toUpperCase()).filter(Boolean)
+  const countries = adReachedCountries.flatMap((code) => {
+    const normalized = code.trim().toUpperCase()
+    return normalized ? [normalized] : []
+  })
   if (countries.length === 0) {
     return []
   }

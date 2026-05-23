@@ -23,6 +23,9 @@ type MeetingAutomationPipelineProps = {
 
 type PipelineStep = { label: string; description: string; badge: string; variant: 'secondary' | 'outline' | 'info' | 'destructive' }
 
+const PIPELINE_STEP_ENTER_INITIAL = { opacity: 0, y: 12 } as const
+const PIPELINE_STEP_ENTER_ANIMATE = { opacity: 1, y: 0 } as const
+
 function createPipelineSteps(props: MeetingAutomationPipelineProps): PipelineStep[] {
   const {
     captureErrorPresent = false,
@@ -119,8 +122,8 @@ export function MeetingAutomationPipeline(props: MeetingAutomationPipelineProps)
           <LazyMotion key={step.label} features={domAnimation}>
             <m.li
               className={cn('rounded-xl border border-border/60 bg-background p-3', listItemEnterClass)}
-              initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
-              animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+              initial={prefersReducedMotion ? false : PIPELINE_STEP_ENTER_INITIAL}
+              animate={prefersReducedMotion ? undefined : PIPELINE_STEP_ENTER_ANIMATE}
               transition={{ delay: index * 0.06, duration: 0.22 }}
             >
               <div className="flex items-center justify-between gap-2">

@@ -35,6 +35,29 @@ import {
   type MetaPixelRow,
 } from './meta-tools-ui'
 
+function WebhookFieldCheckbox({
+  field,
+  checked,
+  onToggleField,
+}: {
+  field: string
+  checked: boolean
+  onToggleField: (field: string) => void
+}) {
+  const handleToggle = useCallback(() => {
+    onToggleField(field)
+  }, [field, onToggleField])
+
+  return (
+    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border/60 bg-card/80 px-2.5 py-1.5 text-xs transition-colors hover:border-primary/25">
+      <Checkbox checked={checked} onChange={handleToggle} />
+      <Badge variant="outline" className="border-0 bg-transparent px-0 text-[10px] capitalize">
+        {field}
+      </Badge>
+    </label>
+  )
+}
+
 type MetaAdvancedToolsPanelProps = {
   workspaceId: string
   clientId?: string | null
@@ -262,6 +285,14 @@ export function MetaAdvancedToolsPanel({
     })
   }, [])
 
+  const handleAdLibraryQueryChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setAdLibraryQuery(event.target.value)
+  }, [])
+
+  const handleAdLibraryCountryChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setAdLibraryCountry(event.target.value.toUpperCase())
+  }, [])
+
   const handleSaveWebhooks = useCallback(() => {
     setSavingWebhooks(true)
     void updateAdAccountWebhooks({
@@ -422,13 +453,13 @@ export function MetaAdvancedToolsPanel({
           <div className="grid gap-2 sm:grid-cols-[1fr_5rem]">
             <Input
               value={adLibraryQuery}
-              onChange={(event) => setAdLibraryQuery(event.target.value)}
+              onChange={handleAdLibraryQueryChange}
               placeholder="Search terms"
               className="h-9"
             />
             <Input
               value={adLibraryCountry}
-              onChange={(event) => setAdLibraryCountry(event.target.value.toUpperCase())}
+              onChange={handleAdLibraryCountryChange}
               placeholder="US"
               className="h-9"
             />
@@ -478,18 +509,12 @@ export function MetaAdvancedToolsPanel({
             </Button>
             <div className="flex flex-wrap gap-2 pt-2">
               {META_AD_ACCOUNT_WEBHOOK_FIELDS.map((field) => (
-                <label
+                <WebhookFieldCheckbox
                   key={field}
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border/60 bg-card/80 px-2.5 py-1.5 text-xs transition-colors hover:border-primary/25"
-                >
-                  <Checkbox
-                    checked={webhookFields.has(field)}
-                    onChange={() => handleToggleWebhookField(field)}
-                  />
-                  <Badge variant="outline" className="border-0 bg-transparent px-0 text-[10px] capitalize">
-                    {field}
-                  </Badge>
-                </label>
+                  field={field}
+                  checked={webhookFields.has(field)}
+                  onToggleField={handleToggleWebhookField}
+                />
               ))}
             </div>
           </MetaToolsFormSection>

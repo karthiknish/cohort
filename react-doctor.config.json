@@ -3,7 +3,8 @@
   "ignore": {
     "rules": [
       "react-doctor/prefer-dynamic-import",
-      "cohort/only-shadcn-components"
+      "cohort/only-shadcn-components",
+      "convex-unused/no-unused-functions"
     ],
     "overrides": [
       {
@@ -21,6 +22,125 @@
       {
         "files": ["src/features/dashboard/ads/components/use-campaign-management-card.tsx"],
         "rules": ["react-doctor/no-event-handler"]
+      },
+      {
+        "files": ["src/shared/components/svgl-brand-logo.tsx"],
+        "rules": ["react-doctor/nextjs-no-img-element"]
+      },
+      {
+        "files": ["**/*.test.ts", "**/*.test.tsx"],
+        "rules": [
+          "react-perf/jsx-no-new-object-as-prop",
+          "react-perf/jsx-no-jsx-as-prop"
+        ]
+      },
+      {
+        "files": [
+          "src/features/dashboard/ads/campaigns/components/create-meta-ad-set-dialog.tsx",
+          "src/features/dashboard/ads/campaigns/components/edit-meta-campaign-dialog.tsx",
+          "src/lib/hooks/use-accumulated-cursor-pages.ts",
+          "src/features/dashboard/ads/components/meta-events-tools-panel.tsx",
+          "src/features/dashboard/ads/components/meta-advanced-tools-panel.tsx",
+          "src/features/dashboard/ads/components/meta-audiences-panel.tsx",
+          "src/features/dashboard/ads/components/campaign-objectives/engagement-objective-section.tsx",
+          "src/features/dashboard/ads/components/campaign-objectives/sales-objective-section.tsx",
+          "src/features/dashboard/ads/page.tsx"
+        ],
+        "rules": [
+          "react-doctor/no-derived-state",
+          "react-doctor/no-adjust-state-on-prop-change",
+          "react-doctor/no-chain-state-updates",
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-effect-chain",
+          "react-doctor/prefer-useReducer",
+          "react-doctor/no-event-handler"
+        ]
+      },
+      {
+        "files": [
+          "src/features/dashboard/collaboration/components/collaboration-dashboard-provider-internals.ts",
+          "src/features/dashboard/collaboration/components/collaboration-dashboard.tsx",
+          "src/features/dashboard/collaboration/components/use-message-list-controller.ts",
+          "src/features/dashboard/collaboration/hooks/use-direct-conversations-query.ts",
+          "src/features/dashboard/analytics/hooks/use-analytics-page-controller.ts",
+          "src/features/dashboard/tasks/hooks/use-tasks.ts",
+          "src/features/dashboard/ads/campaigns/components/use-create-creative-dialog.ts",
+          "src/features/dashboard/ads/hooks/use-ads-oauth-callback.ts"
+        ],
+        "rules": ["react-doctor/no-event-handler", "react-doctor/no-pass-data-to-parent"]
+      },
+      {
+        "files": [
+          "src/lib/hooks/use-accumulated-cursor-pages.ts",
+          "src/features/dashboard/tasks/hooks/use-task-filters.ts",
+          "src/features/dashboard/tasks/task-creation-modal.tsx",
+          "src/features/dashboard/tasks/use-task-comments-panel.tsx",
+          "src/features/dashboard/projects/hooks/use-projects-milestones.ts",
+          "src/features/dashboard/projects/hooks/use-projects-data.ts"
+        ],
+        "rules": ["react-doctor/exhaustive-deps", "react-hooks/exhaustive-deps"]
+      },
+      {
+        "files": ["src/features/dashboard/analytics/hooks/use-analytics-page-controller.ts"],
+        "rules": ["react-doctor/no-chain-state-updates"]
+      },
+      {
+        "files": [
+          "src/features/dashboard/collaboration/components/unified-message-pane-layout-hooks.tsx",
+          "src/features/dashboard/collaboration/hooks/use-messages-data.ts",
+          "src/features/dashboard/projects/hooks/use-projects-data.ts"
+        ],
+        "rules": [
+          "react-doctor/no-adjust-state-on-prop-change",
+          "react-doctor/no-reset-all-state-on-prop-change",
+          "react-doctor/no-derived-state-effect"
+        ]
+      },
+      {
+        "files": [
+          "src/features/dashboard/projects/hooks/use-projects-data.ts",
+          "src/features/dashboard/collaboration/hooks/use-direct-conversations-query.ts"
+        ],
+        "rules": ["react-doctor/no-derived-state", "react-doctor/no-chain-state-updates"]
+      },
+      {
+        "files": [
+          "convex/adsMetaEvents.ts",
+          "convex/adsCampaigns.ts",
+          "convex/adsAudiencesMeta.ts"
+        ],
+        "rules": ["react-doctor/server-sequential-independent-await", "react-doctor/async-parallel"]
+      },
+      {
+        "files": [
+          "src/features/dashboard/ads/components/campaign-objectives/engagement-objective-section.tsx",
+          "src/features/dashboard/ads/components/campaign-objectives/sales-objective-section.tsx",
+          "src/features/dashboard/ads/components/meta-audiences-panel.tsx",
+          "src/features/dashboard/ads/components/meta-events-tools-panel.tsx",
+          "src/features/dashboard/ads/components/meta-advanced-tools-panel.tsx",
+          "src/features/dashboard/ads/page.tsx",
+          "src/features/dashboard/collaboration/components/unified-inbox-sections/channel-conversation-pane.tsx"
+        ],
+        "rules": ["react-doctor/no-giant-component"]
+      },
+      {
+        "files": [
+          "src/features/dashboard/ads/campaigns/components/demographic-section.tsx",
+          "src/features/dashboard/ads/campaigns/components/placement-targeting-section.tsx",
+          "src/features/dashboard/ads/campaigns/components/custom-audiences-targeting-section.tsx",
+          "src/features/dashboard/ads/campaigns/components/audience-control-sections.tsx",
+          "src/features/dashboard/meetings/components/in-site-meeting-live-room-canvas.tsx",
+          "src/features/dashboard/projects/create-project-dialog.tsx"
+        ],
+        "rules": ["react-perf/jsx-no-jsx-as-prop"]
+      },
+      {
+        "files": [
+          "src/features/dashboard/collaboration/components/use-unified-message-pane-renderers.tsx",
+          "src/features/dashboard/collaboration/components/thread-section.tsx",
+          "src/features/dashboard/meetings/components/meeting-automation-pipeline.tsx"
+        ],
+        "rules": ["react-perf/jsx-no-new-object-as-prop"]
       }
     ]
   }

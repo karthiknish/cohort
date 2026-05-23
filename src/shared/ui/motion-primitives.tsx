@@ -10,7 +10,6 @@ import {
 import {
   buttonPressVariants,
   cardHoverVariants,
-  listItemEnterClass,
   staggerContainerVariants,
   staggerItemVariants,
   subtlePulseVariants,
@@ -118,8 +117,6 @@ type MotionBadgeProps = Omit<HTMLMotionProps<'span'>, 'initial' | 'animate' | 'v
   children?: ReactNode
   pulse?: boolean
 }
-
-export { listItemEnterClass }
 
 export function MotionBadge({ pulse = false, className, children, ...props }: MotionBadgeProps) {
   const prefersReducedMotion = useReducedMotion()
