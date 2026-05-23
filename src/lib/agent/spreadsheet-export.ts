@@ -1,5 +1,11 @@
+import type { AgentStoredAttachment } from '@/lib/agent-attachments'
 import type { SpreadsheetChartSpec } from '@/lib/export/cohorts-spreadsheet-charts'
-import { ensureXlsxFilename } from '@/lib/export/cohorts-spreadsheet'
+import {
+  buildCohortsSpreadsheetWorkbook,
+  ensureXlsxFilename,
+  workbookToXlsxBlob,
+} from '@/lib/export/cohorts-spreadsheet'
+import { uploadStorageFileWithPublicUrl } from '@/lib/upload-storage-file'
 
 export type AgentSpreadsheetExtraTable = {
   title: string
@@ -90,12 +96,36 @@ export function parseAgentSpreadsheetExport(
   }
 }
 
-export async function downloadAgentSpreadsheetExport(
+export function parseStoredSpreadsheetExport(
+  data: Record<string, unknown> | undefined,
+): AgentStoredAttachment | null {
+  const raw = data?.storedExport
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const record = raw as Record<string, unknown>
+  const id = typeof record.id === 'string' ? record.id : null
+  const name = typeof record.name === 'string' ? record.name : null
+  const storageId = typeof record.storageId === 'string' ? record.storageId : null
+  if (!id || !name || !storageId) return null
+
+  return {
+    id,
+    name,
+    mimeType:
+      typeof record.mimeType === 'string'
+        ? record.mimeType
+        : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    sizeLabel: typeof record.sizeLabel === 'string' ? record.sizeLabel : '—',
+    excerpt: typeof record.excerpt === 'string' ? record.excerpt : 'Excel export',
+    extractionStatus: 'ready',
+    storageId,
+    url: typeof record.url === 'string' ? record.url : undefined,
+  }
+}
+
+export async function buildSpreadsheetBlobFromPayload(
   payload: AgentSpreadsheetExportPayload,
-): Promise<void> {
-  const { exportCohortsSpreadsheetRows } = await import('@/lib/export/cohorts-spreadsheet')
-  await exportCohortsSpreadsheetRows({
-    filename: payload.filename,
+): Promise<Blob> {
+  const workbook = await buildCohortsSpreadsheetWorkbook({
     title: payload.title,
     subtitle: payload.subtitle,
     sheetName: payload.sheetName,
@@ -105,4 +135,61 @@ export async function downloadAgentSpreadsheetExport(
     metadata: payload.metadata,
     charts: payload.charts,
   })
+  return workbookToXlsxBlob(workbook)
+}
+
+export async function downloadAgentSpreadsheetExport(
+  payload: AgentSpreadsheetExportPayload,
+): Promise<void> {
+  const blob = await buildSpreadsheetBlobFromPayload(payload)
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = ensureXlsxFilename(payload.filename)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+export type PersistAgentSpreadsheetExportArgs = {
+  payload: AgentSpreadsheetExportPayload
+  generateUploadUrl: () => Promise<{ url: string; key: string; storageId?: string }>
+  syncMetadata: (args: { key: string }) => Promise<unknown>
+  getPublicUrl: (args: { storageId: string }) => Promise<{ url: string | null }>
+}
+
+export async function persistAgentSpreadsheetExport(
+  args: PersistAgentSpreadsheetExportArgs,
+): Promise<AgentStoredAttachment> {
+  const filename = ensureXlsxFilename(args.payload.filename)
+  const blob = await buildSpreadsheetBlobFromPayload(args.payload)
+  const file = new File([blob], filename, {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+
+  const { storageId, url } = await uploadStorageFileWithPublicUrl({
+    file,
+    contentType: file.type,
+    generateUploadUrl: args.generateUploadUrl,
+    syncMetadata: args.syncMetadata,
+    getPublicUrl: args.getPublicUrl,
+  })
+
+  const sizeLabel =
+    file.size >= 1024 * 1024
+      ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.max(1, Math.round(file.size / 1024))} KB`
+
+  return {
+    id: `export-${Date.now()}`,
+    name: filename,
+    mimeType: file.type,
+    sizeLabel,
+    excerpt: args.payload.subtitle ?? args.payload.title,
+    extractionStatus: 'ready',
+    storageId,
+    url: url ?? undefined,
+  }
 }

@@ -82,6 +82,8 @@ import type * as agentActions_operations_reports from "../agentActions/operation
 import type * as agentActions_operations_shared from "../agentActions/operations/shared.js";
 import type * as agentActions_operations_socials_index from "../agentActions/operations/socials/index.js";
 import type * as agentActions_operations_socials_socialSummary from "../agentActions/operations/socials/socialSummary.js";
+import type * as agentActions_operations_spreadsheet_builders from "../agentActions/operations/spreadsheet/builders.js";
+import type * as agentActions_operations_spreadsheet_export from "../agentActions/operations/spreadsheet/export.js";
 import type * as agentActions_operations_taskSummary from "../agentActions/operations/taskSummary.js";
 import type * as agentActions_operations_tasks from "../agentActions/operations/tasks.js";
 import type * as agentActions_operations_tasks_index from "../agentActions/operations/tasks/index.js";
@@ -293,6 +295,8 @@ declare const fullApi: ApiFromModules<{
   "agentActions/operations/shared": typeof agentActions_operations_shared;
   "agentActions/operations/socials/index": typeof agentActions_operations_socials_index;
   "agentActions/operations/socials/socialSummary": typeof agentActions_operations_socials_socialSummary;
+  "agentActions/operations/spreadsheet/builders": typeof agentActions_operations_spreadsheet_builders;
+  "agentActions/operations/spreadsheet/export": typeof agentActions_operations_spreadsheet_export;
   "agentActions/operations/taskSummary": typeof agentActions_operations_taskSummary;
   "agentActions/operations/tasks": typeof agentActions_operations_tasks;
   "agentActions/operations/tasks/index": typeof agentActions_operations_tasks_index;

@@ -45,6 +45,8 @@ export function AgentModePanel(props: AgentModePanelProps) {
     showJumpToLatest,
     onJumpToLatest,
     showEmptyState,
+    workspaceId,
+    onStoreSpreadsheetExport,
   } = useAgentModePanel(props)
 
   const viewState = useMemo(
@@ -94,6 +96,9 @@ export function AgentModePanel(props: AgentModePanelProps) {
         scrollAreaRef={scrollAreaRef}
         onMessagesScroll={onMessagesScroll}
         onJumpToLatest={onJumpToLatest}
+        conversationId={props.conversationId}
+        workspaceId={workspaceId}
+        onStoreSpreadsheetExport={onStoreSpreadsheetExport}
       />
     </AgentModePanelShell>
   )

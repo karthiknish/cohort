@@ -249,6 +249,9 @@ export default function AdsPage() {
         suppressMetricsErrors={suppressMetricsErrors}
         handleLoadMoreMetrics={handleLoadMoreMetrics}
         providerCurrencyMap={providerCurrencyMap}
+        automationStatuses={connections.automationStatuses}
+        connectedAccountCount={connectedAccountCount}
+        showWorkflow={showWorkflow}
       />
     ),
     [
@@ -260,6 +263,9 @@ export default function AdsPage() {
       suppressMetricsErrors,
       handleLoadMoreMetrics,
       providerCurrencyMap,
+      connections.automationStatuses,
+      connectedAccountCount,
+      showWorkflow,
     ],
   )
 
@@ -312,7 +318,6 @@ export default function AdsPage() {
             showSetup={!isPreviewMode}
             connectedAccountCount={connectedAccountCount}
             hasPendingSetup={hasPendingSetup}
-            hasMetricData={metrics.hasMetricData}
           />
         </div>
       </div>

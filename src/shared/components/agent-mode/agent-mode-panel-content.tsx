@@ -36,6 +36,9 @@ export function AgentModePanelContent({
   scrollAreaRef,
   onMessagesScroll,
   onJumpToLatest,
+  conversationId,
+  workspaceId,
+  onStoreSpreadsheetExport,
 }: {
   dockComposerProps: AgentComposerSectionProps
   emptyComposerProps: AgentComposerSectionProps
@@ -56,6 +59,12 @@ export function AgentModePanelContent({
   scrollAreaRef: RefObject<HTMLDivElement | null>
   onMessagesScroll: () => void
   onJumpToLatest: () => void
+  conversationId: string | null
+  workspaceId: string | null
+  onStoreSpreadsheetExport?: (
+    messageId: string,
+    attachment: import('@/lib/agent-attachments').AgentAttachmentContext,
+  ) => void
 }) {
   const {
     conversationLoading: isConversationLoading,
@@ -89,6 +98,9 @@ export function AgentModePanelContent({
         onMessagesScroll={onMessagesScroll}
         showJumpToLatest={showJumpToLatest}
         onJumpToLatest={onJumpToLatest}
+        workspaceId={workspaceId}
+        conversationId={conversationId}
+        onStoreSpreadsheetExport={onStoreSpreadsheetExport}
       />
 
       {!isProcessing ? <FailedMessageBanner lastFailedMessage={lastFailedMessage} onRetry={onRetry} /> : null}

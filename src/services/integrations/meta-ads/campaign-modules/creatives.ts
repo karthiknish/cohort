@@ -13,6 +13,7 @@ import type { MetaCreative, MetaAdsListResponse, MetaAdData, MetaAdCreative } fr
 import { extractLeadGenFormId } from './objectives/leads'
 import { sanitizeMetaDestinationSpec } from '../creatives'
 import { resolveMetaCallToActionType } from '../meta-call-to-action'
+import { enrichMetaCreativesWithObjectStoryMedia } from './post-enrichment'
 
 function collectUniqueStrings(values: Array<string | null | undefined>): string[] {
   const seen = new Set<string>()
@@ -120,6 +121,12 @@ export function inferMetaDisplayAdType(options: {
     (typeof objectStoryId === 'string' && objectStoryId.trim().length > 0)
     || (typeof effectiveObjectStoryId === 'string' && effectiveObjectStoryId.trim().length > 0)
   )
+
+  // Promoted existing page/IG posts (including video posts) reference object_story_id.
+  if (hasPostReference) {
+    return 'boosted_post'
+  }
+
   const hasMeaningfulStorySpec = Boolean(
     storySpec?.link_data
     || storySpec?.video_data
@@ -127,9 +134,6 @@ export function inferMetaDisplayAdType(options: {
     || storySpec?.photo_data
     || storySpec?.text_data
   )
-  if (hasPostReference && !hasMeaningfulStorySpec) {
-    return 'boosted_post'
-  }
 
   const attachments = storySpec?.link_data?.child_attachments ?? []
   const childCount = attachments.length
@@ -145,7 +149,16 @@ export function inferMetaDisplayAdType(options: {
   if (hasStoryVideo) return 'video'
 
   const afVideoCount = assetFeedSpec?.videos?.filter((v) => v?.video_id)?.length ?? 0
-  if (afVideoCount > 0 && !storySpec?.template_data) return 'video'
+  const afImageCount = assetFeedSpec?.images?.length ?? 0
+  // Dynamic creative asset feeds with only videos are not page-post boosts.
+  if (
+    afVideoCount > 0
+    && !storySpec?.video_data
+    && !hasPostReference
+    && afImageCount === 0
+  ) {
+    return 'video'
+  }
 
   const template = storySpec?.template_data
   const hasTemplate = Boolean(template && (template.message || template.name || template.link))
@@ -518,8 +531,13 @@ export async function fetchMetaCreatives(options: {
       }]
     })
 
+  const withPostMedia = await enrichMetaCreativesWithObjectStoryMedia(accessToken, baseCreatives, {
+    maxConcurrent: 8,
+    maxRetries,
+  })
+
   if (!includeVideoMedia) {
-    return baseCreatives
+    return withPostMedia
   }
 
   const videoIds = Array.from(
@@ -531,7 +549,7 @@ export async function fetchMetaCreatives(options: {
   ).slice(0, Math.max(0, videoLookupLimit))
 
   if (videoIds.length === 0) {
-    return baseCreatives
+    return withPostMedia
   }
 
   const videoInfoEntries = await Promise.all(
@@ -579,7 +597,7 @@ export async function fetchMetaCreatives(options: {
 
   const videoInfoById = Object.fromEntries(videoInfoEntries) as Record<string, { source?: string; picture?: string }>
 
-  return baseCreatives.map((creative) => {
+  return withPostMedia.map((creative) => {
     const id = creative.videoId
     if (!id) return creative
 

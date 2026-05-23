@@ -135,10 +135,6 @@ export function AdsPageSetupSection({
     reloadMetaAccountOptions,
   } = connections
   const { handleManualRefresh } = metrics
-  const automation = useAdsAutomation({
-    automationStatuses: connections.automationStatuses,
-    onRefresh: handleManualRefresh,
-  })
   const handleReloadMetaAccountOptions = useCallback(() => {
     void reloadMetaAccountOptions()
   }, [reloadMetaAccountOptions])
@@ -207,23 +203,6 @@ export function AdsPageSetupSection({
           initializingGoogle={initializingGoogle}
         />
       </FadeIn>
-
-      {connectedAccountCount > 0 && !showWorkflow ? (
-        <FadeIn>
-          <AutomationControlsCard
-            automationStatuses={connections.automationStatuses}
-            automationDraft={automation.automationDraft}
-            savingSettings={automation.savingSettings}
-            settingsErrors={automation.settingsErrors}
-            expandedProviders={automation.expandedProviders}
-            syncingProvider={automation.syncingProvider}
-            onUpdateDraft={automation.updateAutomationDraft}
-            onSaveAutomation={automation.handleSaveAutomation}
-            onToggleAdvanced={automation.toggleAdvanced}
-            onRunManualSync={automation.runManualSync}
-          />
-        </FadeIn>
-      ) : null}
 
       {connectedAccountCount > 0 ? (
         <FadeIn>
@@ -419,6 +398,9 @@ export function AdsPageAdvancedAnalyticsSection({
   suppressMetricsErrors,
   handleLoadMoreMetrics,
   providerCurrencyMap,
+  automationStatuses,
+  connectedAccountCount,
+  showWorkflow,
 }: Pick<
   AdsPageSectionsProps,
   | 'metrics'
@@ -428,7 +410,12 @@ export function AdsPageAdvancedAnalyticsSection({
   | 'activeCurrency'
   | 'suppressMetricsErrors'
   | 'handleLoadMoreMetrics'
-> & { providerCurrencyMap: Record<string, string> }) {
+> & {
+  providerCurrencyMap: Record<string, string>
+  automationStatuses: ReturnType<typeof useAdsConnections>['automationStatuses']
+  connectedAccountCount: number
+  showWorkflow: boolean
+}) {
   const {
     processedMetrics,
     tableMetrics,
@@ -443,9 +430,30 @@ export function AdsPageAdvancedAnalyticsSection({
   } = metrics
 
   const { periodComparison, providerComparison } = comparison
+  const automation = useAdsAutomation({
+    automationStatuses,
+    onRefresh: handleManualRefresh,
+  })
 
   return (
     <>
+      {connectedAccountCount > 0 && !showWorkflow ? (
+        <FadeIn>
+          <AutomationControlsCard
+            automationStatuses={automationStatuses}
+            automationDraft={automation.automationDraft}
+            savingSettings={automation.savingSettings}
+            settingsErrors={automation.settingsErrors}
+            expandedProviders={automation.expandedProviders}
+            syncingProvider={automation.syncingProvider}
+            onUpdateDraft={automation.updateAutomationDraft}
+            onSaveAutomation={automation.handleSaveAutomation}
+            onToggleAdvanced={automation.toggleAdvanced}
+            onRunManualSync={automation.runManualSync}
+          />
+        </FadeIn>
+      ) : null}
+
       <FadeIn>
         <AdsSuspenseReveal fallback={ADS_SKELETON_250}>
           <ComparisonViewCard

@@ -1,4 +1,5 @@
 import { parseAgentAttachmentsFromStored } from '@/lib/agent-attachments'
+import { parseStoredSpreadsheetExport } from '@/lib/agent/spreadsheet-export'
 import type { AgentMessageMetadata } from '@/lib/agent-message-lifecycle'
 import { parsePendingConfirmationFromStored } from '@/lib/agent-message-lifecycle'
 import { parseAgentMentionsFromStored } from '@/lib/agent-mentions'
@@ -62,9 +63,20 @@ export function mapStoredMessagesToAgentMessages(stored: StoredAgentMessage[]): 
       msg.params && typeof msg.params === 'object' && !Array.isArray(msg.params)
         ? parseAgentMentionsFromStored((msg.params as Record<string, unknown>).mentions)
         : undefined
-    const storedAttachments =
+    const storedAttachmentsFromParams =
       msg.params && typeof msg.params === 'object' && !Array.isArray(msg.params)
         ? parseAgentAttachmentsFromStored((msg.params as Record<string, unknown>).attachments)
+        : undefined
+    const storedExportAttachment = parseStoredSpreadsheetExport(storedData)
+    const storedAttachments =
+      storedAttachmentsFromParams || storedExportAttachment
+        ? [
+            ...(storedAttachmentsFromParams ?? []),
+            ...(storedExportAttachment &&
+            !storedAttachmentsFromParams?.some((item) => item.id === storedExportAttachment.id)
+              ? [storedExportAttachment]
+              : []),
+          ]
         : undefined
 
     return {

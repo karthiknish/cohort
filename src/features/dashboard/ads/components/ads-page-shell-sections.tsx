@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link2, LineChart, Settings2 } from 'lucide-react'
 
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
@@ -20,7 +20,6 @@ type AdsPageLayoutProps = {
   showSetup: boolean
   connectedAccountCount: number
   hasPendingSetup?: boolean
-  hasMetricData?: boolean
 }
 
 export function AdsPageLayout({
@@ -30,16 +29,13 @@ export function AdsPageLayout({
   showSetup,
   connectedAccountCount,
   hasPendingSetup = false,
-  hasMetricData = false,
 }: AdsPageLayoutProps) {
   const defaultTab =
     connectedAccountCount > 0 && !hasPendingSetup ? 'performance' : 'setup'
   const [mobileTab, setMobileTab] = useState(defaultTab)
 
   const advancedAnalyticsBlock = advancedAnalytics ? (
-    <AdsAdvancedAnalyticsCollapsible hasMetricData={hasMetricData}>
-      {advancedAnalytics}
-    </AdsAdvancedAnalyticsCollapsible>
+    <AdsAdvancedAnalyticsCollapsible>{advancedAnalytics}</AdsAdvancedAnalyticsCollapsible>
   ) : null
 
   if (!showSetup) {
@@ -138,34 +134,22 @@ export function AdsAnalyticsSection({ children }: { children: ReactNode }) {
   )
 }
 
-function AdsAdvancedAnalyticsCollapsible({
-  children,
-  hasMetricData,
-}: {
-  children: ReactNode
-  hasMetricData: boolean
-}) {
-  const [hasUserToggled, setHasUserToggled] = useState(false)
+function AdsAdvancedAnalyticsCollapsible({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
-  const effectiveOpen = hasUserToggled ? open : hasMetricData
-  const handleOpenChange = useCallback((next: boolean) => {
-    setHasUserToggled(true)
-    setOpen(next)
-  }, [])
 
   return (
-    <Collapsible open={effectiveOpen} onOpenChange={handleOpenChange} className={ADS_PAGE_THEME.advancedPanel}>
+    <Collapsible open={open} onOpenChange={setOpen} className={ADS_PAGE_THEME.advancedPanel}>
       <div className="flex items-center justify-between gap-3 p-4 sm:px-5">
         <div className="min-w-0 space-y-0.5">
-          <p className="text-sm font-semibold tracking-tight text-foreground">Advanced analytics</p>
+          <p className="text-sm font-semibold tracking-tight text-foreground">Analytics tools</p>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Period comparisons, custom KPIs, formula builder, and raw metric rows.
+            Sync automation, period comparisons, custom KPIs, formula builder, and raw metric rows.
           </p>
         </div>
         <CollapsibleTrigger asChild>
           <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-xl">
             <Settings2 className="size-3.5" aria-hidden />
-            {effectiveOpen ? 'Hide' : 'Show'}
+            {open ? 'Hide' : 'Show'}
           </Button>
         </CollapsibleTrigger>
       </div>

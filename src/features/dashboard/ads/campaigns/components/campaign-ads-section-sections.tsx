@@ -321,6 +321,9 @@ function AdGridItem({
   const spendShare = metrics && maxSpend > 0 ? (metrics.spend / maxSpend) * 100 : 0
   const [imageFailed, setImageFailed] = useState(false)
   const handleImageError = useCallback(() => setImageFailed(true), [])
+  const previewImageUrl = ad.thumbnailUrl || ad.imageUrl
+  const socialPermalink = resolveMetaSocialPermalink(ad)
+  const isBoostedPost = ad.type.toLowerCase().includes('boosted')
 
   return (
     <div
@@ -332,9 +335,9 @@ function AdGridItem({
         className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
       >
         <div className="relative aspect-square overflow-hidden bg-muted">
-          {ad.imageUrl && !imageFailed ? (
+          {previewImageUrl && !imageFailed ? (
             <NextImage
-              src={ad.imageUrl}
+              src={previewImageUrl}
               alt={ad.name || 'Creative preview'}
               fill
               unoptimized
@@ -342,7 +345,7 @@ function AdGridItem({
               className="object-cover transition-transform group-hover:scale-105"
               onError={handleImageError}
             />
-          ) : ad.imageUrl && imageFailed ? (
+          ) : previewImageUrl && imageFailed ? (
             <div className="flex h-full flex-col items-center justify-center gap-1.5 px-3 text-center text-muted-foreground">
               <ImageIcon className="size-8 opacity-40" aria-hidden />
               <span className="text-[10px] font-medium">Preview unavailable</span>
@@ -359,11 +362,20 @@ function AdGridItem({
             </div>
           )}
 
-          {ad.videoUrl && ad.imageUrl ? (
+          {ad.videoUrl && previewImageUrl ? (
             <div className="absolute inset-0 flex items-center justify-center bg-black/35">
               <div className="flex size-12 items-center justify-center rounded-full bg-card/95 shadow-sm ring-1 ring-border/50">
                 <Play className="ml-0.5 size-6 text-foreground" />
               </div>
+            </div>
+          ) : null}
+
+          {isBoostedPost ? (
+            <div className="absolute left-2 top-2">
+              <Badge variant="secondary" className="h-5 gap-1 bg-card/95 px-1.5 text-[9px] font-semibold shadow-sm">
+                <Link2 className="size-3" aria-hidden />
+                Boosted post
+              </Badge>
             </div>
           ) : null}
 
@@ -373,11 +385,27 @@ function AdGridItem({
         </div>
 
         <div className="flex flex-col gap-1.5 border-t bg-card p-3">
-          <div className="flex items-center justify-between">
-            <span className="max-w-[60%] truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{ad.type}</span>
-            <Badge variant={getStatusVariant(ad.status)} className="h-4 px-1 text-[8px] font-bold">
-              {ad.status}
-            </Badge>
+          <div className="flex items-center justify-between gap-1">
+            <span className="max-w-[60%] truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {isBoostedPost ? 'Boosted post' : ad.type}
+            </span>
+            <div className="flex items-center gap-1">
+              {socialPermalink ? (
+                <a
+                  href={socialPermalink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                  onClick={(event) => event.stopPropagation()}
+                  aria-label="Open on Facebook or Instagram"
+                >
+                  <ExternalLink className="size-3.5" />
+                </a>
+              ) : null}
+              <Badge variant={getStatusVariant(ad.status)} className="h-4 px-1 text-[8px] font-bold">
+                {ad.status}
+              </Badge>
+            </div>
           </div>
           <div className="flex items-start justify-between gap-2">
             <h4 className="line-clamp-1 flex-1 text-xs font-semibold">{ad.name || ad.headlines?.[0] || 'Ad'}</h4>

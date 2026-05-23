@@ -192,6 +192,7 @@ export function normalizeMetaCreatives(creatives: MetaCreative[]): NormalizedCre
     status: c.status,
     headlines: c.headlines,
     descriptions: c.descriptions ?? (c.message ? [c.message] : undefined),
+    message: c.message,
     // Try to get best quality image, fallback to thumbnail
     imageUrl: optimizeMetaImageUrl(c.imageUrl) ?? optimizeMetaImageUrl(c.videoThumbnailUrl) ?? optimizeMetaImageUrl(c.thumbnailUrl),
     // Keep original thumbnail for fallback if optimized fails

@@ -12,6 +12,7 @@ export type CampaignAd = {
   headlines?: string[]
   descriptions?: string[]
   imageUrl?: string
+  thumbnailUrl?: string
   videoUrl?: string
   videoId?: string
   imageHash?: string

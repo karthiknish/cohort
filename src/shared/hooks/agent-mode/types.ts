@@ -165,4 +165,8 @@ export interface UseAgentModeReturn {
   activeContext: AgentContextIds
   /** Maximum allowed message length */
   maxMessageLength: number
+  /** Current workspace id for agent storage */
+  workspaceId: string | null
+  /** Merge a persisted Excel export attachment onto an agent message */
+  storeSpreadsheetExportForMessage: (messageId: string, attachment: AgentAttachmentContext) => void
 }

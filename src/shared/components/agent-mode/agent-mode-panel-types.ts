@@ -85,4 +85,6 @@ export interface AgentModePanelProps {
   onJumpToLatest?: () => void
   connectionStatus?: ConnectionStatus
   rateLimitCountdown?: number | null
+  workspaceId?: string | null
+  onStoreSpreadsheetExport?: (messageId: string, attachment: AgentAttachmentContext) => void
 }

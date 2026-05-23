@@ -390,11 +390,15 @@ async function buildBrandedWorkbook({
   return workbook
 }
 
-async function downloadWorkbook(workbook: ExcelJS.Workbook, filename: string) {
+export async function workbookToXlsxBlob(workbook: ExcelJS.Workbook): Promise<Blob> {
   const buffer = await workbook.xlsx.writeBuffer()
-  const blob = new Blob([buffer], {
+  return new Blob([buffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
+}
+
+async function downloadWorkbook(workbook: ExcelJS.Workbook, filename: string) {
+  const blob = await workbookToXlsxBlob(workbook)
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url

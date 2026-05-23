@@ -69,6 +69,8 @@ function AgentModeInner() {
     rateLimitCountdown,
     activeContext,
     maxMessageLength,
+    workspaceId,
+    storeSpreadsheetExportForMessage,
   } = useAgentMode()
 
   const requestCloseRef = useRef<(() => void) | null>(null)
@@ -216,6 +218,8 @@ function AgentModeInner() {
         onJumpToLatest={scrollToLatest}
         connectionStatus={connectionStatus}
         rateLimitCountdown={rateLimitCountdown}
+        workspaceId={workspaceId}
+        onStoreSpreadsheetExport={storeSpreadsheetExportForMessage}
       />
     </>
   )

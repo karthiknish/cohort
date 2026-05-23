@@ -43,6 +43,12 @@ type PresentationTone = 'success' | 'error' | 'warning' | 'info'
 interface AgentMessageCardProps {
   message: AgentMessage
   mentionLabels?: string[]
+  conversationId?: string | null
+  workspaceId?: string | null
+  onStoreSpreadsheetExport?: (
+    messageId: string,
+    attachment: import('@/lib/agent-attachments').AgentAttachmentContext,
+  ) => void
   onRetryLastUserTurn?: () => void
   onRetryUserMessage?: (clientId: string, content: string) => void
   onConfirmPending?: (pending: AgentPendingConfirmation, decision: 'confirm' | 'cancel' | 'edit') => void
@@ -491,6 +497,9 @@ function AgentConfirmationPanel({
 export function AgentMessageCard({
   message,
   mentionLabels = EMPTY_MENTION_LABELS,
+  conversationId = null,
+  workspaceId = null,
+  onStoreSpreadsheetExport,
   onRetryLastUserTurn,
   onRetryUserMessage,
   onConfirmPending,
@@ -673,7 +682,20 @@ export function AgentMessageCard({
                 accentClass={accents.section}
               />
 
-              <AgentSpreadsheetDownload data={metadata?.data} />
+              <AgentSpreadsheetDownload
+                messageId={message.id}
+                conversationId={conversationId ?? null}
+                workspaceId={workspaceId ?? null}
+                data={metadata?.data}
+                attachments={message.attachments}
+                onStored={onStoreSpreadsheetExport}
+              />
+
+              {message.attachments && message.attachments.length > 0 ? (
+                <div className="mt-3">
+                  <AgentMessageAttachmentChips attachments={message.attachments} />
+                </div>
+              ) : null}
 
               {showRouteLink ? (
                 <div className="mt-3">

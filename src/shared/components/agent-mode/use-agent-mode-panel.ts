@@ -63,6 +63,8 @@ export function useAgentModePanel({
   onJumpToLatest,
   connectionStatus = 'connected',
   rateLimitCountdown,
+  workspaceId = null,
+  onStoreSpreadsheetExport,
   error = null,
   historyError = null,
   historyHasMore = false,
@@ -625,5 +627,7 @@ export function useAgentModePanel({
     showJumpToLatest: !isPinnedToBottom && messages.length > 0,
     onJumpToLatest: onJumpToLatest ?? noop,
     showEmptyState,
+    workspaceId,
+    onStoreSpreadsheetExport,
   }
 }

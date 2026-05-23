@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import { Errors } from './errors'
 import { workspaceQuery, workspaceMutation } from './functions'
 
 const paramScalarValidator = v.union(v.null(), v.boolean(), v.number(), v.string())
@@ -71,6 +72,90 @@ export const upsert = workspaceMutation({
       operation: args.operation,
       params: args.params,
       executeResult: args.executeResult,
+    })
+
+    return { ok: true } as const
+  },
+})
+
+const storedAttachmentValidator = v.object({
+  id: v.string(),
+  name: v.string(),
+  mimeType: v.string(),
+  sizeLabel: v.string(),
+  excerpt: v.string(),
+  extractedText: v.optional(v.string()),
+  extractionStatus: v.union(v.literal('ready'), v.literal('limited'), v.literal('failed')),
+  errorMessage: v.optional(v.string()),
+  storageId: v.optional(v.string()),
+  url: v.optional(v.string()),
+})
+
+function parseExecuteDataJson(executeResult: {
+  dataJson?: unknown
+} | null): Record<string, unknown> {
+  if (!executeResult || typeof executeResult.dataJson !== 'string') {
+    return {}
+  }
+  try {
+    const parsed = JSON.parse(executeResult.dataJson)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {}
+  } catch {
+    return {}
+  }
+}
+
+export const attachSpreadsheetExport = workspaceMutation({
+  args: {
+    conversationLegacyId: v.string(),
+    legacyId: v.string(),
+    attachment: storedAttachmentValidator,
+  },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query('agentMessages')
+      .withIndex('by_workspace_conversation_legacyId', (q) =>
+        q
+          .eq('workspaceId', args.workspaceId)
+          .eq('conversationLegacyId', args.conversationLegacyId)
+          .eq('legacyId', args.legacyId),
+      )
+      .unique()
+
+    if (!existing) {
+      throw Errors.resource.notFound('Agent message', args.legacyId)
+    }
+
+    const params =
+      existing.params && typeof existing.params === 'object' && !Array.isArray(existing.params)
+        ? { ...(existing.params as Record<string, unknown>) }
+        : {}
+
+    const currentAttachments = Array.isArray(params.attachments) ? [...params.attachments] : []
+    const withoutDuplicate = currentAttachments.filter((entry) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return true
+      const record = entry as Record<string, unknown>
+      return record.id !== args.attachment.id
+    })
+
+    params.attachments = [...withoutDuplicate, args.attachment]
+
+    const executeData = parseExecuteDataJson(existing.executeResult)
+    executeData.storedExport = args.attachment
+
+    await ctx.db.patch(existing._id, {
+      params: params as typeof existing.params,
+      executeResult: {
+        ...(existing.executeResult && typeof existing.executeResult === 'object'
+          ? (existing.executeResult as Record<string, unknown>)
+          : {}),
+        dataJson: JSON.stringify(executeData),
+      },
     })
 
     return { ok: true } as const

@@ -20,6 +20,8 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useNavigationContext } from '@/shared/contexts/navigation-context'
 
+import type { AgentAttachmentContext } from '@/lib/agent-attachments'
+
 import { useAgentAttachments } from './use-agent-attachments'
 import { useAgentConversationHistory } from './use-agent-conversation-history'
 import { useAgentSend } from './use-agent-send'
@@ -164,6 +166,32 @@ export function useAgentMode(): UseAgentModeReturn {
     send.clearError()
   }, [send])
 
+  const storeSpreadsheetExportForMessage = useCallback(
+    (messageId: string, attachment: AgentAttachmentContext) => {
+      setMessages((prev) =>
+        prev.map((message) => {
+          if (message.id !== messageId) return message
+          const existing = message.attachments ?? []
+          const withoutDuplicate = existing.filter((item) => item.id !== attachment.id)
+          return {
+            ...message,
+            attachments: [...withoutDuplicate, attachment],
+            metadata: message.metadata
+              ? {
+                  ...message.metadata,
+                  data: {
+                    ...(message.metadata.data ?? {}),
+                    storedExport: attachment,
+                  },
+                }
+              : message.metadata,
+          }
+        }),
+      )
+    },
+    [],
+  )
+
   return {
     isOpen,
     setOpen,
@@ -215,5 +243,7 @@ export function useAgentMode(): UseAgentModeReturn {
     scrollContainerRef,
     connectionStatus: send.connectionStatus,
     rateLimitCountdown: send.rateLimitCountdown,
+    workspaceId,
+    storeSpreadsheetExportForMessage,
   }
 }

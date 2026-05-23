@@ -117,6 +117,16 @@ describe('inferMetaDisplayAdType', () => {
     ).toBe('boosted_post')
   })
 
+  it('does not classify boosted posts as video from asset_feed videos alone', () => {
+    expect(
+      inferMetaDisplayAdType({
+        objectStoryId: '1234567890_9876543210',
+        storySpec: {},
+        assetFeedSpec: { videos: [{ video_id: '999' }] },
+      })
+    ).toBe('boosted_post')
+  })
+
   it('returns dynamic_product when template_data has copy', () => {
     expect(
       inferMetaDisplayAdType({

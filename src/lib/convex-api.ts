@@ -230,6 +230,7 @@ export const agentApi = {
   deleteConversation: looseApi.agent.deleteConversation,
   setConversationFlags: looseApi.agentConversations.setConversationFlags,
   searchByUser: looseApi.agentMessages.searchByUser,
+  attachSpreadsheetExport: looseApi.agentMessages.attachSpreadsheetExport,
 }
 
 export const adminNotificationsApi = {

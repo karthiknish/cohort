@@ -57,6 +57,9 @@ export function AgentMessagesSection({
   onMessagesScroll,
   showJumpToLatest,
   onJumpToLatest,
+  conversationId,
+  workspaceId,
+  onStoreSpreadsheetExport,
 }: {
   isConversationLoading: boolean
   isProcessing: boolean
@@ -75,6 +78,12 @@ export function AgentMessagesSection({
   onMessagesScroll: () => void
   showJumpToLatest: boolean
   onJumpToLatest: () => void
+  conversationId: string | null
+  workspaceId: string | null
+  onStoreSpreadsheetExport?: (
+    messageId: string,
+    attachment: import('@/lib/agent-attachments').AgentAttachmentContext,
+  ) => void
 }) {
   const now = useClientNow()
 
@@ -117,6 +126,9 @@ export function AgentMessagesSection({
                     message={message}
                     mentionLabels={mentionLabels}
                     isProcessing={isProcessing}
+                    conversationId={conversationId}
+                    workspaceId={workspaceId}
+                    onStoreSpreadsheetExport={onStoreSpreadsheetExport}
                     onRetryLastUserTurn={onRetryLastUserTurn}
                     onRetryUserMessage={onRetryUserMessage}
                     onConfirmPending={onConfirmPending}
