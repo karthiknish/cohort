@@ -11,6 +11,7 @@ import {
   formatLabel,
   formatPercent,
   formatWholeNumber,
+  resolveCurrencyCode,
   resolveMetricsAvailable,
   resolveTotals,
 } from './helpers'
@@ -31,6 +32,7 @@ export function buildAgentMessageCharts(
   const comparison = asRecord(data.comparison)
   const deltaPercent = asRecord(comparison?.deltaPercent)
   const totals = isAnalytics ? asRecord(data.totals) : resolveTotals(data)
+  const currencyCode = resolveCurrencyCode(data)
 
   if (totals && isAnalytics) {
     const users = asNumber(totals.users)
@@ -59,13 +61,14 @@ export function buildAgentMessageCharts(
       spend !== null && spend > 0 ? { name: 'Spend', value: spend } : null,
       revenue !== null && revenue > 0 ? { name: 'Revenue', value: revenue } : null,
     ])
-    if (financialPoints.length >= 2) {
+    if (financialPoints.length >= 1) {
       charts.push({
         id: 'financial',
-        title: 'Spend vs revenue',
+        title: financialPoints.length >= 2 ? 'Spend vs revenue' : financialPoints[0]?.name ?? 'Spend',
         subtitle: 'Synced totals for this window',
         points: financialPoints,
         valueFormat: 'currency',
+        currencyCode,
         layout: 'vertical',
       })
     }
@@ -81,7 +84,7 @@ export function buildAgentMessageCharts(
         ? { name: 'Conversions', value: asNumber(totals.conversions)! }
         : null,
     ])
-    if (deliveryPoints.length >= 2) {
+    if (deliveryPoints.length >= 1) {
       charts.push({
         id: 'delivery',
         title: 'Delivery volume',
@@ -157,6 +160,7 @@ export function buildAgentMessageCharts(
         title: 'Spend by platform',
         points,
         valueFormat: 'currency',
+        currencyCode,
         layout: 'horizontal',
       })
     }
@@ -177,12 +181,35 @@ export function buildAgentMessageCharts(
       }),
     )
 
-    if (points.length >= 2) {
+    if (points.length >= 1) {
       charts.push({
         id: 'top-campaigns',
         title: 'Top campaigns by spend',
         points: points.slice(0, 5),
         valueFormat: 'currency',
+        currencyCode,
+        layout: 'horizontal',
+      })
+    }
+  }
+
+  const currencyBreakdown = asRecordArray(data.currencyBreakdown)
+  if (currencyBreakdown.length >= 1 && !isAnalytics && !isSocial) {
+    const points = currencyBreakdown.flatMap((row) => {
+      const spend = asNumber(row.spend)
+      if (spend === null || spend <= 0) return []
+      return {
+        name: asString(row.currency) ?? 'USD',
+        value: spend,
+      }
+    })
+    if (points.length >= 1) {
+      charts.push({
+        id: 'currency-breakdown',
+        title: 'Spend by currency',
+        points,
+        valueFormat: 'currency',
+        currencyCode,
         layout: 'horizontal',
       })
     }

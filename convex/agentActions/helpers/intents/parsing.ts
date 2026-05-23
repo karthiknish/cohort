@@ -83,9 +83,9 @@ export function inferProviderFiltersFromIntent(message: string): ProviderId[] {
 }
 
 export function inferReportPeriodFromIntent(normalized: string): ReportPeriod {
-  return includesAnyPhrase(normalized, ['today', 'daily', 'last 24'])
+  return includesAnyPhrase(normalized, ['today', 'yesterday', 'daily', 'last 24'])
     ? 'daily'
-    : includesAnyPhrase(normalized, ['month', 'monthly', '30 day'])
+    : includesAnyPhrase(normalized, ['month', 'monthly', '30 day', 'quarter', 'q1', 'q2', 'q3', 'q4'])
       ? 'monthly'
       : 'weekly'
 }
@@ -327,6 +327,7 @@ export function resolveWeakCommandClarification(
   const hasWeakVerb = includesAnyPhrase(normalized, ['do', 'fix', 'handle', 'work on', 'take care of', 'update', 'change', 'continue', 'help', 'try again'])
   const hasTimeframe = includesAnyPhrase(normalized, [
     'today', 'yesterday', 'daily', 'weekly', 'monthly', 'this week', 'last week', 'this month', 'last month', 'last 7', 'last 30',
+    'this quarter', 'last quarter', 'this year', 'last year', 'q1', 'q2', 'q3', 'q4',
   ]) || resolveIntentDateRange(message) !== null
 
   if (includesAnyPhrase(normalized, ['metrics', 'numbers', 'performance', 'snapshot', 'report']) && !hasTimeframe && inferProviderFiltersFromIntent(message).length === 0 && !context?.activeClientId) {
@@ -417,6 +418,96 @@ export function wantsOrganicSocialIntent(normalized: string): boolean {
   ])
 
   return mentionsSocialSurface && asksSocialPerformance
+}
+
+export function resolveSpreadsheetSourceFromMessage(
+  normalized: string,
+  context?: { activeClientId?: string | null },
+  clientReference?: string | null,
+): string | null {
+  if (
+    normalized.includes('report') &&
+    (normalized.includes('performance report') ||
+      normalized.includes('weekly report') ||
+      normalized.includes('monthly report') ||
+      normalized.includes('daily report') ||
+      normalized.includes('excel') ||
+      normalized.includes('xlsx') ||
+      normalized.includes('spreadsheet'))
+  ) {
+    return 'report'
+  }
+  if (normalized.includes('meeting')) return 'meetings'
+  if (normalized.includes('proposal')) return 'proposals'
+  if (normalized.includes('project')) return 'projects'
+  if (normalized.includes('client') && !normalized.includes('task')) return 'clients'
+  if (normalized.includes('task')) {
+    if (clientReference || context?.activeClientId || normalized.includes('client')) {
+      return 'clientTasks'
+    }
+    return 'tasks'
+  }
+  if (
+    normalized.includes('instagram') ||
+    normalized.includes('facebook page') ||
+    normalized.includes('organic social') ||
+    (normalized.includes('social') && !normalized.includes('ad spend'))
+  ) {
+    return 'social'
+  }
+  if (
+    normalized.includes('analytics') ||
+    normalized.includes('ga4') ||
+    normalized.includes('website traffic') ||
+    normalized.includes('site traffic') ||
+    normalized.includes('sessions') ||
+    normalized.includes('pageviews')
+  ) {
+    return 'analytics'
+  }
+  if (
+    normalized.includes('ads') ||
+    normalized.includes('campaign') ||
+    normalized.includes('roas') ||
+    normalized.includes('ad spend')
+  ) {
+    return 'ads'
+  }
+  return null
+}
+
+export function wantsSpreadsheetExportIntent(normalized: string): boolean {
+  if (
+    includesAnyPhrase(normalized, [
+      'export conversation',
+      'export chat',
+      'export this chat',
+      'export markdown',
+      'share chat',
+    ])
+  ) {
+    return false
+  }
+
+  return (
+    includesAnyPhrase(normalized, [
+      'export to excel',
+      'export as excel',
+      'excel export',
+      'download excel',
+      'download as excel',
+      'save as excel',
+      'excel file',
+      'xlsx file',
+      'xlsx',
+      'spreadsheet',
+      'export spreadsheet',
+      'download spreadsheet',
+      'workbook',
+    ]) ||
+    (includesAnyPhrase(normalized, ['export', 'download']) &&
+      includesAnyPhrase(normalized, ['excel', 'xlsx', 'spreadsheet']))
+  )
 }
 
 export function getProviderSummaryLabel(providerIds: ProviderId[]): string {

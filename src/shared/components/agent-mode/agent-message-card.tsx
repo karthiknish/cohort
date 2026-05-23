@@ -26,6 +26,7 @@ import { buildAgentDataSections, type AgentDataSection } from './agent-message-d
 import { AgentDataSections } from './agent-data-sections'
 import { AgentPlainText } from './agent-plain-text'
 import { AgentMentionPills, AgentMentionText } from './mention-highlights'
+import { AgentSpreadsheetDownload } from './agent-spreadsheet-download'
 import { AgentMessageAttachmentChips } from './agent-mode-panel-sections'
 
 const AGENT_MESSAGE_INITIAL = { opacity: 0, y: 10 } as const
@@ -80,6 +81,46 @@ function getActionLabel(action?: string, operation?: string): string {
 
   if (operation === 'generatePerformanceReport') {
     return 'Report'
+  }
+
+  if (operation === 'summarizeMyTasks' || operation === 'summarizeClientTasks') {
+    return 'Task Summary'
+  }
+
+  if (operation === 'listWorkspaceClients') {
+    return 'Clients'
+  }
+
+  if (operation === 'listActiveProjects') {
+    return 'Projects'
+  }
+
+  if (operation === 'listProposals') {
+    return 'Proposals'
+  }
+
+  if (operation === 'summarizeMeetings') {
+    return 'Meetings'
+  }
+
+  if (operation === 'requestAdsSync') {
+    return 'Ads Sync'
+  }
+
+  if (operation === 'requestAnalyticsSync') {
+    return 'Analytics Sync'
+  }
+
+  if (operation === 'requestSocialSync') {
+    return 'Social Sync'
+  }
+
+  if (operation === 'markAllNotificationsRead') {
+    return 'Notifications'
+  }
+
+  if (operation === 'exportSpreadsheet') {
+    return 'Excel Export'
   }
 
   if (operation === 'createProject' || operation === 'updateProject') {
@@ -272,13 +313,26 @@ function isRetryableData(data: Record<string, unknown> | undefined): boolean {
   return data?.retryable === true
 }
 
+const STRUCTURED_DATA_OPERATIONS = new Set([
+  'summarizeAdsPerformance',
+  'summarizeAnalyticsPerformance',
+  'summarizeSocialPerformance',
+  'generatePerformanceReport',
+  'summarizeMyTasks',
+  'summarizeClientTasks',
+  'listWorkspaceClients',
+  'listActiveProjects',
+  'listProposals',
+  'summarizeMeetings',
+  'requestAdsSync',
+  'requestAnalyticsSync',
+  'requestSocialSync',
+  'markAllNotificationsRead',
+  'exportSpreadsheet',
+])
+
 function usesStructuredMetricsCard(operation?: string): boolean {
-  return (
-    operation === 'summarizeAdsPerformance' ||
-    operation === 'summarizeAnalyticsPerformance' ||
-    operation === 'summarizeSocialPerformance' ||
-    operation === 'generatePerformanceReport'
-  )
+  return operation !== undefined && STRUCTURED_DATA_OPERATIONS.has(operation)
 }
 
 function resolveAgentDisplayContent(
@@ -303,9 +357,9 @@ function resolveAgentDisplayContent(
 }
 
 function routeLinkLabel(operation?: string): string {
-  if (operation === 'summarizeAdsPerformance') return 'Open ads dashboard'
-  if (operation === 'summarizeAnalyticsPerformance') return 'Open analytics'
-  if (operation === 'summarizeSocialPerformance') return 'Open socials'
+  if (operation === 'summarizeAdsPerformance' || operation === 'requestAdsSync') return 'Open ads dashboard'
+  if (operation === 'summarizeAnalyticsPerformance' || operation === 'requestAnalyticsSync') return 'Open analytics'
+  if (operation === 'summarizeSocialPerformance' || operation === 'requestSocialSync') return 'Open socials'
   if (operation === 'generatePerformanceReport') return 'Open analytics'
   return 'Go to page'
 }
@@ -618,6 +672,8 @@ export function AgentMessageCard({
                 data={metadata?.data}
                 accentClass={accents.section}
               />
+
+              <AgentSpreadsheetDownload data={metadata?.data} />
 
               {showRouteLink ? (
                 <div className="mt-3">

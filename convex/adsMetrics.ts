@@ -152,8 +152,14 @@ export const listMetrics = workspaceQuery({
     })
 
     const filtered = all.filter((row) => {
-      if (clientId !== null && row.clientId !== clientId) return false
-      if (providerSet && !providerSet.has(row.providerId)) return false
+      if (clientId !== null && row.clientId != null && row.clientId !== clientId) return false
+      if (providerSet) {
+        const rowCanonical = normalizeAdsProviderId(row.providerId) ?? row.providerId
+        const matchesProvider = [...providerSet].some(
+          (providerId) => (normalizeAdsProviderId(providerId) ?? providerId) === rowCanonical,
+        )
+        if (!matchesProvider) return false
+      }
       if (args.startDate && row.date < args.startDate) return false
       if (args.endDate && row.date > args.endDate) return false
       return true
@@ -294,11 +300,17 @@ export const listMetricsWithSummary = workspaceQuery({
     const clientIdsSet = args.clientIds && args.clientIds.length > 0 ? new Set(args.clientIds) : null
 
     const filtered = all.filter((row) => {
-      // Single clientId filter takes precedence
-      if (clientId !== null && row.clientId !== clientId) return false
+      // Include workspace-level rows (null clientId) when a client is selected.
+      if (clientId !== null && row.clientId != null && row.clientId !== clientId) return false
       // Multiple clientIds filter (if single clientId not provided)
       if (clientId === null && clientIdsSet && row.clientId && !clientIdsSet.has(row.clientId)) return false
-      if (providerSet && !providerSet.has(row.providerId)) return false
+      if (providerSet) {
+        const rowCanonical = normalizeAdsProviderId(row.providerId) ?? row.providerId
+        const matchesProvider = [...providerSet].some(
+          (providerId) => (normalizeAdsProviderId(providerId) ?? providerId) === rowCanonical,
+        )
+        if (!matchesProvider) return false
+      }
       if (args.startDate && row.date < args.startDate) return false
       if (args.endDate && row.date > args.endDate) return false
       return true
@@ -528,9 +540,15 @@ export const listMetricsWithSummaryV2 = workspaceQuery({
       args.clientIds && args.clientIds.length > 0 ? new Set(args.clientIds) : null
 
     const filtered = all.filter((row) => {
-      if (clientId !== null && row.clientId !== clientId) return false
+      if (clientId !== null && row.clientId != null && row.clientId !== clientId) return false
       if (clientId === null && clientIdsSet && row.clientId && !clientIdsSet.has(row.clientId)) return false
-      if (providerSet && !providerSet.has(row.providerId)) return false
+      if (providerSet) {
+        const rowCanonical = normalizeAdsProviderId(row.providerId) ?? row.providerId
+        const matchesProvider = [...providerSet].some(
+          (providerId) => (normalizeAdsProviderId(providerId) ?? providerId) === rowCanonical,
+        )
+        if (!matchesProvider) return false
+      }
       if (args.startDate && row.date < args.startDate) return false
       if (args.endDate && row.date > args.endDate) return false
       return true

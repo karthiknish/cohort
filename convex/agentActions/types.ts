@@ -206,6 +206,10 @@ export const OPERATION_ALIASES: Record<string, string> = {
   requestsocialsync: 'requestSocialSync',
   syncsocial: 'requestSocialSync',
   syncsocialmetrics: 'requestSocialSync',
+  exportspreadsheet: 'exportSpreadsheet',
+  exporttoexcel: 'exportSpreadsheet',
+  downloadexcel: 'exportSpreadsheet',
+  excelexport: 'exportSpreadsheet',
 }
 
 export const PROPOSAL_STATUSES = new Set(['draft', 'in_progress', 'ready', 'partial_success', 'sent', 'failed'])

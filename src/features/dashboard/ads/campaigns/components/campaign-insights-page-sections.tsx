@@ -174,13 +174,6 @@ export function CampaignInsightsControlsSection({
         isPreviewMode={isPreviewMode}
         campaignObjective={campaign?.objective}
       />
-      {providerId === 'facebook' ? (
-        <CampaignMetaToolsSection
-          clientId={selectedClientId}
-          isPreviewMode={isPreviewMode}
-          campaignObjective={campaign?.objective}
-        />
-      ) : null}
     </>
   )
 }
@@ -213,10 +206,18 @@ export function CampaignInsightsCreativesSection({
 }
 
 export function CampaignInsightsAdvancedSection({
+  providerId,
+  selectedClientId,
+  isPreviewMode,
+  campaign,
   formulaEditor,
   calculatedMetrics,
   insightsLoading,
 }: {
+  providerId: string
+  selectedClientId: string | null
+  isPreviewMode: boolean
+  campaign: Campaign | null
   formulaEditor: ReturnType<typeof useFormulaEditor>
   calculatedMetrics: ReturnType<typeof useCampaignInsightsPage>['calculatedMetrics']
   insightsLoading: boolean
@@ -228,6 +229,13 @@ export function CampaignInsightsAdvancedSection({
         metricTotals={calculatedMetrics ?? undefined}
         loading={insightsLoading}
       />
+      {providerId === 'facebook' ? (
+        <CampaignMetaToolsSection
+          clientId={selectedClientId}
+          isPreviewMode={isPreviewMode}
+          campaignObjective={campaign?.objective}
+        />
+      ) : null}
     </div>
   )
 }
@@ -288,6 +296,10 @@ export function CampaignInsightsPageBody({
   const advancedSection = useMemo(
     () => (
       <CampaignInsightsAdvancedSection
+        providerId={page.providerId}
+        selectedClientId={page.selectedClientId}
+        isPreviewMode={page.isPreviewMode}
+        campaign={page.campaign}
         formulaEditor={page.formulaEditor}
         calculatedMetrics={page.calculatedMetrics}
         insightsLoading={page.insightsLoading}

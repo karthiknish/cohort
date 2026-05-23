@@ -55,9 +55,9 @@ function CampaignAdvancedCollapsible({ children }: { children: ReactNode }) {
     <Collapsible open={open} onOpenChange={setOpen} className={ADS_PAGE_THEME.advancedPanel}>
       <div className="flex items-center justify-between gap-3 p-4 sm:px-5">
         <div className="min-w-0 space-y-0.5">
-          <p className="text-sm font-semibold tracking-tight text-foreground">Advanced analytics</p>
+          <p className="text-sm font-semibold tracking-tight text-foreground">Advanced tools</p>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Custom formulas and deeper recommendations for this campaign.
+            Custom formulas, Meta events and batch tools, pixels, and webhooks for this campaign.
           </p>
         </div>
         <CollapsibleTrigger asChild>

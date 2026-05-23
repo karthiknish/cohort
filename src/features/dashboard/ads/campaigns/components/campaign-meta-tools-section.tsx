@@ -17,7 +17,7 @@ import { MotionCard } from '@/shared/ui/motion-primitives'
 import { MotionTabsContent, Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 
 import { CampaignControlHeader } from './campaign-control-header'
-import { Wrench } from 'lucide-react'
+import { Radio, Webhook, Wrench } from 'lucide-react'
 
 type CampaignMetaToolsSectionProps = {
   clientId?: string | null
@@ -96,9 +96,15 @@ export function CampaignMetaToolsSection({
       />
       <CardContent className="pt-2">
         <Tabs value={metaToolsTab} onValueChange={setMetaToolsTab} className="w-full">
-          <TabsList className="mb-4 grid w-full grid-cols-2">
-            <TabsTrigger value="events">Events & batch</TabsTrigger>
-            <TabsTrigger value="advanced">Pixels & webhooks</TabsTrigger>
+          <TabsList className="mb-4 grid h-auto w-full grid-cols-2 gap-1 bg-muted/40 p-1">
+            <TabsTrigger value="events" className="gap-1.5 text-xs sm:text-sm">
+              <Radio className="size-3.5 shrink-0" aria-hidden />
+              Conversions API
+            </TabsTrigger>
+            <TabsTrigger value="advanced" className="gap-1.5 text-xs sm:text-sm">
+              <Webhook className="size-3.5 shrink-0" aria-hidden />
+              Pixel &amp; webhooks
+            </TabsTrigger>
           </TabsList>
           <MotionTabsContent activeTab={metaToolsTab} tabValue="events" className="mt-0">
             <MetaEventsToolsPanel {...panelProps} />

@@ -1,3 +1,5 @@
+import { normalizeAdsProviderId } from '@/domain/ads/provider'
+
 import {
   asNonEmptyString,
   asNumber,
@@ -13,9 +15,18 @@ export function isAnalyticsProviderId(providerId: string | null | undefined): bo
 }
 
 export function isAdsMetricsProvider(providerId: string | null | undefined): boolean {
-  const normalized = (providerId ?? '').trim().toLowerCase()
-  if (!normalized || isAnalyticsProviderId(normalized)) return false
-  return ALL_PROVIDER_IDS.includes(normalized as (typeof ALL_PROVIDER_IDS)[number])
+  if (isAnalyticsProviderId(providerId)) return false
+  return normalizeAdsProviderId(providerId) !== null
+}
+
+export function matchesAdsProviderFilter(
+  rowProviderId: string | null | undefined,
+  providerIds: readonly string[] | null | undefined,
+): boolean {
+  if (!providerIds || providerIds.length === 0) return true
+  const rowCanonical = normalizeAdsProviderId(rowProviderId)
+  if (!rowCanonical) return false
+  return providerIds.some((providerId) => normalizeAdsProviderId(providerId) === rowCanonical)
 }
 
 export function filterAdsMetricRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
@@ -76,6 +87,97 @@ export function isPausedCampaignStatus(status: string | null): boolean {
 
 function toIsoDate(value: number): string {
   return new Date(value).toISOString().slice(0, 10)
+}
+
+/** Days of history to request from ad platforms so `startDate` is included (Meta uses trailing window). */
+export function resolveAdsSyncTimeframeDays(
+  startDate: string,
+  endDate: string,
+  nowMs: number = Date.now(),
+): number {
+  const startMs = parseDateToMs(startDate)
+  if (startMs === null) return 30
+
+  const todayIso = toIsoDate(nowMs)
+  const todayMs = parseDateToMs(todayIso) ?? nowMs
+  const coverageDays = Math.ceil((todayMs - startMs) / 86_400_000) + 1
+
+  const endMs = parseDateToMs(endDate)
+  const spanDays =
+    endMs !== null ? Math.max(Math.round((endMs - startMs) / 86_400_000) + 1, 1) : 1
+
+  return Math.min(Math.max(coverageDays, spanDays, 7), 730)
+}
+
+export type CurrencyBreakdownRow = {
+  currency: string
+  spend: number
+  revenue: number
+}
+
+export function extractCurrencyBreakdown(summary: Record<string, unknown> | null): CurrencyBreakdownRow[] {
+  const financial = asRecord(summary?.financialTotals) ?? {}
+  const totalsByCurrency = asRecord(financial.totalsByCurrency) ?? {}
+
+  return Object.entries(totalsByCurrency)
+    .flatMap(([currency, totals]) => {
+      if (currency === '__unknown__') return []
+      const record = asRecord(totals)
+      const spend = asNumber(record?.spend) ?? 0
+      const revenue = asNumber(record?.revenue) ?? 0
+      if (spend <= 0 && revenue <= 0) return []
+      return [{ currency, spend, revenue }]
+    })
+    .sort((left, right) => right.spend - left.spend)
+}
+
+export function extractV2InsightsSnapshot(summary: Record<string, unknown> | null): {
+  spend: number
+  revenue: number
+  impressions: number
+  clicks: number
+  conversions: number
+  currency: string | null
+  comparability: string
+  warnings: string[]
+  currencyBreakdown: CurrencyBreakdownRow[]
+} {
+  if (!summary) {
+    return {
+      spend: 0,
+      revenue: 0,
+      impressions: 0,
+      clicks: 0,
+      conversions: 0,
+      currency: null,
+      comparability: 'unknown_currency',
+      warnings: [],
+      currencyBreakdown: [],
+    }
+  }
+
+  const delivery = asRecord(summary.deliveryTotals) ?? {}
+  const financial = asRecord(summary.financialTotals) ?? {}
+  const comparability = asNonEmptyString(financial.comparability) ?? 'unknown_currency'
+  const singleCurrency = comparability === 'single_currency'
+  const warnings = Array.isArray(summary.warnings)
+    ? summary.warnings.flatMap((warning) => {
+        const message = asNonEmptyString(warning)
+        return message !== null ? [message] : []
+      })
+    : []
+
+  return {
+    spend: singleCurrency ? (asNumber(financial.spend) ?? 0) : 0,
+    revenue: singleCurrency ? (asNumber(financial.revenue) ?? 0) : 0,
+    impressions: asNumber(delivery.impressions) ?? 0,
+    clicks: asNumber(delivery.clicks) ?? 0,
+    conversions: asNumber(delivery.conversions) ?? 0,
+    currency: asNonEmptyString(financial.primaryCurrency),
+    comparability,
+    warnings,
+    currencyBreakdown: extractCurrencyBreakdown(summary),
+  }
 }
 
 export function getPreviousDateWindow(startDate: string, endDate: string): { startDate: string; endDate: string } | null {

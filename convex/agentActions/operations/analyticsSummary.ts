@@ -1,4 +1,4 @@
-import { api } from '/_generated/api'
+import { api, internal } from '/_generated/api'
 import {
   asNonEmptyString,
   asRecord,
@@ -12,11 +12,11 @@ import {
 import type { OperationHandler } from '../types'
 import {
   ANALYTICS_PROVIDER_ID,
-  buildAggregateComparison,
   computeAggregateMetrics,
   computeAggregateMetricsFromRows,
   filterAnalyticsMetricRows,
   getPreviousDateWindow,
+  resolveAdsSyncTimeframeDays,
 } from './shared'
 
 export type AnalyticsTotals = {
@@ -27,6 +27,16 @@ export type AnalyticsTotals = {
   conversionRate: number
   revenuePerSession: number
   sessionsPerUser: number
+}
+
+function resolveAnalyticsCurrencyCode(rows: Record<string, unknown>[]): string {
+  for (const row of rows) {
+    const currency = asNonEmptyString(row.currency)
+    if (currency && /^[A-Z]{3}$/i.test(currency)) {
+      return currency.toUpperCase()
+    }
+  }
+  return 'USD'
 }
 
 function metricsToAnalyticsTotals(metrics: ReturnType<typeof computeAggregateMetrics>): AnalyticsTotals {
@@ -71,7 +81,7 @@ function buildAnalyticsComparison(
   return { previousTotals: previous, deltaPercent, previousWindow }
 }
 
-function buildAnalyticsSituation(totals: AnalyticsTotals): string {
+function buildAnalyticsSituation(totals: AnalyticsTotals, currencyCode = 'USD'): string {
   const parts: string[] = []
 
   if (totals.users <= 0 && totals.sessions <= 0) {
@@ -88,7 +98,9 @@ function buildAnalyticsSituation(totals: AnalyticsTotals): string {
       parts.push('Sessions are coming in, but conversions are still light.')
     }
     if (totals.revenue > 0) {
-      parts.push(`${formatCurrency(totals.revenue)} revenue (${formatCurrency(totals.revenuePerSession)} per session).`)
+      parts.push(
+        `${formatCurrency(totals.revenue, currencyCode)} revenue (${formatCurrency(totals.revenuePerSession, currencyCode)} per session).`,
+      )
     }
     if (totals.sessionsPerUser >= 1.4) {
       parts.push('Users are returning for multiple sessions.')
@@ -100,18 +112,25 @@ function buildAnalyticsSituation(totals: AnalyticsTotals): string {
   return parts.join(' ')
 }
 
-export const summarizeAnalyticsPerformanceHandler: OperationHandler = async (ctx, input) => {
-  const period = normalizeReportPeriod(input.params.period)
-  const { periodLabel, startDate, endDate } = resolveReportWindow(period, input.params)
-  const previousWindow = getPreviousDateWindow(startDate, endDate)
-  const clientId = asNonEmptyString(input.params.clientId) ?? asNonEmptyString(input.context?.activeClientId ?? null)
+function hasAnalyticsTotals(totals: AnalyticsTotals): boolean {
+  return totals.users > 0 || totals.sessions > 0 || totals.conversions > 0 || totals.revenue > 0
+}
 
+async function loadAnalyticsMetrics(
+  ctx: Parameters<OperationHandler>[0],
+  args: {
+    workspaceId: string
+    clientId: string | null
+    startDate: string
+    endDate: string
+  },
+) {
   const metricsRaw = await ctx.runQuery(api.adsMetrics.listMetricsWithSummary, {
-    workspaceId: input.workspaceId,
-    clientId: clientId ?? undefined,
+    workspaceId: args.workspaceId,
+    clientId: args.clientId ?? undefined,
     providerIds: [ANALYTICS_PROVIDER_ID],
-    startDate,
-    endDate,
+    startDate: args.startDate,
+    endDate: args.endDate,
     aggregate: true,
     limit: 500,
   })
@@ -125,6 +144,145 @@ export const summarizeAnalyticsPerformanceHandler: OperationHandler = async (ctx
         })
       : [],
   )
+
+  return { metricsPayload, metricsRows }
+}
+
+async function syncConnectedGoogleAnalytics(
+  ctx: Parameters<OperationHandler>[0],
+  args: {
+    workspaceId: string
+    clientId: string | null
+    startDate: string
+    endDate: string
+  },
+): Promise<{ synced: boolean; timeframeDays: number | null; syncHint: string | null }> {
+  const status = asRecord(
+    await ctx.runQuery(api.analyticsIntegrations.getGoogleAnalyticsStatus, {
+      workspaceId: args.workspaceId,
+      clientId: args.clientId,
+    }),
+  )
+
+  if (!status) {
+    return {
+      synced: false,
+      timeframeDays: null,
+      syncHint: 'Connect Google Analytics on the Analytics page, then select a property.',
+    }
+  }
+
+  if (!asNonEmptyString(status.accountId)) {
+    return {
+      synced: false,
+      timeframeDays: null,
+      syncHint: 'Google Analytics is linked but no property is selected yet. Finish setup on the Analytics page.',
+    }
+  }
+
+  const timeframeDays = resolveAdsSyncTimeframeDays(args.startDate, args.endDate)
+
+  await ctx.runMutation(api.adsIntegrations.requestManualSync, {
+    workspaceId: args.workspaceId,
+    providerId: ANALYTICS_PROVIDER_ID,
+    clientId: args.clientId,
+    timeframeDays,
+  })
+
+  await ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
+    workspaceId: args.workspaceId,
+  })
+
+  return {
+    synced: true,
+    timeframeDays,
+    syncHint: `Synced the last ${timeframeDays} days from ${asNonEmptyString(status.accountName) ?? 'your GA4 property'}.`,
+  }
+}
+
+export const requestAnalyticsSyncHandler: OperationHandler = async (ctx, input) => {
+  const period = normalizeReportPeriod(input.params.period)
+  const { startDate, endDate } = resolveReportWindow(period, input.params)
+  const clientId = asNonEmptyString(input.params.clientId) ?? asNonEmptyString(input.context?.activeClientId ?? null)
+
+  const syncResult = await syncConnectedGoogleAnalytics(ctx, {
+    workspaceId: input.workspaceId,
+    clientId,
+    startDate,
+    endDate,
+  })
+
+  if (!syncResult.synced) {
+    return {
+      success: false,
+      retryable: false,
+      route: '/dashboard/analytics',
+      data: { connected: false, syncHint: syncResult.syncHint },
+      userMessage: syncResult.syncHint ?? 'Connect Google Analytics before requesting a sync.',
+    }
+  }
+
+  return {
+    success: true,
+    route: '/dashboard/analytics',
+    data: {
+      syncTimeframeDays: syncResult.timeframeDays,
+      startDate,
+      endDate,
+      syncHint: syncResult.syncHint,
+      suggestedActionRoute: '/dashboard/analytics',
+    },
+    userMessage:
+      syncResult.syncHint ??
+      `Queued a Google Analytics sync for the last ${syncResult.timeframeDays ?? 30} days.`,
+  }
+}
+
+export const summarizeAnalyticsPerformanceHandler: OperationHandler = async (ctx, input) => {
+  const period = normalizeReportPeriod(input.params.period)
+  const { periodLabel, startDate, endDate } = resolveReportWindow(period, input.params)
+  const previousWindow = getPreviousDateWindow(startDate, endDate)
+  const clientId = asNonEmptyString(input.params.clientId) ?? asNonEmptyString(input.context?.activeClientId ?? null)
+
+  let { metricsRows } = await loadAnalyticsMetrics(ctx, {
+    workspaceId: input.workspaceId,
+    clientId,
+    startDate,
+    endDate,
+  })
+
+  const gaStatus = asRecord(
+    await ctx.runQuery(api.analyticsIntegrations.getGoogleAnalyticsStatus, {
+      workspaceId: input.workspaceId,
+      clientId,
+    }),
+  )
+
+  let syncTimeframeDays: number | null = null
+  let syncHint: string | null = null
+
+  let totals = metricsToAnalyticsTotals(computeAggregateMetricsFromRows(metricsRows))
+  if (!hasAnalyticsTotals(totals)) {
+    const syncResult = await syncConnectedGoogleAnalytics(ctx, {
+      workspaceId: input.workspaceId,
+      clientId,
+      startDate,
+      endDate,
+    })
+    syncTimeframeDays = syncResult.timeframeDays
+    syncHint = syncResult.syncHint
+
+    if (syncResult.synced) {
+      const reloaded = await loadAnalyticsMetrics(ctx, {
+        workspaceId: input.workspaceId,
+        clientId,
+        startDate,
+        endDate,
+      })
+      metricsRows = reloaded.metricsRows
+      totals = metricsToAnalyticsTotals(computeAggregateMetricsFromRows(metricsRows))
+    }
+  }
 
   const previousSummaryPayload = previousWindow
     ? asRecord(
@@ -150,15 +308,22 @@ export const summarizeAnalyticsPerformanceHandler: OperationHandler = async (ctx
       : [],
   )
 
-  const currentMetrics = computeAggregateMetricsFromRows(metricsRows)
-  const previousMetrics = computeAggregateMetricsFromRows(previousMetricsRows)
-  const totals = metricsToAnalyticsTotals(currentMetrics)
-  const previousTotals = metricsToAnalyticsTotals(previousMetrics)
+  const previousTotals = metricsToAnalyticsTotals(computeAggregateMetricsFromRows(previousMetricsRows))
   const comparison = buildAnalyticsComparison(totals, previousTotals, previousWindow)
-  const currentSituation = buildAnalyticsSituation(totals)
   const dayCount = new Set(metricsRows.map((row) => asNonEmptyString(row.date)).filter(Boolean)).size
+  const currencyCode = resolveAnalyticsCurrencyCode(metricsRows)
+  const currentSituation = buildAnalyticsSituation(totals, currencyCode)
 
-  if (totals.users <= 0 && totals.sessions <= 0 && totals.conversions <= 0 && totals.revenue <= 0) {
+  const connection = gaStatus
+    ? {
+        accountId: asNonEmptyString(gaStatus.accountId),
+        accountName: asNonEmptyString(gaStatus.accountName),
+        currency: asNonEmptyString(gaStatus.currency),
+        lastSyncStatus: asNonEmptyString(gaStatus.lastSyncStatus),
+      }
+    : null
+
+  if (!hasAnalyticsTotals(totals)) {
     return {
       success: true,
       route: '/dashboard/analytics',
@@ -171,14 +336,28 @@ export const summarizeAnalyticsPerformanceHandler: OperationHandler = async (ctx
         previousWindow,
         comparison,
         totals,
+        currentSituation,
         metricsAvailable: false,
         syncedDays: dayCount,
+        currencyCode,
+        providerLabel: 'Google Analytics',
+        connection,
+        syncTimeframeDays,
+        syncHint,
+        suggestedActionRoute: '/dashboard/analytics',
       },
-      userMessage: `Google Analytics (${startDate} to ${endDate}): no synced traffic in this window yet. Connect a property and run a sync from Analytics.`,
+      userMessage: [
+        `Google Analytics (${periodLabel}, ${startDate} to ${endDate}): no synced traffic in this window yet.`,
+        syncTimeframeDays !== null
+          ? `Synced the last ${syncTimeframeDays} days but still found no traffic rows for this range.`
+          : syncHint ?? 'Connect a property and run a sync from Analytics.',
+      ]
+        .filter((line): line is string => Boolean(line))
+        .join(' '),
     }
   }
 
-  const headline = `Google Analytics ${periodLabel}: ${formatWholeNumber(totals.users)} users · ${formatWholeNumber(totals.sessions)} sessions · ${formatWholeNumber(totals.conversions)} conversions · ${formatCurrency(totals.revenue)} revenue.`
+  const headline = `Google Analytics (${periodLabel}, ${startDate} to ${endDate}): ${formatWholeNumber(totals.users)} users · ${formatWholeNumber(totals.sessions)} sessions · ${formatWholeNumber(totals.conversions)} conversions · ${formatCurrency(totals.revenue, currencyCode)} revenue.`
 
   return {
     success: true,
@@ -195,7 +374,11 @@ export const summarizeAnalyticsPerformanceHandler: OperationHandler = async (ctx
       currentSituation,
       metricsAvailable: true,
       syncedDays: dayCount,
+      currencyCode,
       providerLabel: 'Google Analytics',
+      connection,
+      syncTimeframeDays,
+      syncHint,
     },
     userMessage: headline,
   }

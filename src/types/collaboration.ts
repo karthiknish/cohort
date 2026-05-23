@@ -89,6 +89,8 @@ export type DirectMessageAttachment = {
 export type DirectMessage = {
   id: string
   legacyId: string
+  /** Present on paginated list responses for client-side validation. */
+  conversationLegacyId?: string
   senderId: string
   senderName: string
   senderRole?: string | null

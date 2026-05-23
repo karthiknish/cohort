@@ -26,19 +26,8 @@ export type CampaignAdSetRow = {
   status: string
 }
 
-export type CampaignMetaAdRow = {
-  id: string
-  name: string
-  status: string
-  adSetId?: string
-  reviewStatus?: 'approved' | 'pending' | 'disapproved' | 'issues' | 'unknown'
-  reviewMessages?: string[]
-}
-
 export type CampaignAdsSectionState = {
   adSets: CampaignAdSetRow[]
-  metaAds: CampaignMetaAdRow[]
-  togglingMetaAdId: string | null
   adSetDialogOpen: boolean
   ads: CampaignAd[]
   loading: boolean
@@ -57,8 +46,6 @@ export type CampaignAdsSectionState = {
 
 export type CampaignAdsSectionAction =
   | { type: 'setAdSets'; value: CampaignAdSetRow[] }
-  | { type: 'setMetaAds'; value: CampaignMetaAdRow[] }
-  | { type: 'setTogglingMetaAdId'; value: string | null }
   | { type: 'setTogglingAdSetId'; value: string | null }
   | { type: 'setAdSetDialogOpen'; value: boolean }
   | { type: 'setAds'; value: CampaignAd[] }

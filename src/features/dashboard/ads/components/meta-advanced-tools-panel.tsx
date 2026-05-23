@@ -2,7 +2,7 @@
 
 import { useAction } from 'convex/react'
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
-import { ExternalLink, Loader2, Search } from 'lucide-react'
+import { Activity, ExternalLink, Loader2, Search, Webhook } from 'lucide-react'
 
 import { adsMetaToolsApi } from '@/lib/convex-api'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
@@ -26,7 +26,14 @@ import {
   resolveMetaCampaignUiVisibility,
 } from '@/lib/meta-campaign-ui'
 
-type PixelRow = { id: string; name: string }
+import {
+  MetaJsonResultBlock,
+  MetaPixelPicker,
+  MetaToolsActionBar,
+  MetaToolsFormSection,
+  MetaToolsPanelShell,
+  type MetaPixelRow,
+} from './meta-tools-ui'
 
 type MetaAdvancedToolsPanelProps = {
   workspaceId: string
@@ -67,7 +74,8 @@ export function MetaAdvancedToolsPanel({
   const clearAdAccountWebhooks = useAction(adsMetaToolsApi.clearAdAccountWebhooks)
 
   const [pixels, dispatchPixels] = useReducer(
-    (_: { rows: PixelRow[]; loading: boolean }, value: { rows: PixelRow[]; loading: boolean }) => value,
+    (_: { rows: MetaPixelRow[]; loading: boolean }, value: { rows: MetaPixelRow[]; loading: boolean }) =>
+      value,
     { rows: [], loading: false },
   )
   const [pixelId, setPixelId] = useState('')
@@ -296,54 +304,79 @@ export function MetaAdvancedToolsPanel({
     return null
   }
 
+  const shellDescription =
+    visibility.showPixelInsights && visibility.showAdLibrary
+      ? 'Inspect pixel health, browse public Ad Library ads, manage Business Manager accounts, and tune webhook subscriptions.'
+      : visibility.showPixelInsights
+        ? 'Inspect pixel configuration, recent event volume, Business Manager access, and ad account webhooks.'
+        : visibility.showAdLibrary
+          ? 'Search the public Ad Library and manage Business Manager and webhook settings.'
+          : 'Business Manager and ad account webhook tools for your connected Meta app.'
+
   return (
-    <div className="space-y-3 rounded-lg border border-dashed border-border/60 p-3">
-      <p className="text-xs font-medium text-foreground">
-        {visibility.showPixelInsights && visibility.showAdLibrary
-          ? 'Pixel stats, Business Manager, Ad Library & webhooks'
-          : visibility.showPixelInsights
-            ? 'Pixel stats, Business Manager & webhooks'
-            : visibility.showAdLibrary
-              ? 'Ad Library, Business Manager & webhooks'
-              : 'Business Manager & webhooks'}
-      </p>
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="h-8 flex-wrap">
+    <MetaToolsPanelShell
+      icon={Activity}
+      title="Pixel insights & integrations"
+      description={shellDescription}
+    >
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="h-9 w-full flex-wrap justify-start gap-1 bg-muted/40 p-1">
           {visibility.showPixelInsights ? (
-            <TabsTrigger value="pixel" className="text-xs">
+            <TabsTrigger value="pixel" className="gap-1.5 text-xs sm:text-sm">
+              <Activity className="size-3.5 shrink-0" aria-hidden />
               Pixel
             </TabsTrigger>
           ) : null}
           {visibility.showBusinessManager ? (
-            <TabsTrigger value="business" className="text-xs">
+            <TabsTrigger value="business" className="text-xs sm:text-sm">
               Business
             </TabsTrigger>
           ) : null}
           {visibility.showAdLibrary ? (
-            <TabsTrigger value="adlibrary" className="text-xs">
+            <TabsTrigger value="adlibrary" className="text-xs sm:text-sm">
               Ad Library
             </TabsTrigger>
           ) : null}
           {visibility.showWebhooks ? (
-            <TabsTrigger value="webhooks" className="text-xs">
+            <TabsTrigger value="webhooks" className="gap-1.5 text-xs sm:text-sm">
+              <Webhook className="size-3.5 shrink-0" aria-hidden />
               Webhooks
             </TabsTrigger>
           ) : null}
         </TabsList>
 
         {visibility.showPixelInsights ? (
-        <MotionTabsContent activeTab={activeTab} tabValue="pixel" className="mt-3 space-y-2">
-          <PixelSelect pixels={pixels} pixelId={pixelId} onPixelIdChange={setPixelId} />
-          <Button type="button" size="sm" disabled={loadingPixel || !pixelId} onClick={handleLoadPixelInsights}>
-            {loadingPixel ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden /> : null}
-            Load details &amp; 7-day stats
-          </Button>
-          {pixelDetails ? (
-            <pre className="max-h-28 overflow-auto rounded-md bg-muted/30 p-2 text-[10px]">{pixelDetails}</pre>
-          ) : null}
-          {pixelStats ? (
-            <pre className="max-h-28 overflow-auto rounded-md bg-muted/30 p-2 text-[10px]">{pixelStats}</pre>
-          ) : null}
+        <MotionTabsContent activeTab={activeTab} tabValue="pixel" className="mt-4 space-y-5">
+          <MetaToolsFormSection
+            title="Pixel"
+            description="Load configuration and a 7-day event summary from Meta."
+          >
+            <MetaPixelPicker pixelId={pixelId} pixels={pixels} onPixelIdChange={setPixelId} />
+          </MetaToolsFormSection>
+
+          <MetaToolsActionBar>
+            <Button type="button" disabled={loadingPixel || !pixelId.trim()} onClick={handleLoadPixelInsights}>
+              {loadingPixel ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden /> : null}
+              Load pixel details &amp; stats
+            </Button>
+          </MetaToolsActionBar>
+
+          {loadingPixel ? (
+            <p className="text-xs text-muted-foreground">Fetching from Meta…</p>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <MetaJsonResultBlock
+                title="Configuration"
+                content={pixelDetails}
+                emptyLabel="Load a pixel to see its configuration."
+              />
+              <MetaJsonResultBlock
+                title="Last 7 days"
+                content={pixelStats}
+                emptyLabel="Load a pixel to see recent event stats."
+              />
+            </div>
+          )}
         </MotionTabsContent>
         ) : null}
 
@@ -434,72 +467,43 @@ export function MetaAdvancedToolsPanel({
         ) : null}
 
         {visibility.showWebhooks ? (
-        <MotionTabsContent activeTab={activeTab} tabValue="webhooks" className="mt-3 space-y-2">
-          <p className="text-[11px] text-muted-foreground">
-            Subscribes the linked Meta app to ad account change notifications. Configure your app callback URL in Meta
-            Developer settings.
-          </p>
-          <Button type="button" size="sm" variant="outline" disabled={loadingWebhooks} onClick={handleLoadWebhooks}>
-            {loadingWebhooks ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden /> : null}
-            Load current subscriptions
-          </Button>
-          <div className="flex flex-wrap gap-2">
-            {META_AD_ACCOUNT_WEBHOOK_FIELDS.map((field) => (
-              <label key={field} className="flex items-center gap-1.5 text-xs">
-                <Checkbox
-                  checked={webhookFields.has(field)}
-                  onChange={() => handleToggleWebhookField(field)}
-                />
-                <Badge variant="outline" className="text-[10px] capitalize">
-                  {field}
-                </Badge>
-              </label>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" disabled={savingWebhooks} onClick={handleSaveWebhooks}>
+        <MotionTabsContent activeTab={activeTab} tabValue="webhooks" className="mt-4 space-y-5">
+          <MetaToolsFormSection
+            title="Ad account subscriptions"
+            description="Subscribes your linked Meta app to change notifications. Set the callback URL in Meta Developer settings first."
+          >
+            <Button type="button" variant="outline" disabled={loadingWebhooks} onClick={handleLoadWebhooks}>
+              {loadingWebhooks ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden /> : null}
+              Load current subscriptions
+            </Button>
+            <div className="flex flex-wrap gap-2 pt-2">
+              {META_AD_ACCOUNT_WEBHOOK_FIELDS.map((field) => (
+                <label
+                  key={field}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border/60 bg-card/80 px-2.5 py-1.5 text-xs transition-colors hover:border-primary/25"
+                >
+                  <Checkbox
+                    checked={webhookFields.has(field)}
+                    onChange={() => handleToggleWebhookField(field)}
+                  />
+                  <Badge variant="outline" className="border-0 bg-transparent px-0 text-[10px] capitalize">
+                    {field}
+                  </Badge>
+                </label>
+              ))}
+            </div>
+          </MetaToolsFormSection>
+          <MetaToolsActionBar>
+            <Button type="button" disabled={savingWebhooks} onClick={handleSaveWebhooks}>
               Save subscriptions
             </Button>
-            <Button type="button" size="sm" variant="ghost" disabled={savingWebhooks} onClick={handleClearWebhooks}>
+            <Button type="button" variant="ghost" disabled={savingWebhooks} onClick={handleClearWebhooks}>
               Clear all
             </Button>
-          </div>
+          </MetaToolsActionBar>
         </MotionTabsContent>
         ) : null}
       </Tabs>
-    </div>
-  )
-}
-
-function PixelSelect({
-  pixels,
-  pixelId,
-  onPixelIdChange,
-}: {
-  pixels: { rows: PixelRow[]; loading: boolean }
-  pixelId: string
-  onPixelIdChange: (value: string) => void
-}) {
-  return (
-    <div className="space-y-1">
-      <Label className="text-xs">Pixel</Label>
-      {pixels.loading ? (
-        <p className="text-xs text-muted-foreground">Loading…</p>
-      ) : pixels.rows.length > 0 ? (
-        <Select value={pixelId || undefined} onValueChange={onPixelIdChange}>
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Select pixel" />
-          </SelectTrigger>
-          <SelectContent>
-            {pixels.rows.map((row) => (
-              <SelectItem key={row.id} value={row.id}>
-                {row.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : null}
-      <Input value={pixelId} onChange={(event) => onPixelIdChange(event.target.value)} className="h-9" />
-    </div>
+    </MetaToolsPanelShell>
   )
 }

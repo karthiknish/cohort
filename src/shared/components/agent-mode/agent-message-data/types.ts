@@ -32,6 +32,7 @@ export type AgentChartSeries = {
   subtitle?: string
   points: AgentChartPoint[]
   valueFormat: 'currency' | 'number' | 'percent'
+  currencyCode?: string
   layout: 'horizontal' | 'vertical'
 }
 

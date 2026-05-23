@@ -3,7 +3,8 @@ import {
   asErrorMessage,
   normalizeOperationName,
 } from './helpers'
-import { summarizeAnalyticsPerformanceHandler } from './operations/analyticsSummary'
+import { requestAnalyticsSyncHandler, summarizeAnalyticsPerformanceHandler } from './operations/analyticsSummary'
+import { spreadsheetExportHandlers } from './operations/spreadsheet/export'
 import { adsOperationHandlers } from './operations/ads/index'
 import { reportOperationHandlers } from './operations/ads/reports'
 import { clientOperationHandlers } from './operations/clients/index'
@@ -26,8 +27,10 @@ const operationHandlers: Record<string, OperationHandler> = {
   ...meetingOperationHandlers,
   ...adsOperationHandlers,
   summarizeAnalyticsPerformance: summarizeAnalyticsPerformanceHandler,
+  requestAnalyticsSync: requestAnalyticsSyncHandler,
   ...socialOperationHandlers,
   ...reportOperationHandlers,
+  ...spreadsheetExportHandlers,
 }
 
 export async function safeExecuteOperation(

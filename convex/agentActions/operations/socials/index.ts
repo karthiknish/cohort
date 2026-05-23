@@ -1,4 +1,4 @@
-import { api } from '/_generated/api'
+import { api, internal } from '/_generated/api'
 import {
   asNonEmptyString,
   asNumber,
@@ -43,6 +43,51 @@ function resolveTimeframeDays(params: Record<string, unknown>, startDate: string
 
   const spanDays = Math.max(Math.round((endMs - startMs) / 86_400_000) + 1, 1)
   return Math.min(spanDays, 365)
+}
+
+async function processQueuedSocialSyncJobs(
+  ctx: Parameters<OperationHandler>[0],
+  workspaceId: string,
+  maxJobs = 3,
+): Promise<void> {
+  for (let index = 0; index < maxJobs; index += 1) {
+    const job = await ctx.runMutation(internal.socialIntegrations.syncJobs.claimNextSyncJobInternal, {
+      workspaceId,
+    })
+    if (!job) return
+
+    try {
+      await ctx.runAction(internal.socialSyncWorkerActions.processClaimedJob, {
+        workspaceId,
+        jobId: job.id,
+        clientId: job.clientId,
+        surface: job.surface,
+        timeframeDays: job.timeframeDays,
+      })
+      await ctx.runMutation(internal.socialIntegrations.syncJobs.completeSyncJobInternal, {
+        jobId: job.id,
+      })
+      await ctx.runMutation(internal.socialIntegrations.settings.updateIntegrationStatusInternal, {
+        workspaceId,
+        clientId: job.clientId,
+        status: 'success',
+        message: null,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      await ctx.runMutation(internal.socialIntegrations.syncJobs.failSyncJobInternal, {
+        jobId: job.id,
+        message,
+      })
+      await ctx.runMutation(internal.socialIntegrations.settings.updateIntegrationStatusInternal, {
+        workspaceId,
+        clientId: job.clientId,
+        status: 'error',
+        message,
+      })
+      return
+    }
+  }
 }
 
 function formatSyncStatus(status: string | null): string {
@@ -119,61 +164,95 @@ export const socialOperationHandlers: Record<string, OperationHandler> = {
       }
     }
 
-    const overviews: Record<string, ReturnType<typeof toSocialOverviewSnapshot>> = {}
-    const topContent: Record<string, SocialTopContent[]> = {}
+    const loadSocialSnapshot = async () => {
+      const nextOverviews: Record<string, ReturnType<typeof toSocialOverviewSnapshot>> = {}
+      const nextTopContent: Record<string, SocialTopContent[]> = {}
 
-    for (const surface of surfaces) {
-      const overviewRaw = await ctx.runQuery(api.socialMetrics.listOverview, {
+      for (const surface of surfaces) {
+        const overviewRaw = await ctx.runQuery(api.socialMetrics.listOverview, {
+          workspaceId: input.workspaceId,
+          clientId: clientId ?? null,
+          surface,
+          startDate,
+          endDate,
+        })
+        nextOverviews[surface] = toSocialOverviewSnapshot(surface, asRecord(overviewRaw))
+
+        const contentRaw = await ctx.runQuery(api.socialMetrics.listContent, {
+          workspaceId: input.workspaceId,
+          clientId: clientId ?? null,
+          surface,
+          limit: 3,
+        })
+
+        nextTopContent[surface] = Array.isArray(contentRaw)
+          ? contentRaw.flatMap((item) => {
+              const record = asRecord(item)
+              if (!record) return []
+              const contentId = asNonEmptyString(record.contentId)
+              if (!contentId) return []
+              return [{
+                contentId,
+                message: asString(record.message),
+                impressions: asNumber(record.impressions) ?? 0,
+                reach: asNumber(record.reach) ?? 0,
+                engagedUsers: asNumber(record.engagedUsers) ?? 0,
+                publishedAt: asString(record.publishedAt),
+              }]
+            })
+          : []
+      }
+
+      return { overviews: nextOverviews, topContent: nextTopContent }
+    }
+
+    let { overviews, topContent } = await loadSocialSnapshot()
+
+    const snapshotHasMetrics = (
+      overviewMap: Record<string, ReturnType<typeof toSocialOverviewSnapshot>>,
+      contentMap: Record<string, SocialTopContent[]>,
+    ) =>
+      surfaces.some((surface) => (overviewMap[surface]?.rowCount ?? 0) > 0) ||
+      (contentMap.facebook?.length ?? 0) > 0 ||
+      (contentMap.instagram?.length ?? 0) > 0
+
+    let syncTimeframeDays: number | null = null
+    let syncHint: string | null = formatSyncStatus(connection.lastSyncStatus)
+
+    if (!snapshotHasMetrics(overviews, topContent)) {
+      const timeframeDays = resolveTimeframeDays(input.params, startDate, endDate)
+      await ctx.runMutation(api.socialIntegrations.requestManualSync, {
         workspaceId: input.workspaceId,
         clientId: clientId ?? null,
-        surface,
-        startDate,
-        endDate,
+        surface: surfaceFilter === 'all' ? null : surfaceFilter,
+        timeframeDays,
       })
-      overviews[surface] = toSocialOverviewSnapshot(surface, asRecord(overviewRaw))
+      await processQueuedSocialSyncJobs(ctx, input.workspaceId)
+      syncTimeframeDays = timeframeDays
+      syncHint = `Synced the last ${timeframeDays} days from Meta organic social.`
 
-      const contentRaw = await ctx.runQuery(api.socialMetrics.listContent, {
-        workspaceId: input.workspaceId,
-        clientId: clientId ?? null,
-        surface,
-        limit: 3,
-      })
-
-      topContent[surface] = Array.isArray(contentRaw)
-        ? contentRaw.flatMap((item) => {
-            const record = asRecord(item)
-            if (!record) return []
-            const contentId = asNonEmptyString(record.contentId)
-            if (!contentId) return []
-            return [{
-              contentId,
-              message: asString(record.message),
-              impressions: asNumber(record.impressions) ?? 0,
-              reach: asNumber(record.reach) ?? 0,
-              engagedUsers: asNumber(record.engagedUsers) ?? 0,
-              publishedAt: asString(record.publishedAt),
-            }]
-          })
-        : []
+      const reloaded = await loadSocialSnapshot()
+      overviews = reloaded.overviews
+      topContent = reloaded.topContent
     }
 
     const facebook = overviews.facebook ?? null
     const instagram = overviews.instagram ?? null
-    const hasMetrics =
-      (facebook?.rowCount ?? 0) > 0 ||
-      (instagram?.rowCount ?? 0) > 0 ||
-      (topContent.facebook?.length ?? 0) > 0 ||
-      (topContent.instagram?.length ?? 0) > 0
+    const hasMetrics = snapshotHasMetrics(overviews, topContent)
 
     const headlineParts = surfaces.flatMap((surface) => {
       const overview = overviews[surface]
       return overview ? [formatSurfaceHeadline(surface, overview)] : []
     })
 
-    const syncHint = formatSyncStatus(connection.lastSyncStatus)
     const userMessage = hasMetrics
       ? `${periodLabel} organic social (${startDate} to ${endDate}): ${headlineParts.join(' ')}`
-      : `Organic social is configured (${connection.facebookPageName ?? 'Facebook Page'}), but no metrics are synced for ${startDate} to ${endDate}. ${syncHint} — ask me to sync social metrics or widen the date range.`
+      : [
+          `Organic social is configured (${connection.facebookPageName ?? 'Facebook Page'}), but no metrics are synced for ${startDate} to ${endDate}.`,
+          syncTimeframeDays !== null
+            ? `Synced the last ${syncTimeframeDays} days but still found no rows in this range.`
+            : `${syncHint ?? 'Never synced'} — open Socials to verify the page binding.`,
+        ].join(' ')
 
     return {
       success: true,
@@ -188,6 +267,9 @@ export const socialOperationHandlers: Record<string, OperationHandler> = {
         instagram,
         topContent,
         metricsAvailable: hasMetrics,
+        syncTimeframeDays,
+        syncHint,
+        suggestedActionRoute: '/dashboard/socials',
       },
       userMessage,
     }

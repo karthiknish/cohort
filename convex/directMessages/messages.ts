@@ -40,6 +40,7 @@ export const listMessages = zWorkspacePaginatedQueryActive({
       items: items.map((msg) => ({
         _id: msg._id,
         legacyId: msg.legacyId,
+        conversationLegacyId: args.conversationLegacyId,
         senderId: msg.senderId,
         senderName: msg.senderName,
         senderRole: msg.senderRole,

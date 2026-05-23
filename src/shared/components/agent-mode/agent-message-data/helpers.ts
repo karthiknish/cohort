@@ -2,12 +2,7 @@ import { formatProviderName } from '@/lib/themes'
 
 import type { DeltaTone, MetricItem } from './types'
 
-const AGENT_MESSAGE_CURRENCY_FORMATTER = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-})
+import { formatEnUsCurrency } from '@/lib/intl/formatters'
 
 const AGENT_MESSAGE_WHOLE_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
@@ -37,8 +32,15 @@ export function compact<T>(items: Array<T | null>): T[] {
   return items.filter((item): item is T => item !== null)
 }
 
-export function formatCurrency(value: number): string {
-  return AGENT_MESSAGE_CURRENCY_FORMATTER.format(value)
+export function resolveCurrencyCode(data: Record<string, unknown> | undefined): string {
+  const code = asString(data?.currencyCode) ?? asString(data?.currency)
+  if (!code) return 'USD'
+  const normalized = code.toUpperCase()
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : 'USD'
+}
+
+export function formatCurrency(value: number, currencyCode = 'USD'): string {
+  return formatEnUsCurrency(value, currencyCode, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 export function formatWholeNumber(value: number): string {
@@ -104,6 +106,7 @@ export function getDeltaTone(value: number | null, invertTrend = false): DeltaTo
 export function buildMetricsFromAnalyticsTotals(
   totals: Record<string, unknown> | null,
   comparison: Record<string, unknown> | null,
+  currencyCode = 'USD',
 ): MetricItem[] {
   if (!totals) return []
 
@@ -149,7 +152,7 @@ export function buildMetricsFromAnalyticsTotals(
     revenue !== null
       ? {
           label: 'Revenue',
-          value: formatCurrency(revenue),
+          value: formatCurrency(revenue, currencyCode),
           numericValue: revenue,
           emphasis: 'primary',
           delta: formatDeltaPercent(asNumber(deltaPercent?.revenue)),
@@ -168,7 +171,7 @@ export function buildMetricsFromAnalyticsTotals(
     revenuePerSession !== null && sessions !== null && sessions > 0
       ? {
           label: 'Revenue / Session',
-          value: formatCurrency(revenuePerSession),
+          value: formatCurrency(revenuePerSession, currencyCode),
           numericValue: revenuePerSession,
         }
       : null,
@@ -185,6 +188,7 @@ export function buildMetricsFromAnalyticsTotals(
 export function buildMetricsFromTotals(
   totals: Record<string, unknown> | null,
   comparison: Record<string, unknown> | null,
+  currencyCode = 'USD',
 ): MetricItem[] {
   if (!totals) return []
 
@@ -203,7 +207,7 @@ export function buildMetricsFromTotals(
     spend !== null
       ? {
           label: 'Spend',
-          value: formatCurrency(spend),
+          value: formatCurrency(spend, currencyCode),
           numericValue: spend,
           emphasis: 'primary',
           delta: formatDeltaPercent(asNumber(deltaPercent?.spend)),
@@ -213,7 +217,7 @@ export function buildMetricsFromTotals(
     revenue !== null
       ? {
           label: 'Revenue',
-          value: formatCurrency(revenue),
+          value: formatCurrency(revenue, currencyCode),
           numericValue: revenue,
           emphasis: 'primary',
           delta: formatDeltaPercent(asNumber(deltaPercent?.revenue)),
@@ -260,7 +264,7 @@ export function buildMetricsFromTotals(
     cpc !== null && clicks !== null && clicks > 0
       ? {
           label: 'CPC',
-          value: formatCurrency(cpc),
+          value: formatCurrency(cpc, currencyCode),
           numericValue: cpc,
         }
       : clicks !== null && clicks > 0
@@ -269,7 +273,7 @@ export function buildMetricsFromTotals(
     cpa !== null && conversions !== null && conversions > 0
       ? {
           label: 'CPA',
-          value: formatCurrency(cpa),
+          value: formatCurrency(cpa, currencyCode),
           numericValue: cpa,
         }
       : conversions !== null && conversions > 0

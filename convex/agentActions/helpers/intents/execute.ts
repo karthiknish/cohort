@@ -29,6 +29,8 @@ import {
   deriveEntityDraftLabelFromAttachment,
   hasAttachmentContext,
   wantsOrganicSocialIntent,
+  wantsSpreadsheetExportIntent,
+  resolveSpreadsheetSourceFromMessage,
 } from './parsing'
 
 export function resolveDeterministicExecuteIntent(message: string, context?: AgentRequestContextType): DeterministicAgentIntent | null {
@@ -103,7 +105,106 @@ export function resolveDeterministicExecuteIntent(message: string, context?: Age
     }
   }
 
-  if (includesAnyPhrase(normalized, ['daily report', 'weekly report', 'monthly report', 'performance report', 'generate report', 'report for', 'report from', 'report between'])) {
+  const wantsAdsSync =
+    includesAnyPhrase(normalized, ['sync', 'refresh', 'resync', 'pull latest', 'fetch latest', 'update metrics']) &&
+    includesAnyPhrase(normalized, [
+      'ads',
+      'ad metrics',
+      'ad spend',
+      'campaign metrics',
+      'meta ads',
+      'facebook ads',
+      'google ads',
+      'tiktok ads',
+      'linkedin ads',
+      'paid media',
+      'paid ads',
+    ]) &&
+    !wantsOrganicSocialIntent(normalized)
+
+  if (wantsAdsSync) {
+    const params: Record<string, unknown> = { period: inferredPeriod }
+    if (providerIds.length === 1) params.providerId = providerIds[0]
+    if (providerIds.length > 0) params.providerIds = providerIds
+    if (context?.activeClientId) params.clientId = context.activeClientId
+    if (parsedDateRange) Object.assign(params, parsedDateRange)
+    return {
+      action: 'execute',
+      operation: 'requestAdsSync',
+      params,
+      message: parsedDateRange
+        ? `Queuing an ads sync for ${parsedDateRange.startDate} to ${parsedDateRange.endDate} now.`
+        : 'Queuing an ads metrics sync now.',
+    }
+  }
+
+  const wantsAnalyticsSync =
+    includesAnyPhrase(normalized, ['sync', 'refresh', 'resync', 'pull latest', 'fetch latest', 'update metrics']) &&
+    includesAnyPhrase(normalized, [
+      'analytics',
+      'google analytics',
+      'ga4',
+      'website traffic',
+      'site traffic',
+      'web traffic',
+    ])
+
+  if (wantsAnalyticsSync) {
+    const params: Record<string, unknown> = { period: inferredPeriod }
+    if (context?.activeClientId) params.clientId = context.activeClientId
+    if (parsedDateRange) Object.assign(params, parsedDateRange)
+    return {
+      action: 'execute',
+      operation: 'requestAnalyticsSync',
+      params,
+      message: parsedDateRange
+        ? `Queuing a Google Analytics sync for ${parsedDateRange.startDate} to ${parsedDateRange.endDate} now.`
+        : 'Queuing a Google Analytics sync now.',
+    }
+  }
+
+  if (wantsSpreadsheetExportIntent(normalized)) {
+    const source = resolveSpreadsheetSourceFromMessage(normalized, context, clientReference)
+    const params: Record<string, unknown> = { period: inferredPeriod }
+    if (source) params.source = source
+    if (providerIds.length === 1) params.providerId = providerIds[0]
+    if (providerIds.length > 0) params.providerIds = providerIds
+    if (context?.activeClientId) params.clientId = context.activeClientId
+    if (clientReference) params.clientReference = clientReference
+    if (parsedDateRange) Object.assign(params, parsedDateRange)
+    if (normalized.includes('instagram')) params.surface = 'instagram'
+    if (normalized.includes('facebook')) params.surface = 'facebook'
+
+    if (!source) {
+      return {
+        action: 'clarify',
+        message:
+          'I can export paid ads, website analytics, organic social, tasks, clients, projects, proposals, meetings, or a performance report to Excel — which should I use?',
+      }
+    }
+
+    const exportLabel =
+      source === 'ads'
+        ? 'ads'
+        : source === 'analytics'
+          ? 'analytics'
+          : source === 'social'
+            ? 'social'
+            : source === 'tasks' || source === 'clientTasks'
+              ? 'tasks'
+              : source
+
+    return {
+      action: 'execute',
+      operation: 'exportSpreadsheet',
+      params,
+      message: parsedDateRange
+        ? `Building an Excel export for ${exportLabel} (${parsedDateRange.startDate} to ${parsedDateRange.endDate}) now.`
+        : `Building an Excel export for ${exportLabel} now.`,
+    }
+  }
+
+  if (includesAnyPhrase(normalized, ['daily report', 'weekly report', 'monthly report', 'performance report', 'generate report', 'report for', 'report from', 'report between', 'quarterly report', 'q1 report', 'q2 report', 'q3 report', 'q4 report', 'last quarter report'])) {
     const period: ReportPeriod = includesAnyPhrase(normalized, ['daily']) ? 'daily' : includesAnyPhrase(normalized, ['monthly']) ? 'monthly' : inferredPeriod
     const params: Record<string, unknown> = { period }
     if (providerIds.length > 0) params.providerIds = providerIds
@@ -126,7 +227,19 @@ export function resolveDeterministicExecuteIntent(message: string, context?: Age
       'paid ads',
       'ad spend',
       'campaign spend',
+      'total spend',
+      'how much spend',
+      'money spent',
+      'what did we spend',
+      'return on ad spend',
+      'cost per click',
+      'cost per acquisition',
+      'tiktok performance',
+      'linkedin ads',
+      'google ads performance',
+      'meta ads performance',
     ]) ||
+    includesAnyPhrase(normalized, ['roas', 'cpc', 'cpa', 'ctr']) ||
     adsStatusSnapshotIntent
 
   const wantsAnalyticsSummary =
@@ -140,9 +253,16 @@ export function resolveDeterministicExecuteIntent(message: string, context?: Age
         'web traffic',
         'web analytics',
         'traffic summary',
+        'website performance',
+        'site performance',
+        'page views',
+        'pageviews',
+        'bounce rate',
+        'sessions',
+        'visitors',
       ]) ||
       (
-        includesAnyPhrase(normalized, ['analytics']) &&
+        includesAnyPhrase(normalized, ['analytics', 'website', 'site traffic', 'web traffic']) &&
         includesAnyPhrase(normalized, [
           'summary',
           'summarize',
@@ -158,9 +278,84 @@ export function resolveDeterministicExecuteIntent(message: string, context?: Age
           'last 7',
           'last 30',
           'last 100',
+          'yesterday',
+          'today',
+          'this week',
+          'last quarter',
+          'this quarter',
         ])
       )
     )
+
+  const wantsAmbiguousPerformanceRecap =
+    includesAnyPhrase(normalized, [
+      'how did we do',
+      'how are we doing',
+      'how did things go',
+      'quick recap',
+      'performance recap',
+      'give me a recap',
+      'business recap',
+    ]) &&
+    (parsedDateRange !== null ||
+      includesAnyPhrase(normalized, [
+        'last month',
+        'this month',
+        'last week',
+        'this week',
+        'yesterday',
+        'today',
+        'last quarter',
+        'this quarter',
+        'last year',
+        'this year',
+      ]))
+
+  if (wantsAmbiguousPerformanceRecap) {
+    if (wantsOrganicSocialIntent(normalized)) {
+      const params: Record<string, unknown> = { period: inferredPeriod }
+      if (context?.activeClientId) params.clientId = context.activeClientId
+      if (parsedDateRange) Object.assign(params, parsedDateRange)
+      return {
+        action: 'execute',
+        operation: 'summarizeSocialPerformance',
+        params,
+        message: 'Pulling your organic social recap now.',
+      }
+    }
+    if (wantsAnalyticsSummary) {
+      const params: Record<string, unknown> = { period: inferredPeriod }
+      if (context?.activeClientId) params.clientId = context.activeClientId
+      if (parsedDateRange) Object.assign(params, parsedDateRange)
+      return {
+        action: 'execute',
+        operation: 'summarizeAnalyticsPerformance',
+        params,
+        message: 'Pulling your website analytics recap now.',
+      }
+    }
+    if (
+      wantsPaidAdsSummary ||
+      includesAnyPhrase(normalized, ['spend', 'revenue', 'campaign', 'ads', 'roas'])
+    ) {
+      const params: Record<string, unknown> = { period: inferredPeriod }
+      if (providerIds.length === 1) params.providerId = providerIds[0]
+      if (providerIds.length > 0) params.providerIds = providerIds
+      if (context?.activeClientId) params.clientId = context.activeClientId
+      if (parsedDateRange) Object.assign(params, parsedDateRange)
+      return {
+        action: 'execute',
+        operation: 'summarizeAdsPerformance',
+        params,
+        message: 'Pulling your paid ads recap now.',
+      }
+    }
+    return {
+      action: 'clarify',
+      message:
+        'I can pull paid ads, website analytics, or organic social for that window — which should I use?',
+    }
+  }
 
   if (
     wantsOrganicSocialIntent(normalized) &&
@@ -231,7 +426,7 @@ export function resolveDeterministicExecuteIntent(message: string, context?: Age
     }
   }
 
-  if (includesAnyPhrase(normalized, ['meta ad metric', 'meta ad metrics', 'facebook ad metric', 'facebook ad metrics', 'ad metric', 'ad metrics', 'ads metric', 'ads metrics', 'meta performance', 'facebook performance', 'ads performance', 'ad performance', 'ads snapshot', 'ad snapshot', 'how are my ads doing', 'how are meta ads doing', 'current meta ad situation', 'current ad situation', 'metrics for', 'metrics from', 'metrics between', 'active ads', 'active campaigns', 'currently active ads', 'currently active campaigns', 'running ads', 'running campaigns', 'live ads', 'live campaigns', 'what ads are active', 'which ads are active', 'what campaigns are active', 'which campaigns are active']) || adsStatusSnapshotIntent || wantsPaidAdsSummary) {
+  if (includesAnyPhrase(normalized, ['meta ad metric', 'meta ad metrics', 'facebook ad metric', 'facebook ad metrics', 'ad metric', 'ad metrics', 'ads metric', 'ads metrics', 'meta performance', 'facebook performance', 'ads performance', 'ad performance', 'ads snapshot', 'ad snapshot', 'how are my ads doing', 'how are meta ads doing', 'current meta ad situation', 'current ad situation', 'metrics for', 'metrics from', 'metrics between', 'active ads', 'active campaigns', 'currently active ads', 'currently active campaigns', 'running ads', 'running campaigns', 'live ads', 'live campaigns', 'what ads are active', 'which ads are active', 'what campaigns are active', 'which campaigns are active', 'spend yesterday', 'spend today', 'spend last month', 'spend last week', 'how much did we spend', 'what was our roas']) || adsStatusSnapshotIntent || wantsPaidAdsSummary) {
     const focusActive = adsStatusSnapshotIntent || includesAnyPhrase(normalized, ['active ads', 'active campaigns', 'currently active', 'running ads', 'running campaigns', 'live ads', 'live campaigns', 'what ads are active', 'which ads are active', 'what campaigns are active', 'which campaigns are active'])
     const params: Record<string, unknown> = { period: inferredPeriod }
     if (providerIds.length === 1) params.providerId = providerIds[0]
@@ -244,7 +439,50 @@ export function resolveDeterministicExecuteIntent(message: string, context?: Age
       action: 'execute',
       operation: 'summarizeAdsPerformance',
       params,
-      message: campaignQuery ? `Checking the ${campaignQuery} campaign on ${getProviderSummaryLabel(providerIds)} now.` : focusActive ? 'Pulling the currently active ads and campaign snapshot now.' : undefined,
+      message: campaignQuery
+        ? `Checking the ${campaignQuery} campaign on ${getProviderSummaryLabel(providerIds)} now.`
+        : parsedDateRange
+          ? `Pulling ${getProviderSummaryLabel(providerIds)} for ${parsedDateRange.startDate} to ${parsedDateRange.endDate} now.`
+          : focusActive
+            ? 'Pulling the currently active ads and campaign snapshot now.'
+            : undefined,
+    }
+  }
+
+  const wantsOverdueTasks =
+    includesAnyPhrase(normalized, ['task', 'tasks']) &&
+    includesAnyPhrase(normalized, ['overdue', 'past due', 'late task', 'late tasks'])
+  const wantsDueTodayTasks =
+    includesAnyPhrase(normalized, ['task', 'tasks']) &&
+    includesAnyPhrase(normalized, ['due today', 'tasks for today', 'tasks today'])
+  const wantsHighPriorityTasks =
+    includesAnyPhrase(normalized, ['task', 'tasks']) &&
+    includesAnyPhrase(normalized, ['high priority', 'urgent task', 'urgent tasks'])
+
+  if (wantsOverdueTasks && !wantsClientTasks) {
+    return {
+      action: 'execute',
+      operation: 'summarizeMyTasks',
+      params: { mode: 'list', timeWindow: 'overdue' },
+      message: 'Listing your overdue tasks now.',
+    }
+  }
+
+  if (wantsDueTodayTasks && !wantsClientTasks) {
+    return {
+      action: 'execute',
+      operation: 'summarizeMyTasks',
+      params: { mode: 'list', timeWindow: 'today' },
+      message: 'Listing tasks due today now.',
+    }
+  }
+
+  if (wantsHighPriorityTasks && !wantsClientTasks) {
+    return {
+      action: 'execute',
+      operation: 'summarizeMyTasks',
+      params: { mode: 'summary', timeWindow: 'all' },
+      message: 'Pulling your high-priority tasks now.',
     }
   }
 
@@ -259,7 +497,7 @@ export function resolveDeterministicExecuteIntent(message: string, context?: Age
     }
   }
 
-  if (wantsClientTasks && (wantsTaskSummary || wantsTaskList)) {
+  if (wantsClientTasks && (wantsTaskSummary || wantsTaskList || wantsOverdueTasks || wantsDueTodayTasks)) {
     if (!clientReference && !context?.activeClientId && !includesAnyPhrase(normalized, ['this client', 'current client'])) {
       return {
         action: 'clarify',
@@ -267,8 +505,10 @@ export function resolveDeterministicExecuteIntent(message: string, context?: Age
       }
     }
 
-    const mode = wantsTaskSummary ? 'summary' : 'list'
-    const timeWindow = parseTaskTimeWindowFromIntent(message)
+    const mode = wantsTaskSummary && !wantsOverdueTasks && !wantsDueTodayTasks ? 'summary' : 'list'
+    let timeWindow = parseTaskTimeWindowFromIntent(message)
+    if (wantsOverdueTasks) timeWindow = 'overdue'
+    if (wantsDueTodayTasks) timeWindow = 'today'
     const params: Record<string, unknown> = { mode, timeWindow }
 
     if (clientReference) {
@@ -278,14 +518,20 @@ export function resolveDeterministicExecuteIntent(message: string, context?: Age
     }
 
     const clientLabel = clientReference ?? 'that client'
+    const statusMessage =
+      timeWindow === 'overdue'
+        ? `Listing overdue tasks for ${clientLabel} now.`
+        : timeWindow === 'today'
+          ? `Listing tasks due today for ${clientLabel} now.`
+          : mode === 'summary'
+            ? `Pulling the task summary for ${clientLabel} now.`
+            : `Listing the tasks for ${clientLabel} now.`
 
     return {
       action: 'execute',
       operation: 'summarizeClientTasks',
       params,
-      message: mode === 'summary'
-        ? `Pulling the task summary for ${clientLabel} now.`
-        : `Listing the tasks for ${clientLabel} now.`,
+      message: statusMessage,
     }
   }
 
@@ -371,6 +617,92 @@ export function resolveDeterministicExecuteIntent(message: string, context?: Age
     const memberName = extractTrailingText(message, [/add\s+team\s+member\s+(.+)\s+to\s+client/i, /add\s+teammate\s+(.+)\s+to\s+client/i])
     if (!clientId || !memberName) return { action: 'clarify', message: 'I can add that teammate — what is their name, and which client should I add them to?' }
     return { action: 'execute', operation: 'addClientTeamMember', params: { clientId, name: memberName }, message: `Adding ${memberName} to that client.` }
+  }
+
+  if (
+    includesAnyPhrase(normalized, ['list projects', 'active projects', 'show projects', 'our projects']) &&
+    !includesAnyPhrase(normalized, ['create project', 'add project', 'new project', 'update project', 'edit project'])
+  ) {
+    return {
+      action: 'execute',
+      operation: 'listActiveProjects',
+      params: {},
+      message: 'Listing active projects in this workspace now.',
+    }
+  }
+
+  if (
+    includesAnyPhrase(normalized, ['list proposals', 'show proposals', 'our proposals', 'proposal drafts', 'open proposals', 'draft proposals', 'proposal list']) &&
+    !includesAnyPhrase(normalized, ['create proposal', 'generate proposal', 'draft proposal', 'update proposal'])
+  ) {
+    const params: Record<string, unknown> = {}
+    if (context?.activeClientId) params.clientId = context.activeClientId
+    return {
+      action: 'execute',
+      operation: 'listProposals',
+      params,
+      message: 'Listing proposal drafts now.',
+    }
+  }
+
+  if (
+    includesAnyPhrase(normalized, ['meeting', 'meetings']) &&
+    includesAnyPhrase(normalized, [
+      'summary',
+      'summarize',
+      'list',
+      'show',
+      'upcoming',
+      'what',
+      'next',
+      'when is',
+      'meetings today',
+      'meetings this week',
+      'next meeting',
+    ]) ||
+    (
+      includesAnyPhrase(normalized, ['today', 'this week']) &&
+      includesAnyPhrase(normalized, ['meeting', 'meetings'])
+    )
+  ) {
+    const params: Record<string, unknown> = {}
+    if (context?.activeClientId) params.clientId = context.activeClientId
+    if (includesAnyPhrase(normalized, ['past', 'previous', 'history'])) params.includePast = true
+    return {
+      action: 'execute',
+      operation: 'summarizeMeetings',
+      params,
+      message: 'Pulling your meetings summary now.',
+    }
+  }
+
+  if (
+    includesAnyPhrase(normalized, ['update proposal', 'edit proposal', 'change proposal']) &&
+    !includesAnyPhrase(normalized, ['generate proposal', 'create proposal', 'draft proposal'])
+  ) {
+    const proposalId = extractEntityIdFromIntent(message, 'proposal') ?? asNonEmptyString(context?.activeProposalId ?? null)
+    if (!proposalId) return { action: 'clarify', message: buildClarificationMessage('proposal', context) }
+    const params: Record<string, unknown> = { proposalId }
+    const section = extractTrailingText(message, [/section\s+(.+)$/i, /update\s+(.+?)\s+in\s+proposal/i])
+    if (section) params.section = section
+    if (context?.activeClientId) params.clientId = context.activeClientId
+    return { action: 'execute', operation: 'updateProposalDraft', params, message: 'Updating that proposal draft now.' }
+  }
+
+  if (
+    includesAnyPhrase(normalized, ['proposal question', 'answer proposal', 'continue proposal', 'next proposal question']) ||
+    (includesAnyPhrase(normalized, ['proposal']) && includesAnyPhrase(normalized, ['answer', 'respond', 'reply']))
+  ) {
+    const answer = extractTrailingText(message, [/answer\s+(.+)$/i, /reply\s+(.+)$/i]) ?? message.trim()
+    const params: Record<string, unknown> = { answer }
+    if (context?.activeProposalId) params.proposalId = context.activeProposalId
+    if (context?.activeClientId) params.clientId = context.activeClientId
+    return {
+      action: 'execute',
+      operation: 'advanceProposalConversation',
+      params,
+      message: 'Recording your proposal answer and moving to the next step.',
+    }
   }
 
   if (includesAnyPhrase(normalized, ['create proposal draft', 'new proposal draft', 'draft proposal'])) {

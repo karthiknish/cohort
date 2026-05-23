@@ -80,6 +80,7 @@ const OPERATION_LABELS: Record<string, string> = {
   updateProposalDraft: 'Updating proposal',
   generateProposalFromDraft: 'Generating proposal',
   summarizeAdsPerformance: 'Checking ads performance',
+  exportSpreadsheet: 'Building Excel export',
   generatePerformanceReport: 'Building report',
   advanceProposalConversation: 'Gathering proposal details',
 }

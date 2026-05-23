@@ -1,4 +1,4 @@
-import { api } from '/_generated/api'
+import { api, internal } from '/_generated/api'
 import {
   asNonEmptyString,
   asNumber,
@@ -17,6 +17,8 @@ import {
   unwrapConvexResult,
 } from '../../helpers'
 import type { OperationHandler } from '../../types'
+import { normalizeAdsProviderId } from '@/domain/ads/provider'
+
 import {
   ALL_PROVIDER_IDS,
   buildAggregateComparison,
@@ -25,13 +27,184 @@ import {
   buildProviderBreakdownFromRows,
   computeAggregateMetrics,
   computeAggregateMetricsFromRows,
+  extractV2InsightsSnapshot,
   filterAdsMetricRows,
+  formatProviderDisplayName,
   getPreviousDateWindow,
   isActiveCampaignStatus,
   isPausedCampaignStatus,
   matchesCampaignQuery,
   normalizeCampaignLookupText,
+  resolveAdsSyncTimeframeDays,
 } from '../shared'
+
+type AdsMetricsBundle = {
+  metricsPayload: Record<string, unknown>
+  metricsSummary: Record<string, unknown>
+  metricsRows: Record<string, unknown>[]
+  v2Snapshot: ReturnType<typeof extractV2InsightsSnapshot>
+  previousSummaryPayload: Record<string, unknown> | null
+  previousSummary: Record<string, unknown>
+  previousMetricsRows: Record<string, unknown>[]
+  previousV2Snapshot: ReturnType<typeof extractV2InsightsSnapshot>
+}
+
+async function loadAdsMetricsBundle(
+  ctx: Parameters<OperationHandler>[0],
+  args: {
+    workspaceId: string
+    clientId?: string
+    providerIds: string[]
+    startDate: string
+    endDate: string
+    previousWindow: { startDate: string; endDate: string } | null
+  },
+): Promise<AdsMetricsBundle> {
+  const metricsRaw = await ctx.runQuery(api.adsMetrics.listMetricsWithSummaryV2, {
+    workspaceId: args.workspaceId,
+    clientId: args.clientId,
+    providerIds: args.providerIds,
+    startDate: args.startDate,
+    endDate: args.endDate,
+    aggregate: true,
+    limit: 500,
+  })
+
+  const metricsPayload = asRecord(unwrapConvexResult(metricsRaw)) ?? asRecord(metricsRaw) ?? {}
+  const metricsSummary = asRecord(metricsPayload.summary) ?? {}
+  const v2Snapshot = extractV2InsightsSnapshot(metricsSummary)
+  const metricsRows = filterAdsMetricRows(
+    Array.isArray(metricsPayload.metrics)
+      ? metricsPayload.metrics.flatMap((item) => {
+          const record = asRecord(item)
+          return record !== null ? [record] : []
+        })
+      : [],
+  )
+
+  const previousSummaryPayload = args.previousWindow
+    ? asRecord(
+        unwrapConvexResult(
+          await ctx.runQuery(api.adsMetrics.listMetricsWithSummaryV2, {
+            workspaceId: args.workspaceId,
+            clientId: args.clientId,
+            providerIds: args.providerIds,
+            startDate: args.previousWindow.startDate,
+            endDate: args.previousWindow.endDate,
+            aggregate: true,
+            limit: 500,
+          }),
+        ),
+      )
+    : null
+  const previousSummary = asRecord(previousSummaryPayload?.summary) ?? {}
+  const previousV2Snapshot = extractV2InsightsSnapshot(previousSummary)
+  const previousMetricsRows = filterAdsMetricRows(
+    Array.isArray(previousSummaryPayload?.metrics)
+      ? previousSummaryPayload.metrics.flatMap((item) => {
+          const record = asRecord(item)
+          return record !== null ? [record] : []
+        })
+      : [],
+  )
+
+  return {
+    metricsPayload,
+    metricsSummary,
+    metricsRows,
+    v2Snapshot,
+    previousSummaryPayload,
+    previousSummary,
+    previousMetricsRows,
+    previousV2Snapshot,
+  }
+}
+
+function hasPaidAdsTotals(metrics: ReturnType<typeof computeAggregateMetrics>): boolean {
+  return (
+    metrics.spend > 0 ||
+    metrics.impressions > 0 ||
+    metrics.clicks > 0 ||
+    metrics.conversions > 0 ||
+    metrics.revenue > 0
+  )
+}
+
+function formatSyncTimestamp(valueMs: number | null): string | null {
+  if (!valueMs || !Number.isFinite(valueMs)) return null
+  return new Date(valueMs).toISOString().slice(0, 10)
+}
+
+function buildAdsIntegrationSyncHint(
+  statuses: Array<{
+    providerId: string
+    lastSyncStatus: string
+    lastSyncedAtMs: number | null
+    lastSyncMessage: string | null
+  }>,
+  providerIds: string[],
+): string | null {
+  const targets = providerIds.length > 0 ? providerIds : [...ALL_PROVIDER_IDS]
+  const lines = targets.flatMap((providerId) => {
+    const canonical = normalizeAdsProviderId(providerId)
+    const row = statuses.find((status) => normalizeAdsProviderId(status.providerId) === canonical)
+    if (!row) {
+      return [`${formatProviderDisplayName(providerId)} is not linked for this scope.`]
+    }
+    const syncedThrough = formatSyncTimestamp(row.lastSyncedAtMs)
+    const status = row.lastSyncStatus || 'unknown'
+    if (status === 'success' && syncedThrough) {
+      return [`${formatProviderDisplayName(providerId)} last synced through ${syncedThrough}.`]
+    }
+    if (row.lastSyncMessage) {
+      return [`${formatProviderDisplayName(providerId)} sync: ${status} — ${row.lastSyncMessage}`]
+    }
+    return [`${formatProviderDisplayName(providerId)} sync status: ${status}.`]
+  })
+
+  return lines.length > 0 ? lines.join(' ') : null
+}
+
+async function syncConnectedAdsProviders(
+  ctx: Parameters<OperationHandler>[0],
+  args: {
+    workspaceId: string
+    clientId: string | null
+    providerIds: string[]
+    startDate: string
+    endDate: string
+    integrationStatuses: Array<{ providerId: string; accountId: string | null }>
+  },
+): Promise<number | null> {
+  const connected = args.integrationStatuses.filter(
+    (row) =>
+      args.providerIds.includes(row.providerId) &&
+      typeof row.accountId === 'string' &&
+      row.accountId.trim().length > 0,
+  )
+  if (connected.length === 0) return null
+
+  const timeframeDays = resolveAdsSyncTimeframeDays(args.startDate, args.endDate)
+
+  await Promise.all(
+    connected.map((row) =>
+      ctx.runMutation(api.adsIntegrations.requestManualSync, {
+        workspaceId: args.workspaceId,
+        providerId: row.providerId,
+        clientId: args.clientId,
+        timeframeDays,
+      }),
+    ),
+  )
+
+  for (let index = 0; index < connected.length; index += 1) {
+    await ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
+      workspaceId: args.workspaceId,
+    })
+  }
+
+  return timeframeDays
+}
 
 export const adsOperationHandlers: Record<string, OperationHandler> = {
   async updateAdsCampaignStatus(ctx, input) {
@@ -129,47 +302,172 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
 
     const adsProviderIds = providerIds.length > 0 ? providerIds : [...ALL_PROVIDER_IDS]
 
-    const metricsRaw = await ctx.runQuery(api.adsMetrics.listMetricsWithSummary, {
+    let metricsScopeNote: string | null = null
+    let {
+      metricsPayload,
+      metricsSummary,
+      metricsRows,
+      v2Snapshot,
+      previousSummaryPayload,
+      previousSummary,
+      previousMetricsRows,
+      previousV2Snapshot,
+    } = await loadAdsMetricsBundle(ctx, {
       workspaceId: input.workspaceId,
       clientId: clientId ?? undefined,
       providerIds: adsProviderIds,
       startDate,
       endDate,
-      aggregate: true,
-      limit: 500,
+      previousWindow,
     })
 
-    const metricsPayload = asRecord(unwrapConvexResult(metricsRaw)) ?? asRecord(metricsRaw) ?? {}
-    const metricsSummary = asRecord(metricsPayload.summary) ?? {}
-    const metricsRows = filterAdsMetricRows(
-      Array.isArray(metricsPayload.metrics)
-        ? metricsPayload.metrics.flatMap((item) => {
-            const record = asRecord(item)
-            return record !== null ? [record] : []
-          })
-        : [],
-    )
+    const initialTotals = metricsRows.length > 0
+      ? computeAggregateMetricsFromRows(metricsRows)
+      : computeAggregateMetrics({
+          spend: v2Snapshot.spend,
+          impressions: v2Snapshot.impressions,
+          clicks: v2Snapshot.clicks,
+          conversions: v2Snapshot.conversions,
+          revenue: v2Snapshot.revenue,
+        })
 
-    const previousSummaryPayload = previousWindow
-      ? asRecord(unwrapConvexResult(await ctx.runQuery(api.adsMetrics.listMetricsWithSummary, {
+    if (!hasPaidAdsTotals(initialTotals) && clientId) {
+      const workspaceScoped = await loadAdsMetricsBundle(ctx, {
+        workspaceId: input.workspaceId,
+        providerIds: adsProviderIds,
+        startDate,
+        endDate,
+        previousWindow,
+      })
+      const workspaceTotals = workspaceScoped.metricsRows.length > 0
+        ? computeAggregateMetricsFromRows(workspaceScoped.metricsRows)
+        : computeAggregateMetrics({
+            spend: workspaceScoped.v2Snapshot.spend,
+            impressions: workspaceScoped.v2Snapshot.impressions,
+            clicks: workspaceScoped.v2Snapshot.clicks,
+            conversions: workspaceScoped.v2Snapshot.conversions,
+            revenue: workspaceScoped.v2Snapshot.revenue,
+          })
+
+      if (hasPaidAdsTotals(workspaceTotals)) {
+        metricsPayload = workspaceScoped.metricsPayload
+        metricsSummary = workspaceScoped.metricsSummary
+        metricsRows = workspaceScoped.metricsRows
+        v2Snapshot = workspaceScoped.v2Snapshot
+        previousSummaryPayload = workspaceScoped.previousSummaryPayload
+        previousSummary = workspaceScoped.previousSummary
+        previousMetricsRows = workspaceScoped.previousMetricsRows
+        previousV2Snapshot = workspaceScoped.previousV2Snapshot
+        metricsScopeNote =
+          'Showing workspace-level synced metrics because this client has no tagged rows in that window.'
+      }
+    }
+
+    const integrationStatusesRaw = await ctx.runQuery(api.adsIntegrations.listStatuses, {
+      workspaceId: input.workspaceId,
+      clientId: clientId ?? null,
+    })
+    let integrationStatuses = Array.isArray(integrationStatusesRaw) ? integrationStatusesRaw : []
+    if (integrationStatuses.length === 0 && clientId) {
+      const workspaceStatusesRaw = await ctx.runQuery(api.adsIntegrations.listStatuses, {
+        workspaceId: input.workspaceId,
+        clientId: null,
+      })
+      integrationStatuses = Array.isArray(workspaceStatusesRaw) ? workspaceStatusesRaw : []
+    }
+
+    let syncTimeframeDays: number | null = null
+    const metricsAfterScope = metricsRows.length > 0
+      ? computeAggregateMetricsFromRows(metricsRows)
+      : computeAggregateMetrics({
+          spend: v2Snapshot.spend,
+          impressions: v2Snapshot.impressions,
+          clicks: v2Snapshot.clicks,
+          conversions: v2Snapshot.conversions,
+          revenue: v2Snapshot.revenue,
+        })
+
+    if (!hasPaidAdsTotals(metricsAfterScope)) {
+      const syncStatuses = integrationStatuses.flatMap((row) => {
+        const record = asRecord(row)
+        if (!record) return []
+        const providerId = asNonEmptyString(record.providerId)
+        if (!providerId) return []
+        return [{ providerId, accountId: asNonEmptyString(record.accountId) }]
+      })
+
+      syncTimeframeDays = await syncConnectedAdsProviders(ctx, {
+        workspaceId: input.workspaceId,
+        clientId,
+        providerIds: adsProviderIds,
+        startDate,
+        endDate,
+        integrationStatuses: syncStatuses,
+      })
+
+      if (syncTimeframeDays !== null) {
+        const reloaded = await loadAdsMetricsBundle(ctx, {
           workspaceId: input.workspaceId,
           clientId: clientId ?? undefined,
           providerIds: adsProviderIds,
-          startDate: previousWindow.startDate,
-          endDate: previousWindow.endDate,
-          aggregate: true,
-          limit: 500,
-        })))
-      : null
-    const previousSummary = asRecord(previousSummaryPayload?.summary) ?? {}
-    const previousMetricsRows = filterAdsMetricRows(
-      Array.isArray(previousSummaryPayload?.metrics)
-        ? previousSummaryPayload.metrics.flatMap((item) => {
-            const record = asRecord(item)
-            return record !== null ? [record] : []
-          })
-        : [],
-    )
+          startDate,
+          endDate,
+          previousWindow,
+        })
+        metricsPayload = reloaded.metricsPayload
+        metricsSummary = reloaded.metricsSummary
+        metricsRows = reloaded.metricsRows
+        v2Snapshot = reloaded.v2Snapshot
+        previousSummaryPayload = reloaded.previousSummaryPayload
+        previousSummary = reloaded.previousSummary
+        previousMetricsRows = reloaded.previousMetricsRows
+        previousV2Snapshot = reloaded.previousV2Snapshot
+
+        if (clientId) {
+          const reloadedTotals = metricsRows.length > 0
+            ? computeAggregateMetricsFromRows(metricsRows)
+            : computeAggregateMetrics({
+                spend: v2Snapshot.spend,
+                impressions: v2Snapshot.impressions,
+                clicks: v2Snapshot.clicks,
+                conversions: v2Snapshot.conversions,
+                revenue: v2Snapshot.revenue,
+              })
+          if (!hasPaidAdsTotals(reloadedTotals)) {
+            const workspaceScoped = await loadAdsMetricsBundle(ctx, {
+              workspaceId: input.workspaceId,
+              providerIds: adsProviderIds,
+              startDate,
+              endDate,
+              previousWindow,
+            })
+            const workspaceTotals = workspaceScoped.metricsRows.length > 0
+              ? computeAggregateMetricsFromRows(workspaceScoped.metricsRows)
+              : computeAggregateMetrics({
+                  spend: workspaceScoped.v2Snapshot.spend,
+                  impressions: workspaceScoped.v2Snapshot.impressions,
+                  clicks: workspaceScoped.v2Snapshot.clicks,
+                  conversions: workspaceScoped.v2Snapshot.conversions,
+                  revenue: workspaceScoped.v2Snapshot.revenue,
+                })
+            if (hasPaidAdsTotals(workspaceTotals)) {
+              metricsPayload = workspaceScoped.metricsPayload
+              metricsSummary = workspaceScoped.metricsSummary
+              metricsRows = workspaceScoped.metricsRows
+              v2Snapshot = workspaceScoped.v2Snapshot
+              previousSummaryPayload = workspaceScoped.previousSummaryPayload
+              previousSummary = workspaceScoped.previousSummary
+              previousMetricsRows = workspaceScoped.previousMetricsRows
+              previousV2Snapshot = workspaceScoped.previousV2Snapshot
+              metricsScopeNote =
+                'Showing workspace-level synced metrics because this client has no tagged rows in that window.'
+            }
+          }
+        }
+      }
+    }
+
+    const syncHint = buildAdsIntegrationSyncHint(integrationStatuses, adsProviderIds)
 
     let campaignCounts: { total: number | null; active: number | null; paused: number | null } = {
       total: null,
@@ -243,10 +541,30 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
 
     const currentTotals = filteredMetricsRows.length > 0
       ? computeAggregateMetricsFromRows(filteredMetricsRows)
-      : computeAggregateMetrics(asRecord(metricsSummary.totals))
+      : computeAggregateMetrics({
+          spend: v2Snapshot.spend,
+          impressions: v2Snapshot.impressions,
+          clicks: v2Snapshot.clicks,
+          conversions: v2Snapshot.conversions,
+          revenue: v2Snapshot.revenue,
+        })
     const previousTotals = filteredPreviousMetricsRows.length > 0
       ? computeAggregateMetricsFromRows(filteredPreviousMetricsRows)
-      : computeAggregateMetrics(asRecord(previousSummary.totals))
+      : computeAggregateMetrics({
+          spend: previousV2Snapshot.spend,
+          impressions: previousV2Snapshot.impressions,
+          clicks: previousV2Snapshot.clicks,
+          conversions: previousV2Snapshot.conversions,
+          revenue: previousV2Snapshot.revenue,
+        })
+    const integrationCurrency = integrationStatuses
+      .flatMap((row) => {
+        const record = asRecord(row)
+        const currency = asNonEmptyString(record?.currency)
+        return currency ? [currency.toUpperCase()] : []
+      })
+      .find((currency) => currency.length === 3)
+    const currencyCode = v2Snapshot.currency ?? integrationCurrency ?? 'USD'
     const totalsComparison = buildAggregateComparison(currentTotals, previousTotals)
     const providerBreakdown = filteredMetricsRows.length > 0
       ? buildProviderBreakdownFromRows(filteredMetricsRows, filteredPreviousMetricsRows)
@@ -331,7 +649,7 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
 
       return {
         success: true,
-        route: '/dashboard/analytics',
+        route: '/dashboard/ads',
         data: {
           period,
           periodLabel,
@@ -342,20 +660,32 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
           previousWindow,
           comparison: { ...totalsComparison, previousWindow },
           providerBreakdown,
+          dataKind: 'ads',
+          currencyCode,
           metricsAvailable: false,
           campaignCounts,
           campaignQuery,
           matchedCampaignCount: normalizedCampaignQuery ? matchingCampaigns.length : null,
           activeCampaigns,
+          metricsScopeNote,
+          currentSituation: syncTimeframeDays !== null
+            ? `Synced the last ${syncTimeframeDays} days from connected ad accounts but found no delivery in ${startDate} to ${endDate}.`
+            : syncHint ?? 'No synced ad metrics in this window yet.',
+          currencyBreakdown: v2Snapshot.currencyBreakdown,
+          syncTimeframeDays,
+          syncHint,
+          suggestedActionRoute: '/dashboard/ads',
         },
         userMessage: [
           normalizedCampaignQuery
             ? `${providerLabel} campaign check (${startDate} to ${endDate}): no synced metrics yet.`
-            : `${providerLabel} ${periodLabel}: no synced metrics in this window yet.`,
+            : `${providerLabel} (${periodLabel}, ${startDate} to ${endDate}): no synced metrics in this window yet.`,
           matchingSummary,
           normalizedCampaignQuery
             ? 'Open a matching campaign below or widen the date range after sync completes.'
-            : 'Confirm integrations are connected and recent syncs have completed.',
+            : syncTimeframeDays !== null
+              ? `Synced the last ${syncTimeframeDays} days from connected ad accounts but still found no delivery in this range.`
+              : syncHint ?? 'Connect an ad account on the Ads page, then sync metrics for this date range.',
         ]
           .filter((line): line is string => Boolean(line))
           .join(' '),
@@ -393,7 +723,7 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
         ].join(' ')
 
     const topCampaignLines = topCampaigns.length > 0
-      ? topCampaigns.map((campaign, index) => `${index + 1}. ${campaign.name}: ${formatCurrency(campaign.spend)} spend, ${formatWholeNumber(campaign.clicks)} clicks, ${formatWholeNumber(campaign.conversions)} conversions, ${formatRatio(campaign.roas)} ROAS`)
+      ? topCampaigns.map((campaign, index) => `${index + 1}. ${campaign.name}: ${formatCurrency(campaign.spend, currencyCode)} spend, ${formatWholeNumber(campaign.clicks)} clicks, ${formatWholeNumber(campaign.conversions)} conversions, ${formatRatio(campaign.roas)} ROAS`)
       : ['Top campaigns: unavailable from current synced metrics.']
 
     const campaignStateLine = campaignCounts.total !== null
@@ -403,11 +733,14 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
       ? activeCampaigns.map((campaign, index) => `${index + 1}. ${campaign.name} (${campaign.providerId})`)
       : ['No active campaigns were returned from the connected providers.']
     const leaderLine = topCampaigns[0] ? `Leading campaign: ${topCampaigns[0].name}` : null
-    const headline = `${providerLabel} ${periodLabel}: ${formatCurrency(spend)} spend · ${formatCurrency(revenue)} revenue · ${formatRatio(roas)} ROAS · ${formatWholeNumber(conversions)} conversions.`
+    const headline =
+      v2Snapshot.comparability === 'mixed_currency'
+        ? `${providerLabel} (${periodLabel}, ${startDate} to ${endDate}): ${formatWholeNumber(impressions)} impressions · ${formatWholeNumber(clicks)} clicks · ${formatWholeNumber(conversions)} conversions. Spend and revenue are broken down by currency below.`
+        : `${providerLabel} (${periodLabel}, ${startDate} to ${endDate}): ${formatCurrency(spend, currencyCode)} spend · ${formatCurrency(revenue, currencyCode)} revenue · ${formatRatio(roas)} ROAS · ${formatWholeNumber(conversions)} conversions.`
 
     return {
       success: true,
-      route: '/dashboard/analytics',
+      route: '/dashboard/ads',
       data: {
         period,
         periodLabel,
@@ -417,6 +750,10 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
         endDate,
         previousWindow,
         dataKind: 'ads',
+        currencyCode,
+        insightsWarnings: v2Snapshot.warnings,
+        metricsScopeNote,
+        currencyBreakdown: v2Snapshot.currencyBreakdown,
         totals: { spend, impressions, clicks, conversions, revenue, roas, ctr, cpc, cpa },
         comparison: { ...totalsComparison, previousWindow },
         providerBreakdown,
@@ -448,6 +785,77 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
         metricsAvailable: true,
       },
       userMessage: headline,
+    }
+  },
+
+  async requestAdsSync(ctx, input) {
+    const period = normalizeReportPeriod(input.params.period)
+    const { startDate, endDate } = resolveReportWindow(period, input.params)
+    const clientId = asNonEmptyString(input.params.clientId) ?? asNonEmptyString(input.context?.activeClientId ?? null)
+    const adsProviderIds = normalizeProviderIds(input.params.providerIds ?? input.params.providerId ?? ALL_PROVIDER_IDS)
+
+    const integrationStatusesRaw = await ctx.runQuery(api.adsIntegrations.listStatuses, {
+      workspaceId: input.workspaceId,
+      clientId: clientId ?? null,
+    })
+    let integrationStatuses = Array.isArray(integrationStatusesRaw) ? integrationStatusesRaw : []
+    if (integrationStatuses.length === 0 && clientId) {
+      const workspaceStatusesRaw = await ctx.runQuery(api.adsIntegrations.listStatuses, {
+        workspaceId: input.workspaceId,
+        clientId: null,
+      })
+      integrationStatuses = Array.isArray(workspaceStatusesRaw) ? workspaceStatusesRaw : []
+    }
+
+    const syncStatuses = integrationStatuses.flatMap((row) => {
+      const record = asRecord(row)
+      if (!record) return []
+      const providerId = normalizeProviderId(record.providerId)
+      if (!providerId || !adsProviderIds.includes(providerId)) return []
+      return [{ providerId, accountId: asNonEmptyString(record.accountId) }]
+    })
+
+    const connected = syncStatuses.filter((row) => typeof row.accountId === 'string' && row.accountId.length > 0)
+    if (connected.length === 0) {
+      return {
+        success: false,
+        retryable: false,
+        route: '/dashboard/ads',
+        data: { connected: false, providerIds: adsProviderIds },
+        userMessage: 'Connect an ad platform on the Ads page before requesting a sync.',
+      }
+    }
+
+    const syncTimeframeDays = await syncConnectedAdsProviders(ctx, {
+      workspaceId: input.workspaceId,
+      clientId,
+      providerIds: adsProviderIds,
+      startDate,
+      endDate,
+      integrationStatuses: connected,
+    })
+
+    const providerLabel = getProviderSummaryLabel(
+      connected.flatMap((row) => {
+        const providerId = normalizeProviderId(row.providerId)
+        return providerId ? [providerId] : []
+      }),
+    )
+
+    return {
+      success: true,
+      route: '/dashboard/ads',
+      data: {
+        syncTimeframeDays,
+        providerIds: adsProviderIds,
+        startDate,
+        endDate,
+        suggestedActionRoute: '/dashboard/ads',
+      },
+      userMessage:
+        syncTimeframeDays !== null
+          ? `Queued a ${providerLabel} sync for the last ${syncTimeframeDays} days. Metrics will refresh on Ads shortly.`
+          : `Queued a ${providerLabel} sync. Metrics will refresh on Ads shortly.`,
     }
   },
 }

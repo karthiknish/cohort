@@ -9,8 +9,17 @@ const WHOLE_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
 })
 
-function formatCurrency(value: number): string {
-  return USD_CURRENCY_FORMATTER.format(value)
+function formatCurrency(value: number, currency = 'USD'): string {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value)
+  } catch {
+    return USD_CURRENCY_FORMATTER.format(value)
+  }
 }
 
 function formatWholeNumber(value: number): string {

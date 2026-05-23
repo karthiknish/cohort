@@ -19,6 +19,7 @@ import {
   formatTaskDueDate,
   formatWholeNumber,
   getDeltaTone,
+  resolveCurrencyCode,
   resolveMetricsAvailable,
   resolveTotals,
 } from './helpers'
@@ -38,6 +39,7 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
   const campaignQuery = asString(data.campaignQuery)
   const matchedCampaignCount = asNumber(data.matchedCampaignCount)
   const metricsAvailable = resolveMetricsAvailable(data)
+  const currencyCode = resolveCurrencyCode(data)
   const dataKind = asString(data.dataKind)
   const isAnalytics = operation === 'summarizeAnalyticsPerformance' || dataKind === 'analytics'
   const isSocial = operation === 'summarizeSocialPerformance' || dataKind === 'social'
@@ -45,6 +47,7 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
   if (periodLabel) details.push({ label: 'Window', value: periodLabel })
   if (startDate || endDate) details.push({ label: 'Dates', value: startDate && endDate ? `${startDate} → ${endDate}` : startDate ?? endDate ?? '' })
   if (providerLabel) details.push({ label: 'Source', value: providerLabel })
+  if (currencyCode && currencyCode !== 'USD') details.push({ label: 'Currency', value: currencyCode })
   if (metricsAvailable === false) {
     details.push({
       label: isAnalytics ? 'Analytics Data' : isSocial ? 'Social Data' : 'Ads Data',
@@ -86,11 +89,35 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
 
   if (details.length > 0) sections.push({ type: 'metrics', title: 'Overview', items: details })
 
+  const metricsScopeNote = asString(data.metricsScopeNote)
+  const syncHint = asString(data.syncHint)
+  const syncTimeframeDays = asNumber(data.syncTimeframeDays)
+  const suggestedActionRoute = asString(data.suggestedActionRoute)
+  const insightsWarnings = Array.isArray(data.insightsWarnings)
+    ? data.insightsWarnings.flatMap((warning) => {
+        const message = asString(warning)
+        return message ? [message] : []
+      })
+    : []
+  const syncedDays = asNumber(data.syncedDays)
+  if (metricsScopeNote) details.push({ label: 'Scope', value: metricsScopeNote })
+  if (syncTimeframeDays !== null) {
+    details.push({ label: 'Sync Window', value: `Last ${formatWholeNumber(syncTimeframeDays)} days` })
+  }
+  if (syncHint) details.push({ label: 'Sync', value: syncHint })
+  if (suggestedActionRoute) details.push({ label: 'Open', value: suggestedActionRoute })
+  if (syncedDays !== null && isAnalytics) {
+    details.push({ label: 'Synced Days', value: formatWholeNumber(syncedDays) })
+  }
+  for (const warning of insightsWarnings.slice(0, 2)) {
+    details.push({ label: 'Note', value: warning })
+  }
+
   const totalsMetrics = isAnalytics
-    ? buildMetricsFromAnalyticsTotals(asRecord(data.totals), comparison)
+    ? buildMetricsFromAnalyticsTotals(asRecord(data.totals), comparison, currencyCode)
     : isSocial
       ? []
-      : buildMetricsFromTotals(resolveTotals(data), comparison)
+      : buildMetricsFromTotals(resolveTotals(data), comparison, currencyCode)
   if (totalsMetrics.length > 0 && metricsAvailable !== false) {
     sections.push({ type: 'metrics', title: isAnalytics ? 'Traffic & Conversions' : 'Performance', items: totalsMetrics })
   }
@@ -112,7 +139,7 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
         return {
           primary: asString(provider.label) ?? formatProviderName(providerId),
           secondary: [
-            spend !== null ? formatCurrency(spend) : null,
+            spend !== null ? formatCurrency(spend, currencyCode) : null,
             roas !== null ? `${formatRatio(roas)} ROAS` : null,
             conversionsValue !== null ? `${formatWholeNumber(conversionsValue)} conv` : null,
           ].filter((item): item is string => Boolean(item)).join(' • ') || undefined,
@@ -137,6 +164,29 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
     })
   }
 
+  const currencyBreakdown = asRecordArray(data.currencyBreakdown)
+  if (currencyBreakdown.length > 0 && !isAnalytics && !isSocial) {
+    sections.push({
+      type: 'list',
+      title: 'Spend by currency',
+      items: currencyBreakdown.map<ListItem>((row) => {
+        const currency = asString(row.currency) ?? 'USD'
+        const spend = asNumber(row.spend)
+        const revenue = asNumber(row.revenue)
+        return {
+          primary: currency,
+          secondary: [
+            spend !== null ? `${formatCurrency(spend, currency)} spend` : null,
+            revenue !== null ? `${formatCurrency(revenue, currency)} revenue` : null,
+          ]
+            .filter((item): item is string => Boolean(item))
+            .join(' • ') || undefined,
+          numericValue: spend ?? undefined,
+        }
+      }),
+    })
+  }
+
   const topCampaigns = asRecordArray(data.topCampaigns)
   if (topCampaigns.length > 0 && !isAnalytics && !isSocial) {
     sections.push({
@@ -147,7 +197,7 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
         const roas = asNumber(campaign.roas)
         const conversions = asNumber(campaign.conversions)
         const pieces = [
-          spend !== null ? formatCurrency(spend) : null,
+          spend !== null ? formatCurrency(spend, currencyCode) : null,
           roas !== null ? `${formatRatio(roas)} ROAS` : null,
           conversions !== null ? `${formatWholeNumber(conversions)} conv` : null,
         ].filter((item): item is string => Boolean(item))
@@ -362,12 +412,172 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
       })
     }
 
+    const dueSoonList = asRecordArray(data.dueSoonList)
+    if (dueSoonList.length > 0) {
+      sections.push({
+        type: 'list',
+        title: 'Due Soon',
+        items: mapTaskListItems(dueSoonList),
+      })
+    }
+
+    const highPriorityList = asRecordArray(data.highPriorityList)
+    if (highPriorityList.length > 0) {
+      sections.push({
+        type: 'list',
+        title: 'High Priority',
+        items: mapTaskListItems(highPriorityList),
+      })
+    }
+
     const tasks = asRecordArray(data.tasks)
     if (tasks.length > 0 && (timeWindow === 'all' || focusTasks.length === 0)) {
       sections.push({
         type: 'list',
         title: 'Tasks',
         items: mapTaskListItems(tasks),
+      })
+    }
+  }
+
+  if (operation === 'listWorkspaceClients') {
+    const total = asNumber(data.total)
+    const clients = asRecordArray(data.clients)
+    const clientOverview = compact<MetricItem>([
+      total !== null ? { label: 'Clients', value: formatWholeNumber(total), numericValue: total, emphasis: 'primary' } : null,
+    ])
+    if (clientOverview.length > 0) {
+      sections.push({ type: 'metrics', title: 'Clients', items: clientOverview })
+    }
+    if (clients.length > 0) {
+      sections.push({
+        type: 'list',
+        title: 'Workspace Clients',
+        items: clients.slice(0, 12).map<ListItem>((client) => ({
+          primary: asString(client.name) ?? 'Unnamed client',
+          secondary: asString(client.clientId) ?? undefined,
+        })),
+      })
+    }
+  }
+
+  if (operation === 'listActiveProjects') {
+    const total = asNumber(data.total)
+    const projects = asRecordArray(data.projects)
+    const projectOverview = compact<MetricItem>([
+      total !== null ? { label: 'Active Projects', value: formatWholeNumber(total), numericValue: total, emphasis: 'primary' } : null,
+    ])
+    if (projectOverview.length > 0) {
+      sections.push({ type: 'metrics', title: 'Projects', items: projectOverview })
+    }
+    if (projects.length > 0) {
+      sections.push({
+        type: 'list',
+        title: 'Active Projects',
+        items: projects.map<ListItem>((project) => ({
+          primary: asString(project.name) ?? 'Unnamed project',
+          secondary: [
+            asString(project.clientName),
+            asString(project.status) ? formatLabel(asString(project.status)!) : null,
+          ].filter((item): item is string => Boolean(item)).join(' • ') || undefined,
+          href: asString(project.route),
+        })),
+      })
+    }
+  }
+
+  if (operation === 'listProposals') {
+    const total = asNumber(data.total)
+    const proposals = asRecordArray(data.proposals)
+    const proposalOverview = compact<MetricItem>([
+      total !== null ? { label: 'Proposals', value: formatWholeNumber(total), numericValue: total, emphasis: 'primary' } : null,
+    ])
+    if (proposalOverview.length > 0) {
+      sections.push({ type: 'metrics', title: 'Proposals', items: proposalOverview })
+    }
+    if (proposals.length > 0) {
+      sections.push({
+        type: 'list',
+        title: 'Proposal Drafts',
+        items: proposals.map<ListItem>((proposal) => ({
+          primary: asString(proposal.title) ?? 'Untitled proposal',
+          secondary: [
+            asString(proposal.clientName),
+            asString(proposal.status) ? formatLabel(asString(proposal.status)!) : null,
+            asNumber(proposal.stepProgress) !== null ? `${formatWholeNumber(asNumber(proposal.stepProgress)!)}% complete` : null,
+          ].filter((item): item is string => Boolean(item)).join(' • ') || undefined,
+          href: asString(proposal.route),
+        })),
+      })
+    }
+  }
+
+  if (operation === 'summarizeMeetings') {
+    const total = asNumber(data.total)
+    const withNotes = asNumber(data.withNotes)
+    const meetings = asRecordArray(data.meetings)
+    const meetingOverview = compact<MetricItem>([
+      total !== null ? { label: 'Meetings', value: formatWholeNumber(total), numericValue: total, emphasis: 'primary' } : null,
+      withNotes !== null ? { label: 'With Notes', value: formatWholeNumber(withNotes), numericValue: withNotes } : null,
+    ])
+    if (meetingOverview.length > 0) {
+      sections.push({ type: 'metrics', title: 'Meetings', items: meetingOverview })
+    }
+    if (meetings.length > 0) {
+      sections.push({
+        type: 'list',
+        title: 'Upcoming & Recent',
+        items: meetings.map<ListItem>((meeting) => ({
+          primary: asString(meeting.title) ?? 'Untitled meeting',
+          secondary: [
+            asString(meeting.when),
+            asString(meeting.status) ? formatLabel(asString(meeting.status)!) : null,
+            meeting.hasTranscript === true ? 'Transcript available' : null,
+          ].filter((item): item is string => Boolean(item)).join(' • ') || undefined,
+          href: asString(meeting.route),
+        })),
+      })
+    }
+  }
+
+  if (operation === 'markAllNotificationsRead') {
+    const marked = asNumber(data.marked)
+    if (marked !== null) {
+      sections.push({
+        type: 'metrics',
+        title: 'Notifications',
+        items: [{ label: 'Marked Read', value: formatWholeNumber(marked), numericValue: marked, emphasis: 'primary' }],
+      })
+    }
+  }
+
+  if (
+    operation === 'requestAdsSync' ||
+    operation === 'requestAnalyticsSync' ||
+    operation === 'requestSocialSync'
+  ) {
+    const syncItems = compact<MetricItem>([
+      asNumber(data.syncTimeframeDays) !== null
+        ? { label: 'Sync Window', value: `Last ${formatWholeNumber(asNumber(data.syncTimeframeDays)!)} days` }
+        : null,
+      asString(data.surface) ? { label: 'Surface', value: formatLabel(asString(data.surface)!) } : null,
+      asString(data.syncHint) ? { label: 'Status', value: asString(data.syncHint)! } : null,
+      asString(data.jobId) ? { label: 'Job', value: asString(data.jobId)! } : null,
+      asString(data.suggestedActionRoute) ? { label: 'Open', value: asString(data.suggestedActionRoute)! } : null,
+    ])
+    if (syncItems.length > 0) {
+      sections.push({ type: 'metrics', title: 'Sync', items: syncItems })
+    }
+  }
+
+  if (operation === 'generatePerformanceReport') {
+    const reportText = asString(data.reportText)
+    if (reportText) {
+      const preview = reportText.length > 480 ? `${reportText.slice(0, 477)}…` : reportText
+      sections.push({
+        type: 'metrics',
+        title: 'Report',
+        items: [{ label: 'Summary', value: preview }],
       })
     }
   }
@@ -409,32 +619,71 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
     }
   }
 
-  if (sections.length === 0 || operation === 'createTask' || operation === 'sendDirectMessage') {
-    const title = asString(data.title)
+  const needsGenericDetails =
+    sections.length === 0 ||
+    operation === 'createTask' ||
+    operation === 'sendDirectMessage' ||
+    operation === 'createClient' ||
+    operation === 'addClientTeamMember' ||
+    operation === 'updateTask' ||
+    operation === 'createProposalDraft' ||
+    operation === 'generateProposalFromDraft' ||
+    operation === 'updateProposalDraft' ||
+    operation === 'updateAdsCampaignStatus' ||
+    operation === 'updateAdsCreativeStatus'
+
+  if (needsGenericDetails) {
+    const title = asString(data.title) ?? asString(data.name)
     const taskId = asString(data.taskId)
     const projectId = asString(data.projectId)
     const clientId = asString(data.clientId)
+    const proposalId = asString(data.proposalId)
     const campaignId = asString(data.campaignId)
     const creativeId = asString(data.creativeId)
+    const providerId = asString(data.providerId)
     const recipientName = asString(data.recipientName)
     const preview = asString(data.preview)
     const status = asString(data.status)
     const action = asString(data.action)
+    const role = asString(data.role)
+    const route = asString(data.route)
+    const stepProgress = asNumber(data.stepProgress)
+    const updatedFields = Array.isArray(data.updatedFields)
+      ? data.updatedFields.filter((field): field is string => typeof field === 'string' && field.trim().length > 0)
+      : []
 
     const genericItems = compact<MetricItem>([
       title ? { label: 'Title', value: title } : null,
       taskId ? { label: 'Task ID', value: taskId } : null,
       projectId ? { label: 'Project ID', value: projectId } : null,
       clientId ? { label: 'Client ID', value: clientId } : null,
+      proposalId ? { label: 'Proposal ID', value: proposalId } : null,
       campaignId ? { label: 'Campaign ID', value: campaignId } : null,
       creativeId ? { label: 'Creative ID', value: creativeId } : null,
+      providerId ? { label: 'Platform', value: formatProviderName(providerId) } : null,
       recipientName ? { label: 'Recipient', value: recipientName } : null,
       preview ? { label: 'Message', value: preview } : null,
-      status ? { label: 'Status', value: status } : null,
-      action ? { label: 'Action', value: action } : null,
+      role ? { label: 'Role', value: role } : null,
+      status ? { label: 'Status', value: formatLabel(status) } : null,
+      action ? { label: 'Action', value: formatLabel(action) } : null,
+      stepProgress !== null ? { label: 'Progress', value: `${formatWholeNumber(stepProgress)}%` } : null,
+      route ? { label: 'Open', value: route } : null,
     ])
 
-    if (genericItems.length > 0) sections.push({ type: 'metrics', title: 'Details', items: genericItems })
+    if (genericItems.length > 0) {
+      const hasExistingDetails = sections.some((section) => section.title === 'Details')
+      if (!hasExistingDetails) {
+        sections.push({ type: 'metrics', title: 'Details', items: genericItems })
+      }
+    }
+
+    if (updatedFields.length > 0 && !sections.some((section) => section.title === 'Updated Fields')) {
+      sections.push({
+        type: 'list',
+        title: 'Updated Fields',
+        items: updatedFields.map((field) => ({ primary: formatLabel(field) })),
+      })
+    }
   }
 
   return sections

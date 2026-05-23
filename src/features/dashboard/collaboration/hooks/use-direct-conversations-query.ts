@@ -27,8 +27,66 @@ type DirectConversationRow = Omit<DirectConversation, 'id'> & {
 }
 
 type DirectMessagesQueryResult = {
-  items: DirectMessageRow[]
+  items: Array<DirectMessageRow & { conversationLegacyId?: string }>
   nextCursor: MessageCursor
+}
+
+type ParsedDirectMessagesPage = {
+  items: DirectMessage[]
+  nextCursor: MessageCursor
+}
+
+function parsePaginatedDirectMessagesQuery(
+  queryData: unknown,
+  expectedConversationLegacyId: string | null,
+): ParsedDirectMessagesPage | null {
+  if (!queryData || typeof queryData !== 'object' || !('items' in queryData)) {
+    return null
+  }
+  const record = queryData as { items?: unknown; nextCursor?: unknown }
+  const items = Array.isArray(record.items)
+    ? record.items.map((item) => {
+        const row = item as DirectMessageRow & { conversationLegacyId?: string }
+        const message: DirectMessage = {
+          id: row.legacyId,
+          legacyId: row.legacyId,
+          senderId: row.senderId,
+          senderName: row.senderName,
+          senderRole: row.senderRole,
+          content: row.content,
+          edited: row.edited,
+          editedAtMs: row.editedAtMs,
+          deleted: row.deleted,
+          deletedAtMs: row.deletedAtMs,
+          deletedBy: row.deletedBy,
+          attachments: row.attachments,
+          reactions: row.reactions,
+          readBy: row.readBy,
+          deliveredTo: row.deliveredTo,
+          readAtMs: row.readAtMs,
+          sharedTo: row.sharedTo,
+          createdAtMs: row.createdAtMs,
+          updatedAtMs: row.updatedAtMs,
+        }
+        return message
+      })
+    : []
+
+  if (expectedConversationLegacyId && items.length > 0) {
+    const mismatched = items.some(
+      (item) =>
+        typeof item.conversationLegacyId === 'string' &&
+        item.conversationLegacyId !== expectedConversationLegacyId,
+    )
+    if (mismatched) {
+      return null
+    }
+  }
+
+  return {
+    items,
+    nextCursor: (record.nextCursor as MessageCursor | null | undefined) ?? null,
+  }
 }
 
 export function useDirectConversationsQuery({
@@ -77,14 +135,54 @@ export function useDirectConversationsQuery({
     !isPreviewMode && workspaceId ? { workspaceId } : 'skip'
   )
 
-  const messagesQuery = useQuery(
-    api.directMessages.listMessages,
-    !isPreviewMode && selectedConversation && workspaceId
-      ? { workspaceId, conversationLegacyId: selectedConversation.legacyId, cursor: messageCursor, limit: MESSAGE_PAGE_SIZE }
-      : 'skip'
+  const messagesQueryArgs = useMemo(
+    () =>
+      !isPreviewMode && selectedConversation && workspaceId
+        ? {
+            workspaceId,
+            conversationLegacyId: selectedConversation.legacyId,
+            cursor: messageCursor,
+            limit: MESSAGE_PAGE_SIZE,
+          }
+        : null,
+    [isPreviewMode, messageCursor, selectedConversation, workspaceId],
   )
 
-  const typedMessagesQuery = messagesQuery as DirectMessagesQueryResult | undefined
+  const messagesQueryArgsRef = useRef(messagesQueryArgs)
+  const messagesQueryArgsKey = useMemo(() => {
+    if (!messagesQueryArgs) {
+      return null
+    }
+    const cursorKey = messagesQueryArgs.cursor
+      ? `${messagesQueryArgs.cursor.fieldValue}|${messagesQueryArgs.cursor.legacyId}`
+      : 'start'
+    return `${messagesQueryArgs.workspaceId}|${messagesQueryArgs.conversationLegacyId}|${cursorKey}`
+  }, [messagesQueryArgs])
+
+  const messagesQueryArgsChanged =
+    messagesQueryArgsKey !== null &&
+    messagesQueryArgsRef.current !== null &&
+    messagesQueryArgsKey !==
+      (messagesQueryArgsRef.current
+        ? `${messagesQueryArgsRef.current.workspaceId}|${messagesQueryArgsRef.current.conversationLegacyId}|${
+            messagesQueryArgsRef.current.cursor
+              ? `${messagesQueryArgsRef.current.cursor.fieldValue}|${messagesQueryArgsRef.current.cursor.legacyId}`
+              : 'start'
+          }`
+        : null)
+
+  if (messagesQueryArgsChanged) {
+    messagesQueryArgsRef.current = messagesQueryArgs
+  }
+
+  const messagesQuery = useQuery(
+    api.directMessages.listMessages,
+    messagesQueryArgs ?? 'skip',
+  )
+
+  const typedMessagesQuery = messagesQueryArgsChanged
+    ? undefined
+    : (messagesQuery as DirectMessagesQueryResult | undefined)
   const conversationRows = useMemo(
     () => (conversationsQuery ?? []) as DirectConversationRow[],
     [conversationsQuery]
@@ -182,32 +280,15 @@ export function useDirectConversationsQuery({
       return null
     }
 
-    const newMessages = (typedMessagesQuery.items ?? []).map((m) => ({
-        id: m._id,
-        legacyId: m.legacyId,
-        senderId: m.senderId,
-        senderName: m.senderName,
-        senderRole: m.senderRole,
-        content: m.content,
-        edited: m.edited,
-        editedAtMs: m.editedAtMs,
-        deleted: m.deleted,
-        deletedAtMs: m.deletedAtMs,
-        deletedBy: m.deletedBy,
-        attachments: m.attachments,
-        reactions: m.reactions,
-        readBy: m.readBy,
-        deliveredTo: m.deliveredTo,
-        readAtMs: m.readAtMs,
-        sharedTo: m.sharedTo,
-        createdAtMs: m.createdAtMs,
-        updatedAtMs: m.updatedAtMs,
-      }))
+    const parsed = parsePaginatedDirectMessagesQuery(typedMessagesQuery, selectedConversationLegacyId)
+    if (!parsed) {
+      return null
+    }
 
     return {
-      key: `${selectedConversationLegacyId ?? ''}|${messageCursor ? 'cursor' : 'root'}|${isLoadingMore ? 'more' : 'fresh'}|${newMessages.length}|${typedMessagesQuery.nextCursor ? 'has-more' : 'end'}`,
-      newMessages,
-      hasMore: Boolean(typedMessagesQuery.nextCursor),
+      key: `${selectedConversationLegacyId ?? ''}|${messageCursor ? 'cursor' : 'root'}|${isLoadingMore ? 'more' : 'fresh'}|${parsed.items.length}|${parsed.nextCursor ? 'has-more' : 'end'}`,
+      newMessages: parsed.items,
+      hasMore: Boolean(parsed.nextCursor),
       loadingMore: isLoadingMore && Boolean(messageCursor),
     }
   }, [isLoadingMore, isPreviewMode, messageCursor, selectedConversationLegacyId, typedMessagesQuery])
@@ -307,7 +388,12 @@ export function useDirectConversationsQuery({
     resolvedSelectedConversation.updatedAtMs !== selectedConversation.updatedAtMs
   ) {
     setSelectedConversation(resolvedSelectedConversation)
-  } else if (selectedConversation && !resolvedSelectedConversation) {
+  } else if (
+    selectedConversation &&
+    !resolvedSelectedConversation &&
+    !isPreviewMode &&
+    conversationsQuery !== undefined
+  ) {
     setSelectedConversation(null)
   }
 
@@ -479,8 +565,19 @@ export function useDirectConversationsQuery({
   }, [fetchDirectMessageSearch, resolvedSyncSearch, searchRetryNonce])
 
   const selectConversation = useCallback((conversation: DirectConversation | null) => {
+    liveMessagesSnapshotRef.current = null
     setSelectedConversation(conversation)
-  }, [])
+    setFeed((prev) => ({
+      ...prev,
+      pagination: {
+        ...prev.pagination,
+        messageCursor: null,
+        allMessages: [],
+        hasMore: !isPreviewMode,
+        isLoadingMore: false,
+      },
+    }))
+  }, [isPreviewMode])
 
   const loadMoreMessages = useCallback(() => {
     if (isPreviewMode) {
@@ -578,7 +675,10 @@ export function useDirectConversationsQuery({
     retryDirectMessageSearch,
     normalizedMessageSearch,
     isLoadingConversations: isPreviewMode ? false : conversationsQuery === undefined,
-    isLoadingMessages: isPreviewMode ? false : typedMessagesQuery === undefined && messageCursor === null,
+    isLoadingMessages: isPreviewMode
+      ? false
+      : messagesQueryArgsChanged ||
+        (typedMessagesQuery === undefined && messageCursor === null),
     hasMoreMessages: isPreviewMode ? false : hasMore,
     messagesError: normalizedMessageSearch ? searchError : null,
   }

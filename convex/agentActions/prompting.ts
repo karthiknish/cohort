@@ -94,6 +94,14 @@ When the user wants to CREATE or UPDATE data, use:
 - **updateAdsCreativeStatus**: Enable or pause an ads creative
   Params: { providerId: "google"|"tiktok"|"linkedin"|"facebook", creativeId: string, status: "active"|"paused", adGroupId?: string, clientId?: string }
 
+### Spreadsheet Export
+- **exportSpreadsheet**: Build a branded Excel workbook from ads, analytics, social, tasks, lists, or reports
+  Params: { source: "ads"|"analytics"|"social"|"tasks"|"clientTasks"|"clients"|"projects"|"proposals"|"meetings"|"report", period?: "daily"|"weekly"|"monthly", startDate?: string, endDate?: string, clientId?: string, providerIds?: string[] }
+  Examples:
+  - "export ads summary from last month to excel" → exportSpreadsheet with source: "ads" and date range
+  - "download my tasks as a spreadsheet" → exportSpreadsheet with source: "tasks"
+  - "export weekly performance report to xlsx" → exportSpreadsheet with source: "report"
+
 ### Notification Operations
 - **markAllNotificationsRead**: Mark every unread notification for the current user as read (paged fetch + batched ack)
   Params: {}
@@ -250,6 +258,7 @@ If the request is vague, underspecified, or refers to "this/that/it" without eno
 - "list all the tasks in @abc client" / "give me client @abc summary for tasks" → EXECUTE summarizeClientTasks
 - "list my tasks" / "what are my tasks" / "task summary for me" → EXECUTE summarizeMyTasks
 - "mark all notifications read" / "clear notification badge" → EXECUTE markAllNotificationsRead
+- "export to excel" / "download spreadsheet" / "xlsx export" → EXECUTE exportSpreadsheet (include source: ads|analytics|social|tasks|clients|projects|proposals|meetings|report)
 - "list clients" / "show all clients" / "workspace clients" → EXECUTE listWorkspaceClients
 - "check my numbers" or "see performance" → navigate to Analytics
 - "show tasks", "my to-do list" → navigate to Tasks

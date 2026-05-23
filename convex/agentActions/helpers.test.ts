@@ -39,6 +39,24 @@ describe('resolveDeterministicAgentIntent', () => {
     })
   })
 
+  it('routes list projects to listActiveProjects', () => {
+    const intent = resolveDeterministicAgentIntent('list active projects')
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'listActiveProjects',
+    })
+  })
+
+  it('routes meeting summaries to summarizeMeetings', () => {
+    const intent = resolveDeterministicAgentIntent('summarize upcoming meetings')
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'summarizeMeetings',
+    })
+  })
+
   it('routes analytics summaries to summarizeAnalyticsPerformance', () => {
     const intent = resolveDeterministicAgentIntent('analytics summary in the last month')
 
@@ -49,6 +67,20 @@ describe('resolveDeterministicAgentIntent', () => {
         period: 'monthly',
         startDate: expect.any(String),
         endDate: expect.any(String),
+      },
+    })
+  })
+
+  it('routes ads summaries with last-month typos to April calendar window', () => {
+    const intent = resolveDeterministicAgentIntent('give me ads summary from ;ast month')
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'summarizeAdsPerformance',
+      params: {
+        period: 'monthly',
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
       },
     })
   })
@@ -80,7 +112,7 @@ describe('resolveDeterministicAgentIntent', () => {
         startDate: '2026-01-01',
         endDate: '2026-01-15',
       },
-      message: undefined,
+      message: 'Pulling Ads for 2026-01-01 to 2026-01-15 now.',
     })
   })
 
@@ -207,6 +239,103 @@ describe('resolveDeterministicAgentIntent', () => {
       operation: 'markAllNotificationsRead',
       params: {},
       message: 'Marking your unread notifications as read now.',
+    })
+  })
+
+  it('routes sync ads requests to requestAdsSync instead of navigation', () => {
+    const intent = resolveDeterministicAgentIntent('refresh meta ads for the last 30 days')
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'requestAdsSync',
+      params: expect.objectContaining({
+        providerIds: ['facebook'],
+        startDate: expect.any(String),
+        endDate: expect.any(String),
+      }),
+    })
+  })
+
+  it('routes sync analytics requests to requestAnalyticsSync', () => {
+    const intent = resolveDeterministicAgentIntent('sync google analytics for last month')
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'requestAnalyticsSync',
+      params: {
+        period: 'monthly',
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+      },
+    })
+  })
+
+  it('routes overdue task list requests to summarizeMyTasks', () => {
+    const intent = resolveDeterministicAgentIntent('show overdue tasks')
+
+    expect(intent).toEqual({
+      action: 'execute',
+      operation: 'summarizeMyTasks',
+      params: { mode: 'list', timeWindow: 'overdue' },
+      message: 'Listing your overdue tasks now.',
+    })
+  })
+
+  it('asks which channel to use for ambiguous performance recaps', () => {
+    const intent = resolveDeterministicAgentIntent('how did we do last month')
+
+    expect(intent).toEqual({
+      action: 'clarify',
+      message:
+        'I can pull paid ads, website analytics, or organic social for that window — which should I use?',
+    })
+  })
+
+  it('routes ambiguous performance recaps to ads when spend is mentioned', () => {
+    const intent = resolveDeterministicAgentIntent('how did we do on ad spend last month')
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'summarizeAdsPerformance',
+    })
+  })
+
+  it('routes excel export requests to exportSpreadsheet', () => {
+    const intent = resolveDeterministicAgentIntent('export ads summary from last month to excel')
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'exportSpreadsheet',
+      params: {
+        source: 'ads',
+        period: 'monthly',
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+      },
+    })
+  })
+
+  it('asks which dataset to export when excel is requested without a source', () => {
+    const intent = resolveDeterministicAgentIntent('download as excel')
+
+    expect(intent).toEqual({
+      action: 'clarify',
+      message:
+        'I can export paid ads, website analytics, organic social, tasks, clients, projects, proposals, meetings, or a performance report to Excel — which should I use?',
+    })
+  })
+
+  it('routes website traffic questions to analytics summaries', () => {
+    const intent = resolveDeterministicAgentIntent('website traffic summary for yesterday')
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'summarizeAnalyticsPerformance',
+      params: {
+        period: 'daily',
+        startDate: '2026-05-22',
+        endDate: '2026-05-22',
+      },
     })
   })
 
@@ -431,7 +560,7 @@ describe('resolveReportWindow', () => {
 
   it('uses explicit date params over relative periods', () => {
     expect(resolveReportWindow('weekly', { startDate: '2026-02-01', endDate: '2026-02-10' })).toMatchObject({
-      periodLabel: 'Custom',
+      periodLabel: 'Feb 1–10, 2026',
       startDate: '2026-02-01',
       endDate: '2026-02-10',
       startDateMs: Date.parse('2026-02-01T00:00:00.000Z'),

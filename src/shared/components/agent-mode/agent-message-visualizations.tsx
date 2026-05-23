@@ -7,16 +7,17 @@ import { LazyMotion, domAnimation, m, useReducedMotion } from '@/shared/ui/motio
 
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
-import {
-  AGENT_CHART_CURRENCY_FORMATTER,
-  AGENT_CHART_WHOLE_NUMBER_FORMATTER,
-} from '@/lib/intl/formatters'
+import { formatEnUsCurrency, AGENT_CHART_WHOLE_NUMBER_FORMATTER } from '@/lib/intl/formatters'
 import type { AgentChartSeries, AgentDataSection, MetricItem } from './agent-message-data'
 import { getAgentChartFill } from './agent-message-data'
 
-function formatChartValue(value: number, format: AgentChartSeries['valueFormat']): string {
+function formatChartValue(
+  value: number,
+  format: AgentChartSeries['valueFormat'],
+  currencyCode = 'USD',
+): string {
   if (format === 'currency') {
-    return AGENT_CHART_CURRENCY_FORMATTER.format(Math.abs(value))
+    return formatEnUsCurrency(Math.abs(value), currencyCode, { maximumFractionDigits: 0 })
   }
   if (format === 'percent') {
     const signed = value > 0 ? '+' : ''
@@ -66,7 +67,7 @@ export function AgentMessageBarChart({ series }: { series: AgentChartSeries }) {
             <div className="mb-1 flex items-center justify-between gap-2 text-[11px]">
               <span className="truncate font-medium text-foreground">{point.name}</span>
               <span className="shrink-0 tabular-nums text-muted-foreground">
-                {formatChartValue(point.value, series.valueFormat)}
+                {formatChartValue(point.value, series.valueFormat, series.currencyCode)}
               </span>
             </div>
           )

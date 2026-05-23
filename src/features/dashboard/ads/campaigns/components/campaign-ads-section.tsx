@@ -10,7 +10,6 @@ import { Skeleton } from '@/shared/ui/skeleton'
 
 import { CreateMetaAdSetDialog } from './create-meta-ad-set-dialog'
 import { MetaAdSetsStrip } from './meta-ad-sets-strip'
-import { MetaAdsStrip } from './meta-ads-strip'
 import { CampaignCreativesPerformanceStrip } from './campaign-creatives-performance'
 import {
   CampaignAdsFilters,
@@ -60,10 +59,7 @@ export function CampaignAdsSection({
     handleAdSetCreated,
     handleOpenAdSetDialog,
     handleToggleAdSetStatus,
-    handleToggleMetaAdStatus,
     togglingAdSetId,
-    togglingMetaAdId,
-    metaAds,
     loading,
     hasLoaded,
   viewMode,
@@ -115,14 +111,6 @@ export function CampaignAdsSection({
           adSets={state.adSets}
           togglingId={togglingAdSetId}
           onToggleStatus={handleToggleAdSetStatus}
-        />
-      ) : null}
-
-      {isMeta && metaAds.length > 0 ? (
-        <MetaAdsStrip
-          ads={metaAds}
-          togglingId={togglingMetaAdId}
-          onToggleStatus={handleToggleMetaAdStatus}
         />
       ) : null}
 

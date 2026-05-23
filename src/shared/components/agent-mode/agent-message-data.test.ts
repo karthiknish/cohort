@@ -142,6 +142,7 @@ describe('buildAgentDataSections', () => {
         items: [
           { label: 'Title', value: 'Review Q1 metrics' },
           { label: 'Task ID', value: 'task_123' },
+          { label: 'Open', value: '/dashboard/tasks' },
         ],
       },
     ])
@@ -183,6 +184,7 @@ describe('buildAgentDataSections', () => {
         items: [
           { label: 'Recipient', value: 'Deepak' },
           { label: 'Message', value: 'hi to him' },
+          { label: 'Open', value: '/dashboard/collaboration' },
         ],
       },
     ])
@@ -213,6 +215,36 @@ describe('buildAgentDataSections', () => {
       title: 'Updated Fields',
       items: [{ primary: 'Status' }, { primary: 'Tags' }],
     })
+  })
+
+  it('extracts workspace client list sections', () => {
+    const sections = buildAgentDataSections('listWorkspaceClients', {
+      total: 2,
+      clients: [
+        { clientId: 'client_1', name: 'Acme Co' },
+        { clientId: 'client_2', name: 'Beta Ltd' },
+      ],
+    })
+
+    expect(sections.map((section) => section.title)).toEqual(['Clients', 'Workspace Clients'])
+  })
+
+  it('extracts meeting summary sections', () => {
+    const sections = buildAgentDataSections('summarizeMeetings', {
+      total: 1,
+      withNotes: 1,
+      meetings: [
+        {
+          title: 'Weekly sync',
+          when: 'Mon 9:00 AM',
+          status: 'scheduled',
+          hasTranscript: false,
+          route: '/dashboard/meetings?meeting=m1',
+        },
+      ],
+    })
+
+    expect(sections.map((section) => section.title)).toEqual(['Meetings', 'Upcoming & Recent'])
   })
 
   it('shows task summary sections for client task summaries', () => {

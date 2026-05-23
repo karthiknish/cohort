@@ -2,7 +2,7 @@
 
 import { useAction } from 'convex/react'
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
-import { Loader2, Send, Zap } from 'lucide-react'
+import { Loader2, Send, Server, Store, Zap } from 'lucide-react'
 
 import { adsMetaEventsApi, adsMetaToolsApi } from '@/lib/convex-api'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
@@ -11,6 +11,11 @@ import {
   META_CAPI_STANDARD_EVENTS,
   META_OFFLINE_ACTION_SOURCE,
 } from '@/lib/meta-capi-events'
+import {
+  hasMetaEventsTools,
+  resolveMetaCampaignUiVisibility,
+} from '@/lib/meta-campaign-ui'
+import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
@@ -24,12 +29,15 @@ import {
 import { MotionTabsContent, Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { Textarea } from '@/shared/ui/textarea'
 import { toast } from '@/shared/ui/use-toast'
-import {
-  hasMetaEventsTools,
-  resolveMetaCampaignUiVisibility,
-} from '@/lib/meta-campaign-ui'
 
-type PixelRow = { id: string; name: string }
+import {
+  MetaJsonResultBlock,
+  MetaPixelPicker,
+  MetaToolsActionBar,
+  MetaToolsFormSection,
+  MetaToolsPanelShell,
+  type MetaPixelRow,
+} from './meta-tools-ui'
 
 type MetaEventsToolsPanelProps = {
   workspaceId: string
@@ -38,6 +46,12 @@ type MetaEventsToolsPanelProps = {
   campaignObjective?: string | null
   /** Account-level surfaces hide CAPI/offline without a campaign objective. */
   scope?: 'campaign' | 'account'
+}
+
+function defaultEventsTab(tabs: Array<'capi' | 'offline' | 'batch'>): string {
+  if (tabs.includes('capi')) return 'capi'
+  if (tabs.includes('offline')) return 'offline'
+  return tabs[0] ?? 'batch'
 }
 
 export function MetaEventsToolsPanel({
@@ -60,7 +74,7 @@ export function MetaEventsToolsPanel({
     return tabs
   }, [visibility])
 
-  const [activeTab, setActiveTab] = useState<string>('batch')
+  const [activeTab, setActiveTab] = useState(() => defaultEventsTab(eventTabs))
 
   const listAdPixels = useAction(adsMetaToolsApi.listAdPixels)
   const sendCapiEvents = useAction(adsMetaEventsApi.sendCapiEvents)
@@ -68,7 +82,8 @@ export function MetaEventsToolsPanel({
   const executeBatch = useAction(adsMetaEventsApi.executeBatch)
 
   const [pixels, dispatchPixels] = useReducer(
-    (_: { rows: PixelRow[]; loading: boolean }, value: { rows: PixelRow[]; loading: boolean }) => value,
+    (_: { rows: MetaPixelRow[]; loading: boolean }, value: { rows: MetaPixelRow[]; loading: boolean }) =>
+      value,
     { rows: [], loading: false },
   )
 
@@ -90,7 +105,7 @@ export function MetaEventsToolsPanel({
 
   useEffect(() => {
     if (eventTabs.length > 0 && !eventTabs.includes(activeTab as 'capi' | 'offline' | 'batch')) {
-      setActiveTab(eventTabs[0]!)
+      setActiveTab(defaultEventsTab(eventTabs))
     }
   }, [activeTab, eventTabs])
 
@@ -259,164 +274,179 @@ export function MetaEventsToolsPanel({
     return null
   }
 
-  const panelTitle =
+  const shellDescription =
     visibility.showCapi && visibility.showOfflineEvents
-      ? 'Conversions API, offline events & batch'
+      ? 'Send server-side conversion and offline store events, or run Graph API batch requests for debugging.'
       : visibility.showCapi
-        ? 'Conversions API'
+        ? 'Send server-side conversion events to Meta without relying on the browser pixel.'
         : visibility.showOfflineEvents
-          ? 'Offline events'
-          : 'Batch API'
+          ? 'Upload in-store or CRM conversions with a physical-store action source.'
+          : 'Run grouped Graph API requests in a single call (max 50).'
 
   return (
-    <div className="space-y-3 rounded-lg border border-dashed border-border/60 p-3">
-      <p className="text-xs font-medium text-foreground">{panelTitle}</p>
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="h-8">
+    <MetaToolsPanelShell
+      icon={Server}
+      title="Conversions API & events"
+      description={shellDescription}
+    >
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="h-9 w-full flex-wrap justify-start gap-1 bg-muted/40 p-1">
           {visibility.showCapi ? (
-            <TabsTrigger value="capi" className="text-xs">
-              CAPI
+            <TabsTrigger value="capi" className="gap-1.5 text-xs sm:text-sm">
+              <Send className="size-3.5 shrink-0" aria-hidden />
+              Conversions API
             </TabsTrigger>
           ) : null}
           {visibility.showOfflineEvents ? (
-            <TabsTrigger value="offline" className="text-xs">
+            <TabsTrigger value="offline" className="gap-1.5 text-xs sm:text-sm">
+              <Store className="size-3.5 shrink-0" aria-hidden />
               Offline
             </TabsTrigger>
           ) : null}
           {visibility.showBatchApi ? (
-            <TabsTrigger value="batch" className="text-xs">
-              Batch
+            <TabsTrigger value="batch" className="gap-1.5 text-xs sm:text-sm">
+              <Zap className="size-3.5 shrink-0" aria-hidden />
+              Batch API
             </TabsTrigger>
           ) : null}
         </TabsList>
 
         {visibility.showCapi ? (
-        <MotionTabsContent activeTab={activeTab} tabValue="capi" className="mt-3 space-y-2">
-          <PixelFields
-            pixelId={pixelId}
-            pixels={pixels}
-            onPixelIdChange={setPixelId}
-          />
-          <EventFields
-            eventName={eventName}
-            actionSource={actionSource}
-            email={email}
-            value={value}
-            currency={currency}
-            orderId={orderId}
-            testEventCode={testEventCode}
-            onEventNameChange={setEventName}
-            onActionSourceChange={setActionSource}
-            onEmailChange={setEmail}
-            onValueChange={setValue}
-            onCurrencyChange={setCurrency}
-            onOrderIdChange={setOrderId}
-            onTestEventCodeChange={setTestEventCode}
-            showActionSource
-          />
-          <Button type="button" size="sm" disabled={sendingCapi} onClick={handleSendCapi}>
-            {sendingCapi ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden /> : <Send className="mr-2 size-4" aria-hidden />}
-            Send CAPI event
-          </Button>
-        </MotionTabsContent>
+          <MotionTabsContent activeTab={activeTab} tabValue="capi" className="mt-4 space-y-5">
+            <MetaToolsFormSection
+              title="Pixel"
+              description="Events are attributed to this pixel in Events Manager."
+            >
+              <MetaPixelPicker pixelId={pixelId} pixels={pixels} onPixelIdChange={setPixelId} />
+            </MetaToolsFormSection>
+
+            <MetaToolsFormSection title="Event" description="Standard event name and where the conversion happened.">
+              <EventFields
+                eventName={eventName}
+                actionSource={actionSource}
+                email={email}
+                value={value}
+                currency={currency}
+                orderId={orderId}
+                testEventCode={testEventCode}
+                onEventNameChange={setEventName}
+                onActionSourceChange={setActionSource}
+                onEmailChange={setEmail}
+                onValueChange={setValue}
+                onCurrencyChange={setCurrency}
+                onOrderIdChange={setOrderId}
+                onTestEventCodeChange={setTestEventCode}
+                showActionSource
+              />
+            </MetaToolsFormSection>
+
+            <MetaToolsActionBar>
+              <Button type="button" disabled={sendingCapi || !pixelId.trim()} onClick={handleSendCapi}>
+                {sendingCapi ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
+                ) : (
+                  <Send className="mr-2 size-4" aria-hidden />
+                )}
+                Send test event
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                PII is hashed server-side before it reaches Meta.
+              </p>
+            </MetaToolsActionBar>
+          </MotionTabsContent>
         ) : null}
 
         {visibility.showOfflineEvents ? (
-        <MotionTabsContent activeTab={activeTab} tabValue="offline" className="mt-3 space-y-2">
-          <PixelFields pixelId={pixelId} pixels={pixels} onPixelIdChange={setPixelId} />
-          <EventFields
-            eventName={eventName}
-            actionSource={META_OFFLINE_ACTION_SOURCE}
-            email={email}
-            value={value}
-            currency={currency}
-            orderId={orderId}
-            testEventCode={testEventCode}
-            onEventNameChange={setEventName}
-            onActionSourceChange={setActionSource}
-            onEmailChange={setEmail}
-            onValueChange={setValue}
-            onCurrencyChange={setCurrency}
-            onOrderIdChange={setOrderId}
-            onTestEventCodeChange={setTestEventCode}
-            showActionSource={false}
-          />
-          <p className="text-[11px] text-muted-foreground">
-            Sends with <code className="text-[10px]">action_source: physical_store</code> for in-store or CRM offline conversions.
-          </p>
-          <Button type="button" size="sm" disabled={sendingOffline} onClick={handleSendOffline}>
-            {sendingOffline ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden /> : <Send className="mr-2 size-4" aria-hidden />}
-            Send offline event
-          </Button>
-        </MotionTabsContent>
+          <MotionTabsContent activeTab={activeTab} tabValue="offline" className="mt-4 space-y-5">
+            <MetaToolsFormSection
+              title="Pixel"
+              description="Offline uploads use the same pixel dataset as your web events."
+            >
+              <MetaPixelPicker pixelId={pixelId} pixels={pixels} onPixelIdChange={setPixelId} />
+            </MetaToolsFormSection>
+
+            <MetaToolsFormSection
+              title="Store event"
+              description="Sent with action_source physical_store for in-store or CRM conversions."
+            >
+              <EventFields
+                eventName={eventName}
+                actionSource={META_OFFLINE_ACTION_SOURCE}
+                email={email}
+                value={value}
+                currency={currency}
+                orderId={orderId}
+                testEventCode={testEventCode}
+                onEventNameChange={setEventName}
+                onActionSourceChange={setActionSource}
+                onEmailChange={setEmail}
+                onValueChange={setValue}
+                onCurrencyChange={setCurrency}
+                onOrderIdChange={setOrderId}
+                onTestEventCodeChange={setTestEventCode}
+                showActionSource={false}
+              />
+            </MetaToolsFormSection>
+
+            <MetaToolsActionBar>
+              <Button type="button" disabled={sendingOffline || !pixelId.trim()} onClick={handleSendOffline}>
+                {sendingOffline ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
+                ) : (
+                  <Store className="mr-2 size-4" aria-hidden />
+                )}
+                Send offline event
+              </Button>
+            </MetaToolsActionBar>
+          </MotionTabsContent>
         ) : null}
 
         {visibility.showBatchApi ? (
-        <MotionTabsContent activeTab={activeTab} tabValue="batch" className="mt-3 space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" disabled={!adAccountId} onClick={handlePresetBatch}>
-              <Zap className="mr-1.5 size-3.5" aria-hidden />
-              Sample: list campaigns + ad sets
-            </Button>
-          </div>
-          <Textarea
-            value={batchJson}
-            onChange={(event) => setBatchJson(event.target.value)}
-            rows={6}
-            className="font-mono text-xs"
-            placeholder={'[\n  { "method": "GET", "relativeUrl": "act_123/campaigns?fields=id,name" }\n]'}
-          />
-          <Button type="button" size="sm" disabled={runningBatch || !batchJson.trim()} onClick={handleRunBatch}>
-            {runningBatch ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden /> : null}
-            Run batch (max 50)
-          </Button>
-          {batchResult ? (
-            <pre className="max-h-32 overflow-auto rounded-md bg-muted/30 p-2 text-[10px] text-muted-foreground">
-              {batchResult}
-            </pre>
-          ) : null}
-        </MotionTabsContent>
+          <MotionTabsContent activeTab={activeTab} tabValue="batch" className="mt-4 space-y-5">
+            <MetaToolsFormSection
+              title="Batch payload"
+              description="Array of { method, relativeUrl, body?, name? } objects. Useful for quick Graph API probes."
+            >
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!adAccountId}
+                  onClick={handlePresetBatch}
+                >
+                  <Zap className="mr-1.5 size-3.5" aria-hidden />
+                  Load sample (campaigns + ad sets)
+                </Button>
+              </div>
+              <Textarea
+                value={batchJson}
+                onChange={(event) => setBatchJson(event.target.value)}
+                rows={8}
+                className="font-mono text-xs leading-relaxed"
+                placeholder={'[\n  { "method": "GET", "relativeUrl": "act_123/campaigns?fields=id,name" }\n]'}
+                spellCheck={false}
+              />
+            </MetaToolsFormSection>
+
+            <MetaToolsActionBar>
+              <Button
+                type="button"
+                disabled={runningBatch || !batchJson.trim()}
+                onClick={handleRunBatch}
+              >
+                {runningBatch ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden /> : null}
+                Run batch (max 50)
+              </Button>
+            </MetaToolsActionBar>
+
+            {batchResult ? (
+              <MetaJsonResultBlock title="Response" content={batchResult} />
+            ) : null}
+          </MotionTabsContent>
         ) : null}
       </Tabs>
-    </div>
-  )
-}
-
-function PixelFields({
-  pixelId,
-  pixels,
-  onPixelIdChange,
-}: {
-  pixelId: string
-  pixels: { rows: PixelRow[]; loading: boolean }
-  onPixelIdChange: (value: string) => void
-}) {
-  return (
-    <div className="space-y-1">
-      <Label className="text-xs">Pixel</Label>
-      {pixels.loading ? (
-        <p className="text-xs text-muted-foreground">Loading pixels…</p>
-      ) : pixels.rows.length > 0 ? (
-        <Select value={pixelId || undefined} onValueChange={onPixelIdChange}>
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Select pixel" />
-          </SelectTrigger>
-          <SelectContent>
-            {pixels.rows.map((row) => (
-              <SelectItem key={row.id} value={row.id}>
-                {row.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : null}
-      <Input
-        value={pixelId}
-        onChange={(event) => onPixelIdChange(event.target.value)}
-        placeholder="Pixel ID"
-        className="h-9"
-      />
-    </div>
+    </MetaToolsPanelShell>
   )
 }
 
@@ -454,12 +484,12 @@ function EventFields({
   showActionSource: boolean
 }) {
   return (
-    <>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label className="text-xs">Event</Label>
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Event name</Label>
           <Select value={eventName} onValueChange={onEventNameChange}>
-            <SelectTrigger className="h-9">
+            <SelectTrigger className="h-10">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -472,10 +502,10 @@ function EventFields({
           </Select>
         </div>
         {showActionSource ? (
-          <div className="space-y-1">
-            <Label className="text-xs">Action source</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Action source</Label>
             <Select value={actionSource} onValueChange={onActionSourceChange}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger className="h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -489,33 +519,71 @@ function EventFields({
           </div>
         ) : null}
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label className="text-xs">Email (hashed server-side)</Label>
-          <Input value={email} onChange={(event) => onEmailChange(event.target.value)} className="h-9" />
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Email</Label>
+          <Input
+            value={email}
+            onChange={(event) => onEmailChange(event.target.value)}
+            placeholder="customer@example.com"
+            className="h-10"
+            autoComplete="off"
+          />
+          <p className="text-[11px] text-muted-foreground">Hashed on the server before send.</p>
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Order ID</Label>
-          <Input value={orderId} onChange={(event) => onOrderIdChange(event.target.value)} className="h-9" />
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Order ID</Label>
+          <Input
+            value={orderId}
+            onChange={(event) => onOrderIdChange(event.target.value)}
+            placeholder="Optional deduplication key"
+            className="h-10"
+          />
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Value</Label>
-          <Input value={value} onChange={(event) => onValueChange(event.target.value)} className="h-9" />
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Value</Label>
+          <Input
+            value={value}
+            onChange={(event) => onValueChange(event.target.value)}
+            placeholder="0.00"
+            inputMode="decimal"
+            className="h-10 tabular-nums"
+          />
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Currency</Label>
-          <Input value={currency} onChange={(event) => onCurrencyChange(event.target.value)} className="h-9" />
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Currency</Label>
+          <Input
+            value={currency}
+            onChange={(event) => onCurrencyChange(event.target.value)}
+            placeholder="USD"
+            className="h-10 uppercase"
+            maxLength={3}
+          />
         </div>
       </div>
-      <div className="space-y-1">
-        <Label className="text-xs">Test event code (optional)</Label>
-        <Input
-          value={testEventCode}
-          onChange={(event) => onTestEventCodeChange(event.target.value)}
-          placeholder="From Events Manager → Test events"
-          className="h-9"
-        />
-      </div>
-    </>
+
+      <Alert className="border-info/20 bg-info/5">
+        <AlertDescription className="space-y-2 text-xs leading-relaxed">
+          <p className="font-medium text-foreground">Test in Events Manager</p>
+          <p className="text-muted-foreground">
+            Open Test events, copy your test code, and paste it below. Events with a test code appear in the
+            debugger without affecting production reporting.
+          </p>
+          <div className="space-y-1.5 pt-1">
+            <Label htmlFor="meta-test-event-code" className="text-xs text-muted-foreground">
+              Test event code (optional)
+            </Label>
+            <Input
+              id="meta-test-event-code"
+              value={testEventCode}
+              onChange={(event) => onTestEventCodeChange(event.target.value)}
+              placeholder="TEST12345"
+              className="h-10 font-mono text-sm"
+            />
+          </div>
+        </AlertDescription>
+      </Alert>
+    </div>
   )
 }
