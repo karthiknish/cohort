@@ -4,6 +4,7 @@ import {
   pickDefaultInsightsTab,
   providerSummariesToSyntheticMetrics,
   resolveChartProviderKey,
+  resolveInsightsChartCurrency,
   tabHasChartData,
 } from './insights-chart-utils'
 
@@ -11,6 +12,18 @@ describe('insights-chart-utils', () => {
   it('resolves meta selection to facebook chart keys', () => {
     expect(resolveChartProviderKey('meta', ['facebook', 'google'])).toBe('facebook')
     expect(resolveChartProviderKey('all', ['all', 'google'])).toBe('all')
+  })
+
+  it('resolves chart currency from provider map for meta selection', () => {
+    expect(
+      resolveInsightsChartCurrency('meta', 'USD', { facebook: 'GBP' }),
+    ).toBe('GBP')
+  })
+
+  it('uses sole provider currency when all platforms selected', () => {
+    expect(
+      resolveInsightsChartCurrency('all', undefined, { facebook: 'EUR' }),
+    ).toBe('EUR')
   })
 
   it('builds synthetic metrics from provider summaries', () => {

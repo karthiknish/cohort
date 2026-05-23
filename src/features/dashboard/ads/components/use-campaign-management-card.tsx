@@ -5,7 +5,7 @@ import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useAction, useConvexAuth } from 'convex/react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useEffectEvent, useMemo, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 
 import { toast } from '@/shared/ui/use-toast'
 import { getCurrencyInfo, isSupportedCurrency, normalizeCurrencyCode } from '@/constants/currencies'
@@ -66,7 +66,8 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
 
   const [state, dispatch] = useReducer(campaignManagementReducer, INITIAL_CAMPAIGN_MANAGEMENT_STATE)
   const [metaCreateOpen, setMetaCreateOpen] = useState(false)
-  const isMetaProvider = toAdsProviderId(providerId) === 'facebook'
+  const adsProviderId = toAdsProviderId(providerId)
+  const isMetaProvider = adsProviderId === 'facebook'
   const {
     campaigns,
     loading,
@@ -121,7 +122,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
 
     await listCampaigns({
       workspaceId,
-      providerId: providerId as 'google' | 'tiktok' | 'linkedin' | 'facebook',
+      providerId: adsProviderId,
       clientId: selectedClientId ?? null,
     })
       .then((result) => {
@@ -138,10 +139,10 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
       .finally(() => {
         dispatch({ type: 'setLoading', loading: false })
       })
-  }, [canQueryConvex, isConnected, listCampaigns, providerId, selectedClientId, setupRequired, workspaceId])
+  }, [adsProviderId, canQueryConvex, isConnected, listCampaigns, selectedClientId, setupRequired, workspaceId])
 
   const fetchGroups = useCallback(async () => {
-    if (!isConnected || setupRequired || providerId !== 'linkedin' || !canQueryConvex) return
+    if (!isConnected || setupRequired || adsProviderId !== 'linkedin' || !canQueryConvex) return
     dispatch({ type: 'setGroupsLoading', groupsLoading: true })
 
     if (!workspaceId) {
@@ -168,7 +169,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
       .finally(() => {
         dispatch({ type: 'setGroupsLoading', groupsLoading: false })
       })
-  }, [canQueryConvex, isConnected, listCampaignGroups, providerId, selectedClientId, setupRequired, workspaceId])
+  }, [adsProviderId, canQueryConvex, isConnected, listCampaignGroups, selectedClientId, setupRequired, workspaceId])
 
   const handleRefresh = useCallback(() => {
     if (view === 'groups') {
@@ -187,25 +188,24 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
     setMetaCreateOpen(true)
   }, [])
 
-  const runInitialCampaignFetch = useEffectEvent(() => {
-    void fetchCampaigns()
-    if (providerId === 'linkedin') {
-      void fetchGroups()
-    }
-  })
-
   // Auto-load campaigns once Convex auth and workspace context are ready.
   useEffect(() => {
     if (!isConnected || setupRequired || !workspaceId || !canQueryConvex) return
 
-    const frameId = requestAnimationFrame(() => {
-      runInitialCampaignFetch()
-    })
-
-    return () => {
-      cancelAnimationFrame(frameId)
+    void fetchCampaigns()
+    if (adsProviderId === 'linkedin') {
+      void fetchGroups()
     }
-  }, [canQueryConvex, isConnected, providerId, selectedClientId, setupRequired, workspaceId])
+  }, [
+    adsProviderId,
+    canQueryConvex,
+    fetchCampaigns,
+    fetchGroups,
+    isConnected,
+    selectedClientId,
+    setupRequired,
+    workspaceId,
+  ])
 
   const openInsightsPage = useCallback(
     (campaignOrGroupId: string, name: string) => {
@@ -214,11 +214,11 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
       params.set('campaignName', name)
 
       push(withPreviewModeSearchParamIfEnabled(
-        `/dashboard/ads/campaigns/${providerId}/${campaignOrGroupId}?${params.toString()}`,
+        `/dashboard/ads/campaigns/${adsProviderId}/${campaignOrGroupId}?${params.toString()}`,
         isPreviewModeEnabled(),
       ), { transitionTypes: ['nav-forward'] })
     },
-    [endDate, providerId, push, selectedClientId, startDate]
+    [adsProviderId, endDate, push, selectedClientId, startDate]
   )
 
   const handleAction = useCallback(async (campaignId: string, action: 'enable' | 'pause' | 'remove') => {
@@ -235,7 +235,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
 
     await updateCampaign({
       workspaceId,
-      providerId: providerId as 'google' | 'tiktok' | 'linkedin' | 'facebook',
+      providerId: adsProviderId,
       clientId: selectedClientId ?? null,
       campaignId,
       action,
@@ -260,7 +260,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
       .finally(() => {
         dispatch({ type: 'setActionLoading', actionLoading: null })
       })
-  }, [fetchCampaigns, onRefresh, providerId, selectedClientId, updateCampaign, workspaceId])
+  }, [adsProviderId, fetchCampaigns, onRefresh, selectedClientId, updateCampaign, workspaceId])
 
   const handleGroupAction = useCallback(async (groupId: string, action: 'enable' | 'pause') => {
     dispatch({ type: 'setActionLoading', actionLoading: groupId })
@@ -332,7 +332,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
         })
       : updateCampaign({
           workspaceId,
-          providerId: providerId as 'google' | 'tiktok' | 'linkedin' | 'facebook',
+          providerId: adsProviderId,
           clientId: selectedClientId ?? null,
           campaignId: targetId,
           action: 'updateBudget',
@@ -365,7 +365,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
       .finally(() => {
         dispatch({ type: 'setActionLoading', actionLoading: null })
       })
-  }, [selectedCampaign, selectedGroup, newBudget, providerId, fetchCampaigns, fetchGroups, onRefresh, selectedClientId, view, workspaceId, updateCampaign, updateCampaignGroup])
+  }, [adsProviderId, selectedCampaign, selectedGroup, newBudget, fetchCampaigns, fetchGroups, onRefresh, selectedClientId, view, workspaceId, updateCampaign, updateCampaignGroup])
 
   const handleBiddingUpdate = useCallback(async () => {
     if (!selectedCampaign || !newBidding.type) return
@@ -383,7 +383,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
 
     await updateCampaign({
       workspaceId,
-      providerId: providerId as 'google' | 'tiktok' | 'linkedin' | 'facebook',
+      providerId: adsProviderId,
       clientId: selectedClientId ?? null,
       campaignId: selectedCampaign.id,
       action: 'updateBidding',
@@ -411,7 +411,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
       .finally(() => {
         dispatch({ type: 'setActionLoading', actionLoading: null })
       })
-  }, [selectedCampaign, newBidding, providerId, fetchCampaigns, onRefresh, selectedClientId, workspaceId, updateCampaign])
+  }, [adsProviderId, selectedCampaign, newBidding, fetchCampaigns, onRefresh, selectedClientId, workspaceId, updateCampaign])
 
   const handleBiddingChange = useCallback((value: BiddingDraft) => {
     dispatch({ type: 'setNewBidding', newBidding: value })

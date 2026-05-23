@@ -374,6 +374,7 @@ export function AdsPageAnalyticsSection({
           <InsightsChartsCard
             analysis={algorithmicInsights.analysis}
             currency={activeCurrency}
+            providerCurrencies={providerCurrencyMap}
             loading={metricsLoading || initialMetricsLoading}
             hasConnections={connectedAccountCount > 0}
             metricsDisplayState={metricsDisplayState}

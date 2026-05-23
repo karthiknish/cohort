@@ -10,6 +10,7 @@ import {
   getProviderDisplayName,
   pickDefaultInsightsTab,
   resolveChartProviderKey,
+  resolveInsightsChartCurrency,
   tabHasChartData,
   type InsightsTabId,
 } from './insights-chart-utils'
@@ -31,6 +32,7 @@ import {
 interface InsightsChartsCardProps {
   analysis: PerformanceAnalysis | null
   currency?: string
+  providerCurrencies?: Record<string, string>
   loading?: boolean
   hasConnections?: boolean
   metricsDisplayState?: AdsMetricsDisplayState
@@ -39,6 +41,7 @@ interface InsightsChartsCardProps {
 export function InsightsChartsCard({
   analysis,
   currency = 'USD',
+  providerCurrencies,
   loading = false,
   hasConnections = false,
   metricsDisplayState,
@@ -81,6 +84,11 @@ export function InsightsChartsCard({
   const activeProvider = useMemo(
     () => resolveChartProviderKey(selectedProvider, funnelChartKeys),
     [funnelChartKeys, selectedProvider],
+  )
+
+  const chartCurrency = useMemo(
+    () => resolveInsightsChartCurrency(selectedProvider, currency, providerCurrencies ?? {}),
+    [currency, providerCurrencies, selectedProvider],
   )
 
   const providerLabel = getProviderDisplayName(activeProvider)
@@ -140,7 +148,7 @@ export function InsightsChartsCard({
           description="Compare financial performance across connected platforms"
         >
           <ProviderComparisonChart
-            currency={currency}
+            currency={chartCurrency}
             data={analysis.chartData.providerComparison}
           />
         </InsightsChartPanel>
@@ -161,7 +169,7 @@ export function InsightsChartsCard({
           description="Historical spend with trend line"
         >
           <SpendTrendChart
-            currency={currency}
+            currency={chartCurrency}
             data={analysis.chartData.trendCharts}
             providerId={activeProvider}
             providerLabel={providerLabel}

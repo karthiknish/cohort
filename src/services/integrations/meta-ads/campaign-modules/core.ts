@@ -21,16 +21,24 @@ const DEPRECATED_ADVANTAGE_STATE_ERROR =
 // LIST CAMPAIGNS
 // =============================================================================
 
+const DEFAULT_META_CAMPAIGN_STATUS_FILTER = [
+  'ACTIVE',
+  'PAUSED',
+  'IN_PROCESS',
+  'WITH_ISSUES',
+  'ARCHIVED',
+] as const
+
 export async function listMetaCampaigns(options: {
   accessToken: string
   adAccountId: string
-  statusFilter?: ('ACTIVE' | 'PAUSED' | 'ARCHIVED')[]
+  statusFilter?: ('ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'IN_PROCESS' | 'WITH_ISSUES')[]
   maxRetries?: number
 }): Promise<MetaCampaign[]> {
   const {
     accessToken,
     adAccountId,
-    statusFilter = ['ACTIVE', 'PAUSED'],
+    statusFilter = [...DEFAULT_META_CAMPAIGN_STATUS_FILTER],
     maxRetries = 3,
   } = options
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, type ReactNode } from 'react'
 
-import { formatCurrency } from '@/lib/utils'
+import { formatMoney } from '@/constants/currencies'
 import type { PerformanceAnalysis } from '@/lib/ad-algorithms'
 
 import {
@@ -78,7 +78,7 @@ export function ProviderComparisonChart({
         </span>
         <span className="font-mono text-sm font-medium tabular-nums">
           {name === 'spend' || name === 'revenue'
-            ? formatCurrency(Number(value), currency)
+            ? formatMoney(Number(value), currency)
             : Number(value).toLocaleString()}
         </span>
       </div>
@@ -86,7 +86,7 @@ export function ProviderComparisonChart({
     [currency],
   )
 
-  const formatXAxis = useCallback((v: number) => formatCurrency(v, currency), [currency])
+  const formatXAxis = useCallback((v: number) => formatMoney(v, currency), [currency])
 
   if (!hasData) {
     return (
@@ -259,14 +259,14 @@ function SpendTrendChartPlot({
             String(name)}
         </span>
         <span className="font-mono text-sm font-medium tabular-nums">
-          {formatCurrency(Number(value), currency)}
+          {formatMoney(Number(value), currency)}
         </span>
       </div>
     ),
     [currency],
   )
 
-  const formatYAxis = useCallback((v: number) => formatCurrency(v, currency), [currency])
+  const formatYAxis = useCallback((v: number) => formatMoney(v, currency), [currency])
 
   const tooltipContent = useMemo(
     () => <ChartTooltipContent labelFormatter={formatDateTick} formatter={currencyFormatter} />,

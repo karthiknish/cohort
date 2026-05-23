@@ -1,3 +1,4 @@
+import { normalizeAdsProviderId } from '@/domain/ads/provider'
 import { normalizeProviderId } from '@/lib/themes'
 
 import type { MetricRecord, ProviderSummary } from './types'
@@ -14,6 +15,25 @@ export const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
 export function getProviderDisplayName(providerId: string): string {
   const key = providerId.toLowerCase()
   return PROVIDER_DISPLAY_NAMES[key] ?? providerId.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+/** Resolve display currency for insights charts from provider map and selection. */
+export function resolveInsightsChartCurrency(
+  selectedProvider: string,
+  fallbackCurrency: string | undefined,
+  providerCurrencyMap: Record<string, string>,
+): string {
+  if (selectedProvider !== 'all') {
+    const key = normalizeAdsProviderId(selectedProvider) ?? selectedProvider
+    return providerCurrencyMap[key] ?? fallbackCurrency ?? 'USD'
+  }
+
+  const currencies = [...new Set(Object.values(providerCurrencyMap).filter(Boolean))]
+  if (currencies.length === 1) {
+    return currencies[0]!
+  }
+
+  return fallbackCurrency ?? currencies[0] ?? 'USD'
 }
 
 /** Map UI selection to chart-data keys (handles meta/facebook aliases and "all"). */
