@@ -2,8 +2,6 @@ import type { ComponentProps, ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
-import { CampaignManagementCard } from './campaign-management-card'
-
 const DATE_RANGE = {
   start: new Date('2026-01-01T00:00:00.000Z'),
   end: new Date('2026-01-31T00:00:00.000Z'),
@@ -11,6 +9,10 @@ const DATE_RANGE = {
 
 vi.mock('convex/react', () => ({
   useAction: () => vi.fn(async () => []),
+  useConvexAuth: () => ({
+    isAuthenticated: true,
+    isLoading: false,
+  }),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -68,6 +70,8 @@ vi.mock('@/shared/ui/tabs', () => ({
   TabsList: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   TabsTrigger: ({ children }: { children: ReactNode }) => <button type="button">{children}</button>,
 }))
+
+import { CampaignManagementCard } from './campaign-management-card'
 
 function renderCard(overrides: Partial<ComponentProps<typeof CampaignManagementCard>> = {}) {
   return renderToStaticMarkup(

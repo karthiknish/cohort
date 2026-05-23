@@ -1,8 +1,9 @@
 'use client'
 
-import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { Skeleton } from '@/shared/ui/skeleton'
+
+import { PROJECTS_THEME } from './projects-theme'
 
 export function ProjectsPageSkeleton() {
   const summarySlots = ['sum-1', 'sum-2', 'sum-3', 'sum-4']

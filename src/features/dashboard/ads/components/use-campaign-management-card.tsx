@@ -3,7 +3,7 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useAction } from 'convex/react'
+import { useAction, useConvexAuth } from 'convex/react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useEffectEvent, useMemo, useReducer, useState } from 'react'
 
@@ -55,7 +55,9 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
   } = props
   const { selectedClientId } = useClientContext()
   const { user } = useAuth()
+  const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
+  const canQueryConvex = isAuthenticated && !convexAuthLoading && Boolean(user?.id)
   const { push } = useRouter()
   const listCampaigns = useAction(adsCampaignsApi.listCampaigns)
   const updateCampaign = useAction(adsCampaignsApi.updateCampaign)
@@ -109,7 +111,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
   }, [])
 
   const fetchCampaigns = useCallback(async () => {
-    if (!isConnected || setupRequired) return
+    if (!isConnected || setupRequired || !canQueryConvex) return
 
     dispatch({ type: 'setLoading', loading: true })
     if (!workspaceId) {
@@ -136,10 +138,10 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
       .finally(() => {
         dispatch({ type: 'setLoading', loading: false })
       })
-  }, [isConnected, listCampaigns, providerId, selectedClientId, setupRequired, workspaceId])
+  }, [canQueryConvex, isConnected, listCampaigns, providerId, selectedClientId, setupRequired, workspaceId])
 
   const fetchGroups = useCallback(async () => {
-    if (!isConnected || setupRequired || providerId !== 'linkedin') return
+    if (!isConnected || setupRequired || providerId !== 'linkedin' || !canQueryConvex) return
     dispatch({ type: 'setGroupsLoading', groupsLoading: true })
 
     if (!workspaceId) {
@@ -166,7 +168,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
       .finally(() => {
         dispatch({ type: 'setGroupsLoading', groupsLoading: false })
       })
-  }, [isConnected, listCampaignGroups, providerId, selectedClientId, setupRequired, workspaceId])
+  }, [canQueryConvex, isConnected, listCampaignGroups, providerId, selectedClientId, setupRequired, workspaceId])
 
   const handleRefresh = useCallback(() => {
     if (view === 'groups') {
@@ -192,9 +194,9 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
     }
   })
 
-  // Auto-load campaigns on mount when connected
+  // Auto-load campaigns once Convex auth and workspace context are ready.
   useEffect(() => {
-    if (!isConnected || setupRequired) return
+    if (!isConnected || setupRequired || !workspaceId || !canQueryConvex) return
 
     const frameId = requestAnimationFrame(() => {
       runInitialCampaignFetch()
@@ -203,7 +205,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [isConnected, setupRequired])
+  }, [canQueryConvex, isConnected, providerId, selectedClientId, setupRequired, workspaceId])
 
   const openInsightsPage = useCallback(
     (campaignOrGroupId: string, name: string) => {
