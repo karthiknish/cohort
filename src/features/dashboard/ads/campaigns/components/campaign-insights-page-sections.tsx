@@ -136,6 +136,20 @@ function clampDateRange(range: { start: Date; end: Date }): { start: Date; end: 
   return { start, end }
 }
 
+function createCampaignLifetimeDateRange(
+  campaignStart: Date | null,
+  campaignStop: Date | null,
+): DateRange | null {
+  if (!campaignStart && !campaignStop) {
+    return null
+  }
+
+  const now = new Date()
+  const end = campaignStop && campaignStop <= now ? campaignStop : now
+  const start = campaignStart ?? new Date(new Date(end).setDate(end.getDate() - 30))
+  return clampDateRange({ start, end })
+}
+
 function isProviderId(value: string): value is ProviderId {
   return value === 'google' || value === 'tiktok' || value === 'linkedin' || value === 'facebook'
 }
@@ -173,11 +187,9 @@ function createInitialDateRange(
   initialStart: Date | null,
   initialEnd: Date | null,
 ): DateRange {
-  if (campaignStartFromUrl || campaignStopFromUrl) {
-    const now = new Date()
-    const end = campaignStopFromUrl && campaignStopFromUrl <= now ? campaignStopFromUrl : now
-    const start = campaignStartFromUrl ?? new Date(new Date(end).setDate(end.getDate() - 30))
-    return clampDateRange({ start, end })
+  const lifetimeRange = createCampaignLifetimeDateRange(campaignStartFromUrl, campaignStopFromUrl)
+  if (lifetimeRange) {
+    return lifetimeRange
   }
 
   if (initialStart || initialEnd) {
@@ -272,15 +284,12 @@ export function useCampaignInsightsPage() {
 
     const campaignStart = parseIsoDateTime(campaign?.startTime ?? null)
     const campaignStop = parseIsoDateTime(campaign?.stopTime ?? null)
+    const lifetimeRange = createCampaignLifetimeDateRange(campaignStart, campaignStop)
 
-    if (!campaignStart && !campaignStop) return
-
-    const now = new Date()
-    const end = campaignStop && campaignStop <= now ? campaignStop : now
-    const start = campaignStart ?? new Date(new Date(end).setDate(end.getDate() - 30))
+    if (!lifetimeRange) return
 
     const frameId = requestAnimationFrame(() => {
-      dispatch({ type: 'setDateRange', value: clampDateRange({ start, end }) })
+      dispatch({ type: 'setDateRange', value: lifetimeRange })
     })
 
     return () => {

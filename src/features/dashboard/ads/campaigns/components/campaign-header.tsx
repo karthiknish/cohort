@@ -55,6 +55,27 @@ function formatCampaignDateRange(startTime?: string, stopTime?: string): string 
   return `${formatDate(start, DATE_FORMATS.SHORT)} — ${formatDate(stop, DATE_FORMATS.SHORT)}`
 }
 
+function getCampaignLifetimeRange(startTime?: string, stopTime?: string): DateRange | null {
+  const now = new Date()
+  const start = startTime ? new Date(startTime) : null
+  const stop = stopTime ? new Date(stopTime) : null
+
+  const hasStart = Boolean(start && !Number.isNaN(start.getTime()))
+  const hasStop = Boolean(stop && !Number.isNaN(stop.getTime()))
+
+  if (!hasStart && !hasStop) {
+    return null
+  }
+
+  const end = hasStop && stop <= now ? stop : now
+  const rangeStart = hasStart && start ? start : new Date(new Date(end).setDate(end.getDate() - 30))
+
+  return {
+    start: rangeStart,
+    end,
+  }
+}
+
 export function CampaignHeader({
   campaign,
   loading,
@@ -67,6 +88,7 @@ export function CampaignHeader({
   const sharedCampaignKey = campaign ? `${campaign.providerId}-${campaign.id}` : null
   const campaignName = campaign?.name ?? ''
   const campaignStatus = campaign?.status ?? ''
+  const campaignLifetimeRange = getCampaignLifetimeRange(campaign?.startTime, campaign?.stopTime)
 
   const getProviderIcon = () => {
     if (!campaign?.providerId) return null
@@ -168,6 +190,7 @@ export function CampaignHeader({
             <DateRangePicker
               value={dateRange}
               onChange={onDateRangeChange}
+              lifetimeRange={campaignLifetimeRange}
               className="w-full sm:w-auto [&_button]:h-10 [&_button]:rounded-xl [&_button]:border-border/70 [&_button]:bg-background/90"
             />
             <Button

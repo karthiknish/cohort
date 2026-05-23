@@ -27,6 +27,7 @@ interface DateRangePickerProps {
   value: DateRange
   onChange: (range: DateRange) => void
   className?: string
+  lifetimeRange?: DateRange | null
 }
 
 const PRESETS = [
@@ -48,7 +49,7 @@ function formatDateRange(range: DateRange): string {
   return `${startStr} – ${endStr}`
 }
 
-export function DateRangePicker({ value, onChange, className }: DateRangePickerProps) {
+export function DateRangePicker({ value, onChange, className, lifetimeRange }: DateRangePickerProps) {
   const [open, setOpen] = useState(false)
 
   const dateRange = useMemo<DayPickerRange>(
@@ -78,6 +79,12 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
     },
     [onChange]
   )
+
+  const handleLifetimeSelect = useCallback(() => {
+    if (!lifetimeRange) return
+    onChange(lifetimeRange)
+    setOpen(false)
+  }, [lifetimeRange, onChange])
 
   const handleDisabledDate = useCallback((date: Date) => date > new Date(), [])
 
@@ -114,6 +121,16 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
               <span className="mb-2 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Presets
               </span>
+              {lifetimeRange ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start font-normal"
+                  onClick={handleLifetimeSelect}
+                >
+                  Lifetime
+                </Button>
+              ) : null}
               {PRESETS.map((preset) => (
                 <Button
                   key={preset.days}
