@@ -57,6 +57,8 @@ export interface MetaAdsOptions {
   timeframeDays: number
   maxPages?: number
   maxRetries?: number
+  /** When true, use async insights jobs; when false, force sync. Undefined falls back to env. */
+  useAsyncInsights?: boolean
   refreshAccessToken?: () => Promise<string>
   onRateLimitHit?: (retryAfterMs: number) => void
   onTokenRefresh?: () => void

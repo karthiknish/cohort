@@ -1,7 +1,7 @@
 'use client'
 
 import { useAction, useMutation, useQuery } from 'convex/react'
-import { differenceInDays, endOfDay, startOfDay } from 'date-fns'
+import { differenceInDays, endOfDay, format, startOfDay } from 'date-fns'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useToast } from '@/shared/ui/use-toast'
@@ -303,31 +303,49 @@ export function useAnalyticsPageController() {
   }, [loadGoogleAnalyticsPropertyOptions, setGaSetupDialogOpen, setGaSetupMessage, toast])
 
   const gaPropertyAutoLoadRef = useRef(false)
-  if (gaNeedsPropertySelection && !isPreviewMode) {
+  useEffect(() => {
+    if (!gaNeedsPropertySelection || isPreviewMode) {
+      gaPropertyAutoLoadRef.current = false
+      return
+    }
+
     if (!gaSetupDialogOpen) {
       setGaSetupDialogOpen(true)
     }
 
-    if (!gaLoadingProperties && gaProperties.length === 0 && !gaPropertyAutoLoadRef.current) {
-      gaPropertyAutoLoadRef.current = true
-      void loadGoogleAnalyticsPropertyOptions().catch((error) => {
-        const message = mapGoogleAnalyticsIntegrationError(error)
-        setGaSetupMessage(message)
-      })
+    if (gaLoadingProperties || gaProperties.length > 0 || gaPropertyAutoLoadRef.current) {
+      return
     }
-  } else {
-    gaPropertyAutoLoadRef.current = false
-  }
+
+    gaPropertyAutoLoadRef.current = true
+    void loadGoogleAnalyticsPropertyOptions().catch((error) => {
+      const message = mapGoogleAnalyticsIntegrationError(error)
+      setGaSetupMessage(message)
+    })
+  }, [
+    gaLoadingProperties,
+    gaNeedsPropertySelection,
+    gaProperties.length,
+    gaSetupDialogOpen,
+    isPreviewMode,
+    loadGoogleAnalyticsPropertyOptions,
+    setGaSetupDialogOpen,
+    setGaSetupMessage,
+  ])
+
+  const analyticsStartDate = format(dateRange.start, 'yyyy-MM-dd')
+  const analyticsEndDate = format(dateRange.end, 'yyyy-MM-dd')
 
   const {
     metricsData,
     breakdowns,
     metricsNextCursor,
     metricsLoadingMore,
-    loadMoreMetrics,
     metricsError,
     metricsLoading,
     metricsRefreshing,
+    loadMoreMetrics,
+    resetMetricsPagination,
     mutateMetrics,
     insights,
     algorithmic,
@@ -338,20 +356,22 @@ export function useAnalyticsPageController() {
   } = useAnalyticsData(null, periodDays, selectedClientId ?? null, isPreviewMode, user?.agencyId, {
     providerIds: ['google-analytics'],
     includeInsights: true,
+    startDate: analyticsStartDate,
+    endDate: analyticsEndDate,
   })
 
-  const metrics = metricsData
-
-  const handleLoadMoreMetrics = useCallback(async () => {
+  const handleLoadMoreMetrics = useCallback(() => {
     if (!metricsNextCursor) return
 
     try {
-      await loadMoreMetrics()
+      loadMoreMetrics()
     } catch (error) {
       logError(error, 'AnalyticsPage:handleLoadMoreMetrics')
       notifyFailure({ title: 'Metrics pagination error', error })
     }
   }, [loadMoreMetrics, metricsNextCursor])
+
+  const metrics = metricsData
 
   const selectedRangeDays = useMemo(() => {
     return Math.max(differenceInDays(dateRange.end, dateRange.start) + 1, 1)
@@ -736,8 +756,9 @@ export function useAnalyticsPageController() {
   }, [chartData, previousTotals, selectedRangeDays, totals])
 
   const handleRefreshMetrics = useCallback(() => {
+    resetMetricsPagination()
     void mutateMetrics()
-  }, [mutateMetrics])
+  }, [mutateMetrics, resetMetricsPagination])
 
   const handleRefreshInsights = useCallback(() => {
     void mutateInsights()

@@ -53,6 +53,7 @@ export const getAdIntegrationInternal = internalQuery({
       autoSyncEnabled: row.autoSyncEnabled,
       syncFrequencyMinutes: row.syncFrequencyMinutes,
       scheduledTimeframeDays: row.scheduledTimeframeDays,
+      metaUseAsyncInsights: row.metaUseAsyncInsights ?? null,
     }
   },
 })
@@ -86,6 +87,7 @@ export const listStatuses = zWorkspaceQuery({
     autoSyncEnabled: z.boolean().nullable(),
     syncFrequencyMinutes: z.number().nullable(),
     scheduledTimeframeDays: z.number().nullable(),
+    metaUseAsyncInsights: z.boolean().nullable().optional(),
   })),
   handler: async (ctx, args) => {
     const clientId = normalizeClientId(args.clientId)
@@ -113,6 +115,7 @@ export const listStatuses = zWorkspaceQuery({
             autoSyncEnabled: row.autoSyncEnabled,
             syncFrequencyMinutes: row.syncFrequencyMinutes,
             scheduledTimeframeDays: row.scheduledTimeframeDays,
+            metaUseAsyncInsights: row.metaUseAsyncInsights ?? null,
           }]
         : [],
     )

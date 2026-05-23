@@ -249,6 +249,31 @@ export async function updateMetaAdSet(
 }
 
 // =============================================================================
+// FETCH AD SET TARGETING
+// =============================================================================
+
+export async function fetchMetaAdSetTargeting(options: {
+  accessToken: string
+  adSetId: string
+  maxRetries?: number
+}): Promise<Record<string, unknown> | null> {
+  const { accessToken, adSetId, maxRetries = 3 } = options
+
+  const params = new URLSearchParams({ fields: 'targeting' })
+  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+
+  const url = `${META_API_BASE}/${adSetId}?${params.toString()}`
+
+  const { payload } = await metaAdsClient.executeRequest<{ targeting?: Record<string, unknown> }>({
+    url,
+    operation: 'fetchAdSetTargeting',
+    maxRetries,
+  })
+
+  return payload?.targeting ?? null
+}
+
+// =============================================================================
 // UPDATE AD SET STATUS
 // =============================================================================
 

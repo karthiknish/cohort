@@ -87,12 +87,38 @@ export {
   inferMetaDisplayAdType,
   fetchMetaAudienceTargeting,
   createMetaAudience,
+  createMetaLookalikeAudience,
+  uploadMetaAudienceUsers,
 } from './campaigns'
 
 export { searchMetaAdInterests, searchMetaAdGeolocations } from './targeting-search'
 export type { MetaTargetingSearchResult } from './targeting-search'
 export { listMetaLeadgenForms, createMetaLeadgenForm } from './leadgen-forms'
 export type { MetaLeadgenForm } from './leadgen-forms'
+export { listMetaPagePosts, listMetaPageEvents } from './page-engagement-resources'
+export type { MetaPagePost, MetaPageEvent } from './page-engagement-resources'
+export { sendMetaCapiEvents, sendMetaOfflineEvents } from './capi'
+export type { MetaCapiEventInput, MetaCapiSendResult } from './capi'
+export { executeMetaBatch } from './batch'
+export type { MetaBatchRequestItem, MetaBatchResponseItem } from './batch'
+export {
+  listMetaBusinesses,
+  listMetaBusinessAdAccounts,
+} from './business-manager'
+export type { MetaBusiness, MetaBusinessAdAccount } from './business-manager'
+export { searchMetaAdLibrary } from './ad-library'
+export type { MetaAdLibraryAd } from './ad-library'
+export {
+  listMetaAdAccountWebhookSubscriptions,
+  updateMetaAdAccountWebhookSubscriptions,
+  clearMetaAdAccountWebhookSubscriptions,
+} from './webhooks'
+export {
+  listMetaAdPixels,
+  getMetaPixelDetails,
+  getMetaPixelStats,
+} from './pixels'
+export type { MetaAdPixel, MetaPixelDetails, MetaPixelStatRow } from './pixels'
 export { buildMetaTargetingFromNormalized } from './meta-targeting-serialize'
 export type { MetaTargetingSource } from './meta-targeting-serialize'
 

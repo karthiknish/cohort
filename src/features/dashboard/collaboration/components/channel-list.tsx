@@ -7,6 +7,7 @@ import type { ChangeEvent } from 'react'
 import { Badge } from '@/shared/ui/badge'
 import { Input } from '@/shared/ui/input'
 import { Separator } from '@/shared/ui/separator'
+import { listItemEnterClass, MotionPressable } from '@/shared/ui/motion-primitives'
 import { cn } from '@/lib/utils'
 
 import type { ChannelSummary } from '../hooks'
@@ -64,11 +65,11 @@ export function CollaborationChannelList({
               const summary = channelSummaries.get(channel.id)
               const isSelected = selectedChannel?.id === channel.id
               return (
-                <button
+                <MotionPressable
                   key={channel.id}
-                  type="button"
                   onClick={selectChannelHandlers[channel.id]}
                   className={cn(
+                    listItemEnterClass,
                     'flex w-full max-w-full min-w-0 flex-col gap-1.5 overflow-hidden rounded-lg border p-3 text-left motion-chromatic outline-none focus-visible:ring-2 focus-visible:ring-primary/20',
                     isSelected
                       ? 'border-accent/20 bg-accent/5 shadow-sm'
@@ -100,7 +101,7 @@ export function CollaborationChannelList({
                       ? formatConversationSnippet(summary.lastMessage, 120)
                       : 'No messages yet'}
                   </p>
-                </button>
+                </MotionPressable>
               )
             })}
           </div>

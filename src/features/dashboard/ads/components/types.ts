@@ -11,6 +11,7 @@ export interface IntegrationStatus {
   autoSyncEnabled?: boolean | null
   syncFrequencyMinutes?: number | null
   scheduledTimeframeDays?: number | null
+  metaUseAsyncInsights?: boolean | null
 }
 
 export interface IntegrationStatusResponse {
@@ -122,6 +123,7 @@ export type ProviderAutomationFormState = {
   autoSyncEnabled: boolean
   syncFrequencyMinutes: number
   scheduledTimeframeDays: number
+  metaUseAsyncInsights?: boolean
 }
 
 export interface AdPlatform {

@@ -22,6 +22,10 @@ import {
 } from '@/shared/ui/select'
 import { cn } from '@/lib/utils'
 
+import { useAuth } from '@/shared/contexts/auth-context'
+import { useClientContext } from '@/shared/contexts/client-context'
+
+import { MetaEventsToolsPanel } from './meta-events-tools-panel'
 import type { IntegrationStatus, ProviderAutomationFormState } from './types'
 import {
   FREQUENCY_OPTIONS,
@@ -170,6 +174,20 @@ function AutomationProviderCard({
     onRunManualSync(status.providerId)
   }, [onRunManualSync, status.providerId])
 
+  const handleAsyncInsightsChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onUpdateDraft(status.providerId, {
+        metaUseAsyncInsights: event.target.checked,
+      })
+    },
+    [onUpdateDraft, status.providerId],
+  )
+
+  const isMeta = status.providerId === 'facebook'
+  const { user } = useAuth()
+  const { selectedClientId } = useClientContext()
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
+
   return (
     <div className="space-y-4 rounded-lg border border-muted/60 p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -211,6 +229,33 @@ function AutomationProviderCard({
           Enable automatic sync
         </label>
       </div>
+
+      {isMeta ? (
+        <div className="flex items-start gap-2 rounded-md border border-border/50 bg-muted/20 p-3 text-sm">
+          <Checkbox
+            id={`meta-async-${status.providerId}`}
+            checked={draft.metaUseAsyncInsights === true}
+            onChange={handleAsyncInsightsChange}
+            disabled={saving}
+          />
+          <label htmlFor={`meta-async-${status.providerId}`} className="cursor-pointer space-y-0.5">
+            <span className="font-medium text-foreground">Async insights reports</span>
+            <span className="block text-xs text-muted-foreground">
+              Use Meta async jobs for metric sync (recommended for large accounts). Falls back to env{' '}
+              <code className="text-[10px]">META_ADS_USE_ASYNC_INSIGHTS</code> when off.
+            </span>
+          </label>
+        </div>
+      ) : null}
+
+      {isMeta && isExpanded && workspaceId ? (
+        <MetaEventsToolsPanel
+          workspaceId={workspaceId}
+          clientId={selectedClientId}
+          adAccountId={status.accountId}
+          scope="account"
+        />
+      ) : null}
 
       {isExpanded && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">

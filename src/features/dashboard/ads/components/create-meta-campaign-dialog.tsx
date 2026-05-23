@@ -27,6 +27,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select'
+import { metaDatetimeLocalToIso } from '@/lib/meta-datetime'
+import {
+  META_SPECIAL_AD_CATEGORIES,
+  normalizeMetaSpecialAdCategoriesForApi,
+  type MetaSpecialAdCategory,
+} from '@/lib/meta-special-ad-categories'
+import { Checkbox } from '@/shared/ui/checkbox'
+import { Label } from '@/shared/ui/label'
 import { toast } from '@/shared/ui/use-toast'
 
 const META_OBJECTIVES = [
@@ -49,6 +57,7 @@ type CreateMetaCampaignState = {
   dailyBudget: string
   startTime: string
   stopTime: string
+  specialAdCategories: MetaSpecialAdCategory[]
   loading: boolean
 }
 
@@ -58,6 +67,7 @@ type CreateMetaCampaignAction =
   | { type: 'setDailyBudget'; value: string }
   | { type: 'setStartTime'; value: string }
   | { type: 'setStopTime'; value: string }
+  | { type: 'toggleSpecialAdCategory'; value: MetaSpecialAdCategory }
   | { type: 'setLoading'; value: boolean }
   | { type: 'resetAfterCreate' }
 
@@ -68,6 +78,7 @@ function createInitialCreateMetaCampaignState(): CreateMetaCampaignState {
     dailyBudget: '',
     startTime: '',
     stopTime: '',
+    specialAdCategories: ['NONE'],
     loading: false,
   }
 }
@@ -87,6 +98,16 @@ function createMetaCampaignReducer(
       return { ...state, startTime: action.value }
     case 'setStopTime':
       return { ...state, stopTime: action.value }
+    case 'toggleSpecialAdCategory': {
+      const value = action.value
+      if (value === 'NONE') {
+        return { ...state, specialAdCategories: ['NONE'] }
+      }
+      const withoutNone = state.specialAdCategories.filter((item) => item !== 'NONE')
+      const has = withoutNone.includes(value)
+      const next = has ? withoutNone.filter((item) => item !== value) : [...withoutNone, value]
+      return { ...state, specialAdCategories: next.length > 0 ? next : ['NONE'] }
+    }
     case 'setLoading':
       return { ...state, loading: action.value }
     case 'resetAfterCreate':
@@ -109,10 +130,11 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
     dailyBudget?: number
     startTime?: string
     stopTime?: string
+    specialAdCategories?: string[]
   }) => Promise<{ success: boolean; campaignId?: string }>
 
   const [state, dispatch] = useReducer(createMetaCampaignReducer, undefined, createInitialCreateMetaCampaignState)
-  const { name, objective, dailyBudget, startTime, stopTime, loading } = state
+  const { name, objective, dailyBudget, startTime, stopTime, specialAdCategories, loading } = state
 
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
 
@@ -128,8 +150,9 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
         objective,
         status: 'PAUSED',
         dailyBudget: dailyBudget ? Number(dailyBudget) : undefined,
-        startTime: startTime.trim() || undefined,
-        stopTime: stopTime.trim() || undefined,
+        startTime: metaDatetimeLocalToIso(startTime),
+        stopTime: metaDatetimeLocalToIso(stopTime),
+        specialAdCategories: normalizeMetaSpecialAdCategoriesForApi(specialAdCategories),
       })
       toast({ title: 'Campaign created', description: `"${name.trim()}" is paused in Meta — add ad sets next.` })
       dispatch({ type: 'resetAfterCreate' })
@@ -150,6 +173,7 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
     dailyBudget,
     startTime,
     stopTime,
+    specialAdCategories,
     name,
     objective,
     onCreated,
@@ -176,6 +200,12 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
 
   const handleObjectiveChange = useCallback((value: string) => {
     dispatch({ type: 'setObjective', value })
+  }, [])
+
+  const handleSpecialAdCategoryToggle = useCallback((value: MetaSpecialAdCategory) => {
+    return () => {
+      dispatch({ type: 'toggleSpecialAdCategory', value })
+    }
   }, [])
 
   const handleCancel = useCallback(() => {
@@ -218,6 +248,29 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
               </SelectContent>
             </Select>
           </FormField>
+          <FormField
+            id="meta-campaign-special-categories"
+            label="Special ad categories"
+            description="Required by Meta. Select only if this campaign promotes housing, employment, credit, or political content."
+          >
+            <div className="space-y-2 rounded-lg border border-border/60 p-3">
+              {META_SPECIAL_AD_CATEGORIES.map((item) => {
+                const checked = specialAdCategories.includes(item.value)
+                return (
+                  <div key={item.value} className="flex items-start gap-2">
+                    <Checkbox
+                      id={`meta-special-${item.value}`}
+                      checked={checked}
+                      onCheckedChange={handleSpecialAdCategoryToggle(item.value)}
+                    />
+                    <Label htmlFor={`meta-special-${item.value}`} className="text-sm font-normal leading-snug">
+                      {item.label}
+                    </Label>
+                  </div>
+                )
+              })}
+            </div>
+          </FormField>
           <FormField id="meta-campaign-budget" label="Daily budget (optional)" description="Account currency">
             <Input
               id="meta-campaign-budget"
@@ -229,7 +282,7 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
             />
           </FormField>
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="meta-campaign-start" label="Start (optional)" description="ISO datetime">
+            <FormField id="meta-campaign-start" label="Start (optional)" description="Local time — saved as UTC for Meta">
               <Input
                 id="meta-campaign-start"
                 type="datetime-local"
@@ -237,7 +290,7 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
                 onChange={handleStartTimeChange}
               />
             </FormField>
-            <FormField id="meta-campaign-stop" label="End (optional)" description="ISO datetime">
+            <FormField id="meta-campaign-stop" label="End (optional)" description="Local time — saved as UTC for Meta">
               <Input
                 id="meta-campaign-stop"
                 type="datetime-local"

@@ -204,6 +204,8 @@ export const create = zWorkspaceMutation({
       aiSuggestions: null,
       pdfUrl: null,
       pptUrl: null,
+      pdfStorageId: null,
+      pptStorageId: null,
       clientId: args.clientId,
       clientName: args.clientName,
       agentConversationId: args.agentConversationId ?? null,

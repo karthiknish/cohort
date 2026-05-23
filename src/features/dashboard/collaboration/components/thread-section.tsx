@@ -1,14 +1,62 @@
 'use client'
 
-import { ChevronDown, ChevronRight, LoaderCircle, MessageSquare, RefreshCw, Reply } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { ChevronRight, LoaderCircle, MessageSquare, RefreshCw, Reply } from 'lucide-react'
 
-import { Button } from '@/shared/ui/button'
-import { EmptyState } from '@/shared/ui/empty-state'
-import type { AsyncViewState } from '@/shared/ui/state-wrapper'
+import { fadeInDownVariants } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import type { CollaborationMessage } from '@/types/collaboration'
+import { Button } from '@/shared/ui/button'
+import { buttonVariants } from '@/shared/ui/button-variants'
+import { EmptyState } from '@/shared/ui/empty-state'
+import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from '@/shared/ui/motion'
+import { MotionPressable } from '@/shared/ui/motion-primitives'
+import type { AsyncViewState } from '@/shared/ui/state-wrapper'
 
 import { formatRelativeTime } from '../utils'
+
+function ThreadPanelReveal({
+  open,
+  panelId,
+  children,
+}: {
+  open: boolean
+  panelId: string
+  children: ReactNode
+}) {
+  const prefersReducedMotion = useReducedMotion()
+
+  if (prefersReducedMotion) {
+    return open ? (
+      <div
+        id={panelId}
+        className="mt-3 space-y-2 border-l-2 border-accent/20 pl-4"
+      >
+        {children}
+      </div>
+    ) : null
+  }
+
+  return (
+    <AnimatePresence initial={false}>
+      {open ? (
+        <LazyMotion features={domAnimation}>
+          <m.div
+            key={panelId}
+            id={panelId}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={fadeInDownVariants}
+            className="mt-3 space-y-2 overflow-hidden border-l-2 border-accent/20 pl-4"
+          >
+            {children}
+          </m.div>
+        </LazyMotion>
+      ) : null}
+    </AnimatePresence>
+  )
+}
 
 export interface ThreadToggleButtonProps {
   replyCount: number
@@ -29,14 +77,14 @@ export function ThreadToggleButton({
   hasRepliesLoaded,
   onToggle,
 }: ThreadToggleButtonProps) {
+  const prefersReducedMotion = useReducedMotion()
+
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
+    <MotionPressable
       className={cn(
+        buttonVariants({ variant: 'ghost', size: 'sm' }),
         'inline-flex items-center gap-2 text-xs text-primary transition-colors hover:bg-accent/5 hover:text-primary/90',
-        isOpen && 'bg-accent/5'
+        isOpen && 'bg-accent/5',
       )}
       onClick={onToggle}
       disabled={isLoading && !isOpen && !hasRepliesLoaded}
@@ -44,10 +92,14 @@ export function ThreadToggleButton({
     >
       {isLoading && !isOpen && !hasRepliesLoaded ? (
         <LoaderCircle className="size-3.5 animate-spin" />
-      ) : isOpen ? (
-        <ChevronDown className="size-3.5" />
       ) : (
-        <ChevronRight className="size-3.5" />
+        <m.span
+          animate={prefersReducedMotion ? undefined : { rotate: isOpen ? 90 : 0 }}
+          transition={{ duration: 0.18 }}
+          className="inline-flex"
+        >
+          <ChevronRight className="size-3.5" />
+        </m.span>
       )}
       <MessageSquare className="size-3.5" />
       <span className="font-medium">
@@ -61,7 +113,7 @@ export function ThreadToggleButton({
       {lastReplyLabel && (
         <span className="font-normal text-muted-foreground">· Last reply {lastReplyLabel}</span>
       )}
-    </Button>
+    </MotionPressable>
   )
 }
 
@@ -122,17 +174,17 @@ export interface ThreadLoadMoreButtonProps {
 
 export function ThreadLoadMoreButton({ isLoading, onLoadMore }: ThreadLoadMoreButtonProps) {
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+    <MotionPressable
+      className={cn(
+        buttonVariants({ variant: 'ghost', size: 'sm' }),
+        'inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground',
+      )}
       onClick={onLoadMore}
       disabled={isLoading}
     >
       <RefreshCw className={cn('size-3.5', isLoading && 'animate-spin')} />
       {isLoading ? 'Loading…' : 'Load older replies'}
-    </Button>
+    </MotionPressable>
   )
 }
 
@@ -143,16 +195,16 @@ export interface ThreadReplyButtonProps {
 export function ThreadReplyButton({ onReply }: ThreadReplyButtonProps) {
   return (
     <div className="pt-2">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="h-9 w-full justify-start text-xs text-muted-foreground hover:text-foreground"
+      <MotionPressable
+        className={cn(
+          buttonVariants({ variant: 'outline', size: 'sm' }),
+          'h-9 w-full justify-start text-xs text-muted-foreground hover:text-foreground',
+        )}
         onClick={onReply}
       >
         <Reply className="mr-2 size-3.5" />
         Reply to thread…
-      </Button>
+      </MotionPressable>
     </div>
   )
 }
@@ -163,16 +215,16 @@ export interface StartThreadButtonProps {
 
 export function StartThreadButton({ onReply }: StartThreadButtonProps) {
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      className="inline-flex items-center gap-2 text-xs text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+    <MotionPressable
+      className={cn(
+        buttonVariants({ variant: 'ghost', size: 'sm' }),
+        'inline-flex items-center gap-2 text-xs text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100',
+      )}
       onClick={onReply}
     >
       <Reply className="size-3.5" />
       <span>Reply</span>
-    </Button>
+    </MotionPressable>
   )
 }
 
@@ -269,37 +321,32 @@ export function ThreadSection({
         canReply ? <StartThreadButton onReply={onReply} /> : null
       )}
 
-      {/* Thread Replies Container */}
-      {isOpen && (
-        <div id={panelId} className="mt-3 animate-in slide-in-from-top-2 space-y-2 border-l-2 border-accent/20 pl-4 duration-200">
-          {threadState === 'error' ? <ThreadError error={error ?? 'Unable to load replies.'} isLoading={isLoading} onRetry={onRetry} /> : null}
+      <ThreadPanelReveal open={isOpen} panelId={panelId}>
+        {threadState === 'error' ? <ThreadError error={error ?? 'Unable to load replies.'} isLoading={isLoading} onRetry={onRetry} /> : null}
 
-          {threadState === 'loading' ? <ThreadLoading hasReplies={false} /> : null}
+        {threadState === 'loading' ? <ThreadLoading hasReplies={false} /> : null}
 
-          {threadState === 'empty' ? <ThreadEmptyState /> : null}
+        {threadState === 'empty' ? <ThreadEmptyState /> : null}
 
-          {threadState === 'ready' ? (
-            <>
-              {error ? <ThreadError error={error} isLoading={isLoading} onRetry={onRetry} /> : null}
-              <div className="space-y-2">
-                {replies.map((reply) => (
-                  <ReplyRenderer key={reply.id} reply={reply} />
-                ))}
-              </div>
-            </>
-          ) : null}
+        {threadState === 'ready' ? (
+          <>
+            {error ? <ThreadError error={error} isLoading={isLoading} onRetry={onRetry} /> : null}
+            <div className="space-y-2">
+              {replies.map((reply) => (
+                <ReplyRenderer key={reply.id} reply={reply} />
+              ))}
+            </div>
+          </>
+        ) : null}
 
-          {isLoading && replies.length > 0 ? <ThreadLoading hasReplies={true} /> : null}
+        {isLoading && replies.length > 0 ? <ThreadLoading hasReplies={true} /> : null}
 
-          {/* Load More Button */}
-          {hasNextCursor && (
-            <ThreadLoadMoreButton isLoading={isLoading} onLoadMore={onLoadMore} />
-          )}
+        {hasNextCursor ? (
+          <ThreadLoadMoreButton isLoading={isLoading} onLoadMore={onLoadMore} />
+        ) : null}
 
-          {/* Inline Thread Reply Composer */}
-          {canReply && <ThreadReplyButton onReply={onReply} />}
-        </div>
-      )}
+        {canReply ? <ThreadReplyButton onReply={onReply} /> : null}
+      </ThreadPanelReveal>
     </div>
   )
 }

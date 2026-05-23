@@ -39,6 +39,9 @@ export interface CampaignFormData {
   // Sales/Conversions
   conversionEvent?: string
   pixelId?: string
+  salesOptimizationMode?: 'pixel' | 'catalog'
+  productCatalogId?: string
+  productSetId?: string
   
   // Leads
   leadFormId?: string

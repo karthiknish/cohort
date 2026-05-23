@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { Button } from '@/shared/ui/button'
 import EmojiPicker, { Theme, type EmojiClickData } from '@/shared/ui/emoji-picker'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
+import { FadeIn } from '@/shared/ui/animate-in'
 import { Separator } from '@/shared/ui/separator'
 import {
   chromaticTransitionClass,
@@ -113,11 +114,13 @@ export function MessageListLoadMoreButton({
 
 export function MessageDateSeparator({ date }: { date: string }) {
   return (
-    <div className="mb-4 flex items-center gap-2">
-      <Separator className="flex-1" />
-      <span className="text-xs font-medium text-muted-foreground">{date}</span>
-      <Separator className="flex-1" />
-    </div>
+    <FadeIn y={6} duration={0.18}>
+      <div className="mb-4 flex items-center gap-2">
+        <Separator className="flex-1" />
+        <span className="text-xs font-medium text-muted-foreground">{date}</span>
+        <Separator className="flex-1" />
+      </div>
+    </FadeIn>
   )
 }
 

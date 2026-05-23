@@ -59,6 +59,8 @@ export { retryFetch, getRetryableErrorMessage } from './retry-fetch'
 
 // Components
 export { AutomationControlsCard } from './automation-controls-card'
+export { MetaEventsToolsPanel } from './meta-events-tools-panel'
+export { MetaAdvancedToolsPanel } from './meta-advanced-tools-panel'
 export { CrossChannelOverviewCard } from './cross-channel-overview-card'
 export { PerformanceSummaryCard } from './performance-summary-card'
 export { MetricsTableCard } from './metrics-table-card'

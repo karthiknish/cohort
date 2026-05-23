@@ -2,6 +2,7 @@ export type CreateCreativeDialogProps = {
   workspaceId: string | null
   providerId: string
   campaignId: string
+  campaignObjective?: string | null
   clientId?: string | null
   adSetId?: string
   availableAdSets?: Array<{ id: string; name: string }>

@@ -162,15 +162,6 @@ export const collaborationTables = {
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
     deletedAtMs: v.union(v.number(), v.null()),
-    billingEmail: v.optional(v.union(v.string(), v.null())),
-    stripeCustomerId: v.optional(v.union(v.string(), v.null())),
-    lastInvoiceAmount: v.optional(v.union(v.number(), v.null())),
-    lastInvoiceCurrency: v.optional(v.union(v.string(), v.null())),
-    lastInvoiceIssuedAtMs: v.optional(v.union(v.number(), v.null())),
-    lastInvoiceNumber: v.optional(v.union(v.string(), v.null())),
-    lastInvoicePaidAtMs: v.optional(v.union(v.number(), v.null())),
-    lastInvoiceStatus: v.optional(v.union(v.string(), v.null())),
-    lastInvoiceUrl: v.optional(v.union(v.string(), v.null())),
   })
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_nameLower_legacyId', ['workspaceId', 'nameLower', 'legacyId'])

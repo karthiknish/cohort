@@ -52,4 +52,5 @@ export type ProviderAutomationFormState = {
     autoSyncEnabled: boolean
     syncFrequencyMinutes: number
     scheduledTimeframeDays: number
+    metaUseAsyncInsights?: boolean
 }

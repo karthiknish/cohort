@@ -16,6 +16,7 @@ import {
   mergeTeamMembersWithAdmins,
   syncWorkspaceClientAdminMembers,
 } from './clientAdminTeamSync'
+import { slugifyClientName } from '@/lib/slugify'
 
 const clientZ = z.object({
   legacyId: z.string(),
@@ -31,21 +32,6 @@ const clientZ = z.object({
   updatedAtMs: z.number(),
   deletedAtMs: z.number().nullable(),
 })
-
-function slugify(value: string): string {
-  const base = value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60)
-
-  if (base.length === 0) {
-    return `client-${Date.now()}`
-  }
-
-  return base
-}
 
 /**
  * Get client by legacyId — **internal only** (agent/actions). Not callable from public clients.
@@ -120,12 +106,25 @@ export const countActive = zWorkspaceQueryActive({
   args: { workspaceId: z.string() },
   returns: z.number(),
   handler: async (ctx, args) => {
-    const rows = await ctx.db
-      .query('clients')
-      .withIndex('by_workspace_deletedAtMs', (q) => q.eq('workspaceId', args.workspaceId).eq('deletedAtMs', null))
-      .collect()
+    let count = 0
+    let cursor: string | null = null
 
-    return rows.length
+    while (true) {
+      const page = await ctx.db
+        .query('clients')
+        .withIndex('by_workspace_deletedAtMs', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('deletedAtMs', null),
+        )
+        .paginate({ numItems: 500, cursor })
+
+      count += page.page.length
+      if (page.isDone) {
+        break
+      }
+      cursor = page.continueCursor
+    }
+
+    return count
   },
 })
 
@@ -193,7 +192,7 @@ export const create = zWorkspaceMutation({
     const adminMembers = await loadEffectiveClientAdminMembers(ctx, args.workspaceId)
     const teamMembersWithAdmins = mergeTeamMembersWithAdmins(normalizedTeamMembers, adminMembers)
 
-    const baseId = slugify(normalizedName)
+    const baseId = slugifyClientName(normalizedName)
     let candidateId = baseId
     let attempt = 1
     let finalId: string | null = null

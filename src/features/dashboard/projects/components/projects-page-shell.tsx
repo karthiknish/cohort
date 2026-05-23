@@ -38,7 +38,7 @@ import { ProjectStatusPills } from './project-status-pills'
 import { PROJECTS_THEME } from './projects-theme'
 import { SummaryCard } from './summary-card'
 import { ViewModeSelector } from './view-mode-selector'
-import { RETRY_CONFIG, type StatusFilter } from './utils'
+import type { StatusFilter } from './utils'
 import { useProjectsPageContext } from './projects-page-provider'
 
 export function ProjectsPageShell() {
@@ -108,7 +108,6 @@ function ProjectsHeaderSection() {
     loading,
     portfolioLabel,
     projects,
-    retryCount,
     setViewMode,
     viewMode,
   } = useProjectsPageContext()
@@ -139,11 +138,6 @@ function ProjectsHeaderSection() {
             </p>
           </div>
         </div>
-        {retryCount > 0 ? (
-          <p className="text-xs font-medium text-warning">
-            Retrying… {retryCount}/{RETRY_CONFIG.maxRetries}
-          </p>
-        ) : null}
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <KeyboardShortcutBadge combo="mod+k" className="origin-left scale-90" />
@@ -337,14 +331,17 @@ function ProjectsBacklogSection() {
     focusedProjectRecord,
     focusedProjectTasksHref,
     handleMilestoneCreated,
+    handleLoadMore,
     handleRefreshProjects,
     handleUpdateStatus,
     hasActiveFilters,
+    hasMoreProjects,
     hasVisibleProjects,
     debouncedSearchQuery,
     initialLoading,
     loadMilestones,
     loading,
+    loadingMore,
     milestonesByProject,
     milestonesError,
     milestonesLoading,
@@ -461,6 +458,9 @@ function ProjectsBacklogSection() {
             onClearAllFilters={clearAllFilters}
             onDelete={openDeleteDialog}
             onEdit={openEditDialog}
+            hasMoreProjects={hasMoreProjects}
+            loadingMore={loadingMore}
+            onLoadMore={handleLoadMore}
             onRefresh={handleRefreshProjectsClick}
             onSearchClear={handleSearchClear}
             onUpdateStatus={handleUpdateStatus}

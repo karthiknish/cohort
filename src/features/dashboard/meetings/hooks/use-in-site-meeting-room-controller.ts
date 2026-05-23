@@ -5,7 +5,6 @@ import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCreateLayoutContext } from '@/shared/ui/livekit'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
-import { logError } from '@/lib/convex-errors'
 import { useToast } from '@/shared/ui/use-toast'
 
 import type {
@@ -13,7 +12,6 @@ import type {
   LiveKitJoinPayload,
   MeetingRoomPageProps,
   TranscriptActionResult,
-  TranscriptMode,
 } from '../components/in-site-meeting-card.shared'
 import type { MeetingRecord } from '../types'
 import {
@@ -22,6 +20,7 @@ import {
   formatMeetingTitleFromRoomName,
   normalizeMeetingProcessingState,
 } from '../utils'
+import { useInSiteMeetingRoomPostCall } from './use-in-site-meeting-room-post-call'
 
 export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
   const { meeting, onClose, canRecord = true, onMeetingUpdated, fallbackRoomName } = props
@@ -40,6 +39,8 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
   const [notesProcessingState, setNotesProcessingState] = useState(() => normalizeMeetingProcessingState(meeting.notesProcessingState))
   const [notesProcessingError, setNotesProcessingError] = useState<string | null>(meeting.notesProcessingError ?? null)
   const [notesReason, setNotesReason] = useState<'ai_not_configured' | 'generation_failed' | null>(null)
+  const [notesStorageId, setNotesStorageId] = useState<string | null>(meeting.notesStorageId ?? null)
+  const [transcriptStorageId, setTranscriptStorageId] = useState<string | null>(meeting.transcriptStorageId ?? null)
   const [transcriptTruncatedForNotes, setTranscriptTruncatedForNotes] = useState(false)
   const [operationsOpen, setOperationsOpen] = useState(false)
   const [generatingNotes, setGeneratingNotes] = useState(false)
@@ -91,7 +92,10 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     )
   const isMinimized = Boolean(joinConfig) && !isMobileViewport && isMinimizedPreference
   const [pipActive, setPipActive] = useState(false)
-  const autoCaptureEnabled = true
+  const [transcriptRecordingEnabled, setTranscriptRecordingEnabled] = useState(
+    () => Boolean(meeting.transcriptText?.trim()),
+  )
+  const autoCaptureEnabled = transcriptRecordingEnabled && canRecord
   const [captureStatus, setCaptureStatus] = useState<CaptureStatus>({
     supported: false,
     listening: false,
@@ -227,6 +231,8 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     setSummaryPreview(updatedMeeting.notesSummary ?? null)
     setNotesProcessingState(normalizeMeetingProcessingState(updatedMeeting.notesProcessingState))
     setNotesProcessingError(updatedMeeting.notesProcessingError ?? null)
+    setNotesStorageId(updatedMeeting.notesStorageId ?? null)
+    setTranscriptStorageId(updatedMeeting.transcriptStorageId ?? null)
     setFinalizingSession(
       normalizeMeetingProcessingState(updatedMeeting.transcriptProcessingState) === 'processing' ||
         normalizeMeetingProcessingState(updatedMeeting.notesProcessingState) === 'processing'
@@ -262,42 +268,41 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     }
   }, [syncMeetingState])
 
-  const submitTranscriptAction = useCallback(async (
-    mode: TranscriptMode,
-    overrides?: { transcriptText?: string; notesSummary?: string; source?: string; markCompleted?: boolean; keepalive?: boolean },
-  ) => {
-    if (!meetingLegacyId) {
-      throw new Error('This meeting record is missing an ID. Refresh and reopen the room.')
-    }
-
-    const response = await fetch('/api/meetings/transcript', {
-      method: 'POST',
-      keepalive: overrides?.keepalive,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        legacyId: meetingLegacyId,
-        mode,
-        markCompleted: overrides?.markCompleted ?? markCompleted,
-        source: overrides?.source ?? 'in-site-voice',
-        transcriptText: overrides?.transcriptText,
-        notesSummary: overrides?.notesSummary,
-      }),
-    })
-
-    const payload = (await response.json().catch(() => ({}))) as {
-      success?: boolean
-      error?: string
-      data?: TranscriptActionResult
-    }
-
-    if (!response.ok || payload.success === false) {
-      throw new Error(payload.error || 'Meeting update failed')
-    }
-
-    return (payload.data ?? {}) as TranscriptActionResult
-  }, [markCompleted, meetingLegacyId])
+  const {
+    finalizeMeetingAfterRoomExit,
+    handleGenerateNotes,
+    handleRetryPostCallProcessing,
+    performAutoSync,
+  } = useInSiteMeetingRoomPostCall({
+    meetingLegacyId,
+    markCompleted,
+    normalizedTranscript,
+    transcriptDraft,
+    transcriptSource,
+    canPersist,
+    canGenerateNotes,
+    onClose,
+    onMeetingUpdated,
+    buildMeetingSnapshot,
+    applyTranscriptActionResult,
+    setMarkCompleted,
+    setFinalizingSession,
+    setTranscriptSource,
+    setTranscriptProcessingState,
+    setTranscriptProcessingError,
+    setNotesProcessingState,
+    setNotesProcessingError,
+    setNotesReason,
+    setGeneratingNotes,
+    setRetryingPostCallProcessing,
+    setOperationsOpen,
+    setJoinConfig,
+    setInterimTranscript,
+    setAutoSyncing,
+    setLastAutoSyncAt,
+    lastAutoSyncedTranscriptRef,
+    finalizationInFlightRef,
+  })
 
   const handleJoinRoom = useCallback(() => {
     if (isPreviewMeeting) {
@@ -352,6 +357,20 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
         }
 
         setJoinConfig(payload.data)
+        setOperationsOpen(true)
+
+        const hasExistingTranscript = Boolean(
+          payload.data.meeting?.transcriptText?.trim() || transcriptDraft.trim(),
+        )
+
+        if (!hasExistingTranscript) {
+          toast({
+            title: 'Room connected',
+            description: 'Start transcript recording when you are ready. Cohorts will transcribe speech, then generate guarded AI notes.',
+          })
+        } else {
+          setTranscriptRecordingEnabled(true)
+        }
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : 'Unable to join the meeting room'
@@ -360,248 +379,24 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
       .finally(() => {
         setJoiningRoom(false)
       })
-  }, [hasJoinReference, isPreviewMeeting, meetingCalendarEventId, meetingLegacyId, meetingRoomName, syncMeetingState, toast])
+  }, [hasJoinReference, isPreviewMeeting, meetingCalendarEventId, meetingLegacyId, meetingRoomName, syncMeetingState, toast, transcriptDraft])
 
-  const finalizeMeetingAfterRoomExit = useCallback((closeAfterKickoff: boolean) => {
-    if (!canPersist || finalizationInFlightRef.current) {
-      if (closeAfterKickoff) {
-        onClose()
-      }
+  const enableTranscriptRecording = useCallback(() => {
+    if (!canRecord) {
+      notifyFailure({
+        title: 'Recording unavailable',
+        message: 'Transcript recording is disabled for this meeting room.',
+      })
       return
     }
 
-    finalizationInFlightRef.current = true
-
-    const hasEnoughTranscript = normalizedTranscript.length >= 20
-    const optimisticMeeting = buildMeetingSnapshot({
-      status: 'completed',
-      transcriptText: normalizedTranscript || transcriptDraft,
-      transcriptSource: 'livekit-browser-voice',
-      transcriptProcessingState: hasEnoughTranscript ? 'processing' : 'idle',
-      transcriptProcessingError: null,
-      notesProcessingState: hasEnoughTranscript ? 'processing' : 'idle',
-      notesProcessingError: null,
-    })
-
-    setMarkCompleted(true)
-    setFinalizingSession(hasEnoughTranscript)
-    setTranscriptSource('livekit-browser-voice')
-    setTranscriptProcessingState(hasEnoughTranscript ? 'processing' : 'idle')
-    setTranscriptProcessingError(null)
-    setNotesProcessingState(hasEnoughTranscript ? 'processing' : 'idle')
-    setNotesProcessingError(null)
+    setTranscriptRecordingEnabled(true)
     setOperationsOpen(true)
-    onMeetingUpdated?.(optimisticMeeting)
-
-    const finalizePromise = submitTranscriptAction('finalize-post-meeting', {
-      transcriptText: normalizedTranscript,
-      source: 'livekit-browser-voice',
-      markCompleted: true,
-      keepalive: closeAfterKickoff,
+    toast({
+      title: 'Transcript recording enabled',
+      description: 'Allow microphone access when prompted. Speak naturally and Cohorts will build the transcript in the background.',
     })
-
-    if (closeAfterKickoff) {
-      setJoinConfig(null)
-      setInterimTranscript('')
-      onClose()
-
-      void finalizePromise.catch((error) => {
-        const message = error instanceof Error ? error.message : 'Meeting finalization failed'
-        onMeetingUpdated?.(
-          buildMeetingSnapshot({
-            status: 'completed',
-            transcriptProcessingState: 'failed',
-            transcriptProcessingError: message,
-            notesProcessingState: 'failed',
-            notesProcessingError: 'AI notes could not be generated because post-call finalization failed.',
-          }),
-        )
-      }).finally(() => {
-        finalizationInFlightRef.current = false
-      })
-
-      return
-    }
-
-    void finalizePromise
-      .then((result) => {
-        lastAutoSyncedTranscriptRef.current = normalizedTranscript
-        applyTranscriptActionResult(result)
-      })
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : 'Meeting finalization failed'
-        setTranscriptProcessingState('failed')
-        setTranscriptProcessingError(message)
-        setNotesProcessingState('failed')
-        setNotesProcessingError('AI notes could not be generated because post-call finalization failed.')
-        setFinalizingSession(false)
-        onMeetingUpdated?.(
-          buildMeetingSnapshot({
-            status: 'completed',
-            transcriptProcessingState: 'failed',
-            transcriptProcessingError: message,
-            notesProcessingState: 'failed',
-            notesProcessingError: 'AI notes could not be generated because post-call finalization failed.',
-          }),
-        )
-      })
-      .finally(() => {
-        finalizationInFlightRef.current = false
-      })
-  }, [
-    applyTranscriptActionResult,
-    buildMeetingSnapshot,
-    canPersist,
-    normalizedTranscript,
-    onClose,
-    onMeetingUpdated,
-    submitTranscriptAction,
-    transcriptDraft,
-  ])
-
-  const handleGenerateNotes = useCallback(async () => {
-    if (!canGenerateNotes) {
-      notifyFailure({
-        title: 'Transcript too short',
-        message: 'Capture a bit more conversation before generating AI meeting notes.',
-      })
-      return
-    }
-
-    setGeneratingNotes(true)
-    setNotesProcessingState('processing')
-    setNotesProcessingError(null)
-
-    try {
-      const result = await submitTranscriptAction('save-transcript-and-generate-notes', {
-        transcriptText: normalizedTranscript,
-        source: 'livekit-browser-voice',
-      })
-
-      lastAutoSyncedTranscriptRef.current = normalizedTranscript
-      applyTranscriptActionResult(result)
-
-      if (result.notesGenerated) {
-        toast({
-          title: 'AI summary updated',
-          description: 'The room sidebar now reflects the latest generated summary.',
-        })
-      } else if (result.notesReason === 'ai_not_configured') {
-        notifyFailure({
-        title: 'AI notes unavailable',
-        message: 'Gemini is not configured for meeting note generation in this environment.',
-      })
-      } else if (result.notesReason === 'generation_failed') {
-        notifyFailure({
-        title: 'AI summary failed',
-        message: 'The request completed, but note generation failed. Try again after more transcript is captured.',
-      })
-      }
-    } catch (error) {
-      setNotesProcessingState('failed')
-      setNotesProcessingError(error instanceof Error ? error.message : 'Unknown error')
-      reportConvexFailure({
-        error,
-        context: 'useInSiteMeetingRoomController:generateNotes',
-        title: 'AI summary failed',
-        fallbackMessage: 'Unable to generate meeting notes.',
-      })
-    } finally {
-      setGeneratingNotes(false)
-    }
-  }, [applyTranscriptActionResult, canGenerateNotes, normalizedTranscript, submitTranscriptAction, toast])
-
-  const handleRetryPostCallProcessing = useCallback(async () => {
-    if (!canPersist) {
-      notifyFailure({
-        title: 'Post-call retry unavailable',
-        message: 'This meeting cannot persist transcript updates in the current environment.',
-      })
-      return
-    }
-
-    if (normalizedTranscript.length < 20) {
-      notifyFailure({
-        title: 'Transcript too short',
-        message: 'Capture a little more conversation before retrying post-call processing.',
-      })
-      return
-    }
-
-    if (finalizationInFlightRef.current) {
-      return
-    }
-
-    finalizationInFlightRef.current = true
-    setRetryingPostCallProcessing(true)
-    setMarkCompleted(true)
-    setFinalizingSession(true)
-    setNotesReason(null)
-    setTranscriptSource((current) => current ?? 'livekit-browser-voice')
-    setTranscriptProcessingState('processing')
-    setTranscriptProcessingError(null)
-    setNotesProcessingState('processing')
-    setNotesProcessingError(null)
-    setOperationsOpen(true)
-
-    onMeetingUpdated?.(
-      buildMeetingSnapshot({
-        status: 'completed',
-        transcriptSource: transcriptSource ?? 'livekit-browser-voice',
-        transcriptProcessingState: 'processing',
-        transcriptProcessingError: null,
-        notesProcessingState: 'processing',
-        notesProcessingError: null,
-      }),
-    )
-
-    try {
-      const result = await submitTranscriptAction('finalize-post-meeting', {
-        transcriptText: normalizedTranscript,
-        source: transcriptSource ?? 'livekit-browser-voice',
-        markCompleted: true,
-      })
-
-      lastAutoSyncedTranscriptRef.current = normalizedTranscript
-      applyTranscriptActionResult(result)
-      toast({
-        title: 'Post-call processing retried',
-        description: 'Transcript finalization and AI notes generation are running again.',
-      })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Meeting finalization failed'
-      setTranscriptProcessingState('failed')
-      setTranscriptProcessingError(message)
-      setNotesProcessingState('failed')
-      setNotesProcessingError('AI notes could not be generated because post-call finalization failed.')
-      setFinalizingSession(false)
-      onMeetingUpdated?.(
-        buildMeetingSnapshot({
-          status: 'completed',
-          transcriptProcessingState: 'failed',
-          transcriptProcessingError: message,
-          notesProcessingState: 'failed',
-          notesProcessingError: 'AI notes could not be generated because post-call finalization failed.',
-        }),
-      )
-      notifyFailure({
-        title: 'Post-call retry failed',
-        message: message,
-      })
-    } finally {
-      setRetryingPostCallProcessing(false)
-      finalizationInFlightRef.current = false
-    }
-  }, [
-    applyTranscriptActionResult,
-    buildMeetingSnapshot,
-    canPersist,
-    normalizedTranscript,
-    onMeetingUpdated,
-    submitTranscriptAction,
-    toast,
-    transcriptSource,
-  ])
+  }, [canRecord, toast])
 
   const togglePictureInPicture = useCallback(async () => {
     if (!joinConfig) {
@@ -710,38 +505,6 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     }
   }, [liveRoomLayoutContext.widget, settingsWidgetOpen])
 
-  const performAutoSync = useCallback((transcript: string) => {
-    setAutoSyncing(true)
-
-    const mode: TranscriptMode =
-      transcript.length >= 80 ? 'save-transcript-and-generate-notes' : 'save-transcript'
-
-    void submitTranscriptAction(mode, {
-      transcriptText: transcript,
-      source: 'livekit-browser-voice',
-    })
-      .then((data) => {
-        lastAutoSyncedTranscriptRef.current = transcript
-        setLastAutoSyncAt(Date.now())
-        applyTranscriptActionResult(data)
-      })
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : 'Room automation sync failed'
-        logError(error, 'useInSiteMeetingRoomController:autoSyncTranscript')
-
-        if (mode === 'save-transcript-and-generate-notes') {
-          setNotesReason('generation_failed')
-          setNotesProcessingState('failed')
-          setNotesProcessingError(message)
-        } else {
-          setTranscriptProcessingError(message)
-        }
-      })
-      .finally(() => {
-        setAutoSyncing(false)
-      })
-  }, [applyTranscriptActionResult, submitTranscriptAction])
-
   useEffect(() => {
     if (!joinConfig || !canPersist || normalizedTranscript.length < 20) {
       return
@@ -776,6 +539,8 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     notesProcessingState,
     notesProcessingError,
     notesReason,
+    notesStorageId,
+    transcriptStorageId,
     transcriptTruncatedForNotes,
     operationsOpen,
     setJoinError,
@@ -787,6 +552,8 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     joiningRoom,
     joinError,
     autoCaptureEnabled,
+    transcriptRecordingEnabled,
+    enableTranscriptRecording,
     captureStatus,
     setCaptureStatus,
     autoSyncing,

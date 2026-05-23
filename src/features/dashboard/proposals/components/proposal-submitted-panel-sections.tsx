@@ -178,6 +178,7 @@ export function ProposalStrategyBriefCard({ onCopySummary, summary }: { onCopySu
 
 function ProposalDeckReadyState({
   activeProposalIdForDeck,
+  deckDownloadUrl,
   isRecheckingDeck,
   onCopyShareLink,
   onRecheckDeck,
@@ -185,6 +186,7 @@ function ProposalDeckReadyState({
   viewerHref,
 }: {
   activeProposalIdForDeck: string | null
+  deckDownloadUrl: string | null
   isRecheckingDeck: boolean
   onCopyShareLink: () => void
   onRecheckDeck?: () => Promise<void>
@@ -223,9 +225,9 @@ function ProposalDeckReadyState({
         <div className="flex flex-col gap-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Export & Share</p>
           <div className="space-y-3">
-            {presentationDeck.storageUrl || presentationDeck.pptxUrl ? (
+            {deckDownloadUrl || presentationDeck.storageUrl || presentationDeck.pptxUrl ? (
               <Button variant="outline" className="group h-14 w-full justify-start rounded-2xl border-muted/60 motion-chromatic hover:border-accent/30 hover:bg-accent/[0.03]" asChild>
-                <a href={presentationDeck.storageUrl || presentationDeck.pptxUrl || '#'} target="_blank" rel="noreferrer">
+                <a href={deckDownloadUrl || presentationDeck.storageUrl || presentationDeck.pptxUrl || '#'} target="_blank" rel="noreferrer">
                   <div className="mr-4 rounded-xl bg-muted p-2 transition-colors group-hover:bg-accent/10">
                     <Download className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
                   </div>
@@ -301,6 +303,7 @@ function ProposalDeckGeneratingState() {
 
 export function ProposalAssetDeliveryCard({
   activeProposalIdForDeck,
+  deckDownloadUrl,
   isRecheckingDeck,
   onCopyShareLink,
   onRecheckDeck,
@@ -308,6 +311,7 @@ export function ProposalAssetDeliveryCard({
   viewerHref,
 }: {
   activeProposalIdForDeck: string | null
+  deckDownloadUrl: string | null
   isRecheckingDeck: boolean
   onCopyShareLink: () => void
   onRecheckDeck?: () => Promise<void>
@@ -342,6 +346,7 @@ export function ProposalAssetDeliveryCard({
           {presentationDeck ? (
             <ProposalDeckReadyState
               activeProposalIdForDeck={activeProposalIdForDeck}
+              deckDownloadUrl={deckDownloadUrl}
               isRecheckingDeck={isRecheckingDeck}
               onCopyShareLink={onCopyShareLink}
               onRecheckDeck={onRecheckDeck}
@@ -399,6 +404,7 @@ export function ProposalSubmittedPanelLayout({
           <ProposalStrategyBriefCard onCopySummary={onCopySummary} summary={summary} />
           <ProposalAssetDeliveryCard
             activeProposalIdForDeck={activeProposalIdForDeck}
+            deckDownloadUrl={deckDownloadUrl}
             isRecheckingDeck={isRecheckingDeck}
             onCopyShareLink={onCopyShareLink}
             onRecheckDeck={onRecheckDeck}

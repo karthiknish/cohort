@@ -3,13 +3,18 @@ import {
   zWorkspaceMutation,
   zWorkspaceQuery,
   zWorkspacePaginatedQueryActive,
-  applyManualPagination,
-  getPaginatedResponse,
 } from './functions'
 import { z } from 'zod/v4'
 import { internal } from '/_generated/api'
 import { Errors } from './errors'
+import { fetchFilteredProjectsPage } from './projects/listFilters'
 import { resolveProjectNotificationRecipientUserIds } from './notificationTargeting'
+
+const projectListFilterArgsZ = {
+  status: z.string().optional(),
+  clientId: z.string().optional(),
+  searchQuery: z.string().optional(),
+}
  
 const projectZ = z.object({
   legacyId: z.string(),
@@ -28,10 +33,7 @@ const projectZ = z.object({
 })
 
 export const list = zWorkspacePaginatedQueryActive({
-  args: {
-    status: z.string().optional(),
-    clientId: z.string().optional(),
-  },
+  args: projectListFilterArgsZ,
   returns: z.object({
     items: z.array(projectZ),
     nextCursor: z.object({
@@ -40,30 +42,17 @@ export const list = zWorkspacePaginatedQueryActive({
     }).nullable(),
   }),
   handler: async (ctx, args) => {
-    const status = typeof args.status === 'string' ? args.status : null
-    const clientId = typeof args.clientId === 'string' ? args.clientId : null
-
-    const baseQuery = ctx.db.query('projects')
-    const indexedQuery = status && clientId
-      ? baseQuery.withIndex('by_workspace_status_clientId_updatedAtMs_legacyId', (q) =>
-          q.eq('workspaceId', args.workspaceId).eq('status', status).eq('clientId', clientId)
-        )
-      : status
-        ? baseQuery.withIndex('by_workspace_status_updatedAtMs_legacyId', (q) =>
-            q.eq('workspaceId', args.workspaceId).eq('status', status)
-          )
-        : clientId
-          ? baseQuery.withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
-              q.eq('workspaceId', args.workspaceId).eq('clientId', clientId)
-            )
-          : baseQuery.withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
-
-    let q = indexedQuery.order('desc')
-    q = applyManualPagination(q, args.cursor, 'updatedAtMs', 'desc')
-
     const limit = args.limit ?? 50
-    const rows = await q.take(limit + 1)
-    const result = getPaginatedResponse(rows, limit, 'updatedAtMs')
+    const result = await fetchFilteredProjectsPage(ctx, {
+      workspaceId: args.workspaceId,
+      filters: {
+        status: args.status,
+        clientId: args.clientId,
+        searchQuery: args.searchQuery,
+      },
+      cursor: args.cursor ?? null,
+      limit,
+    })
 
     return {
       items: result.items.map((row) => ({

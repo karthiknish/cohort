@@ -2,6 +2,7 @@
 
 import { api, internal } from '/_generated/api'
 import { internalAction } from './_generated/server'
+import { runProposalDeckArchive } from './lib/artifactArchiveSchedule'
 import { Errors } from './errors'
 import { zWorkspaceAction } from './functions'
 import { enforceGeminiActionRateLimit } from './geminiRateLimit'
@@ -184,6 +185,13 @@ export const pollDeckGeneration = internalAction({
           lastAutosaveAtMs: Date.now(),
         })
 
+        await runProposalDeckArchive(ctx, {
+          workspaceId: args.workspaceId,
+          legacyId: args.legacyId,
+          pptxUrl,
+          pdfUrl,
+        })
+
         markGenerationComplete(args.workspaceId, args.legacyId)
         return { done: true, status: finalStatus }
       }
@@ -207,6 +215,13 @@ export const pollDeckGeneration = internalAction({
           pdfUrl: pdfUrl,
           updatedAtMs: Date.now(),
           lastAutosaveAtMs: Date.now(),
+        })
+
+        await runProposalDeckArchive(ctx, {
+          workspaceId: args.workspaceId,
+          legacyId: args.legacyId,
+          pptxUrl,
+          pdfUrl,
         })
 
         markGenerationComplete(args.workspaceId, args.legacyId)

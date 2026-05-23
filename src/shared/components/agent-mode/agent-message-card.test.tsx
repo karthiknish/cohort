@@ -108,6 +108,57 @@ describe('AgentMessageCard', () => {
     expect(markup).toContain('Performance')
   })
 
+  it('renders analytics snapshot with traffic chart sections', () => {
+    const markup = renderToStaticMarkup(
+      <AgentMessageCard
+        message={agentMessage({
+          content: 'Traffic is up this month.',
+          status: 'success',
+          metadata: {
+            action: 'execute',
+            operation: 'summarizeAnalyticsPerformance',
+            success: true,
+            data: {
+              dataKind: 'analytics',
+              currentSituation: 'Traffic is up this month.',
+              totals: { users: 1200, sessions: 2400, conversions: 48, revenue: 9600 },
+              comparison: { deltaPercent: { users: 8, sessions: 12, conversions: -4, revenue: 15 } },
+              metricsAvailable: true,
+            },
+          },
+        })}
+      />,
+    )
+    expect(markup).toContain('Analytics ready')
+    expect(markup).toContain('Traffic volume')
+    expect(markup).toMatch(/Traffic (&amp;|&) Conversions/)
+  })
+
+  it('renders social snapshot with surface chart sections', () => {
+    const markup = renderToStaticMarkup(
+      <AgentMessageCard
+        message={agentMessage({
+          content: 'Instagram is leading engagement.',
+          status: 'success',
+          metadata: {
+            action: 'execute',
+            operation: 'summarizeSocialPerformance',
+            success: true,
+            data: {
+              dataKind: 'social',
+              facebook: { reach: 5000, impressions: 8000, engagedUsers: 420 },
+              instagram: { reach: 3200, impressions: 5100, engagedUsers: 280 },
+              metricsAvailable: true,
+            },
+          },
+        })}
+      />,
+    )
+    expect(markup).toContain('Social insights ready')
+    expect(markup).toContain('Facebook reach &amp; engagement')
+    expect(markup).toContain('Instagram reach &amp; engagement')
+  })
+
   it('renders neutral info card for conversational response', () => {
     const markup = renderToStaticMarkup(
       <AgentMessageCard

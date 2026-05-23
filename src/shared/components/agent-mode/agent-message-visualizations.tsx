@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { useMemo } from 'react'
 import { ArrowRight, BarChart3 } from 'lucide-react'
+import { LazyMotion, domAnimation, m, useReducedMotion } from '@/shared/ui/motion'
 
+import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
 import {
   AGENT_CHART_CURRENCY_FORMATTER,
@@ -24,13 +26,23 @@ function formatChartValue(value: number, format: AgentChartSeries['valueFormat']
 }
 
 function AgentChartBarFill({ width, fill }: { width: number; fill: string }) {
+  const prefersReducedMotion = useReducedMotion()
   const style = useMemo(() => ({ width: `${width}%`, backgroundColor: fill }), [fill, width])
 
+  if (prefersReducedMotion) {
+    return <div className="h-full rounded-full" style={style} />
+  }
+
   return (
-    <div
-      className="h-full rounded-full transition-[width] motion-reduce:transition-none"
-      style={style}
-    />
+    <LazyMotion features={domAnimation}>
+      <m.div
+        className="h-full rounded-full"
+        initial={{ width: 0 }}
+        animate={{ width: `${width}%` }}
+        transition={{ duration: motionDurationSeconds.slow, ease: motionEasing.out }}
+        style={{ backgroundColor: fill }}
+      />
+    </LazyMotion>
   )
 }
 

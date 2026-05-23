@@ -8,6 +8,9 @@ import {
   coerceNumber,
   META_API_BASE,
 } from '../client'
+import { summarizeMetaAdReview } from '@/lib/meta-ad-review'
+import type { MetaAdReviewStatus } from '@/lib/meta-ad-review'
+
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
 import type { MetaAdMetric, MetaInsightsResponse } from '../types'
 
@@ -20,7 +23,7 @@ export async function listMetaAds(options: {
   adAccountId: string
   campaignId?: string
   adSetId?: string
-  statusFilter?: ('ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED')[]
+  statusFilter?: string[]
   maxRetries?: number
 }): Promise<Array<{
   id: string
@@ -29,6 +32,8 @@ export async function listMetaAds(options: {
   adSetId?: string
   campaignId?: string
   creativeId?: string
+  reviewStatus: MetaAdReviewStatus
+  reviewMessages: string[]
 }>> {
   const {
     accessToken,
@@ -40,7 +45,17 @@ export async function listMetaAds(options: {
   } = options
 
   const params = new URLSearchParams({
-    fields: ['id', 'name', 'status', 'effective_status', 'adset_id', 'campaign_id', 'creative'].join(','),
+    fields: [
+      'id',
+      'name',
+      'status',
+      'effective_status',
+      'adset_id',
+      'campaign_id',
+      'creative',
+      'ad_review_feedback',
+      'issues_info',
+    ].join(','),
     limit: '100',
   })
 
@@ -75,6 +90,8 @@ export async function listMetaAds(options: {
       adset_id?: string
       campaign_id?: string
       creative?: { id?: string }
+      ad_review_feedback?: unknown
+      issues_info?: unknown
     }>
   }>({
     url,
@@ -84,14 +101,25 @@ export async function listMetaAds(options: {
 
   const ads = Array.isArray(payload?.data) ? payload.data : []
 
-  return ads.map((ad) => ({
-    id: ad.id ?? '',
-    name: ad.name ?? '',
-    status: (ad.effective_status ?? ad.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
-    adSetId: ad.adset_id,
-    campaignId: ad.campaign_id,
-    creativeId: ad.creative?.id,
-  }))
+  return ads.map((ad) => {
+    const effectiveStatus = ad.effective_status ?? ad.status ?? 'PAUSED'
+    const review = summarizeMetaAdReview(
+      effectiveStatus,
+      ad.ad_review_feedback,
+      ad.issues_info,
+    )
+
+    return {
+      id: ad.id ?? '',
+      name: ad.name ?? '',
+      status: effectiveStatus as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
+      adSetId: ad.adset_id,
+      campaignId: ad.campaign_id,
+      creativeId: ad.creative?.id,
+      reviewStatus: review.status,
+      reviewMessages: review.messages,
+    }
+  })
 }
 
 // =============================================================================

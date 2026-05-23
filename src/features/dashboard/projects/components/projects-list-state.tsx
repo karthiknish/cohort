@@ -32,6 +32,9 @@ export type ProjectsListStateProps = {
   sortedProjects: ProjectRecord[]
   viewMode: 'list' | 'grid' | 'board'
   onClearFocusAndFilters: () => void
+  hasMoreProjects: boolean
+  loadingMore: boolean
+  onLoadMore: () => void
 }
 
 export function ProjectsListState({
@@ -52,6 +55,9 @@ export function ProjectsListState({
   sortedProjects,
   viewMode,
   onClearFocusAndFilters,
+  hasMoreProjects,
+  loadingMore,
+  onLoadMore,
 }: ProjectsListStateProps) {
   const openCreateProject = useCallback(() => {
     document.getElementById('create-project-trigger')?.click()
@@ -138,6 +144,16 @@ export function ProjectsListState({
     )
   }
 
+  const loadMoreFooter =
+    hasMoreProjects ? (
+      <div className="flex justify-center border-t border-border/50 py-4">
+        <Button type="button" variant="outline" size="sm" onClick={onLoadMore} disabled={loadingMore || loading}>
+          {loadingMore ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
+          {loadingMore ? 'Loading more projects…' : 'Load more projects'}
+        </Button>
+      </div>
+    ) : null
+
   if (viewMode === 'list') {
     return (
       <div className="space-y-3 py-2">
@@ -151,34 +167,41 @@ export function ProjectsListState({
             isPendingUpdate={pendingStatusUpdates.has(project.id)}
           />
         ))}
+        {loadMoreFooter}
       </div>
     )
   }
 
   if (viewMode === 'grid') {
     return (
-      <div className="grid gap-4 py-2 sm:grid-cols-2 xl:grid-cols-3">
-        {sortedProjects.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            onDelete={onDelete}
-            onEdit={onEdit}
-            onUpdateStatus={onUpdateStatus}
-            isPendingUpdate={pendingStatusUpdates.has(project.id)}
-          />
-        ))}
+      <div className="space-y-3 py-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {sortedProjects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onUpdateStatus={onUpdateStatus}
+              isPendingUpdate={pendingStatusUpdates.has(project.id)}
+            />
+          ))}
+        </div>
+        {loadMoreFooter}
       </div>
     )
   }
 
   return (
-    <ProjectKanban
-      projects={sortedProjects}
-      pendingStatusUpdates={pendingStatusUpdates}
-      onUpdateStatus={onUpdateStatus}
-      onEdit={onEdit}
-      onDelete={onDelete}
-    />
+    <div className="space-y-3">
+      <ProjectKanban
+        projects={sortedProjects}
+        pendingStatusUpdates={pendingStatusUpdates}
+        onUpdateStatus={onUpdateStatus}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
+      {loadMoreFooter}
+    </div>
   )
 }

@@ -1,3 +1,5 @@
+import { Errors } from '../errors'
+
 const POLL_FENCE = '```cohort-poll'
 
 export type PollOptionRow = {
@@ -59,23 +61,23 @@ export function applyPollVote(
   optionIds: string[],
 ): CollaborationPollPayload {
   if (isPollExpired(poll)) {
-    throw new Error('Poll has ended')
+    throw Errors.validation.invalidState('Poll has ended')
   }
 
   const uniqueOptionIds = [...new Set(optionIds.filter(Boolean))]
   if (uniqueOptionIds.length === 0) {
-    throw new Error('Select at least one option')
+    throw Errors.validation.invalidInput('Select at least one option')
   }
 
   const validIds = new Set(poll.options.map((option) => option.id))
   for (const optionId of uniqueOptionIds) {
     if (!validIds.has(optionId)) {
-      throw new Error('Invalid poll option')
+      throw Errors.validation.invalidInput('Invalid poll option')
     }
   }
 
   if (!poll.multipleChoice && uniqueOptionIds.length !== 1) {
-    throw new Error('This poll accepts only one choice')
+    throw Errors.validation.invalidInput('This poll accepts only one choice')
   }
 
   const nextOptions = poll.options.map((option) => ({

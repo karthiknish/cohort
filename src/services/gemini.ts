@@ -27,6 +27,23 @@ export type GeminiRequestPart =
   | { text: string }
   | { inlineData: { mimeType: string; data: string } }
 
+export type GeminiSafetySetting = {
+  category:
+    | 'HARM_CATEGORY_HARASSMENT'
+    | 'HARM_CATEGORY_HATE_SPEECH'
+    | 'HARM_CATEGORY_SEXUALLY_EXPLICIT'
+    | 'HARM_CATEGORY_DANGEROUS_CONTENT'
+    | string
+  threshold: 'BLOCK_NONE' | 'BLOCK_ONLY_HIGH' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_LOW_AND_ABOVE' | string
+}
+
+export type GeminiContentGenerationOptions = {
+  systemInstruction?: string
+  temperature?: number
+  maxOutputTokens?: number
+  safetySettings?: GeminiSafetySetting[]
+}
+
 export class GeminiAIService {
   private apiKey: string
   private model: string
@@ -42,7 +59,11 @@ export class GeminiAIService {
     return this.generateContentWithParts([{ text: prompt }])
   }
 
-  async generateContentWithParts(parts: GeminiRequestPart[]): Promise<string> {
+  async generateContentWithOptions(prompt: string, options?: GeminiContentGenerationOptions): Promise<string> {
+    return this.generateContentWithParts([{ text: prompt }], options)
+  }
+
+  async generateContentWithParts(parts: GeminiRequestPart[], options?: GeminiContentGenerationOptions): Promise<string> {
     const apiKey = this.resolveApiKey()
 
     if (!apiKey) {
@@ -61,6 +82,18 @@ export class GeminiAIService {
           'x-goog-api-key': apiKey,
         },
         body: JSON.stringify({
+          ...(options?.systemInstruction
+            ? { system_instruction: { parts: [{ text: options.systemInstruction }] } }
+            : {}),
+          ...(options?.temperature !== undefined || options?.maxOutputTokens !== undefined
+            ? {
+                generationConfig: {
+                  ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
+                  ...(options.maxOutputTokens !== undefined ? { maxOutputTokens: options.maxOutputTokens } : {}),
+                },
+              }
+            : {}),
+          ...(options?.safetySettings?.length ? { safetySettings: options.safetySettings } : {}),
           contents: [{
             parts: parts.map((part) =>
               'text' in part

@@ -5,6 +5,7 @@ import { Check, Trash2 } from 'lucide-react'
 
 import { kindToCategory } from '@/lib/notifications/preferences'
 import type { WorkspaceNotification } from '@/types/notifications'
+import { listItemEnterClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { Badge } from '@/shared/ui/badge'
@@ -112,6 +113,7 @@ export function NotificationItem({
       onClick={onOpenNotification}
       className={cn(
         'group relative flex w-full cursor-pointer gap-3 border-b border-border/50 border-l-[3px] text-left transition-[background-color,box-shadow]',
+        listItemEnterClass,
         accentClass,
         compact ? 'px-3.5 py-3' : 'rounded-lg border p-4',
         !notification.read && 'shadow-sm',

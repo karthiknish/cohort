@@ -15,6 +15,7 @@ import { formatDate, DATE_FORMATS } from '@/lib/dates'
 import { DASHBOARD_THEME, getIconContainerClasses } from '@/lib/dashboard-theme'
 import { formatProviderName } from '@/lib/themes'
 import { BackLink } from '@/shared/components/back-link'
+import { EditMetaCampaignDialog } from './edit-meta-campaign-dialog'
 
 interface Campaign {
   id: string
@@ -35,6 +36,7 @@ interface CampaignHeaderProps {
   onDateRangeChange: (range: DateRange) => void
   onRefresh: () => void
   refreshing: boolean
+  onCampaignUpdated?: () => void
 }
 
 function formatObjectiveLabel(objective?: string): string | null {
@@ -84,6 +86,7 @@ export function CampaignHeader({
   onDateRangeChange,
   onRefresh,
   refreshing,
+  onCampaignUpdated,
 }: CampaignHeaderProps) {
   const providerDisplay = formatProviderName(campaign?.providerId ?? '')
   const sharedCampaignKey = campaign ? `${campaign.providerId}-${campaign.id}` : null
@@ -188,6 +191,15 @@ export function CampaignHeader({
           </div>
 
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+            {!loading && campaign && (campaign.providerId === 'facebook' || campaign.providerId === 'meta') ? (
+              <EditMetaCampaignDialog
+                campaignId={campaign.id}
+                initialName={campaign.name}
+                initialStartTime={campaign.startTime}
+                initialStopTime={campaign.stopTime}
+                onUpdated={onCampaignUpdated}
+              />
+            ) : null}
             <DateRangePicker
               value={dateRange}
               onChange={onDateRangeChange}

@@ -3,7 +3,7 @@ import type { AuthRole } from '@/services/auth/types'
 import {
   DASHBOARD_NAVIGATION_GROUPS,
   type NavigationGroup,
-} from '@/lib/workforce-routes'
+} from '@/lib/dashboard-navigation'
 
 export type { AuthRole }
 

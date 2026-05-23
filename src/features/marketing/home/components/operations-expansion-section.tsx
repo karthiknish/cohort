@@ -37,7 +37,7 @@ const PILLARS = [
 const WHAT_CHANGED = [
   'Grouped dashboard navigation makes the new modules feel deliberate instead of bolted on.',
   'Every route ships with preview fixtures so the UX can be refined before backend wiring starts.',
-  'Homepage messaging now acknowledges operations and people workflows without abandoning the agency thesis.',
+  'Homepage messaging reflects the expanded workspace without abandoning the agency thesis.',
 ] as const
 
 const ROLLOUT_STEPS = [
@@ -57,7 +57,7 @@ export function OperationsExpansionSection() {
             Cohorts now stretches beyond campaign delivery into day-to-day operations
           </h2>
           <p className="text-base leading-7 text-muted-foreground sm:text-lg">
-            The agency core stays intact. The new modules layer workforce operations, structured communication, and HR-lite workflows into the same workspace.
+            The agency core stays intact. Collaboration, meetings, and growth tools now sit beside projects and tasks in the same workspace.
           </p>
         </FadeIn>
 

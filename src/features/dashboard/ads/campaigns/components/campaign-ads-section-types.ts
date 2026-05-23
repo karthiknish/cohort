@@ -20,8 +20,25 @@ export type CampaignAdsSectionProps = {
 export type ViewMode = 'grid' | 'list'
 export type SupportedProviderId = 'google' | 'tiktok' | 'linkedin' | 'facebook'
 
+export type CampaignAdSetRow = {
+  id: string
+  name: string
+  status: string
+}
+
+export type CampaignMetaAdRow = {
+  id: string
+  name: string
+  status: string
+  adSetId?: string
+  reviewStatus?: 'approved' | 'pending' | 'disapproved' | 'issues' | 'unknown'
+  reviewMessages?: string[]
+}
+
 export type CampaignAdsSectionState = {
-  adSets: Array<{ id: string; name: string }>
+  adSets: CampaignAdSetRow[]
+  metaAds: CampaignMetaAdRow[]
+  togglingMetaAdId: string | null
   adSetDialogOpen: boolean
   ads: CampaignAd[]
   loading: boolean
@@ -35,10 +52,14 @@ export type CampaignAdsSectionState = {
   metricsLoading: boolean
   periodDays: string
   sortKey: CreativeSortKey
+  togglingAdSetId: string | null
 }
 
 export type CampaignAdsSectionAction =
-  | { type: 'setAdSets'; value: Array<{ id: string; name: string }> }
+  | { type: 'setAdSets'; value: CampaignAdSetRow[] }
+  | { type: 'setMetaAds'; value: CampaignMetaAdRow[] }
+  | { type: 'setTogglingMetaAdId'; value: string | null }
+  | { type: 'setTogglingAdSetId'; value: string | null }
   | { type: 'setAdSetDialogOpen'; value: boolean }
   | { type: 'setAds'; value: CampaignAd[] }
   | { type: 'setLoading'; value: boolean }

@@ -5,6 +5,8 @@ import type { FormEvent, KeyboardEvent } from 'react'
 import { Button } from '@/shared/ui/button'
 import { DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { getButtonClasses } from '@/lib/dashboard-theme'
+import { pressableScaleClass } from '@/lib/motion'
+import { cn } from '@/lib/utils'
 
 import type { MeetingAttendeeSuggestion } from './meeting-attendees-field'
 import { MeetingAttendeesSection, MeetingDetailsSection, MeetingTimingSection } from './meeting-form-sections'
@@ -109,7 +111,7 @@ export function QuickMeetDialogForm({
 
       <div className="md:col-span-2">
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" className={getButtonClasses('primary')} disabled={quickStarting || submitDisabled}>
+          <Button type="submit" className={cn(getButtonClasses('primary'), pressableScaleClass)} disabled={quickStarting || submitDisabled}>
             {quickStarting ? 'Starting…' : 'Start Room'}
           </Button>
           <Button

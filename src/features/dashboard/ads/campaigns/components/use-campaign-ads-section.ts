@@ -11,7 +11,7 @@ import { normalizeCurrencyCode } from '@/constants/currencies'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { logError } from '@/lib/convex-errors'
 import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
-import { adsAdMetricsApi, adsAdSetsApi, adsCreativesApi } from '@/lib/convex-api'
+import { adsAdMetricsApi, adsAdSetsApi, adsCreativesApi, adsMetaToolsApi } from '@/lib/convex-api'
 import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data'
 
 import {
@@ -41,6 +41,10 @@ function campaignAdsSectionReducer(
   switch (action.type) {
     case 'setAdSets':
       return { ...state, adSets: action.value }
+    case 'setMetaAds':
+      return { ...state, metaAds: action.value }
+    case 'setTogglingMetaAdId':
+      return { ...state, togglingMetaAdId: action.value }
     case 'setAdSetDialogOpen':
       return { ...state, adSetDialogOpen: action.value }
     case 'setAds':
@@ -69,6 +73,8 @@ function campaignAdsSectionReducer(
       return { ...state, sortKey: action.value }
     case 'clearFilters':
       return { ...state, searchQuery: '', typeFilter: 'all', statusFilter: 'all' }
+    case 'setTogglingAdSetId':
+      return { ...state, togglingAdSetId: action.value }
     default:
       return state
   }
@@ -77,6 +83,8 @@ function campaignAdsSectionReducer(
 export function createInitialCampaignAdsSectionState(): CampaignAdsSectionState {
   return {
     adSets: [],
+    metaAds: [],
+    togglingMetaAdId: null,
     adSetDialogOpen: false,
     ads: [],
     loading: true,
@@ -90,6 +98,7 @@ export function createInitialCampaignAdsSectionState(): CampaignAdsSectionState 
     metricsLoading: false,
     periodDays: '30',
     sortKey: 'spend',
+    togglingAdSetId: null,
   }
 }
 
@@ -109,8 +118,10 @@ export function useCampaignAdsSection({
 
   const listCreatives = useAction(adsCreativesApi.listCreatives)
   const listAdSets = useAction(adsAdSetsApi.listAdSets)
+  const updateAdSetStatus = useAction(adsAdSetsApi.updateAdSetStatus)
   const updateCreativeStatus = useAction(adsCreativesApi.updateCreativeStatus)
   const listAdMetrics = useAction(adsAdMetricsApi.listAdMetrics)
+  const listMetaAds = useAction(adsMetaToolsApi.listMetaAds)
   const [state, dispatch] = useReducer(
     campaignAdsSectionReducer,
     undefined,
@@ -118,6 +129,8 @@ export function useCampaignAdsSection({
   )
   const {
     adSets,
+    metaAds,
+    togglingMetaAdId,
     adSetDialogOpen,
     ads,
     loading,
@@ -131,6 +144,7 @@ export function useCampaignAdsSection({
     metricsLoading,
     periodDays,
     sortKey,
+    togglingAdSetId,
   } = state
 
   const setViewMode = useCallback((value: ViewMode) => {
@@ -209,7 +223,11 @@ export function useCampaignAdsSection({
         dispatch({
           type: 'setAdSets',
           value: Array.isArray(rows)
-            ? rows.map((row) => ({ id: row.id, name: row.name || row.id }))
+            ? rows.map((row) => ({
+                id: row.id,
+                name: row.name || row.id,
+                status: row.status ?? 'PAUSED',
+              }))
             : [],
         })
       })
@@ -217,6 +235,33 @@ export function useCampaignAdsSection({
         logError(error, 'CampaignAdsSection:fetchAdSets')
       })
   }, [campaignId, canLoad, clientId, isMeta, listAdSets, workspaceId])
+
+  const fetchMetaAds = useCallback(async () => {
+    if (!canLoad || !workspaceId || !isMeta) return
+    await listMetaAds({
+      workspaceId,
+      clientId: clientId ?? null,
+      campaignId,
+    })
+      .then((rows) => {
+        dispatch({
+          type: 'setMetaAds',
+          value: Array.isArray(rows)
+            ? rows.map((row) => ({
+                id: row.id,
+                name: row.name || row.id,
+                status: row.status ?? 'PAUSED',
+                adSetId: row.adSetId,
+                reviewStatus: row.reviewStatus,
+                reviewMessages: row.reviewMessages,
+              }))
+            : [],
+        })
+      })
+      .catch((error) => {
+        logError(error, 'CampaignAdsSection:fetchMetaAds')
+      })
+  }, [campaignId, canLoad, clientId, isMeta, listMetaAds, workspaceId])
 
   const fetchMetrics = useCallback(async () => {
     if (!canLoad) return
@@ -274,7 +319,8 @@ export function useCampaignAdsSection({
     if (!canLoad || !workspaceId) return
     void fetchAds()
     void fetchAdSets()
-  }, [canLoad, campaignId, clientId, convexProviderId, fetchAdSets, fetchAds, workspaceId])
+    void fetchMetaAds()
+  }, [canLoad, campaignId, clientId, convexProviderId, fetchAdSets, fetchAds, fetchMetaAds, workspaceId])
 
   useEffect(() => {
     if (!hasLoaded) return
@@ -420,8 +466,51 @@ export function useCampaignAdsSection({
   }, [])
 
   const handleRefreshAll = useCallback(async () => {
-    await Promise.all([fetchAds(), fetchMetrics(), fetchAdSets()])
-  }, [fetchAdSets, fetchAds, fetchMetrics])
+    await Promise.all([fetchAds(), fetchMetrics(), fetchAdSets(), fetchMetaAds()])
+  }, [fetchAdSets, fetchAds, fetchMetaAds, fetchMetrics])
+
+  const handleToggleMetaAdStatus = useCallback(
+    (ad: { id: string; name: string; status: string }) => {
+      if (!workspaceId || isPreviewMode) return
+
+      const nextStatus = ad.status.toUpperCase() === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'
+      const previous = metaAds
+      dispatch({
+        type: 'setMetaAds',
+        value: metaAds.map((row) =>
+          row.id === ad.id ? { ...row, status: nextStatus } : row,
+        ),
+      })
+      dispatch({ type: 'setTogglingMetaAdId', value: ad.id })
+
+      void updateCreativeStatus({
+        workspaceId,
+        providerId: 'facebook',
+        clientId: clientId ?? null,
+        creativeId: ad.id,
+        status: nextStatus,
+      })
+        .then(() => {
+          toast({
+            title: 'Ad updated',
+            description: `${ad.name} is now ${nextStatus.toLowerCase()}.`,
+          })
+        })
+        .catch((error) => {
+          dispatch({ type: 'setMetaAds', value: previous })
+          reportConvexFailure({
+            error,
+            context: 'CampaignAdsSection:toggleMetaAdStatus',
+            title: 'Could not update ad',
+            fallbackMessage: 'Check Meta permissions and try again.',
+          })
+        })
+        .finally(() => {
+          dispatch({ type: 'setTogglingMetaAdId', value: null })
+        })
+    },
+    [clientId, isPreviewMode, metaAds, updateCreativeStatus, workspaceId],
+  )
 
   const handleAdSetCreated = useCallback(() => {
     void fetchAdSets()
@@ -430,6 +519,49 @@ export function useCampaignAdsSection({
   const handleOpenAdSetDialog = useCallback(() => {
     dispatch({ type: 'setAdSetDialogOpen', value: true })
   }, [])
+
+  const handleToggleAdSetStatus = useCallback(
+    (adSet: { id: string; name: string; status: string }) => {
+      if (!workspaceId || isPreviewMode) return
+
+      const nextStatus = adSet.status.toUpperCase() === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'
+      const previous = adSets
+      dispatch({
+        type: 'setAdSets',
+        value: adSets.map((row) =>
+          row.id === adSet.id ? { ...row, status: nextStatus } : row,
+        ),
+      })
+      dispatch({ type: 'setTogglingAdSetId', value: adSet.id })
+
+      void updateAdSetStatus({
+        workspaceId,
+        providerId: 'facebook',
+        clientId: clientId ?? null,
+        adSetId: adSet.id,
+        status: nextStatus,
+      })
+        .then(() => {
+          toast({
+            title: 'Ad set updated',
+            description: `${adSet.name} is now ${nextStatus.toLowerCase()}.`,
+          })
+        })
+        .catch((error) => {
+          dispatch({ type: 'setAdSets', value: previous })
+          reportConvexFailure({
+            error,
+            context: 'CampaignAdsSection:toggleAdSetStatus',
+            title: 'Could not update ad set',
+            fallbackMessage: 'Check Meta permissions and try again.',
+          })
+        })
+        .finally(() => {
+          dispatch({ type: 'setTogglingAdSetId', value: null })
+        })
+    },
+    [adSets, clientId, isPreviewMode, updateAdSetStatus, workspaceId],
+  )
 
   return {
     state,
@@ -473,5 +605,10 @@ export function useCampaignAdsSection({
     statusFilter,
     typeFilter,
     adSetDialogOpen,
+    togglingAdSetId,
+    handleToggleAdSetStatus,
+    metaAds,
+    togglingMetaAdId,
+    handleToggleMetaAdStatus,
   }
 }

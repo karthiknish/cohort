@@ -5,7 +5,8 @@ import { History } from 'lucide-react'
 
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
-import { FadeIn } from '@/shared/ui/animate-in'
+import { FadeIn, FadeInStagger } from '@/shared/ui/animate-in'
+import { FadeInItem } from '@/shared/ui/fade-in-item'
 import { MotionCard } from '@/shared/ui/motion-primitives'
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 
@@ -149,23 +150,24 @@ function ProposalHistoryComponent({
       </CardHeader>
         <CardContent className="space-y-4">
         <ProposalHistoryHeader isLoading={isLoading} onRefresh={onRefresh} proposalCount={proposals.length} />
-        <div className="space-y-3">
+        <FadeInStagger className="space-y-3">
           {proposals.length === 0 && !isLoading ? (
               <ProposalHistoryEmptyState actions={emptyStateActions} onCreateNew={onCreateNew} />
           ) : (
             rows.map((row) => (
-              <ProposalHistoryRow
-                key={row.proposal.id}
+              <FadeInItem key={row.proposal.id} y={14}>
+                <ProposalHistoryRow
                   canManage={canManage}
-                deletingProposalId={deletingProposalId}
-                onDownloadDeck={onDownloadDeck}
-                onRequestDelete={onRequestDelete}
-                onResume={onResume}
-                row={row}
-              />
+                  deletingProposalId={deletingProposalId}
+                  onDownloadDeck={onDownloadDeck}
+                  onRequestDelete={onRequestDelete}
+                  onResume={onResume}
+                  row={row}
+                />
+              </FadeInItem>
             ))
           )}
-        </div>
+        </FadeInStagger>
       </CardContent>
       </MotionCard>
     </FadeIn>

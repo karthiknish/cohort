@@ -1,14 +1,24 @@
 'use client'
 
 import { useAction, useConvexAuth, useQuery } from 'convex/react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { analyticsInsightsApi, analyticsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { notifyFailure } from '@/lib/notifications'
+import { useAccumulatedCursorPages } from '@/lib/hooks/use-accumulated-cursor-pages'
 import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
 import { buildProviderIdsKey, normalizeProviderIds } from '../lib/insight-utils'
 import type { AlgorithmicInsight, MetricRecord, ProviderInsight } from './types'
+import {
+  ANALYTICS_METRICS_PAGE_SIZE,
+  mergeAnalyticsMetricPages,
+  parsePaginatedAnalyticsMetrics,
+  type AnalyticsMetricsPageCursor,
+} from './use-analytics-metrics-pagination'
+
+export type { AnalyticsMetricsPageCursor } from './use-analytics-metrics-pagination'
 
 export type AnalyticsBreakdownRow = {
   propertyId: string
@@ -24,12 +34,13 @@ export type AnalyticsBreakdownRow = {
 export interface UseAnalyticsDataReturn {
   metricsData: MetricRecord[]
   breakdowns: AnalyticsBreakdownRow[]
-  metricsNextCursor: string | null
+  metricsNextCursor: AnalyticsMetricsPageCursor | null
   metricsLoadingMore: boolean
-  loadMoreMetrics: () => Promise<void>
   metricsError: Error | undefined
   metricsLoading: boolean
   metricsRefreshing: boolean
+  loadMoreMetrics: () => void
+  resetMetricsPagination: () => void
   mutateMetrics: () => Promise<unknown>
   insights: ProviderInsight[]
   algorithmic: AlgorithmicInsight[]
@@ -42,6 +53,8 @@ export interface UseAnalyticsDataReturn {
 type UseAnalyticsDataOptions = {
   providerIds?: string[]
   includeInsights?: boolean
+  startDate?: string
+  endDate?: string
 }
 
 function matchesProvider(providerId: string, providerIds?: string[]) {
@@ -68,6 +81,8 @@ export function useAnalyticsData(
     [providerIdsKey],
   )
   const gaOnly = isGoogleAnalyticsOnly(providerIds)
+  const startDate = options?.startDate
+  const endDate = options?.endDate
 
   const [insights, setInsights] = useState<ProviderInsight[]>([])
   const [algorithmic, setAlgorithmic] = useState<AlgorithmicInsight[]>([])
@@ -75,6 +90,7 @@ export function useAnalyticsData(
   const [insightsRefreshing, setInsightsRefreshing] = useState(false)
   const [insightsError, setInsightsError] = useState<Error | undefined>(undefined)
   const hasFetchedInsightsRef = useRef(false)
+  const [metricsLoadCursor, setMetricsLoadCursor] = useState<AnalyticsMetricsPageCursor | null>(null)
 
   const previewMetrics = useMemo(() => {
     if (!isPreviewMode) return null
@@ -88,16 +104,33 @@ export function useAnalyticsData(
 
   const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
   const canQueryConvex = isConvexAuthenticated && !isConvexLoading
+  const metricsScopeKey = `${workspaceId ?? ''}|${clientId ?? ''}|${startDate ?? ''}|${endDate ?? ''}|${isPreviewMode ? 'preview' : 'live'}`
+  const metricsQueryEnabled = gaOnly && !isPreviewMode && Boolean(workspaceId) && canQueryConvex
 
   const gaMetricsRealtime = useQuery(
-    analyticsIntegrationsApi.listAnalyticsMetrics,
+    analyticsIntegrationsApi.listAnalyticsMetricsPaginated,
     gaOnly && !isPreviewMode && workspaceId && canQueryConvex
       ? {
           workspaceId,
           clientId: clientId ?? null,
-          limit: 500,
+          startDate,
+          endDate,
+          limit: ANALYTICS_METRICS_PAGE_SIZE,
+          cursor: metricsLoadCursor,
         }
-      : 'skip'
+      : 'skip',
+  )
+
+  const gaBreakdownsRealtime = useQuery(
+    analyticsIntegrationsApi.listAnalyticsBreakdowns,
+    gaOnly && !isPreviewMode && workspaceId && canQueryConvex
+      ? {
+          workspaceId,
+          clientId: clientId ?? null,
+          startDate,
+          endDate,
+        }
+      : 'skip',
   )
 
   const gaMetricsQueryError = useConvexQueryError({
@@ -146,52 +179,92 @@ export function useAnalyticsData(
         : null,
     [clientId, includeInsights, isPreviewMode, periodDays, providerIdsKey, workspaceId],
   )
-  const lastInsightsFetchKeyRef = useRef<string | null>(null)
-  if (insightsFetchKey && lastInsightsFetchKeyRef.current !== insightsFetchKey) {
-    lastInsightsFetchKeyRef.current = insightsFetchKey
+  useEffect(() => {
+    if (!insightsFetchKey) return
     void fetchInsights()
-  }
-
-  const loadMoreMetrics = useCallback(async () => {
-    // Pagination is not supported in the Convex query
-  }, [])
+  }, [fetchInsights, insightsFetchKey])
 
   const mutateInsights = useCallback(async () => {
     await fetchInsights()
   }, [fetchInsights])
 
-  const mappedMetrics = useMemo(() => {
-    if (isPreviewMode) {
-      return (previewMetrics ?? []).map((row) => {
-        const record = row as unknown as Record<string, unknown>
-        return {
-          ...(row as MetricRecord),
-          currency: typeof record.currency === 'string' ? record.currency : null,
-        } satisfies MetricRecord
-      })
-    }
+  const metricsPagination = useAccumulatedCursorPages<MetricRecord, AnalyticsMetricsPageCursor>({
+    scopeKey: metricsScopeKey,
+    queryData: gaMetricsRealtime,
+    loadCursor: metricsLoadCursor,
+    setLoadCursor: setMetricsLoadCursor,
+    enabled: metricsQueryEnabled,
+    getItemKey: (metric) => metric.id,
+    parsePage: (queryData) => {
+      const paginated = parsePaginatedAnalyticsMetrics(queryData)
+      if (!paginated) {
+        return { items: [], nextCursor: null }
+      }
 
-    const rows = gaMetricsRealtime?.metrics ?? []
-    return rows.map((row: (typeof rows)[number]) => ({
-      id: row.id,
-      providerId: row.providerId,
-      date: row.date,
-      currency: row.currency,
-      spend: row.spend,
-      impressions: row.impressions,
-      clicks: row.clicks,
-      conversions: row.conversions,
-      revenue: row.revenue,
-    })) satisfies MetricRecord[]
-  }, [gaMetricsRealtime?.metrics, isPreviewMode, previewMetrics])
+      return {
+        items: paginated.metrics.map((row) => ({
+          id: row.id,
+          providerId: row.providerId,
+          date: row.date,
+          currency: row.currency,
+          spend: row.spend,
+          impressions: row.impressions,
+          clicks: row.clicks,
+          conversions: row.conversions,
+          revenue: row.revenue,
+        })),
+        nextCursor: paginated.nextCursor,
+      }
+    },
+    mergePages: mergeAnalyticsMetricPages,
+  })
+
+  const previewMappedMetrics = useMemo(() => {
+    return (previewMetrics ?? []).map((row) => {
+      const record = row as unknown as Record<string, unknown>
+      return {
+        ...(row as MetricRecord),
+        currency: typeof record.currency === 'string' ? record.currency : null,
+      } satisfies MetricRecord
+    })
+  }, [previewMetrics])
+
+  const mappedMetrics = isPreviewMode ? previewMappedMetrics : metricsPagination.mergedItems
 
   const breakdowns = useMemo((): AnalyticsBreakdownRow[] => {
-    if (isPreviewMode || !gaMetricsRealtime?.breakdowns) return []
-    return gaMetricsRealtime.breakdowns.map((row: (typeof gaMetricsRealtime.breakdowns)[number]) => ({
-      ...row,
-      revenue: row.revenue ?? null,
-    }))
-  }, [gaMetricsRealtime?.breakdowns, isPreviewMode])
+    if (isPreviewMode) return []
+    if (!gaBreakdownsRealtime || typeof gaBreakdownsRealtime !== 'object') return []
+
+    const rows = (gaBreakdownsRealtime as { breakdowns?: unknown }).breakdowns
+    if (!Array.isArray(rows)) return []
+
+    return rows.map((row) => {
+      const entry = row as AnalyticsBreakdownRow
+      return {
+        ...entry,
+        revenue: entry.revenue ?? null,
+      }
+    })
+  }, [gaBreakdownsRealtime, isPreviewMode])
+
+  const metricsLoading = metricsQueryEnabled && metricsPagination.isInitialLoading
+
+  const loadMoreMetrics = useCallback(() => {
+    if (isPreviewMode || metricsLoading) {
+      return
+    }
+
+    try {
+      metricsPagination.loadMore()
+    } catch (error) {
+      logError(error, 'useAnalyticsData:loadMoreMetrics')
+      notifyFailure({ title: 'Metrics pagination error', error })
+    }
+  }, [isPreviewMode, metricsLoading, metricsPagination])
+
+  const resetMetricsPagination = useCallback(() => {
+    metricsPagination.reset()
+  }, [metricsPagination])
 
   if (isPreviewMode && previewMetrics && previewInsights) {
     return {
@@ -199,10 +272,11 @@ export function useAnalyticsData(
       breakdowns: [],
       metricsNextCursor: null,
       metricsLoadingMore: false,
-      loadMoreMetrics: async () => {},
+      resetMetricsPagination: async () => undefined,
       metricsError: undefined,
       metricsLoading: false,
       metricsRefreshing: false,
+      loadMoreMetrics: () => undefined,
       mutateMetrics: async () => undefined,
       insights: (previewInsights.insights as ProviderInsight[]).filter((entry) => matchesProvider(entry.providerId, providerIds)),
       algorithmic: (previewInsights.algorithmic as AlgorithmicInsight[]).filter(
@@ -215,19 +289,21 @@ export function useAnalyticsData(
     }
   }
 
-  const metricsLoading = gaMetricsRealtime === undefined && !isPreviewMode && !!workspaceId && canQueryConvex && gaOnly
   const metricsError = gaMetricsQueryError ? new Error(gaMetricsQueryError) : undefined
 
   return {
     metricsData: mappedMetrics,
     breakdowns,
-    metricsNextCursor: null,
-    metricsLoadingMore: false,
-    loadMoreMetrics,
+    metricsNextCursor: metricsPagination.nextCursor,
+    metricsLoadingMore: metricsPagination.isLoadingMore,
     metricsError,
     metricsLoading,
     metricsRefreshing: false,
-    mutateMetrics: async () => undefined,
+    loadMoreMetrics,
+    resetMetricsPagination,
+    mutateMetrics: async () => {
+      resetMetricsPagination()
+    },
     insights,
     algorithmic,
     insightsError,

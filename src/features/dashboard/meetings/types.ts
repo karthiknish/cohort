@@ -24,6 +24,8 @@ export type MeetingRecord = {
   notesModel?: string | null
   notesProcessingState?: MeetingProcessingState | null
   notesProcessingError?: string | null
+  notesStorageId?: string | null
+  transcriptStorageId?: string | null
 }
 
 export type WorkspaceMember = {

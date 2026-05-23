@@ -11,6 +11,7 @@ import {
 } from './components/insights-chart-utils'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
+import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { FadeIn } from '@/shared/ui/animate-in'
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
@@ -281,6 +282,7 @@ export default function AdsPage() {
   const isInitialLoading = metrics.initialMetricsLoading && !connections.integrationStatuses
 
   return (
+    <PageMotionShell reveal={false}>
     <BoneyardSkeletonBoundary name="dashboard-ads-page" loading={isInitialLoading}>
       <div className={DASHBOARD_THEME.layout.container}>
         <div className="space-y-6 pb-10">
@@ -330,5 +332,6 @@ export default function AdsPage() {
         />
       ) : null}
     </BoneyardSkeletonBoundary>
+    </PageMotionShell>
   )
 }

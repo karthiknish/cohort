@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react'
 import { Skeleton as BoneyardSkeleton } from 'boneyard-js/react'
 
+import { ContentRevealBoundary } from '@/shared/ui/content-reveal-boundary'
+
 type BoneyardSkeletonBoundaryProps = {
   name: string
   loading: boolean
@@ -35,7 +37,7 @@ export function BoneyardSkeletonBoundary({
       className={className}
       animate={animate}
     >
-      {children}
+      <ContentRevealBoundary ready={!loading}>{children}</ContentRevealBoundary>
     </BoneyardSkeleton>
   )
 }

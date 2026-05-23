@@ -1,7 +1,13 @@
 import { z } from 'zod/v4'
 
+import { slugifyMeetingLegacyId } from '@/lib/slugify'
+
 import { Errors } from './errors'
 import { zWorkspaceMutation, zWorkspaceQuery } from './functions'
+import {
+  scheduleMeetingNotesArchive,
+  scheduleMeetingTranscriptArchive,
+} from './lib/artifactArchiveSchedule'
 import type { Doc } from '/_generated/dataModel'
 
 const meetingStatusValues = ['scheduled', 'in_progress', 'completed', 'cancelled'] as const
@@ -45,22 +51,9 @@ const meetingZ = z.object({
   notesModel: z.string().nullable(),
   notesProcessingState: meetingProcessingStateZ.nullable(),
   notesProcessingError: z.string().nullable(),
+  notesStorageId: z.string().nullable(),
+  transcriptStorageId: z.string().nullable(),
 })
-
-function slugify(value: string): string {
-  const base = value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40)
-
-  if (base.length === 0) {
-    return 'meeting'
-  }
-
-  return base
-}
 
 function normalizeEmails(values: string[]): string[] {
   return Array.from(
@@ -150,6 +143,8 @@ function mapMeeting(row: Doc<'meetings'>): z.infer<typeof meetingZ> {
     notesModel: row.notesModel,
     notesProcessingState: row.notesProcessingState ?? 'idle',
     notesProcessingError: row.notesProcessingError ?? null,
+    notesStorageId: row.notesStorageId ?? null,
+    transcriptStorageId: row.transcriptStorageId ?? null,
   }
 }
 
@@ -306,7 +301,7 @@ export const create = zWorkspaceMutation({
       throw Errors.validation.invalidInput('Meeting end time must be after start time')
     }
 
-    const base = `${slugify(title)}-${ctx.now}`
+    const base = `${slugifyMeetingLegacyId(title)}-${ctx.now}`
     let legacyId = base
 
     for (let attempt = 1; attempt <= 20; attempt += 1) {
@@ -351,10 +346,17 @@ export const create = zWorkspaceMutation({
       notesModel: null,
       notesProcessingState: 'idle' as const,
       notesProcessingError: null,
+      notesStorageId: null,
+      transcriptStorageId: null,
     }
 
-    await ctx.db.insert('meetings', payload)
-    return payload
+    const meetingId = await ctx.db.insert('meetings', payload)
+    const created = await ctx.db.get(meetingId)
+    if (!created) {
+      throw Errors.resource.notFound('Meeting', legacyId)
+    }
+
+    return mapMeeting(created)
   },
 })
 
@@ -532,6 +534,12 @@ export const attachTranscript = zWorkspaceMutation({
       receivedAtMs: ctx.now,
     })
 
+    await scheduleMeetingTranscriptArchive(
+      ctx,
+      { workspaceId: args.workspaceId, legacyId: meeting.legacyId },
+      args.transcriptText,
+    )
+
     return meeting.legacyId
   },
 })
@@ -581,6 +589,12 @@ export const attachTranscriptByCalendarEventId = zWorkspaceMutation({
       receivedAtMs: ctx.now,
     })
 
+    await scheduleMeetingTranscriptArchive(
+      ctx,
+      { workspaceId: args.workspaceId, legacyId: meeting.legacyId },
+      args.transcriptText,
+    )
+
     return meeting.legacyId
   },
 })
@@ -628,6 +642,11 @@ export const saveNotes = zWorkspaceMutation({
         model: args.model ?? null,
       },
       receivedAtMs: ctx.now,
+    })
+
+    await scheduleMeetingNotesArchive(ctx, {
+      workspaceId: args.workspaceId,
+      legacyId: meeting.legacyId,
     })
 
     return meeting.legacyId

@@ -18,8 +18,7 @@ import {
 import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { can, capabilityForHref, type DashboardCapability } from '@/lib/access-control/dashboard-access'
-import { WORKFORCE_ROUTES } from '@/lib/workforce-routes'
-import type { WorkforceVisibility } from '@/types/workforce'
+import type { AuthRole } from '@/services/auth/types'
 import { Badge } from '@/shared/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 
@@ -28,7 +27,7 @@ type HubTile = {
   title: string
   description: string
   icon: LucideIcon
-  roles?: WorkforceVisibility[]
+  roles?: AuthRole[]
   capability?: DashboardCapability
 }
 
@@ -98,7 +97,7 @@ const CLIENT_EXTRA_TILES: HubTile[] = [
   },
 ]
 
-function filterByRole(tiles: HubTile[], role: WorkforceVisibility): HubTile[] {
+function filterByRole(tiles: HubTile[], role: AuthRole): HubTile[] {
   return tiles.filter((tile) => {
     const capability = tile.capability ?? capabilityForHref(tile.href)
     if (capability) return can(role, capability)
@@ -160,17 +159,10 @@ type DashboardWorkHubProps = {
   userRole: string | null
 }
 
-/** Hybrid hub: team operations first, then shared delivery and agency tools. */
+/** Hub for core delivery and agency tools. */
 export function DashboardWorkHub({ userRole }: DashboardWorkHubProps) {
-  const role = (userRole ?? 'client') as WorkforceVisibility
+  const role = (userRole ?? 'client') as AuthRole
   const isClient = role === 'client'
-
-  const teamOpsTiles = WORKFORCE_ROUTES.map((r) => ({
-    href: r.href,
-    title: r.name,
-    description: r.description,
-    icon: r.icon,
-  }))
 
   const coreTiles = isClient
     ? [...filterByRole(CORE_DELIVERY_TILES, role), ...CLIENT_EXTRA_TILES]
@@ -192,10 +184,6 @@ export function DashboardWorkHub({ userRole }: DashboardWorkHubProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8 pt-6">
-        {!isClient && teamOpsTiles.length > 0 ? (
-          <HubCluster label="Team operations" description="Operational modules." tiles={teamOpsTiles} />
-        ) : null}
-
         <HubCluster
           label={isClient ? 'Your workspace' : 'Core delivery'}
           description={isClient ? 'Tasks, projects, and team touchpoints.' : 'Execution threads everyone shares.'}

@@ -27,14 +27,18 @@ type AudienceDisplaySectionProps = {
   aggregatedData: AggregatedTargetingData
   expandedSections: Set<string>
   toggleSection: (section: string) => void
+  customAudiencesSection?: React.ReactNode
   interestSection?: React.ReactNode
+  hidePlacements?: boolean
 }
 
 export function AudienceDisplaySection({
   aggregatedData,
   expandedSections,
   toggleSection,
+  customAudiencesSection,
   interestSection,
+  hidePlacements,
 }: AudienceDisplaySectionProps) {
   const sectionToggleHandlers = useMemo(
     () => ({
@@ -54,7 +58,9 @@ export function AudienceDisplaySection({
 
   return (
     <>
-      {aggregatedData.audiences.included.length > 0 ? (
+      {customAudiencesSection ? (
+        customAudiencesSection
+      ) : aggregatedData.audiences.included.length > 0 ? (
         <TargetingCollapsiblePanel
           sectionId="audiences"
           icon={UserCheck}
@@ -120,7 +126,7 @@ export function AudienceDisplaySection({
         </TargetingCollapsiblePanel>
       ) : null}
 
-      {aggregatedData.placements.length > 0 ? (
+      {!hidePlacements && aggregatedData.placements.length > 0 ? (
         <TargetingCollapsiblePanel
           sectionId="placements"
           icon={Globe}

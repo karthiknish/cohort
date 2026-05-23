@@ -8,8 +8,8 @@ import {
   GEMINI_RATE_LIMITS,
 } from '@/lib/geminiRateLimits'
 import { getMeetingRecord, saveMeetingNotes, saveMeetingTranscript, setMeetingProcessingState, updateMeetingRecord } from '@/lib/meetings-admin'
+import { generateConciseMeetingNotes, normalizeNotesSummary } from '@/lib/meeting-notes-gemini'
 import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
-import { GeminiAIService, resolveGeminiApiKey } from '@/services/gemini'
 
 const transcriptModeValues = ['save-transcript', 'save-transcript-and-generate-notes', 'save-notes', 'finalize-post-meeting'] as const
 const transcriptModeZ = z.enum(transcriptModeValues)
@@ -23,8 +23,6 @@ const saveTranscriptSchema = z.object({
   mode: transcriptModeZ.optional(),
 })
 
-const MAX_TRANSCRIPT_CHARS_FOR_NOTES = 18_000
-
 function normalizeTranscriptText(value: string): string {
   return value
     .replace(/\r\n?/g, '\n')
@@ -33,61 +31,6 @@ function normalizeTranscriptText(value: string): string {
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
-}
-
-function normalizeNotesSummary(value: string): string {
-  return value
-    .replace(/\r\n?/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
-
-function buildTranscriptExcerptForNotes(transcriptText: string): { text: string; truncated: boolean } {
-  if (transcriptText.length <= MAX_TRANSCRIPT_CHARS_FOR_NOTES) {
-    return { text: transcriptText, truncated: false }
-  }
-
-  const leading = transcriptText.slice(0, 11_000).trim()
-  const trailing = transcriptText.slice(-7_000).trim()
-
-  return {
-    text: `${leading}\n\n[... transcript truncated for note generation ...]\n\n${trailing}`,
-    truncated: true,
-  }
-}
-
-async function generateConciseMeetingNotes(transcriptText: string): Promise<{ summary: string; model: string; truncated: boolean } | null> {
-  const apiKey = resolveGeminiApiKey()
-  if (!apiKey) {
-    return null
-  }
-
-  const gemini = new GeminiAIService(apiKey)
-  const excerpt = buildTranscriptExcerptForNotes(transcriptText)
-  const prompt = [
-    'You are an expert meeting note taker.',
-    'Read the transcript and return concise markdown meeting notes with exactly these headings:',
-    '## Summary',
-    '## Decisions',
-    '## Action Items',
-    '## Risks / Blockers',
-    'Under each heading, use short bullet points only.',
-    'Keep the output under 260 words, factual, and avoid speculation.',
-    'If a section has no clear content, write a single bullet with "None noted."',
-    excerpt.truncated ? 'The transcript may be truncated. Prefer the most concrete decisions and actions that appear in the provided text.' : '',
-    '',
-    'Transcript:',
-    excerpt.text,
-  ].join('\n')
-
-  const summary = await gemini.generateContent(prompt)
-  const model = gemini.getModel()
-
-  return {
-    summary: normalizeNotesSummary(summary),
-    model,
-    truncated: excerpt.truncated,
-  }
 }
 
 export const POST = createApiHandler(

@@ -1,6 +1,6 @@
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -21,6 +21,10 @@ import type { ProposalPresentationDeck } from '@/types/proposals'
 import { createInitialProposalFormState, stepErrorPaths } from '../utils/form-steps'
 import type { SubmissionSnapshot } from './use-proposal-drafts'
 import type { FormStateUpdateOptions } from './use-proposal-wizard'
+import {
+  resolveProposalDeckUrls,
+  useProposalArtifactUrls,
+} from './use-proposal-artifact-urls'
 
 type ProposalDeckState = {
     status: string
@@ -171,7 +175,15 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
     submittedRef.current = submitted
 
     const activeProposalIdForDeck = lastSubmissionSnapshot?.draftId ?? draftId
-    const deckDownloadUrl = presentationDeck?.storageUrl ?? presentationDeck?.pptxUrl ?? null
+    const artifactUrls = useProposalArtifactUrls(workspaceId, activeProposalIdForDeck ?? null)
+    const { pptUrl: deckDownloadUrl } = useMemo(
+      () =>
+        resolveProposalDeckUrls({
+          artifactUrls,
+          presentationDeck,
+        }),
+      [artifactUrls, presentationDeck],
+    )
     const canResumeSubmission = Boolean(
         lastSubmissionSnapshot &&
         !isSubmitting &&

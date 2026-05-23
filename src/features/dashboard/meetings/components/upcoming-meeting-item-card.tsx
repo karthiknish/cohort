@@ -1,12 +1,16 @@
 import { useCallback } from 'react'
 import { Link2, LoaderCircle, Video } from 'lucide-react'
 
+import { listItemEnterClass } from '@/lib/motion'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { getButtonClasses } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
 
 import type { MeetingRecord } from '../types'
 import { formatLocalDateTime, normalizeMeetingProcessingState, statusVariant } from '../utils'
+import { MeetingArtifactsDownload } from './meeting-artifacts-download'
+import { MeetingNotesMarkdown } from './meeting-notes-markdown'
 
 export function UpcomingMeetingItemCard({
   meeting,
@@ -35,7 +39,7 @@ export function UpcomingMeetingItemCard({
   const handleMarkCompleted = useCallback(() => onMarkCompleted(meeting.legacyId), [meeting.legacyId, onMarkCompleted])
 
   return (
-    <div className="rounded-lg border border-muted/60 p-4">
+    <div className={cn('rounded-lg border border-muted/60 p-4', listItemEnterClass)}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="font-medium text-foreground">{meeting.title}</p>
@@ -132,7 +136,17 @@ export function UpcomingMeetingItemCard({
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {meeting.notesModel ? 'AI Meeting Notes' : 'Meeting Notes'}
           </p>
-          <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{meeting.notesSummary}</p>
+          <MeetingNotesMarkdown className="mt-1" content={meeting.notesSummary} />
+          <MeetingArtifactsDownload
+            className="mt-3"
+            compact
+            legacyId={meeting.legacyId}
+            meetingTitle={meeting.title}
+            notesStorageId={meeting.notesStorageId}
+            notesSummary={meeting.notesSummary}
+            transcriptStorageId={meeting.transcriptStorageId}
+            transcriptText={meeting.transcriptText}
+          />
         </div>
       ) : null}
 

@@ -8,6 +8,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { ScrollArea } from '@/shared/ui/scroll-area'
+import { listItemEnterClass, MotionPressable } from '@/shared/ui/motion-primitives'
 import { cn } from '@/lib/utils'
 
 import { CHAT_CONVERSATION_ROW_CLASS, CHAT_LIST_PREVIEW_CLASS, formatConversationSnippet } from '../utils'
@@ -144,11 +145,11 @@ export function DMSidebar({
               const hasUnread = !conversation.isRead
 
               return (
-                <button
+                <MotionPressable
                   key={conversation.legacyId}
-                  type="button"
                   onClick={selectConversationHandlers[conversation.legacyId]}
                   className={cn(
+                    listItemEnterClass,
                     CHAT_CONVERSATION_ROW_CLASS,
                     'rounded-lg motion-chromatic',
                     'hover:bg-muted/50',
@@ -204,7 +205,7 @@ export function DMSidebar({
                   {hasUnread && (
                     <div className="size-2 rounded-full bg-primary shrink-0" />
                   )}
-                </button>
+                </MotionPressable>
               )
             })}
           </div>

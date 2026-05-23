@@ -167,6 +167,8 @@ export function LiveRoomCanvasViewport({
   onTogglePictureInPicture,
   pipActive,
   pipSupported,
+  recordingPrompt,
+  showRecordingPrompt = false,
   tracks,
   transcriptProcessingState,
 }: {
@@ -182,6 +184,8 @@ export function LiveRoomCanvasViewport({
   onTogglePictureInPicture: () => void
   pipActive: boolean
   pipSupported: boolean
+  recordingPrompt?: ReactNode
+  showRecordingPrompt?: boolean
   tracks: GridTracks
   transcriptProcessingState: 'idle' | 'processing' | 'failed'
 }) {
@@ -214,6 +218,9 @@ export function LiveRoomCanvasViewport({
           >
             <ParticipantTile />
           </GridLayout>
+          {showRecordingPrompt && recordingPrompt ? (
+            <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30 max-w-xl">{recordingPrompt}</div>
+          ) : null}
           <InSiteMeetingRoomChat compact={compact} />
         </div>
       ) : (
@@ -235,6 +242,9 @@ export function LiveRoomCanvasViewport({
             useDarkChrome={false}
           />
           <LiveRoomCanvasEmptyState compact={compact} />
+          {showRecordingPrompt && recordingPrompt ? (
+            <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30 max-w-xl">{recordingPrompt}</div>
+          ) : null}
           <InSiteMeetingRoomChat compact={compact} />
         </div>
       )}

@@ -20,8 +20,11 @@ import {
 type MeetingOperationsSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  canRecord: boolean
   joinConfig: LiveKitJoinPayload | null
   captureStatus: CaptureStatus
+  onEnableRecording: () => void
+  recordingEnabled: boolean
   meetingAttendeeEmails: string[]
   meetingRoomName: string
   meetingTimezone: string
@@ -39,8 +42,13 @@ type MeetingOperationsSheetProps = {
   interimTranscript: string
   summaryPreview: string | null
   notesReason: 'ai_not_configured' | 'generation_failed' | null
+  notesStorageId: string | null
+  transcriptStorageId: string | null
   transcriptTruncatedForNotes: boolean
   transcriptLength: number
+  meetingLegacyId: string
+  meetingTitle: string
+  transcriptText: string
   canGenerateNotes: boolean
   generatingNotes: boolean
   onGenerateNotes: () => void
@@ -61,8 +69,11 @@ export function InSiteMeetingOperationsSheet(props: MeetingOperationsSheetProps)
   const {
     open,
     onOpenChange,
+    canRecord,
     joinConfig,
     captureStatus,
+    onEnableRecording,
+    recordingEnabled,
     meetingAttendeeEmails,
     meetingRoomName,
     meetingTimezone,
@@ -80,8 +91,13 @@ export function InSiteMeetingOperationsSheet(props: MeetingOperationsSheetProps)
     interimTranscript,
     summaryPreview,
     notesReason,
+    notesStorageId,
+    transcriptStorageId,
     transcriptTruncatedForNotes,
     transcriptLength,
+    meetingLegacyId,
+    meetingTitle,
+    transcriptText,
     canGenerateNotes,
     generatingNotes,
     onGenerateNotes,
@@ -112,7 +128,14 @@ export function InSiteMeetingOperationsSheet(props: MeetingOperationsSheetProps)
         <MeetingOperationsSheetHeader joinConfig={joinConfig} meetingRoomName={meetingRoomName} />
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-          <MeetingOperationsCaptureCard captureStatus={captureStatus} joinConfig={joinConfig} transcriptSource={transcriptSource} />
+          <MeetingOperationsCaptureCard
+            canRecord={canRecord}
+            captureStatus={captureStatus}
+            joinConfig={joinConfig}
+            onEnableRecording={onEnableRecording}
+            recordingEnabled={recordingEnabled}
+            transcriptSource={transcriptSource}
+          />
 
           <MeetingOperationsAttendeesCard meetingAttendeeEmails={meetingAttendeeEmails} />
 
@@ -133,6 +156,7 @@ export function InSiteMeetingOperationsSheet(props: MeetingOperationsSheetProps)
             hasTranscriptSaved={Boolean(transcriptSavedAt)}
             inRoom={Boolean(joinConfig)}
             notesProcessingState={notesProcessingState}
+            recordingEnabled={recordingEnabled}
             summaryReady={Boolean(summaryPreview)}
             transcriptProcessingState={transcriptProcessingState}
           />
@@ -163,11 +187,16 @@ export function InSiteMeetingOperationsSheet(props: MeetingOperationsSheetProps)
           <MeetingOperationsSummaryCard
             canGenerateNotes={canGenerateNotes}
             generatingNotes={generatingNotes}
+            legacyId={meetingLegacyId}
+            meetingTitle={meetingTitle}
             notesProcessingState={notesProcessingState}
+            notesStorageId={notesStorageId}
             onGenerateNotes={onGenerateNotes}
             postCallProcessingActive={retryingPostCallProcessing || finalizingSession || transcriptProcessingState === 'processing' || notesProcessingState === 'processing'}
             summaryPreview={summaryPreview}
             transcriptLength={transcriptLength}
+            transcriptStorageId={transcriptStorageId}
+            transcriptText={transcriptText}
           />
 
           {interimTranscript ? <MeetingOperationsLiveCapturePreview interimTranscript={interimTranscript} /> : null}

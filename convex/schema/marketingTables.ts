@@ -33,6 +33,8 @@ export const marketingTables = {
     autoSyncEnabled: v.union(v.boolean(), v.null()),
     syncFrequencyMinutes: v.union(v.number(), v.null()),
     scheduledTimeframeDays: v.union(v.number(), v.null()),
+    /** Meta only: use async insights reports for large account syncs. */
+    metaUseAsyncInsights: v.optional(v.union(v.boolean(), v.null())),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -130,6 +132,8 @@ export const marketingTables = {
     notesModel: v.union(v.string(), v.null()),
     notesProcessingState: v.optional(v.union(v.literal('idle'), v.literal('processing'), v.literal('failed'))),
     notesProcessingError: v.optional(v.union(v.string(), v.null())),
+    notesStorageId: v.optional(v.union(v.string(), v.null())),
+    transcriptStorageId: v.optional(v.union(v.string(), v.null())),
   })
     .index('by_workspace_startTimeMs', ['workspaceId', 'startTimeMs'])
     .index('by_workspace_status_startTimeMs', ['workspaceId', 'status', 'startTimeMs'])
@@ -392,4 +396,15 @@ export const marketingTables = {
     .index('by_workspace_status_createdAt', ['workspaceId', 'status', 'createdAtMs'])
     .index('by_workspace_client_surface_status', ['workspaceId', 'clientId', 'surface', 'status'])
     .index('by_status_processedAt', ['status', 'processedAtMs']),
+
+  /** Inbound Meta Marketing API webhook payloads (ad account subscriptions). */
+  metaWebhookEvents: defineTable({
+    objectId: v.union(v.string(), v.null()),
+    objectType: v.union(v.string(), v.null()),
+    changeField: v.union(v.string(), v.null()),
+    verb: v.union(v.string(), v.null()),
+    entryId: v.union(v.string(), v.null()),
+    payload: v.any(),
+    receivedAtMs: v.number(),
+  }).index('by_receivedAtMs', ['receivedAtMs']),
 }

@@ -14,6 +14,10 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { useQuery } from 'convex/react'
 import { proposalsApi } from '@/lib/convex-api'
+import {
+  resolveProposalDeckUrls,
+  useProposalArtifactUrls,
+} from '@/features/dashboard/proposals/hooks/use-proposal-artifact-urls'
 import { getPreviewProposals } from '@/lib/preview-data'
 import { DirectionalPageTransition } from '@/shared/ui/page-transition'
 import { BackLink } from '@/shared/components/back-link'
@@ -69,34 +73,26 @@ export default function ProposalDeckPage() {
     }
   }, [isPreviewMode, previewProposal, proposalRow])
 
-  // PDF storage URL (preferred for viewing)
-  const pdfStorageUrl = useMemo(() => {
-    if (!proposal) return null
-    const deck = proposal.presentationDeck
-    return deck?.pdfStorageUrl ?? null
-  }, [proposal])
+  const artifactUrls = useProposalArtifactUrls(workspaceId, proposalId ?? null)
 
-  // Direct PDF URL (fallback for download)
-  const pdfUrl = useMemo(() => {
-    if (!proposal) return null
-    const deck = proposal.presentationDeck
-    return proposal.pdfUrl ?? deck?.pdfUrl ?? null
-  }, [proposal])
+  const { pdfUrl: pdfViewerUrl, pptUrl: pptxViewerUrl } = useMemo(
+    () =>
+      resolveProposalDeckUrls({
+        artifactUrls,
+        pdfUrl: proposal?.pdfUrl,
+        pptUrl: proposal?.pptUrl,
+        presentationDeck: proposal?.presentationDeck,
+      }),
+    [artifactUrls, proposal],
+  )
 
-  const pdfViewerUrl = useMemo(() => {
-    return pdfStorageUrl ?? pdfUrl
-  }, [pdfStorageUrl, pdfUrl])
-
-  const pptxViewerUrl = useMemo(() => {
-    if (!proposal) return null
-    const deck = proposal.presentationDeck
-    return proposal.pptUrl ?? deck?.storageUrl ?? deck?.pptxUrl ?? null
-  }, [proposal])
-
-  // Best PDF download URL (prefer storage URL for reliability)
-  const pdfDownloadUrl = useMemo(() => {
-    return pdfStorageUrl ?? pdfUrl
-  }, [pdfStorageUrl, pdfUrl])
+  const pdfDownloadUrl = pdfViewerUrl
+  const pptDownloadUrl = pptxViewerUrl
+  const cloudCopyPending = Boolean(
+    proposal &&
+      workspaceId &&
+      ((proposal.pdfUrl && !artifactUrls?.pdfArchived) || (proposal.pptUrl && !artifactUrls?.pptArchived)),
+  )
 
   const lastUpdated = useMemo(() => {
     if (!proposal?.updatedAt) return null
@@ -242,13 +238,16 @@ export default function ProposalDeckPage() {
                     </a>
                   </Button>
                 ) : null}
-                {pptxViewerUrl ? (
+                {pptDownloadUrl ? (
                   <Button variant="outline" asChild>
-                    <a href={pptxViewerUrl} target="_blank" rel="noreferrer">
+                    <a href={pptDownloadUrl} target="_blank" rel="noreferrer">
                       <Download className="mr-2 size-4" />
                       Download PowerPoint
                     </a>
                   </Button>
+                ) : null}
+                {cloudCopyPending ? (
+                  <p className="text-xs text-muted-foreground">Cloud copies are syncing to durable storage…</p>
                 ) : null}
               </div>
 

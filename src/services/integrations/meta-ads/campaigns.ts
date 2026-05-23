@@ -40,9 +40,12 @@ export {
   
   // Audiences
   createMetaAudience,
+  createMetaLookalikeAudience,
+  uploadMetaAudienceUsers,
   listMetaAudiences,
   deleteMetaAudience,
   type CreateAudienceOptions,
+  type CreateLookalikeAudienceOptions,
   
   // Objectives
   LEADS_OBJECTIVE_CONFIG,

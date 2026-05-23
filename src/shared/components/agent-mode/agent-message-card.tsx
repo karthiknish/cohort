@@ -70,6 +70,14 @@ function getActionLabel(action?: string, operation?: string): string {
     return 'Ads Snapshot'
   }
 
+  if (operation === 'summarizeAnalyticsPerformance') {
+    return 'Analytics Snapshot'
+  }
+
+  if (operation === 'summarizeSocialPerformance') {
+    return 'Social Insights'
+  }
+
   if (operation === 'generatePerformanceReport') {
     return 'Report'
   }
@@ -142,6 +150,18 @@ function getPresentationHeading(tone: PresentationTone, action?: string, operati
     if (tone === 'success') return 'Snapshot ready'
     if (tone === 'error') return 'Snapshot failed'
     return 'Ads snapshot'
+  }
+
+  if (operation === 'summarizeAnalyticsPerformance') {
+    if (tone === 'success') return 'Analytics ready'
+    if (tone === 'error') return 'Analytics failed'
+    return 'Analytics snapshot'
+  }
+
+  if (operation === 'summarizeSocialPerformance') {
+    if (tone === 'success') return 'Social insights ready'
+    if (tone === 'error') return 'Social insights failed'
+    return 'Social insights'
   }
 
   if (operation === 'generatePerformanceReport') {
@@ -253,7 +273,12 @@ function isRetryableData(data: Record<string, unknown> | undefined): boolean {
 }
 
 function usesStructuredMetricsCard(operation?: string): boolean {
-  return operation === 'summarizeAdsPerformance' || operation === 'generatePerformanceReport'
+  return (
+    operation === 'summarizeAdsPerformance' ||
+    operation === 'summarizeAnalyticsPerformance' ||
+    operation === 'summarizeSocialPerformance' ||
+    operation === 'generatePerformanceReport'
+  )
 }
 
 function resolveAgentDisplayContent(
@@ -279,6 +304,8 @@ function resolveAgentDisplayContent(
 
 function routeLinkLabel(operation?: string): string {
   if (operation === 'summarizeAdsPerformance') return 'Open ads dashboard'
+  if (operation === 'summarizeAnalyticsPerformance') return 'Open analytics'
+  if (operation === 'summarizeSocialPerformance') return 'Open socials'
   if (operation === 'generatePerformanceReport') return 'Open analytics'
   return 'Go to page'
 }

@@ -36,13 +36,19 @@ export type ExportCohortsSpreadsheetRowsOptions = {
   filename: string
   title?: string
   subtitle?: string
+  /** Sheet 1 — tabular data only (defaults to "Data"). */
   sheetName?: string
+  /** Sheet 2 — chart images (defaults to "Charts"). */
+  chartsSheetName?: string
   headers: string[]
   rows: Array<Array<string | number | boolean | null | undefined>>
   extraTables?: SpreadsheetExtraTable[]
   metadata?: Record<string, string>
   charts?: SpreadsheetChartSpec[]
 }
+
+const DEFAULT_DATA_SHEET_NAME = 'Data'
+const DEFAULT_CHARTS_SHEET_NAME = 'Charts'
 
 export function ensureXlsxFilename(filename: string): string {
   const trimmed = filename.trim()
@@ -111,14 +117,6 @@ function embedWorksheetCharts(
   const theme = COHORTS_SPREADSHEET_THEME
   let currentRow = startRow
 
-  worksheet.mergeCells(currentRow, 1, currentRow, columnCount)
-  const sectionCell = worksheet.getCell(currentRow, 1)
-  sectionCell.value = 'Visual summary (optional charts)'
-  sectionCell.font = { ...theme.fonts.title, color: { argb: theme.colors.foreground } }
-  sectionCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 }
-  worksheet.getRow(currentRow).height = 22
-  currentRow += 1
-
   for (const chart of charts) {
     const rowSpan = chartImageRowSpan(chart.height)
 
@@ -137,6 +135,57 @@ function embedWorksheetCharts(
     })
 
     currentRow += rowSpan + 2
+  }
+
+  return currentRow + 1
+}
+
+function buildChartsWorksheetHeader(
+  worksheet: ExcelJS.Worksheet,
+  columnCount: number,
+  options: {
+    dataSheetName: string
+    title?: string
+    subtitle?: string
+    metadata?: Record<string, string>
+    chartCount: number
+  },
+): number {
+  const theme = COHORTS_SPREADSHEET_THEME
+  let currentRow = 1
+
+  worksheet.mergeCells(currentRow, 1, currentRow, columnCount)
+  const brandCell = worksheet.getCell(currentRow, 1)
+  brandCell.value = theme.brandName
+  brandCell.font = { ...theme.fonts.brand, color: { argb: theme.colors.primaryForeground } }
+  applyFill(brandCell, theme.colors.primary)
+  brandCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 }
+  worksheet.getRow(currentRow).height = 30
+  currentRow += 1
+
+  worksheet.mergeCells(currentRow, 1, currentRow, columnCount)
+  const titleCell = worksheet.getCell(currentRow, 1)
+  titleCell.value = options.title?.trim() || 'Visual summary'
+  titleCell.font = { ...theme.fonts.title, color: { argb: theme.colors.foreground } }
+  titleCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 }
+  worksheet.getRow(currentRow).height = 22
+  currentRow += 1
+
+  const metaLines = [
+    `Numeric data is on the "${options.dataSheetName}" sheet.`,
+    options.subtitle?.trim(),
+    `${options.chartCount} chart${options.chartCount === 1 ? '' : 's'} generated from export data.`,
+    `Exported ${new Date().toLocaleString()}`,
+    ...buildMetadataLines(options.metadata),
+  ].filter((line): line is string => Boolean(line?.trim()))
+
+  for (const line of metaLines) {
+    worksheet.mergeCells(currentRow, 1, currentRow, columnCount)
+    const metaCell = worksheet.getCell(currentRow, 1)
+    metaCell.value = line
+    metaCell.font = { ...theme.fonts.subtitle, color: { argb: theme.colors.mutedForeground } }
+    metaCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 }
+    currentRow += 1
   }
 
   return currentRow + 1
@@ -169,13 +218,13 @@ function writeTableSection(
 
   rows.forEach((rowValues, rowOffset) => {
     const rowIndex = headerRowIndex + 1 + rowOffset
-    const stripe = rowOffset % 2 === 1 ? theme.colors.muted : theme.colors.white
+    const zebraFill = rowOffset % 2 === 1 ? theme.colors.muted : theme.colors.white
 
     rowValues.forEach((value, columnIndex) => {
       const cell = worksheet.getCell(rowIndex, columnIndex + 1)
       cell.value = value
       cell.font = { ...theme.fonts.body, color: { argb: theme.colors.foreground } }
-      applyFill(cell, stripe)
+      applyFill(cell, zebraFill)
       applyBorder(cell)
       cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1, wrapText: true }
     })
@@ -188,6 +237,7 @@ async function buildBrandedWorkbook({
   title,
   subtitle,
   sheetName,
+  chartsSheetName,
   headers,
   rows,
   extraTables = [],
@@ -197,6 +247,7 @@ async function buildBrandedWorkbook({
   title?: string
   subtitle?: string
   sheetName?: string
+  chartsSheetName?: string
   headers: string[]
   rows: string[][]
   extraTables?: SpreadsheetExtraTable[]
@@ -208,7 +259,11 @@ async function buildBrandedWorkbook({
   workbook.creator = COHORTS_SPREADSHEET_THEME.brandName
   workbook.created = new Date()
 
-  const worksheet = workbook.addWorksheet(sheetName?.slice(0, 31) || 'Export')
+  const dataSheetName = sheetName?.slice(0, 31) || DEFAULT_DATA_SHEET_NAME
+  const resolvedChartsSheetName = chartsSheetName?.slice(0, 31) || DEFAULT_CHARTS_SHEET_NAME
+  const chartImages = renderSpreadsheetCharts(charts)
+
+  const worksheet = workbook.addWorksheet(dataSheetName)
 
   const columnCount = Math.max(headers.length, 1)
   const theme = COHORTS_SPREADSHEET_THEME
@@ -291,23 +346,15 @@ async function buildBrandedWorkbook({
     column.width = Math.min(Math.max(maxCellLength + 4, 12), 48)
   }
 
-  let footerRowIndex = nextRow
+  const footerRowIndex = nextRow
   worksheet.mergeCells(footerRowIndex, 1, footerRowIndex, columnCount)
   const footerCell = worksheet.getCell(footerRowIndex, 1)
-  footerCell.value = `Prepared in ${theme.brandName}`
+  footerCell.value =
+    chartImages.length > 0
+      ? `Prepared in ${theme.brandName} — see "${resolvedChartsSheetName}" for charts`
+      : `Prepared in ${theme.brandName}`
   footerCell.font = { ...theme.fonts.footer, color: { argb: theme.colors.mutedForeground } }
   footerCell.alignment = { horizontal: 'left', indent: 1 }
-
-  const chartImages = renderSpreadsheetCharts(charts)
-  if (chartImages.length > 0) {
-    footerRowIndex = embedWorksheetCharts(
-      workbook,
-      worksheet,
-      chartImages,
-      columnCount,
-      footerRowIndex + 2,
-    )
-  }
 
   worksheet.views = [
     {
@@ -316,6 +363,29 @@ async function buildBrandedWorkbook({
       activeCell: `A${headerRowIndex + 1}`,
     },
   ]
+
+  if (chartImages.length > 0) {
+    const chartsColumnCount = 8
+    const chartsWorksheet = workbook.addWorksheet(
+      resolvedChartsSheetName === dataSheetName ? DEFAULT_CHARTS_SHEET_NAME : resolvedChartsSheetName,
+    )
+
+    const chartStartRow = buildChartsWorksheetHeader(chartsWorksheet, chartsColumnCount, {
+      dataSheetName,
+      title: title ? `${title} — charts` : undefined,
+      subtitle,
+      metadata,
+      chartCount: chartImages.length,
+    })
+
+    embedWorksheetCharts(workbook, chartsWorksheet, chartImages, chartsColumnCount, chartStartRow)
+
+    for (let index = 0; index < chartsColumnCount; index += 1) {
+      chartsWorksheet.getColumn(index + 1).width = 14
+    }
+
+    chartsWorksheet.views = [{ state: 'frozen', ySplit: 1, activeCell: 'A2' }]
+  }
 
   return workbook
 }
@@ -336,11 +406,16 @@ async function downloadWorkbook(workbook: ExcelJS.Workbook, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export async function exportCohortsSpreadsheetRows(
-  options: ExportCohortsSpreadsheetRowsOptions,
-): Promise<void> {
-  const { headers, rows, filename, title, subtitle, sheetName, extraTables, metadata, charts } = options
-  if (headers.length === 0) return
+/** Build a branded workbook in memory (data sheet + optional charts sheet). */
+export async function buildCohortsSpreadsheetWorkbook(
+  options: Omit<ExportCohortsSpreadsheetRowsOptions, 'filename'>,
+): Promise<ExcelJS.Workbook> {
+  const { headers, rows, title, subtitle, sheetName, chartsSheetName, extraTables, metadata, charts } =
+    options
+  if (headers.length === 0) {
+    const ExcelJS = await loadExcelJS()
+    return new ExcelJS.Workbook()
+  }
 
   const sanitizedRows = rows.map((row) =>
     row.map((value) => sanitizeSpreadsheetCell(value)),
@@ -352,13 +427,44 @@ export async function exportCohortsSpreadsheetRows(
     rows: table.rows.map((row) => row.map((value) => sanitizeSpreadsheetCell(value))),
   }))
 
-  const workbook = await buildBrandedWorkbook({
+  return buildBrandedWorkbook({
     title,
     subtitle,
     sheetName,
+    chartsSheetName,
     headers,
     rows: sanitizedRows,
     extraTables: sanitizedExtraTables,
+    metadata,
+    charts,
+  })
+}
+
+export async function exportCohortsSpreadsheetRows(
+  options: ExportCohortsSpreadsheetRowsOptions,
+): Promise<void> {
+  const {
+    headers,
+    rows,
+    filename,
+    title,
+    subtitle,
+    sheetName,
+    chartsSheetName,
+    extraTables,
+    metadata,
+    charts,
+  } = options
+  if (headers.length === 0) return
+
+  const workbook = await buildCohortsSpreadsheetWorkbook({
+    title,
+    subtitle,
+    sheetName,
+    chartsSheetName,
+    headers,
+    rows,
+    extraTables,
     metadata,
     charts,
   })

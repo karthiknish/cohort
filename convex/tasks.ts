@@ -2,8 +2,6 @@ import {
   zAuthenticatedMutation,
   zWorkspaceQueryActive,
   zWorkspacePaginatedQueryActive,
-  applyManualPagination,
-  getPaginatedResponse,
 } from './functions'
 import { z } from 'zod/v4'
 import { internal } from '/_generated/api'
@@ -11,8 +9,19 @@ import { internal } from '/_generated/api'
 import { getDayKeyFormatter } from '@/lib/intl/cached-datetime'
 
 import { Errors } from './errors'
+import { fetchFilteredTasksPage } from './tasks/listFilters'
+
+export { summarizeCountsByProject } from './tasks/projectCounts'
 import { resolveTaskNotificationRecipientUserIds } from './notificationTargeting'
 import { normalizeTaskAssignees } from './taskAssignees'
+
+const taskListFilterArgsZ = {
+  status: z.string().optional(),
+  searchQuery: z.string().optional(),
+  assigneeUserId: z.string().optional(),
+  assigneeMatch: z.string().optional(),
+  projectId: z.string().optional(),
+}
 
 const taskAttachmentZ = z.object({
   name: z.string(),
@@ -138,7 +147,7 @@ function assertFutureDueDateMs(dueDateMs: number | null | undefined, nowMs: numb
 }
 
 export const list = zWorkspacePaginatedQueryActive({
-  args: {},
+  args: taskListFilterArgsZ,
   returns: z.object({
     items: z.array(taskZ),
     nextCursor: z.object({
@@ -147,16 +156,19 @@ export const list = zWorkspacePaginatedQueryActive({
     }).nullable(),
   }),
   handler: async (ctx, args) => {
-    let q = ctx.db
-      .query('tasks')
-      .withIndex('by_workspace_createdAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
-      .order('desc')
-
-    q = applyManualPagination(q, args.cursor)
-
     const limit = args.limit ?? 50
-    const rows = await q.take(limit + 1)
-    const result = getPaginatedResponse(rows, limit, 'createdAtMs')
+    const result = await fetchFilteredTasksPage(ctx, {
+      workspaceId: args.workspaceId,
+      filters: {
+        status: args.status,
+        searchQuery: args.searchQuery,
+        assigneeUserId: args.assigneeUserId,
+        assigneeMatch: args.assigneeMatch,
+        projectId: args.projectId,
+      },
+      cursor: args.cursor ?? null,
+      limit,
+    })
 
     return {
       items: result.items.map(mapTaskRow),
@@ -168,6 +180,7 @@ export const list = zWorkspacePaginatedQueryActive({
 export const listByClient = zWorkspacePaginatedQueryActive({
   args: {
     clientId: z.string(),
+    ...taskListFilterArgsZ,
   },
   returns: z.object({
     items: z.array(taskZ),
@@ -177,18 +190,20 @@ export const listByClient = zWorkspacePaginatedQueryActive({
     }).nullable(),
   }),
   handler: async (ctx, args) => {
-    let q = ctx.db
-      .query('tasks')
-      .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
-        q.eq('workspaceId', args.workspaceId).eq('clientId', args.clientId),
-      )
-      .order('desc')
-
-    q = applyManualPagination(q, args.cursor)
-
     const limit = args.limit ?? 50
-    const rows = await q.take(limit + 1)
-    const result = getPaginatedResponse(rows, limit, 'createdAtMs')
+    const result = await fetchFilteredTasksPage(ctx, {
+      workspaceId: args.workspaceId,
+      clientId: args.clientId,
+      filters: {
+        status: args.status,
+        searchQuery: args.searchQuery,
+        assigneeUserId: args.assigneeUserId,
+        assigneeMatch: args.assigneeMatch,
+        projectId: args.projectId,
+      },
+      cursor: args.cursor ?? null,
+      limit,
+    })
 
     return {
       items: result.items.map(mapTaskRow),

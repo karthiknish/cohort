@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useMemo, useState, type MouseEvent } from 'react'
-import { Edit2, Globe, MapPin, X } from 'lucide-react'
+import { Edit2, Globe, Loader2, MapPin, X } from 'lucide-react'
 
+import type { MetaTargetingSearchResult } from '@/features/dashboard/ads/hooks/use-meta-targeting-search'
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -37,6 +38,10 @@ type LocationTargetingSectionProps = {
   workspaceId?: string | null
   clientId?: string | null
   canSearchGeo?: boolean
+  onAddLocation?: (item: MetaTargetingSearchResult) => void
+  onRemoveLocation?: (locationId: string) => void
+  onSaveLocations?: () => void
+  savingTargeting?: boolean
 }
 
 export function LocationTargetingSection({
@@ -50,9 +55,14 @@ export function LocationTargetingSection({
   workspaceId,
   clientId,
   canSearchGeo,
+  onAddLocation,
+  onRemoveLocation,
+  onSaveLocations,
+  savingTargeting,
 }: LocationTargetingSectionProps) {
   const [selectedLocation, setSelectedLocation] = useState<LocationMarker | null>(null)
   const isEditing = editingSection === 'locations'
+  const canEditLocations = Boolean(onAddLocation && onRemoveLocation)
 
   const handleToggleEditing = useCallback(() => {
     onToggleEditing('locations')
@@ -60,20 +70,20 @@ export function LocationTargetingSection({
 
   const handleLocationSelect = useCallback((loc: LocationMarker) => {
     setSelectedLocation(loc)
-    toast({
-      title: 'Location selected',
-      description: `${loc.name} — use the map search to add more when editing.`,
-    })
   }, [])
 
   const handleGeoSelect = useCallback(
-    (item: { id: string; name: string }) => {
-      toast({
-        title: 'Geo target found',
-        description: `${item.name} (${item.id}) — add via Meta Ads Manager or ad set creation. Map pins here are for planning only.`,
-      })
+    (item: MetaTargetingSearchResult) => {
+      if (!onAddLocation) {
+        toast({
+          title: 'Geo target found',
+          description: `${item.name} (${item.id}) — enable editing to add locations.`,
+        })
+        return
+      }
+      onAddLocation(item)
     },
-    [],
+    [onAddLocation],
   )
 
   const locationSelectHandlers = useMemo(
@@ -97,15 +107,23 @@ export function LocationTargetingSection({
           loc.id,
           (event: MouseEvent<HTMLButtonElement>) => {
             event.stopPropagation()
+            if (isEditing && onRemoveLocation) {
+              onRemoveLocation(loc.id)
+              return
+            }
             toast({
               title: 'Read-only geography',
-              description: `${loc.name} is synced from Meta. Edit locations in Ads Manager or when creating an ad set.`,
+              description: 'Click Edit to remove locations from this ad set.',
             })
           },
         ]),
       ) as Record<string, (event: MouseEvent<HTMLButtonElement>) => void>,
-    [aggregatedData.locations.included],
+    [aggregatedData.locations.included, isEditing, onRemoveLocation],
   )
+
+  const handleSaveLocationsClick = useCallback(() => {
+    onSaveLocations?.()
+  }, [onSaveLocations])
 
   return (
     <div className="space-y-4">
@@ -141,26 +159,28 @@ export function LocationTargetingSection({
           </Select>
         ) : null}
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={isEditing ? 'default' : 'outline'}
-                size="sm"
-                className="h-9 gap-1.5"
-                onClick={handleToggleEditing}
-                aria-pressed={isEditing}
-                aria-label="Edit locations"
-              >
-                <Edit2 className="size-3.5" aria-hidden />
-                {isEditing ? 'Done' : 'Edit'}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {isEditing ? 'Exit map editing' : 'Search and pin locations on the map'}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {canEditLocations ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={isEditing ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  onClick={handleToggleEditing}
+                  aria-pressed={isEditing}
+                  aria-label="Edit locations"
+                >
+                  <Edit2 className="size-3.5" aria-hidden />
+                  {isEditing ? 'Done' : 'Edit'}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isEditing ? 'Exit location editing' : 'Search and save geo targets to Meta'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : null}
       </div>
 
       {isEditing && canSearchGeo && workspaceId ? (
@@ -168,7 +188,8 @@ export function LocationTargetingSection({
           workspaceId={workspaceId}
           clientId={clientId}
           mode="geolocations"
-          placeholder="Search Meta geo targets (reference for Ads Manager)…"
+          placeholder="Search countries, regions, cities…"
+          disabled={savingTargeting}
           onSelect={handleGeoSelect}
         />
       ) : null}
@@ -197,7 +218,7 @@ export function LocationTargetingSection({
             >
               <MapPin className="mr-1 size-3 shrink-0" aria-hidden />
               {loc.name}
-              {isEditing ? (
+              {isEditing && onRemoveLocation ? (
                 <button
                   type="button"
                   onClick={locationRemoveHandlers[loc.id]}
@@ -212,9 +233,26 @@ export function LocationTargetingSection({
         </div>
       ) : (
         <p className="rounded-xl border border-dashed border-border/60 bg-muted/10 px-4 py-6 text-center text-xs text-muted-foreground">
-          No location targeting configured for this view.
+          {isEditing
+            ? 'Search above to add countries, regions, or cities, then save to Meta.'
+            : 'No location targeting configured for this view.'}
         </p>
       )}
+
+      {isEditing && onSaveLocations ? (
+        <div className="flex justify-end border-t border-border/60 pt-3">
+          <Button size="sm" onClick={handleSaveLocationsClick} disabled={savingTargeting}>
+            {savingTargeting ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
+                Saving…
+              </>
+            ) : (
+              'Save locations to Meta'
+            )}
+          </Button>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -3,6 +3,58 @@ import { describe, expect, it } from 'vitest'
 import { buildAgentDataSections, buildAgentMessageCharts } from './agent-message-data'
 
 describe('buildAgentDataSections', () => {
+  it('builds chart series for analytics snapshots', () => {
+    const charts = buildAgentMessageCharts('summarizeAnalyticsPerformance', {
+      dataKind: 'analytics',
+      totals: { users: 1200, sessions: 2400, conversions: 48, revenue: 9600 },
+      comparison: { deltaPercent: { users: 8, sessions: 12, conversions: -4, revenue: 15 } },
+    })
+
+    expect(charts.map((chart) => chart.id)).toEqual(
+      expect.arrayContaining(['analytics-traffic', 'analytics-period-delta']),
+    )
+  })
+
+  it('builds chart series for social snapshots', () => {
+    const charts = buildAgentMessageCharts('summarizeSocialPerformance', {
+      dataKind: 'social',
+      facebook: { reach: 5000, impressions: 8000, engagedUsers: 420 },
+      instagram: { reach: 3200, impressions: 5100, engagedUsers: 280 },
+      topContent: {
+        facebook: [
+          { message: 'Launch post', reach: 900, engagedUsers: 120 },
+          { message: 'Behind the scenes', reach: 650, engagedUsers: 80 },
+        ],
+        instagram: [
+          { message: 'Reel highlight', reach: 1100, engagedUsers: 200 },
+          { message: 'Story recap', reach: 700, engagedUsers: 95 },
+        ],
+      },
+    })
+
+    expect(charts.map((chart) => chart.id)).toEqual(
+      expect.arrayContaining([
+        'social-facebook',
+        'social-instagram',
+        'social-top-facebook',
+        'social-top-instagram',
+      ]),
+    )
+  })
+
+  it('extracts analytics sections with traffic metrics', () => {
+    const sections = buildAgentDataSections('summarizeAnalyticsPerformance', {
+      dataKind: 'analytics',
+      periodLabel: 'Last 30 days',
+      providerLabel: 'Google Analytics',
+      currentSituation: 'Traffic is growing steadily.',
+      totals: { users: 1200, sessions: 2400, conversions: 48, revenue: 9600, conversionRate: 2, revenuePerSession: 4, sessionsPerUser: 2 },
+      metricsAvailable: true,
+    })
+
+    expect(sections.map((section) => section.title)).toEqual(['Insight', 'Overview', 'Traffic & Conversions'])
+  })
+
   it('builds chart series for ads snapshots', () => {
     const charts = buildAgentMessageCharts('summarizeAdsPerformance', {
       totals: { spend: 1200, revenue: 3600, impressions: 50000, clicks: 900, conversions: 40 },

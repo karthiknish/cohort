@@ -37,6 +37,7 @@ import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { parsePageSize } from '@/lib/pagination'
 import { getPreviewNotifications } from '@/lib/preview-data'
 import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
+import { FadeIn } from '@/shared/ui/animate-in'
 import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 import { NotificationItem } from '@/features/notifications/components/notification-item'
 import { NotificationEmptyState } from '@/features/notifications/components/notification-empty-state'
@@ -479,6 +480,7 @@ export function NotificationsPageContent() {
     <div className={DASHBOARD_THEME.layout.container}>
       <LiveRegion message={page.notificationAnnouncement} />
 
+      <FadeIn>
       <NotificationsPageHeader
         onRefresh={page.handleRefresh}
         onMarkAllRead={page.handleMarkAllRead}
@@ -511,6 +513,7 @@ export function NotificationsPageContent() {
           <NotificationsFilterPanel page={page} />
         </TabsContent>
       </Tabs>
+      </FadeIn>
     </div>
   )
 }

@@ -7,8 +7,15 @@ import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet'
 
+import { pressableScaleClass } from '@/lib/motion'
+import { FadeIn } from '@/shared/ui/animate-in'
+import { cn } from '@/lib/utils'
+
 import type { MeetingProcessingState } from '../types'
 import type { CaptureStatus, LiveKitJoinPayload } from './in-site-meeting-card.shared'
+import { MeetingArtifactsDownload } from './meeting-artifacts-download'
+import { MeetingNotesMarkdown } from './meeting-notes-markdown'
+import { MeetingRecordingPromptCard } from './meeting-recording-prompt-card'
 
 export function MeetingOperationsSheetHeader({
   joinConfig,
@@ -30,29 +37,51 @@ export function MeetingOperationsSheetHeader({
 }
 
 export function MeetingOperationsCaptureCard({
+  canRecord,
   captureStatus,
   joinConfig,
+  onEnableRecording,
+  recordingEnabled,
   transcriptSource,
 }: {
+  canRecord: boolean
   captureStatus: CaptureStatus
   joinConfig: LiveKitJoinPayload | null
+  onEnableRecording: () => void
+  recordingEnabled: boolean
   transcriptSource: string | null
 }) {
   return (
-    <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
-      <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Capture status</p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Badge variant={joinConfig ? 'secondary' : 'outline'}>{joinConfig ? 'In room' : 'Ready to join'}</Badge>
-        <Badge variant={captureStatus.listening ? 'secondary' : 'outline'}>
-          {captureStatus.listening ? 'Listening' : 'Not listening'}
-        </Badge>
-        {transcriptSource ? <Badge variant="outline">{transcriptSource}</Badge> : null}
+    <div className="space-y-3">
+      <MeetingRecordingPromptCard
+        canRecord={canRecord}
+        captureError={captureStatus.error}
+        captureSupported={captureStatus.supported}
+        inRoom={Boolean(joinConfig)}
+        recordingEnabled={recordingEnabled}
+        onEnableRecording={onEnableRecording}
+      />
+
+      <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+        <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Capture status</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Badge variant={joinConfig ? 'secondary' : 'outline'}>{joinConfig ? 'In room' : 'Ready to join'}</Badge>
+          <Badge variant={recordingEnabled ? 'secondary' : 'outline'}>
+            {recordingEnabled ? 'Recording armed' : 'Recording paused'}
+          </Badge>
+          <Badge variant={captureStatus.listening ? 'secondary' : 'outline'}>
+            {captureStatus.listening ? 'Listening' : 'Not listening'}
+          </Badge>
+          {transcriptSource ? <Badge variant="outline">{transcriptSource}</Badge> : null}
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {captureStatus.supported
+            ? recordingEnabled
+              ? 'Speech is transcribed locally, synced to the meeting record, and used for guarded Gemini notes.'
+              : 'Start recording when the meeting begins so transcript capture and AI notes can run.'
+            : 'Browser speech capture is unavailable in this browser. Transcript sync will stay idle until capture is available.'}
+        </p>
       </div>
-      <p className="mt-3 text-sm text-muted-foreground">
-        {captureStatus.supported
-          ? 'Browser speech capture is available for automatic transcript collection.'
-          : 'Browser speech capture is unavailable in this browser. Transcript sync will stay idle until capture is available.'}
-      </p>
     </div>
   )
 }
@@ -247,38 +276,72 @@ export function MeetingOperationsAlerts({
 export function MeetingOperationsSummaryCard({
   canGenerateNotes,
   generatingNotes,
+  legacyId,
+  meetingTitle,
   notesProcessingState,
+  notesStorageId,
   onGenerateNotes,
   postCallProcessingActive,
   summaryPreview,
   transcriptLength,
+  transcriptStorageId,
+  transcriptText,
 }: {
   canGenerateNotes: boolean
   generatingNotes: boolean
+  legacyId: string
+  meetingTitle: string
   notesProcessingState: MeetingProcessingState
+  notesStorageId?: string | null
   onGenerateNotes: () => void
   postCallProcessingActive: boolean
   summaryPreview: string | null
   transcriptLength: number
+  transcriptStorageId?: string | null
+  transcriptText?: string | null
 }) {
+  if (notesProcessingState === 'processing' && !summaryPreview) {
+    return (
+      <FadeIn y={12} className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+        <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">AI summary</p>
+        <p className="mt-3 text-sm text-foreground">
+          Gemini is generating structured meeting notes from the saved transcript. This usually takes a few seconds.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Notes include Summary, Decisions, Action Items, and Risks / Blockers with factual guardrails applied.
+        </p>
+      </FadeIn>
+    )
+  }
+
   if (summaryPreview) {
     return (
-      <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+      <FadeIn y={12} className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Latest AI summary</p>
           {canGenerateNotes ? (
-            <Button type="button" size="sm" variant="outline" onClick={onGenerateNotes} disabled={generatingNotes || notesProcessingState === 'processing'}>
+            <Button type="button" size="sm" variant="outline" className={cn(pressableScaleClass)} onClick={onGenerateNotes} disabled={generatingNotes || notesProcessingState === 'processing'}>
               {generatingNotes || notesProcessingState === 'processing' ? 'Refreshing…' : 'Refresh summary'}
             </Button>
           ) : null}
         </div>
-        <p className="mt-3 whitespace-pre-wrap text-sm text-foreground">{summaryPreview}</p>
-      </div>
+        <MeetingNotesMarkdown className="mt-3" content={summaryPreview} />
+        <MeetingArtifactsDownload
+          className="mt-4"
+          compact
+          legacyId={legacyId}
+          meetingTitle={meetingTitle}
+          notesStorageId={notesStorageId}
+          notesSummary={summaryPreview}
+          transcriptStorageId={transcriptStorageId}
+          transcriptText={transcriptText}
+        />
+      </FadeIn>
     )
   }
 
   return (
-    <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+    <FadeIn y={12} className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">AI summary</p>
@@ -292,12 +355,12 @@ export function MeetingOperationsSummaryCard({
           {postCallProcessingActive ? <p className="mt-2 text-xs text-muted-foreground">Post-call processing is running. Keep this page open until transcript finalization and notes generation finish.</p> : null}
         </div>
         {canGenerateNotes ? (
-          <Button type="button" size="sm" variant="outline" onClick={onGenerateNotes} disabled={generatingNotes || notesProcessingState === 'processing'}>
+          <Button type="button" size="sm" variant="outline" className={cn(pressableScaleClass)} onClick={onGenerateNotes} disabled={generatingNotes || notesProcessingState === 'processing'}>
             {generatingNotes || notesProcessingState === 'processing' ? 'Generating...' : 'Generate notes'}
           </Button>
         ) : null}
       </div>
-    </div>
+    </FadeIn>
   )
 }
 

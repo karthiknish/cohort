@@ -9,6 +9,19 @@ vi.mock('@/shared/ui/sheet', () => ({
   SheetTitle: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }))
 
+vi.mock('@/shared/contexts/auth-context', () => ({
+  useAuth: () => ({ user: { workspaceId: 'workspace-1' } }),
+}))
+
+vi.mock('convex/react', () => ({
+  useQuery: () => ({
+    notesDownloadUrl: null,
+    transcriptDownloadUrl: null,
+    notesArchived: false,
+    transcriptArchived: false,
+  }),
+}))
+
 import { MeetingAutomationPipeline } from './meeting-automation-pipeline'
 import {
   MeetingOperationsAlerts,
@@ -30,8 +43,11 @@ describe('meeting operations sheet sections', () => {
       <>
         <MeetingOperationsSheetHeader joinConfig={joinConfig} meetingRoomName="room-1" />
         <MeetingOperationsCaptureCard
+          canRecord
           captureStatus={captureStatus}
           joinConfig={joinConfig}
+          onEnableRecording={vi.fn()}
+          recordingEnabled={false}
           transcriptSource="livekit"
         />
         <MeetingOperationsAttendeesCard meetingAttendeeEmails={['alex@example.com', 'sam@example.com']} />
@@ -67,7 +83,8 @@ describe('meeting operations sheet sections', () => {
 
     expect(markup).toContain('Room sidebar')
     expect(markup).toContain('room-1')
-    expect(markup).toContain('Browser speech capture is available')
+    expect(markup).toContain('Start recording transcript')
+    expect(markup).toContain('Recording paused')
     expect(markup).toContain('2 attendees')
     expect(markup).toContain('AI notes generating')
     expect(markup).toContain('Transcript truncated')
@@ -94,6 +111,8 @@ describe('meeting operations sheet sections', () => {
         <MeetingOperationsSummaryCard
           canGenerateNotes={true}
           generatingNotes={false}
+          legacyId="meeting-1"
+          meetingTitle="Weekly sync"
           notesProcessingState="idle"
           onGenerateNotes={vi.fn()}
           postCallProcessingActive={true}
@@ -103,11 +122,14 @@ describe('meeting operations sheet sections', () => {
         <MeetingOperationsSummaryCard
           canGenerateNotes={true}
           generatingNotes={false}
+          legacyId="meeting-1"
+          meetingTitle="Weekly sync"
           notesProcessingState="idle"
           onGenerateNotes={vi.fn()}
           postCallProcessingActive={false}
-          summaryPreview="Action items and next steps"
+          summaryPreview={'## Summary\n- Discussed scope\n\n## Decisions\n- Ship next week\n\n## Action Items\n- Draft plan\n\n## Risks / Blockers\n- None noted.'}
           transcriptLength={42}
+          transcriptText="Discussed scope and timeline for the launch."
         />
         <MeetingOperationsLiveCapturePreview interimTranscript="Discussing scope and timeline" />
       </>,
@@ -119,6 +141,8 @@ describe('meeting operations sheet sections', () => {
     expect(markup).toContain('Retry AI notes')
     expect(markup).toContain('Generate notes')
     expect(markup).toContain('Latest AI summary')
+    expect(markup).toContain('Discussed scope')
+    expect(markup).toContain('Download PDF')
     expect(markup).toContain('Keep this page open until transcript finalization and notes generation finish.')
     expect(markup).toContain('Discussing scope and timeline')
   })

@@ -2,6 +2,8 @@
 
 import { useMemo } from 'react'
 
+import { FadeInStagger } from '@/shared/ui/animate-in'
+import { FadeInItem } from '@/shared/ui/fade-in-item'
 import { cn } from '@/lib/utils'
 import {
   buildAgentMessageCharts,
@@ -25,10 +27,24 @@ function chartForSection(charts: AgentChartSeries[], sectionTitle: string): Agen
   switch (sectionTitle) {
     case 'Performance':
       return charts.find((chart) => chart.id === 'financial') ?? charts.find((chart) => chart.id === 'delivery') ?? null
+    case 'Traffic & Conversions':
+      return (
+        charts.find((chart) => chart.id === 'analytics-traffic') ??
+        charts.find((chart) => chart.id === 'analytics-period-delta') ??
+        null
+      )
     case 'Platform Breakdown':
       return charts.find((chart) => chart.id === 'providers') ?? null
     case 'Top Campaigns':
       return charts.find((chart) => chart.id === 'top-campaigns') ?? null
+    case 'Facebook':
+      return charts.find((chart) => chart.id === 'social-facebook') ?? null
+    case 'Instagram':
+      return charts.find((chart) => chart.id === 'social-instagram') ?? null
+    case 'Top Facebook Posts':
+      return charts.find((chart) => chart.id === 'social-top-facebook') ?? null
+    case 'Top Instagram Posts':
+      return charts.find((chart) => chart.id === 'social-top-instagram') ?? null
     case 'Status Breakdown':
       return charts.find((chart) => chart.id === 'task-status') ?? null
     default:
@@ -51,21 +67,32 @@ export function AgentDataSections({ sections, operation, data, accentClass }: Ag
   const usedChartIds = new Set<string>()
 
   return (
-    <div className="mt-4 space-y-4">
-      {charts.find((chart) => chart.id === 'period-delta') && sections.length === 0 ? (
-        <AgentMessageBarChart series={charts.find((chart) => chart.id === 'period-delta')!} />
-      ) : null}
+    <FadeInStagger className="mt-4 space-y-4" stagger={0.06}>
+      {sections.length === 0 ? (() => {
+        const standaloneDelta =
+          charts.find((chart) => chart.id === 'period-delta') ??
+          charts.find((chart) => chart.id === 'analytics-period-delta')
+        return standaloneDelta ? (
+          <FadeInItem y={12}>
+            <AgentMessageBarChart series={standaloneDelta} />
+          </FadeInItem>
+        ) : null
+      })() : null}
 
       {sections.map((section) => {
         const linkedChart = chartForSection(charts, section.title)
         if (linkedChart) usedChartIds.add(linkedChart.id)
-        const extraCharts = section.title === 'Performance'
-          ? charts.filter((chart) => chart.id === 'delivery' || chart.id === 'period-delta')
-          : secondaryCharts(charts, linkedChart?.id)
+        const extraCharts =
+          section.title === 'Performance'
+            ? charts.filter((chart) => chart.id === 'delivery' || chart.id === 'period-delta')
+            : section.title === 'Traffic & Conversions'
+              ? charts.filter((chart) => chart.id === 'analytics-period-delta')
+              : secondaryCharts(charts, linkedChart?.id)
 
         return (
-          <div
+          <FadeInItem
             key={section.title}
+            y={12}
             className={cn(
               'rounded-xl border border-border/60 bg-background/85 p-3 shadow-sm',
               accentClass,
@@ -98,13 +125,19 @@ export function AgentDataSections({ sections, operation, data, accentClass }: Ag
                 </div>
               )]
             })}
-          </div>
+          </FadeInItem>
         )
       })}
 
       {charts.flatMap((chart) =>
-        !usedChartIds.has(chart.id) ? [<AgentMessageBarChart key={chart.id} series={chart} />] : [],
+        !usedChartIds.has(chart.id)
+          ? [
+              <FadeInItem key={chart.id} y={12}>
+                <AgentMessageBarChart series={chart} />
+              </FadeInItem>,
+            ]
+          : [],
       )}
-    </div>
+    </FadeInStagger>
   )
 }

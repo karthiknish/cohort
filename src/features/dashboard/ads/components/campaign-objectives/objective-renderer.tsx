@@ -14,12 +14,27 @@ import type { CampaignObjective, ObjectiveComponentProps } from './types'
 
 interface ObjectiveRendererProps extends ObjectiveComponentProps {
   objective?: CampaignObjective
+  metaContext?: ObjectiveComponentProps['metaContext']
 }
 
-export function ObjectiveRenderer({ objective, formData, onChange, disabled }: ObjectiveRendererProps) {
+export function ObjectiveRenderer({
+  objective,
+  formData,
+  onChange,
+  disabled,
+  metaContext,
+}: ObjectiveRendererProps) {
   switch (objective) {
     case 'OUTCOME_SALES':
-      return <SalesObjectiveSection formData={formData} onChange={onChange} disabled={disabled} providerId={formData.providerId || 'facebook'} />
+      return (
+        <SalesObjectiveSection
+          formData={formData}
+          onChange={onChange}
+          disabled={disabled}
+          providerId={formData.providerId || 'facebook'}
+          metaContext={metaContext}
+        />
+      )
     
     case 'OUTCOME_LEADS':
       return (
@@ -28,7 +43,7 @@ export function ObjectiveRenderer({ objective, formData, onChange, disabled }: O
           onChange={onChange}
           disabled={disabled}
           providerId={formData.providerId || 'facebook'}
-          metaContext={undefined}
+          metaContext={metaContext}
         />
       )
     
@@ -36,7 +51,15 @@ export function ObjectiveRenderer({ objective, formData, onChange, disabled }: O
       return <TrafficObjectiveSection formData={formData} onChange={onChange} disabled={disabled} providerId={formData.providerId || 'facebook'} />
     
     case 'OUTCOME_ENGAGEMENT':
-      return <EngagementObjectiveSection formData={formData} onChange={onChange} disabled={disabled} providerId={formData.providerId || 'facebook'} />
+      return (
+        <EngagementObjectiveSection
+          formData={formData}
+          onChange={onChange}
+          disabled={disabled}
+          providerId={formData.providerId || 'facebook'}
+          metaContext={metaContext}
+        />
+      )
     
     case 'OUTCOME_AWARENESS':
       return <AwarenessObjectiveSection formData={formData} onChange={onChange} disabled={disabled} providerId={formData.providerId || 'facebook'} />

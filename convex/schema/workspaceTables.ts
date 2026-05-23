@@ -47,7 +47,6 @@ export const workspaceTables = {
         locale: v.optional(v.union(v.string(), v.null())),
       })
     ),
-    stripeCustomerId: v.optional(v.union(v.string(), v.null())),
     createdAtMs: v.union(v.number(), v.null()),
     updatedAtMs: v.union(v.number(), v.null()),
   })

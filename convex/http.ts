@@ -4,6 +4,7 @@ import { httpAction } from './_generated/server'
 import { authComponent, buildTrustedOrigins, createAuth, getAuthHealthSnapshot } from './betterAuth/auth'
 import { corsHeadersForOrigin } from './betterAuth/origins'
 import { adSyncNotification, externalWebhook } from './httpActions'
+import { metaWebhook } from './httpActions/metaWebhook'
 import { run as adSyncWorker } from './adSyncWorker'
 
 const http = httpRouter()
@@ -61,6 +62,8 @@ authComponent.registerRoutes(http, createAuth, {
 
 http.route({ path: '/webhooks/ads-sync', method: 'POST', handler: adSyncNotification })
 http.route({ path: '/webhooks/external', method: 'POST', handler: externalWebhook })
+http.route({ path: '/webhooks/meta', method: 'GET', handler: metaWebhook })
+http.route({ path: '/webhooks/meta', method: 'POST', handler: metaWebhook })
 http.route({ path: '/cron/ad-sync-worker', method: 'POST', handler: adSyncWorker })
 
 export default http

@@ -203,7 +203,7 @@ export function MeetingRoomEmptyState({
           </div>
           <div className="rounded-2xl border border-border bg-muted/30 p-4">
             <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Auto transcript</p>
-            <p className="mt-2 text-sm text-foreground">Transcript is persisted automatically, then AI notes start regenerating once enough meeting context has been captured.</p>
+            <p className="mt-2 text-sm text-foreground">Start recording when the call begins. Cohorts transcribes speech, then generates guarded Gemini notes after enough context is captured.</p>
           </div>
           <div className="rounded-2xl border border-border bg-muted/30 p-4">
             <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">PiP + mobile tray</p>
@@ -225,6 +225,8 @@ export function MeetingRoomEmptyState({
 
 export function MeetingRoomCanvasSection({
   autoCaptureEnabled,
+  onEnableTranscriptRecording,
+  transcriptRecordingEnabled,
   autoSyncing,
   canMinimize,
   finalizingSession,
@@ -308,6 +310,8 @@ export function MeetingRoomCanvasSection({
               meetingTitle={meetingTitle}
               layoutContext={layoutContext}
               autoCaptureEnabled={autoCaptureEnabled}
+              onEnableTranscriptRecording={onEnableTranscriptRecording}
+              transcriptRecordingEnabled={transcriptRecordingEnabled}
               compact={roomPinnedToMobileTray}
               pipSupported={pipSupported}
               pipActive={pipActive}

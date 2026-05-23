@@ -119,6 +119,8 @@ type MotionBadgeProps = Omit<HTMLMotionProps<'span'>, 'initial' | 'animate' | 'v
   pulse?: boolean
 }
 
+export { listItemEnterClass }
+
 export function MotionBadge({ pulse = false, className, children, ...props }: MotionBadgeProps) {
   const prefersReducedMotion = useReducedMotion()
   const motionEnabled = pulse && !prefersReducedMotion

@@ -1,5 +1,8 @@
 import { internal } from '/_generated/api'
+import type { Doc } from '/_generated/dataModel'
+import type { QueryCtx } from '../_generated/server'
 
+import { getPaginatedResponse, zWorkspacePaginatedQuery } from '../functions'
 import {
   internalMutation,
   mutation,
@@ -10,6 +13,208 @@ import {
   z,
   zWorkspaceQuery,
 } from './shared'
+
+const ANALYTICS_METRICS_PAGE_SIZE_DEFAULT = 100
+const ANALYTICS_BREAKDOWNS_MAX = 2000
+
+function analyticsDailyLegacyId(row: Pick<Doc<'analyticsMetricsDaily'>, 'propertyId' | 'date' | 'createdAtMs'>) {
+  return `${row.propertyId}|${row.date}|${row.createdAtMs}`
+}
+
+function parseAnalyticsDailyCursor(legacyId: string) {
+  const [propertyId = '', , createdAtMsRaw = '0'] = legacyId.split('|')
+  const createdAtMs = Number(createdAtMsRaw)
+  return {
+    propertyId,
+    createdAtMs: Number.isFinite(createdAtMs) ? createdAtMs : 0,
+  }
+}
+
+type AnalyticsDailyListArgs = {
+  workspaceId: string
+  clientId: string | null
+  propertyId?: string
+  startDate?: string
+  endDate?: string
+  cursor?: { fieldValue: string; legacyId: string } | null
+}
+
+function applyAnalyticsDailyPagination<TQuery>(
+  query: TQuery,
+  cursor: { fieldValue: string; legacyId: string } | null | undefined,
+): TQuery {
+  if (!cursor) {
+    return query
+  }
+
+  const { propertyId: cursorPropertyId, createdAtMs } = parseAnalyticsDailyCursor(cursor.legacyId)
+  const filtered = query as {
+    filter: (predicate: (row: {
+      field: (name: string) => unknown
+      eq: (left: unknown, right: unknown) => unknown
+      lt: (left: unknown, right: unknown) => unknown
+      gte: (left: unknown, right: unknown) => unknown
+      lte: (left: unknown, right: unknown) => unknown
+      and: (...conditions: unknown[]) => unknown
+      or: (...conditions: unknown[]) => unknown
+    }) => unknown) => TQuery
+  }
+
+  return filtered.filter((row) =>
+    row.or(
+      row.lt(row.field('date'), cursor.fieldValue),
+      row.and(
+        row.eq(row.field('date'), cursor.fieldValue),
+        row.or(
+          row.lt(row.field('propertyId'), cursorPropertyId),
+          row.and(
+            row.eq(row.field('propertyId'), cursorPropertyId),
+            row.lt(row.field('createdAtMs'), createdAtMs),
+          ),
+        ),
+      ),
+    ),
+  )
+}
+
+function analyticsDailyRowsQuery(ctx: QueryCtx, args: AnalyticsDailyListArgs) {
+  const { clientId, propertyId, startDate, endDate, cursor } = args
+
+  if (clientId !== null && propertyId) {
+    let query = ctx.db
+      .query('analyticsMetricsDaily')
+      .withIndex('by_workspace_client_property_date', (index) => {
+        const base = index
+          .eq('workspaceId', args.workspaceId)
+          .eq('clientId', clientId)
+          .eq('propertyId', propertyId)
+        if (startDate && endDate) {
+          return base.gte('date', startDate).lte('date', endDate)
+        }
+        if (endDate) {
+          return base.lte('date', endDate)
+        }
+        if (startDate) {
+          return base.gte('date', startDate)
+        }
+        return base
+      })
+      .order('desc')
+
+    return applyAnalyticsDailyPagination(query, cursor)
+  }
+
+  if (clientId !== null) {
+    let query = ctx.db
+      .query('analyticsMetricsDaily')
+      .withIndex('by_workspace_client_property_date', (index) =>
+        index.eq('workspaceId', args.workspaceId).eq('clientId', clientId),
+      )
+      .order('desc')
+
+    if (startDate) {
+      query = query.filter((row) => row.gte(row.field('date'), startDate))
+    }
+    if (endDate) {
+      query = query.filter((row) => row.lte(row.field('date'), endDate))
+    }
+
+    return applyAnalyticsDailyPagination(query, cursor)
+  }
+
+  let query = ctx.db
+    .query('analyticsMetricsDaily')
+    .withIndex('by_workspace_date', (index) => {
+      const base = index.eq('workspaceId', args.workspaceId)
+      if (startDate && endDate) {
+        return base.gte('date', startDate).lte('date', endDate)
+      }
+      if (startDate) {
+        return base.gte('date', startDate)
+      }
+      if (endDate) {
+        return base.lte('date', endDate)
+      }
+      return base
+    })
+    .order('desc')
+
+  if (propertyId) {
+    query = query.filter((row) => row.eq(row.field('propertyId'), propertyId))
+  }
+
+  return applyAnalyticsDailyPagination(query, cursor)
+}
+
+function mapAnalyticsDailyRow(row: Doc<'analyticsMetricsDaily'>) {
+  return {
+    id: `ga|${row.propertyId}|${row.date}|${row.createdAtMs}`,
+    providerId: 'google-analytics' as const,
+    propertyId: row.propertyId,
+    clientId: row.clientId,
+    date: row.date,
+    users: row.users,
+    sessions: row.sessions,
+    conversions: row.conversions,
+    revenue: row.revenue,
+    currency: row.currency,
+    spend: 0,
+    impressions: row.users,
+    clicks: row.sessions,
+  }
+}
+
+function analyticsBreakdownRowsQuery(
+  ctx: QueryCtx,
+  args: {
+    workspaceId: string
+    clientId: string | null
+    startDate?: string
+    endDate?: string
+  },
+) {
+  return ctx.db.query('analyticsMetricsBreakdown').withIndex('by_workspace_client_date', (index) => {
+    const base = index.eq('workspaceId', args.workspaceId).eq('clientId', args.clientId)
+    if (args.startDate && args.endDate) {
+      return base.gte('date', args.startDate).lte('date', args.endDate)
+    }
+    if (args.startDate) {
+      return base.gte('date', args.startDate)
+    }
+    if (args.endDate) {
+      return base.lte('date', args.endDate)
+    }
+    return base
+  })
+}
+
+async function loadAnalyticsBreakdowns(
+  ctx: QueryCtx,
+  args: {
+    workspaceId: string
+    clientId: string | null
+    propertyId?: string
+    startDate?: string
+    endDate?: string
+  },
+) {
+  const breakdownRows = await analyticsBreakdownRowsQuery(ctx, args)
+    .order('desc')
+    .take(ANALYTICS_BREAKDOWNS_MAX)
+
+  return breakdownRows
+    .filter((row) => !args.propertyId || row.propertyId === args.propertyId)
+    .map((row) => ({
+      propertyId: row.propertyId,
+      date: row.date,
+      dimension: row.dimension,
+      dimensionValue: row.dimensionValue,
+      users: row.users,
+      sessions: row.sessions,
+      conversions: row.conversions,
+      revenue: row.revenue,
+    }))
+}
 
 const metricRowValidator = v.object({
   propertyId: v.string(),
@@ -114,6 +319,84 @@ const analyticsBreakdownRowZ = z.object({
   sessions: z.number(),
   conversions: z.number(),
   revenue: z.number().nullable(),
+})
+
+export const listAnalyticsBreakdowns = zWorkspaceQuery({
+  args: {
+    clientId: z.string().nullable().optional(),
+    propertyId: z.string().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+  },
+  returns: z.object({
+    breakdowns: z.array(analyticsBreakdownRowZ),
+  }),
+  handler: async (ctx, args) => {
+    const clientId = normalizeClientId(args.clientId ?? null)
+    const breakdowns = await loadAnalyticsBreakdowns(ctx, {
+      workspaceId: args.workspaceId,
+      clientId,
+      propertyId: args.propertyId,
+      startDate: args.startDate,
+      endDate: args.endDate,
+    })
+
+    return { breakdowns }
+  },
+})
+
+export const listAnalyticsMetricsPaginated = zWorkspacePaginatedQuery({
+  args: {
+    clientId: z.string().nullable().optional(),
+    propertyId: z.string().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+  },
+  returns: z.object({
+    metrics: z.array(analyticsMetricRowZ),
+    breakdowns: z.array(analyticsBreakdownRowZ),
+    nextCursor: z
+      .object({
+        fieldValue: z.string(),
+        legacyId: z.string(),
+      })
+      .nullable(),
+  }),
+  handler: async (ctx, args) => {
+    const clientId = normalizeClientId(args.clientId ?? null)
+    const limit = Math.min(Math.max(args.limit ?? ANALYTICS_METRICS_PAGE_SIZE_DEFAULT, 1), 200)
+
+    const rows = await analyticsDailyRowsQuery(ctx, {
+      workspaceId: args.workspaceId,
+      clientId,
+      propertyId: args.propertyId,
+      startDate: args.startDate,
+      endDate: args.endDate,
+      cursor: args.cursor
+        ? {
+            fieldValue: String(args.cursor.fieldValue),
+            legacyId: args.cursor.legacyId,
+          }
+        : null,
+    }).take(limit + 1)
+
+    const withLegacy = rows.map((row) => ({
+      ...row,
+      legacyId: analyticsDailyLegacyId(row),
+    }))
+    const page = getPaginatedResponse(withLegacy, limit, 'date')
+
+    return {
+      metrics: page.items.map(mapAnalyticsDailyRow),
+      breakdowns: [],
+      nextCursor: page.nextCursor
+        ? {
+            fieldValue: String(page.nextCursor.fieldValue),
+            legacyId: page.nextCursor.legacyId,
+          }
+        : null,
+    }
+  },
 })
 
 export const listAnalyticsMetrics = zWorkspaceQuery({

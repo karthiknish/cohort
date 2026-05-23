@@ -17,7 +17,7 @@ import {
 import { InSiteMeetingOperationsSheet } from './in-site-meeting-operations-sheet'
 
 export function MeetingRoomPage(props: MeetingRoomPageProps) {
-  const { meeting, onClose } = props
+  const { meeting, onClose, canRecord = true } = props
   const { toast } = useToast()
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
   const controller = useInSiteMeetingRoomController(props)
@@ -37,6 +37,8 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
     notesProcessingState,
     notesProcessingError,
     notesReason,
+    notesStorageId,
+    transcriptStorageId,
     transcriptTruncatedForNotes,
     operationsOpen,
     setJoinError,
@@ -48,6 +50,8 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
     joiningRoom,
     joinError,
     autoCaptureEnabled,
+    transcriptRecordingEnabled,
+    enableTranscriptRecording,
     captureStatus,
     setCaptureStatus,
     autoSyncing,
@@ -95,7 +99,7 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
             ? 'Transcript capture and AI notes are in sync.'
             : normalizedTranscript.length >= 20
               ? 'Transcript capture is active. AI notes will generate automatically as the room continues.'
-              : 'Join the room and speak naturally. Cohorts will save transcript first, then upgrade to AI notes.'
+              : 'Join the room, start transcript recording, then Cohorts will save speech and generate guarded AI notes.'
 
   const roomAutomationBadge = autoSyncing || notesProcessingState === 'processing'
     ? 'AI notes syncing'
@@ -196,6 +200,8 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
 
         <MeetingRoomCanvasSection
           autoCaptureEnabled={autoCaptureEnabled && canPersist}
+          onEnableTranscriptRecording={enableTranscriptRecording}
+          transcriptRecordingEnabled={transcriptRecordingEnabled}
           autoSyncing={autoSyncing}
           canMinimize={canMinimizeRoom}
           finalizingSession={finalizingSession}
@@ -249,8 +255,13 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
       <InSiteMeetingOperationsSheet
         open={operationsOpen}
         onOpenChange={handleOperationsOpenChange}
+        canRecord={canRecord}
+        meetingLegacyId={meeting.legacyId}
+        meetingTitle={meetingTitle}
         joinConfig={joinConfig}
         captureStatus={captureStatus}
+        onEnableRecording={enableTranscriptRecording}
+        recordingEnabled={transcriptRecordingEnabled}
         meetingAttendeeEmails={meetingAttendeeEmails}
         meetingRoomName={meetingRoomName}
         meetingTimezone={meetingTimezone}
@@ -268,8 +279,11 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
         interimTranscript={interimTranscript}
         summaryPreview={summaryPreview}
         notesReason={notesReason}
+        notesStorageId={notesStorageId}
+        transcriptStorageId={transcriptStorageId}
         transcriptTruncatedForNotes={transcriptTruncatedForNotes}
         transcriptLength={normalizedTranscript.length}
+        transcriptText={normalizedTranscript}
         canGenerateNotes={canGenerateNotes}
         generatingNotes={generatingNotes}
         onGenerateNotes={handleGenerateNotes}

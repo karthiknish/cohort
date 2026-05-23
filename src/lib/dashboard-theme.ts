@@ -90,10 +90,6 @@ export const PAGE_ICONS = {
   proposals: 'FileText',
   notifications: 'Bell',
   activity: 'Activity',
-  time: 'Clock3',
-  scheduling: 'CalendarDays',
-  forms: 'NotebookTabs',
-  'time-off': 'CalendarDays',
   settings: 'Settings',
 } as const
 
@@ -141,22 +137,6 @@ export const PAGE_TITLES: Record<string, { title: string; description: string }>
   activity: {
     title: 'Activity',
     description: 'Recent actions and audit trail.',
-  },
-  time: {
-    title: 'Time and attendance',
-    description: 'Clock sessions, approvals, and attendance exceptions.',
-  },
-  scheduling: {
-    title: 'Scheduling and shifts',
-    description: 'Coverage planning, open shifts, and swap requests.',
-  },
-  forms: {
-    title: 'Forms and checklists',
-    description: 'Operational templates, submissions, and completion quality.',
-  },
-  'time-off': {
-    title: 'Time off',
-    description: 'Leave balances, approvals, and availability planning.',
   },
 } as const
 

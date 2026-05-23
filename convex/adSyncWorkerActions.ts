@@ -197,6 +197,7 @@ export const processClaimedJob = internalAction({
             accessToken: metaAccessToken,
             adAccountId: accountId,
             timeframeDays: args.timeframeDays,
+            useAsyncInsights: integration.metaUseAsyncInsights === true,
           })
           break
         }

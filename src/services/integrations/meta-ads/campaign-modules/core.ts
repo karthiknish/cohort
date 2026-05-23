@@ -141,9 +141,10 @@ export async function createMetaCampaign(
   if (stopTime) {
     params.set('stop_time', stopTime)
   }
-  if (specialAdCategories && specialAdCategories.length > 0) {
-    params.set('special_ad_categories', JSON.stringify(specialAdCategories))
-  }
+  params.set(
+    'special_ad_categories',
+    JSON.stringify(specialAdCategories && specialAdCategories.length > 0 ? specialAdCategories : []),
+  )
   // Post-v25.0 only `classic` remains valid in Marketing API mutations.
   if (advantageState) {
     if (!isMutableAdvantageState(advantageState)) {
@@ -236,6 +237,8 @@ export async function updateMetaCampaign(
     status,
     dailyBudget,
     lifetimeBudget,
+    startTime,
+    stopTime,
     maxRetries = 3,
   } = options
 
@@ -252,6 +255,12 @@ export async function updateMetaCampaign(
   }
   if (lifetimeBudget !== undefined) {
     params.set('lifetime_budget', String(Math.round(lifetimeBudget * 100)))
+  }
+  if (startTime) {
+    params.set('start_time', startTime)
+  }
+  if (stopTime) {
+    params.set('stop_time', stopTime)
   }
 
   await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })

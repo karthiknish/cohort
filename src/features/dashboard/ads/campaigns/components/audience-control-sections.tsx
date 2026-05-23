@@ -1,6 +1,6 @@
 'use client'
 
-import { createElement, type ComponentProps, type ReactNode } from 'react'
+import { createElement, useMemo, type ComponentProps, type ReactNode } from 'react'
 
 import {
   AudienceControlHeaderActionsSlot,
@@ -12,6 +12,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
+import type { MetaPlacementDetailDraft } from '@/lib/meta-placement-positions'
+import { resolveMetaCampaignUiVisibility } from '@/lib/meta-campaign-ui'
 import { CardContent } from '@/shared/ui/card'
 import { MotionCard } from '@/shared/ui/motion-primitives'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -23,7 +25,9 @@ import { AudienceDisplaySection } from './audience-display-section'
 import { AudienceEditorSection } from './audience-editor-section'
 import { CampaignControlHeader } from './campaign-control-header'
 import { DemographicSection } from './demographic-section'
+import { PlacementTargetingSection } from './placement-targeting-section'
 import { LocationTargetingSection } from './location-targeting-section'
+import { CustomAudiencesTargetingSection } from './custom-audiences-targeting-section'
 import type { TargetingData } from './audience-control-types'
 import type { Insights } from './audience-control-section-state'
 
@@ -203,6 +207,7 @@ export function AudienceControlMainCard({
   audienceStats,
   headerActionsProps,
   interestSectionProps,
+  customAudiencesSectionProps,
   builderOpen,
   providerId,
   workspaceId,
@@ -213,6 +218,19 @@ export function AudienceControlMainCard({
   onToggleEditing,
   onToggleSection,
   onBuilderOpenChange,
+  onAddLocation,
+  onRemoveLocation,
+  onSaveLocations,
+  onSaveDemographics,
+  onDraftDemographicsChange,
+  draftDemographics,
+  draftPlacements,
+  draftPlacementDetail,
+  onSavePlacements,
+  onTogglePlatform,
+  onTogglePlacementPosition,
+  savingTargeting,
+  campaignObjective,
 }: {
   targeting: TargetingData[]
   insights: Insights | null
@@ -224,6 +242,7 @@ export function AudienceControlMainCard({
   audienceStats: Array<{ label: string; value: number }>
   headerActionsProps: ComponentProps<typeof AudienceControlHeaderActionsSlot>
   interestSectionProps: AudienceControlInterestEditorSectionProps
+  customAudiencesSectionProps: React.ComponentProps<typeof CustomAudiencesTargetingSection>
   builderOpen: boolean
   providerId: string
   workspaceId: string | null
@@ -234,8 +253,37 @@ export function AudienceControlMainCard({
   onToggleEditing: (section: string) => void
   onToggleSection: (section: string) => void
   onBuilderOpenChange: (open: boolean) => void
+  onAddLocation?: (item: { id: string; name: string; type: string }) => void
+  onRemoveLocation?: (locationId: string) => void
+  onSaveLocations?: () => void
+  onSaveDemographics?: () => void | Promise<void>
+  onDraftDemographicsChange?: (
+    updater: (prev: { ageMin: number; ageMax: number; genders: string[] }) => {
+      ageMin: number
+      ageMax: number
+      genders: string[]
+    },
+  ) => void
+  draftDemographics?: { ageMin: number; ageMax: number; genders: string[] } | null
+  draftPlacements?: string[] | null
+  draftPlacementDetail?: MetaPlacementDetailDraft | null
+  onSavePlacements?: () => void | Promise<void>
+  onTogglePlatform?: (platformId: string) => void
+  onTogglePlacementPosition?: (field: keyof MetaPlacementDetailDraft, positionId: string) => void
+  savingTargeting?: boolean
+  campaignObjective?: string | null
 }) {
   const entityCount = insights?.totalEntities ?? targeting.length
+  const metaUi = useMemo(
+    () =>
+      resolveMetaCampaignUiVisibility({
+        campaignObjective,
+        scope: 'campaign',
+      }),
+    [campaignObjective],
+  )
+  const showPlacementSection = canEditMetaTargeting && metaUi.showPlacementTargeting
+  const showCustomAudiences = canEditMetaTargeting && metaUi.showCustomAudiences
 
   return (
     <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
@@ -276,6 +324,12 @@ export function AudienceControlMainCard({
               workspaceId={workspaceId}
               clientId={clientId}
               canSearchGeo={canEditMetaTargeting}
+              onAddLocation={onAddLocation}
+              onRemoveLocation={onRemoveLocation}
+              onSaveLocations={
+                canEditMetaTargeting && editingSection === 'locations' ? onSaveLocations : undefined
+              }
+              savingTargeting={savingTargeting}
             />
           </div>
 
@@ -285,11 +339,44 @@ export function AudienceControlMainCard({
               aggregatedData={aggregatedData}
               expandedSections={expandedSections}
               toggleSection={onToggleSection}
+              editingSection={editingSection}
+              onToggleEditing={onToggleEditing}
+              canEdit={canEditMetaTargeting}
+              draftDemographics={draftDemographics}
+              onDraftChange={canEditMetaTargeting ? onDraftDemographicsChange : undefined}
+              onSaveDemographics={
+                canEditMetaTargeting && editingSection === 'demographics' ? onSaveDemographics : undefined
+              }
+              savingTargeting={savingTargeting}
             />
+            {showPlacementSection ? (
+              <PlacementTargetingSection
+                aggregatedData={aggregatedData}
+                expandedSections={expandedSections}
+                toggleSection={onToggleSection}
+                editingSection={editingSection}
+                onToggleEditing={onToggleEditing}
+                canEdit={canEditMetaTargeting}
+                draftPublisherPlatforms={draftPlacements}
+                draftPlacementDetail={draftPlacementDetail}
+                onTogglePlatform={onTogglePlatform}
+                onTogglePlacementPosition={onTogglePlacementPosition}
+                onSavePlacements={
+                  editingSection === 'placements' ? onSavePlacements : undefined
+                }
+                savingTargeting={savingTargeting}
+              />
+            ) : null}
             <AudienceDisplaySection
               aggregatedData={aggregatedData}
               expandedSections={expandedSections}
               toggleSection={onToggleSection}
+              hidePlacements={showPlacementSection}
+              customAudiencesSection={
+                showCustomAudiences ? (
+                  <CustomAudiencesTargetingSection {...customAudiencesSectionProps} />
+                ) : undefined
+              }
               interestSection={createElement(AudienceControlInterestSectionSlot, interestSectionProps)}
             />
           </div>

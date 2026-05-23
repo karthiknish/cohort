@@ -82,6 +82,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
       enabled: s.autoSyncEnabled,
       freq: s.syncFrequencyMinutes,
       days: s.scheduledTimeframeDays,
+      async: s.metaUseAsyncInsights,
     }))),
     [automationStatuses]
   )
@@ -97,6 +98,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
         autoSyncEnabled: status.autoSyncEnabled !== false,
         syncFrequencyMinutes: normalizeFrequency(status.syncFrequencyMinutes ?? null),
         scheduledTimeframeDays: normalizeTimeframe(status.scheduledTimeframeDays ?? null),
+        metaUseAsyncInsights: status.metaUseAsyncInsights === true,
       }
     })
     return nextDraft
@@ -166,6 +168,8 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
           autoSyncEnabled: draft.autoSyncEnabled,
           syncFrequencyMinutes: draft.syncFrequencyMinutes,
           scheduledTimeframeDays: draft.scheduledTimeframeDays,
+          metaUseAsyncInsights:
+            providerId === 'facebook' ? draft.metaUseAsyncInsights === true : undefined,
         })
         toast({
           title: TOAST_TITLES.AUTOMATION_UPDATED,

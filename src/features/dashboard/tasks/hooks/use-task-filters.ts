@@ -5,6 +5,7 @@ import { TASK_STATUSES } from '@/types/tasks'
 import type { TaskRecord, TaskStatus } from '@/types/tasks'
 import { PRIORITY_ORDER, resolveAssigneeLabel } from '../task-types'
 import type { SortField, SortDirection, TaskParticipant } from '../task-types'
+import type { TaskListFiltersInput } from './task-list-filters'
 
 const TASK_VIEW_MODE_STORAGE_KEY = 'dashboard:tasks:view-mode'
 
@@ -32,6 +33,14 @@ export type UseTaskFiltersOptions = {
   projectFilterName: string | null
   activeTab?: string
   setActiveTab?: React.Dispatch<React.SetStateAction<string>>
+  /** When set, status/search/assignee/project filters are applied on the server. */
+  serverListFilters?: TaskListFiltersInput
+  selectedStatus?: 'all' | TaskStatus
+  setSelectedStatus?: React.Dispatch<React.SetStateAction<'all' | TaskStatus>>
+  searchQuery?: string
+  setSearchQuery?: React.Dispatch<React.SetStateAction<string>>
+  selectedAssignee?: string
+  setSelectedAssignee?: React.Dispatch<React.SetStateAction<string>>
 }
 
 export type UseTaskFiltersReturn = {
@@ -85,10 +94,24 @@ export function useTaskFilters({
   projectFilterName,
   activeTab: controlledActiveTab,
   setActiveTab: controlledSetActiveTab,
+  serverListFilters,
+  selectedStatus: controlledSelectedStatus,
+  setSelectedStatus: controlledSetSelectedStatus,
+  searchQuery: controlledSearchQuery,
+  setSearchQuery: controlledSetSearchQuery,
+  selectedAssignee: controlledSelectedAssignee,
+  setSelectedAssignee: controlledSetSelectedAssignee,
 }: UseTaskFiltersOptions): UseTaskFiltersReturn {
-  const [selectedStatus, setSelectedStatus] = useState<'all' | TaskStatus>('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedAssignee, setSelectedAssignee] = useState('all')
+  const [selectedStatusInternal, setSelectedStatusInternal] = useState<'all' | TaskStatus>('all')
+  const [searchQueryInternal, setSearchQueryInternal] = useState('')
+  const [selectedAssigneeInternal, setSelectedAssigneeInternal] = useState('all')
+
+  const selectedStatus = controlledSelectedStatus ?? selectedStatusInternal
+  const setSelectedStatus = controlledSetSelectedStatus ?? setSelectedStatusInternal
+  const searchQuery = controlledSearchQuery ?? searchQueryInternal
+  const setSearchQuery = controlledSetSearchQuery ?? setSearchQueryInternal
+  const selectedAssignee = controlledSelectedAssignee ?? selectedAssigneeInternal
+  const setSelectedAssignee = controlledSetSelectedAssignee ?? setSelectedAssigneeInternal
   const [activeTabInternal, setActiveTabInternal] = useState('all-tasks')
   const [sortField, setSortField] = useState<SortField>('updatedAt')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -142,8 +165,12 @@ export function useTaskFilters({
     })
   }, [tasks, selectedClientId, selectedClient])
 
-  // Filter by project
+  // Filter by project (skipped when project filter is applied server-side)
   const projectScopedTasks = useMemo(() => {
+    if (serverListFilters?.projectId) {
+      return tasksForClient
+    }
+
     if (!projectFilterId && !projectFilterName) return tasksForClient
 
     const targetId = projectFilterId
@@ -156,10 +183,14 @@ export function useTaskFilters({
       }
       return false
     })
-  }, [projectFilterId, projectFilterName, tasksForClient])
+  }, [projectFilterId, projectFilterName, serverListFilters?.projectId, tasksForClient])
 
-  // Apply all filters
+  // Apply list filters (server handles status/search/assignee/project when serverListFilters is set)
   const filteredTasks = useMemo(() => {
+    if (serverListFilters) {
+      return projectScopedTasks
+    }
+
     return projectScopedTasks.filter((task) => {
       const matchesStatus = selectedStatus === 'all' || task.status === selectedStatus
       const title = task.title.toLowerCase()
@@ -192,7 +223,17 @@ export function useTaskFilters({
 
       return matchesStatus && matchesSearch && matchesAssignee
     })
-  }, [projectScopedTasks, selectedStatus, searchQuery, selectedAssignee, activeTab, userId, userName, participants])
+  }, [
+    activeTab,
+    participants,
+    projectScopedTasks,
+    searchQuery,
+    selectedAssignee,
+    selectedStatus,
+    serverListFilters,
+    userId,
+    userName,
+  ])
 
   // Sort tasks
   const sortedTasks = useMemo(() => {

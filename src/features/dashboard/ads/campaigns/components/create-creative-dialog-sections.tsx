@@ -1,12 +1,18 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
+
+import {
+  getMetaCreativeObjectTypeOptions,
+  type MetaCreativeObjectTypeOption,
+} from '@/lib/meta-campaign-ui'
 
 import type { ChangeEvent, FormEvent } from 'react'
 
 import { AlertCircle, Loader2 } from 'lucide-react'
 
 import { CreativeMediaField } from '@/features/dashboard/ads/components/creative-media-field'
+import { CreateCreativeLeadFormSection } from './create-creative-lead-form-section'
 import { Button } from '@/shared/ui/button'
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { Input } from '@/shared/ui/input'
@@ -134,6 +140,11 @@ type CreateCreativeDialogFormProps = {
   status: CreativeStatus
   title: string
   uploadingImage: boolean
+  workspaceId: string | null
+  clientId?: string | null
+  campaignObjective?: string | null
+  leadFormId: string
+  onLeadFormIdChange: (value: string) => void
 }
 
 export function CreateCreativeDialogForm({
@@ -181,7 +192,24 @@ export function CreateCreativeDialogForm({
   status,
   title,
   uploadingImage,
+  workspaceId,
+  clientId,
+  campaignObjective,
+  leadFormId,
+  onLeadFormIdChange,
 }: CreateCreativeDialogFormProps) {
+  const allowedObjectTypes = useMemo(
+    () => getMetaCreativeObjectTypeOptions(campaignObjective),
+    [campaignObjective],
+  )
+
+  const objectTypeLabels: Record<MetaCreativeObjectTypeOption, string> = {
+    IMAGE: 'Image Ad',
+    VIDEO: 'Video Ad',
+    CAROUSEL: 'Carousel Ad',
+    DYNAMIC: 'Dynamic Ad (catalog)',
+  }
+
   const handleInstagramActorIdChange = useCallback(
     (value: string) => {
       onInstagramActorIdChange(value === '__none__' ? '' : value)
@@ -198,12 +226,18 @@ export function CreateCreativeDialogForm({
         <Select value={objectType} onValueChange={createSelectChangeHandler<CreativeObjectType>(onObjectTypeChange)} disabled={loading}>
           <SelectTrigger id="objectType"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="IMAGE">Image Ad</SelectItem>
-            <SelectItem value="VIDEO">Video Ad</SelectItem>
-            <SelectItem value="CAROUSEL">Carousel Ad</SelectItem>
-            <SelectItem value="DYNAMIC">Dynamic Ad</SelectItem>
+            {allowedObjectTypes.map((format) => (
+              <SelectItem key={format} value={format}>
+                {objectTypeLabels[format]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+        {objectType === 'DYNAMIC' ? (
+          <p className="text-xs text-muted-foreground">
+            Use with a catalog-backed ad set (product catalog ID on the ad set). Meta serves product cards from the catalog; link URL is optional when the catalog drives the destination.
+          </p>
+        ) : null}
       </FormField>
 
       {availableAdSets?.length ? (
@@ -322,6 +356,17 @@ export function CreateCreativeDialogForm({
           </SelectContent>
         </Select>
       </FormField>
+
+      <CreateCreativeLeadFormSection
+        workspaceId={workspaceId}
+        clientId={clientId}
+        campaignObjective={campaignObjective}
+        pageId={pageId}
+        leadFormId={leadFormId}
+        disabled={loading}
+        onLeadFormIdChange={onLeadFormIdChange}
+      />
+
       <FormField
         id="instagramActorId"
         label="Instagram Business Account"

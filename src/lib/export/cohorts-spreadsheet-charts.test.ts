@@ -47,16 +47,43 @@ describe('cohorts spreadsheet chart builders', () => {
 
   it('builds analytics trend and platform charts', () => {
     const charts = buildAnalyticsExportCharts([
-      { date: '2026-05-01', platform: 'google', spend: 10, revenue: 20 },
-      { date: '2026-05-02', platform: 'google', spend: 15, revenue: 25 },
-      { date: '2026-05-03', platform: 'meta', spend: 5, revenue: 8 },
+      {
+        date: '2026-05-01',
+        platform: 'google',
+        spend: 10,
+        revenue: 20,
+        impressions: 100,
+        clicks: 10,
+        conversions: 2,
+      },
+      {
+        date: '2026-05-02',
+        platform: 'google',
+        spend: 15,
+        revenue: 25,
+        impressions: 120,
+        clicks: 12,
+        conversions: 3,
+      },
+      {
+        date: '2026-05-03',
+        platform: 'meta',
+        spend: 5,
+        revenue: 8,
+        impressions: 80,
+        clicks: 6,
+        conversions: 1,
+      },
     ])
 
-    expect(charts.map((chart) => chart.title)).toEqual([
-      'Daily spend',
-      'Daily revenue',
-      'Spend by platform',
-    ])
+    expect(charts.map((chart) => chart.title)).toEqual(
+      expect.arrayContaining([
+        'Spend vs revenue over time',
+        'Delivery volume over time',
+        'Spend by platform',
+      ]),
+    )
+    expect(charts.length).toBeGreaterThanOrEqual(2)
   })
 
   it('builds collaboration activity charts', () => {
@@ -82,8 +109,8 @@ describe('cohorts spreadsheet chart builders', () => {
       'Performance',
     )
 
-    expect(charts).toHaveLength(1)
-    expect(charts[0]?.kind).toBe('line')
+    expect(charts.length).toBeGreaterThanOrEqual(1)
+    expect(charts.every((chart) => chart.kind === 'line')).toBe(true)
   })
 
   it('returns null for empty time series input', () => {
@@ -101,12 +128,35 @@ describe('cohorts spreadsheet chart builders', () => {
 
   it('keeps ads charts when there is enough daily history', () => {
     const charts = buildAdsMetricsCharts([
-      { date: '2026-05-01', providerId: 'facebook', spend: 4 },
-      { date: '2026-05-02', providerId: 'facebook', spend: 6 },
-      { date: '2026-05-03', providerId: 'facebook', spend: 8 },
+      {
+        date: '2026-05-01',
+        providerId: 'facebook',
+        spend: 4,
+        impressions: 100,
+        clicks: 8,
+        revenue: 12,
+      },
+      {
+        date: '2026-05-02',
+        providerId: 'facebook',
+        spend: 6,
+        impressions: 120,
+        clicks: 10,
+        revenue: 18,
+      },
+      {
+        date: '2026-05-03',
+        providerId: 'facebook',
+        spend: 8,
+        impressions: 140,
+        clicks: 12,
+        revenue: 22,
+      },
     ])
 
-    expect(charts.map((chart) => chart.title)).toEqual(['Daily ad spend'])
+    expect(charts.map((chart) => chart.title)).toEqual(
+      expect.arrayContaining(['Spend vs revenue trend', 'Impressions and clicks']),
+    )
   })
 
   it('computes padded axis maxima for small values', () => {

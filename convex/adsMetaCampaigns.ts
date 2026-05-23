@@ -66,3 +66,40 @@ export const createMetaCampaign = action({
       return { success: true, campaignId: result.campaignId }
     }, 'adsMetaCampaigns:createMetaCampaign', { maxRetries: 2 }),
 })
+
+export const updateMetaCampaign = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.literal('facebook'),
+    clientId: v.optional(v.union(v.string(), v.null())),
+    campaignId: v.string(),
+    name: v.optional(v.string()),
+    startTime: v.optional(v.union(v.string(), v.null())),
+    stopTime: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args): Promise<{ success: boolean }> =>
+    withErrorHandling(async () => {
+      const clientId = normalizeClientId(args.clientId ?? null)
+      const [identity, integration, { updateMetaCampaign: updateCampaignOnMeta }] = await Promise.all([
+        ctx.auth.getUserIdentity(),
+        getFacebookIntegration(ctx, args.workspaceId, clientId),
+        import('@/services/integrations/meta-ads/campaign-modules/core'),
+      ])
+      requireIdentity(identity)
+      const accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
+
+      const result = await updateCampaignOnMeta({
+        accessToken,
+        campaignId: args.campaignId,
+        name: args.name,
+        startTime: args.startTime ?? undefined,
+        stopTime: args.stopTime ?? undefined,
+      })
+
+      if (!result.success) {
+        throw Errors.integration.error('facebook', result.error ?? 'Failed to update campaign')
+      }
+
+      return { success: true }
+    }, 'adsMetaCampaigns:updateMetaCampaign'),
+})

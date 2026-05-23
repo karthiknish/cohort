@@ -1,0 +1,203 @@
+'use client'
+
+import { useCallback, type ChangeEvent, type Dispatch, type RefObject } from 'react'
+
+import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { adsCreativesApi } from '@/lib/convex-api'
+import { useAction } from 'convex/react'
+
+import { toast } from '@/shared/ui/use-toast'
+
+import {
+  parseImageHashFromCreativeSpec,
+  revokeBlobPreview,
+  type CreateCreativeDialogAction,
+} from './create-creative-dialog-state'
+
+type UseCreateCreativeDialogMediaArgs = {
+  dispatch: Dispatch<CreateCreativeDialogAction>
+  workspaceId: string | undefined
+  clientId: string | null | undefined
+  isMeta: boolean
+  imagePreviewRef: RefObject<string | null>
+  videoPreviewRef: RefObject<string | null>
+}
+
+export function useCreateCreativeDialogMedia({
+  dispatch,
+  workspaceId,
+  clientId,
+  isMeta,
+  imagePreviewRef,
+  videoPreviewRef,
+}: UseCreateCreativeDialogMediaArgs) {
+  const uploadMedia = useAction(adsCreativesApi.uploadMedia)
+
+  const handleClearImage = useCallback(() => {
+    revokeBlobPreview(imagePreviewRef.current)
+    imagePreviewRef.current = null
+    dispatch({ type: 'clearImage' })
+  }, [dispatch, imagePreviewRef])
+
+  const handleClearVideo = useCallback(() => {
+    revokeBlobPreview(videoPreviewRef.current)
+    videoPreviewRef.current = null
+    dispatch({ type: 'clearVideo' })
+  }, [dispatch, videoPreviewRef])
+
+  const handleImageUpload = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (!file) return
+
+      if (!isMeta) {
+        toast({
+          title: 'Platform not supported',
+          description: 'Image upload is currently only supported for Meta (Facebook/Instagram) ads.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (!workspaceId) {
+        toast({
+          title: 'Upload failed',
+          description: 'Sign in required',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      dispatch({ type: 'setUploadingImage', value: true })
+
+      const blobUrl = URL.createObjectURL(file)
+      revokeBlobPreview(imagePreviewRef.current)
+      imagePreviewRef.current = blobUrl
+      dispatch({ type: 'setImagePreviewUrl', value: blobUrl })
+      dispatch({ type: 'setImageUrl', value: '' })
+
+      try {
+        const fileData = await file.arrayBuffer()
+        const result = await uploadMedia({
+          workspaceId,
+          providerId: 'facebook',
+          clientId: clientId ?? null,
+          fileName: file.name,
+          fileData,
+          mimeType: file.type || undefined,
+        })
+
+        if (!result.success) {
+          throw new Error('Failed to upload media')
+        }
+
+        const spec =
+          typeof result.creativeSpec === 'string'
+            ? result.creativeSpec
+            : result.creativeSpec
+              ? JSON.stringify(result.creativeSpec)
+              : ''
+        const hash = spec ? parseImageHashFromCreativeSpec(spec) : null
+
+        if (hash) {
+          dispatch({ type: 'setImageHash', value: hash })
+          toast({
+            title: 'Image uploaded',
+            description: 'Your image has been uploaded successfully.',
+          })
+        }
+      } catch (error) {
+        logError(error, 'CreateCreativeDialog:handleImageUpload')
+        revokeBlobPreview(imagePreviewRef.current)
+        imagePreviewRef.current = null
+        dispatch({ type: 'clearImage' })
+        toast({
+          title: 'Upload failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      } finally {
+        dispatch({ type: 'setUploadingImage', value: false })
+        event.target.value = ''
+      }
+    },
+    [clientId, dispatch, imagePreviewRef, isMeta, uploadMedia, workspaceId],
+  )
+
+  const handleVideoUpload = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (!file) return
+
+      if (!isMeta) {
+        toast({
+          title: 'Platform not supported',
+          description: 'Video upload is currently only supported for Meta (Facebook/Instagram) ads.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (!workspaceId) {
+        toast({
+          title: 'Upload failed',
+          description: 'Sign in required',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      dispatch({ type: 'setUploadingVideo', value: true })
+
+      const blobUrl = URL.createObjectURL(file)
+      revokeBlobPreview(videoPreviewRef.current)
+      videoPreviewRef.current = blobUrl
+      dispatch({ type: 'setVideoPreviewUrl', value: blobUrl })
+
+      try {
+        const fileData = await file.arrayBuffer()
+        const result = await uploadMedia({
+          workspaceId,
+          providerId: 'facebook',
+          clientId: clientId ?? null,
+          fileName: file.name,
+          fileData,
+          mimeType: file.type || undefined,
+        })
+
+        if (!result.success) {
+          throw new Error('Failed to upload media')
+        }
+
+        if (result.videoId) {
+          dispatch({ type: 'setVideoId', value: result.videoId })
+          toast({
+            title: 'Video uploaded',
+            description: 'Your video has been uploaded successfully.',
+          })
+        }
+      } catch (error) {
+        logError(error, 'CreateCreativeDialog:handleVideoUpload')
+        revokeBlobPreview(videoPreviewRef.current)
+        videoPreviewRef.current = null
+        dispatch({ type: 'clearVideo' })
+        toast({
+          title: 'Upload failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      } finally {
+        dispatch({ type: 'setUploadingVideo', value: false })
+        event.target.value = ''
+      }
+    },
+    [clientId, dispatch, isMeta, uploadMedia, videoPreviewRef, workspaceId],
+  )
+
+  return {
+    handleClearImage,
+    handleClearVideo,
+    handleImageUpload,
+    handleVideoUpload,
+  }
+}

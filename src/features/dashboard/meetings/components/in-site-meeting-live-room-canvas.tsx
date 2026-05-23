@@ -8,6 +8,7 @@ import { useVoiceInput } from '@/shared/hooks/use-voice-input'
 import { useTracks, type useCreateLayoutContext } from '@/shared/ui/livekit'
 
 import type { CaptureStatus } from './in-site-meeting-card.shared'
+import { MeetingRecordingPromptCard } from './meeting-recording-prompt-card'
 import {
   LiveRoomCanvasShell,
   LiveRoomCanvasViewport,
@@ -17,6 +18,8 @@ type LiveRoomCanvasProps = {
   meetingTitle: string
   layoutContext: ReturnType<typeof useCreateLayoutContext>
   autoCaptureEnabled: boolean
+  onEnableTranscriptRecording: () => void
+  transcriptRecordingEnabled: boolean
   compact?: boolean
   pipSupported: boolean
   pipActive: boolean
@@ -56,6 +59,8 @@ export function InSiteMeetingLiveRoomCanvas(props: LiveRoomCanvasProps) {
     meetingTitle,
     layoutContext,
     autoCaptureEnabled,
+    onEnableTranscriptRecording,
+    transcriptRecordingEnabled,
     compact = false,
     pipSupported,
     pipActive,
@@ -154,7 +159,11 @@ export function InSiteMeetingLiveRoomCanvas(props: LiveRoomCanvasProps) {
     }
   }, [stopListening])
 
-  const captureLabel = isListening ? 'Recording live' : 'Capture armed'
+  const captureLabel = isListening
+    ? 'Recording live'
+    : transcriptRecordingEnabled
+      ? 'Capture armed'
+      : 'Recording paused'
   const aiStatusLabel = autoSyncing || notesProcessingState === 'processing'
     ? 'AI notes syncing'
     : finalizingSession || transcriptProcessingState === 'processing'
@@ -190,6 +199,18 @@ export function InSiteMeetingLiveRoomCanvas(props: LiveRoomCanvasProps) {
         onTogglePictureInPicture={onTogglePictureInPicture}
         pipActive={pipActive}
         pipSupported={pipSupported}
+        recordingPrompt={
+          <MeetingRecordingPromptCard
+            canRecord
+            captureError={error}
+            captureSupported={isSupported}
+            compact
+            inRoom
+            recordingEnabled={transcriptRecordingEnabled}
+            onEnableRecording={onEnableTranscriptRecording}
+          />
+        }
+        showRecordingPrompt={!transcriptRecordingEnabled}
         tracks={tracks}
         transcriptProcessingState={transcriptProcessingState}
       />

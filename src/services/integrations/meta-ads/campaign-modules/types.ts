@@ -93,6 +93,8 @@ export interface UpdateCampaignOptions {
   status?: 'ACTIVE' | 'PAUSED'
   dailyBudget?: number
   lifetimeBudget?: number
+  startTime?: string
+  stopTime?: string
   maxRetries?: number
 }
 
@@ -122,6 +124,9 @@ export interface CreateAdSetOptions {
   }
   promotedObject?: {
     page_id?: string
+    object_id?: string
+    event_id?: string
+    pixel_id?: string
     product_catalog_id?: string
     custom_event_type?: string
     application_id?: string
@@ -158,5 +163,18 @@ export interface CreateAudienceOptions {
   name: string
   description?: string
   segments: string[]
+  maxRetries?: number
+}
+
+export interface CreateLookalikeAudienceOptions {
+  accessToken: string
+  adAccountId: string
+  name: string
+  originAudienceId: string
+  /** ISO 3166-1 alpha-2 country for the lookalike population. */
+  country: string
+  /** Fraction of country population (0.01–0.20). */
+  ratio: number
+  description?: string
   maxRetries?: number
 }

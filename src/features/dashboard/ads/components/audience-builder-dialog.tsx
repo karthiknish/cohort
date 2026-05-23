@@ -1,5 +1,7 @@
 'use client'
 
+import { useMemo } from 'react'
+
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useAction } from 'convex/react'
@@ -19,6 +21,13 @@ import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
 
 import { MetaAudiencesPanel } from '@/features/dashboard/ads/components/meta-audiences-panel'
+import { MetaEventsToolsPanel } from '@/features/dashboard/ads/components/meta-events-tools-panel'
+import {
+  hasMetaAdvancedTools,
+  hasMetaEventsTools,
+  resolveMetaCampaignUiVisibility,
+} from '@/lib/meta-campaign-ui'
+import { MetaAdvancedToolsPanel } from '@/features/dashboard/ads/components/meta-advanced-tools-panel'
 import {
   AudienceBuilderDialogFooter,
   AudienceBuilderDialogHeader,
@@ -316,6 +325,13 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
 
   const completedCount = completionSteps.filter(s => s.complete).length
 
+  const accountMetaUi = useMemo(
+    () => resolveMetaCampaignUiVisibility({ scope: 'account' }),
+    [],
+  )
+  const showAccountEventsTools = hasMetaEventsTools(accountMetaUi)
+  const showAccountAdvancedTools = hasMetaAdvancedTools(accountMetaUi)
+
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
@@ -328,6 +344,20 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
               </AlertDescription>
             </Alert>
             <MetaAudiencesPanel workspaceId={String(user.agencyId)} clientId={selectedClientId} />
+            {showAccountEventsTools ? (
+              <MetaEventsToolsPanel
+                workspaceId={String(user.agencyId)}
+                clientId={selectedClientId}
+                scope="account"
+              />
+            ) : null}
+            {showAccountAdvancedTools ? (
+              <MetaAdvancedToolsPanel
+                workspaceId={String(user.agencyId)}
+                clientId={selectedClientId}
+                scope="account"
+              />
+            ) : null}
           </div>
         ) : null}
         <AudienceBuilderDialogTabs

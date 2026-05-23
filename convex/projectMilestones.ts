@@ -53,38 +53,40 @@ export const listByProjectIds = workspaceQuery({
   returns: v.record(v.string(), v.array(milestoneValidator)),
   handler: async (ctx, args) => {
     const result: Record<string, unknown[]> = {}
+    const projectIdSet = new Set(args.projectIds)
 
-    const milestonesByProject = await Promise.all(
-      args.projectIds.map(async (projectId) => {
-        const rows = await ctx.db
-          .query('projectMilestones')
-          .withIndex('by_workspace_project_start_created_legacyId', (q) =>
-            q.eq('workspaceId', args.workspaceId).eq('projectId', projectId),
-          )
-          .order('asc')
-          .collect()
+    const rows = await ctx.db
+      .query('projectMilestones')
+      .withIndex('by_workspace_project_start_created_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+      .order('asc')
+      .collect()
 
-        return {
-          projectId,
-          milestones: rows.map((row) => ({
-            legacyId: row.legacyId,
-            projectId: row.projectId,
-            title: row.title,
-            description: row.description,
-            status: row.status,
-            startDateMs: row.startDateMs,
-            endDateMs: row.endDateMs,
-            ownerId: row.ownerId,
-            order: row.order,
-            createdAtMs: row.createdAtMs,
-            updatedAtMs: row.updatedAtMs,
-          })),
-        }
-      }),
-    )
+    const mapMilestone = (row: (typeof rows)[number]) => ({
+      legacyId: row.legacyId,
+      projectId: row.projectId,
+      title: row.title,
+      description: row.description,
+      status: row.status,
+      startDateMs: row.startDateMs,
+      endDateMs: row.endDateMs,
+      ownerId: row.ownerId,
+      order: row.order,
+      createdAtMs: row.createdAtMs,
+      updatedAtMs: row.updatedAtMs,
+    })
 
-    for (const { projectId, milestones } of milestonesByProject) {
-      result[projectId] = milestones
+    for (const projectId of args.projectIds) {
+      result[projectId] = []
+    }
+
+    for (const row of rows) {
+      if (!projectIdSet.has(row.projectId)) {
+        continue
+      }
+      const bucket = result[row.projectId]
+      if (bucket) {
+        bucket.push(mapMilestone(row))
+      }
     }
 
     return result as Record<string, Array<{

@@ -1,0 +1,113 @@
+'use client'
+
+import { useMemo, useState } from 'react'
+
+import { MetaAdvancedToolsPanel } from '@/features/dashboard/ads/components/meta-advanced-tools-panel'
+import { MetaEventsToolsPanel } from '@/features/dashboard/ads/components/meta-events-tools-panel'
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
+import {
+  hasAnyMetaCampaignTools,
+  hasMetaAdvancedTools,
+  hasMetaEventsTools,
+  resolveMetaCampaignUiVisibility,
+} from '@/lib/meta-campaign-ui'
+import { useAuth } from '@/shared/contexts/auth-context'
+import { CardContent } from '@/shared/ui/card'
+import { MotionCard } from '@/shared/ui/motion-primitives'
+import { MotionTabsContent, Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
+
+import { CampaignControlHeader } from './campaign-control-header'
+import { Wrench } from 'lucide-react'
+
+type CampaignMetaToolsSectionProps = {
+  clientId?: string | null
+  isPreviewMode?: boolean
+  campaignObjective?: string | null
+}
+
+export function CampaignMetaToolsSection({
+  clientId,
+  isPreviewMode,
+  campaignObjective,
+}: CampaignMetaToolsSectionProps) {
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
+  const [metaToolsTab, setMetaToolsTab] = useState('events')
+
+  const visibility = useMemo(
+    () =>
+      resolveMetaCampaignUiVisibility({
+        campaignObjective,
+        scope: 'campaign',
+      }),
+    [campaignObjective],
+  )
+
+  const showEvents = hasMetaEventsTools(visibility)
+  const showAdvanced = hasMetaAdvancedTools(visibility)
+
+  if (isPreviewMode || !workspaceId || !hasAnyMetaCampaignTools(visibility)) {
+    return null
+  }
+
+  const panelProps = {
+    workspaceId,
+    clientId,
+    campaignObjective,
+    scope: 'campaign' as const,
+  }
+
+  if (showEvents && !showAdvanced) {
+    return (
+      <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+        <CampaignControlHeader
+          icon={Wrench}
+          title="Meta tools"
+          description={visibility.metaToolsDescription}
+        />
+        <CardContent className="pt-2">
+          <MetaEventsToolsPanel {...panelProps} />
+        </CardContent>
+      </MotionCard>
+    )
+  }
+
+  if (!showEvents && showAdvanced) {
+    return (
+      <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+        <CampaignControlHeader
+          icon={Wrench}
+          title="Meta tools"
+          description={visibility.metaToolsDescription}
+        />
+        <CardContent className="pt-2">
+          <MetaAdvancedToolsPanel {...panelProps} />
+        </CardContent>
+      </MotionCard>
+    )
+  }
+
+  return (
+    <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+      <CampaignControlHeader
+        icon={Wrench}
+        title="Meta tools"
+        description={visibility.metaToolsDescription}
+      />
+      <CardContent className="pt-2">
+        <Tabs value={metaToolsTab} onValueChange={setMetaToolsTab} className="w-full">
+          <TabsList className="mb-4 grid w-full grid-cols-2">
+            <TabsTrigger value="events">Events & batch</TabsTrigger>
+            <TabsTrigger value="advanced">Pixels & webhooks</TabsTrigger>
+          </TabsList>
+          <MotionTabsContent activeTab={metaToolsTab} tabValue="events" className="mt-0">
+            <MetaEventsToolsPanel {...panelProps} />
+          </MotionTabsContent>
+          <MotionTabsContent activeTab={metaToolsTab} tabValue="advanced" className="mt-0">
+            <MetaAdvancedToolsPanel {...panelProps} />
+          </MotionTabsContent>
+        </Tabs>
+      </CardContent>
+    </MotionCard>
+  )
+}

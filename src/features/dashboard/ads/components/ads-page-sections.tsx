@@ -11,6 +11,8 @@ import { MetricsTableCard } from '@/features/dashboard/ads/components/metrics-ta
 import { PerformanceSummaryCard } from '@/features/dashboard/ads/components/performance-summary-card'
 import { WorkflowCard } from '@/features/dashboard/ads/components/workflow-card'
 import { AdSetupPanel } from '@/features/dashboard/ads/components/ad-setup-panel'
+import { AutomationControlsCard } from '@/features/dashboard/ads/components/automation-controls-card'
+import { useAdsAutomation } from '@/features/dashboard/ads/hooks/use-ads-automation'
 import { resolveAdsMetricsDisplayState } from '@/features/dashboard/ads/components/ads-metrics-display-state'
 import type { DateRange } from '@/features/dashboard/ads/components/date-range-picker'
 import type {
@@ -133,6 +135,10 @@ export function AdsPageSetupSection({
     reloadMetaAccountOptions,
   } = connections
   const { handleManualRefresh } = metrics
+  const automation = useAdsAutomation({
+    automationStatuses: connections.automationStatuses,
+    onRefresh: handleManualRefresh,
+  })
   const handleReloadMetaAccountOptions = useCallback(() => {
     void reloadMetaAccountOptions()
   }, [reloadMetaAccountOptions])
@@ -201,6 +207,23 @@ export function AdsPageSetupSection({
           initializingGoogle={initializingGoogle}
         />
       </FadeIn>
+
+      {connectedAccountCount > 0 && !showWorkflow ? (
+        <FadeIn>
+          <AutomationControlsCard
+            automationStatuses={connections.automationStatuses}
+            automationDraft={automation.automationDraft}
+            savingSettings={automation.savingSettings}
+            settingsErrors={automation.settingsErrors}
+            expandedProviders={automation.expandedProviders}
+            syncingProvider={automation.syncingProvider}
+            onUpdateDraft={automation.updateAutomationDraft}
+            onSaveAutomation={automation.handleSaveAutomation}
+            onToggleAdvanced={automation.toggleAdvanced}
+            onRunManualSync={automation.runManualSync}
+          />
+        </FadeIn>
+      ) : null}
 
       {connectedAccountCount > 0 ? (
         <FadeIn>

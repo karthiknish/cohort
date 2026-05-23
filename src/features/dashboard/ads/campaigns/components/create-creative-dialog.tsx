@@ -2,6 +2,9 @@
 
 import { Plus } from 'lucide-react'
 
+import { pressableScaleClass } from '@/lib/motion'
+import { FadeInStagger } from '@/shared/ui/animate-in'
+import { cn } from '@/lib/utils'
 import { Button } from '@/shared/ui/button'
 import {
   Dialog,
@@ -63,20 +66,24 @@ export function CreateCreativeDialog(props: CreateCreativeDialogProps) {
     handleVideoUpload,
     handleSubmit,
     handleClose,
+    leadFormId,
+    campaignObjective,
+    setLeadFormId,
   } = useCreateCreativeDialog(props)
 
-  const { providerId, availableAdSets } = props
+  const { providerId, availableAdSets, workspaceId, clientId } = props
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" disabled={!isMeta || !selectedAdSetId}>
+        <Button size="sm" className={cn(pressableScaleClass)} disabled={!isMeta || !selectedAdSetId}>
           <Plus className="mr-2 size-4" />
           Create Ad
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <CreateCreativeDialogHeader providerId={providerId} />
+        <FadeInStagger className="space-y-4" stagger={0.05}>
         <CreateCreativeDialogForm
           availableAdSets={availableAdSets}
           body={body}
@@ -122,7 +129,13 @@ export function CreateCreativeDialog(props: CreateCreativeDialogProps) {
           status={status}
           title={title}
           uploadingImage={uploadingImage}
+          workspaceId={workspaceId}
+          clientId={clientId}
+          campaignObjective={campaignObjective}
+          leadFormId={leadFormId}
+          onLeadFormIdChange={setLeadFormId}
         />
+        </FadeInStagger>
       </DialogContent>
     </Dialog>
   )

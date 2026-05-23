@@ -108,6 +108,13 @@ export async function exportMetricsToCsv(
       Clicks: totalClicks.toLocaleString('en-US'),
       Conversions: totalConversions.toLocaleString('en-US'),
     },
-    charts: filterMeaningfulCharts(buildAdsMetricsCharts(processedMetrics)),
+    charts: filterMeaningfulCharts(
+      buildAdsMetricsCharts(
+        processedMetrics.map((metric) => ({
+          ...metric,
+          revenue: metric.revenue ?? undefined,
+        })),
+      ),
+    ),
   })
 }

@@ -1,5 +1,13 @@
 import {
   type ReadCheckpointPosition,
+  comparePosition,
+  getReadCheckpoint,
+  isAfterCheckpoint,
+  pickNewestCheckpoint,
+  readPositionFromRow,
+  upsertReadCheckpoint,
+} from '../lib/collaboration/readCheckpoints'
+import {
   THREAD_SCAN_BATCH_SIZE,
   THREAD_SCAN_MAX_ROWS,
   assertAccessToMessage,
@@ -8,21 +16,18 @@ import {
   buildListChannelQuery,
   buildThreadQuery,
   canAccessCustomChannel,
-  comparePosition,
-  getReadCheckpoint,
-  isAfterCheckpoint,
   normalizeChannelScope,
-  pickNewestCheckpoint,
-  readPositionFromRow,
   requireActorUserId,
   resolveChannelKey,
   resolveChannelKeyFromScope,
   scanChannelRows,
-  upsertReadCheckpoint,
   z,
   zRateLimitedWorkspaceMutation,
   zWorkspaceMutation,
   zWorkspaceQuery,
+  type CollaborationCtx,
+  type CollaborationMessageRow,
+  type ReadCheckpointRow,
 } from './shared'
 
 export const markAsRead = zRateLimitedWorkspaceMutation({

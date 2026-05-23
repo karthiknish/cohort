@@ -3,14 +3,24 @@
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useMutation, useQuery } from 'convex/react'
-import { useCallback, useMemo, useReducer, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 
 import { useToast } from '@/shared/ui/use-toast'
 import { tasksApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { useAccumulatedCursorPages } from '@/lib/hooks/use-accumulated-cursor-pages'
 import { getPreviewTasks } from '@/lib/preview-data'
 import type { TaskAttachment, TaskRecord, TaskStatus } from '@/types/tasks'
 import { formatStatusLabel } from '../task-types'
+import { taskListFiltersScopeKey, type TaskListFiltersInput } from './task-list-filters'
+import {
+  mergeTaskPages,
+  parsePaginatedTasksQuery,
+  TASKS_PAGE_SIZE,
+  type TaskPageCursor,
+} from './use-tasks-pagination'
+
+export type { TaskListFiltersInput } from './task-list-filters'
 
 export type UseTasksOptions = {
   userId: string | undefined
@@ -18,19 +28,21 @@ export type UseTasksOptions = {
   authLoading: boolean
   isPreviewMode?: boolean
   workspaceId?: string | null
+  listFilters?: TaskListFiltersInput
 }
 
 export type UseTasksReturn = {
   tasks: TaskRecord[]
   setTasks: React.Dispatch<React.SetStateAction<TaskRecord[]>>
-  nextCursor: string | null
+  nextCursor: TaskPageCursor | null
+  hasMoreTasks: boolean
   loading: boolean
   loadingMore: boolean
   error: string | null
   setError: React.Dispatch<React.SetStateAction<string | null>>
   retryCount: number
   pendingStatusUpdates: Set<string>
-  handleLoadMore: () => Promise<void>
+  handleLoadMore: () => void
   handleRefresh: () => Promise<void>
   handleQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => Promise<void>
   handleDeleteTask: (task: TaskRecord) => Promise<boolean>
@@ -91,10 +103,6 @@ type TaskQueryRow = {
   createdAtMs: number | null
   updatedAtMs: number | null
   deletedAtMs: number | null
-}
-
-type PaginatedTaskRows = {
-  items: TaskQueryRow[]
 }
 
 type CreateTaskMutationResult = string | { legacyId?: string | null } | null | undefined
@@ -164,11 +172,6 @@ function useTasksReducer(state: UseTasksState, action: UseTasksAction): UseTasks
   }
 }
 
-function hasPaginatedItems(value: unknown): value is PaginatedTaskRows {
-  if (!value || typeof value !== 'object') return false
-  return Array.isArray((value as { items?: unknown }).items)
-}
-
 function mapConvexTaskToTaskRecord(row: TaskQueryRow): TaskRecord {
   const attachments = Array.isArray(row.attachments)
     ? row.attachments
@@ -209,6 +212,7 @@ export function useTasks({
   authLoading,
   isPreviewMode = false,
   workspaceId,
+  listFilters,
 }: UseTasksOptions): UseTasksReturn {
   const { toast } = useToast()
 
@@ -229,21 +233,60 @@ export function useTasks({
     dispatch({ type: 'setPendingStatusUpdates', updater })
   }, [])
 
+  const paginationScopeKey = `${workspaceId ?? ''}|${clientId ?? ''}|${taskListFiltersScopeKey(listFilters)}|${isPreviewMode ? 'preview' : 'live'}`
+  const tasksQueryEnabled = !isPreviewMode && !authLoading && Boolean(workspaceId)
+  const [loadCursor, setLoadCursor] = useState<TaskPageCursor | null>(null)
+
+  const convexListArgs = useMemo(
+    () => ({
+      workspaceId: workspaceId!,
+      limit: TASKS_PAGE_SIZE,
+      cursor: loadCursor,
+      ...(listFilters ?? {}),
+    }),
+    [listFilters, loadCursor, workspaceId],
+  )
+
   const convexAllTasksQuery = useQuery(
     tasksApi.list,
-    !isPreviewMode && !authLoading && workspaceId && clientId === undefined
-      ? { workspaceId, limit: 200 }
-      : 'skip'
+    tasksQueryEnabled && clientId === undefined ? convexListArgs : 'skip',
   )
 
   const convexClientTasksQuery = useQuery(
     tasksApi.listByClient,
-    !isPreviewMode && !authLoading && workspaceId && clientId !== undefined
-      ? { workspaceId, clientId: clientId ?? null, limit: 200 }
-      : 'skip'
+    tasksQueryEnabled && clientId !== undefined
+      ? {
+          ...convexListArgs,
+          clientId: clientId!,
+        }
+      : 'skip',
   )
 
   const convexTasksQuery = clientId === undefined ? convexAllTasksQuery : convexClientTasksQuery
+
+  const taskPagination = useAccumulatedCursorPages<TaskRecord, TaskPageCursor>({
+    scopeKey: paginationScopeKey,
+    queryData: convexTasksQuery,
+    loadCursor,
+    setLoadCursor,
+    enabled: tasksQueryEnabled,
+    getItemKey: (task) => task.id,
+    parsePage: (queryData) => {
+      const paginated = parsePaginatedTasksQuery(queryData)
+      if (!paginated) {
+        if (queryData !== undefined) {
+          logError(queryData, 'useTasks:unexpectedQueryShape')
+        }
+        return { items: [], nextCursor: null }
+      }
+
+      return {
+        items: paginated.items.map((row) => mapConvexTaskToTaskRecord(row as TaskQueryRow)),
+        nextCursor: paginated.nextCursor,
+      }
+    },
+    mergePages: mergeTaskPages,
+  })
 
   const createTask = useMutation(tasksApi.createTask)
   const patchTask = useMutation(tasksApi.patchTask)
@@ -255,54 +298,48 @@ export function useTasks({
     if (isPreviewMode) return false
     if (authLoading) return true
     if (!userId || !workspaceId) return false
-    return convexTasksQuery === undefined
-  }, [authLoading, convexTasksQuery, isPreviewMode, userId, workspaceId])
+    return taskPagination.isInitialLoading
+  }, [authLoading, isPreviewMode, taskPagination.isInitialLoading, userId, workspaceId])
 
-  const syncedTasksFromQuery = useMemo(() => {
+  useEffect(() => {
     if (isPreviewMode) {
-      return getPreviewTasks(clientId ?? null)
+      dispatch({
+        type: 'syncData',
+        tasks: getPreviewTasks(clientId ?? null),
+        error: null,
+      })
+      return
     }
 
-    if (!userId || !workspaceId) {
-      return [] as TaskRecord[]
+    if (!userId || !workspaceId || convexTasksQuery === undefined) {
+      return
     }
 
-    const queryValue = convexTasksQuery as unknown
-    const isArray = Array.isArray(queryValue)
-    const paginated = hasPaginatedItems(queryValue)
-
-    const rows = isArray
-      ? (queryValue as TaskQueryRow[])
-      : paginated
-        ? queryValue.items
-        : []
-
-    if (queryValue && !isArray && !paginated) {
-      logError(convexTasksQuery, 'useTasks:unexpectedQueryShape')
-    }
-
-    return rows.map(mapConvexTaskToTaskRecord)
-  }, [clientId, convexTasksQuery, isPreviewMode, userId, workspaceId])
-
-  const tasksSyncKey = `${isPreviewMode}|${clientId ?? ''}|${userId ?? ''}|${workspaceId ?? ''}|${syncedTasksFromQuery.length}|${syncedTasksFromQuery[0]?.id ?? ''}|${syncedTasksFromQuery.at(-1)?.updatedAt ?? ''}`
-  const tasksSyncKeyRef = useRef<string | null>(null)
-  if (tasksSyncKeyRef.current !== tasksSyncKey) {
-    tasksSyncKeyRef.current = tasksSyncKey
     dispatch({
       type: 'syncData',
-      tasks: syncedTasksFromQuery,
+      tasks: taskPagination.mergedItems,
       error: null,
     })
-  }
+  }, [
+    clientId,
+    convexTasksQuery,
+    isPreviewMode,
+    taskPagination.mergedItems,
+    userId,
+    workspaceId,
+  ])
 
-  const handleLoadMore = useCallback(async () => {
-    // Realtime query returns the current dataset; no cursor pagination.
-  }, [])
+  const handleLoadMore = useCallback(() => {
+    if (isPreviewMode) {
+      return
+    }
+    taskPagination.loadMore()
+  }, [isPreviewMode, taskPagination])
 
   const handleRefresh = useCallback(async () => {
-    // Convex query stays live; a manual refresh is a no-op.
+    taskPagination.reset()
     toast({ title: 'Up to date', description: 'Tasks update in real time.' })
-  }, [toast])
+  }, [taskPagination, toast])
 
   const handleQuickStatusChange = useCallback(
     async (task: TaskRecord, newStatus: TaskStatus) => {
@@ -610,9 +647,10 @@ export function useTasks({
   return {
     tasks,
     setTasks,
-    nextCursor: null,
+    nextCursor: taskPagination.nextCursor,
     loading,
-    loadingMore: false,
+    loadingMore: taskPagination.isLoadingMore,
+    hasMoreTasks: Boolean(taskPagination.nextCursor),
     error,
     setError,
     retryCount: 0,

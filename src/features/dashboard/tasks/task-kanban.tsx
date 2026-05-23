@@ -349,16 +349,19 @@ export function TaskKanban({
         </div>
       </ScrollArea>
 
-      {hasMore && (
+      {hasMore ? (
         <div className="flex justify-center pt-2">
-          <Button variant="ghost" className="h-10 gap-2 rounded-xl px-6 font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground" onClick={onLoadMore} disabled={loadingMore || loading}>
-            {loadingMore ? (
-              <LoaderCircle className="size-4 animate-spin text-primary" />
-            ) : null}
+          <Button
+            variant="ghost"
+            className="h-10 gap-2 rounded-xl px-6 font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+            onClick={onLoadMore}
+            disabled={loadingMore || loading}
+          >
+            {loadingMore ? <LoaderCircle className="size-4 animate-spin text-primary" /> : null}
             {loadingMore ? 'Loading more tasks…' : 'Load more tasks'}
           </Button>
         </div>
-      )}
+      ) : null}
 
       <TaskViewDialog
         task={viewingTask}

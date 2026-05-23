@@ -54,12 +54,15 @@ export {
 // Audience operations
 export {
   createMetaAudience,
+  createMetaLookalikeAudience,
+  uploadMetaAudienceUsers,
   listMetaAudiences,
   deleteMetaAudience,
 } from './audiences'
 
 export type {
   CreateAudienceOptions,
+  CreateLookalikeAudienceOptions,
 } from './types'
 
 // Campaign objectives

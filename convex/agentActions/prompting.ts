@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 
-import { buildRoutesForPrompt } from '../../src/lib/navigation-intents'
+import { buildRoutesForPrompt } from '@/domain/agent/navigation-intents'
 import { geminiAI } from '../../src/services/gemini'
 import { Errors } from '../errors'
 

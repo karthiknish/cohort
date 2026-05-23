@@ -96,6 +96,7 @@ export const updateAutomationSettings = mutation({
     autoSyncEnabled: v.optional(v.union(v.boolean(), v.null())),
     syncFrequencyMinutes: v.optional(v.union(v.number(), v.null())),
     scheduledTimeframeDays: v.optional(v.union(v.number(), v.null())),
+    metaUseAsyncInsights: v.optional(v.union(v.boolean(), v.null())),
   },
   handler: async (ctx, args) => {
     await requireWorkspaceAccess(ctx, args.workspaceId)
@@ -121,6 +122,7 @@ export const updateAutomationSettings = mutation({
     if (hasOwn(args, 'autoSyncEnabled')) patch.autoSyncEnabled = args.autoSyncEnabled ?? null
     if (hasOwn(args, 'syncFrequencyMinutes')) patch.syncFrequencyMinutes = args.syncFrequencyMinutes ?? null
     if (hasOwn(args, 'scheduledTimeframeDays')) patch.scheduledTimeframeDays = args.scheduledTimeframeDays ?? null
+    if (hasOwn(args, 'metaUseAsyncInsights')) patch.metaUseAsyncInsights = args.metaUseAsyncInsights ?? null
 
     await ctx.db.patch(existing._id, patch)
     return { ok: true }

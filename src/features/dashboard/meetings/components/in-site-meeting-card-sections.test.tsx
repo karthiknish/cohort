@@ -100,6 +100,8 @@ describe('meeting room sections', () => {
     const markup = renderToStaticMarkup(
       <MeetingRoomCanvasSection
         autoCaptureEnabled={true}
+        onEnableTranscriptRecording={vi.fn()}
+        transcriptRecordingEnabled={true}
         autoSyncing={false}
         canMinimize={true}
         finalizingSession={false}

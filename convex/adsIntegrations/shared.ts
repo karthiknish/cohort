@@ -112,6 +112,7 @@ export const adIntegrationZ = z.object({
   autoSyncEnabled: z.boolean().nullable(),
   syncFrequencyMinutes: z.number().nullable(),
   scheduledTimeframeDays: z.number().nullable(),
+  metaUseAsyncInsights: z.boolean().nullable().optional(),
 })
 
 export type ClaimedSyncJob = {

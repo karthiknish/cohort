@@ -13,9 +13,16 @@ type Props = {
   campaignId: string
   clientId?: string | null
   isPreviewMode?: boolean
+  campaignObjective?: string | null
 }
 
-export function AudienceControlSection({ providerId, campaignId, clientId, isPreviewMode }: Props) {
+export function AudienceControlSection({
+  providerId,
+  campaignId,
+  clientId,
+  isPreviewMode,
+  campaignObjective,
+}: Props) {
   const view = useAudienceControlSection({ providerId, campaignId, clientId, isPreviewMode })
 
   if (view.loading && !view.hasLoaded) {
@@ -49,6 +56,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
       audienceStats={view.audienceStats}
       headerActionsProps={view.headerActionsProps}
       interestSectionProps={view.interestSectionProps}
+      customAudiencesSectionProps={view.customAudiencesSectionProps}
       builderOpen={view.builderOpen}
       providerId={view.providerId}
       workspaceId={view.workspaceId}
@@ -59,6 +67,19 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
       onToggleEditing={view.handleToggleEditing}
       onToggleSection={view.toggleSection}
       onBuilderOpenChange={view.handleBuilderOpenChange}
+      onAddLocation={view.handleAddLocationDraft}
+      onRemoveLocation={view.handleRemoveLocationDraft}
+      onSaveLocations={view.handlePersistLocations}
+      onSaveDemographics={view.handlePersistDemographics}
+      onDraftDemographicsChange={view.handleDraftDemographicsChange}
+      draftDemographics={view.draftDemographics}
+      draftPlacements={view.draftPlacements}
+      draftPlacementDetail={view.draftPlacementDetail}
+      onSavePlacements={view.handlePersistPlacements}
+      onTogglePlatform={view.handleTogglePlatformDraft}
+      onTogglePlacementPosition={view.handleTogglePlacementPositionDraft}
+      savingTargeting={view.savingTargeting}
+      campaignObjective={campaignObjective}
     />
   )
 }

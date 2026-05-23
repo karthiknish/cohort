@@ -5,7 +5,7 @@ import { useQuery } from 'convex/react'
 import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import dynamic from 'next/dynamic'
 import { usePathname, useRouter } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   formatAssigneeList,
@@ -43,6 +43,7 @@ import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import {
   buildCategoryCountChart,
 } from '@/lib/export/cohorts-spreadsheet-charts'
+import { buildTaskListFilters } from './hooks/task-list-filters'
 import { TASKS_THEME } from './tasks-theme'
 import { isFeatureEnabled } from '@/lib/features'
 import { exportToCsv } from '@/lib/export/export-to-spreadsheet'
@@ -148,15 +149,15 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
   const actionParam = normalizedAction
   const searchParamsString = normalizedSearchParamsString
 
-  const syncedProjectContextRef = useRef<string | null>(null)
   const projectContextKey =
     isFeatureEnabled('BIDIRECTIONAL_NAV') && projectFilter.id && projectFilter.name
       ? `${projectFilter.id}|${projectFilter.name}`
       : null
-  if (projectContextKey && syncedProjectContextRef.current !== projectContextKey) {
-    syncedProjectContextRef.current = projectContextKey
-    setProjectContext(projectFilter.id!, projectFilter.name!)
-  }
+
+  useEffect(() => {
+    if (!projectContextKey || !projectFilter.id || !projectFilter.name) return
+    setProjectContext(projectFilter.id, projectFilter.name)
+  }, [projectContextKey, projectFilter.id, projectFilter.name, setProjectContext])
 
   const clearProjectFilter = useCallback(() => {
     const params = new URLSearchParams(searchParamsString)
@@ -166,6 +167,24 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
   }, [pathname, replace, searchParamsString])
 
+  const [selectedStatus, setSelectedStatus] = useState<'all' | TaskStatus>('all')
+  const [selectedAssignee, setSelectedAssignee] = useState('all')
+  const [rawSearchQuery, setRawSearchQuery] = useState('')
+  const debouncedQuery = useDebouncedValue(rawSearchQuery, 300)
+
+  const listFilters = useMemo(
+    () =>
+      buildTaskListFilters({
+        selectedStatus,
+        searchQuery: debouncedQuery,
+        activeTab: taskTabs.value,
+        userId: user?.id,
+        selectedAssignee,
+        projectId: projectFilter.id,
+      }),
+    [debouncedQuery, projectFilter.id, selectedAssignee, selectedStatus, taskTabs.value, user?.id],
+  )
+
   // Tasks data hook
   const {
     tasks,
@@ -174,6 +193,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     error,
     retryCount,
     pendingStatusUpdates,
+    nextCursor,
     handleLoadMore,
     handleRefresh,
     handleQuickStatusChange,
@@ -182,13 +202,13 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     handleUpdateTask,
     handleBulkUpdate,
     handleBulkDelete,
-    nextCursor,
   } = useTasks({
     userId: user?.id,
     clientId: taskFormClientId ?? undefined,
     authLoading,
     isPreviewMode,
     workspaceId: taskWorkspaceId,
+    listFilters,
   })
 
   const workspaceMembers = useQuery(
@@ -248,10 +268,6 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     return mergeTaskParticipants([workspaceMembers ?? []])
   }, [effectiveTaskClient?.teamMembers, rosterProfiles, selectedClient?.teamMembers, workspaceMembers])
 
-  // Debounced search for filters
-  const [rawSearchQuery, setRawSearchQuery] = useState('')
-  const debouncedQuery = useDebouncedValue(rawSearchQuery, 300)
-
   // Filters hook
   const filters = useTaskFilters({
     tasks,
@@ -264,6 +280,13 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     projectFilterName: projectFilter.name,
     activeTab: taskTabs.value,
     setActiveTab: (next) => taskTabs.setValue(next as 'all-tasks' | 'my-tasks'),
+    serverListFilters: listFilters,
+    selectedStatus,
+    setSelectedStatus,
+    searchQuery: debouncedQuery,
+    setSearchQuery: setRawSearchQuery,
+    selectedAssignee,
+    setSelectedAssignee,
   })
 
   const [rawSelectedTaskIds, setRawSelectedTaskIds] = useState<Set<string>>(new Set())
@@ -272,11 +295,6 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     label: '',
     progress: 0,
   })
-
-  // Sync debounced search
-  useEffect(() => {
-    filters.setSearchQuery(debouncedQuery)
-  }, [debouncedQuery, filters])
 
   // Form management hook
   const form = useTaskForm({
@@ -680,7 +698,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
                   onQuickStatusChange={handleQuickStatusChange}
                   onRefresh={handleRefresh}
                   loadingMore={loadingMore}
-                  hasMore={!!nextCursor}
+                  hasMore={Boolean(nextCursor)}
                   onLoadMore={handleLoadMore}
                   emptyStateMessage={emptyStateMessage}
                   showEmptyStateFiltered={showFilteredEmpty}
@@ -705,7 +723,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
                   onQuickStatusChange={handleQuickStatusChange}
                   onRefresh={handleRefresh}
                   loadingMore={loadingMore}
-                  hasMore={!!nextCursor}
+                  hasMore={Boolean(nextCursor)}
                   onLoadMore={handleLoadMore}
                   emptyStateMessage={emptyStateMessage}
                   showEmptyStateFiltered={showFilteredEmpty}
@@ -726,7 +744,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
                 <TaskResultsCount
                   sortedCount={filters.sortedTasks.length}
                   totalCount={tasks.length}
-                  loading={loading}
+                  loading={loading && !loadingMore}
                 />
               )}
             </div>

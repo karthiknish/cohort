@@ -200,7 +200,11 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
   if (!accessToken) throw new Error('Missing Meta access token')
   if (!adAccountId) throw new Error('Missing Meta ad account ID on integration')
 
-  if (readEnvFlag(process.env.META_ADS_USE_ASYNC_INSIGHTS)) {
+  const useAsyncInsights =
+    options.useAsyncInsights === true ||
+    (options.useAsyncInsights !== false && readEnvFlag(process.env.META_ADS_USE_ASYNC_INSIGHTS))
+
+  if (useAsyncInsights) {
     const { runMetaAccountInsightsReportToCompletion } = await import('./async-insights')
     const maxWaitRaw = process.env.META_ADS_ASYNC_INSIGHTS_MAX_WAIT_MS
     const pollRaw = process.env.META_ADS_ASYNC_INSIGHTS_POLL_MS

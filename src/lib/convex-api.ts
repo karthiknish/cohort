@@ -57,6 +57,7 @@ export const tasksApi = {
   list: looseApi.tasks.list,
   listByClient: looseApi.tasks.listByClient,
   listForUser: looseApi.tasks.listForUser,
+  summarizeCountsByProject: looseApi.tasks.summarizeCountsByProject,
   createTask: looseApi.tasks.createTask,
   patchTask: looseApi.tasks.patchTask,
   bulkPatchTasks: looseApi.tasks.bulkPatchTasks,
@@ -108,6 +109,8 @@ export const analyticsIntegrationsApi = {
   listGoogleAnalyticsProperties: looseApi.analyticsIntegrations.listGoogleAnalyticsProperties,
   initializeGoogleAnalyticsProperty: looseApi.analyticsIntegrations.initializeGoogleAnalyticsProperty,
   listAnalyticsMetrics: looseApi.analyticsIntegrations.listAnalyticsMetrics,
+  listAnalyticsMetricsPaginated: looseApi.analyticsIntegrations.listAnalyticsMetricsPaginated,
+  listAnalyticsBreakdowns: looseApi.analyticsIntegrations.listAnalyticsBreakdowns,
   deleteGoogleAnalyticsIntegration: looseApi.analyticsIntegrations.deleteGoogleAnalyticsIntegration,
   deleteGoogleAnalyticsSyncJobs: looseApi.analyticsIntegrations.deleteGoogleAnalyticsSyncJobs,
   deleteGoogleAnalyticsMetrics: looseApi.analyticsIntegrations.deleteGoogleAnalyticsMetrics,
@@ -126,6 +129,10 @@ export const meetingsApi = {
   updateStatus: looseApi.meetings.updateStatus,
 }
 
+export const meetingArchivesApi = {
+  getArtifactDownloadUrls: looseApi.meetingArchives.getArtifactDownloadUrls,
+}
+
 export const adsMetricsApi = {
   listMetrics: looseApi.adsMetrics.listMetrics,
   listMetricsWithSummary: looseApi.adsMetrics.listMetricsWithSummary,
@@ -138,10 +145,16 @@ export const adsCampaignsApi = {
   updateCampaign: looseApi.adsCampaigns.updateCampaign,
 }
 
+export const adsMetaCampaignsApi = {
+  createMetaCampaign: looseApi.adsMetaCampaigns.createMetaCampaign,
+  updateMetaCampaign: looseApi.adsMetaCampaigns.updateMetaCampaign,
+}
+
 export const adsAdSetsApi = {
   listAdSets: looseApi.adsAdSets.listAdSets,
   createAdSet: looseApi.adsAdSets.createAdSet,
   updateAdSetTargeting: looseApi.adsAdSets.updateAdSetTargeting,
+  updateAdSetStatus: looseApi.adsAdSets.updateAdSetStatus,
 }
 
 export const adsCampaignGroupsApi = {
@@ -173,6 +186,9 @@ export const adsTargetingApi = {
 export const adsAudiencesApi = {
   createAudience: looseApi.adsAudiences.createAudience,
   listAudiences: looseApi.adsAudiencesMeta.listAudiences,
+  createLookalikeAudience: looseApi.adsAudiencesMeta.createLookalikeAudience,
+  uploadAudienceUsers: looseApi.adsAudiencesMeta.uploadAudienceUsers,
+  deleteAudience: looseApi.adsAudiencesMeta.deleteAudience,
 }
 
 export const adsMetaToolsApi = {
@@ -180,6 +196,26 @@ export const adsMetaToolsApi = {
   searchTargetingGeolocations: looseApi.adsMetaTools.searchTargetingGeolocations,
   listLeadgenForms: looseApi.adsMetaTools.listLeadgenForms,
   createLeadgenForm: looseApi.adsMetaTools.createLeadgenForm,
+  listPagePosts: looseApi.adsMetaTools.listPagePosts,
+  listPageEvents: looseApi.adsMetaTools.listPageEvents,
+  listAdPixels: looseApi.adsMetaTools.listAdPixels,
+  listProductCatalogs: looseApi.adsMetaTools.listProductCatalogs,
+  listProductSets: looseApi.adsMetaTools.listProductSets,
+  listMetaAds: looseApi.adsMetaTools.listMetaAds,
+  getPixelDetails: looseApi.adsMetaTools.getPixelDetails,
+  getPixelStats: looseApi.adsMetaTools.getPixelStats,
+  listBusinesses: looseApi.adsMetaTools.listBusinesses,
+  listBusinessAdAccounts: looseApi.adsMetaTools.listBusinessAdAccounts,
+  searchAdLibrary: looseApi.adsMetaTools.searchAdLibrary,
+  listAdAccountWebhooks: looseApi.adsMetaTools.listAdAccountWebhooks,
+  updateAdAccountWebhooks: looseApi.adsMetaTools.updateAdAccountWebhooks,
+  clearAdAccountWebhooks: looseApi.adsMetaTools.clearAdAccountWebhooks,
+}
+
+export const adsMetaEventsApi = {
+  sendCapiEvents: looseApi.adsMetaEvents.sendCapiEvents,
+  sendOfflineEvents: looseApi.adsMetaEvents.sendOfflineEvents,
+  executeBatch: looseApi.adsMetaEvents.executeBatch,
 }
 
 export const agentApi = {
@@ -264,6 +300,10 @@ export const proposalsApi = {
   count: looseApi.proposals.count,
 }
 
+export const proposalArchivesApi = {
+  getArtifactDownloadUrls: looseApi.proposalArchives.getArtifactDownloadUrls,
+}
+
 export const proposalGenerationApi = {
   generateFromProposal: looseApi.proposalGeneration.generateFromProposal,
 }
@@ -310,29 +350,6 @@ export const problemReportsApi = {
   list: looseApi.problemReports.list,
   update: looseApi.problemReports.update,
   remove: looseApi.problemReports.remove,
-}
-
-export const workforceApi = {
-  getTimeDashboard: looseApi.workforce.getTimeDashboard,
-  seedTimeModule: looseApi.workforce.seedTimeModule,
-  clockAction: looseApi.workforce.clockAction,
-  submitTimeSessionReview: looseApi.workforce.submitTimeSessionReview,
-  getSchedulingDashboard: looseApi.workforce.getSchedulingDashboard,
-  seedSchedulingModule: looseApi.workforce.seedSchedulingModule,
-  createCoverageShift: looseApi.workforce.createCoverageShift,
-  setMyAvailability: looseApi.workforce.setMyAvailability,
-  createShiftSwapRequest: looseApi.workforce.createShiftSwapRequest,
-  reviewShiftSwapRequest: looseApi.workforce.reviewShiftSwapRequest,
-  claimOpenShift: looseApi.workforce.claimOpenShift,
-  getFormsDashboard: looseApi.workforce.getFormsDashboard,
-  seedFormsModule: looseApi.workforce.seedFormsModule,
-  createChecklistTemplate: looseApi.workforce.createChecklistTemplate,
-  submitChecklist: looseApi.workforce.submitChecklist,
-  reviewFormSubmission: looseApi.workforce.reviewFormSubmission,
-  getTimeOffDashboard: looseApi.workforce.getTimeOffDashboard,
-  seedTimeOffModule: looseApi.workforce.seedTimeOffModule,
-  createTimeOffRequest: looseApi.workforce.createTimeOffRequest,
-  reviewTimeOffRequest: looseApi.workforce.reviewTimeOffRequest,
 }
 
 export const presentationDeckApi = {

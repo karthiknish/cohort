@@ -122,6 +122,7 @@ function CreativeStatusToggle({
 export function CampaignAdsHeader({
   availableAdSets,
   campaignId,
+  campaignObjective,
   canLoad,
   clientId,
   convexProviderId,
@@ -138,6 +139,7 @@ export function CampaignAdsHeader({
 }: {
   availableAdSets: Array<{ id: string; name: string }>
   campaignId: string
+  campaignObjective?: string | null
   canLoad: boolean
   clientId?: string | null
   convexProviderId: string
@@ -188,6 +190,7 @@ export function CampaignAdsHeader({
             workspaceId={workspaceId}
             providerId={convexProviderId}
             campaignId={campaignId}
+            campaignObjective={campaignObjective}
             clientId={clientId}
             adSetId={firstAdSetId}
             availableAdSets={availableAdSets}
