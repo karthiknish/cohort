@@ -13,6 +13,7 @@ import { useMutation, useConvex } from 'convex/react'
 
 import { useToast } from '@/shared/ui/use-toast'
 import { settingsApi, filesApi } from '@/lib/convex-api'
+import { uploadStorageFile } from '@/lib/upload-storage-file'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { validateFile } from '@/lib/utils'
 import type { ProfileEditAction, ProfileUser } from './profile-card-state'
@@ -33,6 +34,7 @@ export function useProfileAvatarUpload({
   const { toast } = useToast()
   const convex = useConvex()
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const syncMetadata = useMutation(filesApi.syncMetadata)
   const updateMyProfile = useMutation(settingsApi.updateMyProfile)
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
   const tempAvatarUrlRef = useRef<string | null>(null)
@@ -49,26 +51,14 @@ export function useProfileAvatarUpload({
 
   const uploadAvatarImage = useCallback(
     async (file: File): Promise<string> => {
-      const { url: uploadUrl } = await generateUploadUrl({})
-
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': file.type || 'image/jpeg',
-        },
-        body: file,
+      const storageId = await uploadStorageFile({
+        file,
+        contentType: file.type || 'image/jpeg',
+        generateUploadUrl: () => generateUploadUrl({}),
+        syncMetadata: (args) => syncMetadata(args),
       })
 
-      if (!uploadResponse.ok) {
-        throw new Error(`Failed to upload file (${uploadResponse.status})`)
-      }
-
-      const json = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
-      if (!json?.storageId) {
-        throw new Error('Upload did not return storageId')
-      }
-
-      const publicUrl = await convex.query(filesApi.getPublicUrl, { storageId: json.storageId })
+      const publicUrl = await convex.query(filesApi.getPublicUrl, { storageId })
 
       if (!publicUrl?.url) {
         throw new Error('Unable to resolve uploaded file URL')
@@ -76,7 +66,7 @@ export function useProfileAvatarUpload({
 
       return publicUrl.url
     },
-    [convex, generateUploadUrl],
+    [convex, generateUploadUrl, syncMetadata],
   )
 
   const handleAvatarRemove = useCallback(async () => {

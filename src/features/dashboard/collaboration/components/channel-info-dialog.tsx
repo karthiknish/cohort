@@ -6,6 +6,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useMutation } from 'convex/react'
 
 import { collaborationApi, collaborationChannelAvatarsApi } from '@/lib/convex-api'
+import { uploadStorageFile } from '@/lib/upload-storage-file'
 import { Button } from '@/shared/ui/button'
 import {
   Dialog,
@@ -62,6 +63,7 @@ export function ChannelInfoDialog({
   const [removing, setRemoving] = useState(false)
 
   const generateUploadUrl = useMutation(collaborationApi.generateUploadUrl)
+  const syncMetadata = useMutation(collaborationApi.syncMetadata)
   const setChannelAvatar = useMutation(collaborationChannelAvatarsApi.setAvatar)
 
   const displayName = channel.name.startsWith('#') ? channel.name : `#${channel.name}`
@@ -95,23 +97,12 @@ export function ChannelInfoDialog({
 
       setUploading(true)
       try {
-        const uploadUrlPayload = (await generateUploadUrl({})) as { url?: string }
-        const uploadUrl = uploadUrlPayload?.url
-        if (!uploadUrl) {
-          throw new Error('Unable to create upload URL')
-        }
-
-        const uploadResponse = await fetch(uploadUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': file.type },
-          body: file,
+        const storageId = await uploadStorageFile({
+          file,
+          contentType: file.type,
+          generateUploadUrl: () => generateUploadUrl({}),
+          syncMetadata: (args) => syncMetadata(args),
         })
-
-        const uploadResult = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
-        const storageId = uploadResult?.storageId
-        if (!uploadResponse.ok || !storageId) {
-          throw new Error('Upload failed')
-        }
 
         await setChannelAvatar({
           workspaceId,
@@ -134,7 +125,7 @@ export function ChannelInfoDialog({
         setUploading(false)
       }
     },
-    [channel.id, displayName, generateUploadUrl, isAdmin, setChannelAvatar, toast, workspaceId],
+    [channel.id, displayName, generateUploadUrl, isAdmin, setChannelAvatar, syncMetadata, toast, workspaceId],
   )
 
   const handleRemovePhoto = useCallback(async () => {

@@ -14,6 +14,7 @@ import { validateAttachments } from '@/features/dashboard/collaboration/hooks/ut
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { filesApi } from '@/lib/convex-api'
+import { uploadStorageFile } from '@/lib/upload-storage-file'
 
 import {
   buildMeetingChatMessageContent,
@@ -40,6 +41,7 @@ export function useInSiteMeetingRoomChat(props: InSiteMeetingRoomChatProps) {
   const { chatMessages, send, isSending } = useChat()
   const participants = useParticipants()
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const syncMetadata = useMutation(filesApi.syncMetadata)
   const [chatState, dispatch] = useReducer(meetingChatReducer, undefined, createInitialMeetingChatState)
   const {
     isOpen,
@@ -166,30 +168,14 @@ export function useInSiteMeetingRoomChat(props: InSiteMeetingRoomChatProps) {
 
     return Promise.all(
       attachments.map(async (attachment) => {
-        const uploadUrlPayload = (await generateUploadUrl({})) as { url?: string }
-        const uploadUrl = uploadUrlPayload?.url
-        if (!uploadUrl) {
-          throw new Error('Unable to create upload URL')
-        }
-
-        const uploadResponse = await fetch(uploadUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': attachment.mimeType || 'application/octet-stream',
-          },
-          body: attachment.file,
+        const storageId = await uploadStorageFile({
+          file: attachment.file,
+          contentType: attachment.mimeType || 'application/octet-stream',
+          generateUploadUrl: () => generateUploadUrl({}),
+          syncMetadata: (args) => syncMetadata(args),
         })
 
-        if (!uploadResponse.ok) {
-          throw new Error(`Failed to upload file (${uploadResponse.status})`)
-        }
-
-        const uploadResult = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
-        if (!uploadResult?.storageId) {
-          throw new Error('Upload did not return storageId')
-        }
-
-        const publicUrl = await convex.query(filesApi.getPublicUrl, { storageId: uploadResult.storageId }) as { url?: string | null }
+        const publicUrl = await convex.query(filesApi.getPublicUrl, { storageId }) as { url?: string | null }
         if (!publicUrl?.url) {
           throw new Error('Unable to resolve uploaded file URL')
         }
@@ -202,7 +188,7 @@ export function useInSiteMeetingRoomChat(props: InSiteMeetingRoomChatProps) {
         } satisfies MeetingChatAttachment
       }),
     )
-  }, [convex, generateUploadUrl, user?.id])
+  }, [convex, generateUploadUrl, syncMetadata, user?.id])
 
   const handleSend = useCallback(async () => {
     if (!canSend) {

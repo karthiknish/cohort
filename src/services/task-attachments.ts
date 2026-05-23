@@ -1,5 +1,6 @@
 import type { TaskAttachment } from '@/types/tasks'
 import type { PendingAttachment } from '@/features/dashboard/collaboration/hooks/types'
+import { uploadStorageFile } from '@/lib/upload-storage-file'
 
 const ALLOWED_TASK_ATTACHMENT_MIME_TYPES = new Set<string>([
   'image/png',
@@ -46,10 +47,11 @@ export function buildPendingTaskAttachments(files: FileList): PendingTaskAttachm
 export async function uploadTaskAttachment(args: {
   userId: string
   file: File
-  generateUploadUrl: () => Promise<{ url: string }>
+  generateUploadUrl: () => Promise<{ url: string; key: string }>
+  syncMetadata: (args: { key: string }) => Promise<unknown>
   getPublicUrl: (args: { storageId: string }) => Promise<{ url: string | null }>
 }): Promise<TaskAttachment> {
-  const { userId, file, generateUploadUrl, getPublicUrl } = args
+  const { userId, file, generateUploadUrl, syncMetadata, getPublicUrl } = args
 
   if (!userId) throw new Error('userId is required')
   if (!file) throw new Error('file is required')
@@ -63,26 +65,14 @@ export async function uploadTaskAttachment(args: {
     throw new Error('Unsupported attachment file type')
   }
 
-  const { url: uploadUrl } = await generateUploadUrl()
-
-  const uploadResponse = await fetch(uploadUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': contentType,
-    },
-    body: file,
+  const storageId = await uploadStorageFile({
+    file,
+    contentType,
+    generateUploadUrl,
+    syncMetadata,
   })
 
-  if (!uploadResponse.ok) {
-    throw new Error(`Failed to upload file (${uploadResponse.status})`)
-  }
-
-  const json = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
-  if (!json?.storageId) {
-    throw new Error('Upload did not return storageId')
-  }
-
-  const publicUrl = await getPublicUrl({ storageId: json.storageId })
+  const publicUrl = await getPublicUrl({ storageId })
 
   if (!publicUrl?.url) {
     throw new Error('Unable to resolve uploaded file URL')

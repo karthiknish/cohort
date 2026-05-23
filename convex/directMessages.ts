@@ -7,6 +7,7 @@ import {
   parsePollMessage,
 } from './lib/collaborationPollMessage'
 import { Errors } from './errors'
+import { resolveStoredObjectUrl } from './lib/fileStorage'
 import {
   type AuthenticatedMutationCtx,
   zWorkspaceMutation,
@@ -82,7 +83,7 @@ async function hydrateAttachments(
       const storageId = attachment.storageId
       if (typeof storageId !== 'string' || storageId.length === 0) return attachment
 
-      const url = await ctx.storage.getUrl(storageId as Id<'_storage'>)
+      const url = await resolveStoredObjectUrl(ctx, storageId)
       return {
         ...attachment,
         url: url ?? attachment.url,

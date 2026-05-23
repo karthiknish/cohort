@@ -1,5 +1,3 @@
-import type { Id } from '/_generated/dataModel'
-
 import {
   buildAgentAttachmentContext,
   type AgentAttachmentContext,
@@ -24,7 +22,7 @@ const TASKS_VISUAL_MIME_TYPES = new Set([
 
 export type PreparedTaskImportDocument =
   | { kind: 'text'; fileName: string; text: string }
-  | { kind: 'vision'; fileName: string; mimeType: string; storageId: Id<'_storage'> }
+  | { kind: 'vision'; fileName: string; mimeType: string; storageId: string }
 
 function getFileExtension(fileName: string): string {
   return fileName.split('.').pop()?.toLowerCase() ?? ''
@@ -84,7 +82,7 @@ export async function prepareTaskImportDocument(
   file: File,
   options: {
     extractPdfOnServer?: (file: File) => Promise<ServerPdfExtractionResult | null>
-    uploadForVision: (file: File) => Promise<Id<'_storage'>>
+    uploadForVision: (file: File) => Promise<string>
   },
 ): Promise<PreparedTaskImportDocument> {
   if (isTasksVisualDocumentFile(file)) {

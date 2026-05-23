@@ -1,6 +1,7 @@
 import { z } from 'zod/v4'
-import type { Doc, Id } from '/_generated/dataModel'
+import type { Doc } from '/_generated/dataModel'
 import { Errors } from '../errors'
+import { resolveStoredObjectUrl } from '../lib/fileStorage'
 import {
   zRateLimitedWorkspaceMutation,
   zWorkspaceMutation,
@@ -49,7 +50,7 @@ export async function hydrateAttachments(
       const storageId = attachment.storageId
       if (typeof storageId !== 'string' || storageId.length === 0) return attachment
 
-      const url = await ctx.storage.getUrl(storageId as Id<'_storage'>)
+      const url = await resolveStoredObjectUrl(ctx, storageId)
       return {
         ...attachment,
         url: url ?? attachment.url,

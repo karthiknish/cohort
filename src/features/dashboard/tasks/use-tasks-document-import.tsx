@@ -94,6 +94,7 @@ export function useTasksDocumentImport({
   const extractPdfTextAction = useAction(agentApi.extractPdfText)
   const extractTasksFromDocument = useAction(tasksDocumentImportApi.extractTasksFromDocument)
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const syncMetadata = useMutation(filesApi.syncMetadata)
   const getPublicUrl = useCallback(
     (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
     [convex],
@@ -147,9 +148,10 @@ export function useTasksDocumentImport({
       return await uploadTaskImportDocument({
         file,
         generateUploadUrl: () => generateUploadUrl({}),
+        syncMetadata: (args) => syncMetadata(args),
       })
     },
-    [generateUploadUrl],
+    [generateUploadUrl, syncMetadata],
   )
 
   const uploadSourceAttachment = useCallback(
@@ -160,13 +162,14 @@ export function useTasksDocumentImport({
           userId,
           file,
           generateUploadUrl: () => generateUploadUrl({}),
+          syncMetadata: (args) => syncMetadata(args),
           getPublicUrl,
         })
       } catch {
         return null
       }
     },
-    [generateUploadUrl, getPublicUrl, userId],
+    [generateUploadUrl, syncMetadata, getPublicUrl, userId],
   )
 
   const createTasksFromProposals = useCallback(

@@ -56,6 +56,7 @@ export function TaskCreationModal({
 
   const createTask = useMutation(tasksApi.createTask)
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const syncMetadata = useMutation(filesApi.syncMetadata)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [pendingAttachments, setPendingAttachments] = useState<PendingTaskAttachment[]>([])
@@ -122,6 +123,7 @@ export function TaskCreationModal({
                   userId: user.id,
                   file: attachment.file,
                   generateUploadUrl: () => generateUploadUrl({}),
+                  syncMetadata: (args) => syncMetadata(args),
                   getPublicUrl: (args) => convex.query(filesApi.getPublicUrl, args),
                 })
               )

@@ -1,36 +1,22 @@
-import type { Id } from '/_generated/dataModel'
+import { uploadStorageFile } from '@/lib/upload-storage-file'
 
 const MAX_TASK_IMPORT_BYTES = 15 * 1024 * 1024
 
 export async function uploadTaskImportDocument(args: {
   file: File
-  generateUploadUrl: () => Promise<{ url: string }>
-}): Promise<Id<'_storage'>> {
-  const { file, generateUploadUrl } = args
+  generateUploadUrl: () => Promise<{ url: string; key: string }>
+  syncMetadata: (args: { key: string }) => Promise<unknown>
+}): Promise<string> {
+  const { file, generateUploadUrl, syncMetadata } = args
 
   if (file.size > MAX_TASK_IMPORT_BYTES) {
     throw new Error('File is too large for import (max 15 MB).')
   }
 
-  const { url: uploadUrl } = await generateUploadUrl()
-  const contentType = file.type || 'application/octet-stream'
-
-  const uploadResponse = await fetch(uploadUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': contentType,
-    },
-    body: file,
+  return uploadStorageFile({
+    file,
+    contentType: file.type || 'application/octet-stream',
+    generateUploadUrl,
+    syncMetadata,
   })
-
-  if (!uploadResponse.ok) {
-    throw new Error(`Failed to upload file (${uploadResponse.status}).`)
-  }
-
-  const json = (await uploadResponse.json().catch(() => null)) as { storageId?: Id<'_storage'> } | null
-  if (!json?.storageId) {
-    throw new Error('Upload did not return a storage id.')
-  }
-
-  return json.storageId
 }

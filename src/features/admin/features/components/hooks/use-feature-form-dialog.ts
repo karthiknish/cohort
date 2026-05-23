@@ -9,6 +9,7 @@ import { api } from '/_generated/api'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useToast } from '@/shared/ui/use-toast'
 import { filesApi } from '@/lib/convex-api'
+import { uploadStorageFile } from '@/lib/upload-storage-file'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { validateFile } from '@/lib/utils'
 import type { FeatureItem, FeaturePriority, FeatureStatus } from '@/types/features'
@@ -50,6 +51,7 @@ export function useFeatureFormDialog({
 
   const generateFeatureAi = useAction(api.adminFeaturesAi.generate)
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const syncMetadata = useMutation(filesApi.syncMetadata)
   const getPublicUrl = useCallback(
     (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
     [convex]
@@ -85,33 +87,21 @@ export function useFeatureFormDialog({
       return URL.createObjectURL(file)
     }
 
-    const { url: uploadUrl } = await generateUploadUrl({})
-
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': file.type || 'application/octet-stream',
-      },
-      body: file,
+    const storageId = await uploadStorageFile({
+      file,
+      contentType: file.type || 'application/octet-stream',
+      generateUploadUrl: () => generateUploadUrl({}),
+      syncMetadata: (args) => syncMetadata(args),
     })
 
-    if (!uploadResponse.ok) {
-      throw new Error(`Failed to upload file (${uploadResponse.status})`)
-    }
-
-    const json = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
-    if (!json?.storageId) {
-      throw new Error('Upload did not return storageId')
-    }
-
-    const publicUrl = await getPublicUrl({ storageId: json.storageId })
+    const publicUrl = await getPublicUrl({ storageId })
 
     if (!publicUrl?.url) {
       throw new Error('Unable to resolve uploaded file URL')
     }
 
     return publicUrl.url
-  }, [generateUploadUrl, getPublicUrl, isPreviewMode])
+  }, [generateUploadUrl, getPublicUrl, isPreviewMode, syncMetadata])
 
   const handleGenerateAI = useCallback((field: 'title' | 'description') => {
     if (field === 'title') {

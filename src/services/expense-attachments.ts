@@ -1,4 +1,5 @@
 import type { ExpenseAttachment } from '@/types/expenses'
+import { uploadStorageFile } from '@/lib/upload-storage-file'
 
 const ALLOWED_RECEIPT_MIME_TYPES = new Set<string>([
   'image/png',
@@ -13,10 +14,11 @@ const MAX_RECEIPT_BYTES = 15 * 1024 * 1024
 export async function uploadExpenseReceipt(args: {
   userId: string
   file: File
-  generateUploadUrl: () => Promise<{ url: string }>
+  generateUploadUrl: () => Promise<{ url: string; key: string }>
+  syncMetadata: (args: { key: string }) => Promise<unknown>
   getPublicUrl: (args: { storageId: string }) => Promise<{ url: string | null }>
 }): Promise<ExpenseAttachment> {
-  const { userId, file, generateUploadUrl, getPublicUrl } = args
+  const { userId, file, generateUploadUrl, syncMetadata, getPublicUrl } = args
 
   if (!userId) {
     throw new Error('userId is required')
@@ -35,26 +37,14 @@ export async function uploadExpenseReceipt(args: {
     throw new Error('Unsupported receipt file type')
   }
 
-  const { url: uploadUrl } = await generateUploadUrl()
-
-  const uploadResponse = await fetch(uploadUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': contentType,
-    },
-    body: file,
+  const storageId = await uploadStorageFile({
+    file,
+    contentType,
+    generateUploadUrl,
+    syncMetadata,
   })
 
-  if (!uploadResponse.ok) {
-    throw new Error(`Failed to upload file (${uploadResponse.status})`)
-  }
-
-  const json = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
-  if (!json?.storageId) {
-    throw new Error('Upload did not return storageId')
-  }
-
-  const publicUrl = await getPublicUrl({ storageId: json.storageId })
+  const publicUrl = await getPublicUrl({ storageId })
 
   if (!publicUrl?.url) {
     throw new Error('Unable to resolve uploaded file URL')

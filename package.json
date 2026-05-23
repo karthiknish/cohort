@@ -30,10 +30,12 @@
     "ci:build": "next build",
     "test": "vitest run",
     "test:a11y": "playwright test e2e/agent-mode.a11y.spec.ts",
-    "test:a11y:fixture": "PLAYWRIGHT_SKIP_WEB_SERVER=1 playwright test e2e/agent-mode.a11y.spec.ts --grep fixture"
+    "test:a11y:fixture": "PLAYWRIGHT_SKIP_WEB_SERVER=1 playwright test e2e/agent-mode.a11y.spec.ts --grep fixture",
+    "r2:sync-svgl": "node scripts/sync-public-svgl-to-r2.mjs"
   },
   "dependencies": {
     "@convex-dev/better-auth": "0.11.3",
+    "@convex-dev/r2": "^0.10.1",
     "@convex-dev/rate-limiter": "^0.3.2",
     "@getbrevo/brevo": "^3.0.1",
     "@google-cloud/local-auth": "^3.0.1",

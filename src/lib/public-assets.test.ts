@@ -39,4 +39,11 @@ describe('public-assets', () => {
   it('falls back to localhost without env on the server', () => {
     expect(getPublicAssetUrl('/svgl/pdf.svg')).toBe('http://localhost:3000/svgl/pdf.svg')
   })
+
+  it('serves svgl assets from R2 when configured', () => {
+    vi.stubEnv('NEXT_PUBLIC_R2_PUBLIC_BASE_URL', 'https://assets.cohorts.test')
+
+    expect(getPublicAssetUrl('/svgl/google.svg')).toBe('https://assets.cohorts.test/svgl/google.svg')
+    expect(getPublicAssetUrl('/icons/app.png')).toBe('http://localhost:3000/icons/app.png')
+  })
 })

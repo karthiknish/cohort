@@ -225,7 +225,8 @@ export const collaborationApi = {
   updateSharedTo: looseApi.collaborationMessages.updateSharedTo,
   setTyping: looseApi.collaborationTyping.setTyping,
   listTyping: looseApi.collaborationTyping.listForChannel,
-  generateUploadUrl: looseApi.files.generateUploadUrl,
+  generateUploadUrl: looseApi.r2.generateUploadUrl,
+  syncMetadata: looseApi.r2.syncMetadata,
 }
 
 export const collaborationChannelsApi = {
@@ -298,7 +299,8 @@ export const authActionsApi = {
 }
 
 export const filesApi = {
-  generateUploadUrl: looseApi.files.generateUploadUrl,
+  generateUploadUrl: looseApi.r2.generateUploadUrl,
+  syncMetadata: looseApi.r2.syncMetadata,
   getPublicUrl: looseApi.files.getPublicUrl,
   getDownloadUrl: looseApi.files.getDownloadUrl,
 }

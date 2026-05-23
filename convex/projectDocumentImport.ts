@@ -3,7 +3,7 @@
 import { action, type ActionCtx } from './_generated/server'
 import { api } from './_generated/api'
 import { v } from 'convex/values'
-import type { Id } from './_generated/dataModel'
+import { loadStoredObjectBlob } from './lib/fileStorage'
 
 import { geminiAI, type GeminiRequestPart } from '../src/services/gemini'
 import { enforceGeminiActionRateLimit } from './geminiRateLimit'
@@ -29,7 +29,7 @@ const MAX_VISUAL_DOCUMENT_BYTES = 15 * 1024 * 1024
 const visualDocumentValidator = v.object({
   fileName: v.string(),
   mimeType: v.string(),
-  storageId: v.id('_storage'),
+  storageId: v.string(),
 })
 
 export type ProposedImportProject = {
@@ -145,12 +145,12 @@ ${fileList}${supplementalBlock}`
 }
 
 async function loadVisualGeminiParts(
-  ctx: { storage: { get: (id: Id<'_storage'>) => Promise<Blob | null> } },
-  documents: Array<{ fileName: string; mimeType: string; storageId: Id<'_storage'> }>,
+  ctx: Parameters<typeof loadStoredObjectBlob>[0],
+  documents: Array<{ fileName: string; mimeType: string; storageId: string }>,
 ): Promise<GeminiRequestPart[]> {
   return Promise.all(
     documents.map(async (document) => {
-      const blob = await ctx.storage.get(document.storageId)
+      const blob = await loadStoredObjectBlob(ctx, document.storageId)
       if (!blob) {
         throw Errors.validation.invalidInput(`Could not read uploaded file "${document.fileName}".`)
       }

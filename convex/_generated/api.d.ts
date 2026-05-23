@@ -119,6 +119,7 @@ import type * as http from "../http.js";
 import type * as httpActions from "../httpActions.js";
 import type * as lib_collaborationPollMessage from "../lib/collaborationPollMessage.js";
 import type * as lib_facebookAdsAccess from "../lib/facebookAdsAccess.js";
+import type * as lib_fileStorage from "../lib/fileStorage.js";
 import type * as lib_webhookAuth from "../lib/webhookAuth.js";
 import type * as meetingIntegrations from "../meetingIntegrations.js";
 import type * as meetings from "../meetings.js";
@@ -137,6 +138,7 @@ import type * as proposalGeneration from "../proposalGeneration.js";
 import type * as proposalTemplates from "../proposalTemplates.js";
 import type * as proposalVersions from "../proposalVersions.js";
 import type * as proposals from "../proposals.js";
+import type * as r2 from "../r2.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as rateLimitApi from "../rateLimitApi.js";
 import type * as schedulerAlertPreferences from "../schedulerAlertPreferences.js";
@@ -284,6 +286,7 @@ declare const fullApi: ApiFromModules<{
   httpActions: typeof httpActions;
   "lib/collaborationPollMessage": typeof lib_collaborationPollMessage;
   "lib/facebookAdsAccess": typeof lib_facebookAdsAccess;
+  "lib/fileStorage": typeof lib_fileStorage;
   "lib/webhookAuth": typeof lib_webhookAuth;
   meetingIntegrations: typeof meetingIntegrations;
   meetings: typeof meetings;
@@ -302,6 +305,7 @@ declare const fullApi: ApiFromModules<{
   proposalTemplates: typeof proposalTemplates;
   proposalVersions: typeof proposalVersions;
   proposals: typeof proposals;
+  r2: typeof r2;
   rateLimit: typeof rateLimit;
   rateLimitApi: typeof rateLimitApi;
   schedulerAlertPreferences: typeof schedulerAlertPreferences;
@@ -1464,6 +1468,130 @@ export declare const components: {
     };
     time: {
       getServerTime: FunctionReference<"mutation", "internal", {}, number>;
+    };
+  };
+  r2: {
+    lib: {
+      deleteMetadata: FunctionReference<
+        "mutation",
+        "internal",
+        { bucket: string; key: string },
+        null
+      >;
+      deleteObject: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          accessKeyId: string;
+          bucket: string;
+          endpoint: string;
+          key: string;
+          secretAccessKey: string;
+        },
+        null
+      >;
+      deleteR2Object: FunctionReference<
+        "action",
+        "internal",
+        {
+          accessKeyId: string;
+          bucket: string;
+          endpoint: string;
+          key: string;
+          secretAccessKey: string;
+        },
+        null
+      >;
+      getMetadata: FunctionReference<
+        "query",
+        "internal",
+        {
+          accessKeyId: string;
+          bucket: string;
+          endpoint: string;
+          key: string;
+          secretAccessKey: string;
+        },
+        {
+          bucket: string;
+          bucketLink: string;
+          contentType?: string;
+          key: string;
+          lastModified: string;
+          link: string;
+          sha256?: string;
+          size?: number;
+          url: string;
+        } | null
+      >;
+      listMetadata: FunctionReference<
+        "query",
+        "internal",
+        {
+          accessKeyId: string;
+          bucket: string;
+          cursor?: string;
+          endpoint: string;
+          limit?: number;
+          secretAccessKey: string;
+        },
+        {
+          continueCursor: string;
+          isDone: boolean;
+          page: Array<{
+            bucket: string;
+            bucketLink: string;
+            contentType?: string;
+            key: string;
+            lastModified: string;
+            link: string;
+            sha256?: string;
+            size?: number;
+            url: string;
+          }>;
+          pageStatus?: null | "SplitRecommended" | "SplitRequired";
+          splitCursor?: null | string;
+        }
+      >;
+      store: FunctionReference<
+        "action",
+        "internal",
+        {
+          accessKeyId: string;
+          bucket: string;
+          endpoint: string;
+          secretAccessKey: string;
+          url: string;
+        },
+        any
+      >;
+      syncMetadata: FunctionReference<
+        "action",
+        "internal",
+        {
+          accessKeyId: string;
+          bucket: string;
+          endpoint: string;
+          key: string;
+          onComplete?: string;
+          secretAccessKey: string;
+        },
+        null
+      >;
+      upsertMetadata: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          bucket: string;
+          contentType?: string;
+          key: string;
+          lastModified: string;
+          link: string;
+          sha256?: string;
+          size?: number;
+        },
+        { isNew: boolean }
+      >;
     };
   };
 };

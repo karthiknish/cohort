@@ -1,21 +1,11 @@
 # SVGL brand assets
 
-Optimized SVG logos from [SVGL](https://svgl.app), fetched via the [SVGL API](https://svgl.app/docs/api).
+Logos from [svgl.app](https://svgl.app), served from Cloudflare R2 in production.
 
-Each file includes `xmlns="http://www.w3.org/2000/svg"` so browsers can render them in `<img>` tags.
+## Deploy to R2
 
-| File | SVGL title |
-|------|------------|
-| `google.svg` | Google (used for Google Ads) |
-| `meta.svg` | Meta |
-| `linkedin.svg` | LinkedIn |
-| `facebook-icon.svg` | Facebook |
-| `instagram-icon.svg` | Instagram |
-| `tiktok-light.svg` / `tiktok-dark.svg` | TikTok (theme variants) |
-| `twitter.svg` | Twitter |
-| `x-light.svg` / `x-dark.svg` | X (theme variants) |
-| `youtube.svg` | YouTube |
-| `microsoft-excel.svg` | Microsoft Excel |
-| `pdf.svg` | PDF |
+1. Configure Convex R2 credentials (`R2_BUCKET`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`).
+2. Run `bun run r2:sync-svgl` (uploads `public/svgl/*` to the `svgl/` prefix).
+3. Set `NEXT_PUBLIC_R2_PUBLIC_BASE_URL` to your public R2 domain (custom domain or `r2.dev` URL).
 
-Rendered in the app through `src/shared/components/svgl-brand-logo.tsx`.
+Local dev falls back to `/public/svgl` when `NEXT_PUBLIC_R2_PUBLIC_BASE_URL` is unset.

@@ -1,7 +1,7 @@
-import type { Id } from './_generated/dataModel'
 import { z } from 'zod/v4'
 
 import { Errors } from './errors'
+import { deleteStoredObject, resolveStoredObjectUrl } from './lib/fileStorage'
 import {
   zWorkspaceMutation,
   zWorkspaceQuery,
@@ -31,7 +31,7 @@ function normalizeChannelKey(value: string) {
 }
 
 async function resolveAvatarUrl(ctx: AuthenticatedMutationCtx, storageId: string) {
-  const url = await ctx.storage.getUrl(storageId as Id<'_storage'>)
+  const url = await resolveStoredObjectUrl(ctx, storageId)
   if (!url) {
     throw Errors.validation.invalidInput('Uploaded image is not available yet. Try again.')
   }
@@ -50,7 +50,7 @@ export const listForWorkspace = zWorkspaceQuery({
     const results = await Promise.all(
       rows.map(async (row) => ({
         channelKey: row.channelKey,
-        avatarUrl: await ctx.storage.getUrl(row.avatarStorageId as Id<'_storage'>),
+        avatarUrl: await resolveStoredObjectUrl(ctx, row.avatarStorageId),
         updatedAtMs: row.updatedAtMs,
       })),
     )
@@ -78,7 +78,7 @@ export const setAvatar = zWorkspaceMutation({
 
     if (!args.storageId) {
       if (existing) {
-        await ctx.storage.delete(existing.avatarStorageId as Id<'_storage'>)
+        await deleteStoredObject(ctx, existing.avatarStorageId)
         await ctx.db.delete(existing._id)
       }
 
@@ -94,7 +94,7 @@ export const setAvatar = zWorkspaceMutation({
 
     if (existing) {
       if (existing.avatarStorageId !== storageId) {
-        await ctx.storage.delete(existing.avatarStorageId as Id<'_storage'>)
+        await deleteStoredObject(ctx, existing.avatarStorageId)
       }
       await ctx.db.patch(existing._id, {
         avatarStorageId: storageId,

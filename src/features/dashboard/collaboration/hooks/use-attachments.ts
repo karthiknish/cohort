@@ -3,14 +3,13 @@
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState } from 'react'
-import { useToast } from '@/shared/ui/use-toast'
 import { useMutation } from 'convex/react'
 import { collaborationApi } from '@/lib/convex-api'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
 import type { CollaborationAttachment } from '@/types/collaboration'
 import type { PendingAttachment } from './types'
 import { MAX_ATTACHMENTS } from './constants'
 import { validateAttachments } from './utils'
+import { uploadStorageFile } from '@/lib/upload-storage-file'
 
 interface UseAttachmentsOptions {
   userId: string | null
@@ -18,9 +17,8 @@ interface UseAttachmentsOptions {
 }
 
 export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
-  const { toast } = useToast()
-
   const generateUploadUrl = useMutation(collaborationApi.generateUploadUrl)
+  const syncMetadata = useMutation(collaborationApi.syncMetadata)
 
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
   const [uploading, setUploading] = useState(false)
@@ -58,23 +56,12 @@ export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
     try {
       const results = await Promise.all(
         attachments.map(async (attachment) => {
-          const uploadUrlPayload = (await generateUploadUrl({})) as { url?: string }
-          const uploadUrl = uploadUrlPayload?.url
-          if (!uploadUrl) throw new Error('Unable to create upload URL')
-
-          const uploadResponse = await fetch(uploadUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': attachment.mimeType || 'application/octet-stream',
-            },
-            body: attachment.file,
+          const storageId = await uploadStorageFile({
+            file: attachment.file,
+            contentType: attachment.mimeType || 'application/octet-stream',
+            generateUploadUrl: () => generateUploadUrl({}),
+            syncMetadata: (args) => syncMetadata(args),
           })
-
-          const uploadResult = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
-          const storageId = uploadResult?.storageId
-          if (!uploadResponse.ok || !storageId) {
-            throw new Error('Upload failed')
-          }
 
           return {
             name: attachment.name,
@@ -98,7 +85,7 @@ export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
     } finally {
       setUploading(false)
     }
-  }, [generateUploadUrl,  userId, workspaceId])
+  }, [generateUploadUrl, syncMetadata, userId, workspaceId])
 
   return {
     pendingAttachments,

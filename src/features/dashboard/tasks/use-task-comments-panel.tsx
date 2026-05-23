@@ -176,9 +176,14 @@ export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
   const updateComment = useMutation(generatedApi.taskComments.updateContent)
   const deleteComment = useMutation(generatedApi.taskComments.softDelete)
   const generateUploadUrlMutation = useMutation(filesApi.generateUploadUrl)
+  const syncMetadataMutation = useMutation(filesApi.syncMetadata)
   const generateUploadUrl = useCallback(
     () => generateUploadUrlMutation({}),
     [generateUploadUrlMutation]
+  )
+  const syncMetadata = useCallback(
+    (args: { key: string }) => syncMetadataMutation(args),
+    [syncMetadataMutation]
   )
   const getPublicUrl = useCallback(
     (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
@@ -360,6 +365,7 @@ export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
                 taskId,
                 file: attachment.file,
                 generateUploadUrl,
+                syncMetadata,
                 getPublicUrl,
               })
             )

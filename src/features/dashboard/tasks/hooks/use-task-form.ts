@@ -81,6 +81,7 @@ export function useTaskForm({
   const [createError, setCreateError] = useState<string | null>(null)
 
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const syncMetadata = useMutation(filesApi.syncMetadata)
   const getPublicUrl = useCallback(
     (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
     [convex]
@@ -215,6 +216,7 @@ export function useTaskForm({
               userId,
               file: attachment.file,
               generateUploadUrl: () => generateUploadUrl({}),
+              syncMetadata: (args) => syncMetadata(args),
               getPublicUrl,
             })
           )

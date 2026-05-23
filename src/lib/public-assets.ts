@@ -1,9 +1,16 @@
+const SVGL_PREFIX = '/svgl/'
+
 function isExternalOAuthDocumentHost(hostname: string): boolean {
   return (
     hostname === 'accounts.google.com' ||
     hostname.endsWith('.facebook.com') ||
     hostname.endsWith('.linkedin.com')
   )
+}
+
+function getR2PublicBaseUrl(): string | null {
+  const base = process.env.NEXT_PUBLIC_R2_PUBLIC_BASE_URL?.replace(/\/$/, '')
+  return base && base.length > 0 ? base : null
 }
 
 /**
@@ -31,5 +38,11 @@ export function getAppOrigin(): string {
 /** Absolute URL for a file in `/public` (path must start with `/`). */
 export function getPublicAssetUrl(path: string): string {
   const normalized = path.startsWith('/') ? path : `/${path}`
+  const r2Base = getR2PublicBaseUrl()
+
+  if (r2Base && normalized.startsWith(SVGL_PREFIX)) {
+    return `${r2Base}${normalized}`
+  }
+
   return `${getAppOrigin()}${normalized}`
 }

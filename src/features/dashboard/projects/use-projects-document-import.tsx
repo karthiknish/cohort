@@ -89,6 +89,7 @@ export function useProjectsDocumentImport({
   const extractProjectsFromDocument = useAction(projectsDocumentImportApi.extractProjectsFromDocument)
   const createProject = useMutation(projectsApi.create)
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const syncMetadata = useMutation(filesApi.syncMetadata)
 
   const [phase, setPhase] = useState<ProjectDocumentImportPhase>('idle')
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
@@ -134,9 +135,10 @@ export function useProjectsDocumentImport({
       return await uploadTaskImportDocument({
         file,
         generateUploadUrl: () => generateUploadUrl({}),
+        syncMetadata: (args) => syncMetadata(args),
       })
     },
-    [generateUploadUrl],
+    [generateUploadUrl, syncMetadata],
   )
 
   const createProjectsFromProposals = useCallback(

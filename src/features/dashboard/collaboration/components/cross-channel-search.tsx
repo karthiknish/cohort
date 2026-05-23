@@ -175,15 +175,6 @@ function useCrossChannelSearchController({
   }
 }
 
-function SearchTriggerButton({ trigger }: { trigger?: React.ReactNode }) {
-  return trigger || (
-    <Button variant="outline" size="sm" className="gap-2">
-      <Search className="size-4" />
-      Search
-    </Button>
-  )
-}
-
 function CrossChannelSearchBar({
   query,
   isSearching,
@@ -403,11 +394,19 @@ export function CrossChannelSearch({
     void handleSearch()
   }, [handleSearch])
 
+  const dialogTrigger =
+    trigger ?? (
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2">
+          <Search className="size-4" />
+          Search
+        </Button>
+      </DialogTrigger>
+    )
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <SearchTriggerButton trigger={trigger} />
-      </DialogTrigger>
+      {dialogTrigger}
       <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Search Messages</DialogTitle>
