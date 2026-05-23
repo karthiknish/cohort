@@ -233,6 +233,7 @@ export default function AdsPage() {
         activeCurrency={activeCurrency}
         suppressMetricsErrors={suppressMetricsErrors}
         handleLoadMoreMetrics={handleLoadMoreMetrics}
+        providerCurrencyMap={providerCurrencyMap}
       />
     ),
     [
@@ -243,6 +244,7 @@ export default function AdsPage() {
       activeCurrency,
       suppressMetricsErrors,
       handleLoadMoreMetrics,
+      providerCurrencyMap,
     ],
   )
 

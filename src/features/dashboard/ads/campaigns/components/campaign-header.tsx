@@ -67,8 +67,9 @@ function getCampaignLifetimeRange(startTime?: string, stopTime?: string): DateRa
     return null
   }
 
-  const end = hasStop && stop <= now ? stop : now
-  const rangeStart = hasStart && start ? start : new Date(new Date(end).setDate(end.getDate() - 30))
+  const end: Date = hasStop && stop !== null && stop <= now ? stop : now
+  const rangeStart: Date =
+    hasStart && start !== null ? start : new Date(new Date(end).setDate(end.getDate() - 30))
 
   return {
     start: rangeStart,

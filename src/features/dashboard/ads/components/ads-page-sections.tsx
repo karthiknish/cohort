@@ -395,6 +395,7 @@ export function AdsPageAdvancedAnalyticsSection({
   activeCurrency,
   suppressMetricsErrors,
   handleLoadMoreMetrics,
+  providerCurrencyMap,
 }: Pick<
   AdsPageSectionsProps,
   | 'metrics'
@@ -404,7 +405,7 @@ export function AdsPageAdvancedAnalyticsSection({
   | 'activeCurrency'
   | 'suppressMetricsErrors'
   | 'handleLoadMoreMetrics'
->) {
+> & { providerCurrencyMap: Record<string, string> }) {
   const {
     processedMetrics,
     hasMetricData,
