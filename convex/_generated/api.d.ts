@@ -123,6 +123,8 @@ import type * as onboardingStates from "../onboardingStates.js";
 import type * as presentationDeck from "../presentationDeck.js";
 import type * as privacyMasks from "../privacyMasks.js";
 import type * as problemReports from "../problemReports.js";
+import type * as projectDocumentImport from "../projectDocumentImport.js";
+import type * as projectDocumentImportParsing from "../projectDocumentImportParsing.js";
 import type * as projectMilestones from "../projectMilestones.js";
 import type * as projects from "../projects.js";
 import type * as proposalAnalytics from "../proposalAnalytics.js";
@@ -281,6 +283,8 @@ declare const fullApi: ApiFromModules<{
   presentationDeck: typeof presentationDeck;
   privacyMasks: typeof privacyMasks;
   problemReports: typeof problemReports;
+  projectDocumentImport: typeof projectDocumentImport;
+  projectDocumentImportParsing: typeof projectDocumentImportParsing;
   projectMilestones: typeof projectMilestones;
   projects: typeof projects;
   proposalAnalytics: typeof proposalAnalytics;

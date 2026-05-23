@@ -1,8 +1,12 @@
 'use client'
 
+import { useCallback, useId, useMemo, useReducer } from 'react'
+import { GripVertical } from 'lucide-react'
+
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
 import { Badge } from '@/shared/ui/badge'
+import { LiveRegion } from '@/shared/ui/live-region'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { cn } from '@/lib/utils'
 
@@ -17,58 +21,398 @@ export interface ProjectKanbanProps {
   onDelete: (project: ProjectRecord) => void
 }
 
-export function ProjectKanban({ projects, pendingStatusUpdates, onUpdateStatus, onEdit, onDelete }: ProjectKanbanProps) {
-  const columns = PROJECT_STATUSES.map((status) => {
-    const items = projects.filter((project) => project.status === status)
-    return { status, items }
-  })
+type DraggedProject = {
+  id: string
+  sourceStatus: ProjectStatus
+}
+
+type ProjectKanbanState = {
+  draggedProject: DraggedProject | null
+  dragOverStatus: ProjectStatus | null
+  boardAnnouncement: string
+}
+
+type ProjectKanbanAction =
+  | { type: 'startDrag'; draggedProject: DraggedProject }
+  | { type: 'setDragOverStatus'; status: ProjectStatus | null }
+  | { type: 'resetDragState' }
+  | { type: 'setBoardAnnouncement'; message: string }
+
+const INITIAL_PROJECT_KANBAN_STATE: ProjectKanbanState = {
+  draggedProject: null,
+  dragOverStatus: null,
+  boardAnnouncement: '',
+}
+
+export function projectKanbanReducer(
+  state: ProjectKanbanState,
+  action: ProjectKanbanAction,
+): ProjectKanbanState {
+  switch (action.type) {
+    case 'startDrag':
+      return { ...state, draggedProject: action.draggedProject }
+    case 'setDragOverStatus':
+      return { ...state, dragOverStatus: action.status }
+    case 'resetDragState':
+      return { ...state, draggedProject: null, dragOverStatus: null }
+    case 'setBoardAnnouncement':
+      return { ...state, boardAnnouncement: action.message }
+    default:
+      return state
+  }
+}
+
+const KANBAN_STATUSES = [...PROJECT_STATUSES]
+
+export function resolveProjectKanbanMoveTarget(
+  currentStatus: ProjectStatus,
+  direction: 'previous' | 'next',
+): ProjectStatus | null {
+  const currentIndex = KANBAN_STATUSES.indexOf(currentStatus)
+  if (currentIndex < 0) return null
+  return direction === 'previous'
+    ? (KANBAN_STATUSES[currentIndex - 1] ?? null)
+    : (KANBAN_STATUSES[currentIndex + 1] ?? null)
+}
+
+export function canDragProjectKanbanCard(
+  project: ProjectRecord,
+  pendingStatusUpdates: Set<string>,
+): boolean {
+  return !pendingStatusUpdates.has(project.id) && project.deletedAt == null
+}
+
+export function ProjectKanban({
+  projects,
+  pendingStatusUpdates,
+  onUpdateStatus,
+  onEdit,
+  onDelete,
+}: ProjectKanbanProps) {
+  const [{ draggedProject, dragOverStatus, boardAnnouncement }, dispatch] = useReducer(
+    projectKanbanReducer,
+    INITIAL_PROJECT_KANBAN_STATE,
+  )
+  const keyboardInstructionsId = useId()
+
+  const columns = useMemo(
+    () =>
+      KANBAN_STATUSES.map((status) => ({
+        status,
+        label: formatStatusLabel(status),
+        items: projects.filter((project) => project.status === status),
+      })),
+    [projects],
+  )
+
+  const handleDragStart = useCallback(
+    (event: React.DragEvent, project: ProjectRecord) => {
+      if (!canDragProjectKanbanCard(project, pendingStatusUpdates)) return
+
+      dispatch({
+        type: 'startDrag',
+        draggedProject: { id: project.id, sourceStatus: project.status },
+      })
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/plain', project.id)
+    },
+    [pendingStatusUpdates],
+  )
+
+  const handleDragOver = useCallback((event: React.DragEvent, status: ProjectStatus) => {
+    if (!draggedProject) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    dispatch({ type: 'setDragOverStatus', status })
+  }, [draggedProject])
+
+  const handleDragLeave = useCallback(() => {
+    dispatch({ type: 'setDragOverStatus', status: null })
+  }, [])
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent, targetStatus: ProjectStatus) => {
+      event.preventDefault()
+      dispatch({ type: 'setDragOverStatus', status: null })
+
+      if (!draggedProject) return
+
+      const project = projects.find((entry) => entry.id === draggedProject.id)
+      if (
+        project &&
+        draggedProject.sourceStatus !== targetStatus &&
+        canDragProjectKanbanCard(project, pendingStatusUpdates)
+      ) {
+        dispatch({
+          type: 'setBoardAnnouncement',
+          message: `${project.name} moved to ${formatStatusLabel(targetStatus)}.`,
+        })
+        void onUpdateStatus(project, targetStatus)
+      }
+
+      dispatch({ type: 'resetDragState' })
+    },
+    [draggedProject, onUpdateStatus, pendingStatusUpdates, projects],
+  )
+
+  const handleKeyboardMoveProject = useCallback(
+    (project: ProjectRecord, direction: 'previous' | 'next') => {
+      if (!canDragProjectKanbanCard(project, pendingStatusUpdates)) return
+
+      const targetStatus = resolveProjectKanbanMoveTarget(project.status, direction)
+      if (!targetStatus) {
+        dispatch({
+          type: 'setBoardAnnouncement',
+          message: `${project.name} is already in the ${formatStatusLabel(project.status)} column.`,
+        })
+        return
+      }
+
+      dispatch({
+        type: 'setBoardAnnouncement',
+        message: `${project.name} moved to ${formatStatusLabel(targetStatus)}.`,
+      })
+      void onUpdateStatus(project, targetStatus)
+    },
+    [onUpdateStatus, pendingStatusUpdates],
+  )
+
+  const handleDragEnd = useCallback(() => {
+    dispatch({ type: 'resetDragState' })
+  }, [])
 
   return (
-    <div className="py-2">
+    <div className="space-y-3 py-2">
+      <LiveRegion message={boardAnnouncement} />
+      <p id={keyboardInstructionsId} className="sr-only">
+        Use Alt plus Left Arrow or Alt plus Right Arrow on a project card grip to move it between status
+        columns. You can also drag projects by the grip handle. Status updates save when you drop a card in
+        another column.
+      </p>
+      <p className="px-1 text-xs text-muted-foreground">
+        Drag projects between columns to update status. Use the grip handle so card links and menus stay
+        clickable.
+      </p>
       <ScrollArea className="w-full">
         <div className="flex min-h-[28rem] w-full gap-4 pb-4 pr-2">
-          {columns.map(({ status, items }) => (
-            <div
-              key={status}
-              className="flex min-w-[17.5rem] max-w-[22rem] flex-1 flex-col rounded-xl border border-border/60 bg-muted/15 shadow-sm"
-            >
-              <div className="flex items-center justify-between gap-2 border-b border-border/50 px-3.5 py-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="size-2.5 rounded-full shadow-sm" style={STATUS_DOT_STYLES[status]} />
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {formatStatusLabel(status)}
-                  </span>
-                </div>
-                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-semibold tabular-nums">
-                  {items.length}
-                </Badge>
-              </div>
-
-              <div className="flex-1 space-y-3 p-3">
-                {items.length === 0 ? (
-                  <div className="flex h-24 flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/60 p-4 text-center">
-                    <p className="text-xs font-medium text-muted-foreground">Empty column</p>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground/70">Change status from the card menu</p>
-                  </div>
-                ) : (
-                  items.map((project) => (
-                    <div key={project.id} className={cn('motion-chromatic', 'active:scale-[0.99]')}>
-                      <ProjectCard
-                        project={project}
-                        onDelete={onDelete}
-                        onEdit={onEdit}
-                        onUpdateStatus={onUpdateStatus}
-                        isPendingUpdate={pendingStatusUpdates.has(project.id)}
-                        compact
-                      />
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+          {columns.map((column) => (
+            <ProjectKanbanColumn
+              key={column.status}
+              column={column}
+              dragOverStatus={dragOverStatus}
+              draggedProject={draggedProject}
+              handleDragEnd={handleDragEnd}
+              handleDragLeave={handleDragLeave}
+              handleDragOver={handleDragOver}
+              handleDrop={handleDrop}
+              handleDragStart={handleDragStart}
+              keyboardInstructionsId={keyboardInstructionsId}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onKeyboardMoveProject={handleKeyboardMoveProject}
+              onUpdateStatus={onUpdateStatus}
+              pendingStatusUpdates={pendingStatusUpdates}
+            />
           ))}
         </div>
       </ScrollArea>
     </div>
+  )
+}
+
+function ProjectKanbanColumn({
+  column,
+  dragOverStatus,
+  draggedProject,
+  handleDragEnd,
+  handleDragLeave,
+  handleDragOver,
+  handleDrop,
+  handleDragStart,
+  keyboardInstructionsId,
+  onDelete,
+  onEdit,
+  onKeyboardMoveProject,
+  onUpdateStatus,
+  pendingStatusUpdates,
+}: {
+  column: { status: ProjectStatus; label: string; items: ProjectRecord[] }
+  dragOverStatus: ProjectStatus | null
+  draggedProject: DraggedProject | null
+  handleDragEnd: () => void
+  handleDragLeave: () => void
+  handleDragOver: (event: React.DragEvent, status: ProjectStatus) => void
+  handleDrop: (event: React.DragEvent, status: ProjectStatus) => void
+  handleDragStart: (event: React.DragEvent, project: ProjectRecord) => void
+  keyboardInstructionsId: string
+  onDelete: (project: ProjectRecord) => void
+  onEdit: (project: ProjectRecord) => void
+  onKeyboardMoveProject: (project: ProjectRecord, direction: 'previous' | 'next') => void
+  onUpdateStatus: (project: ProjectRecord, status: ProjectStatus) => void
+  pendingStatusUpdates: Set<string>
+}) {
+  const isDragTarget = dragOverStatus === column.status
+  const isDraggingFrom = draggedProject?.sourceStatus === column.status
+
+  const handleColumnDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => handleDragOver(event, column.status),
+    [column.status, handleDragOver],
+  )
+
+  const handleColumnDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => handleDrop(event, column.status),
+    [column.status, handleDrop],
+  )
+
+  return (
+    <section
+      aria-label={`${column.label} projects`}
+      className={cn(
+        'flex min-w-[17.5rem] max-w-[22rem] flex-1 flex-col rounded-xl border border-border/60 bg-muted/15 shadow-sm transition-colors',
+        isDragTarget && 'border-primary/30 bg-primary/5 ring-1 ring-primary/15',
+        isDraggingFrom && !isDragTarget && 'opacity-60',
+      )}
+      onDragOver={handleColumnDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleColumnDrop}
+    >
+      <div className="flex items-center justify-between gap-2 border-b border-border/50 px-3.5 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="size-2.5 rounded-full shadow-sm" style={STATUS_DOT_STYLES[column.status]} />
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {column.label}
+          </span>
+        </div>
+        <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-semibold tabular-nums">
+          {column.items.length}
+        </Badge>
+      </div>
+
+      <ScrollArea className="min-h-0 flex-1">
+        <ul className="list-none space-y-3 p-3">
+          {column.items.length === 0 ? (
+            <li
+              className={cn(
+                'flex min-h-24 list-none flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/60 p-4 text-center',
+                isDragTarget && 'border-primary/35 bg-primary/5',
+              )}
+            >
+              {draggedProject ? (
+                <>
+                  <GripVertical className="mb-1.5 size-5 text-muted-foreground" aria-hidden />
+                  <p className="text-xs font-medium text-muted-foreground">Drop to move here</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-medium text-muted-foreground">Empty column</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground/70">Drag a project here or use the card menu</p>
+                </>
+              )}
+            </li>
+          ) : (
+            column.items.map((project) => (
+              <KanbanProjectItem
+                key={project.id}
+                draggedProject={draggedProject}
+                handleDragEnd={handleDragEnd}
+                handleDragStart={handleDragStart}
+                keyboardInstructionsId={keyboardInstructionsId}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                onKeyboardMoveProject={onKeyboardMoveProject}
+                onUpdateStatus={onUpdateStatus}
+                pending={pendingStatusUpdates.has(project.id)}
+                project={project}
+                reorderEnabled={canDragProjectKanbanCard(project, pendingStatusUpdates)}
+              />
+            ))
+          )}
+        </ul>
+      </ScrollArea>
+    </section>
+  )
+}
+
+function KanbanProjectItem({
+  draggedProject,
+  handleDragEnd,
+  handleDragStart,
+  keyboardInstructionsId,
+  onDelete,
+  onEdit,
+  onKeyboardMoveProject,
+  onUpdateStatus,
+  pending,
+  project,
+  reorderEnabled,
+}: {
+  draggedProject: DraggedProject | null
+  handleDragEnd: () => void
+  handleDragStart: (event: React.DragEvent, project: ProjectRecord) => void
+  keyboardInstructionsId: string
+  onDelete: (project: ProjectRecord) => void
+  onEdit: (project: ProjectRecord) => void
+  onKeyboardMoveProject: (project: ProjectRecord, direction: 'previous' | 'next') => void
+  onUpdateStatus: (project: ProjectRecord, status: ProjectStatus) => void
+  pending: boolean
+  project: ProjectRecord
+  reorderEnabled: boolean
+}) {
+  const isDragging = draggedProject?.id === project.id
+
+  const onGripDragStart = useCallback(
+    (event: React.DragEvent<HTMLButtonElement>) => {
+      handleDragStart(event, project)
+    },
+    [handleDragStart, project],
+  )
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (!event.altKey) return
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        onKeyboardMoveProject(project, 'previous')
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        onKeyboardMoveProject(project, 'next')
+      }
+    },
+    [onKeyboardMoveProject, project],
+  )
+
+  return (
+    <li className={cn('list-none', isDragging && 'opacity-40')}>
+      <div className="flex items-start gap-1.5">
+        {reorderEnabled ? (
+          <button
+            type="button"
+            className="mt-1 flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md border border-border/60 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted/60 active:cursor-grabbing"
+            aria-label={`Move ${project.name} to another status column`}
+            aria-describedby={keyboardInstructionsId}
+            aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
+            aria-grabbed={isDragging}
+            draggable
+            onDragStart={onGripDragStart}
+            onDragEnd={handleDragEnd}
+            onKeyDown={handleKeyDown}
+          >
+            <GripVertical className="size-4" aria-hidden />
+          </button>
+        ) : null}
+        <div className={cn('min-w-0 flex-1 motion-chromatic', reorderEnabled && 'active:scale-[0.99]')}>
+          <ProjectCard
+            project={project}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            onUpdateStatus={onUpdateStatus}
+            isPendingUpdate={pending}
+            compact
+            kanban
+          />
+        </div>
+      </div>
+    </li>
   )
 }

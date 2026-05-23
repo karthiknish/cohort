@@ -20,6 +20,7 @@ import {
     CustomInsightsLoadingState,
     type KpiTileData,
 } from './custom-insights-card-sections'
+import { resolveAdsDisplayCurrency } from './insights-chart-utils'
 
 import type { DerivedMetrics } from '../hooks/use-derived-metrics'
 import type { MetricRecord } from './types'
@@ -32,6 +33,7 @@ interface CustomInsightsCardProps {
   derivedMetrics: DerivedMetrics | null
   processedMetrics?: MetricRecord[]
   currency?: string
+  providerCurrencyMap?: Record<string, string>
   loading?: boolean
 }
 
@@ -45,7 +47,23 @@ function isAnomaly(value: number | null, benchmark: number | undefined | null, t
 // MAIN COMPONENT
 // =============================================================================
 
-export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency, loading }: CustomInsightsCardProps) {
+export function CustomInsightsCard({
+  derivedMetrics,
+  processedMetrics,
+  currency,
+  providerCurrencyMap,
+  loading,
+}: CustomInsightsCardProps) {
+    const displayCurrency = useMemo(
+      () =>
+        resolveAdsDisplayCurrency(
+          currency,
+          processedMetrics ?? [],
+          providerCurrencyMap ?? {},
+        ),
+      [currency, processedMetrics, providerCurrencyMap],
+    )
+
     const computedBenchmarks = useMemo(() => {
         if (!derivedMetrics) return null
 
@@ -163,7 +181,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency,
     return (
         <Card className="overflow-hidden border-muted/60 shadow-sm">
             <CustomInsightsCardHeader anomalyCount={anomalyCount} />
-            {loading ? <CustomInsightsLoadingState /> : !derivedMetrics || !kpiData ? <CustomInsightsEmptyState /> : <CustomInsightsGrid currency={currency} items={kpiData} />}
+            {loading ? <CustomInsightsLoadingState /> : !derivedMetrics || !kpiData ? <CustomInsightsEmptyState /> : <CustomInsightsGrid currency={displayCurrency} items={kpiData} />}
         </Card>
     )
 }

@@ -1,7 +1,9 @@
+import { aggregateMetricFinancials } from '@/domain/ads/aggregate-financials'
 import { normalizeAdsProviderId } from '@/domain/ads/provider'
 import { normalizeCurrencyCode } from '@/constants/currencies'
 import { normalizeProviderId } from '@/lib/themes'
 
+import { metricRowsForAggregation } from './cross-channel-overview-card.utils'
 import type { MetricRecord, ProviderSummary } from './types'
 
 export const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
@@ -35,7 +37,74 @@ export function resolveInsightsChartCurrency(
     return normalizeCurrencyCode(currencies[0])
   }
 
-  return normalizeCurrencyCode(fallbackCurrency ?? currencies[0])
+  if (currencies.length > 1) {
+    return normalizeCurrencyCode(fallbackCurrency)
+  }
+
+  return normalizeCurrencyCode(fallbackCurrency)
+}
+
+/** Per-provider currency from synced metric rows (same rules as cross-channel overview). */
+export function buildProviderCurrencyMapFromMetrics(
+  metrics: MetricRecord[],
+): Record<string, string> {
+  const rowsByProvider = new Map<string, MetricRecord[]>()
+
+  for (const metric of metrics) {
+    const key = normalizeAdsProviderId(metric.providerId) ?? metric.providerId
+    const rows = rowsByProvider.get(key) ?? []
+    rows.push(metric)
+    rowsByProvider.set(key, rows)
+  }
+
+  const map: Record<string, string> = {}
+  for (const [providerId, rows] of rowsByProvider) {
+    const { financialTotals } = aggregateMetricFinancials(metricRowsForAggregation(rows))
+    if (
+      financialTotals.comparability === 'single_currency' &&
+      financialTotals.primaryCurrency
+    ) {
+      map[providerId] = financialTotals.primaryCurrency
+    }
+  }
+
+  return map
+}
+
+/** Global display currency from processed metric rows when V2 summary is incomplete. */
+export function resolveCurrencyFromProcessedMetrics(
+  metrics: MetricRecord[],
+): string | null {
+  const { financialTotals } = aggregateMetricFinancials(metricRowsForAggregation(metrics))
+  return financialTotals.comparability === 'single_currency'
+    ? financialTotals.primaryCurrency
+    : null
+}
+
+/**
+ * Resolve a display currency for ads KPI surfaces (custom insights, formula builder, etc.).
+ * Returns undefined when currency cannot be determined — never invents USD.
+ */
+export function resolveAdsDisplayCurrency(
+  fallbackCurrency: string | null | undefined,
+  metrics: MetricRecord[],
+  providerCurrencyMap: Record<string, string> = {},
+): string | undefined {
+  if (typeof fallbackCurrency === 'string' && fallbackCurrency.trim().length > 0) {
+    return normalizeCurrencyCode(fallbackCurrency)
+  }
+
+  const fromMetrics = resolveCurrencyFromProcessedMetrics(metrics)
+  if (fromMetrics) {
+    return fromMetrics
+  }
+
+  const currencies = [...new Set(Object.values(providerCurrencyMap).filter(Boolean))]
+  if (currencies.length === 1) {
+    return normalizeCurrencyCode(currencies[0])
+  }
+
+  return undefined
 }
 
 /** Map UI selection to chart-data keys (handles meta/facebook aliases and "all"). */

@@ -20,9 +20,11 @@ import { METRICS_PAGE_SIZE } from '../components/utils'
 import {
   buildProviderSummariesFromServer,
   dedupeAndFilterMetrics,
+  formatMetricQueryDate,
   hasAdsMetricActivity,
   isAdsProviderId,
   mapRealtimeMetricRow,
+  metricsForTableDisplay,
   metricsSummaryFromV2Insights,
   type RealtimeMetricRow,
 } from './use-ads-metrics.helpers'
@@ -52,6 +54,8 @@ export interface UseAdsMetricsReturn {
   /** V2 currency-aware insights summary. Use this for financial display. */
   adsInsightsSummary: AdsInsightsSummary | null
   hasMetricData: boolean
+  /** Rows for the Latest synced rows table (daily rows or summary fallback). */
+  tableMetrics: MetricRecord[]
   /** Full filtered metric rows for charts (not the paged table slice). */
   chartMetrics: MetricRecord[]
   
@@ -116,8 +120,8 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
       : {
           workspaceId,
           clientId: selectedClientId ?? null,
-          startDate: dateRange.start.toISOString().split('T')[0],
-          endDate: dateRange.end.toISOString().split('T')[0],
+          startDate: formatMetricQueryDate(dateRange.start),
+          endDate: formatMetricQueryDate(dateRange.end),
           limit: 1000,
           aggregate: true,
         }
@@ -130,8 +134,8 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
       : {
           workspaceId,
           clientId: selectedClientId ?? null,
-          startDate: dateRange.start.toISOString().split('T')[0],
-          endDate: dateRange.end.toISOString().split('T')[0],
+          startDate: formatMetricQueryDate(dateRange.start),
+          endDate: formatMetricQueryDate(dateRange.end),
           limit: 1000,
           aggregate: true,
         }
@@ -154,6 +158,22 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   const processedMetrics = useMemo(
     () => dedupeAndFilterMetrics(metricsSource, dateRange),
     [dateRange, metricsSource],
+  )
+
+  const effectiveServerSummary = useMemo(
+    () =>
+      (!isPreviewMode && metricsRealtime?.summary ? metricsRealtime.summary : null) ??
+      metricsSummaryFromV2Insights(
+        !isPreviewMode && metricsRealtimeV2?.summary
+          ? (metricsRealtimeV2.summary as AdsInsightsSummary)
+          : null,
+      ),
+    [isPreviewMode, metricsRealtime?.summary, metricsRealtimeV2?.summary],
+  )
+
+  const tableMetrics = useMemo(
+    () => metricsForTableDisplay(processedMetrics, effectiveServerSummary),
+    [effectiveServerSummary, processedMetrics],
   )
 
   const isConvexLoading =
@@ -184,12 +204,12 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
 
     const summary = !isPreviewMode && metricsRealtime?.summary ? metricsRealtime.summary : null
     const v2Summary = !isPreviewMode && metricsRealtimeV2?.summary ? metricsRealtimeV2.summary : null
-    const page = processedMetrics.slice(0, visibleCount)
+    const page = tableMetrics.slice(0, visibleCount)
 
     return {
       metricsLoading: false,
       metrics: page,
-      nextCursor: processedMetrics.length > visibleCount ? 'more' : null,
+      nextCursor: tableMetrics.length > visibleCount ? 'more' : null,
       serverSideSummary: summary,
       adsInsightsSummary: v2Summary as AdsInsightsSummary | null,
     }
@@ -199,7 +219,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     isPreviewMode,
     metricsRealtime,
     metricsRealtimeV2,
-    processedMetrics,
+    tableMetrics,
     visibleCount,
     workspaceId,
   ])
@@ -219,20 +239,17 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     return persistedMetricError
   }, [canQueryConvex, isPreviewMode, persistedMetricError, workspaceId])
 
-  const effectiveServerSummary = useMemo(
-    () => serverSideSummary ?? metricsSummaryFromV2Insights(adsInsightsSummary),
-    [adsInsightsSummary, serverSideSummary],
-  )
-
   const hasMetricData = useMemo(
     () => hasAdsMetricActivity(processedMetrics, effectiveServerSummary, adsInsightsSummary),
     [adsInsightsSummary, effectiveServerSummary, processedMetrics],
   )
+
+  const resolvedServerSummary = serverSideSummary ?? effectiveServerSummary
   const initialMetricsLoading = metricsLoading && !hasMetricData
 
   const providerSummaries = useMemo(() => {
-    if (effectiveServerSummary?.providers && metricsSource.length <= METRICS_PAGE_SIZE) {
-      return buildProviderSummariesFromServer(effectiveServerSummary.providers)
+    if (resolvedServerSummary?.providers && metricsSource.length <= METRICS_PAGE_SIZE) {
+      return buildProviderSummariesFromServer(resolvedServerSummary.providers)
     }
 
     const summary: Record<string, ProviderSummary> = {}
@@ -252,7 +269,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
       summary[metric.providerId] = providerSummary
     })
     return summary
-  }, [effectiveServerSummary, metricsSource.length, processedMetrics])
+  }, [metricsSource.length, processedMetrics, resolvedServerSummary])
 
   // Handlers
   const handleManualRefresh = useCallback(() => {
@@ -300,7 +317,8 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     processedMetrics,
     providerSummaries,
     serverSideSummary,
-    effectiveServerSummary,
+    effectiveServerSummary: resolvedServerSummary,
+    tableMetrics,
     adsInsightsSummary,
     hasMetricData,
     chartMetrics: processedMetrics,

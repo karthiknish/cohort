@@ -20,6 +20,36 @@ type CustomChannel = {
   }>
 }
 
+/** undefined = auto-pick default; null = explicitly no channel (DM view). */
+export function resolveSelectedChannelId(
+  channels: Array<{ id: string }>,
+  pickedChannelId: string | null | undefined,
+  visibleClientId: string | null = null,
+): string | null {
+  if (channels.length === 0) {
+    return null
+  }
+
+  if (pickedChannelId === null) {
+    return null
+  }
+
+  if (pickedChannelId && channels.some((channel) => channel.id === pickedChannelId)) {
+    return pickedChannelId
+  }
+
+  if (pickedChannelId !== undefined) {
+    return null
+  }
+
+  const preferredClientChannelId = visibleClientId ? `client-${visibleClientId}` : null
+  return (
+    (preferredClientChannelId && channels.some((channel) => channel.id === preferredClientChannelId)
+      ? preferredClientChannelId
+      : null) ?? channels[0]?.id ?? null
+  )
+}
+
 interface UseChannelsDataOptions {
   clients: ClientRecord[]
   projects: ProjectRecord[]
@@ -116,25 +146,14 @@ export function useChannelsData({
     return [teamChannel, ...customTeamChannels, ...clientChannels, ...projectChannels]
   }, [aggregatedTeamMembers, avatarForChannel, clients, customChannels, projects, visibleClients])
 
-  const [pickedChannelId, setPickedChannelId] = useState<string | null>(null)
+  // undefined = auto-pick default channel; null = explicitly no channel (e.g. viewing a DM)
+  const [pickedChannelId, setPickedChannelId] = useState<string | null | undefined>(undefined)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const selectedChannelId = useMemo(() => {
-    if (channels.length === 0) {
-      return null
-    }
-
-    if (pickedChannelId && channels.some((channel) => channel.id === pickedChannelId)) {
-      return pickedChannelId
-    }
-
-    const preferredClientChannelId = visibleClientId ? `client-${visibleClientId}` : null
-    return (
-      (preferredClientChannelId && channels.some((channel) => channel.id === preferredClientChannelId)
-        ? preferredClientChannelId
-        : null) ?? channels[0]?.id ?? null
-    )
-  }, [channels, pickedChannelId, visibleClientId])
+  const selectedChannelId = useMemo(
+    () => resolveSelectedChannelId(channels, pickedChannelId, visibleClientId),
+    [channels, pickedChannelId, visibleClientId],
+  )
 
   const selectedChannel = useMemo(
     () => channels.find((channel) => channel.id === selectedChannelId) ?? null,

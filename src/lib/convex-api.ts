@@ -68,6 +68,10 @@ export const tasksDocumentImportApi = {
   extractTasksFromDocument: looseApi.taskDocumentImport.extractTasksFromDocument,
 }
 
+export const projectsDocumentImportApi = {
+  extractProjectsFromDocument: looseApi.projectDocumentImport.extractProjectsFromDocument,
+}
+
 export const projectsApi = {
   list: looseApi.projects.list,
   getByLegacyId: looseApi.projects.getByLegacyId,

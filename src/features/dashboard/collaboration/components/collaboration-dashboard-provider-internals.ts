@@ -269,12 +269,12 @@ export function useCollaborationDashboardActions({
   const handleSelectDM = useCallback(
     (conversation: DirectConversation | null) => {
       clearMessageFocus()
-      selectConversation(conversation)
-      if (conversation && selectedChannel) {
+      if (conversation) {
         selectChannel(null)
       }
+      selectConversation(conversation)
     },
-    [clearMessageFocus, selectChannel, selectConversation, selectedChannel],
+    [clearMessageFocus, selectChannel, selectConversation],
   )
 
   const handleSelectChannel = useCallback(

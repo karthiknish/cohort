@@ -5,10 +5,12 @@ import { endOfDay, startOfDay } from 'date-fns'
 import {
   buildProviderSummariesFromServer,
   dedupeAndFilterMetrics,
+  formatMetricQueryDate,
   hasAdsMetricActivity,
   isAdsProviderId,
   isMetricDateInRange,
   mapRealtimeMetricRow,
+  metricsForTableDisplay,
   parseMetricDate,
 } from './use-ads-metrics.helpers'
 import type { MetricRecord } from '../components/types'
@@ -88,5 +90,25 @@ describe('useAdsMetrics helpers', () => {
     expect(
       hasAdsMetricActivity([], { totals: { spend: 282, impressions: 19417, clicks: 145, conversions: 0, revenue: 0 }, providers: {}, count: 1 }, null),
     ).toBe(true)
+  })
+
+  it('formats query dates in local calendar time', () => {
+    const local = new Date(2026, 2, 11, 23, 30, 0)
+    expect(formatMetricQueryDate(local)).toBe('2026-03-11')
+  })
+
+  it('builds table rows from server summary when daily metrics are empty', () => {
+    const rows = metricsForTableDisplay([], {
+      totals: { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 },
+      providers: {
+        facebook: { spend: 120, impressions: 5000, clicks: 80, conversions: 2, revenue: 0 },
+      },
+      count: 1,
+    })
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.providerId).toBe('facebook')
+    expect(rows[0]?.date).toBe('summary')
+    expect(rows[0]?.spend).toBe(120)
   })
 })

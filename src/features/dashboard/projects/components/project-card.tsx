@@ -29,6 +29,8 @@ export interface ProjectCardProps {
   onUpdateStatus: (project: ProjectRecord, status: ProjectStatus) => void
   isPendingUpdate?: boolean
   compact?: boolean
+  /** Board view: status tooltip mentions drag-and-drop. */
+  kanban?: boolean
 }
 
 function ProjectCardComponent({
@@ -38,6 +40,7 @@ function ProjectCardComponent({
   onUpdateStatus,
   isPendingUpdate,
   compact = false,
+  kanban = false,
 }: ProjectCardProps) {
   const tasksHref = buildProjectTasksRoute({
     projectId: project.id,
@@ -126,7 +129,11 @@ function ProjectCardComponent({
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  {isPendingUpdate ? 'Updating status…' : 'Use the menu to change status'}
+                  {isPendingUpdate
+                    ? 'Updating status…'
+                    : kanban
+                      ? 'Drag the grip to move columns, or use the menu'
+                      : 'Use the menu to change status'}
                 </TooltipContent>
               </Tooltip>
               <ProjectActionsMenu

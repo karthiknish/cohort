@@ -408,6 +408,7 @@ export function AdsPageAdvancedAnalyticsSection({
 > & { providerCurrencyMap: Record<string, string> }) {
   const {
     processedMetrics,
+    tableMetrics,
     hasMetricData,
     initialMetricsLoading,
     metricsLoading,
@@ -440,6 +441,7 @@ export function AdsPageAdvancedAnalyticsSection({
             derivedMetrics={hasMetricData ? derivedMetrics : null}
             processedMetrics={processedMetrics}
             currency={activeCurrency}
+            providerCurrencyMap={providerCurrencyMap}
             loading={metricsLoading || initialMetricsLoading}
           />
         </AdsSuspenseReveal>
@@ -458,9 +460,9 @@ export function AdsPageAdvancedAnalyticsSection({
       <FadeIn>
         <MetricsTableCard
           visibleMetrics={metrics.metrics}
-          processedMetrics={processedMetrics}
+          processedMetrics={tableMetrics}
           currency={activeCurrency}
-          hasMetrics={processedMetrics.length > 0}
+          hasMetrics={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}
           metricError={suppressMetricsErrors ? null : metricError}

@@ -1,4 +1,4 @@
-import { endOfDay, isWithinInterval, startOfDay } from 'date-fns'
+import { endOfDay, format, isWithinInterval, startOfDay } from 'date-fns'
 
 import { normalizeAdsProviderId, isCanonicalAdsProvider } from '@/domain/ads/provider'
 
@@ -104,6 +104,74 @@ export function parseMetricDate(dateStr: string | null | undefined): Date | null
   }
 
   return startOfDay(parsed)
+}
+
+/** Calendar YYYY-MM-DD in local time — avoids UTC shift from `toISOString().split('T')[0]`. */
+export function formatMetricQueryDate(date: Date): string {
+  return format(date, 'yyyy-MM-dd')
+}
+
+export function summaryTotalsHaveActivity(totals: ProviderSummary): boolean {
+  return (
+    totals.spend > 0 ||
+    totals.impressions > 0 ||
+    totals.clicks > 0 ||
+    totals.conversions > 0
+  )
+}
+
+/**
+ * Prefer daily metric rows for the table; fall back to server summary provider totals
+ * when the page has aggregate insights but no row slice (common after sync).
+ */
+export function metricsForTableDisplay(
+  dailyMetrics: MetricRecord[],
+  summary: MetricsSummary | null | undefined,
+): MetricRecord[] {
+  if (dailyMetrics.length > 0) {
+    return dailyMetrics
+  }
+
+  const providers = summary?.providers
+  if (providers && Object.keys(providers).length > 0) {
+    return Object.entries(providers).flatMap(([providerId, totals], index) => {
+      if (!summaryTotalsHaveActivity(totals)) {
+        return []
+      }
+
+      const normalizedProviderId = normalizeAdsProviderId(providerId) ?? providerId
+      return [
+        {
+          id: `summary-${normalizedProviderId}-${index}`,
+          providerId: normalizedProviderId,
+          date: 'summary',
+          spend: totals.spend,
+          impressions: totals.impressions,
+          clicks: totals.clicks,
+          conversions: totals.conversions,
+          revenue: totals.revenue,
+        },
+      ]
+    })
+  }
+
+  const totals = summary?.totals
+  if (totals && summaryTotalsHaveActivity(totals)) {
+    return [
+      {
+        id: 'summary-total',
+        providerId: 'all',
+        date: 'summary',
+        spend: totals.spend,
+        impressions: totals.impressions,
+        clicks: totals.clicks,
+        conversions: totals.conversions,
+        revenue: totals.revenue,
+      },
+    ]
+  }
+
+  return []
 }
 
 export function isMetricDateInRange(dateStr: string, range: DateRange): boolean {

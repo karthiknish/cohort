@@ -6,6 +6,9 @@ import Link from 'next/link'
 
 import { CreateProjectDialog } from '@/features/dashboard/projects/create-project-dialog'
 import { EditProjectDialog } from '@/features/dashboard/projects/edit-project-dialog'
+import { ProjectsDocumentImportOverlay } from '@/features/dashboard/projects/projects-document-import-overlay'
+import { ProjectsDocumentImportReviewSheet } from '@/features/dashboard/projects/projects-document-import-review-sheet'
+import { useProjectsDocumentImport } from '@/features/dashboard/projects/use-projects-document-import'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +26,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shar
 import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
 import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses, getIconContainerClasses } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/shared/contexts/auth-context'
+import { useClientContext } from '@/shared/contexts/client-context'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { GanttView } from './gantt-view'
 import { ProjectActiveFilters } from './project-active-filters'
 import { ProjectFilters } from './project-filters'
@@ -36,14 +42,55 @@ import { RETRY_CONFIG, type StatusFilter } from './utils'
 import { useProjectsPageContext } from './projects-page-provider'
 
 export function ProjectsPageShell() {
-  const { initialLoading } = useProjectsPageContext()
+  const { initialLoading, handleProjectCreated } = useProjectsPageContext()
+  const { user } = useAuth()
+  const { clients, selectedClient, selectedClientId } = useClientContext()
+  const { isPreviewMode } = usePreview()
+
+  const documentImport = useProjectsDocumentImport({
+    workspaceId: user?.agencyId ?? null,
+    ownerId: user?.id,
+    clients,
+    preferredClientId: selectedClientId,
+    preferredClientName: selectedClient?.name ?? null,
+    disabledReason: isPreviewMode
+      ? 'Document import is unavailable in preview mode.'
+      : !user?.agencyId || !user?.id
+        ? 'Sign in to import projects from documents.'
+        : null,
+    isPreviewMode,
+    onProjectCreated: handleProjectCreated,
+  })
+
   return (
     <TooltipProvider>
       <BoneyardSkeletonBoundary
         name="dashboard-projects-page"
         loading={initialLoading}
       >
-        <div className={cn(DASHBOARD_THEME.layout.container, PROJECTS_THEME.page)}>
+        <div
+          className={cn(DASHBOARD_THEME.layout.container, PROJECTS_THEME.page)}
+          {...documentImport.importDragHandlers}
+        >
+          <ProjectsDocumentImportOverlay
+            phase={documentImport.phase}
+            statusMessage={documentImport.statusMessage}
+            errorMessage={documentImport.errorMessage}
+            visible={documentImport.overlayVisible}
+            onCancel={documentImport.handleCancel}
+          />
+
+          <ProjectsDocumentImportReviewSheet
+            open={documentImport.reviewOpen}
+            documentSummary={documentImport.documentSummary}
+            proposedProjects={documentImport.proposedProjects}
+            clients={clients}
+            preferredClientName={selectedClient?.name ?? null}
+            onUpdateProject={documentImport.updateProposedProject}
+            onConfirm={documentImport.handleConfirmReview}
+            onDiscard={documentImport.handleDismissReview}
+          />
+
           <ProjectsHeaderSection />
           <ProjectsDialogs />
           <ProjectsSummarySection />
@@ -86,6 +133,9 @@ function ProjectsHeaderSection() {
                   · {projects.length} project{projects.length === 1 ? '' : 's'}
                 </span>
               ) : null}
+              <span className="block text-xs text-muted-foreground">
+                Drop a PDF, Word file, or image anywhere on this page to import projects with AI.
+              </span>
             </p>
           </div>
         </div>
@@ -112,6 +162,10 @@ function ProjectsHeaderSection() {
           <Link href="/dashboard/tasks" className="font-medium text-primary underline-offset-4 hover:underline">
             Open tasks
           </Link>
+          <span className="text-muted-foreground/40" aria-hidden>
+            ·
+          </span>
+          <span>Drop a PDF or image anywhere to import projects with AI</span>
         </p>
       </div>
 

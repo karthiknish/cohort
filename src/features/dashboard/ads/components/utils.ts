@@ -175,6 +175,10 @@ export function describeTimeframe(days: number): string {
 
 
 export function formatDisplayDate(value: string): string {
+  if (value === 'summary') {
+    return 'Period total'
+  }
+
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) {
     return value

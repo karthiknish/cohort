@@ -5,6 +5,10 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { extractErrorCode, logError } from '@/lib/convex-errors'
 import { normalizeAdsProviderId } from '@/domain/ads/provider'
+import {
+  buildProviderCurrencyMapFromMetrics,
+  resolveCurrencyFromProcessedMetrics,
+} from './components/insights-chart-utils'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
 import { FadeIn } from '@/shared/ui/animate-in'
@@ -54,23 +58,33 @@ export default function AdsPage() {
 
   const { displayCurrency, providerCurrencyMap } = useMemo(() => {
     const financialTotals = metrics.adsInsightsSummary?.financialTotals
-    const primaryCurrency =
+    const summaryCurrency =
       financialTotals?.comparability === 'single_currency'
         ? (financialTotals.primaryCurrency ?? null)
         : null
 
-    const map: Record<string, string> = {}
+    const summaryMap: Record<string, string> = {}
     if (metrics.adsInsightsSummary?.providers) {
       for (const p of metrics.adsInsightsSummary.providers) {
         const providerId = normalizeAdsProviderId(p.providerId) ?? p.providerId
-        if (p.financialTotals.primaryCurrency) {
-          map[providerId] = p.financialTotals.primaryCurrency
+        const providerFinancial = p.financialTotals
+        if (
+          providerFinancial.comparability === 'single_currency' &&
+          providerFinancial.primaryCurrency
+        ) {
+          summaryMap[providerId] = providerFinancial.primaryCurrency
         }
       }
     }
 
-    return { displayCurrency: primaryCurrency, providerCurrencyMap: map }
-  }, [metrics.adsInsightsSummary])
+    const metricsMap = buildProviderCurrencyMapFromMetrics(metrics.processedMetrics)
+    const metricsCurrency = resolveCurrencyFromProcessedMetrics(metrics.processedMetrics)
+
+    return {
+      displayCurrency: summaryCurrency ?? metricsCurrency,
+      providerCurrencyMap: { ...metricsMap, ...summaryMap },
+    }
+  }, [metrics.adsInsightsSummary, metrics.processedMetrics])
 
   const hasAnyAdIntegration =
     !isPreviewMode &&
