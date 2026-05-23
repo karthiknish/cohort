@@ -245,6 +245,22 @@ export function buildCollaborationChannelShareUrl(channel: CollaborationShareCha
   return url.toString()
 }
 
+/**
+ * Builds a collaboration URL that opens a direct message conversation when shared.
+ */
+export function buildCollaborationDmShareUrl(conversationLegacyId: string): string {
+  if (typeof window === 'undefined') return ''
+
+  const url = new URL(window.location.href)
+  url.searchParams.set('conversationId', conversationLegacyId)
+  url.searchParams.delete('channelId')
+  url.searchParams.delete('channelType')
+  url.searchParams.delete('messageId')
+  url.searchParams.delete('threadId')
+
+  return url.toString()
+}
+
 export { formatConversationSnippet, CHAT_CONVERSATION_ROW_CLASS, CHAT_LIST_PREVIEW_CLASS, CHAT_MARKDOWN_CLASS, CHAT_MESSAGE_BODY_CLASS } from './chat-text'
 
 export function formatDateSeparator(date: Date): string {

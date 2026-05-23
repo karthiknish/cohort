@@ -1,21 +1,26 @@
 'use client'
 
-import type { CollaborationAttachment } from '@/types/collaboration'
+import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 import type { ClientTeamMember } from '@/types/clients'
 
 import type { Channel } from '../types'
 
 export type ChannelInfoHeaderConfig = {
   channel: Channel
+  channelMessages: CollaborationMessage[]
   channelParticipants: ClientTeamMember[]
   sharedFiles: CollaborationAttachment[]
   workspaceId: string
+  currentUserId: string | null
   isAdmin: boolean
   canManageMembers?: boolean
   onManageMembers?: () => void
+  onPinnedMessageClick?: (messageId: string) => void
 }
 
 export interface MessagePaneHeaderInfo {
+  /** Stable id for list keys and scroll reset (channel id or DM legacy id). */
+  conversationKey?: string
   name: string
   type: 'channel' | 'dm'
   role?: string | null

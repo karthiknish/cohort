@@ -31,9 +31,14 @@ type CollaborationDashboardContextValue = {
   isManageMembersDialogOpen: boolean
   isNewDMDialogOpen: boolean
   requestedMessageId: string | null
+  requestedConversationId: string | null
   requestedProjectId: string | null
   requestedProjectName: string | null
   requestedThreadId: string | null
+  unresolvedChannelUrl: boolean
+  unresolvedConversationUrl: boolean
+  dismissUnresolvedChannelUrl: () => void
+  dismissUnresolvedConversationUrl: () => void
   selectedCustomChannel: ReturnType<typeof useCollaborationData>['selectedChannel']
   workspaceId: string | null
   workspaceMembers: WorkspaceMember[]
@@ -50,7 +55,8 @@ type CollaborationDashboardContextValue = {
     memberIds: string[]
     visibility: 'public' | 'private'
   }) => Promise<void>
-  handleOpenChannelMessage: (messageId: string) => void
+  handleOpenChannelMessage: (messageId: string, options?: { threadId?: string | null }) => void
+  handleOpenDmMessage: (messageId: string) => void
   handleSelectChannel: (channelId: string | null) => void
   handleSelectDM: (conversation: DirectConversation | null) => void
   handleStartNewDM: (targetUser: { id: string; name: string; role?: string | null }) => Promise<void>
@@ -116,8 +122,13 @@ export function CollaborationDashboardProvider({ children }: { children: ReactNo
 
   const urlState = useCollaborationDashboardUrlState({
     channels: collab.channels,
+    dmConversations: dm.conversations,
     selectedChannelId: collabSelectedChannelId,
+    selectedConversationLegacyId: dm.selectedConversation?.legacyId ?? null,
+    isChannelsReady: !collab.isBootstrapping,
+    isDmReady: !dm.isLoadingConversations,
     selectChannel: selectCollabChannel,
+    selectConversation: dm.selectConversation,
   })
 
   useEffect(() => {
@@ -130,7 +141,11 @@ export function CollaborationDashboardProvider({ children }: { children: ReactNo
   }, [clearThreadReplies, selectedChannelId])
 
   const actions = useCollaborationDashboardActions({
+    clearCollaborationSelectionFromUrl: urlState.clearCollaborationSelectionFromUrl,
     clearMessageFocus: urlState.clearMessageFocus,
+    clearPendingAttachments: collab.clearPendingAttachments,
+    syncChannelToUrl: urlState.syncChannelToUrl,
+    syncDmToUrl: urlState.syncDmToUrl,
     closeManageMembersDialog: () => dialogs.setIsManageMembersDialogOpen(false),
     closeNewDMDialog: () => dialogs.setIsNewDMDialogOpen(false),
     createChannel,
@@ -156,9 +171,14 @@ export function CollaborationDashboardProvider({ children }: { children: ReactNo
       isManageMembersDialogOpen: dialogs.isManageMembersDialogOpen,
       isNewDMDialogOpen: dialogs.isNewDMDialogOpen,
       requestedMessageId: urlState.requestedMessageId,
+      requestedConversationId: urlState.requestedConversationId,
       requestedProjectId: urlState.requestedProjectId,
       requestedProjectName: urlState.requestedProjectName,
       requestedThreadId: urlState.requestedThreadId,
+      unresolvedChannelUrl: urlState.unresolvedChannelUrl,
+      unresolvedConversationUrl: urlState.unresolvedConversationUrl,
+      dismissUnresolvedChannelUrl: urlState.dismissUnresolvedChannelUrl,
+      dismissUnresolvedConversationUrl: urlState.dismissUnresolvedConversationUrl,
       selectedCustomChannel,
       workspaceId,
       workspaceMembers,
@@ -167,6 +187,7 @@ export function CollaborationDashboardProvider({ children }: { children: ReactNo
       handleCreateChannel: actions.handleCreateChannel,
       handleDeleteChannel: actions.handleDeleteChannel,
       handleOpenChannelMessage: urlState.handleOpenChannelMessage,
+      handleOpenDmMessage: urlState.handleOpenDmMessage,
       handleSaveChannelMembers: actions.handleSaveChannelMembers,
       handleSelectChannel: actions.handleSelectChannel,
       handleSelectDM: actions.handleSelectDM,
@@ -198,10 +219,16 @@ export function CollaborationDashboardProvider({ children }: { children: ReactNo
       urlState.clearMessageFocus,
       urlState.clearProjectFilter,
       urlState.handleOpenChannelMessage,
+      urlState.handleOpenDmMessage,
+      urlState.dismissUnresolvedChannelUrl,
+      urlState.dismissUnresolvedConversationUrl,
+      urlState.requestedConversationId,
       urlState.requestedMessageId,
       urlState.requestedProjectId,
       urlState.requestedProjectName,
       urlState.requestedThreadId,
+      urlState.unresolvedChannelUrl,
+      urlState.unresolvedConversationUrl,
       workspaceId,
       workspaceMembers,
     ],

@@ -122,6 +122,15 @@ const baseProps = {
     onStartNewDM: () => {},
     messagesError: null,
     onRetryMessages: () => {},
+    typingParticipants: [],
+    notifyDmTyping: () => {},
+    handleComposerFocus: () => {},
+    handleComposerBlur: () => {},
+    onCreateTask: () => {},
+    currentUserRole: 'admin',
+    workspaceId: 'workspace-1',
+    deepLinkMessageId: null,
+    onClearDeepLink: () => {},
   },
 }
 

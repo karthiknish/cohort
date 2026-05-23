@@ -87,12 +87,16 @@ describe('channel info dialog sections', () => {
     const markup = renderToStaticMarkup(
       <ChannelInfoTabs
         channel={channel}
+        channelMessages={[]}
         channelParticipants={participants}
+        currentUserId="user-1"
         sharedFiles={sharedFiles}
+        workspaceId="workspace-1"
       />,
     )
 
     expect(markup).toContain('Members')
+    expect(markup).toContain('Pinned')
     expect(markup).toContain('Files')
     expect(markup).toContain('About')
     expect(markup).toContain('(2)')

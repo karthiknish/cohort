@@ -22,17 +22,20 @@ import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
+import { directMessageToCollaborationMessage } from '../lib/direct-message-collaboration'
 import type { PendingAttachment, ReactionPendingState, SendMessageOptions, ThreadCursorsState, ThreadErrorsState, ThreadLoadingState, ThreadMessagesState } from '../hooks/types'
 import type { Channel } from '../types'
 import {
   buildCollaborationChannelShareUrl,
+  buildCollaborationDmShareUrl,
   CHANNEL_TYPE_COLORS,
   CHAT_CONVERSATION_ROW_CLASS,
   CHAT_LIST_PREVIEW_CLASS,
   formatConversationSnippet,
 } from '../utils'
 import { collaborationToUnifiedMessage } from './message-list-utils'
-import { MessagesErrorState } from './message-pane-parts'
+import { EmptyMessagesState, MessagesErrorState, NoSearchResultsState } from './message-pane-parts'
+import type { UnifiedMessage } from './message-list-types'
 import { UnifiedMessagePane } from './unified-message-pane'
 
 export type SourceFilter = 'all' | 'direct_message' | 'channel'
@@ -120,24 +123,44 @@ export function ConversationListPane({
 
   useEffect(() => {
     const onGlobalKeyDown = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') {
-        return
-      }
-
       const target = event.target as HTMLElement | null
       const tag = target?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) {
+      const inEditableField =
+        tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        if (inEditableField) {
+          return
+        }
+
+        event.preventDefault()
+        searchInputRef.current?.focus()
+        searchInputRef.current?.select()
         return
       }
 
-      event.preventDefault()
-      searchInputRef.current?.focus()
-      searchInputRef.current?.select()
+      if (inEditableField || filteredItems.length === 0) {
+        return
+      }
+
+      const selectedIndex = filteredItems.findIndex((item) => isSelected(item))
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        const nextIndex = selectedIndex < filteredItems.length - 1 ? selectedIndex + 1 : 0
+        onSelectItem(filteredItems[nextIndex]!)
+        return
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        const nextIndex = selectedIndex > 0 ? selectedIndex - 1 : filteredItems.length - 1
+        onSelectItem(filteredItems[nextIndex]!)
+      }
     }
 
     window.addEventListener('keydown', onGlobalKeyDown)
     return () => window.removeEventListener('keydown', onGlobalKeyDown)
-  }, [])
+  }, [filteredItems, isSelected, onSelectItem])
 
   const unreadAnnouncement = useMemo(() => {
     if (isLoading || previousUnread === undefined) {
@@ -267,6 +290,7 @@ export function ConversationListPane({
                 <button
                   key={`${item.type}-${item.legacyId}`}
                   type="button"
+                  aria-current={selected ? 'true' : undefined}
                   onClick={createSelectItemHandler(item)}
                   className={cn(
                     CHAT_CONVERSATION_ROW_CLASS,
@@ -383,6 +407,12 @@ export type ChannelConversationPaneProps = {
   workspaceId: string | null
   isAdmin: boolean
   onSendMessage: (options?: SendMessageOptions) => Promise<void>
+  onShareToPlatform?: (message: UnifiedMessage, platform: 'email') => Promise<void>
+  onCreateTask?: (message: UnifiedMessage) => void
+  onForwardMessage?: (message: UnifiedMessage) => void
+  onCreatePoll?: (poll: Omit<import('./message-polls').MessagePoll, 'id' | 'createdAt'>) => Promise<void>
+  onExportChannel?: () => void
+  onOpenChannelMessage?: (messageId: string, options?: { threadId?: string | null }) => void
   onToggleReaction: (channelId: string, messageId: string, emoji: string) => void
   pendingAttachments: PendingAttachment[]
   reactionPendingByMessage: ReactionPendingState
@@ -464,6 +494,12 @@ export function ChannelConversationPane({
   onMessageSearchChange,
   onRemoveAttachment,
   onSendMessage,
+  onShareToPlatform,
+  onCreateTask,
+  onForwardMessage,
+  onCreatePoll,
+  onExportChannel,
+  onOpenChannelMessage,
   onToggleReaction,
   pendingAttachments,
   reactionPendingByMessage,
@@ -489,6 +525,57 @@ export function ChannelConversationPane({
   const { canLoadMore, loading: isCurrentChannelLoading, loadingMore } = listState
   const { active: isChannelSearchActive, searching: searchingMessages } = searchState
   const { sending, uploading } = composerState
+  const [replyingToMessage, setReplyingToMessage] = useState<CollaborationMessage | null>(null)
+
+  useEffect(() => {
+    setReplyingToMessage(null)
+  }, [selectedChannel.id])
+
+  const resolveCollaborationMessage = useCallback(
+    (message: UnifiedMessage): CollaborationMessage | null => {
+      const fromChannel = channelMessages.find((entry) => entry.id === message.id)
+      if (fromChannel) {
+        return fromChannel
+      }
+
+      for (const replies of Object.values(threadMessagesByRootId)) {
+        const fromThread = replies.find((entry) => entry.id === message.id)
+        if (fromThread) {
+          return fromThread
+        }
+      }
+
+      return null
+    },
+    [channelMessages, threadMessagesByRootId],
+  )
+
+  const handleReply = useCallback(
+    (message: UnifiedMessage) => {
+      setReplyingToMessage(resolveCollaborationMessage(message))
+    },
+    [resolveCollaborationMessage],
+  )
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingToMessage(null)
+  }, [])
+
+  const channelEmptyState = useMemo(() => {
+    if (isCurrentChannelLoading || searchingMessages) {
+      return undefined
+    }
+
+    if (channelMessages.length > 0) {
+      return undefined
+    }
+
+    if (isChannelSearchActive) {
+      return <NoSearchResultsState />
+    }
+
+    return <EmptyMessagesState />
+  }, [channelMessages.length, isChannelSearchActive, isCurrentChannelLoading, searchingMessages])
 
   const showMissingDeepLinkNotice =
     (Boolean(deepLinkMessageId?.trim()) || Boolean(deepLinkThreadId?.trim())) &&
@@ -498,11 +585,13 @@ export function ChannelConversationPane({
 
   const channelHeader = useMemo(
     () => ({
+      conversationKey: selectedChannel.id,
       name: selectedChannel.name,
       type: 'channel' as const,
       channelKind: selectedChannel.type,
       participantCount: channelParticipants.length,
       messageCount: channelMessages.length,
+      onExport: onExportChannel,
       buildShareableUrl: () => buildCollaborationChannelShareUrl(selectedChannel),
       channelUnreadCount,
       onMarkChannelRead,
@@ -512,7 +601,14 @@ export function ChannelConversationPane({
         workspaceId != null
           ? {
               channel: selectedChannel,
+              channelMessages,
               channelParticipants,
+              currentUserId,
+              onPinnedMessageClick: onOpenChannelMessage
+                ? (messageId: string) => {
+                    onOpenChannelMessage(messageId)
+                  }
+                : undefined,
               sharedFiles,
               workspaceId,
               isAdmin,
@@ -523,14 +619,17 @@ export function ChannelConversationPane({
     }),
     [
       canManageMembers,
+      channelMessages,
       channelParticipants,
-      channelMessages.length,
       channelUnreadCount,
+      currentUserId,
       isAdmin,
       markChannelReadPending,
       onBackToInbox,
+      onExportChannel,
       onManageMembers,
       onMarkChannelRead,
+      onOpenChannelMessage,
       selectedChannel,
       sharedFiles,
       workspaceId,
@@ -584,8 +683,9 @@ export function ChannelConversationPane({
   }, [onLoadMore, selectedChannel.id])
 
   const handleSendMessage = useCallback(async () => {
-    await onSendMessage()
-  }, [onSendMessage])
+    await onSendMessage({ parentMessageId: replyingToMessage?.id })
+    setReplyingToMessage(null)
+  }, [onSendMessage, replyingToMessage?.id])
 
   const handleToggleReaction = useCallback(async (messageId: string, emoji: string) => {
     await onToggleReaction(selectedChannel.id, messageId, emoji)
@@ -631,6 +731,10 @@ export function ChannelConversationPane({
       messageInput={messageInput}
       onMessageInputChange={onMessageInputChange}
       onSendMessage={handleSendMessage}
+      onReply={handleReply}
+      replyingToMessage={replyingToMessage}
+      onCancelReply={handleCancelReply}
+      emptyState={channelEmptyState}
       composerState={channelComposerState}
       pendingAttachments={pendingAttachments}
       onAddAttachments={onAddAttachments}
@@ -639,6 +743,11 @@ export function ChannelConversationPane({
       onComposerFocus={onComposerFocus}
       onComposerBlur={onComposerBlur}
       onToggleReaction={handleToggleReaction}
+      onShareToPlatform={onShareToPlatform}
+      onCreateTask={onCreateTask}
+      onForwardMessage={onForwardMessage}
+      onCreatePoll={onCreatePoll ? async (poll) => onCreatePoll(poll) : undefined}
+      workspaceId={workspaceId}
       reactionPendingByMessage={reactionPendingByMessage}
       onDeleteMessage={handleDeleteMessage}
       onEditMessage={handleEditMessage}
@@ -662,6 +771,7 @@ export function ChannelConversationPane({
 }
 
 export type DirectMessageConversationPaneProps = {
+  mentionParticipants: ClientTeamMember[]
   currentUserId: string | null
   dmDeleteMessage?: (messageLegacyId: string) => Promise<void>
   dmEditMessage?: (messageLegacyId: string, newContent: string) => Promise<void>
@@ -691,9 +801,19 @@ export type DirectMessageConversationPaneProps = {
   onStartNewDM?: () => void
   messagesError: string | null
   onRetryMessages: () => void
+  onShareToPlatform?: (message: UnifiedMessage, platform: 'email') => Promise<void>
+  onComposerFocus?: () => void
+  onComposerBlur?: () => void
+  typingIndicatorText?: string
+  onCreateTask?: (message: UnifiedMessage) => void
+  currentUserRole?: string | null
+  workspaceId?: string | null
+  deepLinkMessageId?: string | null
+  onClearDeepLink?: () => void
 }
 
 export function DirectMessageConversationPane({
+  mentionParticipants,
   currentUserId,
   dmDeleteMessage,
   dmEditMessage,
@@ -723,9 +843,44 @@ export function DirectMessageConversationPane({
   onStartNewDM,
   messagesError,
   onRetryMessages,
+  onShareToPlatform,
+  onComposerFocus,
+  onComposerBlur,
+  typingIndicatorText,
+  onCreateTask,
+  currentUserRole,
+  workspaceId,
+  deepLinkMessageId,
+  onClearDeepLink,
 }: DirectMessageConversationPaneProps) {
+  const handleDmSend = useCallback(async () => {
+    const content = dmMessageInput.trim()
+    if (!content && pendingAttachments.length === 0) {
+      return
+    }
+
+    await handleSendDirectMessage(content)
+  }, [dmMessageInput, handleSendDirectMessage, pendingAttachments.length])
+
+  const dmEmptyState = useMemo(() => {
+    if (dmIsLoadingMessages || dmSearchingMessages) {
+      return undefined
+    }
+
+    if (dmMessagesForPane.length > 0) {
+      return undefined
+    }
+
+    if (isDmSearchActive) {
+      return <NoSearchResultsState />
+    }
+
+    return <EmptyMessagesState />
+  }, [dmIsLoadingMessages, dmMessagesForPane.length, dmSearchingMessages, isDmSearchActive])
+
   const dmHeader = useMemo(
     () => ({
+      conversationKey: selectedDM.legacyId,
       name: selectedDM.otherParticipantName,
       type: 'dm' as const,
       role: selectedDM.otherParticipantRole,
@@ -735,7 +890,7 @@ export function DirectMessageConversationPane({
       onMute: dmMuteConversation,
       primaryActionLabel: 'New chat',
       onPrimaryAction: onStartNewDM,
-      buildShareableUrl: () => (typeof window !== 'undefined' ? window.location.href : ''),
+      buildShareableUrl: () => buildCollaborationDmShareUrl(selectedDM.legacyId),
       onBack: onBackToInbox,
     }),
     [dmMuteConversation, onArchiveConversation, onBackToInbox, onStartNewDM, selectedDM],
@@ -775,11 +930,22 @@ export function DirectMessageConversationPane({
     [dmIsSending, pendingAttachments.length, uploading],
   )
 
+  const dmChannelMessages = useMemo(
+    () => dmMessagesForPane.map(directMessageToCollaborationMessage),
+    [dmMessagesForPane],
+  )
+
   return (
     <UnifiedMessagePane
       header={dmHeader}
       messages={dmMessagesForPane.map(directMessageToUnifiedMessage)}
+      channelMessages={dmChannelMessages}
       currentUserId={currentUserId}
+      currentUserRole={currentUserRole}
+      workspaceId={workspaceId}
+      dmParticipantName={selectedDM.otherParticipantName}
+      focusMessageId={deepLinkMessageId}
+      onCreateTask={onCreateTask}
       listState={dmListState}
       onLoadMore={dmLoadMoreMessages}
       messageSearchQuery={dmMessageSearchQuery}
@@ -787,7 +953,9 @@ export function DirectMessageConversationPane({
       messageSearchHighlights={dmSearchHighlights}
       messageInput={dmMessageInput}
       onMessageInputChange={setActiveDmMessageInput}
-      onSendMessage={handleSendDirectMessage}
+      onSendMessage={handleDmSend}
+      emptyState={dmEmptyState}
+      participants={mentionParticipants}
       composerState={dmComposerState}
       pendingAttachments={pendingAttachments}
       onAddAttachments={onAddAttachments}
@@ -795,6 +963,10 @@ export function DirectMessageConversationPane({
       onToggleReaction={dmToggleReaction}
       onDeleteMessage={dmDeleteMessage}
       onEditMessage={dmEditMessage}
+      onShareToPlatform={onShareToPlatform}
+      onComposerFocus={onComposerFocus}
+      onComposerBlur={onComposerBlur}
+      typingIndicator={typingIndicatorText}
       placeholder={`Message ${selectedDM.otherParticipantName}...`}
       statusBanner={dmStatusBanner}
     />
@@ -867,5 +1039,7 @@ function directMessageToUnifiedMessage(message: DirectMessage) {
         size: attachment.size ? parseInt(attachment.size, 10) : undefined,
       })) ?? undefined,
     sharedTo: message.sharedTo ?? undefined,
+    readBy: message.readBy ?? undefined,
+    deliveredTo: message.deliveredTo ?? undefined,
   }
 }

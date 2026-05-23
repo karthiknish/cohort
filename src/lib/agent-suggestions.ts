@@ -15,6 +15,8 @@ const CLIENT_READ_OPERATIONS = new Set([
   'generatePerformanceReport',
   'listWorkspaceClients',
   'summarizeAdsPerformance',
+  'summarizeSocialPerformance',
+  'requestSocialSync',
 ])
 
 const AGENCY_WRITE_OPERATIONS = new Set([
@@ -196,6 +198,44 @@ const ROUTE_SUGGESTIONS: RouteSuggestionRule[] = [
       {
         id: 'nav-ads',
         label: 'Open ads',
+        prompt: 'Open ads dashboard',
+        capability: 'navigate',
+      },
+    ],
+  },
+  {
+    match: (path) => path.includes('/dashboard/socials'),
+    suggestions: [
+      {
+        id: 'social-summary',
+        label: 'Social summary',
+        prompt: 'Summarize organic social performance for the last 30 days',
+        capability: 'execute',
+        operation: 'summarizeSocialPerformance',
+      },
+      {
+        id: 'instagram-insights',
+        label: 'Instagram insights',
+        prompt: 'How is Instagram performing this month?',
+        capability: 'execute',
+        operation: 'summarizeSocialPerformance',
+      },
+      {
+        id: 'sync-social',
+        label: 'Sync social',
+        prompt: 'Sync organic social metrics',
+        capability: 'execute',
+        operation: 'requestSocialSync',
+      },
+      {
+        id: 'connect-meta-social',
+        label: 'Connect Meta',
+        prompt: 'Open socials to connect Meta',
+        capability: 'navigate',
+      },
+      {
+        id: 'nav-ads-from-socials',
+        label: 'Paid ads',
         prompt: 'Open ads dashboard',
         capability: 'navigate',
       },

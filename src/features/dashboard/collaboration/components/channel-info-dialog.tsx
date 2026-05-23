@@ -31,7 +31,10 @@ export type ChannelInfoDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   channel: Channel
+  channelMessages: import('@/types/collaboration').CollaborationMessage[]
   channelParticipants: ClientTeamMember[]
+  currentUserId: string | null
+  onPinnedMessageClick?: (messageId: string) => void
   sharedFiles: CollaborationAttachment[]
   workspaceId: string
   isAdmin: boolean
@@ -43,7 +46,10 @@ export function ChannelInfoDialog({
   open,
   onOpenChange,
   channel,
+  channelMessages,
   channelParticipants,
+  currentUserId,
+  onPinnedMessageClick,
   sharedFiles,
   workspaceId,
   isAdmin,
@@ -200,8 +206,12 @@ export function ChannelInfoDialog({
 
         <ChannelInfoTabs
           channel={channel}
+          channelMessages={channelMessages}
           channelParticipants={channelParticipants}
+          currentUserId={currentUserId}
+          onPinnedMessageClick={onPinnedMessageClick}
           sharedFiles={sharedFiles}
+          workspaceId={workspaceId}
           canManageMembers={canManageMembers}
           onManageMembers={onManageMembers ? handleManageMembers : undefined}
         />

@@ -15,7 +15,7 @@ import {
 import { useToast } from '@/shared/ui/use-toast'
 import type { CollaborationMessage } from '@/types/collaboration'
 
-import type { PendingAttachment } from '../hooks/types'
+import type { PendingAttachment, SendMessageOptions } from '../hooks/types'
 import type { UnifiedMessage } from './message-list-types'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
 
@@ -37,7 +37,7 @@ type UseUnifiedMessagePaneControllerArgs = {
   onLoadThreadReplies?: (threadRootId: string) => Promise<void> | void
   onMarkThreadAsRead?: (threadRootId: string, beforeMs?: number) => Promise<void> | void
   onReply?: (message: UnifiedMessage) => void
-  onSendMessage: (content: string) => Promise<void>
+  onSendMessage: (options?: SendMessageOptions) => Promise<void>
   onShareToPlatform?: (message: UnifiedMessage, platform: 'email') => Promise<void>
   onToggleReaction: (messageId: string, emoji: string) => Promise<void>
   pendingAttachments: PendingAttachment[]
@@ -98,7 +98,7 @@ export function useUnifiedMessagePaneController({
   const { toast } = useToast()
 
   const activeDeletingMessageId = deletingMessageId ?? messageDeletingId
-  const conversationKey = header ? `${header.type}:${header.name}` : 'none'
+  const conversationKey = header?.conversationKey ?? (header ? `${header.type}:${header.name}` : 'none')
   const hasPendingAttachments = pendingAttachments.length > 0
 
   const channelMessagesById = useMemo(() => {
@@ -140,6 +140,7 @@ export function useUnifiedMessagePaneController({
     lastConversationKeyRef.current = conversationKey
 
     const frame = window.requestAnimationFrame(() => {
+      setExpandedThreadIds({})
       setPaneUi({
         deletingMessageId: null,
         confirmingDeleteMessageId: null,
@@ -255,7 +256,7 @@ export function useUnifiedMessagePaneController({
   const handleSend = useCallback(async () => {
     const content = messageInput.trim()
     if ((!content && !hasPendingAttachments) || isSending || uploadingAttachments) return
-    await onSendMessage(content)
+    await onSendMessage()
   }, [hasPendingAttachments, isSending, messageInput, onSendMessage, uploadingAttachments])
 
   const handleComposerFocusInternal = useCallback(() => {
@@ -290,8 +291,10 @@ export function useUnifiedMessagePaneController({
 
   const handleComposerPaste = useCallback((event: ClipboardEvent<HTMLTextAreaElement>) => {
     if (!onAddAttachments) return
-    const files = event.clipboardData?.files
-    if (files && files.length > 0) {
+    const files = Array.from(event.clipboardData?.files ?? []).filter((file) =>
+      file.type.startsWith('image/'),
+    )
+    if (files.length > 0) {
       event.preventDefault()
       onAddAttachments(files)
     }

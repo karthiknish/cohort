@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import type { CollaborationMessage } from '@/types/collaboration'
 import type { ClientTeamMember } from '@/types/clients'
 
-import type { PendingAttachment } from '../hooks/types'
+import type { PendingAttachment, SendMessageOptions } from '../hooks/types'
 import type { UnifiedMessage } from './message-list-types'
 import {
   UnifiedMessagePaneConversationLayout,
@@ -13,6 +13,7 @@ import {
   type MessagePaneListState,
 } from './unified-message-pane-layout'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
+import { usePollMessageActions } from '../hooks/use-poll-message-actions'
 import { useUnifiedMessagePaneRenderers } from './use-unified-message-pane-renderers'
 import { useUnifiedMessagePaneController } from './use-unified-message-pane-controller'
 
@@ -40,7 +41,9 @@ export interface UnifiedMessagePaneProps {
   messageSearchHighlights?: string[]
   messageInput: string
   onMessageInputChange: (value: string) => void
-  onSendMessage: (content: string) => Promise<void>
+  onSendMessage: (options?: SendMessageOptions) => Promise<void>
+  replyingToMessage?: CollaborationMessage | null
+  onCancelReply?: () => void
   pendingAttachments?: PendingAttachment[]
   onAddAttachments?: (files: FileList | File[]) => void
   onRemoveAttachment?: (attachmentId: string) => void
@@ -51,6 +54,10 @@ export interface UnifiedMessagePaneProps {
   onEditMessage?: (messageId: string, newContent: string) => Promise<void>
   onShareToPlatform?: (message: UnifiedMessage, platform: 'email') => Promise<void>
   onCreateTask?: (message: UnifiedMessage) => void
+  onForwardMessage?: (message: UnifiedMessage) => void
+  onCreatePoll?: (poll: Omit<import('./message-polls').MessagePoll, 'id' | 'createdAt'>) => Promise<void>
+  workspaceId?: string | null
+  dmParticipantName?: string | null
   typingIndicator?: string
   onComposerFocus?: () => void
   onComposerBlur?: () => void
@@ -89,6 +96,8 @@ export function UnifiedMessagePane({
   messageInput,
   onMessageInputChange,
   onSendMessage,
+  replyingToMessage = null,
+  onCancelReply,
   pendingAttachments = EMPTY_PENDING_ATTACHMENTS,
   onAddAttachments,
   onRemoveAttachment,
@@ -98,6 +107,11 @@ export function UnifiedMessagePane({
   onDeleteMessage,
   onEditMessage,
   onShareToPlatform,
+  onCreateTask,
+  onForwardMessage,
+  onCreatePoll,
+  workspaceId,
+  dmParticipantName,
   typingIndicator,
   onComposerFocus,
   onComposerBlur,
@@ -205,6 +219,11 @@ export function UnifiedMessagePane({
     [isComposerFocused, isSending, hasPendingAttachments, uploadingAttachments],
   )
 
+  const pollActions = usePollMessageActions({
+    workspaceId: workspaceId ?? null,
+    mode: header?.type === 'dm' ? 'dm' : 'channel',
+  })
+
   const messageListRenderers = useUnifiedMessagePaneRenderers({
     activeDeletingMessageId,
     channelMessagesById,
@@ -222,6 +241,13 @@ export function UnifiedMessagePane({
     onEditMessage,
     onReply,
     onShareToPlatform,
+    onCreateTask,
+    onForwardMessage,
+    onVotePoll: pollActions.handleVote,
+    onEndPoll: pollActions.handleEndPoll,
+    workspaceId,
+    currentUserRole,
+    dmParticipantName,
     reactionPendingByMessage,
     resolveThreadRootId,
     setEditingValue,
@@ -285,6 +311,8 @@ export function UnifiedMessagePane({
       onRefresh={onRefresh}
       onRemoveAttachment={onRemoveAttachment}
       onReply={onReply}
+      replyingToMessage={replyingToMessage}
+      onCancelReply={onCancelReply}
       participants={participants}
       pendingAttachments={pendingAttachments}
       uploadingAttachments={uploadingAttachments}
@@ -292,6 +320,8 @@ export function UnifiedMessagePane({
       reactionPendingByMessage={reactionPendingByMessage}
       statusBanner={statusBanner}
       typingIndicator={typingIndicator}
+      onCreatePoll={onCreatePoll}
+      workspaceId={workspaceId}
     />
   )
 }

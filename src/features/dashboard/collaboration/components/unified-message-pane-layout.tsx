@@ -1,11 +1,14 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, ReactNode, RefObject } from 'react'
+
+import { QuickPollButton, type MessagePoll } from './message-polls'
 
 import type { ClientTeamMember } from '@/types/clients'
 
 import type { PendingAttachment } from '../hooks/types'
+import type { CollaborationMessage } from '@/types/collaboration'
 import type { MessageListRenderers } from './message-list-render-context'
 import type { UnifiedMessage } from './message-list-types'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
@@ -79,6 +82,8 @@ type UnifiedMessagePaneConversationLayoutProps = {
   onRefresh?: () => Promise<void> | void
   onRemoveAttachment?: (attachmentId: string) => void
   onReply?: (message: UnifiedMessage) => void
+  replyingToMessage?: CollaborationMessage | null
+  onCancelReply?: () => void
   participants: ClientTeamMember[]
   pendingAttachments: PendingAttachment[]
   placeholder: string
@@ -86,6 +91,8 @@ type UnifiedMessagePaneConversationLayoutProps = {
   statusBanner?: ReactNode
   typingIndicator?: string
   uploadingAttachments: boolean
+  onCreatePoll?: (poll: Omit<MessagePoll, 'id' | 'createdAt'>) => Promise<void>
+  workspaceId?: string | null
 }
 
 export function UnifiedMessagePaneConversationLayout({
@@ -125,12 +132,16 @@ export function UnifiedMessagePaneConversationLayout({
   onRefresh,
   onRemoveAttachment,
   onReply,
+  replyingToMessage,
+  onCancelReply,
   participants,
   pendingAttachments,
   placeholder,
   reactionPendingByMessage,
   statusBanner,
   typingIndicator,
+  onCreatePoll,
+  workspaceId,
 }: UnifiedMessagePaneConversationLayoutProps) {
   const { loading: isLoading, loadingMore: isLoadingMore, hasMore } = listState
   const {
@@ -140,9 +151,23 @@ export function UnifiedMessagePaneConversationLayout({
     uploadingAttachments,
   } = composerState
   const { canSearch: canSearchMessages, active: isMessageSearchActive } = searchState
+  const composerToolbar = useMemo(() => {
+    if (header.type !== 'channel' || !onCreatePoll) {
+      return null
+    }
+
+    return (
+      <QuickPollButton
+        workspaceId={workspaceId ?? null}
+        userId={currentUserId}
+        onCreate={onCreatePoll}
+      />
+    )
+  }, [currentUserId, header.type, onCreatePoll, workspaceId])
 
   const { messageSearchOpen, handleToggleMessageSearch, searchBar } = useUnifiedMessagePaneMessageSearch({
     canSearchMessages,
+    conversationKey: header.conversationKey,
     headerType: header.type,
     messageSearchQuery,
     messageSearchActive: isMessageSearchActive,
@@ -196,7 +221,6 @@ export function UnifiedMessagePaneConversationLayout({
         editingMessageId={editingMessageId}
         effectiveFocusMessageId={effectiveFocusMessageId}
         effectiveFocusThreadId={effectiveFocusThreadId}
-        typingIndicator={typingIndicator}
       />
 
       <UnifiedMessagePaneComposerSection
@@ -209,6 +233,8 @@ export function UnifiedMessagePaneConversationLayout({
         messageInput={messageInput}
         onMessageInputChange={onMessageInputChange}
         onSend={handleSend}
+        replyingToMessage={replyingToMessage}
+        onCancelReply={onCancelReply}
         placeholder={placeholder}
         participants={participants}
         onFocus={handleComposerFocusInternal}
@@ -220,6 +246,7 @@ export function UnifiedMessagePaneConversationLayout({
         fileInputRef={fileInputRef}
         onAttachmentInputChange={handleAttachmentInputChange}
         typingIndicator={typingIndicator}
+        composerToolbar={composerToolbar}
         confirmingDeleteMessageId={confirmingDeleteMessageId}
         activeDeletingMessageId={activeDeletingMessageId}
         onDeleteConfirmOpenChange={handleConfirmDeleteChange}

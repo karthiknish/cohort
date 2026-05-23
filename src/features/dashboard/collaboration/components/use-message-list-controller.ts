@@ -166,6 +166,35 @@ export function useMessageListController({
   }, [typingIndicatorText])
 
   useEffect(() => {
+    lastFocusedMessageRef.current = null
+  }, [focusMessageId, focusThreadId])
+
+  useEffect(() => {
+    const resolvedFocusId =
+      (typeof focusMessageId === 'string' && focusMessageId.trim().length > 0
+        ? focusMessageId.trim()
+        : null) ??
+      (typeof focusThreadId === 'string' && focusThreadId.trim().length > 0
+        ? sortedMessages.find((message) => {
+            const threadRootId =
+              typeof message.threadRootId === 'string' && message.threadRootId.trim().length > 0
+                ? message.threadRootId.trim()
+                : message.id
+            return threadRootId === focusThreadId.trim()
+          })?.id ?? null
+        : null)
+
+    if (!resolvedFocusId) {
+      return
+    }
+
+    const isLoaded = sortedMessages.some((message) => message.id === resolvedFocusId)
+    if (!isLoaded && hasMore && !isLoading) {
+      onLoadMore()
+    }
+  }, [focusMessageId, focusThreadId, hasMore, isLoading, onLoadMore, sortedMessages])
+
+  useEffect(() => {
     const container = scrollRef.current
     if (!container) return
 

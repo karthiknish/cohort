@@ -19,11 +19,12 @@ export function MessageListJumpToLatest({ visible, onClick }: MessageListJumpToL
       <Button
         type="button"
         size="sm"
-        variant="secondary"
-        className="pointer-events-auto gap-1.5 shadow-md ring-1 ring-border/60"
+        variant="outline"
+        className="pointer-events-auto gap-1.5 text-foreground shadow-md ring-1 ring-border/60 hover:bg-muted/80"
         onClick={onClick}
+        aria-label="Jump to latest messages"
       >
-        <ArrowDown className="size-3.5" />
+        <ArrowDown className="size-3.5" aria-hidden />
         Latest
       </Button>
     </div>

@@ -50,6 +50,12 @@ type UnifiedInboxChannelPaneProps = {
   messageInput: string
   onMessageInputChange: (value: string) => void
   onSendMessage: (options?: SendMessageOptions) => Promise<void>
+  onShareToPlatform?: (message: import('./message-list-types').UnifiedMessage, platform: 'email') => Promise<void>
+  onCreateTask?: (message: import('./message-list-types').UnifiedMessage) => void
+  onForwardMessage?: (message: import('./message-list-types').UnifiedMessage) => void
+  onCreatePoll?: (poll: Omit<import('./message-polls').MessagePoll, 'id' | 'createdAt'>) => Promise<void>
+  onExportChannel?: () => void
+  onOpenChannelMessage?: (messageId: string, options?: { threadId?: string | null }) => void
   sending: boolean
   pendingAttachments: PendingAttachment[]
   onAddAttachments: (files: FileList | File[]) => void
@@ -114,6 +120,15 @@ type UnifiedInboxDirectMessagePaneProps = {
   onStartNewDM?: () => void
   messagesError: string | null
   onRetryMessages: () => void
+  typingParticipants: TypingParticipant[]
+  notifyDmTyping: () => void
+  handleComposerFocus: () => void
+  handleComposerBlur: () => void
+  onCreateTask?: (message: import('./message-list-types').UnifiedMessage) => void
+  currentUserRole?: string | null
+  workspaceId?: string | null
+  deepLinkMessageId?: string | null
+  onClearDeepLink?: () => void
 }
 
 type UnifiedInboxManageChannelProps = {
@@ -153,6 +168,12 @@ export function UnifiedInbox({
     messageInput,
     onMessageInputChange,
     onSendMessage,
+    onShareToPlatform,
+    onCreateTask,
+    onForwardMessage,
+    onCreatePoll,
+    onExportChannel,
+    onOpenChannelMessage,
     sending,
     pendingAttachments,
     onAddAttachments,
@@ -206,6 +227,13 @@ export function UnifiedInbox({
     onStartNewDM,
     messagesError: dmMessagesError,
     onRetryMessages: onDmRetryMessages,
+    handleComposerFocus: dmHandleComposerFocus,
+    handleComposerBlur: dmHandleComposerBlur,
+    onCreateTask: dmOnCreateTask,
+    currentUserRole: dmCurrentUserRole,
+    workspaceId: dmWorkspaceId,
+    deepLinkMessageId: dmDeepLinkMessageId,
+    onClearDeepLink: dmOnClearDeepLink,
   } = directMessagePane
   const canManageSelectedChannel = manageChannel?.canManageSelectedChannel ?? false
   const onManageSelectedChannel = manageChannel?.onManageSelectedChannel
@@ -288,6 +316,12 @@ export function UnifiedInbox({
             onMessageSearchChange={onMessageSearchChange}
             onRemoveAttachment={onRemoveAttachment}
             onSendMessage={onSendMessage}
+            onShareToPlatform={onShareToPlatform}
+            onCreateTask={onCreateTask}
+            onForwardMessage={onForwardMessage}
+            onCreatePoll={onCreatePoll}
+            onExportChannel={onExportChannel}
+            onOpenChannelMessage={onOpenChannelMessage}
             onToggleReaction={onToggleReaction}
             pendingAttachments={pendingAttachments}
             reactionPendingByMessage={reactionPendingByMessage}
@@ -313,6 +347,7 @@ export function UnifiedInbox({
           />
         ) : selectedDM ? (
           <DirectMessageConversationPane
+            mentionParticipants={mentionParticipants}
             currentUserId={currentUserId}
             dmDeleteMessage={dmDeleteMessage}
             dmEditMessage={dmEditMessage}
@@ -342,6 +377,15 @@ export function UnifiedInbox({
             onStartNewDM={onStartNewDM}
             messagesError={dmMessagesError}
             onRetryMessages={onDmRetryMessages}
+            onShareToPlatform={onShareToPlatform}
+            onComposerFocus={dmHandleComposerFocus}
+            onComposerBlur={dmHandleComposerBlur}
+            typingIndicatorText={inbox.typingIndicatorText}
+            onCreateTask={dmOnCreateTask}
+            currentUserRole={dmCurrentUserRole}
+            workspaceId={dmWorkspaceId}
+            deepLinkMessageId={dmDeepLinkMessageId}
+            onClearDeepLink={dmOnClearDeepLink}
           />
         ) : (
           <EmptyConversationPane channelCount={inbox.channelCount} dmCount={inbox.dmCount} onNewDM={onNewDM} />

@@ -95,8 +95,8 @@ export function DMMessagePane({
 
   const unifiedMessages = useMemo(() => messages.map(toUnifiedMessage), [messages])
 
-  const handleSend = useCallback(async (content: string) => {
-    const trimmedContent = content.trim()
+  const handleSend = useCallback(async () => {
+    const trimmedContent = inputValue.trim()
     if (!trimmedContent || isSending) return
 
     setInputValue('')
@@ -113,7 +113,7 @@ export function DMMessagePane({
         })
       throw error
     }
-  }, [isSending, onSendMessage])
+  }, [inputValue, isSending, onSendMessage])
 
   const handleReaction = useCallback(async (messageId: string, emoji: string) => {
     await onToggleReaction(messageId, emoji)

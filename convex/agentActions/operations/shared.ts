@@ -6,6 +6,25 @@ import {
 } from '../helpers'
 
 export const ALL_PROVIDER_IDS = ['google', 'facebook', 'tiktok', 'linkedin'] as const
+export const ANALYTICS_PROVIDER_ID = 'google-analytics' as const
+
+export function isAnalyticsProviderId(providerId: string | null | undefined): boolean {
+  return (providerId ?? '').trim().toLowerCase() === ANALYTICS_PROVIDER_ID
+}
+
+export function isAdsMetricsProvider(providerId: string | null | undefined): boolean {
+  const normalized = (providerId ?? '').trim().toLowerCase()
+  if (!normalized || isAnalyticsProviderId(normalized)) return false
+  return ALL_PROVIDER_IDS.includes(normalized as (typeof ALL_PROVIDER_IDS)[number])
+}
+
+export function filterAdsMetricRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+  return rows.filter((row) => isAdsMetricsProvider(asNonEmptyString(row.providerId)))
+}
+
+export function filterAnalyticsMetricRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+  return rows.filter((row) => isAnalyticsProviderId(asNonEmptyString(row.providerId)))
+}
 
 export type AggregateMetrics = {
   spend: number
@@ -41,6 +60,8 @@ export type ClientTaskRecord = {
   priority: string
   dueDateMs: number | null
   assignedTo: string[] | null
+  clientName: string | null
+  projectName: string | null
 }
 
 export function isActiveCampaignStatus(status: string | null): boolean {
@@ -236,6 +257,8 @@ export function extractClientTaskRecords(value: unknown): ClientTaskRecord[] {
             return normalized !== null ? [normalized] : []
           })
         : null,
+      clientName: asNonEmptyString(record.client) ?? asNonEmptyString(record.clientName),
+      projectName: asNonEmptyString(record.projectName),
     }
     return mapped.legacyId.length > 0 ? [mapped] : []
   })

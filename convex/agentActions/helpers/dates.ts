@@ -71,6 +71,56 @@ function normalizeParsedDate(value: unknown): string | null {
   return toIsoDate(new Date(parsed))
 }
 
+function parseRelativeDayRangeFromIntent(
+  message: string,
+  nowMs: number = Date.now(),
+): { startDate: string; endDate: string } | null {
+  const normalized = message.toLowerCase().replace(/\s+/g, ' ').trim()
+  const end = new Date(nowMs)
+
+  const lastDaysMatch = normalized.match(/(?:last|past|previous)\s+(\d{1,4})\s+days?/)
+  if (lastDaysMatch) {
+    const days = Number.parseInt(lastDaysMatch[1] ?? '', 10)
+    if (Number.isFinite(days) && days > 0 && days <= 3650) {
+      const start = new Date(end)
+      start.setDate(start.getDate() - (days - 1))
+      return { startDate: toIsoDate(start), endDate: toIsoDate(end) }
+    }
+  }
+
+  const lastMonthsMatch = normalized.match(/(?:last|past|previous)\s+(\d{1,2})\s+months?/)
+  if (lastMonthsMatch) {
+    const months = Number.parseInt(lastMonthsMatch[1] ?? '', 10)
+    if (Number.isFinite(months) && months > 0 && months <= 36) {
+      const start = new Date(end)
+      start.setMonth(start.getMonth() - months)
+      start.setDate(start.getDate() + 1)
+      return { startDate: toIsoDate(start), endDate: toIsoDate(end) }
+    }
+  }
+
+  if (/(?:last|past|previous)\s+month\b/.test(normalized)) {
+    const start = new Date(end)
+    start.setDate(start.getDate() - 29)
+    return { startDate: toIsoDate(start), endDate: toIsoDate(end) }
+  }
+
+  if (/(?:last|past|previous)\s+week\b/.test(normalized)) {
+    const start = new Date(end)
+    start.setDate(start.getDate() - 6)
+    return { startDate: toIsoDate(start), endDate: toIsoDate(end) }
+  }
+
+  if (/(?:last|past|previous)\s+year\b/.test(normalized)) {
+    const start = new Date(end)
+    start.setFullYear(start.getFullYear() - 1)
+    start.setDate(start.getDate() + 1)
+    return { startDate: toIsoDate(start), endDate: toIsoDate(end) }
+  }
+
+  return null
+}
+
 function parseDateRangeFromIntent(message: string): { startDate: string; endDate: string } | null {
   const rangePatterns = [
     /(?:from|between)\s+([A-Za-z]+\s+\d{1,2}(?:,\s*\d{4})?|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})\s+(?:to|and|through|thru|-|until)\s+([A-Za-z]+\s+\d{1,2}(?:,\s*\d{4})?|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})/i,
@@ -154,11 +204,17 @@ function resolveReportWindow(period: ReportPeriod, params: Record<string, unknow
   }
 }
 
+function resolveIntentDateRange(message: string): { startDate: string; endDate: string } | null {
+  return parseDateRangeFromIntent(message) ?? parseRelativeDayRangeFromIntent(message)
+}
+
 export {
   getPeriodWindow,
   parseDateRangeFromIntent,
+  parseRelativeDayRangeFromIntent,
   parseDateToMs,
   resolveAgentDueDateMs,
+  resolveIntentDateRange,
   resolveReportWindow,
   toIsoDate,
 }

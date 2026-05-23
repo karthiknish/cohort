@@ -1,7 +1,14 @@
 import { z } from 'zod/v4'
 import type { Id } from '/_generated/dataModel'
+import {
+  applyPollVote,
+  encodePollMessage,
+  endPoll,
+  parsePollMessage,
+} from './lib/collaborationPollMessage'
 import { Errors } from './errors'
 import {
+  type AuthenticatedMutationCtx,
   zWorkspaceMutation,
   zWorkspaceQuery,
   zWorkspaceQueryActive,
@@ -16,6 +23,38 @@ function generateLegacyId(): string {
 
 function sortParticipantIds(id1: string, id2: string): [string, string] {
   return id1 < id2 ? [id1, id2] : [id2, id1]
+}
+
+async function assertDirectMessageParticipant(
+  ctx: AuthenticatedMutationCtx,
+  workspaceId: string,
+  conversationLegacyId: string,
+) {
+  const conversation = await ctx.db
+    .query('directConversations')
+    .withIndex('by_workspace_legacyId', (q) =>
+      q.eq('workspaceId', workspaceId).eq('legacyId', conversationLegacyId),
+    )
+    .first()
+
+  if (!conversation) {
+    throw Errors.resource.notFound('Conversation')
+  }
+
+  const currentUserId = ctx.user._id
+  const isParticipant =
+    conversation.participantOneId === currentUserId ||
+    conversation.participantTwoId === currentUserId
+
+  if (!isParticipant) {
+    throw Errors.auth.forbidden()
+  }
+
+  return conversation
+}
+
+function canManageDirectMessage(ctx: AuthenticatedMutationCtx, message: { senderId: string }) {
+  return message.senderId === ctx.user._id || ctx.user.role === 'admin'
 }
 
 function clampSearchLimit(limit: number): number {
@@ -118,6 +157,8 @@ export const getOrCreateConversation = zWorkspaceMutation({
       lastMessageSenderId: null,
       readByParticipantOne: true,
       readByParticipantTwo: true,
+      unreadCountParticipantOne: 0,
+      unreadCountParticipantTwo: 0,
       lastReadByParticipantOneAtMs: now,
       lastReadByParticipantTwoAtMs: now,
       archivedByParticipantOne: false,
@@ -173,6 +214,15 @@ export const listConversations = zWorkspaceQueryActive({
       const isRead = isParticipantOne ? conv.readByParticipantOne : conv.readByParticipantTwo
       const isArchived = isParticipantOne ? conv.archivedByParticipantOne : conv.archivedByParticipantTwo
       const isMuted = isParticipantOne ? conv.mutedByParticipantOne : conv.mutedByParticipantTwo
+      const storedUnreadCount = isParticipantOne
+        ? conv.unreadCountParticipantOne
+        : conv.unreadCountParticipantTwo
+      const unreadCount =
+        typeof storedUnreadCount === 'number'
+          ? Math.max(0, storedUnreadCount)
+          : isRead
+            ? 0
+            : 1
 
       return {
         _id: conv._id,
@@ -184,6 +234,7 @@ export const listConversations = zWorkspaceQueryActive({
         lastMessageAtMs: conv.lastMessageAtMs,
         lastMessageSenderId: conv.lastMessageSenderId,
         isRead,
+        unreadCount,
         isArchived,
         isMuted,
         createdAtMs: conv.createdAtMs,
@@ -383,12 +434,18 @@ export const sendMessage = zWorkspaceMutation({
     })
 
     const isSenderParticipantOne = conversation.participantOneId === currentUserId
+    const recipientUnreadCount = isSenderParticipantOne
+      ? (conversation.unreadCountParticipantTwo ?? 0) + 1
+      : (conversation.unreadCountParticipantOne ?? 0) + 1
+
     await ctx.db.patch(conversation._id, {
       lastMessageSnippet: snippet,
       lastMessageAtMs: now,
       lastMessageSenderId: currentUserId,
       readByParticipantOne: isSenderParticipantOne,
       readByParticipantTwo: !isSenderParticipantOne,
+      unreadCountParticipantOne: isSenderParticipantOne ? 0 : recipientUnreadCount,
+      unreadCountParticipantTwo: isSenderParticipantOne ? recipientUnreadCount : 0,
       updatedAtMs: now,
     })
 
@@ -426,9 +483,11 @@ export const markAsRead = zWorkspaceMutation({
 
     if (isParticipantOne) {
       updates.readByParticipantOne = true
+      updates.unreadCountParticipantOne = 0
       updates.lastReadByParticipantOneAtMs = now
     } else {
       updates.readByParticipantTwo = true
+      updates.unreadCountParticipantTwo = 0
       updates.lastReadByParticipantTwoAtMs = now
     }
 
@@ -480,7 +539,7 @@ export const editMessage = zWorkspaceMutation({
       throw Errors.resource.notFound('Message')
     }
 
-    if (message.senderId !== currentUserId) {
+    if (!canManageDirectMessage(ctx, message)) {
       throw Errors.auth.forbidden()
     }
 
@@ -533,7 +592,7 @@ export const deleteMessage = zWorkspaceMutation({
       throw Errors.resource.notFound('Message')
     }
 
-    if (message.senderId !== currentUserId) {
+    if (!canManageDirectMessage(ctx, message)) {
       throw Errors.auth.forbidden()
     }
 
@@ -546,6 +605,96 @@ export const deleteMessage = zWorkspaceMutation({
     })
 
     return { success: true }
+  },
+})
+
+export const voteOnPoll = zWorkspaceMutation({
+  args: {
+    messageLegacyId: z.string(),
+    optionIds: z.array(z.string()),
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db
+      .query('directMessages')
+      .withIndex('by_workspace_legacyId', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('legacyId', args.messageLegacyId),
+      )
+      .first()
+
+    if (!message) {
+      throw Errors.resource.notFound('Message')
+    }
+
+    if (message.deleted) {
+      throw Errors.validation.invalidInput('Cannot vote on deleted message')
+    }
+
+    await assertDirectMessageParticipant(ctx, args.workspaceId, message.conversationLegacyId)
+
+    const poll = parsePollMessage(message.content)
+    if (!poll) {
+      throw Errors.validation.invalidInput('Message is not a poll')
+    }
+
+    let nextPoll
+    try {
+      nextPoll = applyPollVote(poll, ctx.user._id, args.optionIds)
+    } catch (error: unknown) {
+      const pollError = error instanceof Error ? error.message : 'Unable to record vote'
+      throw Errors.validation.invalidInput(pollError)
+    }
+
+    const now = Date.now()
+    await ctx.db.patch(message._id, {
+      content: encodePollMessage(nextPoll),
+      edited: true,
+      editedAtMs: now,
+      updatedAtMs: now,
+    })
+
+    return { success: true, legacyId: message.legacyId }
+  },
+})
+
+export const endPollMessage = zWorkspaceMutation({
+  args: {
+    messageLegacyId: z.string(),
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db
+      .query('directMessages')
+      .withIndex('by_workspace_legacyId', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('legacyId', args.messageLegacyId),
+      )
+      .first()
+
+    if (!message) {
+      throw Errors.resource.notFound('Message')
+    }
+
+    await assertDirectMessageParticipant(ctx, args.workspaceId, message.conversationLegacyId)
+
+    const poll = parsePollMessage(message.content)
+    if (!poll) {
+      throw Errors.validation.invalidInput('Message is not a poll')
+    }
+
+    const isCreator = poll.createdBy === ctx.user._id
+    const isAdmin = ctx.user.role === 'admin'
+    if (!isCreator && !isAdmin) {
+      throw Errors.auth.forbidden('Only the poll creator can end this poll')
+    }
+
+    const now = Date.now()
+    const nextPoll = endPoll(poll, now)
+    await ctx.db.patch(message._id, {
+      content: encodePollMessage(nextPoll),
+      edited: true,
+      editedAtMs: now,
+      updatedAtMs: now,
+    })
+
+    return { success: true, legacyId: message.legacyId }
   },
 })
 

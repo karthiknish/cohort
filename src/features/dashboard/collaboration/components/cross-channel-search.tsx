@@ -35,7 +35,7 @@ interface SearchResult {
 
 interface CrossChannelSearchProps {
   onSearch: (query: CrossChannelSearchQuery) => Promise<SearchResult[]>
-  onResultClick?: (messageId: string, channelId: string) => void
+  onResultClick?: (messageId: string, channelId: string, threadRootId?: string | null) => void
   trigger?: React.ReactNode
 }
 
@@ -141,7 +141,11 @@ function useCrossChannelSearchController({
 
   const handleResultClick = useCallback(
     (result: SearchResult) => {
-      onResultClick?.(result.message.id, result.channel.id)
+      const threadRootId =
+        result.message.threadRootId?.trim() ||
+        result.message.parentMessageId?.trim() ||
+        null
+      onResultClick?.(result.message.id, result.channel.id, threadRootId)
       setOpen(false)
       setQuery('')
       setResults([])

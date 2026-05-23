@@ -13,14 +13,60 @@ import {
 } from '../../helpers'
 import type { OperationHandler } from '../../types'
 import {
+  buildTaskDigest,
+  buildTaskDigestUserMessage,
+  parseTaskTimeWindowFromIntent,
+  type TaskTimeWindow,
+} from '../taskSummary'
+import {
   extractClientLookupRecords,
   extractClientTaskRecords,
-  formatTaskDate,
-  formatTaskPriorityLabel,
-  formatTaskStatusLabel,
-  isCompletedTaskStatus,
   resolveClientLookupMatch,
 } from '../shared'
+
+function resolveTaskTimeWindow(args: {
+  params: Record<string, unknown>
+  rawMessage: string
+}): TaskTimeWindow {
+  const param = asNonEmptyString(args.params.timeWindow)?.toLowerCase()
+  if (
+    param === 'all' ||
+    param === 'due_this_week' ||
+    param === 'due_soon' ||
+    param === 'overdue' ||
+    param === 'today'
+  ) {
+    return param
+  }
+  return parseTaskTimeWindowFromIntent(args.rawMessage)
+}
+
+function taskDigestOperationData(
+  digest: ReturnType<typeof buildTaskDigest>,
+  extras: Record<string, unknown>,
+) {
+  return {
+    ...extras,
+    mode: digest.mode,
+    timeWindow: digest.timeWindow,
+    timeWindowLabel: digest.timeWindowLabel,
+    totalTasks: digest.totalTasks,
+    openTasks: digest.openTasks,
+    completedTasks: digest.completedTasks,
+    overdueTasks: digest.overdueTasks,
+    dueSoonTasks: digest.dueSoonTasks,
+    dueThisWeekTasks: digest.dueThisWeekTasks,
+    highPriorityTasks: digest.highPriorityTasks,
+    unscheduledOpen: digest.unscheduledOpen,
+    statusBreakdown: digest.statusBreakdown,
+    focusTasks: digest.focusTasks,
+    overdueTaskList: digest.overdueTaskList,
+    dueThisWeekList: digest.dueThisWeekList,
+    dueSoonList: digest.dueSoonList,
+    highPriorityList: digest.highPriorityList,
+    tasks: digest.tasks,
+  }
+}
 
 export const taskOperationHandlers: Record<string, OperationHandler> = {
   async summarizeClientTasks(ctx, input) {
@@ -95,71 +141,34 @@ export const taskOperationHandlers: Record<string, OperationHandler> = {
     })
 
     const tasks = extractClientTaskRecords(rawTasks)
-    const nowMs = Date.now()
-    const dueSoonCutoffMs = nowMs + 3 * 24 * 60 * 60 * 1000
-    const openTasks = tasks.filter((task) => !isCompletedTaskStatus(task.status))
-    const completedTasks = tasks.length - openTasks.length
-    const overdueTasks = openTasks.filter((task) => typeof task.dueDateMs === 'number' && task.dueDateMs < nowMs).length
-    const dueSoonTasks = openTasks.filter((task) => typeof task.dueDateMs === 'number' && task.dueDateMs >= nowMs && task.dueDateMs <= dueSoonCutoffMs).length
-    const highPriorityTasks = openTasks.filter((task) => {
-      const normalized = task.priority.toLowerCase()
-      return normalized === 'high' || normalized === 'urgent'
-    }).length
-
-    const statusBreakdown = Array.from(tasks.reduce<Map<string, number>>((acc, task) => {
-      const status = task.status.trim().toLowerCase() || 'unknown'
-      acc.set(status, (acc.get(status) ?? 0) + 1)
-      return acc
-    }, new Map()))
-      .map(([status, count]) => ({ status, count }))
-      .sort((left, right) => right.count - left.count)
-
-    const listedTasks = tasks.slice(0, 10).map((task) => ({
-      taskId: task.legacyId,
-      title: task.title,
-      status: formatTaskStatusLabel(task.status),
-      priority: formatTaskPriorityLabel(task.priority),
-      dueDate: formatTaskDate(task.dueDateMs),
-      assignedTo: task.assignedTo ?? [],
-    }))
+    const timeWindow = resolveTaskTimeWindow({ params: input.params, rawMessage: input.rawMessage ?? '' })
+    const digest = buildTaskDigest({
+      tasks,
+      mode,
+      timeWindow,
+      scopeLabel: matchedClient.name,
+      clientId: matchedClient.legacyId,
+      clientName: matchedClient.name,
+    })
 
     if (tasks.length === 0) {
       return {
         success: true,
-        data: {
+        data: taskDigestOperationData(digest, {
           clientId: matchedClient.legacyId,
           clientName: matchedClient.name,
-          totalTasks: 0,
-          openTasks: 0,
-          completedTasks: 0,
-          overdueTasks: 0,
-          dueSoonTasks: 0,
-          highPriorityTasks: 0,
-          statusBreakdown: [],
-          tasks: [],
-        },
+        }),
         userMessage: `I couldn’t find any tasks for ${matchedClient.name}.`,
       }
     }
 
     return {
       success: true,
-      data: {
+      data: taskDigestOperationData(digest, {
         clientId: matchedClient.legacyId,
         clientName: matchedClient.name,
-        mode,
-        totalTasks: tasks.length,
-        openTasks: openTasks.length,
-        completedTasks,
-        overdueTasks,
-        dueSoonTasks,
-        highPriorityTasks,
-        statusBreakdown,
-        tasks: listedTasks,
-      },
-      userMessage: mode === 'summary'
-        ? `Here’s the task summary for ${matchedClient.name}: ${openTasks.length} open, ${completedTasks} completed, ${overdueTasks} overdue.`
-        : `I found ${tasks.length} task${tasks.length === 1 ? '' : 's'} for ${matchedClient.name}.`,
+      }),
+      userMessage: buildTaskDigestUserMessage(digest),
     }
   },
 
@@ -172,48 +181,18 @@ export const taskOperationHandlers: Record<string, OperationHandler> = {
     })
 
     const tasks = extractClientTaskRecords(rawTasks)
-    const nowMs = Date.now()
-    const dueSoonCutoffMs = nowMs + 3 * 24 * 60 * 60 * 1000
-    const openTasks = tasks.filter((task) => !isCompletedTaskStatus(task.status))
-    const completedTasks = tasks.length - openTasks.length
-    const overdueTasks = openTasks.filter((task) => typeof task.dueDateMs === 'number' && task.dueDateMs < nowMs).length
-    const dueSoonTasks = openTasks.filter((task) => typeof task.dueDateMs === 'number' && task.dueDateMs >= nowMs && task.dueDateMs <= dueSoonCutoffMs).length
-    const highPriorityTasks = openTasks.filter((task) => {
-      const normalized = task.priority.toLowerCase()
-      return normalized === 'high' || normalized === 'urgent'
-    }).length
-
-    const statusBreakdown = Array.from(tasks.reduce<Map<string, number>>((acc, task) => {
-      const status = task.status.trim().toLowerCase() || 'unknown'
-      acc.set(status, (acc.get(status) ?? 0) + 1)
-      return acc
-    }, new Map()))
-      .map(([status, count]) => ({ status, count }))
-      .sort((left, right) => right.count - left.count)
-
-    const listedTasks = tasks.slice(0, 10).map((task) => ({
-      taskId: task.legacyId,
-      title: task.title,
-      status: formatTaskStatusLabel(task.status),
-      priority: formatTaskPriorityLabel(task.priority),
-      dueDate: formatTaskDate(task.dueDateMs),
-      assignedTo: task.assignedTo ?? [],
-    }))
+    const timeWindow = resolveTaskTimeWindow({ params: input.params, rawMessage: input.rawMessage ?? '' })
+    const digest = buildTaskDigest({
+      tasks,
+      mode,
+      timeWindow,
+      scopeLabel: 'you',
+    })
 
     if (tasks.length === 0) {
       return {
         success: true,
-        data: {
-          scope: 'workspace_user',
-          totalTasks: 0,
-          openTasks: 0,
-          completedTasks: 0,
-          overdueTasks: 0,
-          dueSoonTasks: 0,
-          highPriorityTasks: 0,
-          statusBreakdown: [],
-          tasks: [],
-        },
+        data: taskDigestOperationData(digest, { scope: 'workspace_user' }),
         userMessage: 'No tasks assigned to you (or unassigned) in this workspace right now.',
         route: '/dashboard/tasks',
       }
@@ -221,21 +200,8 @@ export const taskOperationHandlers: Record<string, OperationHandler> = {
 
     return {
       success: true,
-      data: {
-        scope: 'workspace_user',
-        mode,
-        totalTasks: tasks.length,
-        openTasks: openTasks.length,
-        completedTasks,
-        overdueTasks,
-        dueSoonTasks,
-        highPriorityTasks,
-        statusBreakdown,
-        tasks: listedTasks,
-      },
-      userMessage: mode === 'summary'
-        ? `Your workspace task summary: ${openTasks.length} open, ${completedTasks} completed, ${overdueTasks} overdue.`
-        : `You have ${tasks.length} relevant task${tasks.length === 1 ? '' : 's'} (assigned to you or unassigned).`,
+      data: taskDigestOperationData(digest, { scope: 'workspace_user' }),
+      userMessage: buildTaskDigestUserMessage(digest),
       route: '/dashboard/tasks',
     }
   },

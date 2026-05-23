@@ -19,6 +19,8 @@ import type { ClientTeamMember } from '@/types/clients'
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
 
 import type { PendingAttachment } from '../hooks/types'
+import type { CollaborationMessage } from '@/types/collaboration'
+import { ReplyIndicator } from './message-composer'
 import type { MessageListRenderers } from './message-list-render-context'
 import { MessageList } from './message-list'
 import type { UnifiedMessage } from './message-list-types'
@@ -131,7 +133,7 @@ export function UnifiedMessagePaneMessagesSection({
     <div className="relative flex min-h-0 flex-1 overflow-hidden">
       <MessageListRenderProvider value={messageListRenderers}>
         <MessageList
-          key={`${header.type}-${header.name}`}
+          key={header.conversationKey ?? `${header.type}-${header.name}`}
           messages={messages}
           currentUserId={currentUserId}
           currentUserRole={currentUserRole}
@@ -177,7 +179,10 @@ type UnifiedMessagePaneComposerSectionProps = {
   onAttachClick?: () => void
   fileInputRef: RefObject<HTMLInputElement | null>
   onAttachmentInputChange: (event: ChangeEvent<HTMLInputElement>) => void
+  replyingToMessage?: CollaborationMessage | null
+  onCancelReply?: () => void
   typingIndicator?: string
+  composerToolbar?: ReactNode
   confirmingDeleteMessageId: string | null
   activeDeletingMessageId: string | null
   onDeleteConfirmOpenChange: (open: boolean) => void
@@ -205,7 +210,10 @@ export function UnifiedMessagePaneComposerSection({
   onAttachClick,
   fileInputRef,
   onAttachmentInputChange,
+  replyingToMessage,
+  onCancelReply,
   typingIndicator,
+  composerToolbar,
   confirmingDeleteMessageId,
   activeDeletingMessageId,
   onDeleteConfirmOpenChange,
@@ -224,6 +232,8 @@ export function UnifiedMessagePaneComposerSection({
         messageInput={messageInput}
         onMessageInputChange={onMessageInputChange}
         onSend={onSend}
+        replyingToMessage={replyingToMessage}
+        onCancelReply={onCancelReply}
         placeholder={placeholder}
         participants={participants}
         onFocus={onFocus}
@@ -235,6 +245,7 @@ export function UnifiedMessagePaneComposerSection({
         fileInputRef={fileInputRef}
         onAttachmentInputChange={onAttachmentInputChange}
         typingIndicator={typingIndicator}
+        composerToolbar={composerToolbar}
       />
 
       <UnifiedMessagePaneDeleteConfirm

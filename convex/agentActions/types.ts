@@ -194,6 +194,18 @@ export const OPERATION_ALIASES: Record<string, string> = {
   getmetaadmetrics: 'summarizeAdsPerformance',
   getfacebookadmetrics: 'summarizeAdsPerformance',
   adsnapshot: 'summarizeAdsPerformance',
+  summarizeanalyticsperformance: 'summarizeAnalyticsPerformance',
+  analyticsummary: 'summarizeAnalyticsPerformance',
+  analyticssnapshot: 'summarizeAnalyticsPerformance',
+  googleanalyticssummary: 'summarizeAnalyticsPerformance',
+  summarizesocialperformance: 'summarizeSocialPerformance',
+  socialsummary: 'summarizeSocialPerformance',
+  socialinsights: 'summarizeSocialPerformance',
+  instagraminsights: 'summarizeSocialPerformance',
+  facebookinsights: 'summarizeSocialPerformance',
+  requestsocialsync: 'requestSocialSync',
+  syncsocial: 'requestSocialSync',
+  syncsocialmetrics: 'requestSocialSync',
 }
 
 export const PROPOSAL_STATUSES = new Set(['draft', 'in_progress', 'ready', 'partial_success', 'sent', 'failed'])

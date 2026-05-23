@@ -37,7 +37,8 @@ function collaborationMessageToUnified(message: CollaborationMessage): UnifiedMe
     deletedAt: message.deletedAt,
   }
 }
-import { SwipeableMessage } from './swipeable-message'
+import { useMediaQuery } from '@/lib/hooks/use-media-query'
+import { LongPressMessage, SwipeableMessage } from './swipeable-message'
 import { ThreadSection } from './thread-section'
 import {
   renderMessageContentBlock,
@@ -293,6 +294,8 @@ export function SwipeableMessageRenderer({
   onDeleteMessage?: (messageId: string) => Promise<void>
   onReply?: (message: UnifiedMessage) => void
 }) {
+  const enableSwipeGestures = useMediaQuery('(pointer: coarse)')
+
   const handleMessageReply = useCallback(() => {
     handleReply(message)
   }, [handleReply, message])
@@ -300,6 +303,18 @@ export function SwipeableMessageRenderer({
   const handleMessageDelete = useCallback(() => {
     handleRequestDelete(message.id)
   }, [handleRequestDelete, message.id])
+
+  if (!enableSwipeGestures) {
+    if (!message.deleted && onReply) {
+      return (
+        <LongPressMessage message={message} onLongPress={handleMessageReply}>
+          {children}
+        </LongPressMessage>
+      )
+    }
+
+    return <>{children}</>
+  }
 
   return (
     <SwipeableMessage

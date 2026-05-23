@@ -213,6 +213,8 @@ export const collaborationApi = {
   getUnreadCountsByChannel: looseApi.collaborationMessages.getUnreadCountsByChannel,
   createMessage: looseApi.collaborationMessages.create,
   updateMessage: looseApi.collaborationMessages.updateMessage,
+  voteOnPoll: looseApi.collaborationMessages.voteOnPoll,
+  endPollMessage: looseApi.collaborationMessages.endPollMessage,
   softDeleteMessage: looseApi.collaborationMessages.softDelete,
   markAsRead: looseApi.collaborationMessages.markAsRead,
   markMultipleAsRead: looseApi.collaborationMessages.markMultipleAsRead,
@@ -240,6 +242,8 @@ export const collaborationChannelAvatarsApi = {
 
 export const directMessagesApi = {
   searchMessages: looseApi.directMessages.searchMessages,
+  voteOnPoll: looseApi.directMessages.voteOnPoll,
+  endPollMessage: looseApi.directMessages.endPollMessage,
 }
 
 export const customFormulasApi = {

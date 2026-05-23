@@ -25,6 +25,8 @@ import {
   Hash,
   Info,
   Link2,
+  Forward,
+  ListTodo,
   Search,
   X,
   LoaderCircle,
@@ -63,7 +65,7 @@ import type { PendingAttachment } from '../hooks/types'
 import { CHANNEL_TYPE_COLORS } from '../utils'
 import { MessageAttachments } from './message-attachments'
 import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
-import { PendingAttachmentsList } from './message-composer'
+import { PendingAttachmentsList, ReplyIndicator } from './message-composer'
 import { MessageContent } from './message-content'
 import { DeletedMessageInfo, DeletingOverlay, MessageEditForm } from './message-item-parts'
 import { collaborationToUnifiedMessage } from './message-list-utils'
@@ -74,6 +76,7 @@ import { MessageReactions } from './message-reactions'
 import { RichComposer } from './rich-composer'
 import { ChannelAvatar } from './channel-avatar'
 import { ChannelInfoDialog } from './channel-info-dialog'
+import { PinMessageButton } from './pinned-messages'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
 
 function getInitials(name: string): string {
@@ -113,6 +116,7 @@ type UnifiedMessageActionBarProps = {
   headerType: 'channel' | 'dm'
   message: UnifiedMessage
   currentUserId: string | null
+  currentUserRole?: string | null
   activeDeletingMessageId: string | null
   messageUpdatingId: string | null
   sharingTo: string | null
@@ -120,12 +124,17 @@ type UnifiedMessageActionBarProps = {
   onStartEdit?: (message: UnifiedMessage) => void
   onRequestDelete?: (messageId: string) => void
   onShare?: (message: UnifiedMessage, platform: 'email') => void
+  onCreateTask?: (message: UnifiedMessage) => void
+  onForward?: (message: UnifiedMessage) => void
+  pinWorkspaceId?: string | null
+  pinMessage?: CollaborationMessage
 }
 
 export function UnifiedMessageActionBar({
   headerType,
   message,
   currentUserId,
+  currentUserRole,
   activeDeletingMessageId,
   messageUpdatingId,
   sharingTo,
@@ -133,8 +142,16 @@ export function UnifiedMessageActionBar({
   onStartEdit,
   onRequestDelete,
   onShare,
+  onCreateTask,
+  onForward,
+  pinWorkspaceId,
+  pinMessage,
 }: UnifiedMessageActionBarProps) {
-  const canManageMessage = Boolean(currentUserId && message.senderId === currentUserId)
+  const canManageMessage = Boolean(
+    currentUserId &&
+      !message.deleted &&
+      (message.senderId === currentUserId || currentUserRole === 'admin'),
+  )
   const isBusy = activeDeletingMessageId === message.id || messageUpdatingId === message.id
   const handleReplyClick = useCallback(() => {
     onReply?.(message)
@@ -148,9 +165,68 @@ export function UnifiedMessageActionBar({
   const handleShareEmailClick = useCallback(() => {
     onShare?.(message, 'email')
   }, [message, onShare])
+  const handleCreateTaskClick = useCallback(() => {
+    onCreateTask?.(message)
+  }, [message, onCreateTask])
+  const handleForwardClick = useCallback(() => {
+    onForward?.(message)
+  }, [message, onForward])
 
   return (
     <div className="flex items-center gap-1">
+      {onCreateTask && !message.deleted ? (
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 transition-transform hover:scale-105"
+                disabled={isBusy}
+                onClick={handleCreateTaskClick}
+              >
+                <ListTodo className="size-3" />
+                <span className="sr-only">Create task from message</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Create task</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : null}
+
+      {headerType === 'channel' && onForward && !message.deleted ? (
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 transition-transform hover:scale-105"
+                disabled={isBusy}
+                onClick={handleForwardClick}
+              >
+                <Forward className="size-3" />
+                <span className="sr-only">Forward message</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Forward to channel</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : null}
+
+      {headerType === 'channel' && pinWorkspaceId && pinMessage && !message.deleted ? (
+        <PinMessageButton
+          message={pinMessage}
+          workspaceId={pinWorkspaceId}
+          userId={currentUserId}
+          variant="icon"
+        />
+      ) : null}
+
       {headerType === 'channel' && onReply ? (
         <TooltipProvider delayDuration={150}>
           <Tooltip>
@@ -561,7 +637,10 @@ export function UnifiedConversationHeader({
                 open={channelInfoOpen}
                 onOpenChange={setChannelInfoOpen}
                 channel={header.channelInfo.channel}
+                channelMessages={header.channelInfo.channelMessages}
                 channelParticipants={header.channelInfo.channelParticipants}
+                currentUserId={header.channelInfo.currentUserId}
+                onPinnedMessageClick={header.channelInfo.onPinnedMessageClick}
                 sharedFiles={header.channelInfo.sharedFiles}
                 workspaceId={header.channelInfo.workspaceId}
                 isAdmin={header.channelInfo.isAdmin}
@@ -707,6 +786,8 @@ type UnifiedComposerSectionProps = {
   messageInput: string
   onMessageInputChange: (value: string) => void
   onSend: () => void
+  replyingToMessage?: CollaborationMessage | null
+  onCancelReply?: () => void
   placeholder: string
   participants: ClientTeamMember[]
   onFocus: () => void
@@ -718,6 +799,7 @@ type UnifiedComposerSectionProps = {
   fileInputRef: RefObject<HTMLInputElement | null>
   onAttachmentInputChange: (event: ChangeEvent<HTMLInputElement>) => void
   typingIndicator?: string
+  composerToolbar?: ReactNode
 }
 
 export function UnifiedComposerSection({
@@ -730,6 +812,8 @@ export function UnifiedComposerSection({
   messageInput,
   onMessageInputChange,
   onSend,
+  replyingToMessage,
+  onCancelReply,
   placeholder,
   participants,
   onFocus,
@@ -741,6 +825,7 @@ export function UnifiedComposerSection({
   fileInputRef,
   onAttachmentInputChange,
   typingIndicator,
+  composerToolbar,
 }: UnifiedComposerSectionProps) {
   const handleRemoveAttachment = useCallback((attachmentId: string) => {
     onRemoveAttachment?.(attachmentId)
@@ -764,6 +849,9 @@ export function UnifiedComposerSection({
           (isComposerFocused || hasPendingAttachments) && 'border-accent/30 shadow-md shadow-primary/5',
         )}
       >
+        {replyingToMessage && onCancelReply ? (
+          <ReplyIndicator message={replyingToMessage} onCancel={onCancelReply} />
+        ) : null}
         <RichComposer
           value={messageInput}
           onChange={onMessageInputChange}
@@ -789,14 +877,16 @@ export function UnifiedComposerSection({
         onChange={onAttachmentInputChange}
       />
       <div className="mt-2 flex items-center justify-between gap-2">
-        {typingIndicator ? (
-          <ChatTypingIndicator label={typingIndicator} variant="composer" />
-        ) : (
-          <span className="min-h-[1rem] text-[11px] leading-snug text-muted-foreground/90">
-            Enter to send · Shift+Enter for a new line
-          </span>
-        )}
-        <div className="flex-1" />
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {composerToolbar}
+          {typingIndicator ? (
+            <ChatTypingIndicator label={typingIndicator} variant="composer" />
+          ) : (
+            <span className="min-h-[1rem] text-[11px] leading-snug text-muted-foreground/90">
+              Enter to send · Shift+Enter for a new line
+            </span>
+          )}
+        </div>
         <Button
           onClick={handleSend}
           disabled={(!messageInput.trim() && !hasPendingAttachments) || isSending || uploadingAttachments}

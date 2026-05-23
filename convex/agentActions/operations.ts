@@ -3,6 +3,7 @@ import {
   asErrorMessage,
   normalizeOperationName,
 } from './helpers'
+import { summarizeAnalyticsPerformanceHandler } from './operations/analyticsSummary'
 import { adsOperationHandlers } from './operations/ads/index'
 import { reportOperationHandlers } from './operations/ads/reports'
 import { clientOperationHandlers } from './operations/clients/index'
@@ -11,6 +12,7 @@ import { notificationOperationHandlers } from './operations/notifications/index'
 import { projectOperationHandlers } from './operations/projects/index'
 import { meetingOperationHandlers } from './operations/meetings/index'
 import { proposalOperationHandlers } from './operations/proposals/index'
+import { socialOperationHandlers } from './operations/socials/index'
 import { taskOperationHandlers } from './operations/tasks/index'
 import type { OperationHandler, OperationInput, OperationResult } from './types'
 
@@ -23,6 +25,8 @@ const operationHandlers: Record<string, OperationHandler> = {
   ...proposalOperationHandlers,
   ...meetingOperationHandlers,
   ...adsOperationHandlers,
+  summarizeAnalyticsPerformance: summarizeAnalyticsPerformanceHandler,
+  ...socialOperationHandlers,
   ...reportOperationHandlers,
 }
 

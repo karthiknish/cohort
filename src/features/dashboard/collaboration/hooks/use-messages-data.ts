@@ -187,8 +187,13 @@ export function useMessagesData({
     setPrevSelectedChannelId(selectedChannelId)
     setChannelListRetryNonce(0)
   }
-  const [messageInput, setMessageInputState] = useState('')
+  const [draftByChannelId, setDraftByChannelId] = useState<Record<string, string>>({})
+  const messageInput = selectedChannelId ? (draftByChannelId[selectedChannelId] ?? '') : ''
   const [messageSearchQuery, setMessageSearchQuery] = useState('')
+
+  useEffect(() => {
+    setMessageSearchQuery('')
+  }, [selectedChannelId])
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const previewReplyTimersRef = useRef<number[]>([])
@@ -568,7 +573,10 @@ export function useMessagesData({
     fallbackDisplayName,
     fallbackRole,
     messageInput,
-    setMessageInput: setMessageInputState,
+    setMessageInput: (value: string) => {
+      if (!selectedChannelId) return
+      setDraftByChannelId((prev) => ({ ...prev, [selectedChannelId]: value }))
+    },
     pendingAttachments,
     uploading,
     clearAttachments,
@@ -593,10 +601,11 @@ export function useMessagesData({
 
   const setMessageInput = useCallback(
     (value: string) => {
-      setMessageInputState(value)
+      if (!selectedChannelId) return
+      setDraftByChannelId((prev) => ({ ...prev, [selectedChannelId]: value }))
       if (value.trim().length > 0) notifyTyping()
     },
-    [notifyTyping]
+    [notifyTyping, selectedChannelId],
   )
 
   return {

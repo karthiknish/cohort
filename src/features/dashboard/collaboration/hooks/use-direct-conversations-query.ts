@@ -93,6 +93,10 @@ export function useDirectConversationsQuery({
   const normalizedMessageSearch = messageSearchQuery.trim()
 
   useEffect(() => {
+    setMessageSearchQuery('')
+  }, [selectedConversationLegacyId])
+
+  useEffect(() => {
     const replyTimersRef = previewReplyTimersRef
     return () => {
       replyTimersRef.current.forEach((timerId) => window.clearTimeout(timerId))
@@ -141,6 +145,7 @@ export function useDirectConversationsQuery({
           lastMessageAtMs: lastMessage?.createdAtMs ?? conversation.lastMessageAtMs ?? null,
           lastMessageSenderId: lastMessage?.senderId ?? conversation.lastMessageSenderId ?? null,
           isRead,
+          unreadCount: isRead ? 0 : 1,
           updatedAtMs: lastMessage?.updatedAtMs ?? conversation.updatedAtMs,
         }
         return enriched
@@ -286,6 +291,7 @@ export function useDirectConversationsQuery({
           lastMessageAtMs: c.lastMessageAtMs,
           lastMessageSenderId: c.lastMessageSenderId,
           isRead: c.isRead,
+          unreadCount: c.unreadCount,
           isArchived: c.isArchived,
           isMuted: c.isMuted,
           createdAtMs: c.createdAtMs,
@@ -316,6 +322,7 @@ export function useDirectConversationsQuery({
       lastMessageAtMs: c.lastMessageAtMs,
       lastMessageSenderId: c.lastMessageSenderId,
       isRead: c.isRead,
+      unreadCount: c.unreadCount,
       isArchived: c.isArchived,
       isMuted: c.isMuted,
       createdAtMs: c.createdAtMs,

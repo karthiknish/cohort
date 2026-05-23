@@ -43,6 +43,7 @@ export type AttachmentValidationResult = {
 
 // Send message options
 export type SendMessageOptions = {
+  content?: string
   parentMessageId?: string
   threadRootId?: string
   senderName?: string

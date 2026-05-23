@@ -22,9 +22,10 @@ import { EmptyState } from '@/shared/ui/empty-state'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
-import type { CollaborationAttachment } from '@/types/collaboration'
+import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 
 import type { Channel } from '../types'
+import { PinnedMessages } from './pinned-messages'
 import { getInitials } from '../utils'
 import { ChannelAvatar } from './channel-avatar'
 import { CHANNEL_INFO_THEME } from './channel-info-theme'
@@ -309,19 +310,28 @@ export function ChannelInfoAboutPanel({
 
 export function ChannelInfoTabs({
   channel,
+  channelMessages,
   channelParticipants,
+  currentUserId,
+  onPinnedMessageClick,
   sharedFiles,
+  workspaceId,
   canManageMembers,
   onManageMembers,
 }: {
   channel: Channel
+  channelMessages: CollaborationMessage[]
   channelParticipants: ClientTeamMember[]
+  currentUserId: string | null
+  onPinnedMessageClick?: (messageId: string) => void
   sharedFiles: CollaborationAttachment[]
+  workspaceId: string
   canManageMembers?: boolean
   onManageMembers?: () => void
 }) {
   const fileCount = sharedFiles.length
   const memberCount = channelParticipants.length
+  const pinnedCount = channelMessages.filter((message) => message.isPinned && !message.isDeleted).length
 
   return (
     <Tabs defaultValue="members" className="flex min-h-0 flex-1 flex-col">
@@ -330,6 +340,12 @@ export function ChannelInfoTabs({
           Members
           {memberCount > 0 ? (
             <span className="ml-1.5 tabular-nums text-muted-foreground">({memberCount})</span>
+          ) : null}
+        </TabsTrigger>
+        <TabsTrigger value="pinned" className={CHANNEL_INFO_THEME.tabTrigger}>
+          Pinned
+          {pinnedCount > 0 ? (
+            <span className="ml-1.5 tabular-nums text-muted-foreground">({pinnedCount})</span>
           ) : null}
         </TabsTrigger>
         <TabsTrigger value="files" className={CHANNEL_INFO_THEME.tabTrigger}>
@@ -349,6 +365,15 @@ export function ChannelInfoTabs({
             channelParticipants={channelParticipants}
             canManageMembers={canManageMembers}
             onManageMembers={onManageMembers}
+          />
+        </TabsContent>
+        <TabsContent value="pinned" className="mt-0 focus-visible:outline-none">
+          <PinnedMessages
+            messages={channelMessages}
+            workspaceId={workspaceId}
+            userId={currentUserId}
+            onMessageClick={onPinnedMessageClick}
+            showEmptyState
           />
         </TabsContent>
         <TabsContent value="files" className="mt-0 focus-visible:outline-none">

@@ -1,5 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('../hooks/use-poll-message-actions', () => ({
+  usePollMessageActions: () => ({
+    handleVote: async () => {},
+    handleEndPoll: async () => {},
+  }),
+}))
 
 import { UnifiedMessagePane } from './unified-message-pane'
 
@@ -15,14 +22,12 @@ describe('UnifiedMessagePane', () => {
         header={null}
         messages={[]}
         currentUserId="user-1"
-        isLoading={false}
-        isLoadingMore={false}
-        hasMore={false}
+        listState={{ loading: false, loadingMore: false, hasMore: false }}
+        composerState={{ sending: false, uploadingAttachments: false, pendingAttachments: false }}
         onLoadMore={handleLoadMore}
         messageInput=""
         onMessageInputChange={handleMessageInputChange}
         onSendMessage={handleSendMessage}
-        isSending={false}
         onToggleReaction={handleToggleReaction}
       />,
     )

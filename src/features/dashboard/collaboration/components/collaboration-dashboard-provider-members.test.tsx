@@ -17,6 +17,15 @@ vi.mock('next/navigation', () => ({
   }),
 }))
 
+vi.mock('@/shared/hooks/use-url-search-params', () => ({
+  useUrlSearchParams: () => ({
+    get: () => null,
+    set: vi.fn(),
+    remove: vi.fn(),
+    toString: () => '',
+  }),
+}))
+
 vi.mock('@/shared/ui/use-toast', () => ({
   useToast: () => ({ toast: vi.fn() }),
 }))
@@ -45,7 +54,7 @@ vi.mock('@/lib/convex-api', () => ({
   },
 }))
 
-vi.mock('../hooks', () => ({
+vi.mock('../hooks/use-collaboration-data', () => ({
   useCollaborationData: () => ({
     clearThreadReplies: vi.fn(),
     channels: [],

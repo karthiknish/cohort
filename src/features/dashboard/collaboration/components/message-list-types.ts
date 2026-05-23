@@ -19,4 +19,6 @@ export interface UnifiedMessage {
   isPinned?: boolean
   deletedBy?: string | null
   deletedAt?: string | null
+  readBy?: string[]
+  deliveredTo?: string[]
 }

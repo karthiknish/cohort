@@ -2,9 +2,14 @@
 
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 
+import { extractUrlsFromContent, isLikelyImageUrl } from '../lib/utils'
+import { parsePollMessage } from '../lib/collaboration-poll-message'
+import { ImageUrlPreview } from './image-url-preview'
+import { LinkPreviewCard } from './link-preview-card'
 import { MessageAttachments } from './message-attachments'
 import { MessageContent } from './message-content'
 import { DeletedMessageInfo, MessageEditForm } from './message-item-parts'
+import { PollCard } from './message-polls'
 import type { UnifiedMessage } from './message-list-types'
 
 export function getSharePlatformLabel(platform: 'email'): string {
@@ -25,17 +30,85 @@ export function renderMessageAttachmentsContent(message: UnifiedMessage) {
   return <MessageAttachments attachments={attachments} />
 }
 
-export function renderMessageContentBlock(
-  message: UnifiedMessage,
-  originalMessage: CollaborationMessage | undefined,
-  highlightTerms?: string[],
-) {
+type RenderMessageContentOptions = {
+  message: UnifiedMessage
+  originalMessage?: CollaborationMessage
+  highlightTerms?: string[]
+  currentUserId?: string | null
+  isAdmin?: boolean
+  onVotePoll?: (messageLegacyId: string, optionIds: string[]) => Promise<void>
+  onEndPoll?: (messageLegacyId: string) => Promise<void>
+}
+
+export function renderMessageContentBlock({
+  message,
+  originalMessage,
+  highlightTerms,
+  currentUserId,
+  isAdmin = false,
+  onVotePoll,
+  onEndPoll,
+}: RenderMessageContentOptions) {
+  const content = originalMessage?.content ?? message.content ?? ''
+  const poll = parsePollMessage(content)
+
+  if (poll) {
+    const canEnd = Boolean(
+      onEndPoll &&
+        currentUserId &&
+        (poll.createdBy === currentUserId || isAdmin),
+    )
+
+    return (
+      <PollCard
+        poll={poll}
+        userId={currentUserId ?? null}
+        showResults={false}
+        canEnd={canEnd}
+        onVote={
+          onVotePoll
+            ? async (_pollId, optionIds) => {
+                await onVotePoll(message.id, optionIds)
+              }
+            : undefined
+        }
+        onEndPoll={
+          onEndPoll
+            ? async () => {
+                await onEndPoll(message.id)
+              }
+            : undefined
+        }
+      />
+    )
+  }
+
+  const allUrls = extractUrlsFromContent(content)
+  const imageUrlPreviews = allUrls.filter((url) => isLikelyImageUrl(url))
+  const linkPreviews = allUrls.filter((url) => !isLikelyImageUrl(url))
+
   return (
-    <MessageContent
-      content={originalMessage?.content ?? message.content ?? ''}
-      mentions={originalMessage?.mentions ?? message.mentions}
-      highlightTerms={highlightTerms}
-    />
+    <>
+      <MessageContent
+        content={content}
+        mentions={originalMessage?.mentions ?? message.mentions}
+        highlightTerms={highlightTerms}
+      />
+      {imageUrlPreviews.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {imageUrlPreviews.map((url) => (
+            <ImageUrlPreview key={`${message.id}-img-${url}`} url={url} />
+          ))}
+        </div>
+      ) : null}
+      {linkPreviews.length > 0 ? (
+        <div className="mt-2 space-y-2">
+          {linkPreviews.map((url) => (
+            <LinkPreviewCard key={`${message.id}-link-${url}`} url={url} />
+          ))}
+        </div>
+      ) : null}
+    </>
   )
 }
 

@@ -37,6 +37,8 @@ export type UnifiedInboxDirectMessageInput = {
   pendingAttachments: PendingAttachment[]
   uploadPendingAttachments: (attachments: PendingAttachment[]) => Promise<CollaborationAttachment[]>
   clearPendingAttachments: () => void
+  typingParticipants: Array<{ name?: string | null }>
+  notifyDmTyping: () => void
 }
 
 export type UseUnifiedInboxControllerArgs = {
@@ -80,6 +82,8 @@ export function useUnifiedInboxController({
     pendingAttachments,
     uploadPendingAttachments,
     clearPendingAttachments,
+    typingParticipants: dmTypingParticipants,
+    notifyDmTyping,
   } = directMessagePane
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -99,8 +103,12 @@ export function useUnifiedInboxController({
         ...current,
         [activeDmLegacyId]: value,
       }))
+
+      if (value.trim().length > 0) {
+        notifyDmTyping()
+      }
     },
-    [activeDmLegacyId],
+    [activeDmLegacyId, notifyDmTyping],
   )
 
   const handleSendDirectMessage = useCallback(
@@ -162,7 +170,7 @@ export function useUnifiedInboxController({
         lastMessageSnippet: conv.lastMessageSnippet ?? null,
         lastMessageAtMs: conv.lastMessageAtMs ?? null,
         isRead: conv.isRead,
-        unreadCount: conv.isRead ? 0 : 1,
+        unreadCount: conv.unreadCount ?? (conv.isRead ? 0 : 1),
         metadata: { otherParticipantRole: conv.otherParticipantRole },
         originalData: conv,
       })
@@ -199,11 +207,13 @@ export function useUnifiedInboxController({
   const dmMessagesForPane = isDmSearchActive ? dmVisibleMessages : dmMessages
 
   const typingIndicatorText = useMemo(() => {
-    if (!selectedChannel || typingParticipants.length === 0) {
+    const activeTypingParticipants = selectedChannel ? typingParticipants : selectedDM ? dmTypingParticipants : []
+
+    if (activeTypingParticipants.length === 0) {
       return undefined
     }
 
-    const names = typingParticipants.flatMap((participant) => {
+    const names = activeTypingParticipants.flatMap((participant) => {
       const name = participant.name
       return typeof name === 'string' && name.trim().length > 0 ? [name] : []
     })
@@ -221,7 +231,7 @@ export function useUnifiedInboxController({
     }
 
     return `${names[0]}, ${names[1]}, and ${names.length - 2} others are typing...`
-  }, [selectedChannel, typingParticipants])
+  }, [dmTypingParticipants, selectedChannel, selectedDM, typingParticipants])
 
   const handleSelectItem = useCallback(
     (item: UnifiedItem) => {

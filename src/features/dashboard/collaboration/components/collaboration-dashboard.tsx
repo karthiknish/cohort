@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { X } from 'lucide-react'
 
+import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Card, CardContent } from '@/shared/ui/card'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Button } from '@/shared/ui/button'
@@ -19,6 +20,11 @@ import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
 import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { CreateChannelDialog } from './create-channel-dialog'
 import { ChannelMembersDialog } from './channel-members-dialog'
+import { CrossChannelSearch } from './cross-channel-search'
+import type { UnifiedMessage } from './message-list-types'
+import { useCollaborationExternalNotify } from '../hooks/use-collaboration-external-notify'
+import { useCrossChannelCollaborationSearch } from '../hooks/use-cross-channel-collaboration-search'
+import { useCollaborationChannelExtras } from './collaboration-channel-extras'
 
 type CollaborationDashboardContext = ReturnType<typeof useCollaborationDashboardContext>
 
@@ -47,8 +53,18 @@ function createUnifiedInboxSidebarProps(context: CollaborationDashboardContext) 
 function createUnifiedInboxChannelPaneProps(
   context: CollaborationDashboardContext,
   mentionParticipants: ClientTeamMember[],
+  channelExtras: ReturnType<typeof useCollaborationChannelExtras>,
+  onShareToPlatform?: (message: UnifiedMessage, platform: 'email') => Promise<void>,
 ) {
-  const { collab, clearMessageFocus, requestedMessageId, requestedThreadId } = context
+  const {
+    collab,
+    clearMessageFocus,
+    currentUserId,
+    handleOpenChannelMessage,
+    requestedMessageId,
+    requestedThreadId,
+    workspaceId,
+  } = context
 
   return {
     selectedChannel: collab.selectedChannel,
@@ -67,6 +83,12 @@ function createUnifiedInboxChannelPaneProps(
     messageInput: collab.messageInput,
     onMessageInputChange: collab.setMessageInput,
     onSendMessage: collab.handleSendMessage,
+    onShareToPlatform,
+    onCreateTask: channelExtras.handleCreateTask,
+    onForwardMessage: channelExtras.handleForwardMessage,
+    onCreatePoll: channelExtras.handleCreatePoll,
+    onExportChannel: channelExtras.handleExportChannel,
+    onOpenChannelMessage: handleOpenChannelMessage,
     sending: collab.sending,
     pendingAttachments: collab.pendingAttachments,
     onAddAttachments: collab.handleAddAttachments,
@@ -105,10 +127,25 @@ function createUnifiedInboxChannelPaneProps(
   }
 }
 
-function createUnifiedInboxDirectMessagePaneProps(context: CollaborationDashboardContext) {
-  const { collab, dm, openNewDMDialog } = context
+function createUnifiedInboxDirectMessagePaneProps(
+  context: CollaborationDashboardContext,
+  channelExtras: ReturnType<typeof useCollaborationChannelExtras>,
+) {
+  const {
+    clearMessageFocus,
+    collab,
+    currentUserRole,
+    dm,
+    openNewDMDialog,
+    requestedMessageId,
+    workspaceId,
+  } = context
 
   return {
+    typingParticipants: dm.typingParticipants,
+    notifyDmTyping: dm.notifyDmTyping,
+    handleComposerFocus: dm.handleComposerFocus,
+    handleComposerBlur: dm.handleComposerBlur,
     selectedDM: dm.selectedConversation,
     messages: dm.messages,
     visibleMessages: dm.visibleMessages,
@@ -136,6 +173,11 @@ function createUnifiedInboxDirectMessagePaneProps(context: CollaborationDashboar
     onStartNewDM: openNewDMDialog,
     messagesError: dm.messagesError,
     onRetryMessages: dm.retryMessagesError,
+    onCreateTask: channelExtras.handleCreateTask,
+    currentUserRole,
+    workspaceId,
+    deepLinkMessageId: requestedMessageId,
+    onClearDeepLink: clearMessageFocus,
   }
 }
 
@@ -170,6 +212,7 @@ function CollaborationDashboardContent() {
       <div className={DASHBOARD_THEME.layout.container}>
         <CollaborationHeaderSection />
         <CollaborationProjectBanner />
+        <CollaborationUrlWarnings />
         <CollaborationInboxSection />
         <ChannelMembersDialogSection />
       </div>
@@ -177,9 +220,59 @@ function CollaborationDashboardContent() {
   )
 }
 
+function CollaborationUrlWarnings() {
+  const {
+    dismissUnresolvedChannelUrl,
+    dismissUnresolvedConversationUrl,
+    unresolvedChannelUrl,
+    unresolvedConversationUrl,
+  } = useCollaborationDashboardContext()
+
+  if (!unresolvedChannelUrl && !unresolvedConversationUrl) {
+    return null
+  }
+
+  return (
+    <div className="mx-4 mb-3 space-y-2">
+      {unresolvedChannelUrl ? (
+        <Alert variant="destructive">
+          <AlertTitle>Channel link unavailable</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>We couldn&apos;t open the channel from this link. You may not have access or it no longer exists.</span>
+            <Button type="button" variant="outline" size="sm" onClick={dismissUnresolvedChannelUrl}>
+              Dismiss
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {unresolvedConversationUrl ? (
+        <Alert variant="destructive">
+          <AlertTitle>Conversation link unavailable</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>We couldn&apos;t open the direct message from this link. It may have been removed or you no longer have access.</span>
+            <Button type="button" variant="outline" size="sm" onClick={dismissUnresolvedConversationUrl}>
+              Dismiss
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+    </div>
+  )
+}
+
 function CollaborationHeaderSection() {
-  const { currentUserId, currentUserRole, handleCreateChannel, isAdmin, workspaceId, workspaceMembers } =
-    useCollaborationDashboardContext()
+  const {
+    collab,
+    currentUserId,
+    currentUserRole,
+    handleCreateChannel,
+    handleOpenChannelMessage,
+    handleSelectChannel,
+    isAdmin,
+    workspaceId,
+    workspaceMembers,
+  } = useCollaborationDashboardContext()
+  const searchAcrossChannels = useCrossChannelCollaborationSearch(workspaceId, collab.channels)
 
   return (
     <DashboardPageHero innerClassName="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -190,7 +283,14 @@ function CollaborationHeaderSection() {
         </p>
       </div>
       {currentUserRole !== 'client' ? (
-        <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto">
+        <div className="flex w-full shrink-0 flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
+          <CrossChannelSearch
+            onSearch={searchAcrossChannels}
+            onResultClick={(messageId, channelId, threadRootId) => {
+              handleSelectChannel(channelId)
+              handleOpenChannelMessage(messageId, { threadId: threadRootId ?? null })
+            }}
+          />
           {isAdmin ? (
             <CreateChannelDialog
               workspaceId={workspaceId}
@@ -250,6 +350,47 @@ function CollaborationInboxSection() {
     workspaceId,
     workspaceMembers,
   } = context
+  const { sendCollaborationEmailCopy } = useCollaborationExternalNotify()
+
+  const handleShareToPlatform = useCallback(
+    async (message: UnifiedMessage, platform: 'email') => {
+      if (platform !== 'email' || !workspaceId) {
+        return
+      }
+
+      const channelMessage = collab.channelMessages.find((entry) => entry.id === message.id)
+      if (channelMessage) {
+        await sendCollaborationEmailCopy(channelMessage, workspaceId)
+        return
+      }
+
+      const dmMessage = context.dm.messages.find((entry) => entry.legacyId === message.id)
+      if (!dmMessage) {
+        return
+      }
+
+      await sendCollaborationEmailCopy(
+        {
+          id: dmMessage.legacyId,
+          channelType: 'team',
+          clientId: null,
+          projectId: null,
+          content: dmMessage.content,
+          senderId: dmMessage.senderId,
+          senderName: dmMessage.senderName,
+          senderRole: dmMessage.senderRole ?? null,
+          createdAt: new Date(dmMessage.createdAtMs).toISOString(),
+          updatedAt: null,
+          isEdited: Boolean(dmMessage.edited),
+          deletedAt: dmMessage.deletedAtMs ? new Date(dmMessage.deletedAtMs).toISOString() : null,
+          deletedBy: dmMessage.deletedBy ?? null,
+          isDeleted: Boolean(dmMessage.deleted),
+        },
+        workspaceId,
+      )
+    },
+    [collab.channelMessages, context.dm.messages, sendCollaborationEmailCopy, workspaceId],
+  )
 
   const mentionParticipants = useMemo<ClientTeamMember[]>(() => {
     const members = new Map<string, ClientTeamMember>()
@@ -276,8 +417,27 @@ function CollaborationInboxSection() {
   }, [collab.channelParticipants, workspaceMembers])
 
   const sidebar = useMemo(() => createUnifiedInboxSidebarProps(context), [context])
-  const channelPane = useMemo(() => createUnifiedInboxChannelPaneProps(context, mentionParticipants), [context, mentionParticipants])
-  const directMessagePane = useMemo(() => createUnifiedInboxDirectMessagePaneProps(context), [context])
+  const channelExtras = useCollaborationChannelExtras({
+    channel: collab.selectedChannel,
+    channelMessages: collab.channelMessages,
+    channels: collab.channels,
+    currentUserId,
+    workspaceId,
+    onSendPollMessage: collab.selectedChannel
+      ? async (content: string) => {
+          await collab.handleSendMessage({ content, skipAttachmentUpload: true })
+        }
+      : undefined,
+  })
+
+  const channelPane = useMemo(
+    () => createUnifiedInboxChannelPaneProps(context, mentionParticipants, channelExtras, handleShareToPlatform),
+    [channelExtras, context, handleShareToPlatform, mentionParticipants],
+  )
+  const directMessagePane = useMemo(
+    () => createUnifiedInboxDirectMessagePaneProps(context, channelExtras),
+    [channelExtras, context],
+  )
   const manageChannel = useMemo(() => createUnifiedInboxManageChannelProps(context), [context])
 
   return (
@@ -299,6 +459,8 @@ function CollaborationInboxSection() {
           currentUserId={currentUserId}
           currentUserRole={currentUserRole}
         />
+        {channelExtras.taskModal}
+        {channelExtras.forwardDialog}
       </CardContent>
     </Card>
   )

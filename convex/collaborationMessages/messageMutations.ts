@@ -1,4 +1,10 @@
 import { internal } from '/_generated/api'
+import {
+  applyPollVote,
+  encodePollMessage,
+  endPoll,
+  parsePollMessage,
+} from '../lib/collaborationPollMessage'
 import { resolveMentionRecipientUserIds } from '../notificationTargeting'
 
 import {
@@ -234,6 +240,84 @@ export const updateMessage = zWorkspaceMutation({
       content: args.content,
       ...(args.format !== undefined ? { format: args.format } : {}),
       ...(args.mentions !== undefined ? { mentions: args.mentions } : {}),
+      updatedAtMs: ctx.now,
+    })
+
+    return args.legacyId
+  },
+})
+
+export const voteOnPoll = zWorkspaceMutation({
+  args: {
+    legacyId: z.string(),
+    optionIds: z.array(z.string()),
+  },
+  handler: async (ctx, args) => {
+    const row = await assertAccessToMessage(
+      ctx,
+      args.workspaceId,
+      await ctx.db
+        .query('collaborationMessages')
+        .withIndex('by_workspace_legacyId', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId),
+        )
+        .unique(),
+    )
+
+    const poll = parsePollMessage(row.content)
+    if (!poll) {
+      throw Errors.validation.invalidInput('Message is not a poll')
+    }
+
+    const currentUserId = requireActorUserId(ctx)
+    let nextPoll
+    try {
+      nextPoll = applyPollVote(poll, currentUserId, args.optionIds)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unable to record vote'
+      throw Errors.validation.invalidInput(message)
+    }
+
+    await ctx.db.patch(row._id, {
+      content: encodePollMessage(nextPoll),
+      updatedAtMs: ctx.now,
+    })
+
+    return args.legacyId
+  },
+})
+
+export const endPollMessage = zWorkspaceMutation({
+  args: {
+    legacyId: z.string(),
+  },
+  handler: async (ctx, args) => {
+    const row = await assertAccessToMessage(
+      ctx,
+      args.workspaceId,
+      await ctx.db
+        .query('collaborationMessages')
+        .withIndex('by_workspace_legacyId', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId),
+        )
+        .unique(),
+    )
+
+    const poll = parsePollMessage(row.content)
+    if (!poll) {
+      throw Errors.validation.invalidInput('Message is not a poll')
+    }
+
+    const currentUserId = requireActorUserId(ctx)
+    const isCreator = poll.createdBy === currentUserId
+    const isAdmin = ctx.user?.role === 'admin'
+    if (!isCreator && !isAdmin) {
+      throw Errors.auth.forbidden('Only the poll creator can end this poll')
+    }
+
+    const nextPoll = endPoll(poll, ctx.now)
+    await ctx.db.patch(row._id, {
+      content: encodePollMessage(nextPoll),
       updatedAtMs: ctx.now,
     })
 

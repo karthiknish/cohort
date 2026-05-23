@@ -4,6 +4,7 @@ import type { DirectConversation, DirectMessage } from '@/types/collaboration'
 
 import { useDirectConversationsQuery } from './use-direct-conversations-query'
 import { useDirectMessageActions } from './use-direct-message-actions'
+import { useDmTyping } from './use-dm-typing'
 
 export type { DirectConversation, DirectMessage }
 
@@ -46,11 +47,22 @@ export type UseDirectMessagesReturn = {
   ) => Promise<{ legacyId: string; isNew: boolean }>
   unreadCount: number
   startNewDM: (user: { id: string; name: string; role?: string | null }) => Promise<void>
+  typingParticipants: Array<{ name: string; role?: string | null }>
+  handleComposerFocus: () => void
+  handleComposerBlur: () => void
+  notifyDmTyping: () => void
 }
 
 export function useDirectMessages(options: UseDirectMessagesOptions): UseDirectMessagesReturn {
   const query = useDirectConversationsQuery(options)
   const actions = useDirectMessageActions({ ...options, ...query })
+  const dmTyping = useDmTyping({
+    workspaceId: options.workspaceId,
+    currentUserId: options.currentUserId,
+    currentUserName: options.currentUserName,
+    currentUserRole: options.currentUserRole,
+    conversationLegacyId: query.selectedConversation?.legacyId ?? null,
+  })
 
   return {
     conversations: query.conversations,
@@ -80,5 +92,9 @@ export function useDirectMessages(options: UseDirectMessagesOptions): UseDirectM
     getOrCreateConversation: actions.getOrCreateConversation,
     unreadCount: actions.unreadCount,
     startNewDM: actions.startNewDM,
+    typingParticipants: dmTyping.typingParticipants,
+    handleComposerFocus: dmTyping.handleComposerFocus,
+    handleComposerBlur: dmTyping.handleComposerBlur,
+    notifyDmTyping: dmTyping.notifyTyping,
   }
 }

@@ -27,5 +27,7 @@ export function collaborationToUnifiedMessage(msg: CollaborationMessage): Unifie
     isPinned: msg.isPinned ?? undefined,
     deletedBy: msg.deletedBy ?? undefined,
     deletedAt: msg.deletedAt ?? undefined,
+    readBy: msg.readBy ?? undefined,
+    deliveredTo: msg.deliveredTo ?? undefined,
   }
 }

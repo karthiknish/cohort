@@ -3,6 +3,69 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { extractCampaignQueryFromIntent, getPeriodWindow, resolveDeterministicAgentIntent, resolveReportWindow, resolveWeakCommandClarification } from './helpers'
 
 describe('resolveDeterministicAgentIntent', () => {
+  it('routes organic social summaries to summarizeSocialPerformance', () => {
+    const intent = resolveDeterministicAgentIntent('How is Instagram performing this month?')
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'summarizeSocialPerformance',
+      params: expect.objectContaining({
+        surface: 'instagram',
+        period: 'monthly',
+      }),
+    })
+  })
+
+  it('routes social sync requests to requestSocialSync', () => {
+    const intent = resolveDeterministicAgentIntent('sync organic social metrics for the last 30 days')
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'requestSocialSync',
+      params: expect.objectContaining({
+        startDate: expect.any(String),
+        endDate: expect.any(String),
+      }),
+    })
+  })
+
+  it('navigates to socials for connect meta organic setup', () => {
+    const intent = resolveDeterministicAgentIntent('open socials and connect meta for organic social')
+
+    expect(intent).toEqual({
+      action: 'navigate',
+      route: '/dashboard/socials',
+      message: 'Opening Socials so you can connect Meta and choose a Facebook Page.',
+    })
+  })
+
+  it('routes analytics summaries to summarizeAnalyticsPerformance', () => {
+    const intent = resolveDeterministicAgentIntent('analytics summary in the last month')
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'summarizeAnalyticsPerformance',
+      params: {
+        period: 'monthly',
+        startDate: expect.any(String),
+        endDate: expect.any(String),
+      },
+    })
+  })
+
+  it('routes ads summaries with long windows to summarizeAdsPerformance', () => {
+    const intent = resolveDeterministicAgentIntent('ads summary from last 100 days')
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'summarizeAdsPerformance',
+      params: {
+        startDate: expect.any(String),
+        endDate: expect.any(String),
+      },
+    })
+  })
+
   it('maps date-range ad metric requests to summarizeAdsPerformance', () => {
     const intent = resolveDeterministicAgentIntent('Give me metrics from 2026-01-01 to 2026-01-15', {
       activeClientId: 'client_1',
@@ -92,6 +155,7 @@ describe('resolveDeterministicAgentIntent', () => {
       params: {
         clientReference: 'abc',
         mode: 'list',
+        timeWindow: 'all',
       },
       message: 'Listing the tasks for abc now.',
     })
@@ -106,6 +170,7 @@ describe('resolveDeterministicAgentIntent', () => {
       params: {
         clientReference: 'abc',
         mode: 'summary',
+        timeWindow: 'all',
       },
       message: 'Pulling the task summary for abc now.',
     })
@@ -117,8 +182,20 @@ describe('resolveDeterministicAgentIntent', () => {
     expect(intent).toEqual({
       action: 'execute',
       operation: 'summarizeMyTasks',
-      params: { mode: 'list' },
+      params: { mode: 'list', timeWindow: 'all' },
       message: 'Listing your tasks now.',
+    })
+  })
+
+  it('passes due-this-week window for weekly task summaries', () => {
+    const intent = resolveDeterministicAgentIntent('summarize my tasks due this week', {
+      activeClientId: 'abc',
+    })
+
+    expect(intent).toMatchObject({
+      action: 'execute',
+      operation: 'summarizeMyTasks',
+      params: { mode: 'summary', timeWindow: 'due_this_week' },
     })
   })
 

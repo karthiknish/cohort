@@ -110,7 +110,6 @@ describe('safeExecuteOperation', () => {
 
     expect(result).toMatchObject({
       success: true,
-      userMessage: 'Here’s the task summary for ABC Client: 1 open, 1 completed, 0 overdue.',
       data: {
         clientId: 'abc',
         clientName: 'ABC Client',
@@ -120,8 +119,12 @@ describe('safeExecuteOperation', () => {
         overdueTasks: 0,
         dueSoonTasks: 1,
         highPriorityTasks: 1,
+        timeWindow: 'all',
       },
     })
+    expect(result.userMessage).toContain('For ABC Client:')
+    expect(result.userMessage).toContain('1 open')
+    expect(result.userMessage).toContain('1 completed')
 
     expect(runQuery).toHaveBeenNthCalledWith(1, expect.anything(), {
       workspaceId: 'ws_1',

@@ -261,7 +261,8 @@ export function useRealtimeChannelSnapshot({
 interface UseRealtimeTypingOptions {
   userId: string | null
   workspaceId: string | null
-  selectedChannel: Channel | null
+  selectedChannel?: Channel | null
+  conversationLegacyId?: string | null
 }
 
 interface ConvexTypingRow {
@@ -270,10 +271,17 @@ interface ConvexTypingRow {
   role?: string
 }
 
-export function useRealtimeTyping({ userId, workspaceId, selectedChannel }: UseRealtimeTypingOptions) {
+export function useRealtimeTyping({
+  userId,
+  workspaceId,
+  selectedChannel = null,
+  conversationLegacyId = null,
+}: UseRealtimeTypingOptions) {
   const { isPreviewMode } = usePreview()
 
-  const channelId = selectedChannel?.id ?? null
+  const channelId = conversationLegacyId
+    ? `dm:${conversationLegacyId}`
+    : selectedChannel?.id ?? null
 
   const convexEnabled =
     !isPreviewMode &&

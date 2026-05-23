@@ -137,6 +137,87 @@ function getDeltaTone(value: number | null, invertTrend = false): DeltaTone {
   return positive ? 'positive' : 'negative'
 }
 
+function buildMetricsFromAnalyticsTotals(
+  totals: Record<string, unknown> | null,
+  comparison: Record<string, unknown> | null,
+): MetricItem[] {
+  if (!totals) return []
+
+  const users = asNumber(totals.users)
+  const sessions = asNumber(totals.sessions)
+  const conversions = asNumber(totals.conversions)
+  const revenue = asNumber(totals.revenue)
+  const conversionRate = asNumber(totals.conversionRate)
+  const revenuePerSession = asNumber(totals.revenuePerSession)
+  const sessionsPerUser = asNumber(totals.sessionsPerUser)
+  const deltaPercent = asRecord(comparison?.deltaPercent)
+
+  return compact<MetricItem>([
+    users !== null
+      ? {
+          label: 'Users',
+          value: formatWholeNumber(users),
+          numericValue: users,
+          emphasis: 'primary',
+          delta: formatDeltaPercent(asNumber(deltaPercent?.users)),
+          deltaTone: getDeltaTone(asNumber(deltaPercent?.users)),
+        }
+      : null,
+    sessions !== null
+      ? {
+          label: 'Sessions',
+          value: formatWholeNumber(sessions),
+          numericValue: sessions,
+          emphasis: 'primary',
+          delta: formatDeltaPercent(asNumber(deltaPercent?.sessions)),
+          deltaTone: getDeltaTone(asNumber(deltaPercent?.sessions)),
+        }
+      : null,
+    conversions !== null
+      ? {
+          label: 'Conversions',
+          value: formatWholeNumber(conversions),
+          numericValue: conversions,
+          delta: formatDeltaPercent(asNumber(deltaPercent?.conversions)),
+          deltaTone: getDeltaTone(asNumber(deltaPercent?.conversions)),
+        }
+      : null,
+    revenue !== null
+      ? {
+          label: 'Revenue',
+          value: formatCurrency(revenue),
+          numericValue: revenue,
+          emphasis: 'primary',
+          delta: formatDeltaPercent(asNumber(deltaPercent?.revenue)),
+          deltaTone: getDeltaTone(asNumber(deltaPercent?.revenue)),
+        }
+      : null,
+    conversionRate !== null
+      ? {
+          label: 'Conversion Rate',
+          value: formatPercent(conversionRate),
+          numericValue: conversionRate,
+          delta: formatDeltaPercent(asNumber(deltaPercent?.conversionRate)),
+          deltaTone: getDeltaTone(asNumber(deltaPercent?.conversionRate)),
+        }
+      : null,
+    revenuePerSession !== null && sessions !== null && sessions > 0
+      ? {
+          label: 'Revenue / Session',
+          value: formatCurrency(revenuePerSession),
+          numericValue: revenuePerSession,
+        }
+      : null,
+    sessionsPerUser !== null && users !== null && users > 0
+      ? {
+          label: 'Sessions / User',
+          value: sessionsPerUser.toFixed(2),
+          numericValue: sessionsPerUser,
+        }
+      : null,
+  ])
+}
+
 function buildMetricsFromTotals(
   totals: Record<string, unknown> | null,
   comparison: Record<string, unknown> | null,
@@ -268,11 +349,34 @@ export function buildAgentMessageCharts(
   const metricsAvailable = resolveMetricsAvailable(data)
   if (metricsAvailable === false) return charts
 
+  const dataKind = asString(data.dataKind)
+  const isAnalytics = operation === 'summarizeAnalyticsPerformance' || dataKind === 'analytics'
+  const isSocial = operation === 'summarizeSocialPerformance' || dataKind === 'social'
   const comparison = asRecord(data.comparison)
   const deltaPercent = asRecord(comparison?.deltaPercent)
-  const totals = resolveTotals(data)
+  const totals = isAnalytics ? asRecord(data.totals) : resolveTotals(data)
 
-  if (totals) {
+  if (totals && isAnalytics) {
+    const users = asNumber(totals.users)
+    const sessions = asNumber(totals.sessions)
+    const conversions = asNumber(totals.conversions)
+    const trafficPoints = compact<AgentChartPoint>([
+      users !== null && users > 0 ? { name: 'Users', value: users } : null,
+      sessions !== null && sessions > 0 ? { name: 'Sessions', value: sessions } : null,
+      conversions !== null && conversions > 0 ? { name: 'Conversions', value: conversions } : null,
+    ])
+    if (trafficPoints.length >= 2) {
+      charts.push({
+        id: 'analytics-traffic',
+        title: 'Traffic volume',
+        points: trafficPoints,
+        valueFormat: 'number',
+        layout: 'horizontal',
+      })
+    }
+  }
+
+  if (totals && !isAnalytics) {
     const spend = asNumber(totals.spend)
     const revenue = asNumber(totals.revenue)
     const financialPoints = compact<AgentChartPoint>([
@@ -326,7 +430,9 @@ export function buildAgentMessageCharts(
       asNumber(deltaPercent.conversions) !== null
         ? { name: 'Conversions', value: asNumber(deltaPercent.conversions)! }
         : null,
-    ]).filter((point) => Math.abs(point.value) >= 0.05)
+    ])
+      .filter((point) => Math.abs(point.value) >= 0.05)
+      .filter((point) => Math.abs(point.value) <= 300)
 
     if (deltaPoints.length >= 2) {
       charts.push({
@@ -389,7 +495,7 @@ export function buildAgentMessageCharts(
     }
   }
 
-  if (operation === 'summarizeClientTasks') {
+  if (operation === 'summarizeClientTasks' || operation === 'summarizeMyTasks') {
     const statusBreakdown = asRecordArray(data.statusBreakdown)
     const statusPoints = statusBreakdown.flatMap((entry) => {
         const count = asNumber(entry.count)
@@ -429,11 +535,23 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
   const campaignQuery = asString(data.campaignQuery)
   const matchedCampaignCount = asNumber(data.matchedCampaignCount)
   const metricsAvailable = resolveMetricsAvailable(data)
+  const dataKind = asString(data.dataKind)
+  const isAnalytics = operation === 'summarizeAnalyticsPerformance' || dataKind === 'analytics'
+  const isSocial = operation === 'summarizeSocialPerformance' || dataKind === 'social'
 
   if (periodLabel) details.push({ label: 'Window', value: periodLabel })
   if (startDate || endDate) details.push({ label: 'Dates', value: startDate && endDate ? `${startDate} → ${endDate}` : startDate ?? endDate ?? '' })
-  if (providerLabel) details.push({ label: 'Providers', value: providerLabel })
-  if (metricsAvailable === false) details.push({ label: 'Ads Data', value: 'No synced metrics in this window' })
+  if (providerLabel) details.push({ label: 'Source', value: providerLabel })
+  if (metricsAvailable === false) {
+    details.push({
+      label: isAnalytics ? 'Analytics Data' : isSocial ? 'Social Data' : 'Ads Data',
+      value: isAnalytics
+        ? 'No synced Google Analytics traffic in this window'
+        : isSocial
+          ? 'No synced organic social metrics in this window'
+          : 'No synced metrics in this window',
+    })
+  }
   if (campaignQuery) details.push({ label: 'Campaign Filter', value: campaignQuery })
   if (matchedCampaignCount !== null) details.push({ label: 'Matches', value: formatWholeNumber(matchedCampaignCount) })
   if (previousWindow) {
@@ -445,7 +563,7 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
   }
 
   const campaignCounts = asRecord(data.campaignCounts)
-  if (campaignCounts) {
+  if (campaignCounts && !isAnalytics) {
     const active = asNumber(campaignCounts.active)
     const paused = asNumber(campaignCounts.paused)
     const total = asNumber(campaignCounts.total)
@@ -465,13 +583,17 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
 
   if (details.length > 0) sections.push({ type: 'metrics', title: 'Overview', items: details })
 
-  const totalsMetrics = buildMetricsFromTotals(resolveTotals(data), comparison)
+  const totalsMetrics = isAnalytics
+    ? buildMetricsFromAnalyticsTotals(asRecord(data.totals), comparison)
+    : isSocial
+      ? []
+      : buildMetricsFromTotals(resolveTotals(data), comparison)
   if (totalsMetrics.length > 0 && metricsAvailable !== false) {
-    sections.push({ type: 'metrics', title: 'Performance', items: totalsMetrics })
+    sections.push({ type: 'metrics', title: isAnalytics ? 'Traffic & Conversions' : 'Performance', items: totalsMetrics })
   }
 
   const providerBreakdown = asRecordArray(data.providerBreakdown)
-  if (providerBreakdown.length > 0 && metricsAvailable !== false) {
+  if (providerBreakdown.length > 0 && metricsAvailable !== false && !isAnalytics && !isSocial) {
     sections.push({
       type: 'list',
       title: 'Platform Breakdown',
@@ -500,7 +622,7 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
   }
 
   const activeCampaigns = asRecordArray(data.activeCampaigns)
-  if (activeCampaigns.length > 0) {
+  if (activeCampaigns.length > 0 && !isAnalytics && !isSocial) {
     sections.push({
       type: 'list',
       title: campaignQuery ? 'Matching Campaigns' : 'Active Campaigns',
@@ -513,7 +635,7 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
   }
 
   const topCampaigns = asRecordArray(data.topCampaigns)
-  if (topCampaigns.length > 0) {
+  if (topCampaigns.length > 0 && !isAnalytics && !isSocial) {
     sections.push({
       type: 'list',
       title: 'Top Campaigns',
@@ -535,6 +657,90 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
         }
       }),
     })
+  }
+
+  if (operation === 'summarizeSocialPerformance') {
+    const connection = asRecord(data.connection)
+    const connectionItems = compact<MetricItem>([
+      connection?.connected === true
+        ? { label: 'Meta', value: 'Connected', emphasis: 'primary' }
+        : { label: 'Meta', value: 'Not connected' },
+      asString(connection?.facebookPageName)
+        ? { label: 'Facebook Page', value: asString(connection?.facebookPageName)! }
+        : null,
+      asString(connection?.instagramBusinessName)
+        ? { label: 'Instagram', value: asString(connection?.instagramBusinessName)! }
+        : null,
+      asString(connection?.lastSyncStatus)
+        ? { label: 'Sync', value: formatLabel(asString(connection?.lastSyncStatus)!) }
+        : null,
+    ])
+    if (connectionItems.length > 0) {
+      sections.push({ type: 'metrics', title: 'Connection', items: connectionItems })
+    }
+
+    const appendSurfaceMetrics = (surface: Record<string, unknown> | null, title: string) => {
+      if (!surface) return
+      const reach = asNumber(surface.reach)
+      const engagedUsers = asNumber(surface.engagedUsers)
+      const impressions = asNumber(surface.impressions)
+      const engagementRate = asNumber(surface.engagementRate)
+      const followerDelta = asNumber(surface.followerDeltaTotal)
+
+      const items = compact<MetricItem>([
+        reach !== null ? { label: 'Reach', value: formatWholeNumber(reach), numericValue: reach, emphasis: 'primary' } : null,
+        impressions !== null ? { label: 'Impressions', value: formatWholeNumber(impressions), numericValue: impressions } : null,
+        engagedUsers !== null ? { label: 'Engaged Users', value: formatWholeNumber(engagedUsers), numericValue: engagedUsers } : null,
+        engagementRate !== null ? { label: 'Engagement Rate', value: formatPercent(engagementRate), numericValue: engagementRate } : null,
+        followerDelta !== null && followerDelta !== 0
+          ? {
+              label: 'Follower Change',
+              value: `${followerDelta > 0 ? '+' : ''}${formatWholeNumber(followerDelta)}`,
+              numericValue: followerDelta,
+            }
+          : null,
+      ])
+
+      if (items.length > 0) sections.push({ type: 'metrics', title, items })
+    }
+
+    appendSurfaceMetrics(asRecord(data.facebook), 'Facebook')
+    appendSurfaceMetrics(asRecord(data.instagram), 'Instagram')
+
+    const topContent = asRecord(data.topContent)
+    for (const surface of ['facebook', 'instagram'] as const) {
+      const posts = asRecordArray(topContent?.[surface])
+      if (posts.length === 0) continue
+      sections.push({
+        type: 'list',
+        title: `Top ${formatLabel(surface)} Posts`,
+        items: posts.map<ListItem>((post) => {
+          const reach = asNumber(post.reach)
+          const engaged = asNumber(post.engagedUsers)
+          const preview = asString(post.message)
+          return {
+            primary: preview && preview.length > 0 ? (preview.length > 72 ? `${preview.slice(0, 69)}…` : preview) : 'Post',
+            secondary: [
+              reach !== null ? `${formatWholeNumber(reach)} reach` : null,
+              engaged !== null ? `${formatWholeNumber(engaged)} engaged` : null,
+              asString(post.publishedAt) ? asString(post.publishedAt)! : null,
+            ].filter((item): item is string => Boolean(item)).join(' • ') || undefined,
+          }
+        }),
+      })
+    }
+  }
+
+  if (operation === 'requestSocialSync') {
+    const jobId = asString(data.jobId)
+    const timeframeDays = asNumber(data.timeframeDays)
+    const surface = asString(data.surface)
+    const syncItems = compact<MetricItem>([
+      jobId ? { label: 'Sync Job', value: jobId } : null,
+      timeframeDays !== null ? { label: 'Window', value: `Last ${formatWholeNumber(timeframeDays)} days` } : null,
+      surface ? { label: 'Surfaces', value: formatLabel(surface) } : null,
+    ])
+    if (syncItems.length > 0) sections.push({ type: 'metrics', title: 'Sync Requested', items: syncItems })
   }
 
   const proposalSummary = asRecord(data.proposalSummary)
@@ -561,15 +767,24 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
   const highPriorityTasks = asNumber(data.highPriorityTasks)
   const clientName = asString(data.clientName)
 
-  if (operation === 'summarizeClientTasks') {
+  if (operation === 'summarizeClientTasks' || operation === 'summarizeMyTasks') {
+    const timeWindowLabel = asString(data.timeWindowLabel)
+    const dueThisWeekTasks = asNumber(data.dueThisWeekTasks)
+    const unscheduledOpen = asNumber(data.unscheduledOpen)
+
     const taskSummaryItems = compact<MetricItem>([
       clientName ? { label: 'Client', value: clientName } : null,
+      timeWindowLabel ? { label: 'Focus', value: timeWindowLabel } : null,
       totalTasks !== null ? { label: 'Total Tasks', value: formatWholeNumber(totalTasks), numericValue: totalTasks, emphasis: 'primary' } : null,
       openTasks !== null ? { label: 'Open', value: formatWholeNumber(openTasks), numericValue: openTasks, emphasis: 'primary' } : null,
       completedTasks !== null ? { label: 'Completed', value: formatWholeNumber(completedTasks), numericValue: completedTasks } : null,
       overdueTasks !== null ? { label: 'Overdue', value: formatWholeNumber(overdueTasks), numericValue: overdueTasks } : null,
+      dueThisWeekTasks !== null ? { label: 'Due This Week', value: formatWholeNumber(dueThisWeekTasks), numericValue: dueThisWeekTasks } : null,
       dueSoonTasks !== null ? { label: 'Due Soon', value: formatWholeNumber(dueSoonTasks), numericValue: dueSoonTasks } : null,
       highPriorityTasks !== null ? { label: 'High Priority', value: formatWholeNumber(highPriorityTasks), numericValue: highPriorityTasks } : null,
+      unscheduledOpen !== null && unscheduledOpen > 0
+        ? { label: 'No Due Date', value: formatWholeNumber(unscheduledOpen), numericValue: unscheduledOpen }
+        : null,
     ])
 
     if (taskSummaryItems.length > 0) {
@@ -589,31 +804,67 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
       })
     }
 
+    const mapTaskListItems = (tasks: Record<string, unknown>[]) =>
+      tasks.slice(0, 8).map<ListItem>((task) => {
+        const status = asString(task.status)
+        const priority = asString(task.priority)
+        const dueLabel = asString(task.dueLabel)
+        const dueDate = dueLabel ?? formatTaskDueDate(asNumber(task.dueDate) ?? asString(task.dueDate))
+        const taskClientName = asString(task.clientName)
+        const projectName = asString(task.projectName)
+        const assignedTo = Array.isArray(task.assignedTo)
+          ? task.assignedTo.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+          : []
+
+        const secondary = [
+          dueDate,
+          status ? formatLabel(status) : null,
+          priority ? formatLabel(priority) : null,
+          taskClientName,
+          projectName,
+          assignedTo.length > 0 ? assignedTo.join(', ') : null,
+        ].filter((item): item is string => Boolean(item)).join(' • ')
+
+        return {
+          primary: asString(task.title) ?? 'Untitled task',
+          secondary: secondary || undefined,
+        }
+      })
+
+    const focusTasks = asRecordArray(data.focusTasks)
+    const timeWindow = asString(data.timeWindow)
+    if (focusTasks.length > 0 && timeWindow && timeWindow !== 'all') {
+      sections.push({
+        type: 'list',
+        title: timeWindowLabel ?? 'Focused Tasks',
+        items: mapTaskListItems(focusTasks),
+      })
+    }
+
+    const overdueTaskList = asRecordArray(data.overdueTaskList)
+    if (overdueTaskList.length > 0 && timeWindow === 'all') {
+      sections.push({
+        type: 'list',
+        title: 'Overdue',
+        items: mapTaskListItems(overdueTaskList),
+      })
+    }
+
+    const dueThisWeekList = asRecordArray(data.dueThisWeekList)
+    if (dueThisWeekList.length > 0 && timeWindow === 'all') {
+      sections.push({
+        type: 'list',
+        title: 'Due This Week',
+        items: mapTaskListItems(dueThisWeekList),
+      })
+    }
+
     const tasks = asRecordArray(data.tasks)
-    if (tasks.length > 0) {
+    if (tasks.length > 0 && (timeWindow === 'all' || focusTasks.length === 0)) {
       sections.push({
         type: 'list',
         title: 'Tasks',
-        items: tasks.slice(0, 8).map<ListItem>((task) => {
-          const status = asString(task.status)
-          const priority = asString(task.priority)
-          const dueDate = formatTaskDueDate(asNumber(task.dueDate) ?? asString(task.dueDate))
-          const assignedTo = Array.isArray(task.assignedTo)
-            ? task.assignedTo.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-            : []
-
-          const secondary = [
-            status ? formatLabel(status) : null,
-            priority ? formatLabel(priority) : null,
-            dueDate ? `Due ${dueDate}` : null,
-            assignedTo.length > 0 ? assignedTo.join(', ') : null,
-          ].filter((item): item is string => Boolean(item)).join(' • ')
-
-          return {
-            primary: asString(task.title) ?? 'Untitled task',
-            secondary: secondary || undefined,
-          }
-        }),
+        items: mapTaskListItems(tasks),
       })
     }
   }

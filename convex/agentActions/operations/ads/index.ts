@@ -25,6 +25,7 @@ import {
   buildProviderBreakdownFromRows,
   computeAggregateMetrics,
   computeAggregateMetricsFromRows,
+  filterAdsMetricRows,
   getPreviousDateWindow,
   isActiveCampaignStatus,
   isPausedCampaignStatus,
@@ -126,10 +127,12 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
       providerIds.unshift(explicitProvider)
     }
 
+    const adsProviderIds = providerIds.length > 0 ? providerIds : [...ALL_PROVIDER_IDS]
+
     const metricsRaw = await ctx.runQuery(api.adsMetrics.listMetricsWithSummary, {
       workspaceId: input.workspaceId,
       clientId: clientId ?? undefined,
-      providerIds: providerIds.length > 0 ? providerIds : undefined,
+      providerIds: adsProviderIds,
       startDate,
       endDate,
       aggregate: true,
@@ -138,18 +141,20 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
 
     const metricsPayload = asRecord(unwrapConvexResult(metricsRaw)) ?? asRecord(metricsRaw) ?? {}
     const metricsSummary = asRecord(metricsPayload.summary) ?? {}
-    const metricsRows = Array.isArray(metricsPayload.metrics)
-      ? metricsPayload.metrics.flatMap((item) => {
-          const record = asRecord(item)
-          return record !== null ? [record] : []
-        })
-      : []
+    const metricsRows = filterAdsMetricRows(
+      Array.isArray(metricsPayload.metrics)
+        ? metricsPayload.metrics.flatMap((item) => {
+            const record = asRecord(item)
+            return record !== null ? [record] : []
+          })
+        : [],
+    )
 
     const previousSummaryPayload = previousWindow
       ? asRecord(unwrapConvexResult(await ctx.runQuery(api.adsMetrics.listMetricsWithSummary, {
           workspaceId: input.workspaceId,
           clientId: clientId ?? undefined,
-          providerIds: providerIds.length > 0 ? providerIds : undefined,
+          providerIds: adsProviderIds,
           startDate: previousWindow.startDate,
           endDate: previousWindow.endDate,
           aggregate: true,
@@ -157,12 +162,14 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
         })))
       : null
     const previousSummary = asRecord(previousSummaryPayload?.summary) ?? {}
-    const previousMetricsRows = Array.isArray(previousSummaryPayload?.metrics)
-      ? previousSummaryPayload.metrics.flatMap((item) => {
-          const record = asRecord(item)
-          return record !== null ? [record] : []
-        })
-      : []
+    const previousMetricsRows = filterAdsMetricRows(
+      Array.isArray(previousSummaryPayload?.metrics)
+        ? previousSummaryPayload.metrics.flatMap((item) => {
+            const record = asRecord(item)
+            return record !== null ? [record] : []
+          })
+        : [],
+    )
 
     let campaignCounts: { total: number | null; active: number | null; paused: number | null } = {
       total: null,
@@ -234,14 +241,14 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
         })
       : previousMetricsRows
 
-    const currentTotals = normalizedCampaignQuery
+    const currentTotals = filteredMetricsRows.length > 0
       ? computeAggregateMetricsFromRows(filteredMetricsRows)
       : computeAggregateMetrics(asRecord(metricsSummary.totals))
-    const previousTotals = normalizedCampaignQuery
+    const previousTotals = filteredPreviousMetricsRows.length > 0
       ? computeAggregateMetricsFromRows(filteredPreviousMetricsRows)
       : computeAggregateMetrics(asRecord(previousSummary.totals))
     const totalsComparison = buildAggregateComparison(currentTotals, previousTotals)
-    const providerBreakdown = normalizedCampaignQuery
+    const providerBreakdown = filteredMetricsRows.length > 0
       ? buildProviderBreakdownFromRows(filteredMetricsRows, filteredPreviousMetricsRows)
       : buildProviderBreakdown({
           currentProviders: asRecord(metricsSummary.providers),
@@ -313,6 +320,10 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
           : `I couldn’t find a campaign matching “${campaignQuery}”, so here are the current active ${providerLabel} campaigns instead.`
       : null
 
+    const hasPaidAdsSignal = spend > 0 || revenue > 0
+    const hasDeliveryWithoutSpend =
+      !hasPaidAdsSignal && (impressions > 0 || clicks > 0 || conversions > 0)
+
     if (spend <= 0 && impressions <= 0 && clicks <= 0 && conversions <= 0 && revenue <= 0) {
       const activeCampaignLines = activeCampaigns.length > 0
         ? activeCampaigns.map((campaign, index) => `${index + 1}. ${campaign.name} (${campaign.providerId})`)
@@ -351,25 +362,35 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
       }
     }
 
-    const currentSituation = [
-      spend > 0
-        ? roas >= 3
-          ? 'ROAS is strong right now.'
-          : roas >= 1.5
-            ? 'ROAS is stable but still has room to improve.'
-            : 'ROAS is soft and needs attention.'
-        : 'Spend has not started flowing yet.',
-      ctr >= 1.5
-        ? 'CTR is healthy.'
-        : impressions > 0
-          ? 'CTR is light, so creative or audience tuning may help.'
-          : 'Delivery is still light.',
-      conversions > 0
-        ? `${formatWholeNumber(conversions)} conversions are tracked in this window.`
-        : clicks > 0
-          ? 'Traffic is coming in, but conversions are still thin.'
-          : 'Clicks are still light in this window.',
-    ].join(' ')
+    const currentSituation = hasDeliveryWithoutSpend
+      ? [
+          'Paid spend is not synced for this window yet.',
+          clicks > 0 || impressions > 0
+            ? `${formatWholeNumber(clicks)} clicks and ${formatWholeNumber(impressions)} impressions are recorded — confirm ad platform sync completed.`
+            : 'Delivery metrics are partial.',
+          conversions > 0
+            ? `${formatWholeNumber(conversions)} conversions are tracked.`
+            : 'No conversions recorded yet.',
+        ].join(' ')
+      : [
+          spend > 0
+            ? roas >= 3
+              ? 'ROAS is strong right now.'
+              : roas >= 1.5
+                ? 'ROAS is stable but still has room to improve.'
+                : 'ROAS is soft and needs attention.'
+            : 'Spend has not started flowing yet.',
+          ctr >= 1.5
+            ? 'CTR is healthy.'
+            : impressions > 0
+              ? 'CTR is light, so creative or audience tuning may help.'
+              : 'Delivery is still light.',
+          conversions > 0
+            ? `${formatWholeNumber(conversions)} conversions are tracked in this window.`
+            : clicks > 0
+              ? 'Traffic is coming in, but conversions are still thin.'
+              : 'Clicks are still light in this window.',
+        ].join(' ')
 
     const topCampaignLines = topCampaigns.length > 0
       ? topCampaigns.map((campaign, index) => `${index + 1}. ${campaign.name}: ${formatCurrency(campaign.spend)} spend, ${formatWholeNumber(campaign.clicks)} clicks, ${formatWholeNumber(campaign.conversions)} conversions, ${formatRatio(campaign.roas)} ROAS`)
@@ -395,6 +416,7 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
         startDate,
         endDate,
         previousWindow,
+        dataKind: 'ads',
         totals: { spend, impressions, clicks, conversions, revenue, roas, ctr, cpc, cpa },
         comparison: { ...totalsComparison, previousWindow },
         providerBreakdown,

@@ -56,6 +56,17 @@ When the user wants to CREATE or UPDATE data, use:
   Params: { clientId?: string, includePast?: boolean, limit?: number }
   Example: "Summarize recent client meetings" → {"action": "execute", "operation": "summarizeMeetings", "params": {"includePast": true}, "message": "Here are your recent meetings."}
 
+### Organic Social Operations (Facebook Page + Instagram business — not paid ads)
+- **summarizeSocialPerformance**: Summarize organic reach, engagement, and follower trends for connected Meta surfaces
+  Params: { period?: "daily"|"weekly"|"monthly", startDate?: string, endDate?: string, clientId?: string, surface?: "facebook"|"instagram" }
+  Examples:
+  - "How is Instagram performing this month?" → summarizeSocialPerformance with surface: "instagram"
+  - "Organic social summary for the last 30 days" → summarizeSocialPerformance with date range
+- **requestSocialSync**: Queue a manual sync of organic social metrics (requires Meta connected + Facebook Page selected)
+  Params: { clientId?: string, surface?: "facebook"|"instagram", timeframeDays?: number, startDate?: string, endDate?: string }
+  Example: "Sync social metrics" / "Refresh Instagram data" → requestSocialSync
+  Note: Connecting Meta still requires the Socials page (OAuth). Use navigate to /dashboard/socials for connect/setup.
+
 ### Messaging Operations
 - **sendDirectMessage**: Send a direct message to a workspace user
   Params: { recipientQuery: string, content: string }
@@ -228,6 +239,9 @@ If the request is vague, underspecified, or refers to "this/that/it" without eno
 - "what ads are active right now" / "which campaigns are live" → EXECUTE summarizeAdsPerformance with focus: "active"
 - "create proposal draft" / "refine proposal" / "generate proposal" → EXECUTE proposal operations
 - "schedule a meeting", "start a meet", "join call" → navigate to Meetings
+- "organic social summary", "instagram insights", "facebook page metrics" → EXECUTE summarizeSocialPerformance
+- "sync social", "refresh instagram metrics" → EXECUTE requestSocialSync
+- "connect meta" / "set up organic social" (when not paid ads) → navigate to /dashboard/socials
 - "open ads", "manage campaigns", "check ad spend" → navigate to Ads Hub
 - "open collaboration", "show project discussion", "open team chat" → navigate to Collaboration
 - "send a chat to @Deepak saying hi" / "dm Deepak saying can we review this" → EXECUTE sendDirectMessage

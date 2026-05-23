@@ -6,19 +6,21 @@ import { useCallback, useEffect, useRef } from 'react'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { collaborationApi } from '@/lib/convex-api'
 import { logError } from '@/lib/convex-errors'
+import { buildDmTypingChannelId } from '../lib/dm-typing'
 import type { Channel } from '../types'
 import { TYPING_TIMEOUT_MS, TYPING_UPDATE_INTERVAL_MS } from './constants'
 
 interface UseTypingOptions {
   workspaceId: string | null
-  selectedChannel: Channel | null
+  selectedChannel?: Channel | null
+  conversationLegacyId?: string | null
   resolveSenderDetails: () => { senderName: string; senderRole: string | null }
 }
 
 type TypingUpdateRequest = {
   workspaceId: string
   channelId: string
-  channelType: Channel['type']
+  channelType: string
   clientId: string | null
   projectId: string | null
   name: string
@@ -30,17 +32,37 @@ type TypingUpdateRequest = {
 export function buildTypingUpdateRequest({
   workspaceId,
   selectedChannel,
+  conversationLegacyId,
   senderName,
   senderRole,
   isTyping,
 }: {
   workspaceId: string | null
-  selectedChannel: Channel | null
+  selectedChannel?: Channel | null
+  conversationLegacyId?: string | null
   senderName: string
   senderRole: string | null
   isTyping: boolean
 }): TypingUpdateRequest | null {
-  if (!workspaceId || !selectedChannel || !senderName) {
+  if (!workspaceId || !senderName) {
+    return null
+  }
+
+  if (conversationLegacyId) {
+    return {
+      workspaceId,
+      channelId: buildDmTypingChannelId(conversationLegacyId),
+      channelType: 'direct_message',
+      clientId: null,
+      projectId: null,
+      name: senderName,
+      role: senderRole,
+      isTyping,
+      ttlMs: TYPING_TIMEOUT_MS,
+    }
+  }
+
+  if (!selectedChannel) {
     return null
   }
 
@@ -57,9 +79,14 @@ export function buildTypingUpdateRequest({
   }
 }
 
-export function useTyping({ workspaceId, selectedChannel, resolveSenderDetails }: UseTypingOptions) {
+export function useTyping({
+  workspaceId,
+  selectedChannel = null,
+  conversationLegacyId = null,
+  resolveSenderDetails,
+}: UseTypingOptions) {
   const { isPreviewMode } = usePreview()
-  const selectedChannelId = selectedChannel?.id ?? null
+  const typingTargetId = conversationLegacyId ?? selectedChannel?.id ?? null
   const composerFocusedRef = useRef(false)
   const isTypingRef = useRef(false)
   const lastTypingUpdateRef = useRef(0)
@@ -77,6 +104,7 @@ export function useTyping({ workspaceId, selectedChannel, resolveSenderDetails }
       const request = buildTypingUpdateRequest({
         workspaceId,
         selectedChannel,
+        conversationLegacyId,
         senderName,
         senderRole,
         isTyping,
@@ -92,7 +120,7 @@ export function useTyping({ workspaceId, selectedChannel, resolveSenderDetails }
         logError(error, 'useTyping:sendTypingUpdate')
       }
     },
-    [isPreviewMode, resolveSenderDetails, selectedChannel, setTyping, workspaceId]
+    [conversationLegacyId, isPreviewMode, resolveSenderDetails, selectedChannel, setTyping, workspaceId]
   )
 
   const stopTyping = useCallback(() => {
@@ -111,7 +139,7 @@ export function useTyping({ workspaceId, selectedChannel, resolveSenderDetails }
   }, [sendTypingUpdate])
 
   const notifyTyping = useCallback(() => {
-    if (!composerFocusedRef.current || !selectedChannel) {
+    if (!composerFocusedRef.current || !typingTargetId) {
       return
     }
 
@@ -131,7 +159,7 @@ export function useTyping({ workspaceId, selectedChannel, resolveSenderDetails }
       lastTypingUpdateRef.current = 0
       void sendTypingUpdate(false)
     }, TYPING_TIMEOUT_MS)
-  }, [selectedChannel, sendTypingUpdate])
+  }, [sendTypingUpdate, typingTargetId])
 
   const handleComposerFocus = useCallback(() => {
     composerFocusedRef.current = true
@@ -143,7 +171,7 @@ export function useTyping({ workspaceId, selectedChannel, resolveSenderDetails }
   }, [stopTyping])
 
   useEffect(() => {
-    if (selectedChannelId === null) {
+    if (typingTargetId === null) {
       return () => {
         stopTyping()
       }
@@ -152,7 +180,7 @@ export function useTyping({ workspaceId, selectedChannel, resolveSenderDetails }
     return () => {
       stopTyping()
     }
-  }, [selectedChannelId, stopTyping])
+  }, [stopTyping, typingTargetId])
 
   useEffect(() => {
     const handleBeforeUnload = () => {

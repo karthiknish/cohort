@@ -387,6 +387,8 @@ export const opsTables = {
     lastMessageSenderId: v.union(v.string(), v.null()),
     readByParticipantOne: v.boolean(),
     readByParticipantTwo: v.boolean(),
+    unreadCountParticipantOne: v.optional(v.number()),
+    unreadCountParticipantTwo: v.optional(v.number()),
     lastReadByParticipantOneAtMs: v.union(v.number(), v.null()),
     lastReadByParticipantTwoAtMs: v.union(v.number(), v.null()),
     archivedByParticipantOne: v.boolean(),

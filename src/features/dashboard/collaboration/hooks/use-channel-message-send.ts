@@ -141,7 +141,7 @@ export function useChannelMessageSend({
 
   const handleSendMessage = useCallback(
     async (options?: SendMessageOptions) => {
-      const trimmedContent = messageInput.trim()
+      const trimmedContent = (options?.content ?? messageInput).trim()
       const channelId = selectedChannel?.id
 
       if (!trimmedContent && pendingAttachments.length === 0) {

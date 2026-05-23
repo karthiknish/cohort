@@ -65,6 +65,7 @@ export type DirectConversation = {
   lastMessageAtMs?: number | null
   lastMessageSenderId?: string | null
   isRead: boolean
+  unreadCount?: number
   isArchived: boolean
   isMuted: boolean
   createdAtMs: number

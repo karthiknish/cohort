@@ -44,27 +44,31 @@ describe('message polls sections', () => {
       <>
         <PollCardHeader isExpired={false} poll={poll} totalVotes={3} />
         <PollOptionRow
-          canVote={true}
+          ui={{
+            canVote: true,
+            selected: true,
+            showResults: true,
+            hasLeadingWinner: true,
+          }}
           handleToggleOption={vi.fn()}
-          hasLeadingWinner={true}
-          isSelected={true}
           option={poll.options[0]!}
           percentage={67}
-          showOptionResults={true}
           sortedOptions={poll.options}
           voteCount={2}
         />
         <PollCardFooterActions
-          canEnd={true}
-          canVote={true}
-          hasVoted={false}
-          isExpired={false}
-          isVoting={false}
+          ui={{
+            canEnd: true,
+            canVote: true,
+            hasVoted: false,
+            isExpired: false,
+            isVoting: false,
+            showResults: false,
+          }}
           onEndPoll={vi.fn()}
           onShowResults={vi.fn()}
           onVote={vi.fn()}
           selectedOptionsCount={1}
-          showResults={false}
         />
       </>,
     )

@@ -140,8 +140,8 @@ export function AgentMessagesSection({
           <Button
             type="button"
             size="sm"
-            variant="secondary"
-            className="pointer-events-auto h-8 gap-1.5 rounded-full border border-border/60 bg-background/95 px-4 shadow-lg backdrop-blur-sm"
+            variant="outline"
+            className="pointer-events-auto h-8 gap-1.5 rounded-full border-border/60 bg-background/95 px-4 text-foreground shadow-lg backdrop-blur-sm hover:bg-muted/80"
             onClick={onJumpToLatest}
           >
             <ArrowDown className="size-3.5" aria-hidden />

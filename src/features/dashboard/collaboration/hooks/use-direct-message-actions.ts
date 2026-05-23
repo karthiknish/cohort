@@ -1,7 +1,7 @@
 'use client'
 
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useMutation } from 'convex/react'
 
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -586,14 +586,19 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
   )
 
   const markedReadConversationRef = useRef<string | null>(null)
-  if (
-    selectedConversation &&
-    !selectedConversation.isRead &&
-    markedReadConversationRef.current !== selectedConversation.legacyId
-  ) {
+
+  useEffect(() => {
+    if (!selectedConversation || selectedConversation.isRead) {
+      return
+    }
+
+    if (markedReadConversationRef.current === selectedConversation.legacyId) {
+      return
+    }
+
     markedReadConversationRef.current = selectedConversation.legacyId
     void markAsRead()
-  }
+  }, [markAsRead, selectedConversation])
 
   return {
     sendMessage,

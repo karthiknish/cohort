@@ -6,6 +6,7 @@ import type { CollaborationMessage } from '@/types/collaboration'
 
 import type { MessageListRenderers } from './message-list-render-context'
 import type { UnifiedMessage } from './message-list-types'
+import { MessageDeliveryStatus } from './message-read-receipts'
 import {
   SwipeableMessageRenderer,
   UnifiedThreadSectionRenderer,
@@ -35,6 +36,13 @@ type UseUnifiedMessagePaneRenderersArgs = {
   onEditMessage?: (messageId: string, newContent: string) => Promise<void>
   onReply?: (message: UnifiedMessage) => void
   onShareToPlatform?: (message: UnifiedMessage, platform: 'email') => Promise<void>
+  onCreateTask?: (message: UnifiedMessage) => void
+  onForwardMessage?: (message: UnifiedMessage) => void
+  onVotePoll?: (messageLegacyId: string, optionIds: string[]) => Promise<void>
+  onEndPoll?: (messageLegacyId: string) => Promise<void>
+  workspaceId?: string | null
+  currentUserRole?: string | null
+  dmParticipantName?: string | null
   reactionPendingByMessage: Record<string, string | null>
   resolveThreadRootId: (message: UnifiedMessage) => string
   setEditingValue: (value: string) => void
@@ -73,6 +81,13 @@ export function useUnifiedMessagePaneRenderers({
   onEditMessage,
   onReply,
   onShareToPlatform,
+  onCreateTask,
+  onForwardMessage,
+  onVotePoll,
+  onEndPoll,
+  workspaceId,
+  currentUserRole,
+  dmParticipantName,
   reactionPendingByMessage,
   resolveThreadRootId,
   setEditingValue,
@@ -98,12 +113,47 @@ export function useUnifiedMessagePaneRenderers({
     [],
   )
 
+  const renderMessageFooter = useCallback(
+    (message: UnifiedMessage) => {
+      const original = channelMessagesById.get(message.id)
+      if (!original || original.senderId !== currentUserId || original.isDeleted) {
+        return null
+      }
+
+      const memberNames: Record<string, string> = {}
+      if (headerType === 'channel') {
+        for (const entry of channelMessagesById.values()) {
+          if (entry.senderId && entry.senderName) {
+            memberNames[entry.senderId] = entry.senderName
+          }
+        }
+      } else if (dmParticipantName) {
+        for (const readerId of original.readBy ?? []) {
+          if (readerId !== currentUserId) {
+            memberNames[readerId] = dmParticipantName
+          }
+        }
+      }
+
+      return (
+        <MessageDeliveryStatus
+          message={original}
+          currentUserId={currentUserId}
+          memberNames={memberNames}
+          className="mt-1 justify-end"
+        />
+      )
+    },
+    [channelMessagesById, currentUserId, dmParticipantName, headerType],
+  )
+
   const renderMessageActions = useCallback(
     (message: UnifiedMessage) => (
       <UnifiedMessageActionBar
         headerType={headerType ?? 'dm'}
         message={message}
         currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
         activeDeletingMessageId={activeDeletingMessageId}
         messageUpdatingId={messageUpdatingId}
         sharingTo={sharingTo}
@@ -111,22 +161,31 @@ export function useUnifiedMessagePaneRenderers({
         onStartEdit={onEditMessage ? handleStartEdit : undefined}
         onRequestDelete={onDeleteMessage ? handleRequestDelete : undefined}
         onShare={onShareToPlatform ? handleShare : undefined}
+        onCreateTask={onCreateTask}
+        onForward={onForwardMessage}
+        pinWorkspaceId={workspaceId}
+        pinMessage={channelMessagesById.get(message.id)}
       />
     ),
     [
       activeDeletingMessageId,
+      channelMessagesById,
       currentUserId,
+      currentUserRole,
       handleReply,
       handleRequestDelete,
       handleShare,
       handleStartEdit,
       headerType,
       messageUpdatingId,
+      onCreateTask,
       onDeleteMessage,
       onEditMessage,
+      onForwardMessage,
       onReply,
       onShareToPlatform,
       sharingTo,
+      workspaceId,
     ],
   )
 
@@ -134,13 +193,25 @@ export function useUnifiedMessagePaneRenderers({
     () =>
       function PaneMessageContent({ message }: { message: UnifiedMessage }) {
         const originalMessage = channelMessagesById.get(message.id)
-        return renderMessageContentBlock(
+        return renderMessageContentBlock({
           message,
           originalMessage,
-          isMessageSearchActive ? messageSearchHighlights : undefined,
-        )
+          highlightTerms: isMessageSearchActive ? messageSearchHighlights : undefined,
+          currentUserId,
+          isAdmin: currentUserRole === 'admin',
+          onVotePoll,
+          onEndPoll,
+        })
       },
-    [channelMessagesById, isMessageSearchActive, messageSearchHighlights],
+    [
+      channelMessagesById,
+      currentUserId,
+      currentUserRole,
+      isMessageSearchActive,
+      messageSearchHighlights,
+      onEndPoll,
+      onVotePoll,
+    ],
   )
 
   const renderMessageAttachments = useCallback((message: UnifiedMessage) => renderMessageAttachmentsContent(message), [])
@@ -246,6 +317,7 @@ export function useUnifiedMessagePaneRenderers({
       renderMessageAttachments,
       renderMessageContent,
       renderMessageExtras,
+      renderMessageFooter,
       renderMessageWrapper,
       renderThreadSection: headerType === 'channel' ? renderThreadSection : undefined,
     }),
@@ -257,6 +329,7 @@ export function useUnifiedMessagePaneRenderers({
       renderMessageAttachments,
       renderMessageContent,
       renderMessageExtras,
+      renderMessageFooter,
       renderMessageWrapper,
       renderThreadSection,
     ],

@@ -7,7 +7,8 @@ import type {
   ReportPeriod,
 } from '../types'
 
-import { parseDateRangeFromIntent } from './dates'
+import { parseTaskTimeWindowFromIntent } from '../operations/taskSummary'
+import { parseDateRangeFromIntent, resolveIntentDateRange } from './dates'
 import { asNonEmptyString } from './values'
 
 function normalizeIntentText(value: string): string {
@@ -326,7 +327,7 @@ function resolveWeakCommandClarification(
   const hasWeakVerb = includesAnyPhrase(normalized, ['do', 'fix', 'handle', 'work on', 'take care of', 'update', 'change', 'continue', 'help', 'try again'])
   const hasTimeframe = includesAnyPhrase(normalized, [
     'today', 'yesterday', 'daily', 'weekly', 'monthly', 'this week', 'last week', 'this month', 'last month', 'last 7', 'last 30',
-  ]) || parseDateRangeFromIntent(message) !== null
+  ]) || resolveIntentDateRange(message) !== null
 
   if (includesAnyPhrase(normalized, ['metrics', 'numbers', 'performance', 'snapshot', 'report']) && !hasTimeframe && inferProviderFiltersFromIntent(message).length === 0 && !context?.activeClientId) {
     return { action: 'clarify', message: buildClarificationMessage(normalized.includes('report') ? 'report' : 'metrics', context) }
@@ -359,6 +360,65 @@ function getProviderDisplayName(providerId: ProviderId): string {
   }
 }
 
+function wantsOrganicSocialIntent(normalized: string): boolean {
+  if (
+    includesAnyPhrase(normalized, [
+      'paid social',
+      'social ads',
+      'instagram ads',
+      'facebook ads',
+      'ad spend',
+      'roas',
+      'campaign spend',
+    ])
+  ) {
+    return false
+  }
+
+  if (
+    includesAnyPhrase(normalized, [
+      'organic social',
+      'socials',
+      'social media',
+      'instagram insights',
+      'facebook insights',
+      'facebook page',
+      'instagram performance',
+      'meta social',
+      'social performance',
+      'social metrics',
+      'social summary',
+      'instagram reach',
+      'facebook reach',
+      'social engagement',
+      'follower growth',
+    ])
+  ) {
+    return true
+  }
+
+  const mentionsSocialSurface =
+    normalized.includes('instagram') ||
+    normalized.includes('facebook page') ||
+    /\bfb page\b/.test(normalized)
+  const asksSocialPerformance = includesAnyPhrase(normalized, [
+    'performing',
+    'performance',
+    'insights',
+    'metrics',
+    'reach',
+    'engagement',
+    'followers',
+    'how is',
+    'how are',
+    'how s',
+    'summary',
+    'snapshot',
+  ])
+
+  return mentionsSocialSurface && asksSocialPerformance
+}
+
 function getProviderSummaryLabel(providerIds: ProviderId[]): string {
   const [firstProvider, secondProvider] = providerIds
   if (providerIds.length === 1 && firstProvider) return `${getProviderDisplayName(firstProvider)} Ads`
@@ -370,7 +430,7 @@ function resolveDeterministicExecuteIntent(message: string, context?: AgentReque
   const normalized = normalizeIntentText(message)
   const providerIds = inferProviderFiltersFromIntent(message)
   const inferredPeriod = inferReportPeriodFromIntent(normalized)
-  const parsedDateRange = parseDateRangeFromIntent(message)
+  const parsedDateRange = resolveIntentDateRange(message)
   const campaignQuery = extractCampaignQueryFromIntent(message)
   const clientReference = extractClientReferenceFromIntent(message)
   const directMessageTarget = extractDirectMessageTargetFromIntent(message)
@@ -379,28 +439,27 @@ function resolveDeterministicExecuteIntent(message: string, context?: AgentReque
   const adsStatusSnapshotIntent = includesAnyPhrase(normalized, ['ads', 'ad', 'campaign', 'campaigns', 'google', 'facebook', 'meta', 'tiktok', 'linkedin']) && includesAnyPhrase(normalized, ['active', 'currently', 'running', 'live'])
   const wantsTaskSummary = includesAnyPhrase(normalized, ['summary', 'summarize', 'overview'])
   const wantsTaskList = includesAnyPhrase(normalized, ['list', 'show', 'all tasks', 'what tasks', 'what are the tasks'])
+  const wantsMyTasksExplicit =
+    includesAnyPhrase(normalized, [
+      'my tasks',
+      'my task',
+      'tasks assigned to me',
+      'assigned to me',
+      'on my plate',
+      'what are my tasks',
+      'tasks for me',
+    ]) ||
+    (normalized.includes('my') && includesAnyPhrase(normalized, ['task', 'tasks']))
   const wantsClientTasks = includesAnyPhrase(normalized, ['task', 'tasks']) && (
     includesAnyPhrase(normalized, ['client', 'this client', 'current client']) ||
     clientReference !== null ||
-    Boolean(context?.activeClientId)
+    (Boolean(context?.activeClientId) && !wantsMyTasksExplicit)
   )
 
   const wantsMyTaskDigest =
     includesAnyPhrase(normalized, ['task', 'tasks']) &&
     (wantsTaskSummary || wantsTaskList) &&
-    !wantsClientTasks &&
-    (
-      includesAnyPhrase(normalized, [
-        'my tasks',
-        'my task',
-        'tasks assigned to me',
-        'assigned to me',
-        'on my plate',
-        'what are my tasks',
-        'tasks for me',
-      ]) ||
-      (normalized.includes('my') && (wantsTaskSummary || wantsTaskList))
-    )
+    wantsMyTasksExplicit
 
   if (wantsToSendDirectMessage && directMessageTarget && !directMessageContent) {
     return { action: 'clarify', message: buildClarificationMessage('dmContent', context, directMessageTarget) }
@@ -453,7 +512,121 @@ function resolveDeterministicExecuteIntent(message: string, context?: AgentReque
     }
   }
 
-  if (includesAnyPhrase(normalized, ['meta ad metric', 'meta ad metrics', 'facebook ad metric', 'facebook ad metrics', 'ad metric', 'ad metrics', 'ads metric', 'ads metrics', 'meta performance', 'facebook performance', 'ads performance', 'ad performance', 'ads snapshot', 'ad snapshot', 'how are my ads doing', 'how are meta ads doing', 'current meta ad situation', 'current ad situation', 'metrics for', 'metrics from', 'metrics between', 'active ads', 'active campaigns', 'currently active ads', 'currently active campaigns', 'running ads', 'running campaigns', 'live ads', 'live campaigns', 'what ads are active', 'which ads are active', 'what campaigns are active', 'which campaigns are active']) || adsStatusSnapshotIntent) {
+  const wantsPaidAdsSummary =
+    includesAnyPhrase(normalized, [
+      'ads summary',
+      'ad summary',
+      'ads snapshot',
+      'ad snapshot',
+      'paid ads',
+      'ad spend',
+      'campaign spend',
+    ]) ||
+    adsStatusSnapshotIntent
+
+  const wantsAnalyticsSummary =
+    !wantsPaidAdsSummary &&
+    (
+      includesAnyPhrase(normalized, [
+        'google analytics',
+        'ga4',
+        'website traffic',
+        'site traffic',
+        'web traffic',
+        'web analytics',
+        'traffic summary',
+      ]) ||
+      (
+        includesAnyPhrase(normalized, ['analytics']) &&
+        includesAnyPhrase(normalized, [
+          'summary',
+          'summarize',
+          'overview',
+          'snapshot',
+          'performance',
+          'metrics',
+          'numbers',
+          'how are',
+          'how is',
+          'last month',
+          'last week',
+          'last 7',
+          'last 30',
+          'last 100',
+        ])
+      )
+    )
+
+  if (
+    wantsOrganicSocialIntent(normalized) &&
+    includesAnyPhrase(normalized, [
+      'sync social',
+      'sync instagram',
+      'sync facebook',
+      'refresh social',
+      'sync organic',
+      'resync social',
+      'update social metrics',
+    ])
+  ) {
+    const params: Record<string, unknown> = {}
+    if (context?.activeClientId) params.clientId = context.activeClientId
+    if (parsedDateRange) Object.assign(params, parsedDateRange)
+    if (normalized.includes('instagram')) params.surface = 'instagram'
+    if (normalized.includes('facebook')) params.surface = 'facebook'
+    return {
+      action: 'execute',
+      operation: 'requestSocialSync',
+      params,
+      message: 'Queuing an organic social metrics sync now.',
+    }
+  }
+
+  if (
+    wantsOrganicSocialIntent(normalized) &&
+    includesAnyPhrase(normalized, [
+      'summary',
+      'summarize',
+      'overview',
+      'snapshot',
+      'performance',
+      'metrics',
+      'insights',
+      'how are',
+      'how is',
+      'how\'s',
+    ])
+  ) {
+    const params: Record<string, unknown> = { period: inferredPeriod }
+    if (context?.activeClientId) params.clientId = context.activeClientId
+    if (parsedDateRange) Object.assign(params, parsedDateRange)
+    if (normalized.includes('instagram')) params.surface = 'instagram'
+    if (normalized.includes('facebook')) params.surface = 'facebook'
+    return {
+      action: 'execute',
+      operation: 'summarizeSocialPerformance',
+      params,
+      message: parsedDateRange
+        ? `Pulling organic social performance for ${parsedDateRange.startDate} to ${parsedDateRange.endDate} now.`
+        : 'Pulling your organic social summary now.',
+    }
+  }
+
+  if (wantsAnalyticsSummary) {
+    const params: Record<string, unknown> = { period: inferredPeriod }
+    if (context?.activeClientId) params.clientId = context.activeClientId
+    if (parsedDateRange) Object.assign(params, parsedDateRange)
+    return {
+      action: 'execute',
+      operation: 'summarizeAnalyticsPerformance',
+      params,
+      message: parsedDateRange
+        ? `Pulling Google Analytics for ${parsedDateRange.startDate} to ${parsedDateRange.endDate} now.`
+        : `Pulling your ${inferredPeriod} analytics summary now.`,
+    }
+  }
+
+  if (includesAnyPhrase(normalized, ['meta ad metric', 'meta ad metrics', 'facebook ad metric', 'facebook ad metrics', 'ad metric', 'ad metrics', 'ads metric', 'ads metrics', 'meta performance', 'facebook performance', 'ads performance', 'ad performance', 'ads snapshot', 'ad snapshot', 'how are my ads doing', 'how are meta ads doing', 'current meta ad situation', 'current ad situation', 'metrics for', 'metrics from', 'metrics between', 'active ads', 'active campaigns', 'currently active ads', 'currently active campaigns', 'running ads', 'running campaigns', 'live ads', 'live campaigns', 'what ads are active', 'which ads are active', 'what campaigns are active', 'which campaigns are active']) || adsStatusSnapshotIntent || wantsPaidAdsSummary) {
     const focusActive = adsStatusSnapshotIntent || includesAnyPhrase(normalized, ['active ads', 'active campaigns', 'currently active', 'running ads', 'running campaigns', 'live ads', 'live campaigns', 'what ads are active', 'which ads are active', 'what campaigns are active', 'which campaigns are active'])
     const params: Record<string, unknown> = { period: inferredPeriod }
     if (providerIds.length === 1) params.providerId = providerIds[0]
@@ -472,10 +645,11 @@ function resolveDeterministicExecuteIntent(message: string, context?: AgentReque
 
   if (wantsMyTaskDigest) {
     const mode = wantsTaskSummary ? 'summary' : 'list'
+    const timeWindow = parseTaskTimeWindowFromIntent(message)
     return {
       action: 'execute',
       operation: 'summarizeMyTasks',
-      params: { mode },
+      params: { mode, timeWindow },
       message: mode === 'summary' ? 'Pulling your workspace task summary now.' : 'Listing your tasks now.',
     }
   }
@@ -489,7 +663,8 @@ function resolveDeterministicExecuteIntent(message: string, context?: AgentReque
     }
 
     const mode = wantsTaskSummary ? 'summary' : 'list'
-    const params: Record<string, unknown> = { mode }
+    const timeWindow = parseTaskTimeWindowFromIntent(message)
+    const params: Record<string, unknown> = { mode, timeWindow }
 
     if (clientReference) {
       params.clientReference = clientReference
@@ -657,6 +832,27 @@ function resolveDeterministicNavigationIntent(message: string, context?: AgentRe
   const meetingIntent = includesAnyPhrase(normalized, ['meeting', 'meet', 'google meet', 'call', 'calendar', 'invite'])
   const meetingTask = includesAnyPhrase(normalized, ['schedule', 'scedule', 'start', 'join', 'reschedule', 'cancel', 'book', 'set up', 'setup', 'quick meet'])
   if (meetingIntent && meetingTask) return { route: '/dashboard/meetings', message: 'Opening Meetings so you can schedule or start the call.' }
+
+  const socialNavigation = includesAnyPhrase(normalized, [
+    'open',
+    'go to',
+    'take me',
+    'show',
+    'view',
+    'check',
+    'connect',
+    'setup',
+    'set up',
+    'configure',
+  ])
+  if (wantsOrganicSocialIntent(normalized) && socialNavigation) {
+    return {
+      route: '/dashboard/socials',
+      message: includesAnyPhrase(normalized, ['connect', 'link', 'setup', 'set up'])
+        ? 'Opening Socials so you can connect Meta and choose a Facebook Page.'
+        : 'Opening Socials for organic Facebook and Instagram metrics.',
+    }
+  }
 
   const adsIntent = includesAnyPhrase(normalized, ['ads', 'ad campaign', 'campaign', 'ad spend', 'roas', 'creative', 'google ads', 'meta ads', 'facebook ads', 'tiktok ads', 'linkedin ads'])
   const adsNavigation = includesAnyPhrase(normalized, ['open', 'go to', 'take me', 'show', 'view', 'check', 'manage', 'sync', 'connect', 'setup', 'set up', 'configure', 'optimize'])
