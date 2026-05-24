@@ -20,6 +20,9 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { Button } from '@/shared/ui/button'
 import { getPreviewAdminDashboardData } from '@/lib/preview-data'
 import { cn } from '@/lib/utils'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { AdminHomePageSkeleton } from '@/features/admin/components/admin-home-page-skeleton'
+
 import { AdminPageShell } from '../components/admin-page-shell'
 
 const adminLinks = [
@@ -89,6 +92,7 @@ export default function AdminPage() {
   const firstName = (user?.name ?? 'Admin').split(' ')[0]
 
   return (
+    <PageSkeletonBoundary loading={statsLoading} loadingContent={<AdminHomePageSkeleton />}>
     <AdminPageShell
       title="Admin"
       description={`${firstName}, pick a section below.`}
@@ -144,5 +148,6 @@ export default function AdminPage() {
         ))}
       </nav>
     </AdminPageShell>
+    </PageSkeletonBoundary>
   )
 }

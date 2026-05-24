@@ -1,5 +1,5 @@
-import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
+import { MarketingHomePageSkeleton } from '@/features/marketing/home/components/marketing-home-page-skeleton'
 
 export default function RootLoading() {
-  return <BoneyardPageLoading name="marketing-home-page" minHeight="min-h-screen" />
+  return <MarketingHomePageSkeleton />
 }

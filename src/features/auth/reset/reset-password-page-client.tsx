@@ -1,15 +1,13 @@
 'use client'
 
-import { useMemo } from 'react'
-
 import { authLockIconLg } from '@/features/auth/auth-icons'
 import { AuthPanel } from '@/features/auth/components/auth-panel'
 import { AuthShell } from '@/features/auth/components/auth-shell'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { AuthPageSkeleton } from '@/features/auth/components/auth-page-skeleton'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
 
 import {
   ResetPasswordErrorState,
-  ResetPasswordFixture,
   ResetPasswordLoadingState,
   ResetPasswordReadyForm,
   ResetPasswordSuccessState,
@@ -37,13 +35,10 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
   } = useResetPassword({ oobCode })
 
   const { status, email, verificationError } = verificationState
-  const fixtureContent = useMemo(() => <ResetPasswordFixture />, [])
-
   return (
-    <BoneyardSkeletonBoundary
-      name="auth-reset-page"
+    <PageSkeletonBoundary
       loading={status === 'loading'}
-      fixture={fixtureContent}
+      loadingContent={<AuthPageSkeleton />}
     >
       <AuthShell>
         <AuthPanel
@@ -77,7 +72,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
           {status === 'success' && <ResetPasswordSuccessState onReturnToSignIn={handleReturnToSignIn} />}
         </AuthPanel>
       </AuthShell>
-    </BoneyardSkeletonBoundary>
+    </PageSkeletonBoundary>
   )
 }
 

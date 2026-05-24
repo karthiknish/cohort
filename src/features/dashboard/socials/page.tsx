@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
 import { FadeIn } from '@/shared/ui/animate-in'
 import { Tabs, TabsContent } from '@/shared/ui/tabs'
 import { SocialsHeader } from './components/socials-header'
@@ -192,16 +193,17 @@ export default function SocialsPage() {
 
   return (
     <PageMotionShell reveal={false} className={cn(DASHBOARD_THEME.layout.container, 'pb-10')}>
-      <SocialsHeader
-        selectedClientName={selectedClient?.name ?? null}
-        dateRange={dateRange}
-        onDateRangeChange={setDateRange}
-        metricsReady={connected && setupComplete}
-      />
+      <PageSkeletonBoundary
+        loading={initialLoading}
+        loadingContent={<SocialsPageLoadingFallback />}
+      >
+        <SocialsHeader
+          selectedClientName={selectedClient?.name ?? null}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          metricsReady={connected && setupComplete}
+        />
 
-      {initialLoading ? (
-        <SocialsPageLoadingFallback />
-      ) : (
         <SocialsPageLayout
           showSetup={!isPreviewMode}
           connected={connected}
@@ -209,7 +211,7 @@ export default function SocialsPage() {
           setup={setupSection}
           performance={performanceSection}
         />
-      )}
+      </PageSkeletonBoundary>
     </PageMotionShell>
   )
 }

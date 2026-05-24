@@ -25,6 +25,7 @@ import {
 import { getPreviewAdminHealthData } from '@/lib/preview-data'
 import { cn } from '@/lib/utils'
 import { usePreview } from '@/shared/contexts/preview-context'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -308,45 +309,43 @@ export function SystemHealthView() {
     : 0
   const totalCount = resolvedData ? Object.keys(resolvedData.checks).length : 0
 
-  if (loading && !resolvedData) {
-    return (
-      <div className="space-y-8">
-        <div className="space-y-4 border-b border-border/60 pb-8">
-          <Skeleton className="h-3 w-28" />
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <Skeleton className="size-12 shrink-0 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-4 w-72 max-w-full" />
-              </div>
+  const healthLoadingContent = (
+    <div className="space-y-8">
+      <div className="space-y-4 border-b border-border/60 pb-8">
+        <Skeleton className="h-3 w-28" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-12 shrink-0 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-72 max-w-full" />
             </div>
-            <Skeleton className="h-9 w-28 shrink-0" />
           </div>
-        </div>
-        <div>
-          <Skeleton className="mb-4 h-3 w-24" />
-          <div className="grid gap-4 sm:grid-cols-3">
-            {['m-a', 'm-b', 'm-c'].map((key) => (
-              <div key={key} className="space-y-3 rounded-lg border border-border/60 bg-card/50 p-4">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-9 w-20" />
-                <Skeleton className="h-3 w-full" />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <Skeleton className="mb-4 h-3 w-32" />
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {['c-a', 'c-b', 'c-c', 'c-d', 'c-e', 'c-f'].map((key) => (
-              <Skeleton key={key} className="h-36 w-full rounded-lg" />
-            ))}
-          </div>
+          <Skeleton className="h-9 w-28 shrink-0" />
         </div>
       </div>
-    )
-  }
+      <div>
+        <Skeleton className="mb-4 h-3 w-24" />
+        <div className="grid gap-4 sm:grid-cols-3">
+          {['m-a', 'm-b', 'm-c'].map((key) => (
+            <div key={key} className="space-y-3 rounded-lg border border-border/60 bg-card/50 p-4">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-9 w-20" />
+              <Skeleton className="h-3 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <Skeleton className="mb-4 h-3 w-32" />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {['c-a', 'c-b', 'c-c', 'c-d', 'c-e', 'c-f'].map((key) => (
+            <Skeleton key={key} className="h-36 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 
   if (resolvedError && !resolvedData) {
     return (
@@ -370,6 +369,10 @@ export function SystemHealthView() {
   }
 
   return (
+    <PageSkeletonBoundary
+      loading={loading && !resolvedData}
+      loadingContent={healthLoadingContent}
+    >
     <div className="space-y-10">
       {isPreviewMode ? (
         <div className="rounded-lg border border-dashed border-border/80 bg-muted/30 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
@@ -489,5 +492,6 @@ export function SystemHealthView() {
         </Card>
       ) : null}
     </div>
+    </PageSkeletonBoundary>
   )
 }

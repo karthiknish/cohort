@@ -3,6 +3,7 @@
 import { useQuery } from 'convex/react'
 import { useCallback, useMemo, useState } from 'react'
 
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -210,11 +211,11 @@ export function ProposalAnalyticsCard() {
     }
   }, [timeSeries])
 
-  if (loading) {
-    return <ProposalAnalyticsLoadingCard />
-  }
-
   return (
+    <PageSkeletonBoundary
+      loading={loading}
+      loadingContent={<ProposalAnalyticsLoadingCard />}
+    >
     <div className="space-y-6">
       <ProposalAnalyticsHeader loading={loading} onRefresh={handleRefresh} onTimeRangeChange={setTimeRange} timeRange={timeRange} />
 
@@ -228,6 +229,7 @@ export function ProposalAnalyticsCard() {
 
       {summary && summary.totalDrafts === 0 ? <ProposalAnalyticsEmptyState /> : null}
     </div>
+    </PageSkeletonBoundary>
   )
 }
 

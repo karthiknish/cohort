@@ -14,7 +14,8 @@ import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { FadeIn } from '@/shared/ui/animate-in'
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { AdsSkeleton } from './components/ads-skeleton'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { useToast } from '@/shared/ui/use-toast'
 import { AdsPageHeader } from './components/ads-page-header'
@@ -289,7 +290,7 @@ export default function AdsPage() {
 
   return (
     <PageMotionShell reveal={false}>
-    <BoneyardSkeletonBoundary name="dashboard-ads-page" loading={isInitialLoading}>
+    <PageSkeletonBoundary loading={isInitialLoading} loadingContent={<AdsSkeleton />}>
       <div className={DASHBOARD_THEME.layout.container}>
         <div className="space-y-6 pb-10">
           <FadeIn>
@@ -336,7 +337,7 @@ export default function AdsPage() {
           onInitialize={handleInitializeGoogle}
         />
       ) : null}
-    </BoneyardSkeletonBoundary>
+    </PageSkeletonBoundary>
     </PageMotionShell>
   )
 }

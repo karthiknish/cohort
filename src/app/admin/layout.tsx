@@ -15,6 +15,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 
+import { isScreenRecordingModeEnabled } from '@/lib/preview-data'
 import { ProtectedRoute } from '@/shared/components/protected-route'
 import { NavigationProvider } from '@/shared/contexts/navigation-context'
 import { AgentModeDynamic } from '@/shared/components/agent-mode/agent-mode-dynamic'
@@ -159,7 +160,7 @@ function AdminBreadcrumb() {
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute requiredRole="admin" allowPreviewAccess={isScreenRecordingModeEnabled()}>
       <WorkspaceProviders enablePreview>
         <NavigationProvider>
           <div className="relative min-h-dvh bg-background">

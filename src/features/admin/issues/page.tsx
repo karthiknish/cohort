@@ -52,6 +52,9 @@ import {
   getProblemReportStatusDisplay,
   type ProblemReport,
 } from '../lib/problem-reports'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { AdminTablePageSkeleton } from '@/features/admin/components/admin-table-page-skeleton'
+
 import { AdminPageShell } from '../components/admin-page-shell'
 
 function AdminIssuesToolbarActions({
@@ -354,6 +357,7 @@ export default function AdminIssuesPage() {
   )
 
   return (
+    <PageSkeletonBoundary loading={loading && resolvedReports.length === 0} loadingContent={<AdminTablePageSkeleton />}>
     <AdminPageShell
       title="Reported issues"
       description="Review, triage, and resolve user-submitted problem reports from across the product."
@@ -450,5 +454,6 @@ export default function AdminIssuesPage() {
         onCancel={handleCancelDelete}
       />
     </AdminPageShell>
+    </PageSkeletonBoundary>
   )
 }

@@ -15,13 +15,14 @@ import { OperationsExpansionSection } from "@/features/marketing/home/components
 import { SupportProofSection } from "@/features/marketing/home/components/support-proof-section"
 import { authClient } from "@/lib/auth-client"
 import { FadeIn } from "@/shared/ui/animate-in"
-import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
 import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
+
+import { MarketingHomePageSkeleton } from '@/features/marketing/home/components/marketing-home-page-skeleton'
 
 const HOME_PAGE_FALLBACK = (
   <RevealTransitionFallback>
-    <BoneyardPageLoading name="marketing-home-page" minHeight="min-h-screen" />
+    <MarketingHomePageSkeleton />
   </RevealTransitionFallback>
 )
 
@@ -50,9 +51,9 @@ function HomePageContent() {
 
   return (
     <RevealTransition>
-      <BoneyardSkeletonBoundary
-        name="marketing-home-page"
+      <PageSkeletonBoundary
         loading={sessionPending && !user}
+        loadingContent={<MarketingHomePageSkeleton />}
       >
       <div className="w-full bg-background">
       {/* ── Hero section ── */}
@@ -166,7 +167,7 @@ function HomePageContent() {
         </div>
       </section>
       </div>
-      </BoneyardSkeletonBoundary>
+      </PageSkeletonBoundary>
     </RevealTransition>
   )
 }

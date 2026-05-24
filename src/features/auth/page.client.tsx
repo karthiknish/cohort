@@ -7,23 +7,24 @@ import { Suspense, useCallback, useEffect, useMemo, useReducer } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 
 import { AuthCard } from '@/features/auth/components/auth-card'
+import { AuthPageSkeleton } from '@/features/auth/components/auth-page-skeleton'
 import { AuthShell } from '@/features/auth/components/auth-shell'
-import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
 import { calculatePasswordStrength, startGoogleOAuthSignIn } from '@/features/auth/auth-utils'
 import { authClient } from '@/lib/auth-client'
 import { logError } from '@/lib/convex-errors'
 import { getSafeRedirectPath } from '@/lib/utils'
 import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
 import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 
 const TAB_STORAGE_KEY = 'cohorts.auth.activeTab'
 const REMEMBER_ME_KEY = 'cohorts.auth.rememberMe'
+
 const AUTH_PAGE_FALLBACK = (
   <RevealTransitionFallback>
-    <BoneyardPageLoading name="auth-main-page" minHeight="min-h-screen" />
+    <AuthPageSkeleton />
   </RevealTransitionFallback>
 )
 
@@ -390,9 +391,9 @@ function HomeAuthPageContent() {
 
   return (
     <RevealTransition>
-      <BoneyardSkeletonBoundary
-        name="auth-main-page"
+      <PageSkeletonBoundary
         loading={isAuthLoading && !user}
+        loadingContent={<AuthPageSkeleton />}
       >
         <AuthShell>
             <AuthCard
@@ -413,7 +414,7 @@ function HomeAuthPageContent() {
               onGoogleSignIn={handleGoogleSignIn}
             />
         </AuthShell>
-      </BoneyardSkeletonBoundary>
+      </PageSkeletonBoundary>
     </RevealTransition>
   )
 }

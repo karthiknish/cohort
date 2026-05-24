@@ -1,5 +1,10 @@
-import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
+import { CollaborationSkeleton } from '@/features/dashboard/collaboration/components/collaboration-skeleton'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
 export default function CollaborationLoading() {
-  return <BoneyardPageLoading name="dashboard-collaboration-page" minHeight="min-h-[70vh]" />
+  return (
+    <div className={DASHBOARD_THEME.layout.container}>
+      <CollaborationSkeleton />
+    </div>
+  )
 }

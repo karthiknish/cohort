@@ -1,5 +1,8 @@
 'use client'
 
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { AdminTablePageSkeleton } from '@/features/admin/components/admin-table-page-skeleton'
+
 import { AdminTeamPageContent, AdminTeamSignInRequired } from './admin-team-sections'
 import { useAdminTeamPage } from './hooks/use-admin-team-page'
 
@@ -11,6 +14,7 @@ export default function AdminTeamPage() {
   }
 
   return (
+    <PageSkeletonBoundary loading={page.loading} loadingContent={<AdminTablePageSkeleton />}>
     <AdminTeamPageContent
       isPreviewMode={page.isPreviewMode}
       loading={page.loading}
@@ -50,5 +54,6 @@ export default function AdminTeamPage() {
       createAdminToggleHandler={page.createAdminToggleHandler}
       createStatusActionHandler={page.createStatusActionHandler}
     />
+    </PageSkeletonBoundary>
   )
 }

@@ -1,5 +1,8 @@
 'use client'
 
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { AdminTablePageSkeleton } from '@/features/admin/components/admin-table-page-skeleton'
+
 import { AdminUsersPageContent, AdminUsersSignInRequired } from './admin-users-sections'
 import { useAdminUsersPage } from './hooks/use-admin-users-page'
 
@@ -11,6 +14,7 @@ export default function AdminUsersPage() {
   }
 
   return (
+    <PageSkeletonBoundary loading={page.loading} loadingContent={<AdminTablePageSkeleton />}>
     <AdminUsersPageContent
       isPreviewMode={page.isPreviewMode}
       loading={page.loading}
@@ -62,5 +66,6 @@ export default function AdminUsersPage() {
       onRevokeClose={page.handleRevokeClose}
       onRevokeConfirm={page.handleRevokeConfirm}
     />
+    </PageSkeletonBoundary>
   )
 }

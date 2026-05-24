@@ -1,5 +1,10 @@
-import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
+import { AdsSkeleton } from '@/features/dashboard/ads/components/ads-skeleton'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
 export default function AdsLoading() {
-  return <BoneyardPageLoading name="dashboard-ads-page" />
+  return (
+    <div className={DASHBOARD_THEME.layout.container}>
+      <AdsSkeleton />
+    </div>
+  )
 }

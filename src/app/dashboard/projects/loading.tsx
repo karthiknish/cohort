@@ -1,5 +1,10 @@
-import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
+import { ProjectsPageSkeleton } from '@/features/dashboard/projects/components/projects-page-skeleton'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
 export default function ProjectsLoading() {
-  return <BoneyardPageLoading name="dashboard-projects-page" />
+  return (
+    <div className={DASHBOARD_THEME.layout.container}>
+      <ProjectsPageSkeleton />
+    </div>
+  )
 }

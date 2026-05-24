@@ -10,7 +10,8 @@ import { can } from '@/lib/access-control/dashboard-access'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { ProposalsPageSkeleton } from '../components/proposals-page-skeleton'
 import { getPreviewProposals } from '@/lib/preview-data'
 import { ProposalStepContent } from '../components/proposal-step-content'
 import { type DeckProgressStage } from '../components/deck-progress-overlays'
@@ -365,9 +366,9 @@ export function useProposalsPageContent() {
   )
 
   return (
-    <BoneyardSkeletonBoundary
-      name="dashboard-proposals-page"
+    <PageSkeletonBoundary
       loading={isInitialLoading}
+      loadingContent={<ProposalsPageSkeleton />}
     >
       <ProposalsPageMainView
         wizardRef={wizardRef}
@@ -412,6 +413,6 @@ export function useProposalsPageContent() {
         onGoToStep={goToStep}
         validationMessages={Object.values(validationErrors)}
       />
-    </BoneyardSkeletonBoundary>
+    </PageSkeletonBoundary>
   )
 }

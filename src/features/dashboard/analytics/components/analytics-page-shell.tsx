@@ -15,7 +15,8 @@ import {
 } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { AnalyticsPageSkeleton } from './analytics-page-skeleton'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
@@ -56,9 +57,9 @@ const AnalyticsCharts = dynamic(
 export function AnalyticsPageShell() {
   const { initialMetricsLoading } = useAnalyticsPageContext()
   return (
-    <BoneyardSkeletonBoundary
-      name="dashboard-analytics-page"
+    <PageSkeletonBoundary
       loading={initialMetricsLoading}
+      loadingContent={<AnalyticsPageSkeleton />}
     >
       <div className={DASHBOARD_THEME.layout.container}>
         <div className="space-y-8 pb-10">
@@ -69,7 +70,7 @@ export function AnalyticsPageShell() {
           <AnalyticsBodySection />
         </div>
       </div>
-    </BoneyardSkeletonBoundary>
+    </PageSkeletonBoundary>
   )
 }
 

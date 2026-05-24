@@ -217,7 +217,9 @@ export async function proxy(request: NextRequest) {
 
   if (
     screenRecordingAuthBypassEnabled &&
-    (pathname.startsWith('/dashboard/') || pathname.startsWith('/for-you'))
+    (pathname.startsWith('/dashboard/') ||
+      pathname.startsWith('/for-you') ||
+      pathname.startsWith('/admin'))
   ) {
     return passThrough()
   }

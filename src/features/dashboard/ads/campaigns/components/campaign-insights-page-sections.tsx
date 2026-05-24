@@ -3,6 +3,8 @@
 import { useMemo } from 'react'
 
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { CampaignInsightsPageSkeleton } from './campaign-insights-page-skeleton'
 import type { UseFormulaEditorReturn } from '@/features/dashboard/ads/hooks/use-formula-editor'
 import type { AlgorithmicInsight } from '@/lib/ad-algorithms'
 import { type DateRange } from '@/features/dashboard/ads/components/date-range-picker'
@@ -324,6 +326,10 @@ export function CampaignInsightsPageContent() {
   const page = useCampaignInsightsPage()
 
   return (
+    <PageSkeletonBoundary
+      loading={page.campaignLoading}
+      loadingContent={<CampaignInsightsPageSkeleton />}
+    >
     <div className={ADS_PAGE_THEME.innerContainer}>
       <CampaignHeader
         campaign={page.campaign}
@@ -344,5 +350,6 @@ export function CampaignInsightsPageContent() {
 
       <CampaignInsightsPageBody page={page} />
     </div>
+    </PageSkeletonBoundary>
   )
 }

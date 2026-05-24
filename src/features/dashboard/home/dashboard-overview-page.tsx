@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
 
 import { DashboardSkeleton } from './components/dashboard-skeleton'
 import {
@@ -64,8 +64,7 @@ export function DashboardOverviewPage() {
 
   return (
     <PageMotionShell reveal={false} className="mx-auto max-w-7xl pb-10">
-      <BoneyardSkeletonBoundary
-        name="dashboard-overview-page"
+      <PageSkeletonBoundary
         loading={isInitialLoading}
         loadingContent={dashboardOverviewLoadingContent}
       >
@@ -85,7 +84,7 @@ export function DashboardOverviewPage() {
           analyticsMetricsList={analyticsMetricsList}
           displayStats={displayStats}
         />
-      </BoneyardSkeletonBoundary>
+      </PageSkeletonBoundary>
     </PageMotionShell>
   )
 }

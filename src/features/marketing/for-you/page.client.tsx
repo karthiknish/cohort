@@ -6,7 +6,7 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { notificationsApi, tasksApi } from '@/lib/convex-api'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
 import { getWorkspaceId } from '@/lib/utils'
 
 import { ForYouClients } from './components/for-you-clients'
@@ -46,8 +46,7 @@ export default function ForYouPage() {
         (clientsLoading || rawTasks === undefined || liveNotifications === undefined)))
 
   return (
-    <BoneyardSkeletonBoundary
-      name="for-you-page"
+    <PageSkeletonBoundary
       loading={isInitialLoading}
       loadingContent={forYouLoadingContent}
     >
@@ -59,6 +58,6 @@ export default function ForYouPage() {
           <ForYouWhatsNext />
         </main>
       </PageMotionShell>
-    </BoneyardSkeletonBoundary>
+    </PageSkeletonBoundary>
   )
 }

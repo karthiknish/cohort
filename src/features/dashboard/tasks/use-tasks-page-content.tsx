@@ -28,7 +28,8 @@ import {
 } from '@/features/dashboard/tasks'
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { Card, CardContent } from '@/shared/ui/card'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { TasksPageSkeleton } from '@/features/dashboard/tasks/tasks-page-skeleton'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { TooltipProvider } from '@/shared/ui/tooltip'
@@ -565,9 +566,9 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
   return (
     <TooltipProvider>
       <TaskParticipantsProvider participants={taskParticipants}>
-      <BoneyardSkeletonBoundary
-        name="dashboard-tasks-page"
+      <PageSkeletonBoundary
         loading={initialLoading}
+        loadingContent={<TasksPageSkeleton />}
       >
       <div
         className={cn(DASHBOARD_THEME.layout.container, TASKS_THEME.page, 'relative')}
@@ -794,7 +795,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
 
 
       </div>
-      </BoneyardSkeletonBoundary>
+      </PageSkeletonBoundary>
       </TaskParticipantsProvider>
     </TooltipProvider>
   )

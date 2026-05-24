@@ -5,10 +5,11 @@ import { NavigationBreadcrumbs } from '@/shared/layout/navigation/breadcrumbs'
 import { AgentModeDynamic } from '@/shared/components/agent-mode/agent-mode-dynamic'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
+import { isScreenRecordingModeEnabled } from '@/lib/preview-data'
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowPreviewAccess={isScreenRecordingModeEnabled()}>
       <WorkspaceProviders enablePreview enablePreferences>
         <NavigationProvider>
           <div className="relative flex min-h-screen bg-background">

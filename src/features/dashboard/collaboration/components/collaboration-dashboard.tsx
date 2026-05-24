@@ -6,7 +6,8 @@ import { X } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Card, CardContent } from '@/shared/ui/card'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { CollaborationSkeleton } from './collaboration-skeleton'
 import { Button } from '@/shared/ui/button'
 import type { ClientTeamMember } from '@/types/clients'
 
@@ -205,9 +206,9 @@ export function CollaborationDashboard() {
 function CollaborationDashboardContent() {
   const { collab } = useCollaborationDashboardContext()
   return (
-    <BoneyardSkeletonBoundary
-      name="dashboard-collaboration-page"
+    <PageSkeletonBoundary
       loading={collab.isBootstrapping}
+      loadingContent={<CollaborationSkeleton />}
     >
       <div className={DASHBOARD_THEME.layout.container}>
         <CollaborationHeaderSection />
@@ -216,7 +217,7 @@ function CollaborationDashboardContent() {
         <CollaborationInboxSection />
         <ChannelMembersDialogSection />
       </div>
-    </BoneyardSkeletonBoundary>
+    </PageSkeletonBoundary>
   )
 }
 

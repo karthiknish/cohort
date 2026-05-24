@@ -19,6 +19,7 @@ import {
   useProposalArtifactUrls,
 } from '@/features/dashboard/proposals/hooks/use-proposal-artifact-urls'
 import { getPreviewProposals } from '@/lib/preview-data'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
 import { DirectionalPageTransition } from '@/shared/ui/page-transition'
 import { BackLink } from '@/shared/components/back-link'
 import { DeckPageViewerSection } from '@/features/dashboard/proposals/[proposalId]/deck/deck-page-viewer-section'
@@ -129,6 +130,17 @@ export default function ProposalDeckPage() {
 
   return (
     <DirectionalPageTransition>
+      <PageSkeletonBoundary
+        loading={isLoading}
+        loadingContent={
+          <div className="flex min-h-[60vh] items-center justify-center">
+            <div className="flex flex-col items-center gap-3 text-muted-foreground">
+              <LoaderCircle className="size-6 animate-spin" />
+              <p>Loading proposal deck…</p>
+            </div>
+          </div>
+        }
+      >
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
@@ -273,6 +285,7 @@ export default function ProposalDeckPage() {
         </Card>
       )}
       </div>
+      </PageSkeletonBoundary>
     </DirectionalPageTransition>
   )
 }

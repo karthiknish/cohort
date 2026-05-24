@@ -9,7 +9,8 @@ import { ClientAccessGate } from '@/features/dashboard/home/components/client-ac
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { ClientsDashboardSkeleton } from './components/clients-dashboard-skeleton'
 import { useToast } from '@/shared/ui/use-toast'
 import { buildMetricSnapshotChart } from '@/lib/export/cohorts-spreadsheet-charts'
 import { exportToCsv } from '@/lib/export/export-to-spreadsheet'
@@ -23,7 +24,6 @@ import {
 } from '@/shared/ui/card'
 import { TooltipProvider } from '@/shared/ui/tooltip'
 
-import { ClientsDashboardSkeleton } from './components/clients-dashboard-skeleton'
 import { ClientsDashboardReadyView } from './clients-dashboard-ready-view'
 import { useClientsData } from './use-clients-data'
 import { formatDate } from './utils'
@@ -224,12 +224,12 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
 
   return (
     <TooltipProvider>
-      <BoneyardSkeletonBoundary
-        name="dashboard-clients-page"
+      <PageSkeletonBoundary
         loading={isInitialLoading}
+        loadingContent={<ClientsDashboardSkeleton />}
       >
         {readyContent}
-      </BoneyardSkeletonBoundary>
+      </PageSkeletonBoundary>
     </TooltipProvider>
   )
 }

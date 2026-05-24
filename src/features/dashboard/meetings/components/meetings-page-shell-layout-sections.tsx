@@ -2,7 +2,8 @@
 
 import type { ReactNode } from 'react'
 
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { MeetingsPageSkeleton } from './meetings-page-skeleton'
 import { QueryErrorAlert } from '@/shared/ui/query-error-alert'
 
 type MeetingsPageShellBoundaryProps = {
@@ -13,9 +14,9 @@ type MeetingsPageShellBoundaryProps = {
 
 export function MeetingsPageShellBoundary({ loading, queryError, children }: MeetingsPageShellBoundaryProps) {
   return (
-    <BoneyardSkeletonBoundary name="dashboard-meetings-page" loading={loading}>
+    <PageSkeletonBoundary loading={loading} loadingContent={<MeetingsPageSkeleton />}>
       {queryError ? <QueryErrorAlert error={queryError} title="Unable to load meetings" /> : null}
       {children}
-    </BoneyardSkeletonBoundary>
+    </PageSkeletonBoundary>
   )
 }

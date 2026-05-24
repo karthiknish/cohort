@@ -1,5 +1,10 @@
-import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
+import { DashboardSkeleton } from '@/features/dashboard/home/components/dashboard-skeleton'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
 export default function DashboardLoading() {
-  return <BoneyardPageLoading name="dashboard-overview-page" minHeight="min-h-[60vh]" />
+  return (
+    <div className={DASHBOARD_THEME.layout.container}>
+      <DashboardSkeleton />
+    </div>
+  )
 }

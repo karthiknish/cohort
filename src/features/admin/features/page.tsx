@@ -1,16 +1,18 @@
 'use client'
 
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+
 import { AdminFeaturesLoadingShell, AdminFeaturesPageContent } from './admin-features-sections'
 import { useAdminFeaturesPage } from './hooks/use-admin-features-page'
 
 export default function AdminFeaturesPage() {
   const page = useAdminFeaturesPage()
 
-  if (page.loading) {
-    return <AdminFeaturesLoadingShell />
-  }
-
   return (
+    <PageSkeletonBoundary
+      loading={page.loading}
+      loadingContent={<AdminFeaturesLoadingShell />}
+    >
     <AdminFeaturesPageContent
       isPreviewMode={page.isPreviewMode}
       features={page.features}
@@ -32,5 +34,6 @@ export default function AdminFeaturesPage() {
       onMoveFeature={page.handleMoveFeature}
       onSubmitFeature={page.handleSubmitFeature}
     />
+    </PageSkeletonBoundary>
   )
 }

@@ -1,5 +1,8 @@
 'use client'
 
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { AdminTablePageSkeleton } from '@/features/admin/components/admin-table-page-skeleton'
+
 import { AdminClientsPageContent, AdminClientsSignInRequired } from './admin-clients-sections'
 import { useAdminClientsPage } from './hooks/use-admin-clients-page'
 
@@ -11,6 +14,7 @@ export default function AdminClientsPage() {
   }
 
   return (
+    <PageSkeletonBoundary loading={page.clientsLoading} loadingContent={<AdminTablePageSkeleton />}>
     <AdminClientsPageContent
       isPreviewMode={page.isPreviewMode}
       clientsLoading={page.clientsLoading}
@@ -72,5 +76,6 @@ export default function AdminClientsPage() {
       onCancelEditRoleDialog={page.handleCancelEditRoleDialog}
       onConfirmEditTeamMemberRole={page.handleConfirmEditTeamMemberRole}
     />
+    </PageSkeletonBoundary>
   )
 }

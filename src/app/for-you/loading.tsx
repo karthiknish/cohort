@@ -1,5 +1,5 @@
-import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
+import { ForYouPageSkeleton } from '@/features/marketing/for-you/components/for-you-page-skeleton'
 
 export default function ForYouLoading() {
-  return <BoneyardPageLoading name="for-you-page" />
+  return <ForYouPageSkeleton />
 }

@@ -21,7 +21,8 @@ import {
 } from '@/shared/ui/alert-dialog'
 import { DashboardPageHero } from '@/shared/components/dashboard-page-hero'
 import { Button } from '@/shared/ui/button'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
+import { ProjectsPageSkeleton } from './projects-page-skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip'
 import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
 import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses, getIconContainerClasses } from '@/lib/dashboard-theme'
@@ -64,9 +65,9 @@ export function ProjectsPageShell() {
 
   return (
     <TooltipProvider>
-      <BoneyardSkeletonBoundary
-        name="dashboard-projects-page"
+      <PageSkeletonBoundary
         loading={initialLoading}
+        loadingContent={<ProjectsPageSkeleton />}
       >
         <div
           className={cn(DASHBOARD_THEME.layout.container, PROJECTS_THEME.page)}
@@ -96,7 +97,7 @@ export function ProjectsPageShell() {
           <ProjectsSummarySection />
           <ProjectsBacklogSection />
         </div>
-      </BoneyardSkeletonBoundary>
+      </PageSkeletonBoundary>
     </TooltipProvider>
   )
 }

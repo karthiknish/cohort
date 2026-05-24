@@ -40,6 +40,7 @@ import {
 } from './creative-detail-page-client-state'
 import { normalizeCurrencyCode } from '@/constants/currencies'
 
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
 import { CreativeDetailPageContent } from './creative-detail-page-client-sections'
 import { CreativeDetailPageLoadingState } from './creative-detail-page-client-loading'
 import { CreativeDetailPageNotFoundState } from './creative-detail-page-client-not-found'
@@ -744,15 +745,14 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
     return calculateAlgorithmicInsights(performanceSummary)
   }, [performanceSummary])
 
-  if (loading) {
-    return <CreativeDetailPageLoadingState />
-  }
-
-  if (!creative) {
-    return <CreativeDetailPageNotFoundState backUrl={backUrl} />
-  }
-
   return (
+    <PageSkeletonBoundary
+      loading={loading}
+      loadingContent={<CreativeDetailPageLoadingState />}
+    >
+  {!creative && !loading ? (
+    <CreativeDetailPageNotFoundState backUrl={backUrl} />
+  ) : creative ? (
     <CreativeDetailPageContent
       creative={creative}
       previewCreative={previewCreative ?? creative}
@@ -792,5 +792,7 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
       onGenerateHeadlines={handleGenerateHeadlines}
       onGenerateDescriptions={handleGenerateDescriptions}
     />
+  ) : null}
+    </PageSkeletonBoundary>
   )
 }

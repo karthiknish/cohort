@@ -9,7 +9,6 @@ import { AuthField, authInputClassName } from '@/features/auth/components/auth-f
 import { AuthPanel } from '@/features/auth/components/auth-panel'
 import { AuthShell } from '@/features/auth/components/auth-shell'
 import { useAuth } from '@/shared/contexts/auth-context'
-import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
@@ -120,7 +119,6 @@ export default function ForgotPasswordPage() {
   }, [])
 
   return (
-    <BoneyardSkeletonBoundary name="auth-forgot-page" loading={false}>
       <AuthShell>
         <AuthPanel
           title="Forgot password?"
@@ -218,7 +216,6 @@ export default function ForgotPasswordPage() {
           ) : null}
         </AuthPanel>
       </AuthShell>
-    </BoneyardSkeletonBoundary>
   )
 }
 

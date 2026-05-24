@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo } from 'react'
 
 import { isLoadingPhase } from '@/lib/auth-phase'
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
 import { Button } from '@/shared/ui/button'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
@@ -75,16 +76,7 @@ export function PendingApprovalContent() {
     })
   }, [replace, signOut])
 
-  if (isLoadingPhase(authPhase)) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-muted/30 px-4 py-16">
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-background px-5 py-4 shadow-sm">
-          <LoaderCircle className="size-5 animate-spin text-primary" />
-          <span className="text-sm text-muted-foreground">Checking your account status…</span>
-        </div>
-      </div>
-    )
-  }
+  const authLoading = isLoadingPhase(authPhase)
 
   if (authPhase === 'sync_failed') {
     return (
@@ -108,21 +100,33 @@ export function PendingApprovalContent() {
   }
 
   return (
-    <PageMotionShell reveal={false}>
-      <div className="flex min-h-dvh items-center justify-center bg-muted/30 px-4 py-16">
-        <div className="w-full max-w-lg rounded-2xl border border-border bg-background p-8 shadow-sm">
-          <div className="space-y-3 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Account status</p>
-            <h1 className="text-2xl font-semibold text-foreground">{statusCopy.title}</h1>
-            <p className="text-sm leading-6 text-muted-foreground">{statusCopy.message}</p>
-          </div>
-
-          <div className="mt-8 grid gap-3 sm:grid-cols-2">
-            <Button onClick={handleRefreshStatus}>Check status</Button>
-            <Button variant="outline" onClick={handleSignOut}>Sign out</Button>
+    <PageSkeletonBoundary
+      loading={authLoading}
+      loadingContent={
+        <div className="flex min-h-dvh items-center justify-center bg-muted/30 px-4 py-16">
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-background px-5 py-4 shadow-sm">
+            <LoaderCircle className="size-5 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">Checking your account status…</span>
           </div>
         </div>
-      </div>
-    </PageMotionShell>
+      }
+    >
+      <PageMotionShell reveal={false}>
+        <div className="flex min-h-dvh items-center justify-center bg-muted/30 px-4 py-16">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-background p-8 shadow-sm">
+            <div className="space-y-3 text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Account status</p>
+              <h1 className="text-2xl font-semibold text-foreground">{statusCopy.title}</h1>
+              <p className="text-sm leading-6 text-muted-foreground">{statusCopy.message}</p>
+            </div>
+
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              <Button onClick={handleRefreshStatus}>Check status</Button>
+              <Button variant="outline" onClick={handleSignOut}>Sign out</Button>
+            </div>
+          </div>
+        </div>
+      </PageMotionShell>
+    </PageSkeletonBoundary>
   )
 }
