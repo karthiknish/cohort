@@ -2,7 +2,7 @@
 // CONVERSIONS API (CAPI) — server-side and offline events
 // =============================================================================
 
-import type { MetaCapiHashedUserData } from '@/lib/meta-capi-user-data'
+import type { MetaCapiHashedUserData } from '@/lib/meta-capi-events'
 import type { MetaCapiActionSource } from '@/lib/meta-capi-events'
 
 import { appendMetaAuthParams, executeMetaApiRequest, META_API_BASE } from './client'

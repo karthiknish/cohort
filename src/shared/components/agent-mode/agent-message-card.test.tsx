@@ -12,13 +12,15 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-vi.mock('@/shared/ui/motion', () => ({
-  domAnimation: {},
-  LazyMotion: ({ children }: { children: ReactNode }) => <div data-lazy-motion="">{children}</div>,
-  m: {
-    div: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  },
+vi.mock('convex/react', () => ({
+  useConvex: () => ({}),
+  useMutation: () => vi.fn(async () => null),
 }))
+
+vi.mock('@/shared/ui/motion', async () => {
+  const { motionTestMock } = await import('@/test/motion-mock')
+  return motionTestMock
+})
 
 function agentMessage(partial: Partial<AgentMessage> & Pick<AgentMessage, 'content'>): AgentMessage {
   return {

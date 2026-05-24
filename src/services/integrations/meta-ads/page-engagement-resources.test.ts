@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
-const executeRequest = vi.fn()
+const { executeRequest } = vi.hoisted(() => ({
+  executeRequest: vi.fn(),
+}))
 
 vi.mock('@/services/integrations/shared/base-client', () => ({
   metaAdsClient: { executeRequest },

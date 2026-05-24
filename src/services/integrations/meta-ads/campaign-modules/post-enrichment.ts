@@ -102,6 +102,11 @@ export async function fetchMetaObjectStoryMedia(options: {
   }
 }
 
+/** Indirection so tests can spy without hitting the Graph API. */
+export const postEnrichmentRuntime = {
+  fetchMetaObjectStoryMedia,
+}
+
 export function needsObjectStoryMediaEnrichment(creative: MetaCreative): boolean {
   const effectiveObjectStoryId =
     typeof creative.effectiveObjectStoryId === 'string' ? creative.effectiveObjectStoryId.trim() : ''
@@ -157,7 +162,7 @@ export async function enrichMetaCreativesWithObjectStoryMedia(
           (typeof creative.objectStoryId === 'string' && creative.objectStoryId.trim()) ||
           ''
 
-        const media = await fetchMetaObjectStoryMedia({
+        const media = await postEnrichmentRuntime.fetchMetaObjectStoryMedia({
           accessToken,
           objectStoryId: storyId,
           maxRetries,

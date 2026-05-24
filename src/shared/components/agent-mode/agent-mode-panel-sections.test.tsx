@@ -3,12 +3,10 @@ import type { ReactNode } from 'react'
 
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children: ReactNode }) => children,
-  m: {
-    div: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  },
-}))
+vi.mock('framer-motion', async () => {
+  const { motionTestMock } = await import('@/test/motion-mock')
+  return motionTestMock
+})
 
 vi.mock('@/shared/ui/voice-input', () => ({
   VoiceInputButton: () => <button type="button">Voice</button>,
@@ -28,14 +26,10 @@ vi.mock('@/shared/ui/sheet', () => ({
   ),
 }))
 
-vi.mock('@/shared/ui/motion', () => ({
-  domAnimation: {},
-  AnimatePresence: ({ children }: { children: ReactNode }) => children,
-  LazyMotion: ({ children }: { children: ReactNode }) => <div data-lazy-motion="">{children}</div>,
-  m: {
-    div: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  },
-}))
+vi.mock('@/shared/ui/motion', async () => {
+  const { motionTestMock } = await import('@/test/motion-mock')
+  return motionTestMock
+})
 
 const noop = vi.fn()
 const emptyRef = { current: null }
@@ -261,10 +255,14 @@ describe('agent mode panel sections', () => {
 
     const contentMarkup = renderToStaticMarkup(
       <AgentModePanelContent
-          dockComposerProps={sharedDockComposerProps}
-          emptyComposerProps={sharedEmptyComposerProps}
-        isConversationLoading={false}
-        isProcessing={false}
+        dockComposerProps={sharedDockComposerProps}
+        emptyComposerProps={sharedEmptyComposerProps}
+        viewState={{
+          conversationLoading: false,
+          processing: false,
+          showJumpToLatest: false,
+          showEmptyState: false,
+        }}
         lastFailedMessage="Failed again"
         mentionLabels={[]}
         messages={[
@@ -281,9 +279,9 @@ describe('agent mode panel sections', () => {
         processingLabel="Understanding request…"
         scrollAreaRef={emptyRef}
         onMessagesScroll={noop}
-        showJumpToLatest={false}
         onJumpToLatest={noop}
-        showEmptyState={false}
+        conversationId="chat-1"
+        workspaceId="ws-1"
       />,
     )
 

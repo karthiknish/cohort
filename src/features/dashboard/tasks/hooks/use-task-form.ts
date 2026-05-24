@@ -2,6 +2,7 @@
 
 import { useCallback, useState, type FormEvent } from 'react'
 import { useConvex, useMutation } from 'convex/react'
+import { useAuth } from '@/shared/contexts/auth-context'
 import type { TaskRecord } from '@/types/tasks'
 import { asErrorMessage } from '@/lib/convex-errors'
 import { filesApi } from '@/lib/convex-api'
@@ -71,6 +72,7 @@ export function useTaskForm({
   onUpdateTask,
 }: UseTaskFormOptions): UseTaskFormReturn {
   const convex = useConvex()
+  const { user } = useAuth()
   // Create form state
   const [isCreateOpen, setIsCreateOpen] = useState(initialCreateOpen)
   const [formState, setFormState] = useState<TaskFormState>(() =>
@@ -83,8 +85,17 @@ export function useTaskForm({
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
   const syncMetadata = useMutation(filesApi.syncMetadata)
   const getPublicUrl = useCallback(
-    (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
-    [convex]
+    (args: { storageId: string }) => {
+      const workspaceId = user?.agencyId
+      if (!workspaceId) {
+        throw new Error('Workspace context missing')
+      }
+      return convex.query(filesApi.getPublicUrl, {
+        workspaceId,
+        storageId: args.storageId,
+      })
+    },
+    [convex, user?.agencyId],
   )
 
   // Edit form state

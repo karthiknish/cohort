@@ -20,6 +20,13 @@ vi.mock('@/shared/contexts/auth-context', () => ({
   useAuth: () => ({ user: { agencyId: 'agency-1' } }),
 }))
 
+vi.mock('@/shared/contexts/client-context', () => ({
+  useClientContext: () => ({
+    selectedClient: null,
+    selectedClientId: null,
+  }),
+}))
+
 vi.mock('@/shared/ui/use-toast', () => ({
   toast: vi.fn(),
 }))

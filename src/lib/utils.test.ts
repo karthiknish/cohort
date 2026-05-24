@@ -14,7 +14,7 @@ afterEach(() => {
 describe('utils', () => {
   describe('cn', () => {
     it('merges tailwind classes correctly', () => {
-      expect(cn('p-2', 'px-4')).toBe('py-2 px-4')
+      expect(cn('p-2', 'px-4')).toBe('p-2 px-4')
     })
   })
 

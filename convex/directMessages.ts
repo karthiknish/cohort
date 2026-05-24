@@ -1,3 +1,3 @@
-export * from './directMessages/conversations'
-export * from './directMessages/messages'
-export * from './directMessages/pollsAndReactions'
+export * from './domains/collaboration/directMessages/conversations'
+export * from './domains/collaboration/directMessages/messages'
+export * from './domains/collaboration/directMessages/pollsAndReactions'

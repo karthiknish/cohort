@@ -1,14 +1,2 @@
-import { query } from './_generated/server'
-import { v } from 'convex/values'
-
-export const ping = query({
-  args: {},
-  returns: v.object({
-    ok: v.literal(true),
-    now: v.number(),
-  }),
-  handler: async () => {
-    // Public health check — no DB reads (avoids touching user rows from anonymous callers).
-    return { ok: true as const, now: Date.now() }
-  },
-})
+/** Root API shim — implementation in `convex/domains/platform/health.ts` */
+export * from './domains/platform/health'

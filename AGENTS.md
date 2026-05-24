@@ -6,6 +6,12 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 
 <!-- END:nextjs-agent-rules -->
 
+## Engineering guardrails
+
+- CI: `bun run ci:check` (lint covers `src` + `convex`; `convex:typecheck` is hermetic).
+- Docs: [docs/engineering-guardrails.md](docs/engineering-guardrails.md), [docs/convex-architecture.md](docs/convex-architecture.md).
+- E2E smoke: `bun run test:e2e:smoke` (public routes always; set `PLAYWRIGHT_E2E_EMAIL` for auth flows).
+
 ## Motion and micro-interactions
 
 - Import CSS tokens and Framer presets from `@/lib/motion` (not `framer-motion` directly).

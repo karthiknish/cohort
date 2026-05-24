@@ -10,7 +10,7 @@ export type {
   MutationHandler,
 } from './lib/functions/types'
 export { PaginationValidators, applyManualPagination, getPaginatedResponse } from './lib/functions/pagination'
-export { requireWorkspaceAccess } from './lib/functions/auth'
+export { requireWorkspaceAccess, requireWorkspaceActionAccess } from './lib/functions/auth'
 export {
   authenticatedQuery,
   optionalAuthenticatedQuery,

@@ -11,6 +11,7 @@ import {
 } from 'react'
 import { useMutation, useConvex } from 'convex/react'
 
+import { useAuth } from '@/shared/contexts/auth-context'
 import { useToast } from '@/shared/ui/use-toast'
 import { settingsApi, filesApi } from '@/lib/convex-api'
 import { uploadStorageFile } from '@/lib/upload-storage-file'
@@ -32,6 +33,7 @@ export function useProfileAvatarUpload({
   setPreviewUser: Dispatch<SetStateAction<ProfileUser>>
 }) {
   const { toast } = useToast()
+  const { user: authUser } = useAuth()
   const convex = useConvex()
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
   const syncMetadata = useMutation(filesApi.syncMetadata)
@@ -58,7 +60,15 @@ export function useProfileAvatarUpload({
         syncMetadata: (args) => syncMetadata(args),
       })
 
-      const publicUrl = await convex.query(filesApi.getPublicUrl, { storageId })
+      const workspaceId = authUser?.agencyId
+      if (!workspaceId) {
+        throw new Error('Workspace context missing')
+      }
+
+      const publicUrl = await convex.query(filesApi.getPublicUrl, {
+        workspaceId,
+        storageId,
+      })
 
       if (!publicUrl?.url) {
         throw new Error('Unable to resolve uploaded file URL')
@@ -66,7 +76,7 @@ export function useProfileAvatarUpload({
 
       return publicUrl.url
     },
-    [convex, generateUploadUrl, syncMetadata],
+    [authUser?.agencyId, convex, generateUploadUrl, syncMetadata],
   )
 
   const handleAvatarRemove = useCallback(async () => {

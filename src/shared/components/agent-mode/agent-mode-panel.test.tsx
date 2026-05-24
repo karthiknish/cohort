@@ -76,33 +76,38 @@ vi.mock('./mention-dropdown', () => ({
   formatMention: (item: { label: string }) => `@${item.label}`,
 }))
 
-vi.mock('@/shared/ui/motion', () => ({
-  domAnimation: {},
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
-  LazyMotion: ({ children }: { children: React.ReactNode }) => <div data-lazy-motion="">{children}</div>,
-  m: {
-    div: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  },
-}))
+vi.mock('@/shared/ui/motion', async () => {
+  const { motionTestMock } = await import('@/test/motion-mock')
+  return motionTestMock
+})
+
+const DEFAULT_RUNTIME = {
+  open: true,
+  processing: false,
+  extractingAttachments: false,
+} as const
+
+const DEFAULT_HISTORY_LOAD = {
+  historyLoading: false,
+  conversationLoading: false,
+} as const
 
 function renderPanel(overrides: Partial<React.ComponentProps<typeof AgentModePanel>> = {}) {
   return renderToStaticMarkup(
     <AgentModePanel
-      isOpen
+      runtime={DEFAULT_RUNTIME}
+      historyLoad={DEFAULT_HISTORY_LOAD}
       activeContext={EMPTY_ACTIVE_CONTEXT}
       maxMessageLength={4000}
       onClose={noop}
       messages={[]}
-      isProcessing={false}
       onSendMessage={noop}
       pendingAttachments={[]}
       onAddAttachments={noopAsync}
       onRemoveAttachment={noop}
-      isExtractingAttachments={false}
       onClear={noop}
       conversationId={null}
       history={[] satisfies AgentConversationSummary[]}
-      isHistoryLoading={false}
       onOpenHistory={noop}
       onSelectConversation={noop}
       onUpdateConversationTitle={noop}

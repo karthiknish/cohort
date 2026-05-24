@@ -124,7 +124,7 @@ describe('AnalyticsPageShell', () => {
     expect(markup).toContain('Read-only sample data')
     expect(markup).toContain('Showing read-only Google Analytics preview metrics and insights for demos and screen recordings.')
     expect(markup).toContain('Analytics Summary Cards')
-    expect(markup).toContain('Analytics Charts')
+    expect(markup).toContain('Analytics Deep Dive')
     expect(markup).toContain('Analytics Insights')
     expect(markup).not.toContain('Connect Google')
     expect(markup).not.toContain('Sync data')

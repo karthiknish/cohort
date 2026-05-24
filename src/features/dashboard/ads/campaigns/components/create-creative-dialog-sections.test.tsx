@@ -3,6 +3,10 @@ import type { ReactNode } from 'react'
 
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('convex/react', () => ({
+  useAction: () => vi.fn(async () => []),
+}))
+
 vi.mock('@/shared/ui/dialog', () => ({
   DialogDescription: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DialogFooter: ({ children }: { children: ReactNode }) => <div>{children}</div>,

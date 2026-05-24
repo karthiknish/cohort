@@ -9,6 +9,7 @@ const DATE_RANGE = {
 
 vi.mock('convex/react', () => ({
   useAction: () => vi.fn(async () => []),
+  useQuery: () => undefined,
   useConvexAuth: () => ({
     isAuthenticated: true,
     isLoading: false,

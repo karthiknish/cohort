@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
+import { assertDebugIntrospectionEnabled } from '@/lib/debug-introspection'
 import { debugApi } from '@/lib/convex-api'
 import { ConvexHttpClient } from 'convex/browser'
 import { getToken } from '@/lib/auth-server'
@@ -22,6 +23,8 @@ export const GET = createApiHandler(
     rateLimit: 'standard',
   },
   async (_req, { query }) => {
+    assertDebugIntrospectionEnabled()
+
     const { mode, limit } = query
 
     const convexUrl = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL

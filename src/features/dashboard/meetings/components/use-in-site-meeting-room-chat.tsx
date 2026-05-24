@@ -173,7 +173,16 @@ export function useInSiteMeetingRoomChat(props: InSiteMeetingRoomChatProps) {
           contentType: attachment.mimeType || 'application/octet-stream',
           generateUploadUrl: () => generateUploadUrl({}),
           syncMetadata: (args) => syncMetadata(args),
-          getPublicUrl: (args) => convex.query(filesApi.getPublicUrl, args),
+          getPublicUrl: (args) => {
+            const workspaceId = user?.agencyId
+            if (!workspaceId) {
+              throw new Error('Workspace context missing')
+            }
+            return convex.query(filesApi.getPublicUrl, {
+              workspaceId,
+              storageId: args.storageId,
+            })
+          },
         })
 
         return {

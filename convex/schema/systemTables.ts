@@ -132,4 +132,14 @@ export const systemTables = {
     .index('by_workspaceId_createdAtMs', ['workspaceId', 'createdAtMs'])
     .index('by_workspaceId_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspaceId_kind_createdAtMs', ['workspaceId', 'kind', 'createdAtMs']),
+
+  /** Short-lived upload grants until attachments are linked to workspace records. */
+  fileUploadGrants: defineTable({
+    workspaceId: v.string(),
+    storageId: v.string(),
+    createdBy: v.string(),
+    expiresAtMs: v.number(),
+  })
+    .index('by_workspace_storageId', ['workspaceId', 'storageId'])
+    .index('by_expiresAtMs', ['expiresAtMs']),
 }

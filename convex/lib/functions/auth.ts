@@ -81,6 +81,14 @@ export async function requireWorkspaceAccess(ctx: QueryCtx | MutationCtx, worksp
   return auth
 }
 
+export async function requireWorkspaceActionAccess(ctx: ActionCtx, workspaceId: string) {
+  const auth = await getAuthenticatedActionContext(ctx)
+  if (auth.user.role !== 'admin' && auth.agencyId !== workspaceId) {
+    throw Errors.auth.workspaceAccessDenied()
+  }
+  return auth
+}
+
 export async function getAuthenticatedActionContext(ctx: ActionCtx) {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) {

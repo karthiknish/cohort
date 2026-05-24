@@ -55,8 +55,16 @@ export function TaskCreationModal({
     : ''
 
   const createTask = useMutation(tasksApi.createTask)
-  const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
-  const syncMetadata = useMutation(filesApi.syncMetadata)
+  const generateUploadUrlMutation = useMutation(filesApi.generateUploadUrl)
+  const syncMetadataMutation = useMutation(filesApi.syncMetadata)
+  const generateUploadUrl = useCallback(
+    () => generateUploadUrlMutation({}),
+    [generateUploadUrlMutation],
+  )
+  const syncMetadata = useCallback(
+    (args: { key: string }) => syncMetadataMutation(args),
+    [syncMetadataMutation],
+  )
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [pendingAttachments, setPendingAttachments] = useState<PendingTaskAttachment[]>([])
@@ -122,9 +130,13 @@ export function TaskCreationModal({
                 uploadTaskAttachment({
                   userId: user.id,
                   file: attachment.file,
-                  generateUploadUrl: () => generateUploadUrl({}),
-                  syncMetadata: (args) => syncMetadata(args),
-                  getPublicUrl: (args) => convex.query(filesApi.getPublicUrl, args),
+                  generateUploadUrl,
+                  syncMetadata,
+                  getPublicUrl: (args) =>
+                    convex.query(filesApi.getPublicUrl, {
+                      workspaceId: user.agencyId,
+                      storageId: args.storageId,
+                    }),
                 })
               )
             )
@@ -206,7 +218,7 @@ export function TaskCreationModal({
       })
       }
     })
-  }, [convex, createTask, defaultDueDate, formData, generateUploadUrl, onClose, onTaskCreated, pendingAttachments, selectedClient, selectedClientId, taskDefaults, toast, user])
+  }, [convex, createTask, defaultDueDate, formData, generateUploadUrl, onClose, onTaskCreated, pendingAttachments, selectedClient, selectedClientId, syncMetadata, taskDefaults, toast, user])
 
   const handleAddAttachments = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return

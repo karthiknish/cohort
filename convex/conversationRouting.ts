@@ -1,3 +1,2 @@
-// Intentionally empty.
-// The generated API still imports this module namespace, but this repo no longer exposes
-// any conversation-routing Convex functions.
+/** Root API shim — implementation in `convex/domains/collaboration/conversationRouting.ts` */
+export * from './domains/collaboration/conversationRouting'

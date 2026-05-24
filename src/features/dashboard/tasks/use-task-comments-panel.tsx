@@ -186,8 +186,12 @@ export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
     [syncMetadataMutation]
   )
   const getPublicUrl = useCallback(
-    (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
-    [convex]
+    (args: { storageId: string }) =>
+      convex.query(filesApi.getPublicUrl, {
+        workspaceId: String(workspaceId),
+        storageId: args.storageId,
+      }),
+    [convex, workspaceId],
   )
 
   const [state, dispatch] = useReducer(taskCommentsPanelReducer, INITIAL_TASK_COMMENTS_PANEL_STATE)
@@ -419,6 +423,7 @@ export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
     activeEditingCommentId,
     generateUploadUrl,
     getPublicUrl,
+    syncMetadata,
     pendingAttachments,
     activeReplyTo,
     resetComposer,

@@ -35,7 +35,7 @@ describe('audience builder dialog sections', () => {
     )
 
     expect(markup).toContain('Build New Audience')
-    expect(markup).toContain('Create a custom audience for facebook campaigns')
+    expect(markup).toContain('Creates an empty Meta custom audience container')
     expect(markup).toContain('Basics')
     expect(markup).toContain('Locations')
   })

@@ -25,10 +25,10 @@ A comprehensive Next.js application for marketing agencies to manage clients, tr
 - Financial insights and cash flow predictions
 
 ### Expense Management (MVP)
-- Expense categories CRUD (Firestore-backed)
+- Expense categories CRUD (Convex-backed API routes)
 - Vendor management CRUD
 - Expenses with cost types (fixed/variable/time/milestone/reimbursements)
-- Receipt / image attachments via Firebase Storage (client uploads)
+- Receipt / image attachments via Convex R2 (scoped file access)
 - Basic approval workflow (submit → approve/reject → mark paid)
 - Expense reports grouped by employee
 
@@ -55,14 +55,16 @@ A comprehensive Next.js application for marketing agencies to manage clients, tr
 
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript
+- **Backend**: [Convex](https://www.convex.dev/) (queries, mutations, actions, cron)
+- **Auth**: [Better Auth](https://www.better-auth.com/) via `@convex-dev/better-auth`
+- **Files**: Cloudflare R2 (`@convex-dev/r2`)
 - **Styling**: Tailwind CSS
-- **Authentication**: Firebase Auth
-- **Database**: Firestore
 - **Charts**: Recharts
-- **UI Components**: Radix UI + Custom components
+- **UI**: Radix UI + shared design system under `src/shared/ui`
 - **AI**: Google Gemini API
-- **PDF Generation**: jsPDF
-- **Real-time**: Socket.io
+- **PDF / decks**: jsPDF, Gamma integration
+
+See [docs/engineering-guardrails.md](docs/engineering-guardrails.md) for CI commands and [docs/convex-architecture.md](docs/convex-architecture.md) for backend layout.
 
 ## Installation
 
@@ -89,39 +91,38 @@ bun run dev
 
 ```
 src/
-├── app/                    # Next.js App Router
-│   ├── dashboard/         # Protected dashboard routes
-│   │   ├── analytics/     # Analytics dashboard
-│   │   ├── clients/       # Client management
-│   │   ├── tasks/         # Task management
-│   │   ├── finance/       # Finance & billing
-│   │   ├── proposals/     # Proposal generator
-│   │   └── collaboration/ # Team communication
-│   ├── auth/              # Authentication pages
-│   └── api/               # API routes
-├── components/            # Reusable components
-│   ├── ui/               # Base UI components
-│   ├── navigation.tsx    # Navigation components
-│   └── protected-route.tsx # Authentication wrapper
-├── contexts/             # React contexts
-│   └── auth-context.tsx  # Authentication context
-├── services/             # External API services
-│   ├── auth.ts           # Authentication service
-│   ├── ads.ts            # Ad platform integrations
-│   └── gemini.ts         # Gemini AI service
-├── types/                # TypeScript type definitions
-├── lib/                  # Utility libraries
-├── hooks/                # Custom React hooks
-└── utils/                # Helper functions
+├── app/                 # Next.js App Router (pages, API routes)
+├── features/            # Product domains (dashboard, admin, settings, …)
+├── shared/              # UI primitives, contexts, hooks
+├── lib/                 # App utilities, Convex client helpers
+├── services/            # External API clients (ads, integrations)
+└── types/               # Shared TypeScript types
+
+convex/
+├── schema/              # Table definitions (modular)
+├── lib/                 # Shared server helpers
+├── agentActions/        # Agent runtime
+├── adsIntegrations/     # Ads provider wiring
+└── *.ts                 # Functions (migrating to domain folders — see docs)
 ```
 
 ## Authentication & Security
 
-- Firebase Authentication integration
-- Role-based access control (Admin, Manager, Member)
-- Protected routes and API endpoints
-- Session management and automatic logout
-- Secure API key handling
+- Better Auth + Convex session validation
+- Role-based access control (admin, team, client roles)
+- Workspace-scoped Convex wrappers (`zWorkspaceQuery`, `zWorkspaceMutation`, `zWorkspaceAction`)
+- CSP and security headers in `next.config.ts`
+- Scoped file URLs (`convex/files.ts` + `convex/lib/storageAccess.ts`)
+
+## Quality checks
+
+```bash
+bun run ci:check   # lint (src + convex) + typecheck + convex:typecheck
+bun run test       # Vitest
+bun run ci:build   # Next.js production build
+```
+
+Do not rely on root `*_output.txt` files — they are not part of CI. See [docs/engineering-guardrails.md](docs/engineering-guardrails.md).
 
 ## Deployment
 
@@ -141,9 +142,7 @@ bun run build
 bun run start
 ```
 
-### Convex Setup (WIP migration)
-
-This repo is being migrated from Firebase (Firestore/Auth/Storage) to Convex.
+### Convex Setup
 
 Your Convex endpoints:
 
@@ -167,11 +166,11 @@ Your Convex endpoints:
 	bun run convex:deploy
 	```
 
-The app is now wired with a `ConvexProvider` (see `src/components/providers/convex-provider.tsx`). Once you start adding Convex functions, you can incrementally replace Firestore-backed API routes/services with Convex queries/mutations.
+The app uses `ConvexProvider` (see `src/shared/contexts/` and app layout). Client calls go through `src/lib/convex-api.ts`.
 
-### Better Auth (WIP migration)
+### Better Auth
 
-This repo is adopting the Convex Labs Better Auth component so Better Auth can store users/sessions in Convex.
+Better Auth stores users/sessions in Convex via the official component.
 
 - Convex component registration: [convex/convex.config.ts](convex/convex.config.ts)
 - Convex Better Auth config: [convex/auth.config.ts](convex/auth.config.ts)
@@ -213,42 +212,13 @@ curl -si "https://YOUR_LIVE_DOMAIN/api/auth/get-session"
 
 If you see HTTP 500 with *"Your request couldn't be completed"*, check Convex logs for `[betterAuth] BETTER_AUTH_SECRET`, HTTPS/`SITE_URL` errors, or a missing trusted origin (www vs apex). Vercel logs show `[auth-server] Convex auth … → 500` with parsed `code` / `message`.
 
-### Firebase Setup
+### Legacy Firebase
 
-This project now includes hardened Firestore and Storage rules for production deployments.
-
-1. Install the Firebase CLI and log in:
-	```bash
-	bun add -g firebase-tools
-	firebase login
-	```
-2. Configure your service account credentials in the environment (locally via `.env.local`, and in your hosting provider as secrets):
-	```bash
-	FIREBASE_ADMIN_PROJECT_ID=your-project-id
-	FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk@your-project-id.iam.gserviceaccount.com
-	FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-	```
-	Alternatively, set `FIREBASE_ADMIN_SERVICE_ACCOUNT_KEY` with the full JSON payload.
-3. Enable Firebase Analytics by adding your GA4 measurement ID to `.env.local`:
-	```bash
-	NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
-	```
-	Without this value, client-side analytics logging will be skipped gracefully.
-4. Deploy security rules once credentials are configured:
-	```bash
-	firebase deploy --only firestore:rules,firestore:indexes,storage:rules
-	```
-	The generated files (`firestore.rules`, `firestore.indexes.json`, `storage.rules`) match the application’s access patterns—users may only touch their own nested data, while administrative operations run through secured API routes using the Firebase Admin SDK.
+Firebase is **not** the canonical stack. Historical setup notes live in [docs/archive/firebase-legacy.md](docs/archive/firebase-legacy.md).
 
 #### Expense APIs (Finance)
 
-Expense tracking is backed by the (non-legacy) finance API routes under `/api/finance/*`:
-
-- Expense categories (`/api/finance/expense-categories`)
-- Vendors (`/api/finance/vendors`)
-- Expenses (`/api/finance/expenses`, plus reporting)
-
-Receipt uploads use Firebase client SDK and store files under `users/{uid}/expenses/...`.
+Finance routes under `/api/finance/*` (categories, vendors, expenses, reporting) use Convex-backed handlers where migrated.
 
 ### Monitoring & Observability (Sentry)
 

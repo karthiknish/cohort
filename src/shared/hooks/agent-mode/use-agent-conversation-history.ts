@@ -200,7 +200,15 @@ export function useAgentConversationHistory({
           if (!message.attachments?.length) return message
           const attachments = await hydrateAgentAttachmentUrls(
             message.attachments,
-            (args) => convex.query(filesApi.getPublicUrl, args),
+            (args) => {
+              if (!workspaceId) {
+                throw new Error('Workspace context missing')
+              }
+              return convex.query(filesApi.getPublicUrl, {
+                workspaceId,
+                storageId: args.storageId,
+              })
+            },
           )
           return attachments ? { ...message, attachments } : message
         }),

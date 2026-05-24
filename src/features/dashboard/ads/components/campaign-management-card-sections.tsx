@@ -212,7 +212,7 @@ export function CampaignGroupRowActions({
   )
 }
 
-function CampaignManagementHeader({
+export function CampaignManagementHeader({
   isRefreshing,
   onCreateCampaign,
   onRefresh,
@@ -267,7 +267,7 @@ function CampaignManagementHeader({
   )
 }
 
-function CampaignManagementTableSection({
+export function CampaignManagementTableSection({
   campaignColumns,
   campaigns,
   groupColumns,
@@ -335,7 +335,7 @@ function CampaignManagementTableSection({
   )
 }
 
-function BudgetUpdateDialog({
+export function BudgetUpdateDialog({
   currencyCode,
   currencyLabel,
   isSubmitting,
@@ -400,7 +400,7 @@ function BudgetUpdateDialog({
   )
 }
 
-function BiddingStrategyDialog({
+export function BiddingStrategyDialog({
   isSubmitting,
   onChange,
   onOpenChange,

@@ -62,16 +62,5 @@ export const POST = createApiHandler(
       scopes: query.entryPoint === 'socials' ? SOCIAL_META_SCOPES : undefined,
     })
 
-    // Debug logging for OAuth configuration
-    console.log('[meta.oauth.url] OAuth Configuration Debug:', {
-      META_APP_ID: appId,
-      META_BUSINESS_CONFIG_ID: businessConfigId,
-      META_OAUTH_REDIRECT_URI: redirectUri,
-      GENERATED_LOGIN_URL: loginUrl,
-      USER_ID: auth.uid,
-      REDIRECT_AFTER_AUTH: redirect,
-      CLIENT_ID: clientId,
-    })
-
     return { url: loginUrl }
   })

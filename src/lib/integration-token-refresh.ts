@@ -7,9 +7,11 @@ import { cache } from 'react'
 import { IntegrationTokenError, type RefreshParams } from './integration-token-refresh-shared'
 
 import { refreshMetaAccessToken } from './integration-token-refresh-meta'
+import { refreshGoogleAccessToken } from './integration-token-refresh-google'
 
 export { IntegrationTokenError, type RefreshParams } from './integration-token-refresh-shared'
 export { refreshMetaAccessToken } from './integration-token-refresh-meta'
+export { refreshGoogleAccessToken } from './integration-token-refresh-google'
 
 // Token refresh endpoints - updated to latest API versions
 const GOOGLE_TOKEN_ENDPOINT = process.env.GOOGLE_TOKEN_ENDPOINT ?? 'https://oauth2.googleapis.com/token'
@@ -97,162 +99,6 @@ export function isTokenExpiringSoon(expiresAt?: AnyTimestamp | null | string, bu
   if (!expiryMs) return true
 
   return Date.now() + bufferMs >= expiryMs
-}
-
-function resolveGoogleProvider(providerId?: 'google' | 'google-analytics'): 'google' | 'google-analytics' {
-  return providerId === 'google-analytics' ? 'google-analytics' : 'google'
-}
-
-function formatGoogleProviderName(providerId: 'google' | 'google-analytics'): string {
-  return providerId === 'google-analytics' ? 'Google Analytics' : 'Google Ads'
-}
-
-export async function refreshGoogleAccessToken({ userId, clientId, providerId }: RefreshParams): Promise<string> {
-  const resolvedProviderId = resolveGoogleProvider(providerId)
-  const providerName = formatGoogleProviderName(resolvedProviderId)
-  const integration = resolvedProviderId === 'google-analytics'
-    ? await getGoogleAnalyticsIntegration({ userId, clientId })
-    : await getAdIntegration({ userId, providerId: resolvedProviderId, clientId })
-
-  if (!integration?.refreshToken) {
-    throw new IntegrationTokenError(`No ${providerName} refresh token available`, resolvedProviderId, userId)
-  }
-
-  const { resolveGoogleAdsOAuthCredentials, resolveGoogleAnalyticsOAuthCredentials } = await import(
-    '@/services/google-oauth'
-  )
-  const credentials =
-    resolvedProviderId === 'google-analytics'
-      ? resolveGoogleAnalyticsOAuthCredentials()
-      : resolveGoogleAdsOAuthCredentials()
-
-  const googleClientId = credentials.clientId
-  const googleClientSecret = credentials.clientSecret
-
-  if (!googleClientId || !googleClientSecret) {
-    throw new IntegrationTokenError(`${providerName} client credentials are not configured`, resolvedProviderId, userId)
-  }
-
-  const params = new URLSearchParams({
-    client_id: googleClientId,
-    client_secret: googleClientSecret,
-    grant_type: 'refresh_token',
-    refresh_token: integration.refreshToken,
-  })
-
-  let lastError: Error | null = null
-
-  const attemptRefresh = async (attempt: number): Promise<string> => {
-    try {
-      const response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params.toString(),
-      })
-
-      if (!response.ok) {
-        const errorPayload = await response.text()
-        let parsedError: { error?: string; error_description?: string } = {}
-
-        try {
-          parsedError = JSON.parse(errorPayload)
-        } catch {
-          // Not JSON
-        }
-
-        const errorMessage = parsedError.error_description ?? parsedError.error ?? errorPayload
-
-        // Check if error is retryable (5xx errors)
-        const isRetryable = response.status >= 500 || response.status === 429
-
-        if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
-          logger.warn(`[Google Token Refresh] Attempt ${attempt + 1} failed (${response.status}), retrying...`, { userId })
-          lastError = new IntegrationTokenError(
-            `Failed to refresh ${providerName} token (${response.status}): ${errorMessage}`,
-            resolvedProviderId,
-            userId,
-            { isRetryable: true, httpStatus: response.status }
-          )
-          await sleep(calculateBackoffDelay(attempt))
-          return attemptRefresh(attempt + 1)
-        }
-
-        // Check for specific error types
-        if (parsedError.error === 'invalid_grant') {
-          throw new IntegrationTokenError(
-            `${providerName} refresh token has been revoked or expired. Please reconnect your account.`,
-            resolvedProviderId,
-            userId,
-            { isRetryable: false, httpStatus: response.status }
-          )
-        }
-
-        throw new IntegrationTokenError(
-          `Failed to refresh ${providerName} token (${response.status}): ${errorMessage}`,
-          resolvedProviderId,
-          userId,
-          { isRetryable: false, httpStatus: response.status }
-        )
-      }
-
-      const tokenPayload = (await response.json()) as {
-        access_token?: string
-        expires_in?: number
-        refresh_token?: string
-        id_token?: string
-      }
-
-      if (!tokenPayload.access_token) {
-        throw new IntegrationTokenError(`${providerName} token response missing access_token`, resolvedProviderId, userId)
-      }
-
-      const expiresAt = computeExpiry(tokenPayload.expires_in)
-
-      if (resolvedProviderId === 'google-analytics') {
-        await updateGoogleAnalyticsCredentials({
-          userId,
-          clientId,
-          accessToken: tokenPayload.access_token,
-          accessTokenExpiresAt: expiresAt ?? undefined,
-          refreshToken: tokenPayload.refresh_token ?? undefined,
-          idToken: tokenPayload.id_token ?? undefined,
-        })
-      } else {
-        await updateIntegrationCredentials({
-          userId,
-          providerId: resolvedProviderId,
-          clientId,
-          accessToken: tokenPayload.access_token,
-          accessTokenExpiresAt: expiresAt ?? undefined,
-          refreshToken: tokenPayload.refresh_token ?? undefined,
-          idToken: tokenPayload.id_token ?? undefined,
-        })
-      }
-
-      logger.info(`[Google Token Refresh] Successfully refreshed token for user ${userId}`, { expiresIn: tokenPayload.expires_in })
-
-      return tokenPayload.access_token
-    } catch (error) {
-      if (error instanceof IntegrationTokenError) {
-        throw error
-      }
-
-      // Network errors are retryable
-      lastError = error instanceof Error ? error : new Error('Unknown error')
-
-      if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
-        console.warn(`[Google Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message)
-        await sleep(calculateBackoffDelay(attempt))
-        return attemptRefresh(attempt + 1)
-      }
-    }
-
-    throw lastError ?? new IntegrationTokenError('Google token refresh failed after all retries', resolvedProviderId, userId)
-  }
-
-  return attemptRefresh(0)
 }
 
 export async function refreshTikTokAccessToken({ userId, clientId }: RefreshParams): Promise<string> {

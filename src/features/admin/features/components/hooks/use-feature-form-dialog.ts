@@ -32,7 +32,7 @@ export function useFeatureFormDialog({
 }: FeatureFormDialogProps) {
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
-  useAuth()
+  const { user } = useAuth()
   const convex = useConvex()
   const [state, dispatch] = useReducer(featureFormReducer, createEmptyFeatureFormState(defaultStatus))
   const {
@@ -53,8 +53,12 @@ export function useFeatureFormDialog({
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
   const syncMetadata = useMutation(filesApi.syncMetadata)
   const getPublicUrl = useCallback(
-    (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
-    [convex]
+    (args: { storageId: string }) =>
+      convex.query(filesApi.getPublicUrl, {
+        workspaceId: user?.agencyId ?? '',
+        storageId: args.storageId,
+      }),
+    [convex, user?.agencyId],
   )
 
   const isEditing = !!feature

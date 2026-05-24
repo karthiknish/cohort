@@ -2,6 +2,16 @@ import { renderToStaticMarkup } from 'react-dom/server'
 
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('@/shared/contexts/auth-context', () => ({
+  useAuth: () => ({
+    user: { id: 'user-1', agencyId: 'agency-1', role: 'admin' },
+  }),
+}))
+
+vi.mock('convex/react', () => ({
+  useQuery: () => undefined,
+}))
+
 import type { MeetingRecord } from '../types'
 
 import { UpcomingMeetingItemCard, UpcomingMeetingsEmptyState } from './upcoming-meetings-card-sections'

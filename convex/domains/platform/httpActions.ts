@@ -1,0 +1,84 @@
+import { httpAction } from '../../_generated/server'
+import { internal } from '/_generated/api'
+import { assertWebhookSecret } from '../../lib/webhookAuth'
+
+function jsonResponse(payload: unknown, status = 200): Response {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      'content-type': 'application/json',
+    },
+  })
+}
+
+function getHeader(request: Request, name: string): string | null {
+  const value = request.headers.get(name)
+  return typeof value === 'string' && value.length > 0 ? value : null
+}
+
+export const adSyncNotification = httpAction(async (ctx, request) => {
+  if (request.method !== 'POST') {
+    return jsonResponse({ error: 'Method not allowed' }, 405)
+  }
+
+  try {
+    assertWebhookSecret('ADS_SYNC_WEBHOOK_SECRET', getHeader(request, 'x-webhook-secret'))
+  } catch {
+    return jsonResponse({ error: 'Unauthorized' }, 401)
+  }
+
+  let payload: Record<string, unknown> | null = null
+  try {
+    payload = await request.json() as Record<string, unknown>
+  } catch (error) {
+    console.error('[httpActions:adSyncNotification] Invalid JSON payload', error)
+    return jsonResponse({ error: 'Invalid JSON payload' }, 400)
+  }
+
+  const workspaceId = typeof payload?.workspaceId === 'string' ? payload.workspaceId : null
+  const providerId = typeof payload?.providerId === 'string' ? payload.providerId : null
+  const clientId = typeof payload?.clientId === 'string' ? payload.clientId : null
+
+  if (!workspaceId || !providerId) {
+    return jsonResponse({ error: 'Missing workspaceId/providerId' }, 400)
+  }
+
+  // Enqueue an ad sync job. This mutation requires user identity today,
+  // so we only attempt it when a secret is configured and we can treat
+  // the source as trusted. If you want a true server-to-server webhook,
+  // we should add a cron/service identity bypass in the mutation.
+  try {
+    await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
+      workspaceId,
+      providerId,
+      clientId,
+      jobType: 'manual-sync',
+    })
+  } catch (error) {
+    console.error('[httpActions:adSyncNotification] Failed to enqueue sync job', {
+      workspaceId,
+      providerId,
+      clientId,
+      error,
+    })
+    // Don’t fail the webhook if auth is not wired yet.
+    return jsonResponse({ received: true, enqueued: false })
+  }
+
+  return jsonResponse({ received: true, enqueued: true })
+})
+
+export const externalWebhook = httpAction(async (_ctx, request) => {
+  if (request.method !== 'POST') {
+    return jsonResponse({ error: 'Method not allowed' }, 405)
+  }
+
+  try {
+    assertWebhookSecret('EXTERNAL_WEBHOOK_SECRET', getHeader(request, 'x-webhook-secret'))
+  } catch {
+    return jsonResponse({ error: 'Unauthorized' }, 401)
+  }
+
+  // Generic endpoint: just acknowledge receipt.
+  return jsonResponse({ received: true })
+})

@@ -49,7 +49,10 @@ describe('proposal history sections', () => {
     const markup = renderToStaticMarkup(
       <>
         <ProposalHistoryHeader isLoading={false} onRefresh={vi.fn()} proposalCount={2} />
-        <ProposalHistoryEmptyState canCreate={true} isCreating={false} isGenerating={false} onCreateNew={vi.fn()} />
+        <ProposalHistoryEmptyState
+          actions={{ canCreate: true, canManage: true, creating: false, generating: false }}
+          onCreateNew={vi.fn()}
+        />
       </>,
     )
 

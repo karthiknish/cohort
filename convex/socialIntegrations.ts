@@ -1,9 +1,9 @@
 /** Public API surface only — internal helpers stay on submodule paths to limit TS depth. */
-export { getStatus } from './socialIntegrations/queries'
-export { discoverPages } from './socialIntegrations/discovery'
+export { getStatus } from './domains/marketing/socialIntegrations/queries'
+export { discoverPages } from './domains/marketing/socialIntegrations/discovery'
 export {
   persistIntegrationTokens,
   confirmSurfaceBinding,
   disconnectIntegration,
-} from './socialIntegrations/settings'
-export { requestManualSync } from './socialIntegrations/syncJobs'
+} from './domains/marketing/socialIntegrations/settings'
+export { requestManualSync } from './domains/marketing/socialIntegrations/syncJobs'

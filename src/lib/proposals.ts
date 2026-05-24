@@ -1,5 +1,6 @@
-const serverTimestamp = () => new Date().toISOString()
 import { z } from 'zod'
+
+const serverTimestamp = () => new Date().toISOString()
 
 export const proposalFormSchema = z.object({
   company: z.object({

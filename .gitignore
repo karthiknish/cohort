@@ -60,12 +60,13 @@ AUDIT_AND_IMPROVEMENT_PLAN.md
 .claude/
 .codex/
 
-# Scripts
-/scripts/
-regression-check.webm
-docs/integrations/meta-marketing-api-coverage.md
-cookies.txt
+# Local artifacts (do not commit audit dumps)
+lint_output.txt
+tsc_output.txt
 knip_output.txt
+grep_output.txt
+regression-check.webm
+cookies.txt
 svgl-logos-fixed.png
 .playwright-mcp/console-2026-05-22T19-08-55-578Z.log
 .playwright-mcp/console-2026-05-22T19-11-23-679Z.log

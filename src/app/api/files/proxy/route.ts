@@ -58,8 +58,7 @@ export const HEAD = createApiHandler({
 
   const headers: Record<string, string> = {
     'Content-Type': contentType,
-    'Cache-Control': 'public, max-age=3600',
-    'Access-Control-Allow-Origin': '*',
+    'Cache-Control': 'private, no-store',
   }
 
   if (contentLength) {
@@ -99,8 +98,7 @@ export const GET = createApiHandler({
     headers: {
       'Content-Type': contentType,
       'Content-Disposition': 'inline; filename="presentation.pptx"',
-      'Cache-Control': 'public, max-age=3600',
-      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'private, no-store',
     },
   })
 })

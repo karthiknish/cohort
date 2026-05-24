@@ -8,7 +8,7 @@ import { components } from '/_generated/api';
 import type { DataModel } from '/_generated/dataModel';
 import authConfig from "../auth.config";
 import { buildTrustedOrigins, isConvexDevDeployment, isLocalDevUrl, normalizeOrigin } from "./origins";
-import schema from "./schema";
+import schema from "../schema";
 
 export { buildTrustedOrigins } from "./origins";
 

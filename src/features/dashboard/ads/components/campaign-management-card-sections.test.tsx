@@ -3,9 +3,20 @@ import type { ReactNode } from 'react'
 
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('@/shared/ui/motion', async () => {
+  const { motionTestMock } = await import('@/test/motion-mock')
+  return motionTestMock
+})
+
+vi.mock('convex/react', () => ({
+  useAction: () => vi.fn(async () => []),
+  useQuery: () => undefined,
+}))
+
 vi.mock('@/shared/ui/data-table', () => ({
   DataTable: ({ data }: { data: unknown[] }) => <div>Rows: {data.length}</div>,
   VirtualizedDataTable: ({ data }: { data: unknown[] }) => <div>Rows: {data.length}</div>,
+  DataTableColumnHeader: ({ title }: { title: string }) => <span>{title}</span>,
 }))
 
 vi.mock('@/shared/ui/state-wrapper', () => ({
@@ -30,12 +41,14 @@ vi.mock('@/shared/ui/dialog', () => ({
   DialogFooter: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DialogTrigger: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }))
 
 vi.mock('@/shared/ui/tabs', () => ({
   Tabs: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   TabsTrigger: ({ children }: { children: ReactNode }) => <button type="button">{children}</button>,
+  TabsContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }))
 
 vi.mock('@/shared/ui/tooltip', () => ({

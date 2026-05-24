@@ -21,8 +21,16 @@ export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
   const generateUploadUrl = useMutation(collaborationApi.generateUploadUrl)
   const syncMetadata = useMutation(collaborationApi.syncMetadata)
   const getPublicUrl = useCallback(
-    (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
-    [convex],
+    (args: { storageId: string }) => {
+      if (!workspaceId) {
+        throw new Error('Workspace context missing')
+      }
+      return convex.query(filesApi.getPublicUrl, {
+        workspaceId,
+        storageId: args.storageId,
+      })
+    },
+    [convex, workspaceId],
   )
 
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])

@@ -1,4 +1,2 @@
-/**
- * @deprecated Use `presentationDeck` module — kept for backwards-compatible Convex API paths.
- */
-export { getStatus, listFolders, listThemes } from './presentationDeck'
+/** Root API shim — implementation in `convex/domains/ops/gamma.ts` */
+export * from './domains/ops/gamma'

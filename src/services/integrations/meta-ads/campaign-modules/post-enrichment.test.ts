@@ -41,7 +41,7 @@ describe('enrichMetaCreativesWithObjectStoryMedia', () => {
   })
 
   it('enriches boosted video posts with thumbnail from page post', async () => {
-    vi.spyOn(postEnrichment, 'fetchMetaObjectStoryMedia').mockResolvedValue({
+    vi.spyOn(postEnrichment.postEnrichmentRuntime, 'fetchMetaObjectStoryMedia').mockResolvedValue({
       imageUrl: 'https://cdn.example/post-thumb.jpg',
       videoUrl: 'https://cdn.example/post-video.mp4',
       permalinkUrl: 'https://www.facebook.com/page/posts/456',
@@ -50,7 +50,7 @@ describe('enrichMetaCreativesWithObjectStoryMedia', () => {
 
     const result = await enrichMetaCreativesWithObjectStoryMedia('token', [creative()])
 
-    expect(postEnrichment.fetchMetaObjectStoryMedia).toHaveBeenCalledWith(
+    expect(postEnrichment.postEnrichmentRuntime.fetchMetaObjectStoryMedia).toHaveBeenCalledWith(
       expect.objectContaining({ objectStoryId: '111_222', accessToken: 'token' }),
     )
     expect(result[0]?.imageUrl).toBe('https://cdn.example/post-thumb.jpg')

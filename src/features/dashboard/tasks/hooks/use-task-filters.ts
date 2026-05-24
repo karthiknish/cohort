@@ -126,11 +126,11 @@ export function useTaskFilters({
 
   const handleStatusChange = useCallback((value: string) => {
     setSelectedStatus(value as 'all' | TaskStatus)
-  }, [])
+  }, [setSelectedStatus])
 
   const handleAssigneeChange = useCallback((value: string) => {
     setSelectedAssignee(value)
-  }, [])
+  }, [setSelectedAssignee])
 
   const hasActiveFilters = useMemo(() => {
     const hasSearch = searchQuery.trim().length > 0
@@ -142,7 +142,7 @@ export function useTaskFilters({
     setSelectedStatus('all')
     setSearchQuery('')
     setSelectedAssignee('all')
-  }, [])
+  }, [setSearchQuery, setSelectedAssignee, setSelectedStatus])
 
   // Filter tasks by client
   const tasksForClient = useMemo(() => {

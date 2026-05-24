@@ -25,3 +25,23 @@ export type MetaCapiActionSource = (typeof META_CAPI_ACTION_SOURCES)[number]['va
 export const META_OFFLINE_ACTION_SOURCE: MetaCapiActionSource = 'physical_store'
 
 export const META_BATCH_MAX_REQUESTS = 50
+
+/** Raw PII fields before hashing for Meta Conversions API `user_data`. */
+export type MetaCapiUserDataInput = {
+  email?: string
+  phone?: string
+  firstName?: string
+  lastName?: string
+  city?: string
+  state?: string
+  zip?: string
+  country?: string
+  clientIpAddress?: string
+  clientUserAgent?: string
+  fbc?: string
+  fbp?: string
+  externalId?: string
+}
+
+/** Hashed / pass-through fields sent as Meta CAPI `user_data`. */
+export type MetaCapiHashedUserData = Record<string, string | string[]>

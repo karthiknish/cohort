@@ -96,8 +96,16 @@ export function useTasksDocumentImport({
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
   const syncMetadata = useMutation(filesApi.syncMetadata)
   const getPublicUrl = useCallback(
-    (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
-    [convex],
+    (args: { storageId: string }) => {
+      if (!workspaceId) {
+        throw new Error('Workspace context missing')
+      }
+      return convex.query(filesApi.getPublicUrl, {
+        workspaceId,
+        storageId: args.storageId,
+      })
+    },
+    [convex, workspaceId],
   )
 
   const [phase, setPhase] = useState<TaskDocumentImportPhase>('idle')

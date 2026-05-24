@@ -23,7 +23,6 @@
     "convex/**/_generated/**",
     "dist/**",
     "oxlint/**",
-    "scripts/**",
     "run-admin-script.js",
     "set-admin-direct.js",
     "test-proposal-validation.js"
