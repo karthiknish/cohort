@@ -2,7 +2,9 @@ import { createHash } from 'node:crypto'
 
 import { hashMetaCustomerEmail } from '@/lib/meta-audience-user-hash'
 
-export type { MetaCapiHashedUserData, MetaCapiUserDataInput } from '@/lib/meta-capi-events'
+import type { MetaCapiHashedUserData, MetaCapiUserDataInput } from '@/lib/meta-capi-events'
+
+export type { MetaCapiHashedUserData, MetaCapiUserDataInput }
 
 function hashNormalized(value: string): string {
   return createHash('sha256').update(value).digest('hex')
