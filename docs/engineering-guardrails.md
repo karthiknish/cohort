@@ -16,6 +16,10 @@ See [security-and-env.md](security-and-env.md) for screen-recording auth bypass,
 | `bun run ci:check` | Full static gate (lint + app + convex typecheck) |
 | `bun run test` | Vitest unit/integration |
 | `bun run ci:build` | Production Next.js build |
+| `bun run prepush` | Pre-push hook gate (`ci:check` + `ci:test`) |
+| `bun run release:gate` | Pre-release gate (adds `ci:build`) |
+
+Git hooks (Husky), versioning, and tagging: [release.md](release.md).
 
 ## Health endpoints
 

@@ -7,6 +7,13 @@
     "bun": ">=1.3.6"
   },
   "scripts": {
+    "prepare": "husky",
+    "prepush": "bun run ci:check && bun run ci:test",
+    "release:gate": "node scripts/release-gate.mjs",
+    "release:gate:fast": "node scripts/release-gate.mjs --skip-build",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version",
     "dev": "bun --bun next dev",
     "dev:insecure-tls": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 bun --bun next dev",
     "dev:local": "convex dev --local & bun --bun next dev",
@@ -35,6 +42,11 @@
     "test:a11y:fixture": "PLAYWRIGHT_SKIP_WEB_SERVER=1 playwright test e2e/agent-mode.a11y.spec.ts --grep fixture",
     "r2:sync-svgl": "node scripts/sync-public-svgl-to-r2.mjs",
     "r2:configure-cors": "node scripts/configure-r2-cors.mjs"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs,json,jsonc}": [
+      "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
+    ]
   },
   "dependencies": {
     "@convex-dev/better-auth": "0.11.3",
@@ -123,6 +135,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.0.1",
+    "@commitlint/config-conventional": "^21.0.1",
     "@axe-core/playwright": "^4.11.3",
     "@biomejs/biome": "^2.4.9",
     "@convex-dev/eslint-plugin": "^2.0.0",
@@ -132,6 +146,8 @@
     "@types/react-dom": "^19.2.3",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint-plugin-react": "^7.37.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
     "next": "^16.2.6",
     "oxlint": "1.57.0",
     "typescript": "^5",

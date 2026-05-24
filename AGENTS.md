@@ -9,6 +9,7 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 ## Engineering guardrails
 
 - CI: `bun run ci:check` (lint covers `src` + `convex`; `convex:typecheck` is hermetic).
+- Git hooks: Husky runs `lint-staged` on commit, `commitlint` on message, `bun run prepush` before push. Pre-release: `bun run release:gate`. See [docs/release.md](docs/release.md).
 - Docs: [docs/engineering-guardrails.md](docs/engineering-guardrails.md), [docs/convex-architecture.md](docs/convex-architecture.md).
 - E2E smoke: `bun run test:e2e:smoke` (public routes always; set `PLAYWRIGHT_E2E_EMAIL` for auth flows).
 
