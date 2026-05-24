@@ -84,4 +84,13 @@ describe('preview route access helpers', () => {
 
     expect(isScreenRecordingAuthBypassEnabled()).toBe(true)
   })
+
+  it('never allows auth bypass on Vercel production deployments', () => {
+    vi.stubEnv('NEXT_PUBLIC_SCREEN_RECORDING_ENABLED', 'true')
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('VERCEL_ENV', 'production')
+    vi.stubEnv('SCREEN_RECORDING_ALLOW_AUTH_BYPASS', 'true')
+
+    expect(isScreenRecordingAuthBypassEnabled()).toBe(false)
+  })
 })

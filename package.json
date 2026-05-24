@@ -26,6 +26,7 @@
     "start": "node scripts/ensure-safe-runtime.cjs && bun --bun next start",
     "lint": "bun run biome:check && oxlint -c .oxlintrc.json src convex",
     "typecheck": "bun --bun tsc -p tsconfig.json --noEmit",
+    "verify:ci-env": "node scripts/verify-ci-env.mjs",
     "ci:check": "bun run biome:check && bun run typecheck && bun run convex:typecheck && oxlint -c .oxlintrc.json src convex",
     "ci:test": "vitest run",
     "ci:build": "next build",

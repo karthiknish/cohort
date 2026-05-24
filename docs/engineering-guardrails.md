@@ -1,5 +1,9 @@
 # Engineering guardrails
 
+## Security and env
+
+See [security-and-env.md](security-and-env.md) for screen-recording auth bypass, CI placeholders, Better Auth origin requirements, and `TrustedHtml` usage.
+
 ## Local / CI commands
 
 | Command | Purpose |

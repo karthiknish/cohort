@@ -7,7 +7,10 @@ export type TrustedHtml = {
   source: string
 }
 
-/** Pair sanitized HTML with a non-production `source` label for debugging. */
+/**
+ * Wrap already-safe HTML for `TrustedHtml`. Does not escape or sanitize.
+ * @see docs/security-and-env.md
+ */
 export function createTrustedHtml(html: string, source: string): TrustedHtml {
   return { __html: html, source }
 }

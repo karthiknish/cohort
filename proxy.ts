@@ -207,6 +207,8 @@ export async function proxy(request: NextRequest) {
       }),
     )
 
+  // Session bypass for screen-recording demos — gated in isScreenRecordingAuthBypassEnabled().
+  // See docs/security-and-env.md (never enabled on VERCEL_ENV=production).
   if (screenRecordingAuthBypassEnabled && pathname === '/dashboard') {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/for-you'

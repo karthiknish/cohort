@@ -19,11 +19,21 @@ export const convexSiteUrl = requireEnv(
 )
 
 /** Next.js app origin — OAuth callbacks and redirects must use this, not *.convex.site. */
-const appOrigin = (
-  process.env.NEXT_PUBLIC_SITE_URL
-  ?? process.env.NEXT_PUBLIC_APP_URL
-  ?? 'http://localhost:3000'
-).replace(/\/$/, '')
+function resolveAppOrigin(): string {
+  const raw =
+    process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL
+  if (typeof raw === 'string' && raw.trim().length > 0) {
+    return raw.trim().replace(/\/$/, '')
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[auth-server] NEXT_PUBLIC_SITE_URL (or NEXT_PUBLIC_APP_URL) is required in production',
+    )
+  }
+  return 'http://localhost:3000'
+}
+
+const appOrigin = resolveAppOrigin()
 
 const convexOrigin = new URL(convexSiteUrl).origin
 

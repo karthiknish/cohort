@@ -84,7 +84,10 @@ export function CodeBlock({
   const visibleCode = visibleLines.join('\n')
 
   const highlightedCode = useMemo(() => {
-    return createTrustedHtml(highlightCode(visibleCode, language), 'collaboration-code-block:highlightCode')
+    return createTrustedHtml(
+      highlightCode(visibleCode, language),
+      'collaboration-code-block:highlightCode:html-escaped',
+    )
   }, [visibleCode, language])
 
   const handleToggleExpanded = useCallback(() => {

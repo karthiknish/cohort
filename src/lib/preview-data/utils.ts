@@ -24,6 +24,11 @@ export function isScreenRecordingModeEnabled(): boolean {
     return isEnabledPreviewValue(process.env.NEXT_PUBLIC_SCREEN_RECORDING_ENABLED ?? null)
 }
 
+/**
+ * When true, the Next.js proxy skips the session gate for `/dashboard/*` and `/for-you/*`.
+ * Never enable on production Vercel deployments — use preview deploys or `?preview=1` routes instead.
+ * @see docs/security-and-env.md
+ */
 export function isScreenRecordingAuthBypassEnabled(): boolean {
     if (!isScreenRecordingModeEnabled()) {
         return false
@@ -31,6 +36,11 @@ export function isScreenRecordingAuthBypassEnabled(): boolean {
 
     if (process.env.NODE_ENV !== 'production') {
         return true
+    }
+
+    // Production Vercel project: session bypass is never allowed, even with SCREEN_RECORDING_ALLOW_AUTH_BYPASS.
+    if (process.env.VERCEL_ENV === 'production') {
+        return false
     }
 
     return isEnabledPreviewValue(process.env.SCREEN_RECORDING_ALLOW_AUTH_BYPASS ?? null)

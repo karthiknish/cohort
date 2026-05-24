@@ -36,7 +36,9 @@ jobs:
         run: cp config/ci.env .env.local
 
       - name: Verify CI environment
-        run: test -f .env.local && grep -q NEXT_PUBLIC_CONVEX_SITE_URL .env.local
+        run: |
+          test -f .env.local && grep -q NEXT_PUBLIC_CONVEX_SITE_URL .env.local
+          bun run verify:ci-env
 
       - name: Static checks
         run: bun run ci:check
