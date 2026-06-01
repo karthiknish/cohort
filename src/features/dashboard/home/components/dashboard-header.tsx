@@ -1,26 +1,23 @@
-'use client'
-
-import { RefreshCw } from 'lucide-react'
-import { Button } from '@/shared/ui/button'
-import { FadeIn } from '@/shared/ui/animate-in'
-
+'use client';
+import { RefreshCw } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { FadeIn } from '@/shared/ui/animate-in';
 interface DashboardHeaderProps {
-  userDisplayName?: string | null
-  onRefresh: () => void
-  isRefreshing: boolean
-  lastRefreshed?: Date
+    userDisplayName?: string | null;
+    onRefresh: () => void;
+    isRefreshing: boolean;
+    lastRefreshed?: Date;
 }
-
 export function DashboardHeader({ userDisplayName, onRefresh, isRefreshing, lastRefreshed }: DashboardHeaderProps) {
-  const getGreeting = () => {
-    const hour = new Date().getHours()
-    if (hour < 12) return 'Good morning'
-    if (hour < 18) return 'Good afternoon'
-    return 'Good evening'
-  }
-
-  return (
-    <FadeIn>
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12)
+            return 'Good morning';
+        if (hour < 18)
+            return 'Good afternoon';
+        return 'Good evening';
+    };
+    return (<FadeIn>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -35,24 +32,15 @@ export function DashboardHeader({ userDisplayName, onRefresh, isRefreshing, last
             <span className="text-sm font-medium" suppressHydrationWarning>
               {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
             </span>
-            {lastRefreshed && (
-              <span className="text-xs text-muted-foreground">
+            {lastRefreshed && (<span className="text-xs text-muted-foreground">
                 Updated {lastRefreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
+              </span>)}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            className="gap-2"
-          >
-            <RefreshCw className={`size-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing} className="gap-2">
+            <RefreshCw className={`size-3.5 ${isRefreshing ? 'animate-spin' : ''}`}/>
             Refresh
           </Button>
         </div>
       </div>
-    </FadeIn>
-  )
+    </FadeIn>);
 }

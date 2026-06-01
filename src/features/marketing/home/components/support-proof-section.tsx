@@ -1,45 +1,40 @@
-'use client'
-
-import Link from 'next/link'
-import { Headphones, ShieldCheck, Sparkles, TimerReset } from 'lucide-react'
-
-import { HOME_HERO_BRAND_ORDER, PlatformLogoStrip } from '@/features/marketing/home/components/platform-brand-logos'
-import { FadeIn } from '@/shared/ui/animate-in'
-import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
-import { cn } from '@/lib/utils'
-
+'use client';
+import Link from 'next/link';
+import { Headphones, ShieldCheck, Sparkles, TimerReset } from 'lucide-react';
+import { HOME_HERO_BRAND_ORDER, PlatformLogoStrip } from '@/features/marketing/home/components/platform-brand-logos';
+import { FadeIn } from '@/shared/ui/animate-in';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
+import { cn } from '@/lib/utils';
 const PROOF_POINTS = [
-  {
-    title: 'Guided onboarding',
-    description: 'New modules ship with preview states first so teams can shape the workflow before persistence decisions get locked in.',
-    icon: Sparkles,
-    wellClass: 'bg-info/10 text-info',
-  },
-  {
-    title: 'Operational support',
-    description: 'Operations modules sit beside chat and delivery so teams keep context in one workspace.',
-    icon: Headphones,
-    wellClass: 'bg-muted/70 text-foreground',
-  },
-  {
-    title: 'Audit visibility',
-    description: 'Delivery and request flows are framed around reviewability, not just task completion.',
-    icon: ShieldCheck,
-    wellClass: 'bg-success/10 text-success',
-  },
-  {
-    title: 'Fast rollout path',
-    description: 'The new routes are intentionally scaffolded for a low-risk transition into live Convex-backed workflows.',
-    icon: TimerReset,
-    wellClass: 'bg-accent/10 text-primary',
-  },
-] as const
-
+    {
+        title: 'Guided onboarding',
+        description: 'New modules ship with preview states first so teams can shape the workflow before persistence decisions get locked in.',
+        icon: Sparkles,
+        wellClass: 'bg-info/10 text-info',
+    },
+    {
+        title: 'Operational support',
+        description: 'Operations modules sit beside chat and delivery so teams keep context in one workspace.',
+        icon: Headphones,
+        wellClass: 'bg-muted/70 text-foreground',
+    },
+    {
+        title: 'Audit visibility',
+        description: 'Delivery and request flows are framed around reviewability, not just task completion.',
+        icon: ShieldCheck,
+        wellClass: 'bg-success/10 text-success',
+    },
+    {
+        title: 'Fast rollout path',
+        description: 'The new routes are intentionally scaffolded for a low-risk transition into live Convex-backed workflows.',
+        icon: TimerReset,
+        wellClass: 'bg-accent/10 text-primary',
+    },
+] as const;
 export function SupportProofSection() {
-  return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-background via-primary/[0.03] to-secondary/[0.05] px-6 py-20 sm:py-28">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgb(from_var(--primary)_r_g_b_/_0.12),transparent)]" aria-hidden />
+    return (<section className="relative overflow-hidden bg-gradient-to-b from-background via-primary/[0.03] to-secondary/[0.05] px-6 py-20 sm:py-28">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgb(from_var(--primary)_r_g_b_/_0.12),transparent)]" aria-hidden/>
       <div className="relative mx-auto max-w-6xl">
         <FadeIn className="mb-8 max-w-3xl space-y-4">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Support and rollout</p>
@@ -56,22 +51,16 @@ export function SupportProofSection() {
             <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:text-left">
               Same platform depth you expect
             </p>
-            <PlatformLogoStrip brands={HOME_HERO_BRAND_ORDER} variant="plain" className="justify-center sm:justify-start" />
+            <PlatformLogoStrip brands={HOME_HERO_BRAND_ORDER} variant="plain" className="justify-center sm:justify-start"/>
           </div>
         </FadeIn>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {PROOF_POINTS.map((point) => (
-            <FadeIn key={point.title}>
-              <Card
-                className={cn(
-                  'h-full border-border/60 bg-background/90 transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
-                  'hover:-translate-y-0.5 hover:border-border hover:shadow-lg hover:shadow-black/[0.06]',
-                )}
-              >
+          {PROOF_POINTS.map((point) => (<FadeIn key={point.title}>
+              <Card className={cn('h-full border-border/60 bg-background/90 transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0', 'hover:-translate-y-0.5 hover:border-border hover:shadow-lg hover:shadow-black/[0.06]')}>
                 <CardHeader className="space-y-4 pb-2">
                   <div className={cn('w-fit rounded-2xl p-3', point.wellClass)}>
-                    <point.icon className="size-5" aria-hidden />
+                    <point.icon className="size-5" aria-hidden/>
                   </div>
                   <CardTitle className="text-lg leading-snug sm:text-xl">{point.title}</CardTitle>
                 </CardHeader>
@@ -79,8 +68,7 @@ export function SupportProofSection() {
                   <p className="text-sm leading-6 text-muted-foreground">{point.description}</p>
                 </CardContent>
               </Card>
-            </FadeIn>
-          ))}
+            </FadeIn>))}
         </div>
 
         <FadeIn className="mt-12">
@@ -104,6 +92,5 @@ export function SupportProofSection() {
           </div>
         </FadeIn>
       </div>
-    </section>
-  )
+    </section>);
 }

@@ -1,121 +1,71 @@
-'use client'
-
-import { useCallback } from 'react'
-import { FileText, LoaderCircle, Save, Star, Trash2 } from 'lucide-react'
-
-import { Badge } from '@/shared/ui/badge'
-import { Button } from '@/shared/ui/button'
-import { Checkbox } from '@/shared/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
-import {
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/shared/ui/dropdown-menu'
-import { Input } from '@/shared/ui/input'
-import { Label } from '@/shared/ui/label'
-import { Skeleton } from '@/shared/ui/skeleton'
-import { Textarea } from '@/shared/ui/textarea'
-import type { ProposalTemplate } from '@/types/proposal-templates'
-
+'use client';
+import { useCallback } from 'react';
+import { FileText, LoaderCircle, Save, Star, Trash2 } from 'lucide-react';
+import { Badge } from '@/shared/ui/badge';
+import { Button } from '@/shared/ui/button';
+import { Checkbox } from '@/shared/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
+import { DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, } from '@/shared/ui/dropdown-menu';
+import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
+import { Skeleton } from '@/shared/ui/skeleton';
+import { Textarea } from '@/shared/ui/textarea';
+import type { ProposalTemplate } from '@/types/proposal-templates';
 export function ProposalTemplateDropdownContent(props: {
-  templates: ProposalTemplate[]
-  loading: boolean
-  deletingTemplateId: string | null
-  canManageTemplates: boolean
-  onApplyTemplate: (template: ProposalTemplate) => void
-  onDeleteTemplate: (templateId: string, templateName: string) => void
-  onOpenSaveDialog: () => void
+    templates: ProposalTemplate[];
+    loading: boolean;
+    deletingTemplateId: string | null;
+    canManageTemplates: boolean;
+    onApplyTemplate: (template: ProposalTemplate) => void;
+    onDeleteTemplate: (templateId: string, templateName: string) => void;
+    onOpenSaveDialog: () => void;
 }) {
-  const {
-    templates,
-    loading,
-    deletingTemplateId,
-    canManageTemplates,
-    onApplyTemplate,
-    onDeleteTemplate,
-    onOpenSaveDialog,
-  } = props
-
-  const handleSaveSelect = useCallback((event: Event) => {
-    event.preventDefault()
-    onOpenSaveDialog()
-  }, [onOpenSaveDialog])
-
-  return (
-    <DropdownMenuContent align="end" className="w-72">
+    const { templates, loading, deletingTemplateId, canManageTemplates, onApplyTemplate, onDeleteTemplate, onOpenSaveDialog, } = props;
+    const handleSaveSelect = (event: Event) => {
+        event.preventDefault();
+        onOpenSaveDialog();
+    };
+    return (<DropdownMenuContent align="end" className="w-72">
       <DropdownMenuLabel className="flex items-center justify-between gap-2">
         <span>Proposal Templates</span>
-        {loading ? <LoaderCircle className="size-3 animate-spin" /> : <Badge variant="outline" className="text-[10px]">{templates.length} saved</Badge>}
+        {loading ? <LoaderCircle className="size-3 animate-spin"/> : <Badge variant="outline" className="text-[10px]">{templates.length} saved</Badge>}
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
 
-      {loading ? (
-        <div className="space-y-2 p-2">{[0, 1, 2].map((slot) => <Skeleton key={slot} className="h-16 w-full rounded-lg" />)}</div>
-      ) : templates.length > 0 ? (
-        templates.map((template) => (
-          <ProposalTemplateMenuItem
-            key={template.id}
-            template={template}
-            deletingTemplateId={deletingTemplateId}
-            onApplyTemplate={onApplyTemplate}
-            onDeleteTemplate={onDeleteTemplate}
-          />
-        ))
-      ) : (
-        <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-          <FileText className="mx-auto mb-2 size-8 opacity-30" />
+      {loading ? (<div className="space-y-2 p-2">{[0, 1, 2].map((slot) => <Skeleton key={slot} className="h-16 w-full rounded-lg"/>)}</div>) : templates.length > 0 ? (templates.map((template) => (<ProposalTemplateMenuItem key={template.id} template={template} deletingTemplateId={deletingTemplateId} onApplyTemplate={onApplyTemplate} onDeleteTemplate={onDeleteTemplate}/>))) : (<div className="px-2 py-4 text-center text-sm text-muted-foreground">
+          <FileText className="mx-auto mb-2 size-8 opacity-30"/>
           <p>No templates yet</p>
           <p className="text-xs">Save this proposal once the basics look good so future proposals can start faster.</p>
-        </div>
-      )}
+        </div>)}
 
       {!canManageTemplates ? <p className="px-3 pb-2 text-[11px] text-muted-foreground">Open a workspace to load and save proposal templates.</p> : null}
 
       <DropdownMenuSeparator />
       <DropdownMenuItem className="cursor-pointer gap-2" disabled={!canManageTemplates} onSelect={handleSaveSelect}>
-        <Save className="size-4" />
+        <Save className="size-4"/>
         Save current as template
       </DropdownMenuItem>
-    </DropdownMenuContent>
-  )
+    </DropdownMenuContent>);
 }
-
-function ProposalTemplateMenuItem({
-  template,
-  deletingTemplateId,
-  onApplyTemplate,
-  onDeleteTemplate,
-}: {
-  template: ProposalTemplate
-  deletingTemplateId: string | null
-  onApplyTemplate: (template: ProposalTemplate) => void
-  onDeleteTemplate: (templateId: string, templateName: string) => void
+function ProposalTemplateMenuItem({ template, deletingTemplateId, onApplyTemplate, onDeleteTemplate, }: {
+    template: ProposalTemplate;
+    deletingTemplateId: string | null;
+    onApplyTemplate: (template: ProposalTemplate) => void;
+    onDeleteTemplate: (templateId: string, templateName: string) => void;
 }) {
-  const handleSelect = useCallback((event: Event) => {
-    event.preventDefault()
-    onApplyTemplate(template)
-  }, [onApplyTemplate, template])
-
-  const handleDelete = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation()
-    onDeleteTemplate(template.id, template.name)
-  }, [onDeleteTemplate, template.id, template.name])
-
-  return (
-    <DropdownMenuItem className="flex cursor-pointer items-start gap-3 p-3" onSelect={handleSelect}>
+    const handleSelect = (event: Event) => {
+        event.preventDefault();
+        onApplyTemplate(template);
+    };
+    const handleDelete = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        onDeleteTemplate(template.id, template.name);
+    };
+    return (<DropdownMenuItem className="flex cursor-pointer items-start gap-3 p-3" onSelect={handleSelect}>
       <div className="flex-1 space-y-1">
         <div className="flex items-center gap-2">
           <span className="font-medium">{template.name}</span>
-          {template.isDefault ? <Star className="size-3 fill-warning text-warning" /> : null}
+          {template.isDefault ? <Star className="size-3 fill-warning text-warning"/> : null}
         </div>
         {template.description ? <p className="line-clamp-2 text-xs text-muted-foreground">{template.description}</p> : null}
         <div className="flex flex-wrap gap-1">
@@ -124,63 +74,41 @@ function ProposalTemplateMenuItem({
         </div>
       </div>
       <Button variant="ghost" size="icon" className="size-6 shrink-0 text-muted-foreground hover:text-destructive" disabled={deletingTemplateId === template.id} aria-label={`Delete ${template.name} template`} onClick={handleDelete}>
-        {deletingTemplateId === template.id ? <LoaderCircle className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
+        {deletingTemplateId === template.id ? <LoaderCircle className="size-3 animate-spin"/> : <Trash2 className="size-3"/>}
       </Button>
-    </DropdownMenuItem>
-  )
+    </DropdownMenuItem>);
 }
-
 export function ProposalTemplateSaveDialog(props: {
-  open: boolean
-  saving: boolean
-  templateName: string
-  templateDescription: string
-  templateIndustry: string
-  isDefault: boolean
-  onOpenChange: (open: boolean) => void
-  onTemplateNameChange: (value: string) => void
-  onTemplateDescriptionChange: (value: string) => void
-  onTemplateIndustryChange: (value: string) => void
-  onDefaultChange: (checked: boolean) => void
-  onSave: () => void
+    open: boolean;
+    saving: boolean;
+    templateName: string;
+    templateDescription: string;
+    templateIndustry: string;
+    isDefault: boolean;
+    onOpenChange: (open: boolean) => void;
+    onTemplateNameChange: (value: string) => void;
+    onTemplateDescriptionChange: (value: string) => void;
+    onTemplateIndustryChange: (value: string) => void;
+    onDefaultChange: (checked: boolean) => void;
+    onSave: () => void;
 }) {
-  const {
-    open,
-    saving,
-    templateName,
-    templateDescription,
-    templateIndustry,
-    isDefault,
-    onOpenChange,
-    onTemplateNameChange,
-    onTemplateDescriptionChange,
-    onTemplateIndustryChange,
-    onDefaultChange,
-    onSave,
-  } = props
-
-  const handleTemplateNameChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    onTemplateNameChange(event.target.value)
-  }, [onTemplateNameChange])
-
-  const handleTemplateDescriptionChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onTemplateDescriptionChange(event.target.value)
-  }, [onTemplateDescriptionChange])
-
-  const handleTemplateIndustryChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    onTemplateIndustryChange(event.target.value)
-  }, [onTemplateIndustryChange])
-
-  const handleDefaultChange = useCallback((checked: boolean | 'indeterminate') => {
-    onDefaultChange(checked === true)
-  }, [onDefaultChange])
-
-  const handleCancel = useCallback(() => {
-    onOpenChange(false)
-  }, [onOpenChange])
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    const { open, saving, templateName, templateDescription, templateIndustry, isDefault, onOpenChange, onTemplateNameChange, onTemplateDescriptionChange, onTemplateIndustryChange, onDefaultChange, onSave, } = props;
+    const handleTemplateNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        onTemplateNameChange(event.target.value);
+    };
+    const handleTemplateDescriptionChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+        onTemplateDescriptionChange(event.target.value);
+    };
+    const handleTemplateIndustryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        onTemplateIndustryChange(event.target.value);
+    };
+    const handleDefaultChange = (checked: boolean | 'indeterminate') => {
+        onDefaultChange(checked === true);
+    };
+    const handleCancel = () => {
+        onOpenChange(false);
+    };
+    return (<Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Save as Template</DialogTitle>
@@ -194,21 +122,21 @@ export function ProposalTemplateSaveDialog(props: {
 
           <div className="space-y-2">
             <Label htmlFor="template-name">Template Name *</Label>
-            <Input id="template-name" value={templateName} onChange={handleTemplateNameChange} placeholder="e.g., E-commerce Growth Package" />
+            <Input id="template-name" value={templateName} onChange={handleTemplateNameChange} placeholder="e.g., E-commerce Growth Package"/>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="template-description">Description</Label>
-            <Textarea id="template-description" value={templateDescription} onChange={handleTemplateDescriptionChange} placeholder="Brief description of when to use this template…" rows={2} />
+            <Textarea id="template-description" value={templateDescription} onChange={handleTemplateDescriptionChange} placeholder="Brief description of when to use this template…" rows={2}/>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="template-industry">Industry</Label>
-            <Input id="template-industry" value={templateIndustry} onChange={handleTemplateIndustryChange} placeholder="e.g., E-commerce, SaaS, Healthcare" />
+            <Input id="template-industry" value={templateIndustry} onChange={handleTemplateIndustryChange} placeholder="e.g., E-commerce, SaaS, Healthcare"/>
           </div>
 
           <div className="flex items-center gap-x-2">
-            <Checkbox id="is-default" checked={isDefault} onCheckedChange={handleDefaultChange} />
+            <Checkbox id="is-default" checked={isDefault} onCheckedChange={handleDefaultChange}/>
             <Label htmlFor="is-default" className="cursor-pointer text-sm font-normal">Set as the default starting template for new proposals</Label>
           </div>
         </div>
@@ -216,10 +144,9 @@ export function ProposalTemplateSaveDialog(props: {
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel} disabled={saving}>Cancel</Button>
           <Button onClick={onSave} disabled={saving || !templateName.trim()}>
-            {saving ? <><LoaderCircle className="mr-2 size-4 animate-spin" />Saving…</> : <><Save className="mr-2 size-4" />Save Template</>}
+            {saving ? <><LoaderCircle className="mr-2 size-4 animate-spin"/>Saving…</> : <><Save className="mr-2 size-4"/>Save Template</>}
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
-  )
+    </Dialog>);
 }

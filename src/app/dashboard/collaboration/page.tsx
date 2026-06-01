@@ -1,1 +1,1 @@
-export { default } from '@/features/dashboard/collaboration/page'
+export { default } from '@/features/dashboard/collaboration/page';

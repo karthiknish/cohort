@@ -1,8 +1,6 @@
-import type { PreviewAdsMetricRecord, PreviewAdsIntegrationStatus, PreviewCampaign, PreviewCampaignInsights } from './types'
-import { isoDaysAgo } from './utils'
-
-const PREVIEW_ADS_CURRENCY = 'GBP'
-
+import type { PreviewAdsMetricRecord, PreviewAdsIntegrationStatus, PreviewCampaign, PreviewCampaignInsights } from './types';
+import { isoDaysAgo } from './utils';
+const PREVIEW_ADS_CURRENCY = 'GBP';
 // Preview campaigns for each provider
 export function getPreviewCampaigns(providerId: string): PreviewCampaign[] {
     const campaignsByProvider: Record<string, PreviewCampaign[]> = {
@@ -98,44 +96,33 @@ export function getPreviewCampaigns(providerId: string): PreviewCampaign[] {
                 stopTime: isoDaysAgo(-7),
             },
         ],
-    }
-
-    return campaignsByProvider[providerId] || []
+    };
+    return campaignsByProvider[providerId] || [];
 }
-
 // Generate preview insights for a specific campaign
-export function getPreviewCampaignInsights(
-    providerId: string,
-    campaignId: string,
-    startDate: string,
-    endDate: string
-): PreviewCampaignInsights {
+export function getPreviewCampaignInsights(providerId: string, campaignId: string, startDate: string, endDate: string): PreviewCampaignInsights {
     // Generate series data between dates
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-
-    const series: PreviewCampaignInsights['series'] = []
-    let totalSpend = 0
-    let totalImpressions = 0
-    let totalClicks = 0
-    let totalConversions = 0
-    let totalRevenue = 0
-    let maxReach = 0
-
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const series: PreviewCampaignInsights['series'] = [];
+    let totalSpend = 0;
+    let totalImpressions = 0;
+    let totalClicks = 0;
+    let totalConversions = 0;
+    let totalRevenue = 0;
+    let maxReach = 0;
     for (let i = 0; i < days; i++) {
-        const date = new Date(start)
-        date.setDate(date.getDate() + i)
-        const dateStr = date.toISOString().split('T')[0]!
-
+        const date = new Date(start);
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0]!;
         // Generate realistic daily metrics with some variance
-        const baseSpend = 150 + Math.random() * 100
-        const impressions = Math.round((baseSpend / 0.005) * (0.8 + Math.random() * 0.4))
-        const clicks = Math.round(impressions * 0.025 * (0.8 + Math.random() * 0.4))
-        const conversions = Math.round(clicks * 0.035 * (0.7 + Math.random() * 0.6))
-        const revenue = Math.round(baseSpend * 2.8 * (0.8 + Math.random() * 0.4))
-        const reach = Math.round(impressions * 0.7 * (0.9 + Math.random() * 0.2))
-
+        const baseSpend = 150 + Math.random() * 100;
+        const impressions = Math.round((baseSpend / 0.005) * (0.8 + Math.random() * 0.4));
+        const clicks = Math.round(impressions * 0.025 * (0.8 + Math.random() * 0.4));
+        const conversions = Math.round(clicks * 0.035 * (0.7 + Math.random() * 0.6));
+        const revenue = Math.round(baseSpend * 2.8 * (0.8 + Math.random() * 0.4));
+        const reach = Math.round(impressions * 0.7 * (0.9 + Math.random() * 0.2));
         series.push({
             date: dateStr,
             spend: Math.round(baseSpend * 100) / 100,
@@ -144,22 +131,19 @@ export function getPreviewCampaignInsights(
             conversions,
             revenue,
             reach,
-        })
-
-        totalSpend += baseSpend
-        totalImpressions += impressions
-        totalClicks += clicks
-        totalConversions += conversions
-        totalRevenue += revenue
-        maxReach = Math.max(maxReach, reach)
+        });
+        totalSpend += baseSpend;
+        totalImpressions += impressions;
+        totalClicks += clicks;
+        totalConversions += conversions;
+        totalRevenue += revenue;
+        maxReach = Math.max(maxReach, reach);
     }
-
     // Calculate derived metrics
-    const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
-    const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0
-    const cpa = totalConversions > 0 ? totalSpend / totalConversions : 0
-    const roas = totalSpend > 0 ? totalRevenue / totalSpend : 0
-
+    const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+    const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
+    const cpa = totalConversions > 0 ? totalSpend / totalConversions : 0;
+    const roas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
     return {
         providerId,
         campaignId,
@@ -214,31 +198,32 @@ export function getPreviewCampaignInsights(
             ],
             calculatedAt: (typeof window === 'undefined' ? new Date('2024-01-15T12:00:00.000Z') : new Date()).toISOString(),
         },
-    }
+    };
 }
-
 export function getPreviewAdsMetrics(): PreviewAdsMetricRecord[] {
-    const providers = ['google', 'facebook', 'linkedin', 'tiktok']
-    const metrics: PreviewAdsMetricRecord[] = []
-
+    const providers = ['google', 'facebook', 'linkedin', 'tiktok'];
+    const metrics: PreviewAdsMetricRecord[] = [];
     // Base metrics for different providers with varying performance
-    const providerData: Record<string, { spendMultiplier: number; ctr: number; convRate: number; roasMultiplier: number }> = {
+    const providerData: Record<string, {
+        spendMultiplier: number;
+        ctr: number;
+        convRate: number;
+        roasMultiplier: number;
+    }> = {
         google: { spendMultiplier: 1.0, ctr: 0.032, convRate: 0.045, roasMultiplier: 3.2 },
         facebook: { spendMultiplier: 0.8, ctr: 0.018, convRate: 0.028, roasMultiplier: 2.8 },
         linkedin: { spendMultiplier: 0.5, ctr: 0.008, convRate: 0.015, roasMultiplier: 4.1 },
         tiktok: { spendMultiplier: 0.6, ctr: 0.022, convRate: 0.022, roasMultiplier: 2.4 },
-    }
-
+    };
     // Generate 30 days of data for each provider
     for (let day = 0; day < 30; day++) {
         providers.forEach((providerId) => {
-            const data = providerData[providerId]!
-            const baseSpend = (150 + Math.random() * 100) * data.spendMultiplier
-            const impressions = Math.round((baseSpend / 0.005) * (0.8 + Math.random() * 0.4))
-            const clicks = Math.round(impressions * data.ctr * (0.8 + Math.random() * 0.4))
-            const conversions = Math.round(clicks * data.convRate * (0.7 + Math.random() * 0.6))
-            const revenue = Math.round(baseSpend * data.roasMultiplier * (0.8 + Math.random() * 0.4))
-
+            const data = providerData[providerId]!;
+            const baseSpend = (150 + Math.random() * 100) * data.spendMultiplier;
+            const impressions = Math.round((baseSpend / 0.005) * (0.8 + Math.random() * 0.4));
+            const clicks = Math.round(impressions * data.ctr * (0.8 + Math.random() * 0.4));
+            const conversions = Math.round(clicks * data.convRate * (0.7 + Math.random() * 0.6));
+            const revenue = Math.round(baseSpend * data.roasMultiplier * (0.8 + Math.random() * 0.4));
             metrics.push({
                 id: `preview-ads-${providerId}-${day}`,
                 providerId,
@@ -249,13 +234,11 @@ export function getPreviewAdsMetrics(): PreviewAdsMetricRecord[] {
                 conversions,
                 revenue,
                 createdAt: isoDaysAgo(day),
-            })
-        })
+            });
+        });
     }
-
-    return metrics.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    return metrics.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
-
 export function getPreviewAdsIntegrationStatuses(): PreviewAdsIntegrationStatus[] {
     return [
         {
@@ -310,5 +293,5 @@ export function getPreviewAdsIntegrationStatuses(): PreviewAdsIntegrationStatus[
             syncFrequencyMinutes: 360,
             scheduledTimeframeDays: 30,
         },
-    ]
+    ];
 }

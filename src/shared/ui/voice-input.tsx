@@ -1,148 +1,82 @@
-'use client'
-
-import { useRef, useCallback, useEffect } from 'react'
-import { Mic, MicOff } from 'lucide-react'
-import { interactiveTransitionClass } from '@/lib/motion'
-import { Button } from '@/shared/ui/button'
-import { cn } from '@/lib/utils'
-import { useVoiceInput } from '@/shared/hooks/use-voice-input'
-import { VoiceWaveform } from './voice-waveform'
-
+'use client';
+import { useRef, useCallback, useEffect } from 'react';
+import { Mic, MicOff } from 'lucide-react';
+import { interactiveTransitionClass } from '@/lib/motion';
+import { Button } from '@/shared/ui/button';
+import { cn } from '@/lib/utils';
+import { useVoiceInput } from '@/shared/hooks/use-voice-input';
+import { VoiceWaveform } from './voice-waveform';
 export interface VoiceInputButtonProps {
-  /** Called with final transcript text */
-  onTranscript: (transcript: string) => void
-  /** Called with interim (real-time) transcript while user is still speaking */
-  onInterimTranscript?: (transcript: string) => void
-  disabled?: boolean
-  className?: string
-  /** 'inline' = compact button for toolbars (collaboration), 'standalone' = larger with built-in waveform (agent) */
-  variant?: 'inline' | 'standalone'
-  /** Show the waveform visualizer when listening */
-  showWaveform?: boolean
+    /** Called with final transcript text */
+    onTranscript: (transcript: string) => void;
+    /** Called with interim (real-time) transcript while user is still speaking */
+    onInterimTranscript?: (transcript: string) => void;
+    disabled?: boolean;
+    className?: string;
+    /** 'inline' = compact button for toolbars (collaboration), 'standalone' = larger with built-in waveform (agent) */
+    variant?: 'inline' | 'standalone';
+    /** Show the waveform visualizer when listening */
+    showWaveform?: boolean;
 }
-
-export function VoiceInputButton({
-  onTranscript,
-  onInterimTranscript,
-  disabled = false,
-  className,
-  variant = 'inline',
-  showWaveform = false,
-}: VoiceInputButtonProps) {
-  const onTranscriptRef = useRef(onTranscript)
-  useEffect(() => {
-    onTranscriptRef.current = onTranscript
-  }, [onTranscript])
-
-  const onInterimRef = useRef(onInterimTranscript)
-  useEffect(() => {
-    onInterimRef.current = onInterimTranscript
-  }, [onInterimTranscript])
-
-  const handleResult = useCallback((transcript: string) => {
-    onTranscriptRef.current(transcript)
-  }, [])
-
-  const {
-    isSupported,
-    isListening,
-    toggleListening,
-    transcript,
-    error: voiceError,
-    timeRemaining,
-    clearError,
-  } = useVoiceInput({
-    onResult: handleResult,
-  })
-
-  // Forward interim transcripts
-  useEffect(() => {
-    if (transcript && isListening && onInterimRef.current) {
-      onInterimRef.current(transcript)
+export function VoiceInputButton({ onTranscript, onInterimTranscript, disabled = false, className, variant = 'inline', showWaveform = false, }: VoiceInputButtonProps) {
+    const onTranscriptRef = useRef(onTranscript);
+    useEffect(() => {
+        onTranscriptRef.current = onTranscript;
+    }, [onTranscript]);
+    const onInterimRef = useRef(onInterimTranscript);
+    useEffect(() => {
+        onInterimRef.current = onInterimTranscript;
+    }, [onInterimTranscript]);
+    const handleResult = (transcript: string) => {
+        onTranscriptRef.current(transcript);
+    };
+    const { isSupported, isListening, toggleListening, transcript, error: voiceError, timeRemaining, clearError, } = useVoiceInput({
+        onResult: handleResult,
+    });
+    // Forward interim transcripts
+    useEffect(() => {
+        if (transcript && isListening && onInterimRef.current) {
+            onInterimRef.current(transcript);
+        }
+    }, [transcript, isListening]);
+    if (!isSupported) {
+        return null;
     }
-  }, [transcript, isListening])
-
-  if (!isSupported) {
-    return null
-  }
-
-  // Inline variant: compact mic button for toolbars
-  if (variant === 'inline') {
-    return (
-      <div className={cn('flex items-center gap-2', className)}>
-        {showWaveform && isListening && <VoiceWaveform isActive={isListening} barCount={8} className="h-8" />}
-        <Button
-          type="button"
-          size="sm"
-          variant={isListening ? 'destructive' : 'ghost'}
-          onClick={toggleListening}
-          disabled={disabled}
-          className={cn(
-            'size-7 p-0',
-            interactiveTransitionClass,
-            isListening && 'animate-pulse'
-          )}
-          title={isListening ? `Stop listening (${timeRemaining}s)` : 'Start voice input'}
-          aria-label={
-            isListening
-              ? `Stop voice input${timeRemaining !== null ? `, ${timeRemaining} seconds left` : ''}`
-              : 'Start voice input'
-          }
-        >
-          <Mic className="size-3.5" />
+    // Inline variant: compact mic button for toolbars
+    if (variant === 'inline') {
+        return (<div className={cn('flex items-center gap-2', className)}>
+        {showWaveform && isListening && <VoiceWaveform isActive={isListening} barCount={8} className="h-8"/>}
+        <Button type="button" size="sm" variant={isListening ? 'destructive' : 'ghost'} onClick={toggleListening} disabled={disabled} className={cn('size-7 p-0', interactiveTransitionClass, isListening && 'animate-pulse')} title={isListening ? `Stop listening (${timeRemaining}s)` : 'Start voice input'} aria-label={isListening
+                ? `Stop voice input${timeRemaining !== null ? `, ${timeRemaining} seconds left` : ''}`
+                : 'Start voice input'}>
+          <Mic className="size-3.5"/>
         </Button>
-      </div>
-    )
-  }
-
-  // Standalone variant: larger button with optional built-in waveform + error display
-  return (
-    <div className={cn('flex flex-col items-center', className)}>
+      </div>);
+    }
+    // Standalone variant: larger button with optional built-in waveform + error display
+    return (<div className={cn('flex flex-col items-center', className)}>
       {/* Waveform */}
-      {showWaveform && isListening && (
-        <div className="flex flex-col items-center py-3">
-          <VoiceWaveform isActive={isListening} />
-          {timeRemaining !== null && (
-            <p className="mt-1 text-xs text-muted-foreground">
+      {showWaveform && isListening && (<div className="flex flex-col items-center py-3">
+          <VoiceWaveform isActive={isListening}/>
+          {timeRemaining !== null && (<p className="mt-1 text-xs text-muted-foreground">
               {timeRemaining}s remaining
-            </p>
-          )}
-        </div>
-      )}
+            </p>)}
+        </div>)}
 
       {/* Error display */}
-      {voiceError && (
-        <div className="mb-2 flex items-center gap-2 text-xs">
+      {voiceError && (<div className="mb-2 flex items-center gap-2 text-xs">
           <p className="text-destructive flex-1">{voiceError}</p>
           <Button variant="ghost" size="sm" onClick={clearError} className="h-6 px-2 text-xs">
             Dismiss
           </Button>
-        </div>
-      )}
+        </div>)}
 
       {/* Mic button */}
-      <Button
-        type="button"
-        variant={isListening ? 'destructive' : 'outline'}
-        size="icon"
-        onClick={toggleListening}
-        disabled={disabled}
-        className={cn(
-          'size-10 shrink-0 rounded-full',
-          interactiveTransitionClass,
-          isListening && 'animate-pulse ring-2 ring-destructive/50'
-        )}
-        title={isListening ? `Stop listening (${timeRemaining}s)` : 'Start voice input'}
-        aria-label={
-          isListening
+      <Button type="button" variant={isListening ? 'destructive' : 'outline'} size="icon" onClick={toggleListening} disabled={disabled} className={cn('size-10 shrink-0 rounded-full', interactiveTransitionClass, isListening && 'animate-pulse ring-2 ring-destructive/50')} title={isListening ? `Stop listening (${timeRemaining}s)` : 'Start voice input'} aria-label={isListening
             ? `Stop voice input${timeRemaining !== null ? `, ${timeRemaining} seconds left` : ''}`
-            : 'Start voice input'
-        }
-      >
-        {isListening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
+            : 'Start voice input'}>
+        {isListening ? <MicOff className="size-4"/> : <Mic className="size-4"/>}
       </Button>
-    </div>
-  )
+    </div>);
 }
-
-export { useVoiceInput, VoiceWaveform }
+export { useVoiceInput, VoiceWaveform };

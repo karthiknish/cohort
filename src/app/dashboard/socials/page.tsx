@@ -1,1 +1,1 @@
-export { default } from '@/features/dashboard/socials/page'
+export { default } from '@/features/dashboard/socials/page';

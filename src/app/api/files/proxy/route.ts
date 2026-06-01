@@ -1,104 +1,83 @@
-import { z } from 'zod'
-import { createApiHandler } from '@/lib/api-handler'
-import { ForbiddenError, ServiceUnavailableError } from '@/lib/api-errors'
-
-export const dynamic = 'force-dynamic'
-
+import { z } from 'zod';
+import { createApiHandler } from '@/lib/api-handler';
+import { ForbiddenError, ServiceUnavailableError } from '@/lib/api-errors';
+export const dynamic = 'force-dynamic';
 /**
  * Proxy endpoint for serving PPTX files to the in-app deck viewer.
  * This makes authenticated storage and presentation export URLs accessible via same-origin
  * so the client can fetch (and occasionally HEAD) the file without CORS issues.
  */
-
 const ALLOWED_DOMAINS = [
-  'storage.googleapis.com',
-  'public-api.gamma.app',
-  'gamma.app',
-]
-
+    'storage.googleapis.com',
+    'public-api.gamma.app',
+    'gamma.app',
+];
 function validateProxiedHost(hostname: string): boolean {
-  if (hostname.endsWith('.r2.dev') || hostname.endsWith('.r2.cloudflarestorage.com')) {
-    return true
-  }
-
-  return ALLOWED_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))
+    if (hostname.endsWith('.r2.dev') || hostname.endsWith('.r2.cloudflarestorage.com')) {
+        return true;
+    }
+    return ALLOWED_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
 }
-
 const querySchema = z.object({
-  url: z.string().url('Invalid URL format')
-})
-
+    url: z.url('Invalid URL format'),
+});
 export const HEAD = createApiHandler({
-  auth: 'required',
-  querySchema
+    auth: 'required',
+    querySchema
 }, async (req, { query }) => {
-  const { url } = query
-
-  const parsedUrl = new URL(url)
-  if (!validateProxiedHost(parsedUrl.hostname)) {
-    throw new ForbiddenError('URL domain not allowed')
-  }
-
-  const response = await fetch(url, {
-    method: 'HEAD',
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation,*/*',
-    },
-  })
-
-  if (!response.ok) {
-    throw new ServiceUnavailableError(`Failed to fetch file: ${response.status}`)
-  }
-
-  const contentType =
-    response.headers.get('content-type') ||
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-  const contentLength = response.headers.get('content-length')
-
-  const headers: Record<string, string> = {
-    'Content-Type': contentType,
-    'Cache-Control': 'private, no-store',
-  }
-
-  if (contentLength) {
-    headers['Content-Length'] = contentLength
-  }
-
-  return new Response(null, { status: 200, headers })
-})
-
+    const { url } = query;
+    const parsedUrl = new URL(url);
+    if (!validateProxiedHost(parsedUrl.hostname)) {
+        throw new ForbiddenError('URL domain not allowed');
+    }
+    const response = await fetch(url, {
+        method: 'HEAD',
+        cache: 'no-store',
+        headers: {
+            Accept: 'application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation,*/*',
+        },
+    });
+    if (!response.ok) {
+        throw new ServiceUnavailableError(`Failed to fetch file: ${response.status}`);
+    }
+    const contentType = response.headers.get('content-type') ||
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+    const contentLength = response.headers.get('content-length');
+    const headers: Record<string, string> = {
+        'Content-Type': contentType,
+        'Cache-Control': 'private, no-store',
+    };
+    if (contentLength) {
+        headers['Content-Length'] = contentLength;
+    }
+    return new Response(null, { status: 200, headers });
+});
 export const GET = createApiHandler({
-  auth: 'required',
-  querySchema
+    auth: 'required',
+    querySchema
 }, async (req, { query }) => {
-  const { url } = query
-
-  const parsedUrl = new URL(url)
-  if (!validateProxiedHost(parsedUrl.hostname)) {
-    throw new ForbiddenError('URL domain not allowed')
-  }
-
-  const response = await fetch(url, {
-    cache: 'no-store',
-    headers: {
-      'Accept': 'application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation,*/*',
-    },
-  })
-
-  if (!response.ok) {
-    throw new ServiceUnavailableError(`Failed to fetch file: ${response.status}`)
-  }
-
-  const contentType = response.headers.get('content-type') ||
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-
-  return new Response(response.body, {
-    status: 200,
-    headers: {
-      'Content-Type': contentType,
-      'Content-Disposition': 'inline; filename="presentation.pptx"',
-      'Cache-Control': 'private, no-store',
-    },
-  })
-})
+    const { url } = query;
+    const parsedUrl = new URL(url);
+    if (!validateProxiedHost(parsedUrl.hostname)) {
+        throw new ForbiddenError('URL domain not allowed');
+    }
+    const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+            'Accept': 'application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation,*/*',
+        },
+    });
+    if (!response.ok) {
+        throw new ServiceUnavailableError(`Failed to fetch file: ${response.status}`);
+    }
+    const contentType = response.headers.get('content-type') ||
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+    return new Response(response.body, {
+        status: 200,
+        headers: {
+            'Content-Type': contentType,
+            'Content-Disposition': 'inline; filename="presentation.pptx"',
+            'Cache-Control': 'private, no-store',
+        },
+    });
+});

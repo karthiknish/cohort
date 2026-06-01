@@ -1,89 +1,58 @@
-'use client'
-
-import { RefreshCw, Info } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { ScrollArea } from '@/shared/ui/scroll-area'
-import { Skeleton } from '@/shared/ui/skeleton'
-import { NoCreativeData } from '@/shared/ui/analytics-empty-state'
-import { formatCurrency } from '@/lib/utils'
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/shared/ui/tooltip'
-
+'use client';
+import { RefreshCw, Info } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { ScrollArea } from '@/shared/ui/scroll-area';
+import { Skeleton } from '@/shared/ui/skeleton';
+import { NoCreativeData } from '@/shared/ui/analytics-empty-state';
+import { formatCurrency } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
 interface CreativeData {
-    id: string
-    name: string
-    spend: number
-    impressions: number
-    clicks: number
-    conversions: number
-    revenue: number
-    date: string
+    id: string;
+    name: string;
+    spend: number;
+    impressions: number;
+    clicks: number;
+    conversions: number;
+    revenue: number;
+    date: string;
 }
-
 interface AnalyticsCreativesSectionProps {
-    creativeBreakdown: CreativeData[]
-    isMetricsLoading: boolean
-    metricsRefreshing: boolean
-    initialMetricsLoading: boolean
-    onRefreshMetrics: () => void
+    creativeBreakdown: CreativeData[];
+    isMetricsLoading: boolean;
+    metricsRefreshing: boolean;
+    initialMetricsLoading: boolean;
+    onRefreshMetrics: () => void;
 }
-
-export function AnalyticsCreativesSection({
-    creativeBreakdown,
-    isMetricsLoading,
-    metricsRefreshing,
-    initialMetricsLoading,
-    onRefreshMetrics,
-}: AnalyticsCreativesSectionProps) {
-    const loadingCardSlots = ['loading-1', 'loading-2', 'loading-3', 'loading-4']
-    const metricSlots = ['metric-1', 'metric-2', 'metric-3', 'metric-4']
-
-    return (
-        <Card className="overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
+export function AnalyticsCreativesSection({ creativeBreakdown, isMetricsLoading, metricsRefreshing, initialMetricsLoading, onRefreshMetrics, }: AnalyticsCreativesSectionProps) {
+    const loadingCardSlots = ['loading-1', 'loading-2', 'loading-3', 'loading-4'];
+    const metricSlots = ['metric-1', 'metric-2', 'metric-3', 'metric-4'];
+    return (<Card className="overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
             <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="size-2 rounded-full bg-primary" />
+                        <div className="size-2 rounded-full bg-primary"/>
                         <div>
                             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Meta creative performance</CardTitle>
                             <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Top-performing ads from Meta based on spend distribution</CardDescription>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={onRefreshMetrics}
-                        disabled={isMetricsLoading || metricsRefreshing}
-                        className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm motion-chromatic hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
-                    >
-                        <RefreshCw className={`size-3 transition-transform duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:rotate-180 ${metricsRefreshing ? 'animate-spin' : ''}`} />
+                    <button type="button" onClick={onRefreshMetrics} disabled={isMetricsLoading || metricsRefreshing} className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm motion-chromatic hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50">
+                        <RefreshCw className={`size-3 transition-transform duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:rotate-180 ${metricsRefreshing ? 'animate-spin' : ''}`}/>
                         Refresh
                     </button>
                 </div>
             </CardHeader>
             <CardContent className="p-0">
-                {initialMetricsLoading || (isMetricsLoading && creativeBreakdown.length === 0) ? (
-                    <div className="p-6">
+                {initialMetricsLoading || (isMetricsLoading && creativeBreakdown.length === 0) ? (<div className="p-6">
                         <div className="space-y-4">
-                            {loadingCardSlots.map((slot) => (
-                                <div key={slot} className="rounded-xl border border-muted/20 bg-muted/5 p-4">
-                                    <Skeleton className="h-4 w-1/3 rounded-full" />
+                            {loadingCardSlots.map((slot) => (<div key={slot} className="rounded-xl border border-muted/20 bg-muted/5 p-4">
+                                    <Skeleton className="h-4 w-1/3 rounded-full"/>
                                     <div className="mt-4 grid grid-cols-4 gap-4">
-                                        {metricSlots.map((metricSlot) => (
-                                            <Skeleton key={metricSlot} className="h-4 w-full rounded-md" />
-                                        ))}
+                                        {metricSlots.map((metricSlot) => (<Skeleton key={metricSlot} className="h-4 w-full rounded-md"/>))}
                                     </div>
-                                </div>
-                            ))}
+                                </div>))}
                         </div>
-                    </div>
-                ) : creativeBreakdown.length === 0 ? (
-                    <NoCreativeData platform="Meta" />
-                ) : (
-                    <ScrollArea className="h-[400px]">
+                    </div>) : creativeBreakdown.length === 0 ? (<NoCreativeData platform="Meta"/>) : (<ScrollArea className="h-[400px]">
                         <table className="w-full text-left">
                             <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-md">
                                 <tr className="border-b border-muted/20">
@@ -94,7 +63,7 @@ export function AnalyticsCreativesSection({
                                             <TooltipProvider>
                                                 <Tooltip>
                                                     <TooltipTrigger className="cursor-help">
-                                                        <Info className="size-3 transition-colors hover:text-primary" />
+                                                        <Info className="size-3 transition-colors hover:text-primary"/>
                                                     </TooltipTrigger>
                                                     <TooltipContent className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md p-2">
                                                         <p className="text-[10px] font-bold">Amount spent on this creative</p>
@@ -109,7 +78,7 @@ export function AnalyticsCreativesSection({
                                             <TooltipProvider>
                                                 <Tooltip>
                                                     <TooltipTrigger className="cursor-help">
-                                                        <Info className="size-3 transition-colors hover:text-primary" />
+                                                        <Info className="size-3 transition-colors hover:text-primary"/>
                                                     </TooltipTrigger>
                                                     <TooltipContent className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md p-2">
                                                         <p className="text-[10px] font-bold">Total click volume</p>
@@ -124,7 +93,7 @@ export function AnalyticsCreativesSection({
                                             <TooltipProvider>
                                                 <Tooltip>
                                                     <TooltipTrigger className="cursor-help">
-                                                        <Info className="size-3 transition-colors hover:text-primary" />
+                                                        <Info className="size-3 transition-colors hover:text-primary"/>
                                                     </TooltipTrigger>
                                                     <TooltipContent className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md p-2">
                                                         <p className="text-[10px] font-bold">Attributed conversions</p>
@@ -139,7 +108,7 @@ export function AnalyticsCreativesSection({
                                             <TooltipProvider>
                                                 <Tooltip>
                                                     <TooltipTrigger className="cursor-help">
-                                                        <Info className="size-3 transition-colors hover:text-primary" />
+                                                        <Info className="size-3 transition-colors hover:text-primary"/>
                                                     </TooltipTrigger>
                                                     <TooltipContent className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md p-2">
                                                         <p className="text-[10px] font-bold">Gross revenue generated</p>
@@ -151,8 +120,7 @@ export function AnalyticsCreativesSection({
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-muted/10">
-                                {creativeBreakdown.map((creative) => (
-                                    <tr key={`${creative.id}-${creative.date}`} className="group transition-colors hover:bg-muted/5">
+                                {creativeBreakdown.map((creative) => (<tr key={`${creative.id}-${creative.date}`} className="group transition-colors hover:bg-muted/5">
                                         <td className="py-4 pl-6">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-bold text-foreground transition-colors group-hover:text-primary line-clamp-1">{creative.name}</span>
@@ -171,13 +139,10 @@ export function AnalyticsCreativesSection({
                                         <td className="py-4 pr-6 text-right">
                                             <span className="text-sm font-bold text-primary">{formatCurrency(creative.revenue ?? 0)}</span>
                                         </td>
-                                    </tr>
-                                ))}
+                                    </tr>))}
                             </tbody>
                         </table>
-                    </ScrollArea>
-                )}
+                    </ScrollArea>)}
             </CardContent>
-        </Card>
-    )
+        </Card>);
 }

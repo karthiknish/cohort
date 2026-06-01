@@ -1,3 +1,2 @@
-'use client'
-
-export { default } from '@/app/dashboard/error'
+'use client';
+export { default } from '@/app/dashboard/error';

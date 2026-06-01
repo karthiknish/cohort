@@ -1,38 +1,29 @@
-'use client'
-
-import { ClipboardList, Sparkles } from 'lucide-react'
-
-import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
-import { cn } from '@/lib/utils'
-import { Badge } from '@/shared/ui/badge'
-import { FadeIn } from '@/shared/ui/animate-in'
-
+'use client';
+import { ClipboardList, Sparkles } from 'lucide-react';
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/shared/ui/badge';
+import { FadeIn } from '@/shared/ui/animate-in';
 type ProposalWizardHeaderProps = {
-  clientName?: string | null
-}
-
+    clientName?: string | null;
+};
 export function ProposalWizardHeader({ clientName }: ProposalWizardHeaderProps) {
-  return (
-    <FadeIn>
+    return (<FadeIn>
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className={cn(DASHBOARD_THEME.icons.container, 'size-11 shrink-0')}>
-            <ClipboardList className="size-5" aria-hidden />
+            <ClipboardList className="size-5" aria-hidden/>
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <Sparkles className="mr-1 inline size-3.5 text-primary" aria-hidden />
+              <Sparkles className="mr-1 inline size-3.5 text-primary" aria-hidden/>
               Proposal studio
             </span>
-            {clientName ? (
-              <Badge variant="secondary" className="max-w-[200px] truncate font-normal">
+            {clientName ? (<Badge variant="secondary" className="max-w-[200px] truncate font-normal">
                 {clientName}
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="font-normal text-muted-foreground">
+              </Badge>) : (<Badge variant="outline" className="font-normal text-muted-foreground">
                 No client selected
-              </Badge>
-            )}
+              </Badge>)}
           </div>
         </div>
         <div className="space-y-1.5">
@@ -45,6 +36,5 @@ export function ProposalWizardHeader({ clientName }: ProposalWizardHeaderProps) 
           </p>
         </div>
       </div>
-    </FadeIn>
-  )
+    </FadeIn>);
 }

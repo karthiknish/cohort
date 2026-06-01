@@ -1,228 +1,205 @@
-'use client'
-
-import { notifyFailure } from '@/lib/notifications'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '@convex/_generated/api'
-import { useConvex, useQuery as useConvexQuery } from 'convex/react'
-
-import { useToast } from '@/shared/ui/use-toast'
-import { useAuth } from '@/shared/contexts/auth-context'
-import { usePreview } from '@/shared/contexts/preview-context'
-import { asErrorMessage } from '@/lib/convex-errors'
-import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { clientsApi } from '@/lib/convex-api'
-import { getPreviewClients } from '@/lib/preview-data'
-import type { ClientRecord, ClientTeamMember } from '@/types/clients'
-import { dedupeClientTeamMembers } from '../../lib/client-allocation'
-
-type ConvexArgs = Record<string, unknown>
-
+'use client';
+import { notifyFailure } from '@/lib/notifications';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@convex/_generated/api';
+import { useConvex, useQuery as useConvexQuery } from 'convex/react';
+import { useToast } from '@/shared/ui/use-toast';
+import { useAuth } from '@/shared/contexts/auth-context';
+import { usePreview } from '@/shared/contexts/preview-context';
+import { asErrorMessage } from '@/lib/convex-errors';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { clientsApi } from '@/lib/convex-api';
+import { getPreviewClients } from '@/lib/preview-data';
+import type { ClientRecord, ClientTeamMember } from '@/types/clients';
+import { dedupeClientTeamMembers } from '../../lib/client-allocation';
+type ConvexArgs = Record<string, unknown>;
 type ClientRow = {
-    legacyId?: string
-    workspaceId?: string
-    name?: string
-    accountManager?: string
-    teamMembers?: ClientTeamMember[]
-    createdAtMs?: number | null
-    updatedAtMs?: number | null
-}
-
+    legacyId?: string;
+    workspaceId?: string;
+    name?: string;
+    accountManager?: string;
+    teamMembers?: ClientTeamMember[];
+    createdAtMs?: number | null;
+    updatedAtMs?: number | null;
+};
 function resolveClientWorkspaceId(client: ClientRecord, fallbackWorkspaceId: string | null) {
-    return client.workspaceId ?? fallbackWorkspaceId
+    return client.workspaceId ?? fallbackWorkspaceId;
 }
-
 export interface TeamMemberField extends ClientTeamMember {
-    key: string
+    key: string;
 }
-
 export function createEmptyMemberField(): TeamMemberField {
     return {
         key: `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
         name: '',
         role: '',
-    }
+    };
 }
-
 export interface UseAdminClientsReturn {
     // Client list state
-    clients: ClientRecord[]
-    setClients: React.Dispatch<React.SetStateAction<ClientRecord[]>>
-    clientsLoading: boolean
-    clientsError: string | null
-    nextCursor: string | null
-    loadingMore: boolean
-    existingTeamMembers: number
-
+    clients: ClientRecord[];
+    setClients: React.Dispatch<React.SetStateAction<ClientRecord[]>>;
+    clientsLoading: boolean;
+    clientsError: string | null;
+    nextCursor: string | null;
+    loadingMore: boolean;
+    existingTeamMembers: number;
     // Actions
-    loadClients: () => Promise<void>
-    handleLoadMore: () => Promise<void>
-
+    loadClients: () => Promise<void>;
+    handleLoadMore: () => Promise<void>;
     // Client form state
-    clientName: string
-    setClientName: (value: string) => void
-    clientAccountManager: string
-    setClientAccountManager: (value: string) => void
-    teamMemberFields: TeamMemberField[]
-    clientSaving: boolean
-
+    clientName: string;
+    setClientName: (value: string) => void;
+    clientAccountManager: string;
+    setClientAccountManager: (value: string) => void;
+    teamMemberFields: TeamMemberField[];
+    clientSaving: boolean;
     // Form actions
-    resetClientForm: () => void
-    addTeamMemberField: () => void
-    updateTeamMemberField: (key: string, field: keyof ClientTeamMember, value: string) => void
-    removeTeamMemberField: (key: string) => void
-    handleCreateClient: () => Promise<void>
-
+    resetClientForm: () => void;
+    addTeamMemberField: () => void;
+    updateTeamMemberField: (key: string, field: keyof ClientTeamMember, value: string) => void;
+    removeTeamMemberField: (key: string) => void;
+    handleCreateClient: () => Promise<void>;
     // Delete client
-    clientPendingDelete: ClientRecord | null
-    isDeleteDialogOpen: boolean
-    deletingClientId: string | null
-    requestDeleteClient: (client: ClientRecord) => void
-    handleDeleteDialogChange: (open: boolean) => void
-    handleDeleteClient: () => Promise<void>
-
+    clientPendingDelete: ClientRecord | null;
+    isDeleteDialogOpen: boolean;
+    deletingClientId: string | null;
+    requestDeleteClient: (client: ClientRecord) => void;
+    handleDeleteDialogChange: (open: boolean) => void;
+    handleDeleteClient: () => Promise<void>;
     // Team member dialog
-    clientPendingMembers: ClientRecord | null
-    isTeamDialogOpen: boolean
-    addingMember: boolean
-    removingTeamMemberKey: string | null
-    memberName: string
-    memberRole: string
-    setMemberName: (value: string) => void
-    setMemberRole: (value: string) => void
-    requestAddTeamMember: (client: ClientRecord) => void
-    handleTeamDialogChange: (open: boolean) => void
-    handleAddTeamMember: () => Promise<void>
-    handleRemoveTeamMember: (client: ClientRecord, memberName: string) => Promise<void>
-    clientPendingEditMember: { client: ClientRecord; memberName: string; memberRole: string } | null
-    isEditRoleDialogOpen: boolean
-    editingMemberRole: string
-    updatingMemberRoleKey: string | null
-    setEditingMemberRole: (value: string) => void
-    requestEditTeamMemberRole: (client: ClientRecord, member: ClientTeamMember) => void
-    handleEditRoleDialogChange: (open: boolean) => void
-    handleUpdateTeamMemberRole: () => Promise<void>
-
+    clientPendingMembers: ClientRecord | null;
+    isTeamDialogOpen: boolean;
+    addingMember: boolean;
+    removingTeamMemberKey: string | null;
+    memberName: string;
+    memberRole: string;
+    setMemberName: (value: string) => void;
+    setMemberRole: (value: string) => void;
+    requestAddTeamMember: (client: ClientRecord) => void;
+    handleTeamDialogChange: (open: boolean) => void;
+    handleAddTeamMember: () => Promise<void>;
+    handleRemoveTeamMember: (client: ClientRecord, memberName: string) => Promise<void>;
+    clientPendingEditMember: {
+        client: ClientRecord;
+        memberName: string;
+        memberRole: string;
+    } | null;
+    isEditRoleDialogOpen: boolean;
+    editingMemberRole: string;
+    updatingMemberRoleKey: string | null;
+    setEditingMemberRole: (value: string) => void;
+    requestEditTeamMemberRole: (client: ClientRecord, member: ClientTeamMember) => void;
+    handleEditRoleDialogChange: (open: boolean) => void;
+    handleUpdateTeamMemberRole: () => Promise<void>;
 }
-
 export function useAdminClients(): UseAdminClientsReturn {
-    const { user } = useAuth()
-    const { isPreviewMode } = usePreview()
-    const { toast } = useToast()
-    const convex = useConvex()
-    const queryClient = useQueryClient()
-
-    const workspaceContext = useConvexQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
-    const workspaceId = workspaceContext?.workspaceId ?? null
-    const includeAllWorkspaces = workspaceContext?.role === 'admin'
-    const workspaceLoading = !isPreviewMode && user != null && workspaceContext === undefined
-    const [previewClients, setPreviewClients] = useState<ClientRecord[]>(() => getPreviewClients())
-
-    type ClientsCursor = { fieldValue: string; legacyId: string }
-
+    const { user } = useAuth();
+    const { isPreviewMode } = usePreview();
+    const { toast } = useToast();
+    const convex = useConvex();
+    const queryClient = useQueryClient();
+    const workspaceContext = useConvexQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip');
+    const workspaceId = workspaceContext?.workspaceId ?? null;
+    const includeAllWorkspaces = workspaceContext?.role === 'admin';
+    const workspaceLoading = !isPreviewMode && user != null && workspaceContext === undefined;
+    const [previewClients, setPreviewClients] = useState<ClientRecord[]>(() => getPreviewClients());
+    type ClientsCursor = {
+        fieldValue: string;
+        legacyId: string;
+    };
     const clientsInfiniteQuery = useInfiniteQuery({
         queryKey: ['adminClients', workspaceId, includeAllWorkspaces],
         enabled: !isPreviewMode && Boolean(workspaceId),
         initialPageParam: null as ClientsCursor | null,
         queryFn: async ({ pageParam }) => {
             if (!workspaceId) {
-                return { items: [], nextCursor: null as ClientsCursor | null }
+                return { items: [], nextCursor: null as ClientsCursor | null };
             }
             return (await convex.query(clientsApi.list as never, {
                 workspaceId,
                 limit: 100,
                 cursor: pageParam,
                 includeAllWorkspaces,
-            } as never)) as { items: ClientRow[]; nextCursor: ClientsCursor | null }
+            } as never)) as {
+                items: ClientRow[];
+                nextCursor: ClientsCursor | null;
+            };
         },
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
-    })
-
+    });
     const createClientMutation = useMutation({
         mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.create as never, args as never),
         onSuccess: () => {
-            void clientsInfiniteQuery.refetch()
-            void queryClient.invalidateQueries({ queryKey: ['adminClients'] })
+            void clientsInfiniteQuery.refetch();
+            void queryClient.invalidateQueries({ queryKey: ['adminClients'] });
         },
-    })
-
+    });
     const softDeleteClientMutation = useMutation({
         mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.softDelete as never, args as never),
         onSuccess: () => {
-            void clientsInfiniteQuery.refetch()
-            void queryClient.invalidateQueries({ queryKey: ['adminClients'] })
+            void clientsInfiniteQuery.refetch();
+            void queryClient.invalidateQueries({ queryKey: ['adminClients'] });
         },
-    })
-
+    });
     const addTeamMemberMutation = useMutation({
         mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.addTeamMember as never, args as never),
         onSuccess: () => {
-            void clientsInfiniteQuery.refetch()
-            void queryClient.invalidateQueries({ queryKey: ['adminClients'] })
+            void clientsInfiniteQuery.refetch();
+            void queryClient.invalidateQueries({ queryKey: ['adminClients'] });
         },
-    })
-
+    });
     const removeTeamMemberMutation = useMutation({
         mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.removeTeamMember as never, args as never),
         onSuccess: () => {
-            void clientsInfiniteQuery.refetch()
-            void queryClient.invalidateQueries({ queryKey: ['adminClients'] })
+            void clientsInfiniteQuery.refetch();
+            void queryClient.invalidateQueries({ queryKey: ['adminClients'] });
         },
-    })
-
+    });
     const updateTeamMemberRoleMutation = useMutation({
-        mutationFn: async (args: ConvexArgs) =>
-            await convex.mutation(clientsApi.updateTeamMemberRole as never, args as never),
+        mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.updateTeamMemberRole as never, args as never),
         onSuccess: () => {
-            void clientsInfiniteQuery.refetch()
-            void queryClient.invalidateQueries({ queryKey: ['adminClients'] })
+            void clientsInfiniteQuery.refetch();
+            void queryClient.invalidateQueries({ queryKey: ['adminClients'] });
         },
-    })
-
+    });
     const syncAdminTeamMembersMutation = useMutation({
-        mutationFn: async (args: ConvexArgs) =>
-            await convex.mutation(clientsApi.syncAdminTeamMembers as never, args as never),
+        mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.syncAdminTeamMembers as never, args as never),
         onSuccess: () => {
-            void clientsInfiniteQuery.refetch()
-            void queryClient.invalidateQueries({ queryKey: ['adminClients'] })
+            void clientsInfiniteQuery.refetch();
+            void queryClient.invalidateQueries({ queryKey: ['adminClients'] });
         },
-    })
-
-    const hasSyncedAdminTeamMembersRef = useRef(false)
-
+    });
+    const hasSyncedAdminTeamMembersRef = useRef(false);
     // Delete dialog state
-    const [clientPendingDelete, setClientPendingDelete] = useState<ClientRecord | null>(null)
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-    const [deletingClientId, setDeletingClientId] = useState<string | null>(null)
-
+    const [clientPendingDelete, setClientPendingDelete] = useState<ClientRecord | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
     // Team member dialog state
-    const [clientPendingMembers, setClientPendingMembers] = useState<ClientRecord | null>(null)
-    const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false)
-    const [addingMember, setAddingMember] = useState(false)
-    const [removingTeamMemberKey, setRemovingTeamMemberKey] = useState<string | null>(null)
-    const [memberName, setMemberName] = useState('')
-    const [memberRole, setMemberRole] = useState('')
-
+    const [clientPendingMembers, setClientPendingMembers] = useState<ClientRecord | null>(null);
+    const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
+    const [addingMember, setAddingMember] = useState(false);
+    const [removingTeamMemberKey, setRemovingTeamMemberKey] = useState<string | null>(null);
+    const [memberName, setMemberName] = useState('');
+    const [memberRole, setMemberRole] = useState('');
     const [clientPendingEditMember, setClientPendingEditMember] = useState<{
-        client: ClientRecord
-        memberName: string
-        memberRole: string
-    } | null>(null)
-    const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false)
-    const [editingMemberRole, setEditingMemberRole] = useState('')
-    const [updatingMemberRoleKey, setUpdatingMemberRoleKey] = useState<string | null>(null)
-
+        client: ClientRecord;
+        memberName: string;
+        memberRole: string;
+    } | null>(null);
+    const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false);
+    const [editingMemberRole, setEditingMemberRole] = useState('');
+    const [updatingMemberRoleKey, setUpdatingMemberRoleKey] = useState<string | null>(null);
     // Client form state
-    const [clientSaving, setClientSaving] = useState(false)
-    const [clientName, setClientName] = useState('')
-    const [clientAccountManager, setClientAccountManager] = useState('')
-    const [teamMemberFields, setTeamMemberFields] = useState<TeamMemberField[]>([createEmptyMemberField()])
-
+    const [clientSaving, setClientSaving] = useState(false);
+    const [clientName, setClientName] = useState('');
+    const [clientAccountManager, setClientAccountManager] = useState('');
+    const [teamMemberFields, setTeamMemberFields] = useState<TeamMemberField[]>([createEmptyMemberField()]);
     // Transform Convex data to ClientRecord format
-    const liveClients = useMemo<ClientRecord[]>(() => {
-        const pages = clientsInfiniteQuery.data?.pages ?? []
-        const rows = pages.flatMap((page) => (Array.isArray(page.items) ? page.items : [])) as ClientRow[]
-
+    const liveClients = (() => {
+        const pages = clientsInfiniteQuery.data?.pages ?? [];
+        const rows = pages.flatMap((page) => (Array.isArray(page.items) ? page.items : [])) as ClientRow[];
         const list: ClientRecord[] = rows.map((row) => ({
             id: row.legacyId ?? '',
             workspaceId: typeof row.workspaceId === 'string' ? row.workspaceId : null,
@@ -231,72 +208,56 @@ export function useAdminClients(): UseAdminClientsReturn {
             teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
             createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
             updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
-        }))
-
-        list.sort((a, b) => a.name.localeCompare(b.name))
-        return list
-    }, [clientsInfiniteQuery.data?.pages])
-
-    const clients = isPreviewMode ? previewClients : liveClients
-
+        }));
+        list.sort((a, b) => a.name.localeCompare(b.name));
+        return list;
+    })();
+    const clients = isPreviewMode ? previewClients : liveClients;
     // Backward-compatible setter used by existing consumers.
-    const setClients = useCallback((updater: React.SetStateAction<ClientRecord[]>) => {
+    const setClients = (updater: React.SetStateAction<ClientRecord[]>) => {
         if (!isPreviewMode) {
-            void updater
-            return
+            void updater;
+            return;
         }
-
-        setPreviewClients((current) => (typeof updater === 'function' ? updater(current) : updater))
-    }, [isPreviewMode])
-
-    const clientsLoading = isPreviewMode ? false : workspaceLoading || clientsInfiniteQuery.isLoading
+        setPreviewClients((current) => (typeof updater === 'function' ? updater(current) : updater));
+    };
+    const clientsLoading = isPreviewMode ? false : workspaceLoading || clientsInfiniteQuery.isLoading;
     const clientsError = isPreviewMode
         ? null
         : clientsInfiniteQuery.error
-          ? asErrorMessage(clientsInfiniteQuery.error)
-          : null
-    const loadingMore = !isPreviewMode && clientsInfiniteQuery.isFetchingNextPage
-    const nextCursor = !isPreviewMode && clientsInfiniteQuery.hasNextPage ? 'more' : null
-
+            ? asErrorMessage(clientsInfiniteQuery.error)
+            : null;
+    const loadingMore = !isPreviewMode && clientsInfiniteQuery.isFetchingNextPage;
+    const nextCursor = !isPreviewMode && clientsInfiniteQuery.hasNextPage ? 'more' : null;
     useEffect(() => {
-        hasSyncedAdminTeamMembersRef.current = false
-    }, [workspaceId, includeAllWorkspaces])
-
+        hasSyncedAdminTeamMembersRef.current = false;
+    }, [workspaceId, includeAllWorkspaces]);
     useEffect(() => {
         if (isPreviewMode || !workspaceId || clientsLoading || hasSyncedAdminTeamMembersRef.current) {
-            return
+            return;
         }
-
         const workspaceIds = includeAllWorkspaces
-            ? [...new Set(
-                clients
+            ? [...new Set(clients
                     .map((client) => client.workspaceId)
-                    .filter((value): value is string => typeof value === 'string' && value.length > 0),
-            )]
-            : [workspaceId]
-
+                    .filter((value): value is string => typeof value === 'string' && value.length > 0))]
+            : [workspaceId];
         if (workspaceIds.length === 0) {
-            return
+            return;
         }
-
-        hasSyncedAdminTeamMembersRef.current = true
-
+        hasSyncedAdminTeamMembersRef.current = true;
         void (async () => {
             try {
-                await Promise.all(
-                    workspaceIds.map((targetWorkspaceId) =>
-                        syncAdminTeamMembersMutation.mutateAsync({ workspaceId: targetWorkspaceId }),
-                    ),
-                )
-            } catch (err: unknown) {
-                hasSyncedAdminTeamMembersRef.current = false
+                await Promise.all(workspaceIds.map((targetWorkspaceId) => syncAdminTeamMembersMutation.mutateAsync({ workspaceId: targetWorkspaceId })));
+            }
+            catch (err: unknown) {
+                hasSyncedAdminTeamMembersRef.current = false;
                 reportConvexFailure({
                     error: err,
                     context: 'useAdminClients:syncAdminTeamMembers',
                     title: 'Could not sync admin teammates',
-                })
+                });
             }
-        })()
+        })();
     }, [
         clients,
         clientsLoading,
@@ -304,404 +265,350 @@ export function useAdminClients(): UseAdminClientsReturn {
         isPreviewMode,
         syncAdminTeamMembersMutation,
         workspaceId,
-    ])
-
-    const existingTeamMembers = useMemo(
-        () => clients.reduce((total, client) => total + client.teamMembers.length, 0),
-        [clients]
-    )
-
-    const loadClients = useCallback(async () => {
+    ]);
+    const existingTeamMembers = clients.reduce((total, client) => total + client.teamMembers.length, 0);
+    const loadClients = async () => {
         if (isPreviewMode) {
-            setPreviewClients(getPreviewClients())
-            toast({ title: 'Preview data refreshed', description: 'Showing sample client workspaces.' })
-            return
+            setPreviewClients(getPreviewClients());
+            toast({ title: 'Preview data refreshed', description: 'Showing sample client workspaces.' });
+            return;
         }
-
-        void clientsInfiniteQuery.refetch()
-    }, [clientsInfiniteQuery, isPreviewMode, toast])
-
-    const handleLoadMore = useCallback(async () => {
+        void clientsInfiniteQuery.refetch();
+    };
+    const handleLoadMore = async () => {
         if (isPreviewMode) {
-            return
+            return;
         }
-
         if (!clientsInfiniteQuery.hasNextPage || clientsInfiniteQuery.isFetchingNextPage) {
-            return
+            return;
         }
-
         try {
-            await clientsInfiniteQuery.fetchNextPage()
-        } catch (err: unknown) {
+            await clientsInfiniteQuery.fetchNextPage();
+        }
+        catch (err: unknown) {
             reportConvexFailure({
                 error: err,
                 context: 'useAdminClients:handleLoadMore',
                 title: 'Could not load more',
-            })
+            });
         }
-    }, [clientsInfiniteQuery, isPreviewMode])
-
+    };
     // Delete dialog handlers
-    const handleDeleteDialogChange = useCallback((open: boolean) => {
-        setIsDeleteDialogOpen(open)
+    const handleDeleteDialogChange = (open: boolean) => {
+        setIsDeleteDialogOpen(open);
         if (!open) {
-            setClientPendingDelete(null)
+            setClientPendingDelete(null);
         }
-    }, [])
-
-    const requestDeleteClient = useCallback((client: ClientRecord) => {
-        setClientPendingDelete(client)
-        setIsDeleteDialogOpen(true)
-    }, [])
-
-    const handleDeleteClient = useCallback(async () => {
-        if (!clientPendingDelete) return
-
+    };
+    const requestDeleteClient = (client: ClientRecord) => {
+        setClientPendingDelete(client);
+        setIsDeleteDialogOpen(true);
+    };
+    const handleDeleteClient = async () => {
+        if (!clientPendingDelete)
+            return;
         if (isPreviewMode) {
-            setDeletingClientId(clientPendingDelete.id)
-            setPreviewClients((current) => current.filter((client) => client.id !== clientPendingDelete.id))
-            toast({ title: 'Preview mode', description: `${clientPendingDelete.name} was removed locally for this session.` })
-            setClientPendingDelete(null)
-            setIsDeleteDialogOpen(false)
-            setDeletingClientId(null)
-            return
+            setDeletingClientId(clientPendingDelete.id);
+            setPreviewClients((current) => current.filter((client) => client.id !== clientPendingDelete.id));
+            toast({ title: 'Preview mode', description: `${clientPendingDelete.name} was removed locally for this session.` });
+            setClientPendingDelete(null);
+            setIsDeleteDialogOpen(false);
+            setDeletingClientId(null);
+            return;
         }
-
-        if (!workspaceId) return
-
-        const targetWorkspaceId = resolveClientWorkspaceId(clientPendingDelete, workspaceId)
-        if (!targetWorkspaceId) return
-
+        if (!workspaceId)
+            return;
+        const targetWorkspaceId = resolveClientWorkspaceId(clientPendingDelete, workspaceId);
+        if (!targetWorkspaceId)
+            return;
         try {
-            setDeletingClientId(clientPendingDelete.id)
+            setDeletingClientId(clientPendingDelete.id);
             await softDeleteClientMutation.mutateAsync({
                 workspaceId: targetWorkspaceId,
                 legacyId: clientPendingDelete.id,
                 deletedAtMs: Date.now(),
-            })
-
-            toast({ title: 'Client deleted', description: `${clientPendingDelete.name} has been removed.` })
-            setClientPendingDelete(null)
-            setIsDeleteDialogOpen(false)
-        } catch (err: unknown) {
+            });
+            toast({ title: 'Client deleted', description: `${clientPendingDelete.name} has been removed.` });
+            setClientPendingDelete(null);
+            setIsDeleteDialogOpen(false);
+        }
+        catch (err: unknown) {
             reportConvexFailure({
                 error: err,
                 context: 'useAdminClients:handleDeleteClient',
                 title: 'Client delete failed',
-            })
-        } finally {
-            setDeletingClientId(null)
+            });
         }
-    }, [clientPendingDelete, isPreviewMode, toast, workspaceId, softDeleteClientMutation])
-
+        finally {
+            setDeletingClientId(null);
+        }
+    };
     // Team member dialog handlers
-    const handleTeamDialogChange = useCallback((open: boolean) => {
-        setIsTeamDialogOpen(open)
+    const handleTeamDialogChange = (open: boolean) => {
+        setIsTeamDialogOpen(open);
         if (!open) {
-            setClientPendingMembers(null)
-            setMemberName('')
-            setMemberRole('')
-            setAddingMember(false)
+            setClientPendingMembers(null);
+            setMemberName('');
+            setMemberRole('');
+            setAddingMember(false);
         }
-    }, [])
-
-    const requestAddTeamMember = useCallback((client: ClientRecord) => {
-        setClientPendingMembers(client)
-        setMemberName('')
-        setMemberRole('')
-        setIsTeamDialogOpen(true)
-    }, [])
-
-    const handleAddTeamMember = useCallback(async () => {
-        if (!clientPendingMembers) return
-
-        const name = memberName.trim()
+    };
+    const requestAddTeamMember = (client: ClientRecord) => {
+        setClientPendingMembers(client);
+        setMemberName('');
+        setMemberRole('');
+        setIsTeamDialogOpen(true);
+    };
+    const handleAddTeamMember = async () => {
+        if (!clientPendingMembers)
+            return;
+        const name = memberName.trim();
         if (!name) {
             notifyFailure({
-        title: 'Name required',
-        message: 'Enter a teammate name before adding.',
-      })
-            return
+                title: 'Name required',
+                message: 'Enter a teammate name before adding.',
+            });
+            return;
         }
-
-        const alreadyAssigned = clientPendingMembers.teamMembers.some(
-            (member) => member.name.trim().toLowerCase() === name.toLowerCase()
-        )
+        const alreadyAssigned = clientPendingMembers.teamMembers.some((member) => member.name.trim().toLowerCase() === name.toLowerCase());
         if (alreadyAssigned) {
             notifyFailure({
-        title: 'Already assigned',
-        message: `${name} is already on ${clientPendingMembers.name}.`,
-      })
-            return
+                title: 'Already assigned',
+                message: `${name} is already on ${clientPendingMembers.name}.`,
+            });
+            return;
         }
-
-        const role = memberRole.trim()
-
+        const role = memberRole.trim();
         if (isPreviewMode) {
-            setAddingMember(true)
+            setAddingMember(true);
             setPreviewClients((current) => current.map((client) => {
                 if (client.id !== clientPendingMembers.id) {
-                    return client
+                    return client;
                 }
-
                 return {
                     ...client,
                     teamMembers: [...client.teamMembers, { name, role: role || 'Contributor' }],
                     updatedAt: new Date().toISOString(),
-                }
-            }))
-            toast({ title: 'Preview mode', description: `${name} joined ${clientPendingMembers.name} in the sample workspace.` })
-            setMemberName('')
-            setMemberRole('')
-            setIsTeamDialogOpen(false)
-            setClientPendingMembers(null)
-            setAddingMember(false)
-            return
+                };
+            }));
+            toast({ title: 'Preview mode', description: `${name} joined ${clientPendingMembers.name} in the sample workspace.` });
+            setMemberName('');
+            setMemberRole('');
+            setIsTeamDialogOpen(false);
+            setClientPendingMembers(null);
+            setAddingMember(false);
+            return;
         }
-
-        if (!workspaceId) return
-
-        const targetWorkspaceId = resolveClientWorkspaceId(clientPendingMembers, workspaceId)
-        if (!targetWorkspaceId) return
-
+        if (!workspaceId)
+            return;
+        const targetWorkspaceId = resolveClientWorkspaceId(clientPendingMembers, workspaceId);
+        if (!targetWorkspaceId)
+            return;
         try {
-            setAddingMember(true)
+            setAddingMember(true);
             await addTeamMemberMutation.mutateAsync({
                 workspaceId: targetWorkspaceId,
                 legacyId: clientPendingMembers.id,
                 name,
                 role: role || undefined,
-            })
-
-            toast({ title: 'Teammate added', description: `${name} joined ${clientPendingMembers.name}.` })
-            setMemberName('')
-            setMemberRole('')
-            setIsTeamDialogOpen(false)
-            setClientPendingMembers(null)
-        } catch (err: unknown) {
+            });
+            toast({ title: 'Teammate added', description: `${name} joined ${clientPendingMembers.name}.` });
+            setMemberName('');
+            setMemberRole('');
+            setIsTeamDialogOpen(false);
+            setClientPendingMembers(null);
+        }
+        catch (err: unknown) {
             reportConvexFailure({
                 error: err,
                 context: 'useAdminClients:handleAddTeamMember',
                 title: 'Add teammate failed',
-            })
-        } finally {
-            setAddingMember(false)
+            });
         }
-    }, [clientPendingMembers, isPreviewMode, toast, workspaceId, memberName, memberRole, addTeamMemberMutation])
-
-    const handleRemoveTeamMember = useCallback(async (client: ClientRecord, memberName: string) => {
-        const normalizedName = memberName.trim()
-        if (!normalizedName) return
-
+        finally {
+            setAddingMember(false);
+        }
+    };
+    const handleRemoveTeamMember = async (client: ClientRecord, memberName: string) => {
+        const normalizedName = memberName.trim();
+        if (!normalizedName)
+            return;
         if (normalizedName.toLowerCase() === client.accountManager.toLowerCase()) {
             notifyFailure({
-        title: 'Cannot remove account manager',
-        message: 'Change the account manager before removing this teammate.',
-      })
-            return
+                title: 'Cannot remove account manager',
+                message: 'Change the account manager before removing this teammate.',
+            });
+            return;
         }
-
         if (isPreviewMode) {
-            const removeKey = `${client.id}:${normalizedName.toLowerCase()}`
-            setRemovingTeamMemberKey(removeKey)
+            const removeKey = `${client.id}:${normalizedName.toLowerCase()}`;
+            setRemovingTeamMemberKey(removeKey);
             setPreviewClients((current) => current.map((candidate) => {
                 if (candidate.id !== client.id) {
-                    return candidate
+                    return candidate;
                 }
-
                 return {
                     ...candidate,
                     teamMembers: candidate.teamMembers.filter((member) => member.name.trim().toLowerCase() !== normalizedName.toLowerCase()),
                     updatedAt: new Date().toISOString(),
-                }
-            }))
-            toast({ title: 'Preview mode', description: `${normalizedName} was removed from ${client.name} locally.` })
-            setRemovingTeamMemberKey(null)
-            return
+                };
+            }));
+            toast({ title: 'Preview mode', description: `${normalizedName} was removed from ${client.name} locally.` });
+            setRemovingTeamMemberKey(null);
+            return;
         }
-
-        if (!workspaceId) return
-
-        const targetWorkspaceId = resolveClientWorkspaceId(client, workspaceId)
-        if (!targetWorkspaceId) return
-
-        const removeKey = `${client.id}:${normalizedName.toLowerCase()}`
-
+        if (!workspaceId)
+            return;
+        const targetWorkspaceId = resolveClientWorkspaceId(client, workspaceId);
+        if (!targetWorkspaceId)
+            return;
+        const removeKey = `${client.id}:${normalizedName.toLowerCase()}`;
         try {
-            setRemovingTeamMemberKey(removeKey)
+            setRemovingTeamMemberKey(removeKey);
             await removeTeamMemberMutation.mutateAsync({
                 workspaceId: targetWorkspaceId,
                 legacyId: client.id,
                 name: normalizedName,
-            })
-
+            });
             toast({
                 title: 'Teammate removed',
                 description: `${normalizedName} was removed from ${client.name}.`,
-            })
-        } catch (err: unknown) {
+            });
+        }
+        catch (err: unknown) {
             reportConvexFailure({
                 error: err,
                 context: 'useAdminClients:handleRemoveTeamMember',
                 title: 'Remove teammate failed',
-            })
-        } finally {
-            setRemovingTeamMemberKey(null)
+            });
         }
-    }, [isPreviewMode, toast, workspaceId, removeTeamMemberMutation])
-
-    const requestEditTeamMemberRole = useCallback((client: ClientRecord, member: ClientTeamMember) => {
+        finally {
+            setRemovingTeamMemberKey(null);
+        }
+    };
+    const requestEditTeamMemberRole = (client: ClientRecord, member: ClientTeamMember) => {
         setClientPendingEditMember({
             client,
             memberName: member.name,
             memberRole: member.role,
-        })
-        setEditingMemberRole(member.role)
-        setIsEditRoleDialogOpen(true)
-    }, [])
-
-    const handleEditRoleDialogChange = useCallback((open: boolean) => {
-        setIsEditRoleDialogOpen(open)
+        });
+        setEditingMemberRole(member.role);
+        setIsEditRoleDialogOpen(true);
+    };
+    const handleEditRoleDialogChange = (open: boolean) => {
+        setIsEditRoleDialogOpen(open);
         if (!open) {
-            setClientPendingEditMember(null)
-            setEditingMemberRole('')
+            setClientPendingEditMember(null);
+            setEditingMemberRole('');
         }
-    }, [])
-
-    const handleUpdateTeamMemberRole = useCallback(async () => {
-        if (!clientPendingEditMember) return
-
-        const { client, memberName: currentMemberName } = clientPendingEditMember
-        const normalizedName = currentMemberName.trim()
-        if (!normalizedName) return
-
-        const role = editingMemberRole.trim() || 'Contributor'
-
+    };
+    const handleUpdateTeamMemberRole = async () => {
+        if (!clientPendingEditMember)
+            return;
+        const { client, memberName: currentMemberName } = clientPendingEditMember;
+        const normalizedName = currentMemberName.trim();
+        if (!normalizedName)
+            return;
+        const role = editingMemberRole.trim() || 'Contributor';
         if (isPreviewMode) {
-            const updateKey = `${client.id}:${normalizedName.toLowerCase()}`
-            setUpdatingMemberRoleKey(updateKey)
-            setPreviewClients((current) =>
-                current.map((candidate) => {
-                    if (candidate.id !== client.id) {
-                        return candidate
-                    }
-
-                    return {
-                        ...candidate,
-                        teamMembers: candidate.teamMembers.map((member) =>
-                            member.name.trim().toLowerCase() === normalizedName.toLowerCase()
-                                ? { ...member, role }
-                                : member,
-                        ),
-                        updatedAt: new Date().toISOString(),
-                    }
-                }),
-            )
+            const updateKey = `${client.id}:${normalizedName.toLowerCase()}`;
+            setUpdatingMemberRoleKey(updateKey);
+            setPreviewClients((current) => current.map((candidate) => {
+                if (candidate.id !== client.id) {
+                    return candidate;
+                }
+                return {
+                    ...candidate,
+                    teamMembers: candidate.teamMembers.map((member) => member.name.trim().toLowerCase() === normalizedName.toLowerCase()
+                        ? { ...member, role }
+                        : member),
+                    updatedAt: new Date().toISOString(),
+                };
+            }));
             toast({
                 title: 'Preview mode',
                 description: `${normalizedName}'s role on ${client.name} was updated locally.`,
-            })
-            setIsEditRoleDialogOpen(false)
-            setClientPendingEditMember(null)
-            setEditingMemberRole('')
-            setUpdatingMemberRoleKey(null)
-            return
+            });
+            setIsEditRoleDialogOpen(false);
+            setClientPendingEditMember(null);
+            setEditingMemberRole('');
+            setUpdatingMemberRoleKey(null);
+            return;
         }
-
-        if (!workspaceId) return
-
-        const targetWorkspaceId = resolveClientWorkspaceId(client, workspaceId)
-        if (!targetWorkspaceId) return
-
-        const updateKey = `${client.id}:${normalizedName.toLowerCase()}`
-
+        if (!workspaceId)
+            return;
+        const targetWorkspaceId = resolveClientWorkspaceId(client, workspaceId);
+        if (!targetWorkspaceId)
+            return;
+        const updateKey = `${client.id}:${normalizedName.toLowerCase()}`;
         try {
-            setUpdatingMemberRoleKey(updateKey)
+            setUpdatingMemberRoleKey(updateKey);
             await updateTeamMemberRoleMutation.mutateAsync({
                 workspaceId: targetWorkspaceId,
                 legacyId: client.id,
                 name: normalizedName,
                 role,
-            })
-
+            });
             toast({
                 title: 'Role updated',
                 description: `${normalizedName} is now ${role} on ${client.name}.`,
-            })
-            setIsEditRoleDialogOpen(false)
-            setClientPendingEditMember(null)
-            setEditingMemberRole('')
-        } catch (err: unknown) {
+            });
+            setIsEditRoleDialogOpen(false);
+            setClientPendingEditMember(null);
+            setEditingMemberRole('');
+        }
+        catch (err: unknown) {
             reportConvexFailure({
                 error: err,
                 context: 'useAdminClients:handleUpdateTeamMemberRole',
                 title: 'Update role failed',
-            })
-        } finally {
-            setUpdatingMemberRoleKey(null)
+            });
         }
-    }, [
-        clientPendingEditMember,
-        editingMemberRole,
-        isPreviewMode,
-        toast,
-        workspaceId,
-        updateTeamMemberRoleMutation,
-    ])
-
+        finally {
+            setUpdatingMemberRoleKey(null);
+        }
+    };
     // Client form handlers
-    const resetClientForm = useCallback(() => {
-        setClientName('')
-        setClientAccountManager('')
-        setTeamMemberFields([createEmptyMemberField()])
-    }, [])
-
-    const addTeamMemberField = useCallback(() => {
-        setTeamMemberFields((prev) => [...prev, createEmptyMemberField()])
-    }, [])
-
-    const updateTeamMemberField = useCallback((key: string, field: keyof ClientTeamMember, value: string) => {
-        setTeamMemberFields((prev) => prev.map((item) => (item.key === key ? { ...item, [field]: value } : item)))
-    }, [])
-
-    const removeTeamMemberField = useCallback((key: string) => {
-        setTeamMemberFields((prev) => (prev.length <= 1 ? prev : prev.filter((item) => item.key !== key)))
-    }, [])
-
-    const handleCreateClient = useCallback(async () => {
-        const name = clientName.trim()
-        const accountManager = clientAccountManager.trim()
-
+    const resetClientForm = () => {
+        setClientName('');
+        setClientAccountManager('');
+        setTeamMemberFields([createEmptyMemberField()]);
+    };
+    const addTeamMemberField = () => {
+        setTeamMemberFields((prev) => [...prev, createEmptyMemberField()]);
+    };
+    const updateTeamMemberField = (key: string, field: keyof ClientTeamMember, value: string) => {
+        setTeamMemberFields((prev) => prev.map((item) => (item.key === key ? { ...item, [field]: value } : item)));
+    };
+    const removeTeamMemberField = (key: string) => {
+        setTeamMemberFields((prev) => (prev.length <= 1 ? prev : prev.filter((item) => item.key !== key)));
+    };
+    const handleCreateClient = async () => {
+        const name = clientName.trim();
+        const accountManager = clientAccountManager.trim();
         if (!name || !accountManager) {
             notifyFailure({
-        title: 'Missing details',
-        message: 'Client name and account manager are required.',
-      })
-            return
+                title: 'Missing details',
+                message: 'Client name and account manager are required.',
+            });
+            return;
         }
-
-        const teamMembers = dedupeClientTeamMembers(
-            accountManager,
-            teamMemberFields.flatMap((member) => {
-                const normalized = {
-                    name: member.name.trim(),
-                    role: member.role.trim(),
-                }
-                return normalized.name.length > 0
-                    ? [{ ...normalized, role: normalized.role || 'Contributor' }]
-                    : []
-            })
-        )
-
-        setClientSaving(true)
-
+        const teamMembers = dedupeClientTeamMembers(accountManager, teamMemberFields.flatMap((member) => {
+            const normalized = {
+                name: member.name.trim(),
+                role: member.role.trim(),
+            };
+            return normalized.name.length > 0
+                ? [{ ...normalized, role: normalized.role || 'Contributor' }]
+                : [];
+        }));
+        setClientSaving(true);
         if (isPreviewMode) {
             setPreviewClients((current) => {
                 const normalizedPreviewTeamMembers = teamMembers.map((member) => ({
                     ...member,
                     role: member.role || 'Contributor',
-                }))
-
+                }));
                 const nextClient: ClientRecord = {
                     id: `preview-client-${Date.now()}`,
                     name,
@@ -709,18 +616,16 @@ export function useAdminClients(): UseAdminClientsReturn {
                     teamMembers: normalizedPreviewTeamMembers,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                }
-                return [...current, nextClient].sort((left, right) => left.name.localeCompare(right.name))
-            })
-
-            toast({ title: 'Preview mode', description: `${name} was created in the sample workspace.` })
-            resetClientForm()
-            setClientSaving(false)
-            return
+                };
+                return [...current, nextClient].sort((left, right) => left.name.localeCompare(right.name));
+            });
+            toast({ title: 'Preview mode', description: `${name} was created in the sample workspace.` });
+            resetClientForm();
+            setClientSaving(false);
+            return;
         }
-
-        if (!workspaceId) return
-
+        if (!workspaceId)
+            return;
         try {
             await createClientMutation.mutateAsync({
                 workspaceId,
@@ -728,21 +633,21 @@ export function useAdminClients(): UseAdminClientsReturn {
                 accountManager,
                 teamMembers,
                 createdBy: user?.id ?? null,
-            })
-
-            toast({ title: 'Client created', description: `${name} is ready to use.` })
-            resetClientForm()
-        } catch (err: unknown) {
+            });
+            toast({ title: 'Client created', description: `${name} is ready to use.` });
+            resetClientForm();
+        }
+        catch (err: unknown) {
             reportConvexFailure({
                 error: err,
                 context: 'useAdminClients:handleCreateClient',
                 title: 'Client create failed',
-            })
-        } finally {
-            setClientSaving(false)
+            });
         }
-    }, [isPreviewMode, toast, workspaceId, clientAccountManager, clientName, resetClientForm, teamMemberFields, createClientMutation, user?.id])
-
+        finally {
+            setClientSaving(false);
+        }
+    };
     return {
         // Client list
         clients,
@@ -754,7 +659,6 @@ export function useAdminClients(): UseAdminClientsReturn {
         existingTeamMembers,
         loadClients,
         handleLoadMore,
-
         // Client form
         clientName,
         setClientName,
@@ -767,7 +671,6 @@ export function useAdminClients(): UseAdminClientsReturn {
         updateTeamMemberField,
         removeTeamMemberField,
         handleCreateClient,
-
         // Delete
         clientPendingDelete,
         isDeleteDialogOpen,
@@ -775,7 +678,6 @@ export function useAdminClients(): UseAdminClientsReturn {
         requestDeleteClient,
         handleDeleteDialogChange,
         handleDeleteClient,
-
         // Team member
         clientPendingMembers,
         isTeamDialogOpen,
@@ -797,5 +699,5 @@ export function useAdminClients(): UseAdminClientsReturn {
         requestEditTeamMemberRole,
         handleEditRoleDialogChange,
         handleUpdateTeamMemberRole,
-    }
+    };
 }

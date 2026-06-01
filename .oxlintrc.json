@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "import", "typescript", "react", "react-perf", "nextjs", "jsx-a11y", "promise"],
+  "plugins": ["eslint", "import", "typescript", "react", "nextjs", "jsx-a11y", "promise"],
   "jsPlugins": [
     {
       "name": "convex",
@@ -93,9 +93,6 @@
     "react/no-children-prop": "warn",
     "react/forward-ref-uses-ref": "warn",
     "react-js/no-unstable-nested-components": "warn",
-    "react-perf/jsx-no-new-function-as-prop": "warn",
-    "react-perf/jsx-no-new-object-as-prop": "warn",
-    "react-perf/jsx-no-jsx-as-prop": "warn",
     "nextjs/no-html-link-for-pages": "warn",
     "nextjs/no-img-element": "warn",
     "nextjs/no-sync-scripts": "warn",

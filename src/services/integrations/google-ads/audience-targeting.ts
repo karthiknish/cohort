@@ -1,68 +1,79 @@
 // =============================================================================
 // GOOGLE ADS AUDIENCE TARGETING - Fetch and create audience targeting
 // =============================================================================
-
-import { googleAdsSearch } from './client'
-import { parseJsonBodySafely, parseRequiredJsonBody } from '@/lib/response-json'
-import { GoogleAdsApiError } from './errors'
-import {
-    GOOGLE_API_BASE,
-    
-} from './types'
-import type {
-    GoogleAudienceTargeting,
-    GoogleAdsApiErrorResponse,
-} from './types'
-
+import { googleAdsSearch } from './client';
+import { parseJsonBodySafely, parseRequiredJsonBody } from '@/lib/response-json';
+import { GoogleAdsApiError } from './errors';
+import { GOOGLE_API_BASE, } from './types';
+import type { GoogleAudienceTargeting, GoogleAdsApiErrorResponse, } from './types';
 type GoogleCriterion = {
-    type?: string
-    negative?: boolean
-    ageRange?: { type?: string }
-    gender?: { type?: string }
-    parentalStatus?: { type?: string }
-    incomeRange?: { type?: string }
-    userInterest?: { userInterestCategory?: string }
-    userList?: { userList?: string }
-    customAudience?: { customAudience?: string }
-    combinedAudience?: { combinedAudience?: string }
-    keyword?: { text?: string; matchType?: string }
-    placement?: { url?: string }
-    topic?: { path?: string[] }
-    language?: { languageConstant?: string }
-    location?: { geoTargetConstant?: string }
-    device?: { type?: string }
-}
-
+    type?: string;
+    negative?: boolean;
+    ageRange?: {
+        type?: string;
+    };
+    gender?: {
+        type?: string;
+    };
+    parentalStatus?: {
+        type?: string;
+    };
+    incomeRange?: {
+        type?: string;
+    };
+    userInterest?: {
+        userInterestCategory?: string;
+    };
+    userList?: {
+        userList?: string;
+    };
+    customAudience?: {
+        customAudience?: string;
+    };
+    combinedAudience?: {
+        combinedAudience?: string;
+    };
+    keyword?: {
+        text?: string;
+        matchType?: string;
+    };
+    placement?: {
+        url?: string;
+    };
+    topic?: {
+        path?: string[];
+    };
+    language?: {
+        languageConstant?: string;
+    };
+    location?: {
+        geoTargetConstant?: string;
+    };
+    device?: {
+        type?: string;
+    };
+};
 function toGoogleCriterion(value: unknown): GoogleCriterion {
     if (!value || typeof value !== 'object') {
-        return {}
+        return {};
     }
-    return value as GoogleCriterion
+    return value as GoogleCriterion;
 }
-
 export async function fetchGoogleAudienceTargeting(options: {
-    accessToken: string
-    developerToken: string
-    customerId: string
-    campaignId?: string
-    adGroupId?: string
-    loginCustomerId?: string | null
-    maxRetries?: number
+    accessToken: string;
+    developerToken: string;
+    customerId: string;
+    campaignId?: string;
+    adGroupId?: string;
+    loginCustomerId?: string | null;
+    maxRetries?: number;
 }): Promise<GoogleAudienceTargeting[]> {
-    const {
-        accessToken,
-        developerToken,
-        customerId,
-        campaignId,
-        adGroupId,
-        loginCustomerId,
-        maxRetries = 3,
-    } = options
-
-    const filters: string[] = ["ad_group_criterion.status != 'REMOVED'"]
-    if (campaignId) filters.push(`campaign.id = ${campaignId}`)
-    if (adGroupId) filters.push(`ad_group.id = ${adGroupId}`)
-
+    const { accessToken, developerToken, customerId, campaignId, adGroupId, loginCustomerId, maxRetries = 3, } = options;
+    const filters: string[] = ["ad_group_criterion.status != 'REMOVED'"];
+    if (campaignId)
+        filters.push(`campaign.id = ${campaignId}`);
+    if (adGroupId)
+        filters.push(`ad_group.id = ${adGroupId}`);
     const adGroupQuery = `
     SELECT
       ad_group.id,
@@ -90,11 +101,10 @@ export async function fetchGoogleAudienceTargeting(options: {
     FROM ad_group_criterion
     WHERE ${filters.join(' AND ')}
     LIMIT 1000
-  `.replace(/\s+/g, ' ').trim()
-
-    const campaignFilters: string[] = ["campaign_criterion.status != 'REMOVED'"]
-    if (campaignId) campaignFilters.push(`campaign.id = ${campaignId}`)
-
+  `.replace(/\s+/g, ' ').trim();
+    const campaignFilters: string[] = ["campaign_criterion.status != 'REMOVED'"];
+    if (campaignId)
+        campaignFilters.push(`campaign.id = ${campaignId}`);
     const campaignQuery = `
     SELECT
       campaign.id,
@@ -114,8 +124,7 @@ export async function fetchGoogleAudienceTargeting(options: {
     FROM campaign_criterion
     WHERE ${campaignFilters.join(' AND ')}
     LIMIT 1000
-  `.replace(/\s+/g, ' ').trim()
-
+  `.replace(/\s+/g, ' ').trim();
     const [adGroupRows, campaignRows] = await Promise.all([
         googleAdsSearch({
             accessToken,
@@ -137,12 +146,10 @@ export async function fetchGoogleAudienceTargeting(options: {
             maxPages: 10,
             maxRetries,
         }),
-    ])
-
-    const targetingMap = new Map<string, GoogleAudienceTargeting>()
-
+    ]);
+    const targetingMap = new Map<string, GoogleAudienceTargeting>();
     function getOrCreateTargeting(id: string, type: 'adGroup' | 'campaign', name?: string, campaignId?: string, campaignName?: string): GoogleAudienceTargeting {
-        const key = `${type}:${id}`
+        const key = `${type}:${id}`;
         if (!targetingMap.has(key)) {
             targetingMap.set(key, {
                 entityId: id,
@@ -167,172 +174,181 @@ export async function fetchGoogleAudienceTargeting(options: {
                 keywords: [],
                 topics: [],
                 placements: [],
-            })
+            });
         }
-        return targetingMap.get(key)!
+        return targetingMap.get(key)!;
     }
-
     // Process Ad Group Rows
     for (const row of adGroupRows) {
-        const adGroup = row.adGroup as { id?: string; name?: string } | undefined
-        const campaign = row.campaign as { id?: string; name?: string } | undefined
-        const criterion = toGoogleCriterion(row.adGroupCriterion)
-
-        if (!adGroup?.id) continue
-        const targeting = getOrCreateTargeting(adGroup.id, 'adGroup', adGroup.name, campaign?.id, campaign?.name)
-        processCriterion(targeting, criterion)
+        const adGroup = row.adGroup as {
+            id?: string;
+            name?: string;
+        } | undefined;
+        const campaign = row.campaign as {
+            id?: string;
+            name?: string;
+        } | undefined;
+        const criterion = toGoogleCriterion(row.adGroupCriterion);
+        if (!adGroup?.id)
+            continue;
+        const targeting = getOrCreateTargeting(adGroup.id, 'adGroup', adGroup.name, campaign?.id, campaign?.name);
+        processCriterion(targeting, criterion);
     }
-
     // Process Campaign Rows
     for (const row of campaignRows) {
-        const campaign = row.campaign as { id?: string; name?: string } | undefined
-        const criterion = toGoogleCriterion(row.campaignCriterion)
-
-        if (!campaign?.id) continue
-        const targeting = getOrCreateTargeting(campaign.id, 'campaign', campaign.name)
-        processCriterion(targeting, criterion)
+        const campaign = row.campaign as {
+            id?: string;
+            name?: string;
+        } | undefined;
+        const criterion = toGoogleCriterion(row.campaignCriterion);
+        if (!campaign?.id)
+            continue;
+        const targeting = getOrCreateTargeting(campaign.id, 'campaign', campaign.name);
+        processCriterion(targeting, criterion);
     }
-
     function processCriterion(targeting: GoogleAudienceTargeting, criterion: GoogleCriterion) {
-        const type = criterion?.type
-        const negative = criterion?.negative === true
-
+        const type = criterion?.type;
+        const negative = criterion?.negative === true;
         if (type === 'AGE_RANGE' && criterion?.ageRange?.type) {
-            targeting.ageRanges.push(criterion.ageRange.type)
-        } else if (type === 'GENDER' && criterion?.gender?.type) {
-            targeting.genders.push(criterion.gender.type)
-        } else if (type === 'PARENTAL_STATUS' && criterion?.parentalStatus?.type) {
-            targeting.parentalStatus.push(criterion.parentalStatus.type)
-        } else if (type === 'INCOME_RANGE' && criterion?.incomeRange?.type) {
-            targeting.incomeRanges.push(criterion.incomeRange.type)
-        } else if (type === 'USER_INTEREST' && criterion?.userInterest?.userInterestCategory) {
-            const category = criterion.userInterest.userInterestCategory
+            targeting.ageRanges.push(criterion.ageRange.type);
+        }
+        else if (type === 'GENDER' && criterion?.gender?.type) {
+            targeting.genders.push(criterion.gender.type);
+        }
+        else if (type === 'PARENTAL_STATUS' && criterion?.parentalStatus?.type) {
+            targeting.parentalStatus.push(criterion.parentalStatus.type);
+        }
+        else if (type === 'INCOME_RANGE' && criterion?.incomeRange?.type) {
+            targeting.incomeRanges.push(criterion.incomeRange.type);
+        }
+        else if (type === 'USER_INTEREST' && criterion?.userInterest?.userInterestCategory) {
+            const category = criterion.userInterest.userInterestCategory;
             if (category.includes('AFFINITY')) {
-                targeting.affinityAudiences.push({ id: category, name: category })
-            } else {
-                targeting.inMarketAudiences.push({ id: category, name: category })
+                targeting.affinityAudiences.push({ id: category, name: category });
             }
-        } else if (type === 'USER_LIST' && criterion?.userList?.userList) {
+            else {
+                targeting.inMarketAudiences.push({ id: category, name: category });
+            }
+        }
+        else if (type === 'USER_LIST' && criterion?.userList?.userList) {
             targeting.remarketingLists.push({
                 id: criterion.userList.userList,
                 name: criterion.userList.userList
-            })
-        } else if (type === 'CUSTOM_AUDIENCE' && criterion?.customAudience?.customAudience) {
+            });
+        }
+        else if (type === 'CUSTOM_AUDIENCE' && criterion?.customAudience?.customAudience) {
             targeting.customAudiences.push({
                 id: criterion.customAudience.customAudience,
                 name: 'Custom Audience'
-            })
-        } else if (type === 'COMBINED_AUDIENCE' && criterion?.combinedAudience?.combinedAudience) {
+            });
+        }
+        else if (type === 'COMBINED_AUDIENCE' && criterion?.combinedAudience?.combinedAudience) {
             targeting.customAudiences.push({
                 id: criterion.combinedAudience.combinedAudience,
                 name: 'Combined Audience'
-            })
-        } else if (type === 'KEYWORD' && criterion?.keyword?.text) {
+            });
+        }
+        else if (type === 'KEYWORD' && criterion?.keyword?.text) {
             targeting.keywords.push({
                 text: criterion.keyword.text,
                 matchType: criterion.keyword.matchType ?? 'BROAD',
-            })
-        } else if (type === 'PLACEMENT' && criterion?.placement?.url) {
+            });
+        }
+        else if (type === 'PLACEMENT' && criterion?.placement?.url) {
             targeting.placements.push({
                 url: criterion.placement.url,
                 type: 'WEBSITE',
-            })
-        } else if (type === 'TOPIC' && criterion?.topic?.path) {
+            });
+        }
+        else if (type === 'TOPIC' && criterion?.topic?.path) {
             targeting.topics.push({
                 id: criterion.topic.path.join('/'),
                 name: criterion.topic.path.join(' > '),
-            })
-        } else if (type === 'LANGUAGE' && criterion?.language?.languageConstant) {
-            targeting.languages.push(criterion.language.languageConstant)
-        } else if (type === 'LOCATION' && criterion?.location?.geoTargetConstant) {
-            const loc = { id: criterion.location.geoTargetConstant, name: 'Location', type: 'LOCATION' }
+            });
+        }
+        else if (type === 'LANGUAGE' && criterion?.language?.languageConstant) {
+            targeting.languages.push(criterion.language.languageConstant);
+        }
+        else if (type === 'LOCATION' && criterion?.location?.geoTargetConstant) {
+            const loc = { id: criterion.location.geoTargetConstant, name: 'Location', type: 'LOCATION' };
             if (negative) {
-                targeting.excludedLocations.push(loc)
-            } else {
-                targeting.locations.push(loc)
+                targeting.excludedLocations.push(loc);
             }
-        } else if (type === 'DEVICE' && criterion?.device?.type) {
-            targeting.devices.push(criterion.device.type)
+            else {
+                targeting.locations.push(loc);
+            }
+        }
+        else if (type === 'DEVICE' && criterion?.device?.type) {
+            targeting.devices.push(criterion.device.type);
         }
     }
-
-    return Array.from(targetingMap.values())
+    return Array.from(targetingMap.values());
 }
-
 // =============================================================================
 // CREATE AUDIENCE (USER LIST)
 // =============================================================================
-
 export async function createGoogleAudience(options: {
-    accessToken: string
-    developerToken: string
-    customerId: string
-    name: string
-    description?: string
-    segments: string[]
-    loginCustomerId?: string | null
-}): Promise<{ success: boolean; resourceName: string }> {
-    const {
-        accessToken,
-        developerToken,
-        customerId,
-        name,
-        description,
-        loginCustomerId,
-    } = options
-
-    const url = `${GOOGLE_API_BASE}/customers/${customerId}/userLists:mutate`
-
+    accessToken: string;
+    developerToken: string;
+    customerId: string;
+    name: string;
+    description?: string;
+    segments: string[];
+    loginCustomerId?: string | null;
+}): Promise<{
+    success: boolean;
+    resourceName: string;
+}> {
+    const { accessToken, developerToken, customerId, name, description, loginCustomerId, } = options;
+    const url = `${GOOGLE_API_BASE}/customers/${customerId}/userLists:mutate`;
     const headers: Record<string, string> = {
         Authorization: `Bearer ${accessToken}`,
         'developer-token': developerToken,
         'Content-Type': 'application/json',
-    }
-
+    };
     if (loginCustomerId) {
-        headers['login-customer-id'] = loginCustomerId
+        headers['login-customer-id'] = loginCustomerId;
     }
-
     const mutation = {
         operations: [{
-            create: {
-                name,
-                description: description || `Created via Cohort Ads Hub`,
-                membershipStatus: 'OPEN',
-                membershipLifeSpan: '30', // Default 30 days
-                crmBasedUserList: {
-                    // This creates a basic CRM-based list placeholder
-                    // In a real app, you'd add members or rules here
-                    appId: 'cohort-app',
+                create: {
+                    name,
+                    description: description || `Created via Cohort Ads Hub`,
+                    membershipStatus: 'OPEN',
+                    membershipLifeSpan: '30', // Default 30 days
+                    crmBasedUserList: {
+                        // This creates a basic CRM-based list placeholder
+                        // In a real app, you'd add members or rules here
+                        appId: 'cohort-app',
+                    }
                 }
-            }
-        }]
-    }
-
+            }]
+    };
     const response = await fetch(url, {
         method: 'POST',
         headers,
         body: JSON.stringify(mutation),
-    })
-
+    });
     if (!response.ok) {
         const errorData = await parseJsonBodySafely<GoogleAdsApiErrorResponse>(response, {
             context: 'Google Ads audience creation error',
             allowEmpty: true,
-        })
+        });
         throw new GoogleAdsApiError({
             message: errorData?.error?.message ?? 'Audience creation failed',
             httpStatus: response.status,
             errorCode: 'MUTATION_ERROR',
-        })
+        });
     }
-
-    const result = await parseRequiredJsonBody<{ results?: Array<{ resourceName?: string }> }>(response, {
+    const result = await parseRequiredJsonBody<{
+        results?: Array<{
+            resourceName?: string;
+        }>;
+    }>(response, {
         context: 'Google Ads audience creation response',
-    })
-
+    });
     return {
         success: true,
         resourceName: result.results?.[0]?.resourceName ?? ''
-    }
+    };
 }

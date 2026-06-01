@@ -1,68 +1,42 @@
-'use client'
-
-import { useCallback } from 'react'
-import { format } from 'date-fns'
-import Link from 'next/link'
-import {
-  ArrowUpRight,
-  Check,
-  Pin,
-  PinOff,
-  Tag,
-} from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
-import { Button } from '@/shared/ui/button'
-import { Badge } from '@/shared/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
-import { ACTIVITY_ICONS, ACTIVITY_COLORS } from '../constants'
-import type { EnhancedActivity } from '../types'
-
+'use client';
+import { useCallback } from 'react';
+import { format } from 'date-fns';
+import Link from 'next/link';
+import { ArrowUpRight, Check, Pin, PinOff, Tag, } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Badge } from '@/shared/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { ACTIVITY_ICONS, ACTIVITY_COLORS } from '../constants';
+import type { EnhancedActivity } from '../types';
 interface ActivityDetailsModalProps {
-  activity: EnhancedActivity | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onMarkAsRead: (id: string) => void
-  onTogglePin: (id: string) => void
+    activity: EnhancedActivity | null;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onMarkAsRead: (id: string) => void;
+    onTogglePin: (id: string) => void;
 }
-
-export function ActivityDetailsModal({
-  activity,
-  open,
-  onOpenChange,
-  onMarkAsRead,
-  onTogglePin,
-}: ActivityDetailsModalProps) {
-  const handleTogglePinClick = useCallback(() => {
-    if (!activity) return
-    onTogglePin(activity.id)
-  }, [activity, onTogglePin])
-
-  const handleMarkAsReadClick = useCallback(() => {
-    if (!activity) return
-    onMarkAsRead(activity.id)
-  }, [activity, onMarkAsRead])
-
-  if (!activity) return null
-
-  const Icon = ACTIVITY_ICONS[activity.type]
-  const colorClass = ACTIVITY_COLORS[activity.type]
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+export function ActivityDetailsModal({ activity, open, onOpenChange, onMarkAsRead, onTogglePin, }: ActivityDetailsModalProps) {
+    const handleTogglePinClick = () => {
+        if (!activity)
+            return;
+        onTogglePin(activity.id);
+    };
+    const handleMarkAsReadClick = () => {
+        if (!activity)
+            return;
+        onMarkAsRead(activity.id);
+    };
+    if (!activity)
+        return null;
+    const Icon = ACTIVITY_ICONS[activity.type];
+    const colorClass = ACTIVITY_COLORS[activity.type];
+    return (<Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div
-              className={`flex size-10 items-center justify-center rounded-full ${colorClass}`}
-            >
-              <Icon className="size-5" />
+            <div className={`flex size-10 items-center justify-center rounded-full ${colorClass}`}>
+              <Icon className="size-5"/>
             </div>
             <div>
               <DialogTitle className="text-lg">{activity.entityName}</DialogTitle>
@@ -85,96 +59,62 @@ export function ActivityDetailsModal({
           </div>
 
           {/* Metadata */}
-          {activity.metadata?.changes && (
-            <div>
+          {activity.metadata?.changes && (<div>
               <h4 className="text-sm font-medium mb-2">Changes</h4>
               <div className="space-y-2">
-                {activity.metadata.changes.map((change) => (
-                  <div
-                    key={`${change.field}-${change.oldValue}-${change.newValue}`}
-                    className="flex items-center gap-2 text-sm rounded-lg bg-muted/50 p-2"
-                  >
+                {activity.metadata.changes.map((change) => (<div key={`${change.field}-${change.oldValue}-${change.newValue}`} className="flex items-center gap-2 text-sm rounded-lg bg-muted/50 p-2">
                     <span className="text-muted-foreground">{change.field}:</span>
                     <span className="line-through text-destructive">
                       {change.oldValue}
                     </span>
                     <span>→</span>
                     <span className="text-success">{change.newValue}</span>
-                  </div>
-                ))}
+                  </div>))}
               </div>
-            </div>
-          )}
+            </div>)}
 
           {/* User */}
-          {activity.userName && (
-            <div className="flex items-center gap-2">
+          {activity.userName && (<div className="flex items-center gap-2">
               <Avatar className="size-6">
-                {activity.userAvatar ? (
-                  <AvatarImage src={activity.userAvatar} alt={activity.userName} />
-                ) : (
-                  <AvatarFallback className="text-xs">
+                {activity.userAvatar ? (<AvatarImage src={activity.userAvatar} alt={activity.userName}/>) : (<AvatarFallback className="text-xs">
                     {activity.userName.charAt(0)}
-                  </AvatarFallback>
-                )}
+                  </AvatarFallback>)}
               </Avatar>
               <span className="text-sm text-muted-foreground">
                 By {activity.userName}
               </span>
-            </div>
-          )}
+            </div>)}
 
           {/* Tags */}
-          {activity.metadata?.tags && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <Tag className="size-3 text-muted-foreground" />
-              {activity.metadata.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs">
+          {activity.metadata?.tags && (<div className="flex items-center gap-2 flex-wrap">
+              <Tag className="size-3 text-muted-foreground"/>
+              {activity.metadata.tags.map((tag) => (<Badge key={tag} variant="secondary" className="text-xs">
                   {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
+                </Badge>))}
+            </div>)}
         </div>
 
         <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleTogglePinClick}
-          >
-            {activity.isPinned ? (
-              <>
-                <PinOff className="size-4 mr-1" />
+          <Button variant="outline" size="sm" onClick={handleTogglePinClick}>
+            {activity.isPinned ? (<>
+                <PinOff className="size-4 mr-1"/>
                 Unpin
-              </>
-            ) : (
-              <>
-                <Pin className="size-4 mr-1" />
+              </>) : (<>
+                <Pin className="size-4 mr-1"/>
                 Pin
-              </>
-            )}
+              </>)}
           </Button>
-          {!activity.isRead && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleMarkAsReadClick}
-            >
-              <Check className="size-4 mr-1" />
+          {!activity.isRead && (<Button variant="outline" size="sm" onClick={handleMarkAsReadClick}>
+              <Check className="size-4 mr-1"/>
               Mark as Read
-            </Button>
-          )}
-          {activity.navigationUrl && (
-            <Button asChild size="sm">
+            </Button>)}
+          {activity.navigationUrl && (<Button asChild size="sm">
               <Link href={activity.navigationUrl}>
                 View Details
-                <ArrowUpRight className="size-4 ml-1" />
+                <ArrowUpRight className="size-4 ml-1"/>
               </Link>
-            </Button>
-          )}
+            </Button>)}
         </DialogFooter>
       </DialogContent>
-    </Dialog>
-  )
+    </Dialog>);
 }

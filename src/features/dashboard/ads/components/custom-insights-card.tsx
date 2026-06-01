@@ -1,72 +1,36 @@
-'use client'
-
-import { useMemo } from 'react'
-import {
-  DollarSign,
-  Eye,
-  MousePointer,
-  Target,
-  TrendingUp,
-  Zap,
-} from 'lucide-react'
-
-import { Card } from '@/shared/ui/card'
-import { calculateBenchmarks } from '@/lib/metrics'
-
-import {
-    CustomInsightsCardHeader,
-    CustomInsightsEmptyState,
-    CustomInsightsGrid,
-    CustomInsightsLoadingState,
-    type KpiTileData,
-} from './custom-insights-card-sections'
-import { resolveAdsDisplayCurrency } from './insights-chart-utils'
-
-import type { DerivedMetrics } from '../hooks/use-derived-metrics'
-import type { MetricRecord } from './types'
-
+'use client';
+import { useMemo } from 'react';
+import { DollarSign, Eye, MousePointer, Target, TrendingUp, Zap, } from 'lucide-react';
+import { Card } from '@/shared/ui/card';
+import { calculateBenchmarks } from '@/lib/metrics';
+import { CustomInsightsCardHeader, CustomInsightsEmptyState, CustomInsightsGrid, CustomInsightsLoadingState, type KpiTileData, } from './custom-insights-card-sections';
+import { resolveAdsDisplayCurrency } from './insights-chart-utils';
+import type { DerivedMetrics } from '../hooks/use-derived-metrics';
+import type { MetricRecord } from './types';
 // =============================================================================
 // TYPES
 // =============================================================================
-
 interface CustomInsightsCardProps {
-  derivedMetrics: DerivedMetrics | null
-  processedMetrics?: MetricRecord[]
-  currency?: string
-  providerCurrencyMap?: Record<string, string>
-  loading?: boolean
+    derivedMetrics: DerivedMetrics | null;
+    processedMetrics?: MetricRecord[];
+    currency?: string;
+    providerCurrencyMap?: Record<string, string>;
+    loading?: boolean;
 }
-
 function isAnomaly(value: number | null, benchmark: number | undefined | null, threshold = 0.5): boolean {
-  if (value === null || benchmark === undefined || benchmark === null || benchmark === 0) return false
-  const deviation = Math.abs((value - benchmark) / benchmark)
-  return deviation > threshold
+    if (value === null || benchmark === undefined || benchmark === null || benchmark === 0)
+        return false;
+    const deviation = Math.abs((value - benchmark) / benchmark);
+    return deviation > threshold;
 }
-
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
-
-export function CustomInsightsCard({
-  derivedMetrics,
-  processedMetrics,
-  currency,
-  providerCurrencyMap,
-  loading,
-}: CustomInsightsCardProps) {
-    const displayCurrency = useMemo(
-      () =>
-        resolveAdsDisplayCurrency(
-          currency,
-          processedMetrics ?? [],
-          providerCurrencyMap ?? {},
-        ),
-      [currency, processedMetrics, providerCurrencyMap],
-    )
-
-    const computedBenchmarks = useMemo(() => {
-        if (!derivedMetrics) return null
-
+export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency, providerCurrencyMap, loading, }: CustomInsightsCardProps) {
+    const displayCurrency = resolveAdsDisplayCurrency(currency, processedMetrics ?? [], providerCurrencyMap ?? {});
+    const computedBenchmarks = (() => {
+        if (!derivedMetrics)
+            return null;
         const normalized = Array.isArray(processedMetrics) ? processedMetrics.map((m) => ({
             providerId: m.providerId,
             adId: m.id,
@@ -77,30 +41,26 @@ export function CustomInsightsCard({
             spend: m.spend,
             conversions: m.conversions,
             revenue: m.revenue ?? 0,
-        })) : []
-
-        return calculateBenchmarks(normalized)
-    }, [derivedMetrics, processedMetrics])
-
-    const cpaBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'cpa')?.value ?? 50
-    const roasBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'roas')?.value ?? 3
-    const ctrBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'ctr')?.value ?? 0.02
-    const cpcBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'cpc')?.value ?? 2
-    const cpmBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'cpm')?.value ?? 10
-    const conversionRateBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'conversionRate')?.value ?? 0.03
-    const profitMarginBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'profitMargin')?.value ?? 0.2
-
-    const kpiData = useMemo<KpiTileData[] | null>(() => {
-        if (!derivedMetrics) return null
-
-        const { kpis, growthWeekOverWeek } = derivedMetrics
-
+        })) : [];
+        return calculateBenchmarks(normalized);
+    })();
+    const cpaBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'cpa')?.value ?? 50;
+    const roasBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'roas')?.value ?? 3;
+    const ctrBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'ctr')?.value ?? 0.02;
+    const cpcBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'cpc')?.value ?? 2;
+    const cpmBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'cpm')?.value ?? 10;
+    const conversionRateBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'conversionRate')?.value ?? 0.03;
+    const profitMarginBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'profitMargin')?.value ?? 0.2;
+    const kpiData = (() => {
+        if (!derivedMetrics)
+            return null;
+        const { kpis, growthWeekOverWeek } = derivedMetrics;
         return [
             {
                 label: 'CPA',
                 value: kpis.cpa,
                 format: 'currency' as const,
-                icon: <Target className="size-4" />,
+                icon: <Target className="size-4"/>,
                 trend: null,
                 benchmark: cpaBenchmark,
                 invertTrend: true, // Lower is better
@@ -110,7 +70,7 @@ export function CustomInsightsCard({
                 label: 'ROAS',
                 value: kpis.roas,
                 format: 'ratio' as const,
-                icon: <Zap className="size-4" />,
+                icon: <Zap className="size-4"/>,
                 trend: growthWeekOverWeek.revenue,
                 benchmark: roasBenchmark,
                 theme: 'success' as const,
@@ -119,7 +79,7 @@ export function CustomInsightsCard({
                 label: 'CTR',
                 value: kpis.ctr,
                 format: 'percent' as const,
-                icon: <MousePointer className="size-4" />,
+                icon: <MousePointer className="size-4"/>,
                 trend: growthWeekOverWeek.clicks,
                 benchmark: ctrBenchmark,
                 theme: 'accent' as const,
@@ -128,7 +88,7 @@ export function CustomInsightsCard({
                 label: 'CPC',
                 value: kpis.cpc,
                 format: 'currency' as const,
-                icon: <DollarSign className="size-4" />,
+                icon: <DollarSign className="size-4"/>,
                 trend: null,
                 benchmark: cpcBenchmark,
                 invertTrend: true,
@@ -138,7 +98,7 @@ export function CustomInsightsCard({
                 label: 'CPM',
                 value: kpis.cpm,
                 format: 'currency' as const,
-                icon: <Eye className="size-4" />,
+                icon: <Eye className="size-4"/>,
                 trend: null,
                 benchmark: cpmBenchmark,
                 invertTrend: true,
@@ -148,7 +108,7 @@ export function CustomInsightsCard({
                 label: 'Conv. Rate',
                 value: kpis.conversionRate,
                 format: 'percent' as const,
-                icon: <Target className="size-4" />,
+                icon: <Target className="size-4"/>,
                 trend: growthWeekOverWeek.conversions,
                 benchmark: conversionRateBenchmark,
                 theme: 'accent' as const,
@@ -157,7 +117,7 @@ export function CustomInsightsCard({
                 label: 'Profit',
                 value: kpis.profit,
                 format: 'currency' as const,
-                icon: <TrendingUp className="size-4" />,
+                icon: <TrendingUp className="size-4"/>,
                 trend: null,
                 theme: 'success' as const,
             },
@@ -165,23 +125,20 @@ export function CustomInsightsCard({
                 label: 'Profit Margin',
                 value: kpis.profitMargin,
                 format: 'percent' as const,
-                icon: <Zap className="size-4" />,
+                icon: <Zap className="size-4"/>,
                 trend: null,
                 benchmark: profitMarginBenchmark,
                 theme: 'accent' as const,
             },
-        ]
-    }, [derivedMetrics, cpaBenchmark, roasBenchmark, ctrBenchmark, cpcBenchmark, cpmBenchmark, conversionRateBenchmark, profitMarginBenchmark])
-
-    const anomalyCount = useMemo(() => {
-        if (!kpiData) return 0
-        return kpiData.filter((kpi) => isAnomaly(kpi.value, kpi.benchmark)).length
-    }, [kpiData])
-
-    return (
-        <Card className="overflow-hidden border-muted/60 shadow-sm">
-            <CustomInsightsCardHeader anomalyCount={anomalyCount} />
-            {loading ? <CustomInsightsLoadingState /> : !derivedMetrics || !kpiData ? <CustomInsightsEmptyState /> : <CustomInsightsGrid currency={displayCurrency} items={kpiData} />}
-        </Card>
-    )
+        ];
+    })();
+    const anomalyCount = (() => {
+        if (!kpiData)
+            return 0;
+        return kpiData.filter((kpi) => isAnomaly(kpi.value, kpi.benchmark)).length;
+    })();
+    return (<Card className="overflow-hidden border-muted/60 shadow-sm">
+            <CustomInsightsCardHeader anomalyCount={anomalyCount}/>
+            {loading ? <CustomInsightsLoadingState /> : !derivedMetrics || !kpiData ? <CustomInsightsEmptyState /> : <CustomInsightsGrid currency={displayCurrency} items={kpiData}/>}
+        </Card>);
 }

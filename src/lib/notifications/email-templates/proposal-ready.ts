@@ -1,18 +1,14 @@
 /**
  * Proposal Ready Email Template
  */
-
-import { wrapEmailTemplate } from './utils'
-
+import { wrapEmailTemplate } from './utils';
 export interface ProposalReadyTemplateParams {
-    proposalTitle: string
-    clientName: string | null
-    downloadUrl: string | null
+    proposalTitle: string;
+    clientName: string | null;
+    downloadUrl: string | null;
 }
-
 export function proposalReadyTemplate(params: ProposalReadyTemplateParams): string {
-    const { proposalTitle, clientName, downloadUrl } = params
-
+    const { proposalTitle, clientName, downloadUrl } = params;
     return wrapEmailTemplate(`
     <div class="header">Your Presentation is Ready</div>
     <div class="content">
@@ -23,5 +19,5 @@ export function proposalReadyTemplate(params: ProposalReadyTemplateParams): stri
       </div>
       ${downloadUrl ? `<a href="${downloadUrl}" class="button">Download Presentation</a>` : '<p>Access it from the Proposals section in your dashboard.</p>'}
     </div>
-  `)
+  `);
 }

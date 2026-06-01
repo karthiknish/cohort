@@ -1,154 +1,140 @@
-import { notifyFailure } from '@/lib/notifications'
-import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useState, useCallback, useRef, useEffect, useMemo, useReducer } from 'react'
-import { useToast } from '@/shared/ui/use-toast'
-import { useClientContext } from '@/shared/contexts/client-context'
-import { useAuth } from '@/shared/contexts/auth-context'
-import { useQuery, useMutation } from 'convex/react'
-import { proposalsApi } from '@/lib/convex-api'
-import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
-import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { trackDraftCreated } from '@/services/proposal-analytics'
-import type { FormStateUpdateOptions } from './use-proposal-wizard'
-
-import { createInitialProposalFormState } from '../utils/form-steps'
-
+import { notifyFailure } from '@/lib/notifications';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useState, useCallback, useRef, useEffect, useEffectEvent, useReducer } from 'react';
+import { useToast } from '@/shared/ui/use-toast';
+import { useClientContext } from '@/shared/contexts/client-context';
+import { useAuth } from '@/shared/contexts/auth-context';
+import { useQuery, useMutation } from 'convex/react';
+import { proposalsApi } from '@/lib/convex-api';
+import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals';
+import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
+import { trackDraftCreated } from '@/services/proposal-analytics';
+import type { FormStateUpdateOptions } from './use-proposal-wizard';
+import { createInitialProposalFormState } from '../utils/form-steps';
+function buildSnapshotKey(snapshot: {
+    form: ProposalFormData;
+    step: number;
+    clientId: string | null;
+}) {
+    return JSON.stringify({
+        clientId: snapshot.clientId,
+        step: snapshot.step,
+        form: snapshot.form,
+    });
+}
 export interface UseProposalDraftsOptions {
-    isPreviewMode: boolean
-    formState: ProposalFormData
-    currentStep: number
-    hasPersistableData: boolean
-    onFormStateChange: (state: ProposalFormData | ((prev: ProposalFormData) => ProposalFormData), options?: FormStateUpdateOptions) => void
-    onStepChange: (step: number) => void
-    onSubmittedChange: (submitted: boolean) => void
-    onPresentationDeckChange: (deck: ProposalPresentationDeck | null) => void
-    onAiSuggestionsChange: (suggestions: string | null) => void
-    onLastSubmissionSnapshotChange: (snapshot: SubmissionSnapshot | null) => void
-    steps: Array<{ id: string }>
+    isPreviewMode: boolean;
+    formState: ProposalFormData;
+    currentStep: number;
+    hasPersistableData: boolean;
+    onFormStateChange: (state: ProposalFormData | ((prev: ProposalFormData) => ProposalFormData), options?: FormStateUpdateOptions) => void;
+    onStepChange: (step: number) => void;
+    onSubmittedChange: (submitted: boolean) => void;
+    onPresentationDeckChange: (deck: ProposalPresentationDeck | null) => void;
+    onAiSuggestionsChange: (suggestions: string | null) => void;
+    onLastSubmissionSnapshotChange: (snapshot: SubmissionSnapshot | null) => void;
+    steps: Array<{
+        id: string;
+    }>;
 }
-
 export interface SubmissionSnapshot {
-    draftId: string
-    form: ProposalFormData
-    step: number
-    clientId: string | null
-    clientName: string | null
+    draftId: string;
+    form: ProposalFormData;
+    step: number;
+    clientId: string | null;
+    clientName: string | null;
 }
-
 export interface UseProposalDraftsReturn {
     // State
-    draftId: string | null
-    proposals: ProposalDraft[]
-    isLoadingProposals: boolean
-    isCreatingDraft: boolean
-    isBootstrapping: boolean
-    autosaveStatus: 'idle' | 'saving' | 'saved' | 'error'
-    deletingProposalId: string | null
-    proposalPendingDelete: ProposalDraft | null
-    isDeleteDialogOpen: boolean
-
+    draftId: string | null;
+    proposals: ProposalDraft[];
+    isLoadingProposals: boolean;
+    isCreatingDraft: boolean;
+    isBootstrapping: boolean;
+    autosaveStatus: 'idle' | 'saving' | 'saved' | 'error';
+    deletingProposalId: string | null;
+    proposalPendingDelete: ProposalDraft | null;
+    isDeleteDialogOpen: boolean;
     // Actions
-    setDraftId: (id: string | null) => void
-    setAutosaveStatus: (status: 'idle' | 'saving' | 'saved' | 'error') => void
-    refreshProposals: () => Promise<ProposalDraft[]>
-    ensureDraftId: () => Promise<string | null>
-    saveDraftNow: (options?: { showToast?: boolean }) => Promise<void>
-    handleCreateNewProposal: () => Promise<void>
+    setDraftId: (id: string | null) => void;
+    setAutosaveStatus: (status: 'idle' | 'saving' | 'saved' | 'error') => void;
+    refreshProposals: () => Promise<ProposalDraft[]>;
+    ensureDraftId: () => Promise<string | null>;
+    saveDraftNow: (options?: {
+        showToast?: boolean;
+    }) => Promise<void>;
+    handleCreateNewProposal: () => Promise<void>;
     handleResumeProposal: (proposal: ProposalDraft, forceEdit?: boolean) => void;
-    handleDeleteProposal: (proposal: ProposalDraft) => Promise<void>
-    requestDeleteProposal: (proposal: ProposalDraft) => void
-    handleDeleteDialogChange: (open: boolean) => void
-
+    handleDeleteProposal: (proposal: ProposalDraft) => Promise<void>;
+    requestDeleteProposal: (proposal: ProposalDraft) => void;
+    handleDeleteDialogChange: (open: boolean) => void;
     // Refs
-    draftIdRef: React.MutableRefObject<string | null>
-    wizardRef: React.RefObject<HTMLDivElement | null>
+    draftIdRef: React.MutableRefObject<string | null>;
+    wizardRef: React.RefObject<HTMLDivElement | null>;
 }
-
 type ProposalBootstrapState = {
-    draftId: string | null
-    isBootstrapping: boolean
-}
-
-type ProposalBootstrapAction =
-    | { type: 'setDraftId'; value: string | null }
-    | { type: 'bootstrapStart' }
-    | { type: 'bootstrapFinish'; draftId: string | null }
-
-function proposalBootstrapReducer(
-    state: ProposalBootstrapState,
-    action: ProposalBootstrapAction,
-): ProposalBootstrapState {
+    draftId: string | null;
+    isBootstrapping: boolean;
+};
+type ProposalBootstrapAction = {
+    type: 'setDraftId';
+    value: string | null;
+} | {
+    type: 'bootstrapStart';
+} | {
+    type: 'bootstrapFinish';
+    draftId: string | null;
+};
+function proposalBootstrapReducer(state: ProposalBootstrapState, action: ProposalBootstrapAction): ProposalBootstrapState {
     switch (action.type) {
         case 'setDraftId':
-            return { ...state, draftId: action.value }
+            return { ...state, draftId: action.value };
         case 'bootstrapStart':
-            return { ...state, isBootstrapping: true }
+            return { ...state, isBootstrapping: true };
         case 'bootstrapFinish':
-            return { draftId: action.draftId, isBootstrapping: false }
+            return { draftId: action.draftId, isBootstrapping: false };
         default:
-            return state
+            return state;
     }
 }
-
 type ProposalRow = {
-    legacyId: string
-    status?: ProposalDraft['status']
-    stepProgress?: number
-    formData?: unknown
-    aiInsights?: unknown
-    aiSuggestions?: string | null
-    pdfUrl?: string | null
-    pptUrl?: string | null
-    createdAtMs?: number
-    updatedAtMs?: number
-    lastAutosaveAtMs?: number
-    clientId?: string | null
-    clientName?: string | null
-    presentationDeck?: ProposalPresentationDeck | null
-}
-
+    legacyId: string;
+    status?: ProposalDraft['status'];
+    stepProgress?: number;
+    formData?: unknown;
+    aiInsights?: unknown;
+    aiSuggestions?: string | null;
+    pdfUrl?: string | null;
+    pptUrl?: string | null;
+    createdAtMs?: number;
+    updatedAtMs?: number;
+    lastAutosaveAtMs?: number;
+    clientId?: string | null;
+    clientName?: string | null;
+    presentationDeck?: ProposalPresentationDeck | null;
+};
 export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposalDraftsReturn {
-    const {
-        isPreviewMode,
-        formState,
-        currentStep,
-        hasPersistableData,
-        onFormStateChange,
-        onStepChange,
-        onSubmittedChange,
-        onPresentationDeckChange,
-        onAiSuggestionsChange,
-        onLastSubmissionSnapshotChange,
-        steps,
-    } = options
-
-    const { toast } = useToast()
-    const { user, isSyncing, authError } = useAuth()
-    const { selectedClient, selectedClientId } = useClientContext()
-
-    const workspaceId = user?.agencyId ?? null
-
-    const canQuery = Boolean(workspaceId && selectedClientId && !isSyncing && !authError)
-    const convexProposals = useQuery(
-        proposalsApi.list,
-        isPreviewMode || !canQuery
-            ? 'skip'
-            : {
-                workspaceId: workspaceId!,
-                clientId: selectedClientId ?? undefined,
-                limit: 100,
-            }
-    )
-
-    const convexCreateProposal = useMutation(proposalsApi.create)
-    const convexUpdateProposal = useMutation(proposalsApi.update)
-    const convexRemoveProposal = useMutation(proposalsApi.remove)
-
-    const proposals: ProposalDraft[] = useMemo(() => {
-        if (!workspaceId || !selectedClientId) return []
-        const rows = Array.isArray(convexProposals) ? (convexProposals as ProposalRow[]) : []
-
+    const { isPreviewMode, formState, currentStep, hasPersistableData, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange, steps, } = options;
+    const { toast } = useToast();
+    const { user, isSyncing, authError } = useAuth();
+    const { selectedClient, selectedClientId } = useClientContext();
+    const workspaceId = user?.agencyId ?? null;
+    const canQuery = Boolean(workspaceId && selectedClientId && !isSyncing && !authError);
+    const convexProposals = useQuery(proposalsApi.list, isPreviewMode || !canQuery
+        ? 'skip'
+        : {
+            workspaceId: workspaceId!,
+            clientId: selectedClientId ?? undefined,
+            limit: 100,
+        });
+    const convexCreateProposal = useMutation(proposalsApi.create);
+    const convexUpdateProposal = useMutation(proposalsApi.update);
+    const convexRemoveProposal = useMutation(proposalsApi.remove);
+    const proposals: ProposalDraft[] = (() => {
+        if (!workspaceId || !selectedClientId)
+            return [];
+        const rows = Array.isArray(convexProposals) ? (convexProposals as ProposalRow[]) : [];
         return rows.map((row) => ({
             id: String(row.legacyId),
             status: (row.status ?? 'draft') as ProposalDraft['status'],
@@ -169,98 +155,90 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                     storageUrl: row.presentationDeck.storageUrl ?? row.pptUrl ?? null,
                 }
                 : null,
-        }))
-    }, [workspaceId, selectedClientId, convexProposals])
-
+        }));
+    })();
     const [bootstrapState, dispatchBootstrap] = useReducer(proposalBootstrapReducer, {
         draftId: null,
         isBootstrapping: true,
-    })
-    const { draftId, isBootstrapping } = bootstrapState
-    const setDraftId = useCallback(
-        (value: string | null) => dispatchBootstrap({ type: 'setDraftId', value }),
-        [],
-    )
-    const [isCreatingDraft, setIsCreatingDraft] = useState(false)
-    const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-    const [deletingProposalId, setDeletingProposalId] = useState<string | null>(null)
-    const [proposalPendingDelete, setProposalPendingDelete] = useState<ProposalDraft | null>(null)
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-
-    const hydrationRef = useRef(false)
-    const draftIdRef = useRef<string | null>(draftId)
-    const wizardRef = useRef<HTMLDivElement | null>(null)
-    const lastBootstrapKeyRef = useRef<string | null>(null)
-    const lastSavedSnapshotRef = useRef<string | null>(null)
-    const toastRef = useRef(toast)
-    const onFormStateChangeRef = useRef(onFormStateChange)
-    const onStepChangeRef = useRef(onStepChange)
-    const onSubmittedChangeRef = useRef(onSubmittedChange)
-    const onPresentationDeckChangeRef = useRef(onPresentationDeckChange)
-    const onAiSuggestionsChangeRef = useRef(onAiSuggestionsChange)
-    const onLastSubmissionSnapshotChangeRef = useRef(onLastSubmissionSnapshotChange)
-
+    });
+    const { draftId, isBootstrapping } = bootstrapState;
+    const setDraftId = (value: string | null) => dispatchBootstrap({ type: 'setDraftId', value });
+    const [isCreatingDraft, setIsCreatingDraft] = useState(false);
+    const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const [deletingProposalId, setDeletingProposalId] = useState<string | null>(null);
+    const [proposalPendingDelete, setProposalPendingDelete] = useState<ProposalDraft | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isHydrated, setIsHydrated] = useState(false);
+    const draftIdRef = useRef<string | null>(draftId);
+    const wizardRef = useRef<HTMLDivElement | null>(null);
+    const lastBootstrapKeyRef = useRef<string | null>(null);
+    const lastSavedSnapshotRef = useRef<string | null>(null);
+    const [lastSavedSnapshotKey, setLastSavedSnapshotKey] = useState<string | null>(null);
+    const toastRef = useRef(toast);
+    const onFormStateChangeRef = useRef(onFormStateChange);
+    const onStepChangeRef = useRef(onStepChange);
+    const onSubmittedChangeRef = useRef(onSubmittedChange);
+    const onPresentationDeckChangeRef = useRef(onPresentationDeckChange);
+    const onAiSuggestionsChangeRef = useRef(onAiSuggestionsChange);
+    const onLastSubmissionSnapshotChangeRef = useRef(onLastSubmissionSnapshotChange);
     useEffect(() => {
-        draftIdRef.current = draftId
-    }, [draftId])
-
-    toastRef.current = toast
-    onFormStateChangeRef.current = onFormStateChange
-    onStepChangeRef.current = onStepChange
-    onSubmittedChangeRef.current = onSubmittedChange
-    onPresentationDeckChangeRef.current = onPresentationDeckChange
-    onAiSuggestionsChangeRef.current = onAiSuggestionsChange
-    onLastSubmissionSnapshotChangeRef.current = onLastSubmissionSnapshotChange
-
-    const isLoadingProposals = Boolean(selectedClientId && workspaceId && convexProposals === undefined)
-
-    const buildSnapshotKey = useCallback((snapshot: { form: ProposalFormData; step: number; clientId: string | null }) => {
-        return JSON.stringify({
-            clientId: snapshot.clientId,
-            step: snapshot.step,
-            form: snapshot.form,
-        })
-    }, [])
-
-    const currentSnapshotKey = useMemo(() => buildSnapshotKey({
+        draftIdRef.current = draftId;
+    }, [draftId]);
+    useEffect(() => {
+        toastRef.current = toast;
+        onFormStateChangeRef.current = onFormStateChange;
+        onStepChangeRef.current = onStepChange;
+        onSubmittedChangeRef.current = onSubmittedChange;
+        onPresentationDeckChangeRef.current = onPresentationDeckChange;
+        onAiSuggestionsChangeRef.current = onAiSuggestionsChange;
+        onLastSubmissionSnapshotChangeRef.current = onLastSubmissionSnapshotChange;
+    }, [
+        onAiSuggestionsChange,
+        onFormStateChange,
+        onLastSubmissionSnapshotChange,
+        onPresentationDeckChange,
+        onStepChange,
+        onSubmittedChange,
+        toast,
+    ]);
+    const markSnapshotSaved = (snapshotKey: string) => {
+        lastSavedSnapshotRef.current = snapshotKey;
+        setLastSavedSnapshotKey(snapshotKey);
+    };
+    const isLoadingProposals = Boolean(selectedClientId && workspaceId && convexProposals === undefined);
+    const currentSnapshotKey = buildSnapshotKey({
         form: formState,
         step: currentStep,
         clientId: selectedClientId,
-    }), [buildSnapshotKey, currentStep, formState, selectedClientId])
-
-    const refreshProposals = useCallback(async () => {
+    });
+    const refreshProposals = async () => {
         // Proposals are realtime via Convex; keep this for callers.
-        return proposals
-    }, [proposals])
-
-    const ensureDraftId = useCallback(async () => {
+        return proposals;
+    };
+    const ensureDraftId = async () => {
         if (draftId) {
-            return draftId
+            return draftId;
         }
-
         if (!hasPersistableData) {
             notifyFailure({
-        title: 'Draft not ready',
-        message: 'Fill in the proposal form before generating.',
-      })
-            return null
+                title: 'Draft not ready',
+                message: 'Fill in the proposal form before generating.',
+            });
+            return null;
         }
-
         if (isCreatingDraft) {
             toast({
                 title: 'Preparing proposal',
                 description: 'Please wait while we prepare your proposal for generation.',
-            })
-            return null
+            });
+            return null;
         }
-
         try {
-            setIsCreatingDraft(true)
-            setAutosaveStatus('saving')
+            setIsCreatingDraft(true);
+            setAutosaveStatus('saving');
             if (!workspaceId) {
-                throw new Error('Workspace is required to create a proposal draft')
+                throw new Error('Workspace is required to create a proposal draft');
             }
-
             const res = await convexCreateProposal({
                 workspaceId,
                 ownerId: user?.id ?? null,
@@ -269,48 +247,47 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                 formData: formState,
                 clientId: selectedClientId ?? null,
                 clientName: selectedClient?.name ?? null,
-            })
-            const newDraftId = res.legacyId
-            setDraftId(newDraftId)
-            lastSavedSnapshotRef.current = currentSnapshotKey
-            setAutosaveStatus('saved')
-            return newDraftId
-        } catch (error: unknown) {
-            logError(error, 'useProposalDrafts:ensureDraftId')
-            setAutosaveStatus('error')
+            });
+            const newDraftId = res.legacyId;
+            setDraftId(newDraftId);
+            markSnapshotSaved(currentSnapshotKey);
+            setAutosaveStatus('saved');
+            return newDraftId;
+        }
+        catch (error: unknown) {
+            logError(error, 'useProposalDrafts:ensureDraftId');
+            setAutosaveStatus('error');
             reportConvexFailure({
-        error: error,
-        context: 'use-proposal-drafts.ts:catch',
-        title: 'Unable to create draft',
-        fallbackMessage: 'Unable to create draft',
-        })
-            return null
-        } finally {
-            setIsCreatingDraft(false)
+                error: error,
+                context: 'use-proposal-drafts.ts:catch',
+                title: 'Unable to create draft',
+                fallbackMessage: 'Unable to create draft',
+            });
+            return null;
         }
-    }, [convexCreateProposal, currentSnapshotKey, currentStep, draftId, formState, hasPersistableData, isCreatingDraft, selectedClient, selectedClientId, setDraftId, toast, user?.id, workspaceId])
-
-    const saveDraftNow = useCallback(async (saveOptions?: { showToast?: boolean }) => {
+        finally {
+            setIsCreatingDraft(false);
+        }
+    };
+    const saveDraftNow = useEffectEvent(async (saveOptions?: {
+        showToast?: boolean;
+    }) => {
         if (isPreviewMode || !hasPersistableData || !selectedClientId) {
-            return
+            return;
         }
-
-        let activeDraftId = draftIdRef.current
-
+        let activeDraftId = draftIdRef.current;
         if (!activeDraftId) {
-            activeDraftId = await ensureDraftId()
+            activeDraftId = await ensureDraftId();
             if (!activeDraftId) {
-                return
+                return;
             }
         }
-
         try {
-            setAutosaveStatus('saving')
+            setAutosaveStatus('saving');
             if (!workspaceId) {
-                throw new Error('Workspace is required to save a proposal draft')
+                throw new Error('Workspace is required to save a proposal draft');
             }
-
-            const timestamp = Date.now()
+            const timestamp = Date.now();
             await convexUpdateProposal({
                 workspaceId,
                 legacyId: activeDraftId,
@@ -321,56 +298,50 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                 clientName: selectedClient?.name ?? null,
                 updatedAtMs: timestamp,
                 lastAutosaveAtMs: timestamp,
-            })
-
-            lastSavedSnapshotRef.current = currentSnapshotKey
-            setAutosaveStatus('saved')
-
+            });
+            markSnapshotSaved(currentSnapshotKey);
+            setAutosaveStatus('saved');
             if (saveOptions?.showToast) {
                 toast({
                     title: 'Draft saved',
                     description: 'Your proposal changes are saved.',
-                })
+                });
             }
-        } catch (error: unknown) {
-            logError(error, 'useProposalDrafts:saveDraftNow')
-            setAutosaveStatus('error')
-
-            const message = asErrorMessage(error)
+        }
+        catch (error: unknown) {
+            logError(error, 'useProposalDrafts:saveDraftNow');
+            setAutosaveStatus('error');
+            const message = asErrorMessage(error);
             if (saveOptions?.showToast) {
                 notifyFailure({
-        title: 'Unable to save draft',
-        message: message,
-      })
+                    title: 'Unable to save draft',
+                    message: message,
+                });
             }
         }
-    }, [convexUpdateProposal, currentSnapshotKey, currentStep, ensureDraftId, formState, hasPersistableData, isPreviewMode, selectedClient?.name, selectedClientId, toast, workspaceId])
-
-    const handleCreateNewProposal = useCallback(async () => {
+    });
+    const handleCreateNewProposal = async () => {
         if (!selectedClientId) {
             notifyFailure({
-        title: 'Select a client',
-        message: 'Choose a client from the sidebar before starting a proposal.',
-      })
-            return
+                title: 'Select a client',
+                message: 'Choose a client from the sidebar before starting a proposal.',
+            });
+            return;
         }
-
         if (isCreatingDraft) {
             toast({
                 title: 'Preparing proposal',
                 description: 'Please wait for the current draft to finish initializing.',
-            })
-            return
+            });
+            return;
         }
-
         try {
-            setIsCreatingDraft(true)
-            setAutosaveStatus('saving')
-            const initialForm = createInitialProposalFormState()
+            setIsCreatingDraft(true);
+            setAutosaveStatus('saving');
+            const initialForm = createInitialProposalFormState();
             if (!workspaceId) {
-                throw new Error('Workspace is required to create a proposal draft')
+                throw new Error('Workspace is required to create a proposal draft');
             }
-
             const res = await convexCreateProposal({
                 workspaceId,
                 ownerId: user?.id ?? null,
@@ -379,60 +350,55 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                 formData: initialForm,
                 clientId: selectedClientId ?? null,
                 clientName: selectedClient?.name ?? null,
-            })
-            const newDraftId = res.legacyId
-
-            setDraftId(newDraftId)
-            onFormStateChange(initialForm)
-            onStepChange(0)
-            onSubmittedChange(false)
-            onPresentationDeckChange(null)
-            onAiSuggestionsChange(null)
-            onLastSubmissionSnapshotChange(null)
-            lastSavedSnapshotRef.current = buildSnapshotKey({
+            });
+            const newDraftId = res.legacyId;
+            setDraftId(newDraftId);
+            onFormStateChange(initialForm);
+            onStepChange(0);
+            onSubmittedChange(false);
+            onPresentationDeckChange(null);
+            onAiSuggestionsChange(null);
+            onLastSubmissionSnapshotChange(null);
+            markSnapshotSaved(buildSnapshotKey({
                 form: initialForm,
                 step: 0,
                 clientId: selectedClientId,
-            })
-            setAutosaveStatus('saved')
-
+            }));
+            setAutosaveStatus('saved');
             // Track draft creation for analytics
             if (workspaceId) {
-                trackDraftCreated(workspaceId, newDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+                trackDraftCreated(workspaceId, newDraftId, selectedClientId, selectedClient?.name).catch(console.error);
             }
-
-
             toast({
                 title: 'New proposal started',
                 description: selectedClient?.name
                     ? `Working on a fresh plan for ${selectedClient.name}.`
                     : 'You can begin filling out the proposal steps.',
-            })
-        } catch (error: unknown) {
-            logError(error, 'useProposalDrafts:handleCreateNewProposal')
-            setAutosaveStatus('error')
-            reportConvexFailure({
-        error: error,
-        context: 'use-proposal-drafts.ts:catch',
-        title: 'Unable to create draft',
-        fallbackMessage: 'Unable to create draft',
-        })
-        } finally {
-            setIsCreatingDraft(false)
+            });
         }
-    }, [buildSnapshotKey, convexCreateProposal, isCreatingDraft, onAiSuggestionsChange, onFormStateChange, onLastSubmissionSnapshotChange, onPresentationDeckChange, onStepChange, onSubmittedChange, selectedClient, selectedClientId, setDraftId, toast, user?.id, workspaceId])
-
-    const handleResumeProposal = useCallback((proposal: ProposalDraft, forceEdit?: boolean) => {
-        const mergedForm = mergeProposalForm(proposal.formData as Partial<ProposalFormData>)
-        const targetStep = Math.min(proposal.stepProgress ?? 0, steps.length - 1)
-
-        setDraftId(proposal.id)
-        onFormStateChange(mergedForm, { resetHistory: true })
-        onStepChange(targetStep)
-        onSubmittedChange(forceEdit ? false : proposal.status === 'ready')
-        onPresentationDeckChange(proposal.presentationDeck ? { ...proposal.presentationDeck, storageUrl: proposal.presentationDeck.storageUrl ?? proposal.pptUrl ?? null } : null)
-        onAiSuggestionsChange(proposal.aiSuggestions ?? null)
-
+        catch (error: unknown) {
+            logError(error, 'useProposalDrafts:handleCreateNewProposal');
+            setAutosaveStatus('error');
+            reportConvexFailure({
+                error: error,
+                context: 'use-proposal-drafts.ts:catch',
+                title: 'Unable to create draft',
+                fallbackMessage: 'Unable to create draft',
+            });
+        }
+        finally {
+            setIsCreatingDraft(false);
+        }
+    };
+    const handleResumeProposal = (proposal: ProposalDraft, forceEdit?: boolean) => {
+        const mergedForm = mergeProposalForm(proposal.formData as Partial<ProposalFormData>);
+        const targetStep = Math.min(proposal.stepProgress ?? 0, steps.length - 1);
+        setDraftId(proposal.id);
+        onFormStateChange(mergedForm, { resetHistory: true });
+        onStepChange(targetStep);
+        onSubmittedChange(forceEdit ? false : proposal.status === 'ready');
+        onPresentationDeckChange(proposal.presentationDeck ? { ...proposal.presentationDeck, storageUrl: proposal.presentationDeck.storageUrl ?? proposal.pptUrl ?? null } : null);
+        onAiSuggestionsChange(proposal.aiSuggestions ?? null);
         if (proposal.status === 'ready' && !forceEdit) {
             onLastSubmissionSnapshotChange({
                 draftId: proposal.id,
@@ -440,199 +406,183 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                 step: targetStep,
                 clientId: proposal.clientId ?? null,
                 clientName: proposal.clientName ?? null,
-            })
-        } else {
-            onLastSubmissionSnapshotChange(null)
+            });
         }
-
-        lastSavedSnapshotRef.current = buildSnapshotKey({
+        else {
+            onLastSubmissionSnapshotChange(null);
+        }
+        markSnapshotSaved(buildSnapshotKey({
             form: mergedForm,
             step: targetStep,
             clientId: proposal.clientId ?? selectedClientId,
-        })
-
-        wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, [buildSnapshotKey, onAiSuggestionsChange, onFormStateChange, onLastSubmissionSnapshotChange, onPresentationDeckChange, onStepChange, onSubmittedChange, selectedClientId, setDraftId, steps])
-
-    const handleDeleteProposal = useCallback(async (proposal: ProposalDraft) => {
+        }));
+        wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    const handleDeleteProposal = async (proposal: ProposalDraft) => {
         if (deletingProposalId && deletingProposalId !== proposal.id) {
-            return
+            return;
         }
-
         try {
-            setDeletingProposalId(proposal.id)
+            setDeletingProposalId(proposal.id);
             if (!workspaceId) {
-                throw new Error('Workspace is required to delete a proposal')
+                throw new Error('Workspace is required to delete a proposal');
             }
-
-            await convexRemoveProposal({ workspaceId, legacyId: proposal.id })
-
+            await convexRemoveProposal({ workspaceId, legacyId: proposal.id });
             if (draftId === proposal.id) {
-                setDraftId(null)
-                onFormStateChange(createInitialProposalFormState(), { resetHistory: true })
-                onStepChange(0)
-                onSubmittedChange(false)
-                onPresentationDeckChange(null)
-                onAiSuggestionsChange(null)
-                onLastSubmissionSnapshotChange(null)
-                lastSavedSnapshotRef.current = buildSnapshotKey({
+                setDraftId(null);
+                onFormStateChange(createInitialProposalFormState(), { resetHistory: true });
+                onStepChange(0);
+                onSubmittedChange(false);
+                onPresentationDeckChange(null);
+                onAiSuggestionsChange(null);
+                onLastSubmissionSnapshotChange(null);
+                markSnapshotSaved(buildSnapshotKey({
                     form: createInitialProposalFormState(),
                     step: 0,
                     clientId: selectedClientId,
-                })
+                }));
             }
-
-            toast({ title: 'Proposal deleted', description: 'The proposal has been removed.' })
-        } catch (err: unknown) {
-            logError(err, 'useProposalDrafts:handleDeleteProposal')
-            const message = asErrorMessage(err)
+            toast({ title: 'Proposal deleted', description: 'The proposal has been removed.' });
+        }
+        catch (err: unknown) {
+            logError(err, 'useProposalDrafts:handleDeleteProposal');
+            const message = asErrorMessage(err);
             notifyFailure({
-        title: 'Unable to delete proposal',
-        message: message,
-      })
-        } finally {
-            setDeletingProposalId(null)
-            setProposalPendingDelete(null)
-            setIsDeleteDialogOpen(false)
+                title: 'Unable to delete proposal',
+                message: message,
+            });
         }
-    }, [buildSnapshotKey, convexRemoveProposal, deletingProposalId, draftId, onAiSuggestionsChange, onFormStateChange, onLastSubmissionSnapshotChange, onPresentationDeckChange, onStepChange, onSubmittedChange, selectedClientId, setDraftId, toast, workspaceId])
-
-    const requestDeleteProposal = useCallback((proposal: ProposalDraft) => {
-        setProposalPendingDelete(proposal)
-        setIsDeleteDialogOpen(true)
-    }, [])
-
-    const handleDeleteDialogChange = useCallback((open: boolean) => {
-        setIsDeleteDialogOpen(open)
+        finally {
+            setDeletingProposalId(null);
+            setProposalPendingDelete(null);
+            setIsDeleteDialogOpen(false);
+        }
+    };
+    const requestDeleteProposal = (proposal: ProposalDraft) => {
+        setProposalPendingDelete(proposal);
+        setIsDeleteDialogOpen(true);
+    };
+    const handleDeleteDialogChange = (open: boolean) => {
+        setIsDeleteDialogOpen(open);
         if (!open) {
-            setProposalPendingDelete(null)
+            setProposalPendingDelete(null);
         }
-    }, [])
-
-    const proposalsKey = useMemo(() => {
+    };
+    const proposalsKey = (() => {
         if (!proposals.length) {
-            return 'none'
+            return 'none';
         }
         return proposals
             .map((proposal) => `${proposal.id}:${proposal.updatedAt ?? ''}:${proposal.status ?? ''}`)
-            .join('|')
-    }, [proposals])
-
+            .join('|');
+    })();
     // Bootstrap effect
     useEffect(() => {
-        const bootstrapKey = `${selectedClientId ?? 'none'}:${proposalsKey}:${steps.length}`
+        const bootstrapKey = `${selectedClientId ?? 'none'}:${proposalsKey}:${steps.length}`;
         if (bootstrapKey === lastBootstrapKeyRef.current) {
-            return
+            return;
         }
-        lastBootstrapKeyRef.current = bootstrapKey
-        hydrationRef.current = false
-        let cancelled = false
-
+        lastBootstrapKeyRef.current = bootstrapKey;
+        setIsHydrated(false);
+        let cancelled = false;
         const bootstrapDraft = async () => {
-            dispatchBootstrap({ type: 'bootstrapStart' })
-            let resolvedDraftId: string | null = null
+            dispatchBootstrap({ type: 'bootstrapStart' });
+            let resolvedDraftId: string | null = null;
             try {
                 if (!selectedClientId) {
-                    const initialForm = createInitialProposalFormState()
-                    onFormStateChangeRef.current(initialForm, { resetHistory: true })
-                    onStepChangeRef.current(0)
-                    onSubmittedChangeRef.current(false)
-                    onPresentationDeckChangeRef.current(null)
-                    onAiSuggestionsChangeRef.current(null)
-                    onLastSubmissionSnapshotChangeRef.current(null)
-                    lastSavedSnapshotRef.current = buildSnapshotKey({ form: initialForm, step: 0, clientId: null })
-                } else {
-                    const allProposals = proposals
+                    const initialForm = createInitialProposalFormState();
+                    onFormStateChangeRef.current(initialForm, { resetHistory: true });
+                    onStepChangeRef.current(0);
+                    onSubmittedChangeRef.current(false);
+                    onPresentationDeckChangeRef.current(null);
+                    onAiSuggestionsChangeRef.current(null);
+                    onLastSubmissionSnapshotChangeRef.current(null);
+                    markSnapshotSaved(buildSnapshotKey({ form: initialForm, step: 0, clientId: null }));
+                }
+                else {
+                    const allProposals = proposals;
                     if (cancelled) {
-                        return
+                        return;
                     }
-
-                    const draft = allProposals.find((proposal) => proposal.status === 'draft') ?? allProposals[0]
-
+                    const draft = allProposals.find((proposal) => proposal.status === 'draft') ?? allProposals[0];
                     if (draft) {
-                        resolvedDraftId = draft.id
-                        const mergedForm = mergeProposalForm(draft.formData as Partial<ProposalFormData>)
-                        const targetStep = Math.min(draft.stepProgress ?? 0, steps.length - 1)
-                        onFormStateChangeRef.current(mergedForm, { resetHistory: true })
-                        onStepChangeRef.current(targetStep)
-                        onSubmittedChangeRef.current(draft.status === 'ready')
-                        onPresentationDeckChangeRef.current(draft.presentationDeck ? { ...draft.presentationDeck, storageUrl: draft.presentationDeck.storageUrl ?? draft.pptUrl ?? null } : null)
-                        onAiSuggestionsChangeRef.current(draft.aiSuggestions ?? null)
-                        onLastSubmissionSnapshotChangeRef.current(null)
-                        lastSavedSnapshotRef.current = buildSnapshotKey({
+                        resolvedDraftId = draft.id;
+                        const mergedForm = mergeProposalForm(draft.formData as Partial<ProposalFormData>);
+                        const targetStep = Math.min(draft.stepProgress ?? 0, steps.length - 1);
+                        onFormStateChangeRef.current(mergedForm, { resetHistory: true });
+                        onStepChangeRef.current(targetStep);
+                        onSubmittedChangeRef.current(draft.status === 'ready');
+                        onPresentationDeckChangeRef.current(draft.presentationDeck ? { ...draft.presentationDeck, storageUrl: draft.presentationDeck.storageUrl ?? draft.pptUrl ?? null } : null);
+                        onAiSuggestionsChangeRef.current(draft.aiSuggestions ?? null);
+                        onLastSubmissionSnapshotChangeRef.current(null);
+                        markSnapshotSaved(buildSnapshotKey({
                             form: mergedForm,
                             step: targetStep,
                             clientId: draft.clientId ?? selectedClientId,
-                        })
-                    } else {
-                        const initialForm = createInitialProposalFormState()
-                        onFormStateChangeRef.current(initialForm, { resetHistory: true })
-                        onStepChangeRef.current(0)
-                        onSubmittedChangeRef.current(false)
-                        onPresentationDeckChangeRef.current(null)
-                        onAiSuggestionsChangeRef.current(null)
-                        onLastSubmissionSnapshotChangeRef.current(null)
-                        lastSavedSnapshotRef.current = buildSnapshotKey({
+                        }));
+                    }
+                    else {
+                        const initialForm = createInitialProposalFormState();
+                        onFormStateChangeRef.current(initialForm, { resetHistory: true });
+                        onStepChangeRef.current(0);
+                        onSubmittedChangeRef.current(false);
+                        onPresentationDeckChangeRef.current(null);
+                        onAiSuggestionsChangeRef.current(null);
+                        onLastSubmissionSnapshotChangeRef.current(null);
+                        markSnapshotSaved(buildSnapshotKey({
                             form: initialForm,
                             step: 0,
                             clientId: selectedClientId,
-                        })
+                        }));
                     }
                 }
-            } catch (err: unknown) {
+            }
+            catch (err: unknown) {
                 if (cancelled) {
-                    return
+                    return;
                 }
                 reportConvexFailure({
-                  error: err,
-                  context: 'useProposalDrafts:bootstrapDraft',
-                  title: 'Unable to start proposal wizard',
-                  fallbackMessage: 'Unable to start proposal wizard.',
-                })
-            } finally {
+                    error: err,
+                    context: 'useProposalDrafts:bootstrapDraft',
+                    title: 'Unable to start proposal wizard',
+                    fallbackMessage: 'Unable to start proposal wizard.',
+                });
+            }
+            finally {
                 if (!cancelled) {
-                    hydrationRef.current = true
-                    dispatchBootstrap({ type: 'bootstrapFinish', draftId: resolvedDraftId })
+                    setIsHydrated(true);
+                    dispatchBootstrap({ type: 'bootstrapFinish', draftId: resolvedDraftId });
                 }
             }
-        }
-
-        void bootstrapDraft()
-
+        };
+        void bootstrapDraft();
         return () => {
-            cancelled = true
-        }
-    }, [buildSnapshotKey, proposals, proposalsKey, selectedClientId, steps.length])
-
-    const shouldScheduleAutosave =
-        !isPreviewMode &&
+            cancelled = true;
+        };
+    }, [proposals, proposalsKey, selectedClientId, steps.length]);
+    const shouldScheduleAutosave = !isPreviewMode &&
         !isBootstrapping &&
-        hydrationRef.current &&
+        isHydrated &&
         hasPersistableData &&
         Boolean(selectedClientId) &&
-        lastSavedSnapshotRef.current !== currentSnapshotKey
-
-    const resolvedAutosaveStatus = useMemo(() => {
+        lastSavedSnapshotKey !== currentSnapshotKey;
+    const resolvedAutosaveStatus = (() => {
         if (shouldScheduleAutosave && autosaveStatus === 'idle') {
-            return 'saving' as const
+            return 'saving' as const;
         }
-        return autosaveStatus
-    }, [autosaveStatus, shouldScheduleAutosave])
-
+        return autosaveStatus;
+    })();
     useEffect(() => {
         if (!shouldScheduleAutosave) {
-            return
+            return;
         }
-
         const timeoutId = window.setTimeout(() => {
-            void saveDraftNow()
-        }, 900)
-
+            void saveDraftNow();
+        }, 900);
         return () => {
-            window.clearTimeout(timeoutId)
-        }
-    }, [currentSnapshotKey, saveDraftNow, shouldScheduleAutosave])
-
+            window.clearTimeout(timeoutId);
+        };
+    }, [currentSnapshotKey, shouldScheduleAutosave]);
     return {
         draftId,
         proposals,
@@ -655,5 +605,5 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         handleDeleteDialogChange,
         draftIdRef,
         wizardRef,
-    }
+    };
 }

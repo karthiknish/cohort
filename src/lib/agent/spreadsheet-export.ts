@@ -1,195 +1,175 @@
-import type { AgentStoredAttachment } from '@/lib/agent-attachments'
-import type { SpreadsheetChartSpec } from '@/lib/export/cohorts-spreadsheet-charts'
-import {
-  buildCohortsSpreadsheetWorkbook,
-  ensureXlsxFilename,
-  workbookToXlsxBlob,
-} from '@/lib/export/cohorts-spreadsheet'
-import { uploadStorageFileWithPublicUrl } from '@/lib/upload-storage-file'
-
+import type { AgentStoredAttachment } from '@/lib/agent-attachments';
+import type { SpreadsheetChartSpec } from '@/lib/export/cohorts-spreadsheet-charts';
+import { buildCohortsSpreadsheetWorkbook, ensureXlsxFilename, workbookToXlsxBlob, } from '@/lib/export/cohorts-spreadsheet';
+import { uploadStorageFileWithPublicUrl } from '@/lib/upload-storage-file';
 export type AgentSpreadsheetExtraTable = {
-  title: string
-  headers: string[]
-  rows: string[][]
-}
-
+    title: string;
+    headers: string[];
+    rows: string[][];
+};
 /** JSON-serializable workbook descriptor returned by agent export operations. */
 export type AgentSpreadsheetExportPayload = {
-  filename: string
-  title: string
-  subtitle?: string
-  sheetName?: string
-  headers: string[]
-  rows: string[][]
-  extraTables?: AgentSpreadsheetExtraTable[]
-  metadata?: Record<string, string>
-  charts?: SpreadsheetChartSpec[]
-}
-
-export function parseAgentSpreadsheetExport(
-  data: Record<string, unknown> | undefined,
-): AgentSpreadsheetExportPayload | null {
-  const raw = data?.spreadsheetExport
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
-
-  const record = raw as Record<string, unknown>
-  const filename = typeof record.filename === 'string' ? record.filename.trim() : ''
-  const title = typeof record.title === 'string' ? record.title.trim() : ''
-  const headers = Array.isArray(record.headers)
-    ? record.headers.filter((value): value is string => typeof value === 'string')
-    : []
-  const rows = Array.isArray(record.rows)
-    ? record.rows.flatMap((row) => {
-        if (!Array.isArray(row)) return []
-        return [row.map((cell) => (cell === null || cell === undefined ? '' : String(cell)))]
-      })
-    : []
-
-  if (!filename || !title || headers.length === 0) return null
-
-  const subtitle = typeof record.subtitle === 'string' ? record.subtitle : undefined
-  const sheetName = typeof record.sheetName === 'string' ? record.sheetName : undefined
-
-  const extraTables = Array.isArray(record.extraTables)
-    ? record.extraTables.flatMap((table) => {
-        if (!table || typeof table !== 'object' || Array.isArray(table)) return []
-        const entry = table as Record<string, unknown>
-        const tableTitle = typeof entry.title === 'string' ? entry.title : ''
-        const tableHeaders = Array.isArray(entry.headers)
-          ? entry.headers.filter((value): value is string => typeof value === 'string')
-          : []
-        const tableRows = Array.isArray(entry.rows)
-          ? entry.rows.flatMap((row) => {
-              if (!Array.isArray(row)) return []
-              return [row.map((cell) => (cell === null || cell === undefined ? '' : String(cell)))]
-            })
-          : []
-        if (!tableTitle || tableHeaders.length === 0) return []
-        return [{ title: tableTitle, headers: tableHeaders, rows: tableRows }]
-      })
-    : undefined
-
-  const metadata =
-    record.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata)
-      ? Object.fromEntries(
-          Object.entries(record.metadata as Record<string, unknown>).flatMap(([key, value]) => {
+    filename: string;
+    title: string;
+    subtitle?: string;
+    sheetName?: string;
+    headers: string[];
+    rows: string[][];
+    extraTables?: AgentSpreadsheetExtraTable[];
+    metadata?: Record<string, string>;
+    charts?: SpreadsheetChartSpec[];
+};
+export function parseAgentSpreadsheetExport(data: Record<string, unknown> | undefined): AgentSpreadsheetExportPayload | null {
+    const raw = data?.spreadsheetExport;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+        return null;
+    const record = raw as Record<string, unknown>;
+    const filename = typeof record.filename === 'string' ? record.filename.trim() : '';
+    const title = typeof record.title === 'string' ? record.title.trim() : '';
+    const headers = Array.isArray(record.headers)
+        ? record.headers.filter((value): value is string => typeof value === 'string')
+        : [];
+    const rows = Array.isArray(record.rows)
+        ? record.rows.flatMap((row) => {
+            if (!Array.isArray(row))
+                return [];
+            return [row.map((cell) => (cell === null || cell === undefined ? '' : String(cell)))];
+        })
+        : [];
+    if (!filename || !title || headers.length === 0)
+        return null;
+    const subtitle = typeof record.subtitle === 'string' ? record.subtitle : undefined;
+    const sheetName = typeof record.sheetName === 'string' ? record.sheetName : undefined;
+    const extraTables = Array.isArray(record.extraTables)
+        ? record.extraTables.flatMap((table) => {
+            if (!table || typeof table !== 'object' || Array.isArray(table))
+                return [];
+            const entry = table as Record<string, unknown>;
+            const tableTitle = typeof entry.title === 'string' ? entry.title : '';
+            const tableHeaders = Array.isArray(entry.headers)
+                ? entry.headers.filter((value): value is string => typeof value === 'string')
+                : [];
+            const tableRows = Array.isArray(entry.rows)
+                ? entry.rows.flatMap((row) => {
+                    if (!Array.isArray(row))
+                        return [];
+                    return [row.map((cell) => (cell === null || cell === undefined ? '' : String(cell)))];
+                })
+                : [];
+            if (!tableTitle || tableHeaders.length === 0)
+                return [];
+            return [{ title: tableTitle, headers: tableHeaders, rows: tableRows }];
+        })
+        : undefined;
+    const metadata = record.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata)
+        ? Object.fromEntries(Object.entries(record.metadata as Record<string, unknown>).flatMap(([key, value]) => {
             if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
-              return []
+                return [];
             }
-            return [[key, String(value)]]
-          }),
-        )
-      : undefined
-
-  const charts = Array.isArray(record.charts) ? (record.charts as SpreadsheetChartSpec[]) : undefined
-
-  return {
-    filename: ensureXlsxFilename(filename),
-    title,
-    subtitle,
-    sheetName,
-    headers,
-    rows,
-    extraTables,
-    metadata,
-    charts,
-  }
+            return [[key, String(value)]];
+        }))
+        : undefined;
+    const charts = Array.isArray(record.charts) ? (record.charts as SpreadsheetChartSpec[]) : undefined;
+    return {
+        filename: ensureXlsxFilename(filename),
+        title,
+        subtitle,
+        sheetName,
+        headers,
+        rows,
+        extraTables,
+        metadata,
+        charts,
+    };
 }
-
-export function parseStoredSpreadsheetExport(
-  data: Record<string, unknown> | undefined,
-): AgentStoredAttachment | null {
-  const raw = data?.storedExport
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
-  const record = raw as Record<string, unknown>
-  const id = typeof record.id === 'string' ? record.id : null
-  const name = typeof record.name === 'string' ? record.name : null
-  const storageId = typeof record.storageId === 'string' ? record.storageId : null
-  if (!id || !name || !storageId) return null
-
-  return {
-    id,
-    name,
-    mimeType:
-      typeof record.mimeType === 'string'
-        ? record.mimeType
-        : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    sizeLabel: typeof record.sizeLabel === 'string' ? record.sizeLabel : '—',
-    excerpt: typeof record.excerpt === 'string' ? record.excerpt : 'Excel export',
-    extractionStatus: 'ready',
-    storageId,
-    url: typeof record.url === 'string' ? record.url : undefined,
-  }
+export function parseStoredSpreadsheetExport(data: Record<string, unknown> | undefined): AgentStoredAttachment | null {
+    const raw = data?.storedExport;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+        return null;
+    const record = raw as Record<string, unknown>;
+    const id = typeof record.id === 'string' ? record.id : null;
+    const name = typeof record.name === 'string' ? record.name : null;
+    const storageId = typeof record.storageId === 'string' ? record.storageId : null;
+    if (!id || !name || !storageId)
+        return null;
+    return {
+        id,
+        name,
+        mimeType: typeof record.mimeType === 'string'
+            ? record.mimeType
+            : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        sizeLabel: typeof record.sizeLabel === 'string' ? record.sizeLabel : '—',
+        excerpt: typeof record.excerpt === 'string' ? record.excerpt : 'Excel export',
+        extractionStatus: 'ready',
+        storageId,
+        url: typeof record.url === 'string' ? record.url : undefined,
+    };
 }
-
-export async function buildSpreadsheetBlobFromPayload(
-  payload: AgentSpreadsheetExportPayload,
-): Promise<Blob> {
-  const workbook = await buildCohortsSpreadsheetWorkbook({
-    title: payload.title,
-    subtitle: payload.subtitle,
-    sheetName: payload.sheetName,
-    headers: payload.headers,
-    rows: payload.rows,
-    extraTables: payload.extraTables,
-    metadata: payload.metadata,
-    charts: payload.charts,
-  })
-  return workbookToXlsxBlob(workbook)
+export async function buildSpreadsheetBlobFromPayload(payload: AgentSpreadsheetExportPayload): Promise<Blob> {
+    const workbook = await buildCohortsSpreadsheetWorkbook({
+        title: payload.title,
+        subtitle: payload.subtitle,
+        sheetName: payload.sheetName,
+        headers: payload.headers,
+        rows: payload.rows,
+        extraTables: payload.extraTables,
+        metadata: payload.metadata,
+        charts: payload.charts,
+    });
+    return workbookToXlsxBlob(workbook);
 }
-
-export async function downloadAgentSpreadsheetExport(
-  payload: AgentSpreadsheetExportPayload,
-): Promise<void> {
-  const blob = await buildSpreadsheetBlobFromPayload(payload)
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = ensureXlsxFilename(payload.filename)
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+export async function downloadAgentSpreadsheetExport(payload: AgentSpreadsheetExportPayload): Promise<void> {
+    const blob = await buildSpreadsheetBlobFromPayload(payload);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = ensureXlsxFilename(payload.filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
-
 export type PersistAgentSpreadsheetExportArgs = {
-  payload: AgentSpreadsheetExportPayload
-  generateUploadUrl: () => Promise<{ url: string; key: string; storageId?: string }>
-  syncMetadata: (args: { key: string }) => Promise<unknown>
-  getPublicUrl: (args: { storageId: string }) => Promise<{ url: string | null }>
-}
-
-export async function persistAgentSpreadsheetExport(
-  args: PersistAgentSpreadsheetExportArgs,
-): Promise<AgentStoredAttachment> {
-  const filename = ensureXlsxFilename(args.payload.filename)
-  const blob = await buildSpreadsheetBlobFromPayload(args.payload)
-  const file = new File([blob], filename, {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  })
-
-  const { storageId, url } = await uploadStorageFileWithPublicUrl({
-    file,
-    contentType: file.type,
-    generateUploadUrl: args.generateUploadUrl,
-    syncMetadata: args.syncMetadata,
-    getPublicUrl: args.getPublicUrl,
-  })
-
-  const sizeLabel =
-    file.size >= 1024 * 1024
-      ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
-      : `${Math.max(1, Math.round(file.size / 1024))} KB`
-
-  return {
-    id: `export-${Date.now()}`,
-    name: filename,
-    mimeType: file.type,
-    sizeLabel,
-    excerpt: args.payload.subtitle ?? args.payload.title,
-    extractionStatus: 'ready',
-    storageId,
-    url: url ?? undefined,
-  }
+    payload: AgentSpreadsheetExportPayload;
+    generateUploadUrl: () => Promise<{
+        url: string;
+        key: string;
+        storageId?: string;
+    }>;
+    syncMetadata: (args: {
+        key: string;
+    }) => Promise<unknown>;
+    getPublicUrl: (args: {
+        storageId: string;
+    }) => Promise<{
+        url: string | null;
+    }>;
+};
+export async function persistAgentSpreadsheetExport(args: PersistAgentSpreadsheetExportArgs): Promise<AgentStoredAttachment> {
+    const filename = ensureXlsxFilename(args.payload.filename);
+    const blob = await buildSpreadsheetBlobFromPayload(args.payload);
+    const file = new File([blob], filename, {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const { storageId, url } = await uploadStorageFileWithPublicUrl({
+        file,
+        contentType: file.type,
+        generateUploadUrl: args.generateUploadUrl,
+        syncMetadata: args.syncMetadata,
+        getPublicUrl: args.getPublicUrl,
+    });
+    const sizeLabel = file.size >= 1024 * 1024
+        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+        : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+    return {
+        id: `export-${Date.now()}`,
+        name: filename,
+        mimeType: file.type,
+        sizeLabel,
+        excerpt: args.payload.subtitle ?? args.payload.title,
+        extractionStatus: 'ready',
+        storageId,
+        url: url ?? undefined,
+    };
 }

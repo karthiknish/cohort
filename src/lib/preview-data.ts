@@ -8,6 +8,5 @@
  * For new code, prefer importing from '@/lib/preview-data' which resolves
  * to the index.ts barrel export.
  */
-
 // Re-export everything from the modular structure
-export * from './preview-data/index'
+export * from './preview-data/index';

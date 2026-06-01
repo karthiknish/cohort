@@ -1,53 +1,29 @@
-'use client'
-
-import { useCallback } from 'react'
-import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu'
-import type { Table } from '@tanstack/react-table'
-import { Settings2 } from 'lucide-react'
-
-import { Button } from '@/shared/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/shared/ui/dropdown-menu'
-
+'use client';
+import { useCallback } from 'react';
+import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
+import type { Table } from '@tanstack/react-table';
+import { Settings2 } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, } from '@/shared/ui/dropdown-menu';
 interface DataTableViewOptionsProps<TData> {
-  table: Table<TData>
+    table: Table<TData>;
 }
-
-type ColumnVisibilityOptionColumn<TData> = ReturnType<Table<TData>['getAllColumns']>[number]
-
-function ColumnVisibilityOption<TData>({ column }: { column: ColumnVisibilityOptionColumn<TData> }) {
-  const handleCheckedChange = useCallback((value: boolean | 'indeterminate') => {
-    column.toggleVisibility(!!value)
-  }, [column])
-
-  return (
-    <DropdownMenuCheckboxItem
-      className="capitalize"
-      checked={column.getIsVisible()}
-      onCheckedChange={handleCheckedChange}
-    >
+type ColumnVisibilityOptionColumn<TData> = ReturnType<Table<TData>['getAllColumns']>[number];
+function ColumnVisibilityOption<TData>({ column }: {
+    column: ColumnVisibilityOptionColumn<TData>;
+}) {
+    const handleCheckedChange = (value: boolean | 'indeterminate') => {
+        column.toggleVisibility(!!value);
+    };
+    return (<DropdownMenuCheckboxItem className="capitalize" checked={column.getIsVisible()} onCheckedChange={handleCheckedChange}>
       {column.id}
-    </DropdownMenuCheckboxItem>
-  )
+    </DropdownMenuCheckboxItem>);
 }
-
-export function DataTableViewOptions<TData>({
-  table,
-}: DataTableViewOptionsProps<TData>) {
-  return (
-    <DropdownMenu>
+export function DataTableViewOptions<TData>({ table, }: DataTableViewOptionsProps<TData>) {
+    return (<DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="ml-auto hidden h-8 lg:flex"
-        >
-          <Settings2 className="mr-2 size-4" />
+        <Button variant="outline" size="sm" className="ml-auto hidden h-8 lg:flex">
+          <Settings2 className="mr-2 size-4"/>
           View
         </Button>
       </DropdownMenuTrigger>
@@ -55,13 +31,10 @@ export function DataTableViewOptions<TData>({
         <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {table
-          .getAllColumns()
-          .flatMap((column) =>
-            typeof column.accessorFn !== 'undefined' && column.getCanHide()
-              ? [<ColumnVisibilityOption key={column.id} column={column} />]
-              : [],
-          )}
+            .getAllColumns()
+            .flatMap((column) => typeof column.accessorFn !== 'undefined' && column.getCanHide()
+            ? [<ColumnVisibilityOption key={column.id} column={column}/>]
+            : [])}
       </DropdownMenuContent>
-    </DropdownMenu>
-  )
+    </DropdownMenu>);
 }

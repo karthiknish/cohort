@@ -1,57 +1,35 @@
 // =============================================================================
 // GOOGLE ADS APP PROMOTION SECTION
 // =============================================================================
-
-'use client'
-
-import { useCallback, type ChangeEvent } from 'react'
-
-import { Label } from '@/shared/ui/label'
-import { Input } from '@/shared/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Smartphone, Store, Play } from 'lucide-react'
-import { GOOGLE_BIDDING_STRATEGIES, APP_CAMPAIGN_SUBTYPES, APP_STORES } from './types'
-import type { GoogleObjectiveComponentProps } from './types'
-
+'use client';
+import { useCallback, type ChangeEvent } from 'react';
+import { Label } from '@/shared/ui/label';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Smartphone, Store, Play } from 'lucide-react';
+import { GOOGLE_BIDDING_STRATEGIES, APP_CAMPAIGN_SUBTYPES, APP_STORES } from './types';
+import type { GoogleObjectiveComponentProps } from './types';
 export function GoogleAppPromotionSection({ formData, onChange, disabled }: GoogleObjectiveComponentProps) {
-  const biddingStrategies = GOOGLE_BIDDING_STRATEGIES['APP_PROMOTION'] || []
-
-  const handleAppStoreChange = useCallback(
-    (value: string) => {
-      onChange({ appStore: value as 'GOOGLE_PLAY' | 'APPLE_APP_STORE' })
-    },
-    [onChange]
-  )
-
-  const handleAppIdChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      onChange({ appId: event.target.value })
-    },
-    [onChange]
-  )
-
-  const handleCampaignSubtypeChange = useCallback(
-    (value: string) => {
-      onChange({ appCampaignSubtype: value })
-    },
-    [onChange]
-  )
-
-  const handleBiddingStrategyChange = useCallback(
-    (value: string) => {
-      onChange({ biddingStrategyType: value })
-    },
-    [onChange]
-  )
-
-  return (
-    <div className="space-y-6">
+    const biddingStrategies = GOOGLE_BIDDING_STRATEGIES['APP_PROMOTION'] || [];
+    const handleAppStoreChange = (value: string) => {
+        onChange({ appStore: value as 'GOOGLE_PLAY' | 'APPLE_APP_STORE' });
+    };
+    const handleAppIdChange = (event: ChangeEvent<HTMLInputElement>) => {
+        onChange({ appId: event.target.value });
+    };
+    const handleCampaignSubtypeChange = (value: string) => {
+        onChange({ appCampaignSubtype: value });
+    };
+    const handleBiddingStrategyChange = (value: string) => {
+        onChange({ biddingStrategyType: value });
+    };
+    return (<div className="space-y-6">
       {/* App Information */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Smartphone className="size-4 text-secondary" />
+            <Smartphone className="size-4 text-secondary"/>
             App Information
           </CardTitle>
           <CardDescription>
@@ -62,30 +40,20 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
           {/* App Store */}
           <div className="space-y-2">
             <Label htmlFor="app-store">App Store</Label>
-            <Select
-              value={formData.appStore}
-              onValueChange={handleAppStoreChange}
-              disabled={disabled}
-            >
+            <Select value={formData.appStore} onValueChange={handleAppStoreChange} disabled={disabled}>
               <SelectTrigger id="app-store">
-                <SelectValue placeholder="Select app store" />
+                <SelectValue placeholder="Select app store"/>
               </SelectTrigger>
               <SelectContent>
-                {APP_STORES.map((store) => (
-                  <SelectItem key={store.value} value={store.value}>
+                {APP_STORES.map((store) => (<SelectItem key={store.value} value={store.value}>
                     <div className="flex items-center gap-2">
-                      {store.value === 'GOOGLE_PLAY' ? (
-                        <Play className="size-4" />
-                      ) : (
-                        <Store className="size-4" />
-                      )}
+                      {store.value === 'GOOGLE_PLAY' ? (<Play className="size-4"/>) : (<Store className="size-4"/>)}
                       <div className="flex flex-col items-start">
                         <span>{store.label}</span>
                         <span className="text-xs text-muted-foreground">{store.description}</span>
                       </div>
                     </div>
-                  </SelectItem>
-                ))}
+                  </SelectItem>))}
               </SelectContent>
             </Select>
           </div>
@@ -93,17 +61,11 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
           {/* App ID */}
           <div className="space-y-2">
             <Label htmlFor="app-id">App ID</Label>
-            <Input
-              id="app-id"
-              placeholder={formData.appStore === 'APPLE_APP_STORE' ? '1234567890' : 'com.example.app'}
-              value={formData.appId || ''}
-              onChange={handleAppIdChange}
-              disabled={disabled}
-            />
+            <Input id="app-id" placeholder={formData.appStore === 'APPLE_APP_STORE' ? '1234567890' : 'com.example.app'} value={formData.appId || ''} onChange={handleAppIdChange} disabled={disabled}/>
             <p className="text-xs text-muted-foreground">
-              {formData.appStore === 'APPLE_APP_STORE' 
-                ? 'App Store ID (numeric)' 
-                : 'Package name (e.g., com.example.app)'}
+              {formData.appStore === 'APPLE_APP_STORE'
+            ? 'App Store ID (numeric)'
+            : 'Package name (e.g., com.example.app)'}
             </p>
           </div>
         </CardContent>
@@ -120,23 +82,17 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
         <CardContent>
           <div className="space-y-2">
             <Label htmlFor="campaign-subtype">Campaign Type</Label>
-            <Select
-              value={formData.appCampaignSubtype}
-              onValueChange={handleCampaignSubtypeChange}
-              disabled={disabled}
-            >
+            <Select value={formData.appCampaignSubtype} onValueChange={handleCampaignSubtypeChange} disabled={disabled}>
               <SelectTrigger id="campaign-subtype">
-                <SelectValue placeholder="Select campaign type" />
+                <SelectValue placeholder="Select campaign type"/>
               </SelectTrigger>
               <SelectContent>
-                {APP_CAMPAIGN_SUBTYPES.map((subtype) => (
-                  <SelectItem key={subtype.value} value={subtype.value}>
+                {APP_CAMPAIGN_SUBTYPES.map((subtype) => (<SelectItem key={subtype.value} value={subtype.value}>
                     <div className="flex flex-col items-start">
                       <span>{subtype.label}</span>
                       <span className="text-xs text-muted-foreground">{subtype.description}</span>
                     </div>
-                  </SelectItem>
-                ))}
+                  </SelectItem>))}
               </SelectContent>
             </Select>
           </div>
@@ -154,23 +110,17 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
         <CardContent>
           <div className="space-y-2">
             <Label htmlFor="bidding-strategy">Bidding Strategy</Label>
-            <Select
-              value={formData.biddingStrategyType}
-              onValueChange={handleBiddingStrategyChange}
-              disabled={disabled}
-            >
+            <Select value={formData.biddingStrategyType} onValueChange={handleBiddingStrategyChange} disabled={disabled}>
               <SelectTrigger id="bidding-strategy">
-                <SelectValue placeholder="Select bidding strategy" />
+                <SelectValue placeholder="Select bidding strategy"/>
               </SelectTrigger>
               <SelectContent>
-                {biddingStrategies.map((strategy) => (
-                  <SelectItem key={strategy.value} value={strategy.value}>
+                {biddingStrategies.map((strategy) => (<SelectItem key={strategy.value} value={strategy.value}>
                     <div className="flex flex-col items-start">
                       <span>{strategy.label}</span>
                       <span className="text-xs text-muted-foreground">{strategy.description}</span>
                     </div>
-                  </SelectItem>
-                ))}
+                  </SelectItem>))}
               </SelectContent>
             </Select>
           </div>
@@ -181,7 +131,7 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
       <Card className="border-secondary/20 bg-secondary/5">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <Smartphone className="size-5 text-secondary flex-shrink-0 mt-0.5" />
+            <Smartphone className="size-5 text-secondary flex-shrink-0 mt-0.5"/>
             <div className="space-y-2">
               <h4 className="font-medium text-sm">App Campaign Best Practices</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
@@ -195,6 +145,5 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
           </div>
         </CardContent>
       </Card>
-    </div>
-  )
+    </div>);
 }

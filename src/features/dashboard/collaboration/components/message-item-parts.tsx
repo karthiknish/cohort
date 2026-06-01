@@ -1,176 +1,93 @@
-'use client'
-
-import { useCallback, useMemo } from 'react'
-import { LoaderCircle, SmilePlus, Reply, MoreHorizontal, Trash2 } from 'lucide-react'
-
-import { Badge } from '@/shared/ui/badge'
-import { Button } from '@/shared/ui/button'
-import { MessageReadReceipts } from './message-read-receipts'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu'
-import { Textarea } from '@/shared/ui/textarea'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/shared/ui/tooltip'
-import type { CollaborationMessage } from '@/types/collaboration'
-import { COLLABORATION_REACTIONS } from '@/constants/collaboration-reactions'
-
-import { formatRelativeTime, formatTimestamp, getInitials } from '../utils'
-
-function ReactionEmojiButton({
-  disableReactionActions,
-  emoji,
-  onReaction,
-}: {
-  disableReactionActions: boolean
-  emoji: string
-  onReaction: (emoji: string) => void
+'use client';
+import { useCallback, useMemo } from 'react';
+import { LoaderCircle, SmilePlus, Reply, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Badge } from '@/shared/ui/badge';
+import { Button } from '@/shared/ui/button';
+import { MessageReadReceipts } from './message-read-receipts';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
+import { Textarea } from '@/shared/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
+import type { CollaborationMessage } from '@/types/collaboration';
+import { COLLABORATION_REACTIONS } from '@/constants/collaboration-reactions';
+import { formatRelativeTime, formatTimestamp, getInitials } from '../utils';
+function ReactionEmojiButton({ disableReactionActions, emoji, onReaction, }: {
+    disableReactionActions: boolean;
+    emoji: string;
+    onReaction: (emoji: string) => void;
 }) {
-  const onAddReaction = useCallback(() => onReaction(emoji), [emoji, onReaction])
-
-  return (
-    <Tooltip key={emoji}>
+    const onAddReaction = () => onReaction(emoji);
+    return (<Tooltip key={emoji}>
       <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-7 text-base"
-          disabled={disableReactionActions}
-          onClick={onAddReaction}
-          aria-label={`React with ${emoji}`}
-        >
+        <Button type="button" variant="ghost" size="icon" className="size-7 text-base" disabled={disableReactionActions} onClick={onAddReaction} aria-label={`React with ${emoji}`}>
           {emoji}
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top" className="text-xs">
         React with {emoji}
       </TooltipContent>
-    </Tooltip>
-  )
+    </Tooltip>);
 }
-
-function ReactionEmojiMenuItem({
-  disableReactionActions,
-  emoji,
-  onReaction,
-}: {
-  disableReactionActions: boolean
-  emoji: string
-  onReaction: (emoji: string) => void
+function ReactionEmojiMenuItem({ disableReactionActions, emoji, onReaction, }: {
+    disableReactionActions: boolean;
+    emoji: string;
+    onReaction: (emoji: string) => void;
 }) {
-  const handleSelect = useCallback(() => onReaction(emoji), [emoji, onReaction])
-
-  return (
-    <DropdownMenuItem
-      className="flex items-center justify-center p-2 text-lg transition-transform hover:scale-110"
-      disabled={disableReactionActions}
-      onSelect={handleSelect}
-    >
+    const handleSelect = () => onReaction(emoji);
+    return (<DropdownMenuItem className="flex items-center justify-center p-2 text-lg transition-transform hover:scale-110" disabled={disableReactionActions} onSelect={handleSelect}>
       {emoji}
-    </DropdownMenuItem>
-  )
+    </DropdownMenuItem>);
 }
-
-function MessageActionMenuItem({
-  children,
-  className,
-  disabled,
-  onAction,
-}: {
-  children: React.ReactNode
-  className?: string
-  disabled: boolean
-  onAction: () => void
+function MessageActionMenuItem({ children, className, disabled, onAction, }: {
+    children: React.ReactNode;
+    className?: string;
+    disabled: boolean;
+    onAction: () => void;
 }) {
-  const handleSelect = useCallback(
-    (event: Event) => {
-      event.preventDefault()
-      onAction()
-    },
-    [onAction]
-  )
-
-  return (
-    <DropdownMenuItem className={className} disabled={disabled} onSelect={handleSelect}>
+    const handleSelect = (event: Event) => {
+        event.preventDefault();
+        onAction();
+    };
+    return (<DropdownMenuItem className={className} disabled={disabled} onSelect={handleSelect}>
       {children}
-    </DropdownMenuItem>
-  )
+    </DropdownMenuItem>);
 }
-
 export type MessageActionsPermissions = {
-  canReact: boolean
-  canManage: boolean
-}
-
+    canReact: boolean;
+    canManage: boolean;
+};
 export type MessageActionsPendingState = {
-  updating: boolean
-  deleting: boolean
-  disableReactions: boolean
-}
-
+    updating: boolean;
+    deleting: boolean;
+    disableReactions: boolean;
+};
 export interface MessageActionsBarProps {
-  message: CollaborationMessage
-  permissions: MessageActionsPermissions
-  pending: MessageActionsPendingState
-  onReaction: (emoji: string) => void
-  onReply: () => void
-  onEdit: () => void
-  onDelete: () => void
-  onCreateTask: () => void
+    message: CollaborationMessage;
+    permissions: MessageActionsPermissions;
+    pending: MessageActionsPendingState;
+    onReaction: (emoji: string) => void;
+    onReply: () => void;
+    onEdit: () => void;
+    onDelete: () => void;
+    onCreateTask: () => void;
 }
-
-export function MessageActionsBar({
-  message,
-  permissions,
-  pending,
-  onReaction,
-  onReply,
-  onEdit,
-  onDelete,
-  onCreateTask,
-}: MessageActionsBarProps) {
-  const { canReact, canManage } = permissions
-  const { updating: isUpdating, deleting: isDeleting, disableReactions: disableReactionActions } = pending
-
-  if (message.isDeleted) return null
-
-  return (
-    <div className="absolute -top-3 right-2 z-10 flex items-center gap-0.5 rounded-md border border-muted/60 bg-background p-0.5 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+export function MessageActionsBar({ message, permissions, pending, onReaction, onReply, onEdit, onDelete, onCreateTask, }: MessageActionsBarProps) {
+    const { canReact, canManage } = permissions;
+    const { updating: isUpdating, deleting: isDeleting, disableReactions: disableReactionActions } = pending;
+    if (message.isDeleted)
+        return null;
+    return (<div className="absolute -top-3 right-2 z-10 flex items-center gap-0.5 rounded-md border border-muted/60 bg-background p-0.5 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
       <TooltipProvider delayDuration={200}>
         {/* Quick Reactions */}
         {canReact &&
-          COLLABORATION_REACTIONS.slice(0, 3).map((emoji) => (
-            <ReactionEmojiButton
-              key={emoji}
-              disableReactionActions={disableReactionActions}
-              emoji={emoji}
-              onReaction={onReaction}
-            />
-          ))}
+            COLLABORATION_REACTIONS.slice(0, 3).map((emoji) => (<ReactionEmojiButton key={emoji} disableReactionActions={disableReactionActions} emoji={emoji} onReaction={onReaction}/>))}
 
         {/* More Reactions */}
-        {canReact && (
-          <DropdownMenu>
+        {canReact && (<DropdownMenu>
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    disabled={disableReactionActions}
-                    aria-label="Add reaction"
-                  >
-                    <SmilePlus className="size-4" />
+                  <Button type="button" variant="ghost" size="icon" className="size-7" disabled={disableReactionActions} aria-label="Add reaction">
+                    <SmilePlus className="size-4"/>
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
@@ -178,35 +95,16 @@ export function MessageActionsBar({
                 Add reaction
               </TooltipContent>
             </Tooltip>
-            <DropdownMenuContent
-              align="end"
-              className="grid w-40 grid-cols-3 gap-1 p-2 text-lg"
-            >
-              {COLLABORATION_REACTIONS.map((emoji) => (
-                <ReactionEmojiMenuItem
-                  key={emoji}
-                  disableReactionActions={disableReactionActions}
-                  emoji={emoji}
-                  onReaction={onReaction}
-                />
-              ))}
+            <DropdownMenuContent align="end" className="grid w-40 grid-cols-3 gap-1 p-2 text-lg">
+              {COLLABORATION_REACTIONS.map((emoji) => (<ReactionEmojiMenuItem key={emoji} disableReactionActions={disableReactionActions} emoji={emoji} onReaction={onReaction}/>))}
             </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+          </DropdownMenu>)}
 
         {/* Reply Button */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7"
-              onClick={onReply}
-              disabled={isUpdating || isDeleting}
-              aria-label="Reply in thread"
-            >
-              <Reply className="size-4" />
+            <Button type="button" variant="ghost" size="icon" className="size-7" onClick={onReply} disabled={isUpdating || isDeleting} aria-label="Reply in thread">
+              <Reply className="size-4"/>
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top" className="text-xs">
@@ -215,20 +113,12 @@ export function MessageActionsBar({
         </Tooltip>
 
         {/* More Actions */}
-        {canManage && (
-          <DropdownMenu>
+        {canManage && (<DropdownMenu>
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    disabled={isUpdating || isDeleting}
-                    aria-label="More actions"
-                  >
-                    <MoreHorizontal className="size-4" />
+                  <Button type="button" variant="ghost" size="icon" className="size-7" disabled={isUpdating || isDeleting} aria-label="More actions">
+                    <MoreHorizontal className="size-4"/>
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
@@ -243,53 +133,31 @@ export function MessageActionsBar({
               <MessageActionMenuItem disabled={isUpdating || isDeleting} onAction={onCreateTask}>
                 Create task from message
               </MessageActionMenuItem>
-              <MessageActionMenuItem
-                className="text-destructive focus:text-destructive"
-                disabled={isDeleting || isUpdating}
-                onAction={onDelete}
-              >
-                <Trash2 className="mr-2 size-4" />
+              <MessageActionMenuItem className="text-destructive focus:text-destructive" disabled={isDeleting || isUpdating} onAction={onDelete}>
+                <Trash2 className="mr-2 size-4"/>
                 Delete message
               </MessageActionMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+          </DropdownMenu>)}
       </TooltipProvider>
-    </div>
-  )
+    </div>);
 }
-
 export interface ReplyActionsBarProps {
-  message: CollaborationMessage
-  canManage: boolean
-  isUpdating: boolean
-  isDeleting: boolean
-  onEdit: () => void
-  onDelete: () => void
+    message: CollaborationMessage;
+    canManage: boolean;
+    isUpdating: boolean;
+    isDeleting: boolean;
+    onEdit: () => void;
+    onDelete: () => void;
 }
-
-export function ReplyActionsBar({
-  message,
-  canManage,
-  isUpdating,
-  isDeleting,
-  onEdit,
-  onDelete,
-}: ReplyActionsBarProps) {
-  if (message.isDeleted || !canManage) return null
-
-  return (
-    <div className="absolute right-2 top-2 flex items-center gap-0.5">
+export function ReplyActionsBar({ message, canManage, isUpdating, isDeleting, onEdit, onDelete, }: ReplyActionsBarProps) {
+    if (message.isDeleted || !canManage)
+        return null;
+    return (<div className="absolute right-2 top-2 flex items-center gap-0.5">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-6 p-0 text-muted-foreground"
-            disabled={isUpdating || isDeleting}
-          >
-            <MoreHorizontal className="size-4" />
+          <Button type="button" variant="ghost" size="icon" className="size-6 p-0 text-muted-foreground" disabled={isUpdating || isDeleting}>
+            <MoreHorizontal className="size-4"/>
             <span className="sr-only">Message actions</span>
           </Button>
         </DropdownMenuTrigger>
@@ -297,198 +165,113 @@ export function ReplyActionsBar({
           <MessageActionMenuItem disabled={isUpdating || isDeleting} onAction={onEdit}>
             Edit message
           </MessageActionMenuItem>
-          <MessageActionMenuItem
-            className="text-destructive focus:text-destructive"
-            disabled={isDeleting || isUpdating}
-            onAction={onDelete}
-          >
+          <MessageActionMenuItem className="text-destructive focus:text-destructive" disabled={isDeleting || isUpdating} onAction={onDelete}>
             Delete message
           </MessageActionMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
-  )
+    </div>);
 }
-
 export interface MessageEditFormProps {
-  value: string
-  onChange: (value: string) => void
-  onConfirm: () => void
-  onCancel: () => void
-  isUpdating: boolean
-  editingPreview: string
+    value: string;
+    onChange: (value: string) => void;
+    onConfirm: () => void;
+    onCancel: () => void;
+    isUpdating: boolean;
+    editingPreview: string;
 }
-
-export function MessageEditForm({
-  value,
-  onChange,
-  onConfirm,
-  onCancel,
-  isUpdating,
-  editingPreview,
-}: MessageEditFormProps) {
-  const onEditContentChange = useCallback(
-    (event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value),
-    [onChange]
-  )
-
-  return (
-    <div className="space-y-2">
-      <Textarea
-        value={value}
-        onChange={onEditContentChange}
-        disabled={isUpdating}
-        maxLength={2000}
-        className="min-h-[88px]"
-      />
+export function MessageEditForm({ value, onChange, onConfirm, onCancel, isUpdating, editingPreview, }: MessageEditFormProps) {
+    const onEditContentChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value);
+    return (<div className="space-y-2">
+      <Textarea value={value} onChange={onEditContentChange} disabled={isUpdating} maxLength={2000} className="min-h-[88px]"/>
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span>Editing message</span>
         {editingPreview && <span className="truncate">&quot;{editingPreview}&quot;</span>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          onClick={onConfirm}
-          disabled={isUpdating || value.trim().length === 0}
-        >
-          {isUpdating ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
+        <Button type="button" size="sm" onClick={onConfirm} disabled={isUpdating || value.trim().length === 0}>
+          {isUpdating ? <LoaderCircle className="mr-2 size-4 animate-spin"/> : null}
           Save changes
         </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={onCancel}
-          disabled={isUpdating}
-        >
+        <Button type="button" size="sm" variant="ghost" onClick={onCancel} disabled={isUpdating}>
           Cancel
         </Button>
       </div>
-    </div>
-  )
+    </div>);
 }
-
 export interface MessageHeaderProps {
-  senderName: string
-  senderRole?: string | null
-  createdAt?: string | null
-  isEdited?: boolean
-  isDeleted?: boolean
-  messageId?: string
-  currentUserId?: string | null
-  readBy?: string[]
-  channelMemberCount?: number
-  readByNames?: string[]
+    senderName: string;
+    senderRole?: string | null;
+    createdAt?: string | null;
+    isEdited?: boolean;
+    isDeleted?: boolean;
+    messageId?: string;
+    currentUserId?: string | null;
+    readBy?: string[];
+    channelMemberCount?: number;
+    readByNames?: string[];
 }
-
-export function MessageHeader({
-  senderName,
-  senderRole,
-  createdAt,
-  isEdited,
-  isDeleted,
-  messageId,
-  currentUserId,
-  readBy,
-  channelMemberCount,
-  readByNames,
-}: MessageHeaderProps) {
-  const readReceiptMessage = useMemo(
-    () => ({
-      id: messageId ?? '',
-      channelType: 'team' as const,
-      clientId: null,
-      projectId: null,
-      content: '',
-      senderId: currentUserId ?? null,
-      senderName,
-      senderRole: senderRole ?? null,
-      createdAt: createdAt ?? null,
-      updatedAt: null,
-      isEdited: Boolean(isEdited),
-      deletedAt: null,
-      deletedBy: null,
-      readBy,
-      deliveredTo: [],
-      isDeleted: isDeleted ?? false,
-    }),
-    [
-      createdAt,
-      currentUserId,
-      isDeleted,
-      isEdited,
-      messageId,
-      readBy,
-      senderName,
-      senderRole,
-    ]
-  )
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
+export function MessageHeader({ senderName, senderRole, createdAt, isEdited, isDeleted, messageId, currentUserId, readBy, channelMemberCount, readByNames, }: MessageHeaderProps) {
+    const readReceiptMessage = ({
+        id: messageId ?? '',
+        channelType: 'team' as const,
+        clientId: null,
+        projectId: null,
+        content: '',
+        senderId: currentUserId ?? null,
+        senderName,
+        senderRole: senderRole ?? null,
+        createdAt: createdAt ?? null,
+        updatedAt: null,
+        isEdited: Boolean(isEdited),
+        deletedAt: null,
+        deletedBy: null,
+        readBy,
+        deliveredTo: [],
+        isDeleted: isDeleted ?? false,
+    });
+    return (<div className="flex flex-wrap items-center gap-2">
       <p className="text-sm font-semibold text-foreground">{senderName}</p>
-      {senderRole && (
-        <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+      {senderRole && (<Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
           {senderRole}
-        </Badge>
-      )}
+        </Badge>)}
       <span className="text-xs text-muted-foreground">
         {formatTimestamp(createdAt ?? null)}
         {isEdited && !isDeleted ? ' · edited' : ''}
       </span>
-      {messageId && currentUserId && (
-        <MessageReadReceipts
-          message={readReceiptMessage}
-          currentUserId={currentUserId}
-          channelMemberCount={channelMemberCount}
-          readByNames={readByNames}
-        />
-      )}
-    </div>
-  )
+      {messageId && currentUserId && (<MessageReadReceipts message={readReceiptMessage} currentUserId={currentUserId} channelMemberCount={channelMemberCount} readByNames={readByNames}/>)}
+    </div>);
 }
-
 export interface MessageAvatarProps {
-  senderName: string
-  isReply?: boolean
+    senderName: string;
+    isReply?: boolean;
 }
-
 export function MessageAvatar({ senderName, isReply = false }: MessageAvatarProps) {
-  const avatarClass = isReply
-    ? 'flex size-6 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-[10px] font-medium text-primary ring-2 ring-background'
-    : 'flex size-9 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-medium text-primary ring-2 ring-background'
-
-  return <span className={avatarClass}>{getInitials(senderName)}</span>
+    const avatarClass = isReply
+        ? 'flex size-6 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-[10px] font-medium text-primary ring-2 ring-background'
+        : 'flex size-9 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-medium text-primary ring-2 ring-background';
+    return <span className={avatarClass}>{getInitials(senderName)}</span>;
 }
-
 export interface DeletedMessageInfoProps {
-  deletedBy?: string | null
-  deletedAt?: string | null
+    deletedBy?: string | null;
+    deletedAt?: string | null;
 }
-
 export function DeletedMessageInfo({ deletedBy, deletedAt }: DeletedMessageInfoProps) {
-  return (
-    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+    return (<div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
       <span>Deleted by {deletedBy ?? 'teammate'}</span>
       {deletedAt && <span>· {formatRelativeTime(deletedAt)}</span>}
-    </div>
-  )
+    </div>);
 }
-
 export interface DeletingOverlayProps {
-  isDeleting: boolean
+    isDeleting: boolean;
 }
-
 export function DeletingOverlay({ isDeleting }: DeletingOverlayProps) {
-  if (!isDeleting) return null
-
-  return (
-    <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/80 backdrop-blur-sm">
+    if (!isDeleting)
+        return null;
+    return (<div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/80 backdrop-blur-sm">
       <div className="flex items-center gap-2 text-xs text-destructive">
-        <LoaderCircle className="size-4 animate-spin" />
+        <LoaderCircle className="size-4 animate-spin"/>
         <span>Removing message…</span>
       </div>
-    </div>
-  )
+    </div>);
 }

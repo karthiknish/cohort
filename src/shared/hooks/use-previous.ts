@@ -1,11 +1,12 @@
-'use client'
-
-import { useRef } from 'react'
-
+'use client';
+import { useEffect, useRef, useState } from 'react';
 /** Returns the previous render's `value` (undefined on first render). */
 export function usePrevious<T>(value: T): T | undefined {
-  const ref = useRef<T | undefined>(undefined)
-  const previous = ref.current
-  ref.current = value
-  return previous
+    const valueRef = useRef(value);
+    const [previous, setPrevious] = useState<T | undefined>(undefined);
+    useEffect(() => {
+        setPrevious(valueRef.current);
+        valueRef.current = value;
+    }, [value]);
+    return previous;
 }

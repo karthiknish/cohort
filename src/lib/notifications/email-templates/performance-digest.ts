@@ -1,27 +1,24 @@
-import { wrapEmailTemplate } from './utils'
-import { EMAIL_COLORS } from '@/lib/colors'
-
+import { wrapEmailTemplate } from './utils';
+import { EMAIL_COLORS } from '@/lib/colors';
 export interface PerformanceDigestTemplateParams {
-    workspaceName: string
-    period: string // e.g., "Weekly Summary (Jan 1 - Jan 7)"
+    workspaceName: string;
+    period: string; // e.g., "Weekly Summary (Jan 1 - Jan 7)"
     metrics: {
-        spend: string
-        revenue: string
-        roas: string
-        conversions: string
-        cpa: string
-    }
+        spend: string;
+        revenue: string;
+        roas: string;
+        conversions: string;
+        cpa: string;
+    };
     topPlatforms: Array<{
-        name: string
-        roas: string
-        spend: string
-    }>
-    suggestionsCount: number
+        name: string;
+        roas: string;
+        spend: string;
+    }>;
+    suggestionsCount: number;
 }
-
 export function performanceDigestTemplate(params: PerformanceDigestTemplateParams): string {
-    const { workspaceName, period, metrics, topPlatforms, suggestionsCount } = params
-
+    const { workspaceName, period, metrics, topPlatforms, suggestionsCount } = params;
     const platformItems = topPlatforms.map(p => `
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid ${EMAIL_COLORS.lightBorder};">
             <div style="font-weight: 600; color: ${EMAIL_COLORS.heading};">${p.name}</div>
@@ -30,8 +27,7 @@ export function performanceDigestTemplate(params: PerformanceDigestTemplateParam
                 <div style="font-size: 13px; color: ${EMAIL_COLORS.subtle};">${p.spend} spend</div>
             </div>
         </div>
-    `).join('')
-
+    `).join('');
     return wrapEmailTemplate(`
         <div style="margin-bottom: 32px;">
             <div style="font-size: 12px; font-weight: 700; color: ${EMAIL_COLORS.subtle}; text-transform: uppercase; letter-spacing: 0.22em; margin-bottom: 10px;">
@@ -83,5 +79,5 @@ export function performanceDigestTemplate(params: PerformanceDigestTemplateParam
                 Open Performance Lab
             </a>
         </div>
-    `)
+    `);
 }

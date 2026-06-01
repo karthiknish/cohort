@@ -1,122 +1,77 @@
-'use client'
-
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useQuery } from 'convex/react'
-import {
-  ChevronRight,
-  Home,
-  Briefcase,
-  ListChecks,
-  MessageSquare,
-  BarChart3,
-  FileText,
-  Megaphone,
-  Activity,
-  Users,
-  Video,
-} from 'lucide-react'
-import { useState } from 'react'
-
-import { proposalsApi } from '@/lib/convex-api'
-import { useClientContext } from '@/shared/contexts/client-context'
-import { useAuth } from '@/shared/contexts/auth-context'
-import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
-import { isFeatureEnabled } from '@/lib/features'
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/shared/ui/breadcrumb'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu'
-import { Button } from '@/shared/ui/button'
-import { cn } from '@/lib/utils'
-
+'use client';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useQuery } from 'convex/react';
+import { ChevronRight, Home, Briefcase, ListChecks, MessageSquare, BarChart3, FileText, Megaphone, Activity, Users, Video, } from 'lucide-react';
+import { useState } from 'react';
+import { proposalsApi } from '@/lib/convex-api';
+import { useClientContext } from '@/shared/contexts/client-context';
+import { useAuth } from '@/shared/contexts/auth-context';
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';
+import { isFeatureEnabled } from '@/lib/features';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, } from '@/shared/ui/breadcrumb';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
+import { Button } from '@/shared/ui/button';
+import { cn } from '@/lib/utils';
 interface NavBreadcrumbItem {
-  label: string
-  href?: string
-  icon?: React.ComponentType<{ className?: string }>
-  isCurrent?: boolean
+    label: string;
+    href?: string;
+    icon?: React.ComponentType<{
+        className?: string;
+    }>;
+    isCurrent?: boolean;
 }
-
 export function NavigationBreadcrumbs() {
-  const pathname = usePathname()
-  const searchParams = useUrlSearchParams()
-  const { selectedClient } = useClientContext()
-  const { user } = useAuth()
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const pathSegments = pathname.replace('/dashboard/', '').split('/').filter(Boolean)
-  const proposalId = pathSegments[0] === 'proposals' && pathSegments[1] && pathSegments[1] !== 'analytics' && pathSegments[1] !== 'viewer'
-    ? pathSegments[1]
-    : null
-  const workspaceId = user?.agencyId ?? null
-
-  const proposalRow = useQuery(
-    proposalsApi.getByLegacyId,
-    workspaceId && proposalId ? { workspaceId, legacyId: proposalId } : 'skip'
-  )
-
-  // Don't render if feature flag is disabled or not on dashboard pages
-  if (
-    !isFeatureEnabled('BREADCRUMBS') ||
-    (!pathname.startsWith('/dashboard') && !pathname.startsWith('/for-you'))
-  ) {
-    return null
-  }
-
-  const items = generateBreadcrumbItems(pathname, searchParams, {
-    id: selectedClient?.id ?? null,
-    name: selectedClient?.name ?? null
-  }, {
-    proposalTitle: proposalRow?.clientName ?? proposalRow?.legacyId ?? null,
-  })
-
-  if (items.length <= 1) {
-    return null
-  }
-
-  return (
-    <div className="flex items-center gap-2 py-2">
+    const pathname = usePathname();
+    const searchParams = useUrlSearchParams();
+    const { selectedClient } = useClientContext();
+    const { user } = useAuth();
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const pathSegments = pathname.replace('/dashboard/', '').split('/').filter(Boolean);
+    const proposalId = pathSegments[0] === 'proposals' && pathSegments[1] && pathSegments[1] !== 'analytics' && pathSegments[1] !== 'viewer'
+        ? pathSegments[1]
+        : null;
+    const workspaceId = user?.agencyId ?? null;
+    const proposalRow = useQuery(proposalsApi.getByLegacyId, workspaceId && proposalId ? { workspaceId, legacyId: proposalId } : 'skip');
+    // Don't render if feature flag is disabled or not on dashboard pages
+    if (!isFeatureEnabled('BREADCRUMBS') ||
+        (!pathname.startsWith('/dashboard') && !pathname.startsWith('/for-you'))) {
+        return null;
+    }
+    const items = generateBreadcrumbItems(pathname, searchParams, {
+        id: selectedClient?.id ?? null,
+        name: selectedClient?.name ?? null
+    }, {
+        proposalTitle: proposalRow?.clientName ?? proposalRow?.legacyId ?? null,
+    });
+    if (items.length <= 1) {
+        return null;
+    }
+    return (<div className="flex items-center gap-2 py-2">
       <Breadcrumb aria-label="Breadcrumb" className="hidden md:flex">
         <BreadcrumbList>
-          {items.map((item, index) => (
-            <div key={`${item.label}-${item.href ?? 'current'}`} className="flex items-center">
+          {items.map((item, index) => (<div key={`${item.label}-${item.href ?? 'current'}`} className="flex items-center">
               <BreadcrumbItem>
-                {item.href && !item.isCurrent ? (
-                  <BreadcrumbLink asChild>
+                {item.href && !item.isCurrent ? (<BreadcrumbLink asChild>
                     <Link prefetch href={item.href} className="flex items-center gap-1 text-sm">
                       {item.icon && (() => {
-                        const Icon = item.icon
-                        return <Icon className="size-4" />
-                      })()}
+                    const Icon = item.icon;
+                    return <Icon className="size-4"/>;
+                })()}
                       <span className="truncate max-w-[120px]">{item.label}</span>
                     </Link>
-                  </BreadcrumbLink>
-                ) : (
-                  <BreadcrumbPage className="flex items-center gap-1 text-sm">
+                  </BreadcrumbLink>) : (<BreadcrumbPage className="flex items-center gap-1 text-sm">
                     {item.icon && (() => {
-                      const Icon = item.icon
-                      return <Icon className="size-4" />
-                    })()}
+                    const Icon = item.icon;
+                    return <Icon className="size-4"/>;
+                })()}
                     <span className="truncate max-w-[120px]">{item.label}</span>
-                  </BreadcrumbPage>
-                )}
+                  </BreadcrumbPage>)}
               </BreadcrumbItem>
-              {index < items.length - 1 && (
-                <BreadcrumbSeparator>
-                  <ChevronRight className="size-4" />
-                </BreadcrumbSeparator>
-              )}
-            </div>
-          ))}
+              {index < items.length - 1 && (<BreadcrumbSeparator>
+                  <ChevronRight className="size-4"/>
+                </BreadcrumbSeparator>)}
+            </div>))}
         </BreadcrumbList>
       </Breadcrumb>
 
@@ -124,302 +79,262 @@ export function NavigationBreadcrumbs() {
       <div className="md:hidden">
         <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2"
-              aria-label="Open breadcrumb trail"
-            >
+            <Button type="button" variant="ghost" size="sm" className="h-8 px-2" aria-label="Open breadcrumb trail">
               <div className="flex items-center gap-1">
                 {items[items.length - 2]?.icon && (() => {
-                  const secondToLastItem = items[items.length - 2]
-                  if (secondToLastItem?.icon) {
-                    const Icon = secondToLastItem.icon
-                    return <Icon className="size-4" />
-                  }
-                  return null
-                })()}
-                <ChevronRight className="size-3" />
+            const secondToLastItem = items[items.length - 2];
+            if (secondToLastItem?.icon) {
+                const Icon = secondToLastItem.icon;
+                return <Icon className="size-4"/>;
+            }
+            return null;
+        })()}
+                <ChevronRight className="size-3"/>
                 {items[items.length - 1]?.icon && (() => {
-                  const lastItem = items[items.length - 1]
-                  if (lastItem?.icon) {
-                    const Icon = lastItem.icon
-                    return <Icon className="size-4" />
-                  }
-                  return null
-                })()}
+            const lastItem = items[items.length - 1];
+            if (lastItem?.icon) {
+                const Icon = lastItem.icon;
+                return <Icon className="size-4"/>;
+            }
+            return null;
+        })()}
                 <span className="text-sm font-medium">{items[items.length - 1]?.label}</span>
               </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
-            {items.map((item) => (
-              <DropdownMenuItem key={`${item.label}-${item.href ?? 'current'}`} asChild>
-                {item.href && !item.isCurrent ? (
-                  <Link prefetch href={item.href} className="flex items-center gap-2">
+            {items.map((item) => (<DropdownMenuItem key={`${item.label}-${item.href ?? 'current'}`} asChild>
+                {item.href && !item.isCurrent ? (<Link prefetch href={item.href} className="flex items-center gap-2">
                     {item.icon && (() => {
-                      const Icon = item.icon
-                      return <Icon className="size-4" />
-                    })()}
+                    const Icon = item.icon;
+                    return <Icon className="size-4"/>;
+                })()}
                     <span className={cn("truncate", item.isCurrent && "font-medium")}>
                       {item.label}
                     </span>
-                  </Link>
-                ) : (
-                  <div className="flex items-center gap-2">
+                  </Link>) : (<div className="flex items-center gap-2">
                     {item.icon && (() => {
-                      const Icon = item.icon
-                      return <Icon className="size-4" />
-                    })()}
+                    const Icon = item.icon;
+                    return <Icon className="size-4"/>;
+                })()}
                     <span className="truncate font-medium">{item.label}</span>
-                  </div>
-                )}
-              </DropdownMenuItem>
-            ))}
+                  </div>)}
+              </DropdownMenuItem>))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </div>
-  )
+    </div>);
 }
-
-function generateBreadcrumbItems(
-  pathname: string,
-  searchParams: URLSearchParams,
-  selectedClient: { id: string | null; name: string | null },
-  dynamicLabels: { proposalTitle: string | null }
-): NavBreadcrumbItem[] {
-  const items: NavBreadcrumbItem[] = []
-
-  if (pathname === '/for-you' || pathname.startsWith('/for-you/')) {
+function generateBreadcrumbItems(pathname: string, searchParams: URLSearchParams, selectedClient: {
+    id: string | null;
+    name: string | null;
+}, dynamicLabels: {
+    proposalTitle: string | null;
+}): NavBreadcrumbItem[] {
+    const items: NavBreadcrumbItem[] = [];
+    if (pathname === '/for-you' || pathname.startsWith('/for-you/')) {
+        items.push({
+            label: 'For You',
+            href: '/for-you',
+            icon: Activity,
+            isCurrent: pathname === '/for-you',
+        });
+        return items;
+    }
+    // Dashboard root
     items.push({
-      label: 'For You',
-      href: '/for-you',
-      icon: Activity,
-      isCurrent: pathname === '/for-you',
-    })
-    return items
-  }
-
-  // Dashboard root
-  items.push({
-    label: 'Dashboard',
-    href: '/dashboard',
-    icon: Home,
-  })
-
-  // Client context
-  if (selectedClient?.id && selectedClient?.name) {
-    items.push({
-      label: selectedClient.name,
-      href: `/dashboard?clientId=${selectedClient.id}`,
-    })
-  }
-
-  // Current page section
-  const pathSegments = pathname.replace('/dashboard/', '').split('/')
-  const currentSection = pathSegments[0]
-
-  switch (currentSection) {
-    case 'projects': {
-      items.push({
-        label: 'Projects',
-        href: '/dashboard/projects',
-        icon: Briefcase,
-      })
-
-      // Specific project context
-      const projectId = searchParams.get('projectId')
-      const projectName = searchParams.get('projectName')
-      if (projectId || projectName) {
+        label: 'Dashboard',
+        href: '/dashboard',
+        icon: Home,
+    });
+    // Client context
+    if (selectedClient?.id && selectedClient?.name) {
         items.push({
-          label: projectName || 'Project Details',
-          href: `/dashboard/projects?projectId=${projectId}&projectName=${projectName}`,
-        })
-      }
-      break
+            label: selectedClient.name,
+            href: `/dashboard?clientId=${selectedClient.id}`,
+        });
     }
-
-    case 'tasks': {
-      items.push({
-        label: 'Tasks',
-        href: '/dashboard/tasks',
-        icon: ListChecks,
-      })
-
-      // Project context for tasks
-      const taskProjectId = searchParams.get('projectId')
-      const taskProjectName = searchParams.get('projectName')
-      if (taskProjectId || taskProjectName) {
-        items.push({
-          label: taskProjectName || 'Project Tasks',
-          href: `/dashboard/tasks?projectId=${taskProjectId}&projectName=${taskProjectName}`,
-        })
-      }
-      break
-    }
-
-    case 'collaboration': {
-      items.push({
-        label: 'Collaboration',
-        href: '/dashboard/collaboration',
-        icon: MessageSquare,
-      })
-
-      // Project context for collaboration
-      const collabProjectId = searchParams.get('projectId')
-      const collabProjectName = searchParams.get('projectName')
-      if (collabProjectId || collabProjectName) {
-        items.push({
-          label: collabProjectName || 'Project Discussion',
-          href: `/dashboard/collaboration?projectId=${collabProjectId}&projectName=${collabProjectName}`,
-        })
-      }
-      break
-    }
-
-    case 'analytics':
-      items.push({
-        label: 'Analytics',
-        href: '/dashboard/analytics',
-        icon: BarChart3,
-      })
-      break
-
-    case 'proposals':
-      items.push({
-        label: 'Proposals',
-        href: '/dashboard/proposals',
-        icon: FileText,
-      })
-
-      // Sub-pages for proposals
-      if (pathSegments[1] === 'analytics') {
-        items.push({
-          label: 'Analytics',
-          isCurrent: true,
-        })
-      } else if (pathSegments[1] === 'viewer') {
-        items.push({
-          label: 'Viewer',
-          isCurrent: true,
-        })
-      } else if (pathSegments[1]) {
-        const proposalTitle = searchParams.get('proposalName') || dynamicLabels.proposalTitle || 'Proposal'
-        items.push({
-          label: proposalTitle,
-          href: `/dashboard/proposals/${pathSegments[1]}`,
-        })
-
-        if (pathSegments[2] === 'deck') {
-          items.push({
-            label: 'Deck',
-            isCurrent: true,
-          })
-        }
-      }
-      break
-
-    case 'ads': {
-      items.push({
-        label: 'Ads',
-        href: '/dashboard/ads',
-        icon: Megaphone,
-      })
-
-      // Handle campaign detail routes: /dashboard/ads/campaigns/[providerId]/[campaignId]
-      if (pathSegments[1] === 'campaigns' && pathSegments[2]) {
-        const providerId = pathSegments[2]
-        const campaignId = pathSegments[3]
-        const campaignName = searchParams.get('campaignName')
-
-        // Provider mapping
-        const providerLabels: Record<string, string> = {
-          'facebook': 'Meta',
-          'google': 'Google Ads',
-          'linkedin': 'LinkedIn',
-          'tiktok': 'TikTok',
-        }
-
-        items.push({
-          label: providerLabels[providerId] || providerId,
-          href: `/dashboard/ads?provider=${providerId}`,
-        })
-
-        if (campaignId) {
-          const isCreativePath = pathSegments[4] === 'creative' && pathSegments[5]
-          const campaignLabel = campaignName || 'Campaign details'
-
-          items.push({
-            label: campaignLabel,
-            href: isCreativePath ? `/dashboard/ads/campaigns/${providerId}/${campaignId}?${searchParams.toString()}` : undefined,
-            isCurrent: !isCreativePath,
-          })
-
-          if (isCreativePath) {
-            const creativeName = searchParams.get('creativeName')
+    // Current page section
+    const pathSegments = pathname.replace('/dashboard/', '').split('/');
+    const currentSection = pathSegments[0];
+    switch (currentSection) {
+        case 'projects': {
             items.push({
-              label: creativeName || 'Creative detail',
-              isCurrent: true,
-            })
-          }
+                label: 'Projects',
+                href: '/dashboard/projects',
+                icon: Briefcase,
+            });
+            // Specific project context
+            const projectId = searchParams.get('projectId');
+            const projectName = searchParams.get('projectName');
+            if (projectId || projectName) {
+                items.push({
+                    label: projectName || 'Project Details',
+                    href: `/dashboard/projects?projectId=${projectId}&projectName=${projectName}`,
+                });
+            }
+            break;
         }
-      }
-      break
+        case 'tasks': {
+            items.push({
+                label: 'Tasks',
+                href: '/dashboard/tasks',
+                icon: ListChecks,
+            });
+            // Project context for tasks
+            const taskProjectId = searchParams.get('projectId');
+            const taskProjectName = searchParams.get('projectName');
+            if (taskProjectId || taskProjectName) {
+                items.push({
+                    label: taskProjectName || 'Project Tasks',
+                    href: `/dashboard/tasks?projectId=${taskProjectId}&projectName=${taskProjectName}`,
+                });
+            }
+            break;
+        }
+        case 'collaboration': {
+            items.push({
+                label: 'Collaboration',
+                href: '/dashboard/collaboration',
+                icon: MessageSquare,
+            });
+            // Project context for collaboration
+            const collabProjectId = searchParams.get('projectId');
+            const collabProjectName = searchParams.get('projectName');
+            if (collabProjectId || collabProjectName) {
+                items.push({
+                    label: collabProjectName || 'Project Discussion',
+                    href: `/dashboard/collaboration?projectId=${collabProjectId}&projectName=${collabProjectName}`,
+                });
+            }
+            break;
+        }
+        case 'analytics':
+            items.push({
+                label: 'Analytics',
+                href: '/dashboard/analytics',
+                icon: BarChart3,
+            });
+            break;
+        case 'proposals':
+            items.push({
+                label: 'Proposals',
+                href: '/dashboard/proposals',
+                icon: FileText,
+            });
+            // Sub-pages for proposals
+            if (pathSegments[1] === 'analytics') {
+                items.push({
+                    label: 'Analytics',
+                    isCurrent: true,
+                });
+            }
+            else if (pathSegments[1] === 'viewer') {
+                items.push({
+                    label: 'Viewer',
+                    isCurrent: true,
+                });
+            }
+            else if (pathSegments[1]) {
+                const proposalTitle = searchParams.get('proposalName') || dynamicLabels.proposalTitle || 'Proposal';
+                items.push({
+                    label: proposalTitle,
+                    href: `/dashboard/proposals/${pathSegments[1]}`,
+                });
+                if (pathSegments[2] === 'deck') {
+                    items.push({
+                        label: 'Deck',
+                        isCurrent: true,
+                    });
+                }
+            }
+            break;
+        case 'ads': {
+            items.push({
+                label: 'Ads',
+                href: '/dashboard/ads',
+                icon: Megaphone,
+            });
+            // Handle campaign detail routes: /dashboard/ads/campaigns/[providerId]/[campaignId]
+            if (pathSegments[1] === 'campaigns' && pathSegments[2]) {
+                const providerId = pathSegments[2];
+                const campaignId = pathSegments[3];
+                const campaignName = searchParams.get('campaignName');
+                // Provider mapping
+                const providerLabels: Record<string, string> = {
+                    'facebook': 'Meta',
+                    'google': 'Google Ads',
+                    'linkedin': 'LinkedIn',
+                    'tiktok': 'TikTok',
+                };
+                items.push({
+                    label: providerLabels[providerId] || providerId,
+                    href: `/dashboard/ads?provider=${providerId}`,
+                });
+                if (campaignId) {
+                    const isCreativePath = pathSegments[4] === 'creative' && pathSegments[5];
+                    const campaignLabel = campaignName || 'Campaign details';
+                    items.push({
+                        label: campaignLabel,
+                        href: isCreativePath ? `/dashboard/ads/campaigns/${providerId}/${campaignId}?${searchParams.toString()}` : undefined,
+                        isCurrent: !isCreativePath,
+                    });
+                    if (isCreativePath) {
+                        const creativeName = searchParams.get('creativeName');
+                        items.push({
+                            label: creativeName || 'Creative detail',
+                            isCurrent: true,
+                        });
+                    }
+                }
+            }
+            break;
+        }
+        case 'for-you':
+            items.push({
+                label: 'For You',
+                href: '/for-you',
+                icon: Activity,
+            });
+            break;
+        case 'activity':
+            items.push({
+                label: 'For You',
+                href: '/for-you',
+                icon: Activity,
+            });
+            break;
+        case 'clients':
+            items.push({
+                label: 'Clients',
+                href: '/dashboard/clients',
+                icon: Users,
+            });
+            break;
+        case 'meetings':
+            items.push({
+                label: 'Meetings',
+                href: '/dashboard/meetings',
+                icon: Video,
+            });
+            break;
+        default:
+            // Handle other dashboard sections
+            if (currentSection) {
+                items.push({
+                    label: currentSection.charAt(0).toUpperCase() + currentSection.slice(1),
+                    isCurrent: true,
+                });
+            }
+            break;
     }
-
-    case 'for-you':
-      items.push({
-        label: 'For You',
-        href: '/for-you',
-        icon: Activity,
-      })
-      break
-
-    case 'activity':
-      items.push({
-        label: 'For You',
-        href: '/for-you',
-        icon: Activity,
-      })
-      break
-
-    case 'clients':
-      items.push({
-        label: 'Clients',
-        href: '/dashboard/clients',
-        icon: Users,
-      })
-      break
-
-    case 'meetings':
-      items.push({
-        label: 'Meetings',
-        href: '/dashboard/meetings',
-        icon: Video,
-      })
-      break
-
-    default:
-      // Handle other dashboard sections
-      if (currentSection) {
-        items.push({
-          label: currentSection.charAt(0).toUpperCase() + currentSection.slice(1),
-          isCurrent: true,
-        })
-      }
-      break
-  }
-
-  // Mark the last item as current
-  if (items.length > 0) {
-    const lastItem = items[items.length - 1]
-    if (lastItem) {
-      lastItem.isCurrent = true
-      delete lastItem.href
+    // Mark the last item as current
+    if (items.length > 0) {
+        const lastItem = items[items.length - 1];
+        if (lastItem) {
+            lastItem.isCurrent = true;
+            delete lastItem.href;
+        }
     }
-  }
-
-  return items
+    return items;
 }

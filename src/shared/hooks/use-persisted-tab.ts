@@ -1,143 +1,104 @@
-'use client'
-
-import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-
-import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
-
+'use client';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';
 type UsePersistedTabOptions<TValue extends string> = {
-  /** Query param key to use in the URL (default: "tab") */
-  param?: string
-  /** Default tab value */
-  defaultValue: TValue
-  /** Allowed values (used to validate URL/localStorage) */
-  allowedValues: readonly TValue[]
-  /** Optional namespace to avoid collisions across pages/components */
-  storageNamespace?: string
-  /** Persist to URL query param (default: true) */
-  syncToUrl?: boolean
-}
-
+    /** Query param key to use in the URL (default: "tab") */
+    param?: string;
+    /** Default tab value */
+    defaultValue: TValue;
+    /** Allowed values (used to validate URL/localStorage) */
+    allowedValues: readonly TValue[];
+    /** Optional namespace to avoid collisions across pages/components */
+    storageNamespace?: string;
+    /** Persist to URL query param (default: true) */
+    syncToUrl?: boolean;
+};
 type UsePersistedTabReturn<TValue extends string> = {
-  value: TValue
-  setValue: (next: TValue) => void
+    value: TValue;
+    setValue: (next: TValue) => void;
+};
+function isAllowed<TValue extends string>(allowed: readonly TValue[], candidate: string | null): candidate is TValue {
+    if (!candidate)
+        return false;
+    return (allowed as readonly string[]).includes(candidate);
 }
-
-function isAllowed<TValue extends string>(
-  allowed: readonly TValue[],
-  candidate: string | null,
-): candidate is TValue {
-  if (!candidate) return false
-  return (allowed as readonly string[]).includes(candidate)
-}
-
 // Stable deep equality check for arrays
 function subscribeClientMounted(onStoreChange: () => void) {
-  onStoreChange()
-  return () => undefined
+    onStoreChange();
+    return () => undefined;
 }
-
-export function usePersistedTab<TValue extends string>(
-  options: UsePersistedTabOptions<TValue>,
-): UsePersistedTabReturn<TValue> {
-  const {
-    param = 'tab',
-    defaultValue,
-    allowedValues,
-    storageNamespace,
-    syncToUrl = true,
-  } = options
-
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useUrlSearchParams()
-
-  const storageKey = useMemo(() => {
-    const base = storageNamespace ? `${storageNamespace}:` : ''
-    return `${base}${pathname}:${param}`
-  }, [pathname, param, storageNamespace])
-
-  const [pickedValue, setPickedValue] = useState<TValue | null>(null)
-  const hasMounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  )
-
-  const allowedValuesRef = useRef(allowedValues)
-  const defaultValueRef = useRef(defaultValue)
-
-  allowedValuesRef.current = allowedValues
-  defaultValueRef.current = defaultValue
-
-  const hydratedValue = useSyncExternalStore(
-    subscribeClientMounted,
-    () => {
-      const fromUrl = searchParams.get(param)
-      if (isAllowed(allowedValuesRef.current, fromUrl)) {
-        return fromUrl
-      }
-
-      try {
-        const fromStorage = window.localStorage.getItem(storageKey)
-        if (isAllowed(allowedValuesRef.current, fromStorage)) {
-          return fromStorage
+export function usePersistedTab<TValue extends string>(options: UsePersistedTabOptions<TValue>): UsePersistedTabReturn<TValue> {
+    const { param = 'tab', defaultValue, allowedValues, storageNamespace, syncToUrl = true, } = options;
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useUrlSearchParams();
+    const storageKey = (() => {
+        const base = storageNamespace ? `${storageNamespace}:` : '';
+        return `${base}${pathname}:${param}`;
+    })();
+    const [pickedValue, setPickedValue] = useState<TValue | null>(null);
+    const hasMounted = useSyncExternalStore(() => () => { }, () => true, () => false);
+    const allowedValuesRef = useRef(allowedValues);
+    const defaultValueRef = useRef(defaultValue);
+    useEffect(() => {
+        allowedValuesRef.current = allowedValues;
+        defaultValueRef.current = defaultValue;
+    }, [allowedValues, defaultValue]);
+    const hydratedValue = useSyncExternalStore(subscribeClientMounted, () => {
+        const fromUrl = searchParams.get(param);
+        if (isAllowed(allowedValuesRef.current, fromUrl)) {
+            return fromUrl;
         }
-      } catch {
-        // ignore storage errors
-      }
-
-      return defaultValueRef.current
-    },
-    () => defaultValueRef.current,
-  )
-
-  const value = useMemo(() => {
-    const candidate = hasMounted ? (pickedValue ?? hydratedValue) : defaultValue
-    return isAllowed(allowedValues, candidate) ? candidate : defaultValue
-  }, [allowedValues, defaultValue, hasMounted, hydratedValue, pickedValue])
-
-  const isSyncingToUrlRef = useRef(false)
-
-  const setValue = useCallback(
-    (next: TValue) => {
-      const currentAllowed = allowedValuesRef.current
-      const currentDefault = defaultValueRef.current
-
-      if (!isAllowed(currentAllowed, next)) {
-        setPickedValue(currentDefault)
-        return
-      }
-
-      setPickedValue((prev) => {
-        if (prev === next) return prev
-        return next
-      })
-
-      try {
-        window.localStorage.setItem(storageKey, next)
-      } catch {
-        // ignore storage errors
-      }
-
-      if (!syncToUrl) return
-      if (isSyncingToUrlRef.current) return
-
-      const currentParamValue = searchParams.get(param)
-      if (currentParamValue === next) return
-
-      isSyncingToUrlRef.current = true
-      const params = new URLSearchParams(searchParams.toString())
-      params.set(param, next)
-      const queryString = params.toString()
-
-      setTimeout(() => {
-        router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
-        isSyncingToUrlRef.current = false
-      }, 0)
-    },
-    [param, pathname, router, searchParams, storageKey, syncToUrl],
-  )
-
-  return { value, setValue }
+        try {
+            const fromStorage = window.localStorage.getItem(storageKey);
+            if (isAllowed(allowedValuesRef.current, fromStorage)) {
+                return fromStorage;
+            }
+        }
+        catch {
+            // ignore storage errors
+        }
+        return defaultValueRef.current;
+    }, () => defaultValueRef.current);
+    const value = (() => {
+        const candidate = hasMounted ? (pickedValue ?? hydratedValue) : defaultValue;
+        return isAllowed(allowedValues, candidate) ? candidate : defaultValue;
+    })();
+    const isSyncingToUrlRef = useRef(false);
+    const setValue = (next: TValue) => {
+        const currentAllowed = allowedValuesRef.current;
+        const currentDefault = defaultValueRef.current;
+        if (!isAllowed(currentAllowed, next)) {
+            setPickedValue(currentDefault);
+            return;
+        }
+        setPickedValue((prev) => {
+            if (prev === next)
+                return prev;
+            return next;
+        });
+        try {
+            window.localStorage.setItem(storageKey, next);
+        }
+        catch {
+            // ignore storage errors
+        }
+        if (!syncToUrl)
+            return;
+        if (isSyncingToUrlRef.current)
+            return;
+        const currentParamValue = searchParams.get(param);
+        if (currentParamValue === next)
+            return;
+        isSyncingToUrlRef.current = true;
+        const params = new URLSearchParams(searchParams.toString());
+        params.set(param, next);
+        const queryString = params.toString();
+        setTimeout(() => {
+            router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+            isSyncingToUrlRef.current = false;
+        }, 0);
+    };
+    return { value, setValue };
 }

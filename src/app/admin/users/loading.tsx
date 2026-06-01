@@ -1,5 +1,4 @@
-import { AdminTablePageSkeleton } from '@/features/admin/components/admin-table-page-skeleton'
-
+import { AdminTablePageSkeleton } from '@/features/admin/components/admin-table-page-skeleton';
 export default function AdminUsersLoading() {
-  return <AdminTablePageSkeleton />
+    return <AdminTablePageSkeleton />;
 }

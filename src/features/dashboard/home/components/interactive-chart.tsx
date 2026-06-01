@@ -1,350 +1,241 @@
-'use client'
-
-import { buildInteractiveChartExportSpec } from '@/lib/export/cohorts-spreadsheet-charts'
-import { exportCohortsSpreadsheetRows } from '@/lib/export/cohorts-spreadsheet'
-import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useState, useCallback, useMemo } from 'react'
-import {
-  Line,
-  LineChart,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from '@/shared/ui/recharts-dynamic'
-import { Card, CardContent } from '@/shared/ui/card'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { cn } from '@/lib/utils'
-import { useToast } from '@/shared/ui/use-toast'
-import { CHART_COLORS, GRAYS } from '@/lib/colors'
-import {
-  InteractiveChartHeader,
-  InteractiveChartRenderer,
-} from './interactive-chart-sections'
-
-export type ChartType = 'line' | 'bar' | 'area' | 'pie'
-export type TimeRange = '7d' | '14d' | '30d' | '90d' | '12m' | 'all'
-
+'use client';
+import { buildInteractiveChartExportSpec } from '@/lib/export/cohorts-spreadsheet-charts';
+import { exportCohortsSpreadsheetRows } from '@/lib/export/cohorts-spreadsheet';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useState, useCallback, useMemo } from 'react';
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, } from '@/shared/ui/recharts-dynamic';
+import { Card, CardContent } from '@/shared/ui/card';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/shared/ui/use-toast';
+import { CHART_COLORS, GRAYS } from '@/lib/colors';
+import { InteractiveChartHeader, InteractiveChartRenderer, } from './interactive-chart-sections';
+export type ChartType = 'line' | 'bar' | 'area' | 'pie';
+export type TimeRange = '7d' | '14d' | '30d' | '90d' | '12m' | 'all';
 export interface ChartDataPoint {
-  date: string
-  value: number
-  label?: string
-  category?: string
-  [key: string]: string | number | undefined
+    date: string;
+    value: number;
+    label?: string;
+    category?: string;
+    [key: string]: string | number | undefined;
 }
-
 interface InteractiveChartProps {
-  data: ChartDataPoint[]
-  title?: string
-  description?: string
-  dataKey?: string
-  xAxisKey?: string
-  valueFormatter?: (value: number) => string
-  className?: string
-  height?: number
-  onExport?: (format: 'excel' | 'png' | 'json') => void
-  showExport?: boolean
-  showRefresh?: boolean
-  onRefresh?: () => void
-  isRefreshing?: boolean
+    data: ChartDataPoint[];
+    title?: string;
+    description?: string;
+    dataKey?: string;
+    xAxisKey?: string;
+    valueFormatter?: (value: number) => string;
+    className?: string;
+    height?: number;
+    onExport?: (format: 'excel' | 'png' | 'json') => void;
+    showExport?: boolean;
+    showRefresh?: boolean;
+    onRefresh?: () => void;
+    isRefreshing?: boolean;
 }
-
-const DEFAULT_VALUE_FORMATTER = (value: number) => value.toString()
-const AXIS_TICK_STYLE = { fontSize: 11 } as const
-const ACTIVE_DOT_STYLE = { r: 5 } as const
-
-function TooltipMetricLine({
-  metric,
-  value,
-}: {
-  metric?: { color: string; label: string }
-  value?: number | string
+const DEFAULT_VALUE_FORMATTER = (value: number) => value.toString();
+const AXIS_TICK_STYLE = { fontSize: 11 } as const;
+const ACTIVE_DOT_STYLE = { r: 5 } as const;
+function TooltipMetricLine({ metric, value, }: {
+    metric?: {
+        color: string;
+        label: string;
+    };
+    value?: number | string;
 }) {
-  const labelStyle = useMemo(() => ({ color: metric?.color }), [metric?.color])
-
-  return (
-    <p style={labelStyle}>
+    const labelStyle = ({ color: metric?.color });
+    return (<p style={labelStyle}>
       {metric?.label}: {value}
-    </p>
-  )
+    </p>);
 }
-
-function MetricTooltipContent({
-  active,
-  payload,
-  metrics,
-}: {
-  active?: boolean
-  payload?: Array<{ name?: string; value?: number | string }>
-  metrics: Array<{ key: string; label: string; color: string }>
+function MetricTooltipContent({ active, payload, metrics, }: {
+    active?: boolean;
+    payload?: Array<{
+        name?: string;
+        value?: number | string;
+    }>;
+    metrics: Array<{
+        key: string;
+        label: string;
+        color: string;
+    }>;
 }) {
-    if (!active || !payload?.length) return null
-
-  return (
-    <div className="bg-background border rounded-lg px-2 py-1 shadow-sm">
+    if (!active || !payload?.length)
+        return null;
+    return (<div className="bg-background border rounded-lg px-2 py-1 shadow-sm">
       {payload.map((entry, index: number) => {
-        const typedEntry = entry as { name?: string; value?: number | string }
-
-        return <TooltipMetricLine key={typedEntry.name} metric={metrics[index]} value={typedEntry.value} />
-      })}
-    </div>
-  )
+            const typedEntry = entry as {
+                name?: string;
+                value?: number | string;
+            };
+            return <TooltipMetricLine key={typedEntry.name} metric={metrics[index]} value={typedEntry.value}/>;
+        })}
+    </div>);
 }
-
 /**
  * Interactive chart component with multiple chart types and export
  */
-export function InteractiveChart({
-  data,
-  title = 'Performance Chart',
-  description,
-  dataKey = 'value',
-  xAxisKey = 'date',
-  valueFormatter = DEFAULT_VALUE_FORMATTER,
-  className,
-  height = 350,
-  onExport,
-  showExport = true,
-  showRefresh = false,
-  onRefresh,
-  isRefreshing = false,
-}: InteractiveChartProps) {
-  const { toast } = useToast()
-  const [chartType, setChartType] = useState<ChartType>('line')
-  const [timeRange, setTimeRange] = useState<TimeRange>('30d')
-
-  // Filter data by time range
-  const filteredData = useMemo(() => {
-    if (timeRange === 'all') return data
-
-    const now = new Date()
-    const ranges: Record<TimeRange, number> = {
-      '7d': 7,
-      '14d': 14,
-      '30d': 30,
-      '90d': 90,
-      '12m': 365,
-      'all': 0,
-    }
-
-    const days = ranges[timeRange]
-    const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
-
-    return data.filter((d) => {
-      const dateValue = d[xAxisKey]
-      if (!dateValue) return false
-      const date = new Date(dateValue)
-      return date >= cutoffDate
-    })
-  }, [data, timeRange, xAxisKey])
-
-  // Aggregate data by category for pie charts
-  const categoryData = useMemo(() => {
-    const categoryMap = new Map<string, number>()
-    filteredData.forEach((d) => {
-      const category = d.category || 'Other'
-      categoryMap.set(category, (categoryMap.get(category) ?? 0) + (d[dataKey] as number))
-    })
-    return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value }))
-  }, [filteredData, dataKey])
-
-  // Handle export
-  const handleExport = useCallback(
-    async (format: 'excel' | 'png' | 'json') => {
-      if (!onExport) return
-
-      try {
-        if (format === 'excel') {
-          const chartRows =
-            chartType === 'pie'
-              ? categoryData.map((entry) => ({ name: entry.name, value: entry.value }))
-              : filteredData
-
-          const chartXAxisKey = chartType === 'pie' ? 'name' : xAxisKey
-          const chartDataKey = chartType === 'pie' ? 'value' : dataKey
-          const exportChartKind = chartType === 'area' ? 'area' : chartType
-
-          const chartSpec = buildInteractiveChartExportSpec({
-            title,
-            kind: exportChartKind,
-            xAxisKey: String(chartXAxisKey),
-            dataKey: String(chartDataKey),
-            rows: chartRows as Array<Record<string, unknown>>,
-          })
-
-          await exportCohortsSpreadsheetRows({
-            filename: `${title.replace(/\s+/g, '-').toLowerCase()}-${timeRange}.xlsx`,
-            title,
-            subtitle: `Time range: ${timeRange}`,
-            sheetName: title.slice(0, 31),
-            headers: [String(chartXAxisKey), String(chartDataKey)],
-            rows: chartRows.map((d) => [
-              String((d as Record<string, unknown>)[chartXAxisKey as string] ?? ''),
-              String((d as Record<string, unknown>)[chartDataKey as string] ?? ''),
-            ]),
-            charts: chartSpec ? [chartSpec] : [],
-          })
-
-          toast({ title: 'Exported as Excel', description: 'Your data has been downloaded.' })
-        } else if (format === 'json') {
-          // Export as JSON
-          const jsonContent = JSON.stringify(filteredData, null, 2)
-          const blob = new Blob([jsonContent], { type: 'application/json' })
-          const url = URL.createObjectURL(blob)
-          const link = document.createElement('a')
-          link.href = url
-          link.download = `${title.replace(/\s+/g, '-').toLowerCase()}-${timeRange}.json`
-          link.click()
-          URL.revokeObjectURL(url)
-
-          toast({ title: 'Exported as JSON', description: 'Your data has been downloaded.' })
-        } else if (format === 'png') {
-          // Export chart as PNG using html2canvas
-          const container = document.querySelector('.chart-container')
-          if (container) {
-            // This would require html2canvas library
-            toast({
-              title: 'PNG export',
-              description: 'Chart image download requires html2canvas library.',
-            })
-          }
+export function InteractiveChart({ data, title = 'Performance Chart', description, dataKey = 'value', xAxisKey = 'date', valueFormatter = DEFAULT_VALUE_FORMATTER, className, height = 350, onExport, showExport = true, showRefresh = false, onRefresh, isRefreshing = false, }: InteractiveChartProps) {
+    const { toast } = useToast();
+    const [chartType, setChartType] = useState<ChartType>('line');
+    const [timeRange, setTimeRange] = useState<TimeRange>('30d');
+    // Filter data by time range
+    const filteredData = (() => {
+        if (timeRange === 'all')
+            return data;
+        const now = new Date();
+        const ranges: Record<TimeRange, number> = {
+            '7d': 7,
+            '14d': 14,
+            '30d': 30,
+            '90d': 90,
+            '12m': 365,
+            'all': 0,
+        };
+        const days = ranges[timeRange];
+        const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        return data.filter((d) => {
+            const dateValue = d[xAxisKey];
+            if (!dateValue)
+                return false;
+            const date = new Date(dateValue);
+            return date >= cutoffDate;
+        });
+    })();
+    // Aggregate data by category for pie charts
+    const categoryData = (() => {
+        const categoryMap = new Map<string, number>();
+        filteredData.forEach((d) => {
+            const category = d.category || 'Other';
+            categoryMap.set(category, (categoryMap.get(category) ?? 0) + (d[dataKey] as number));
+        });
+        return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value }));
+    })();
+    // Handle export
+    const handleExport = async (format: 'excel' | 'png' | 'json') => {
+        if (!onExport)
+            return;
+        try {
+            if (format === 'excel') {
+                const chartRows = chartType === 'pie'
+                    ? categoryData.map((entry) => ({ name: entry.name, value: entry.value }))
+                    : filteredData;
+                const chartXAxisKey = chartType === 'pie' ? 'name' : xAxisKey;
+                const chartDataKey = chartType === 'pie' ? 'value' : dataKey;
+                const exportChartKind = chartType === 'area' ? 'area' : chartType;
+                const chartSpec = buildInteractiveChartExportSpec({
+                    title,
+                    kind: exportChartKind,
+                    xAxisKey: String(chartXAxisKey),
+                    dataKey: String(chartDataKey),
+                    rows: chartRows as Array<Record<string, unknown>>,
+                });
+                await exportCohortsSpreadsheetRows({
+                    filename: `${title.replace(/\s+/g, '-').toLowerCase()}-${timeRange}.xlsx`,
+                    title,
+                    subtitle: `Time range: ${timeRange}`,
+                    sheetName: title.slice(0, 31),
+                    headers: [String(chartXAxisKey), String(chartDataKey)],
+                    rows: chartRows.map((d) => [
+                        String((d as Record<string, unknown>)[chartXAxisKey as string] ?? ''),
+                        String((d as Record<string, unknown>)[chartDataKey as string] ?? ''),
+                    ]),
+                    charts: chartSpec ? [chartSpec] : [],
+                });
+                toast({ title: 'Exported as Excel', description: 'Your data has been downloaded.' });
+            }
+            else if (format === 'json') {
+                // Export as JSON
+                const jsonContent = JSON.stringify(filteredData, null, 2);
+                const blob = new Blob([jsonContent], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${title.replace(/\s+/g, '-').toLowerCase()}-${timeRange}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+                toast({ title: 'Exported as JSON', description: 'Your data has been downloaded.' });
+            }
+            else if (format === 'png') {
+                // Export chart as PNG using html2canvas
+                const container = document.querySelector('.chart-container');
+                if (container) {
+                    // This would require html2canvas library
+                    toast({
+                        title: 'PNG export',
+                        description: 'Chart image download requires html2canvas library.',
+                    });
+                }
+            }
         }
-      } catch (error) {
-        reportConvexFailure({
-        error: error,
-        context: 'InteractiveChart:handleExport',
-        title: 'Export failed',
-        fallbackMessage: 'Export failed',
-        })
-      }
-    },
-    [categoryData, chartType, filteredData, xAxisKey, dataKey, title, timeRange, onExport, toast]
-  )
-
-  return (
-    <Card className={cn('chart-container', className)}>
-      <InteractiveChartHeader
-        chartType={chartType}
-        description={description}
-        handleExport={handleExport}
-        isRefreshing={isRefreshing}
-        onRefresh={onRefresh}
-        setChartType={setChartType}
-        setTimeRange={setTimeRange}
-        showExport={showExport && !!onExport}
-        showRefresh={showRefresh}
-        timeRange={timeRange}
-        title={title}
-      />
+        catch (error) {
+            reportConvexFailure({
+                error: error,
+                context: 'InteractiveChart:handleExport',
+                title: 'Export failed',
+                fallbackMessage: 'Export failed',
+            });
+        }
+    };
+    return (<Card className={cn('chart-container', className)}>
+      <InteractiveChartHeader chartType={chartType} description={description} handleExport={handleExport} isRefreshing={isRefreshing} onRefresh={onRefresh} setChartType={setChartType} setTimeRange={setTimeRange} showExport={showExport && !!onExport} showRefresh={showRefresh} timeRange={timeRange} title={title}/>
 
       <CardContent className="pt-4">
-        <InteractiveChartRenderer
-          categoryData={categoryData}
-          chartType={chartType}
-          dataKey={dataKey}
-          filteredData={filteredData}
-          height={height}
-          valueFormatter={valueFormatter}
-          xAxisKey={xAxisKey}
-        />
+        <InteractiveChartRenderer categoryData={categoryData} chartType={chartType} dataKey={dataKey} filteredData={filteredData} height={height} valueFormatter={valueFormatter} xAxisKey={xAxisKey}/>
       </CardContent>
-    </Card>
-  )
+    </Card>);
 }
-
 /**
  * Mini sparkline chart for displaying trends in small spaces
  */
-export function SparklineChart({
-  data,
-  valueKey = 'value',
-  width = 100,
-  height = 40,
-  className,
-  trend,
-}: {
-  data: ChartDataPoint[]
-  valueKey?: string
-  width?: number
-  height?: number
-  className?: string
-  trend?: 'up' | 'down' | 'neutral'
+export function SparklineChart({ data, valueKey = 'value', width = 100, height = 40, className, trend, }: {
+    data: ChartDataPoint[];
+    valueKey?: string;
+    width?: number;
+    height?: number;
+    className?: string;
+    trend?: 'up' | 'down' | 'neutral';
 }) {
-  const color = trend === 'up' ? CHART_COLORS.metrics.revenue : trend === 'down' ? CHART_COLORS.metrics.spend : GRAYS[500]
-
-  return (
-    <div className={cn('inline-block', className)}>
+    const color = trend === 'up' ? CHART_COLORS.metrics.revenue : trend === 'down' ? CHART_COLORS.metrics.spend : GRAYS[500];
+    return (<div className={cn('inline-block', className)}>
       <ResponsiveContainer width={width} height={height}>
         <LineChart data={data}>
-          <Line
-            type="monotone"
-            dataKey={valueKey}
-            stroke={color}
-            strokeWidth={2}
-            dot={false}
-            activeDot={false}
-          />
+          <Line type="monotone" dataKey={valueKey} stroke={color} strokeWidth={2} dot={false} activeDot={false}/>
         </LineChart>
       </ResponsiveContainer>
-    </div>
-  )
+    </div>);
 }
-
 /**
  * Multi-metric comparison chart
  */
-export function MultiMetricChart({
-  data,
-  metrics,
-  xAxisKey = 'date',
-  height = 300,
-  className,
-}: {
-  data: ChartDataPoint[]
-  metrics: Array<{ key: string; label: string; color: string }>
-  xAxisKey?: string
-  height?: number
-  className?: string
+export function MultiMetricChart({ data, metrics, xAxisKey = 'date', height = 300, className, }: {
+    data: ChartDataPoint[];
+    metrics: Array<{
+        key: string;
+        label: string;
+        color: string;
+    }>;
+    xAxisKey?: string;
+    height?: number;
+    className?: string;
 }) {
-  const renderTooltipContent = useCallback(
-    (props: { active?: boolean; payload?: Array<{ name?: string; value?: number | string }> }) => (
-      <MetricTooltipContent {...props} metrics={metrics} />
-    ),
-    [metrics],
-  )
-    const activeDot = useMemo(() => ({ r: 5 }), [])
-
-  return (
-    <ResponsiveContainer width="100%" height={height} className={className}>
+    const renderTooltipContent = (props: {
+        active?: boolean;
+        payload?: Array<{
+            name?: string;
+            value?: number | string;
+        }>;
+    }) => (<MetricTooltipContent {...props} metrics={metrics}/>);
+    const activeDot = ({ r: 5 });
+    return (<ResponsiveContainer width="100%" height={height} className={className}>
       <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.2} />
-        <XAxis
-          dataKey={xAxisKey}
-          tick={AXIS_TICK_STYLE}
-          stroke="var(--muted-foreground)"
-          strokeOpacity={0.5}
-        />
-        <YAxis
-          tick={AXIS_TICK_STYLE}
-          stroke="var(--muted-foreground)"
-          strokeOpacity={0.5}
-        />
-        <Tooltip content={renderTooltipContent} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.2}/>
+        <XAxis dataKey={xAxisKey} tick={AXIS_TICK_STYLE} stroke="var(--muted-foreground)" strokeOpacity={0.5}/>
+        <YAxis tick={AXIS_TICK_STYLE} stroke="var(--muted-foreground)" strokeOpacity={0.5}/>
+        <Tooltip content={renderTooltipContent}/>
         <Legend />
-        {metrics.map((metric) => (
-          <Line
-            key={metric.key}
-            type="monotone"
-            dataKey={metric.key}
-            stroke={metric.color}
-            strokeWidth={2}
-            dot={false}
-            activeDot={ACTIVE_DOT_STYLE}
-          />
-        ))}
+        {metrics.map((metric) => (<Line key={metric.key} type="monotone" dataKey={metric.key} stroke={metric.color} strokeWidth={2} dot={false} activeDot={ACTIVE_DOT_STYLE}/>))}
       </LineChart>
-    </ResponsiveContainer>
-  )
+    </ResponsiveContainer>);
 }

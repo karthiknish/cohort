@@ -26,7 +26,7 @@ export const discoverPages = action({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const socialInternal = internal as any
       const integration = await ctx.runQuery(
-        socialInternal['socialIntegrations/queries'].getSocialIntegrationInternal,
+        socialInternal['domains/marketing/socialIntegrations/queries'].getSocialIntegrationInternal,
         {
           workspaceId: args.workspaceId,
           clientId,

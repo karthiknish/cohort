@@ -1,18 +1,14 @@
 /**
  * Project Created Email Template
  */
-
-import { wrapEmailTemplate } from './utils'
-
+import { wrapEmailTemplate } from './utils';
 export interface ProjectCreatedTemplateParams {
-    projectName: string
-    clientName: string | null
-    createdBy: string | null
+    projectName: string;
+    clientName: string | null;
+    createdBy: string | null;
 }
-
 export function projectCreatedTemplate(params: ProjectCreatedTemplateParams): string {
-    const { projectName, clientName, createdBy } = params
-
+    const { projectName, clientName, createdBy } = params;
     return wrapEmailTemplate(`
     <div class="header">New Project Created</div>
     <div class="content">
@@ -24,5 +20,5 @@ export function projectCreatedTemplate(params: ProjectCreatedTemplateParams): st
       </div>
       <p>Head over to the dashboard to view project details and start collaborating.</p>
     </div>
-  `)
+  `);
 }

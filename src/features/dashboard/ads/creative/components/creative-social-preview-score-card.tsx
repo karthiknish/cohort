@@ -1,45 +1,30 @@
-'use client'
-
-import { useMemo } from 'react'
-import { LazyMotion, domAnimation, m } from '@/shared/ui/motion'
-import { Activity } from 'lucide-react'
-
-import { easings, fadeInUpVariants, transitions } from '@/lib/motion'
-import { motionLoopSeconds } from '@/lib/animation-system'
-
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
-
-import type { Creative } from './types'
-import type { CreativePerformanceSummary } from './creative-social-preview-state'
-
-const progressBarInitial: { width: number } = { width: 0 }
-const progressBarTransition = { duration: motionLoopSeconds.shimmer, ease: easings.easeOut }
-
-export function CreativeSocialPreviewScoreCard({
-  creative,
-  performanceSummary,
-  efficiencyScore,
-}: {
-  creative: Creative
-  performanceSummary: CreativePerformanceSummary
-  efficiencyScore: number
+'use client';
+import { useMemo } from 'react';
+import { LazyMotion, domAnimation, m } from '@/shared/ui/motion';
+import { Activity } from 'lucide-react';
+import { easings, fadeInUpVariants, transitions } from '@/lib/motion';
+import { motionLoopSeconds } from '@/lib/animation-system';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
+import type { Creative } from './types';
+import type { CreativePerformanceSummary } from './creative-social-preview-state';
+const progressBarInitial: {
+    width: number;
+} = { width: 0 };
+const progressBarTransition = { duration: motionLoopSeconds.shimmer, ease: easings.easeOut };
+export function CreativeSocialPreviewScoreCard({ creative, performanceSummary, efficiencyScore, }: {
+    creative: Creative;
+    performanceSummary: CreativePerformanceSummary;
+    efficiencyScore: number;
 }) {
-  const scoreCardTransition = useMemo(() => ({ ...transitions.slow, delay: 0.2 }), [])
-  const progressBarAnimate = useMemo(() => ({ width: `${efficiencyScore}%` }), [efficiencyScore])
-
-  return (
-    <LazyMotion features={domAnimation}>
-      <m.div
-        initial="hidden"
-        animate="visible"
-        variants={fadeInUpVariants}
-        transition={scoreCardTransition}
-      >
+    const scoreCardTransition = ({ ...transitions.slow, delay: 0.2 });
+    const progressBarAnimate = ({ width: `${efficiencyScore}%` });
+    return (<LazyMotion features={domAnimation}>
+      <m.div initial="hidden" animate="visible" variants={fadeInUpVariants} transition={scoreCardTransition}>
         <Card className="border border-border/60 bg-card shadow-lg rounded-[2.5rem] overflow-hidden">
           <CardHeader className="pb-4 pt-8 px-8">
             <CardTitle className="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-3 text-primary/80">
               <div className="size-6 rounded-lg bg-accent/10 flex items-center justify-center">
-                <Activity className="size-3.5 text-primary" />
+                <Activity className="size-3.5 text-primary"/>
               </div>
               The Alpha Score
             </CardTitle>
@@ -73,12 +58,7 @@ export function CreativeSocialPreviewScoreCard({
 
             <div className="space-y-3">
               <div className="h-3 w-full rounded-full bg-accent/5 border border-accent/5 p-0.5 overflow-hidden">
-                <m.div
-                  initial={progressBarInitial}
-                  animate={progressBarAnimate}
-                  transition={progressBarTransition}
-                  className="h-full bg-info rounded-full shadow-sm"
-                />
+                <m.div initial={progressBarInitial} animate={progressBarAnimate} transition={progressBarTransition} className="h-full bg-info rounded-full shadow-sm"/>
               </div>
               <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-30">
                 <span>Underperforming</span>
@@ -93,6 +73,5 @@ export function CreativeSocialPreviewScoreCard({
           </CardContent>
         </Card>
       </m.div>
-    </LazyMotion>
-  )
+    </LazyMotion>);
 }

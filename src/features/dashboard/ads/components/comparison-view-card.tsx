@@ -1,40 +1,24 @@
-'use client'
-
-import { useMemo } from 'react'
-
-import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
-
-import {
-    ComparisonViewCardShell,
-    ComparisonViewLoadingCard,
-} from './comparison-view-card-sections'
-
-import type { PeriodComparison, ProviderComparison } from '../hooks/use-metrics-comparison'
-
+'use client';
+import { useMemo } from 'react';
+import { usePersistedTab } from '@/shared/hooks/use-persisted-tab';
+import { ComparisonViewCardShell, ComparisonViewLoadingCard, } from './comparison-view-card-sections';
+import type { PeriodComparison, ProviderComparison } from '../hooks/use-metrics-comparison';
 interface ComparisonViewCardProps {
-    periodComparison: PeriodComparison | null
-    providerComparison: ProviderComparison[]
-    currency?: string
-    providerCurrencies?: Record<string, string>
-    loading?: boolean
+    periodComparison: PeriodComparison | null;
+    providerComparison: ProviderComparison[];
+    currency?: string;
+    providerCurrencies?: Record<string, string>;
+    loading?: boolean;
 }
-
-export function ComparisonViewCard({
-    periodComparison,
-    providerComparison,
-    currency,
-    providerCurrencies,
-    loading,
-}: ComparisonViewCardProps) {
+export function ComparisonViewCard({ periodComparison, providerComparison, currency, providerCurrencies, loading, }: ComparisonViewCardProps) {
     const viewTabs = usePersistedTab({
         defaultValue: 'period',
-        allowedValues: useMemo(() => ['period', 'platform'] as const, []),
+        allowedValues: ['period', 'platform'] as const,
         storageNamespace: 'dashboard:ads:comparison',
         param: 'compareTab',
         syncToUrl: true,
-    })
-
+    });
     return loading
         ? <ComparisonViewLoadingCard />
-        : <ComparisonViewCardShell currency={currency} onTabChange={viewTabs.setValue} periodComparison={periodComparison} providerComparison={providerComparison} providerCurrencies={providerCurrencies} selectedTab={viewTabs.value} />
+        : <ComparisonViewCardShell currency={currency} onTabChange={viewTabs.setValue} periodComparison={periodComparison} providerComparison={providerComparison} providerCurrencies={providerCurrencies} selectedTab={viewTabs.value}/>;
 }

@@ -1,56 +1,40 @@
-'use client'
-
-import { lazy, Suspense, useMemo, type ReactNode } from 'react'
-import { FadeInStagger } from '@/shared/ui/animate-in'
-
-const LazyRevealTransition = lazy(() =>
-  import('@/shared/ui/page-transition').then((module) => ({ default: module.RevealTransition })),
-)
-
+'use client';
+import { lazy, Suspense, useMemo, type ReactNode } from 'react';
+import { FadeInStagger } from '@/shared/ui/animate-in';
+const LazyRevealTransition = lazy(() => import('@/shared/ui/page-transition').then((module) => ({ default: module.RevealTransition })));
 type PageMotionShellProps = {
-  children: ReactNode
-  className?: string
-  /** Set false when the route segment already uses `ShellRouteTransition` in `template.tsx`. */
-  reveal?: boolean
-}
-
+    children: ReactNode;
+    className?: string;
+    /** Set false when the route segment already uses `ShellRouteTransition` in `template.tsx`. */
+    reveal?: boolean;
+};
 /**
  * Standard page entrance: optional route reveal + staggered section fade-in.
  * Use once at the feature page root.
  */
-function PageMotionFadeIn({ children, className }: { children: ReactNode; className?: string }) {
-  return <FadeInStagger className={className ?? 'flex flex-col gap-6'}>{children}</FadeInStagger>
-}
-
-function PageMotionSuspenseFallback({
-  children,
-  className,
-}: {
-  children: ReactNode
-  className?: string
+function PageMotionFadeIn({ children, className }: {
+    children: ReactNode;
+    className?: string;
 }) {
-  return <PageMotionFadeIn className={className}>{children}</PageMotionFadeIn>
+    return <FadeInStagger className={className ?? 'flex flex-col gap-6'}>{children}</FadeInStagger>;
 }
-
+function PageMotionSuspenseFallback({ children, className, }: {
+    children: ReactNode;
+    className?: string;
+}) {
+    return <PageMotionFadeIn className={className}>{children}</PageMotionFadeIn>;
+}
 function PageMotionRevealShell({ children, className }: PageMotionShellProps) {
-  const suspenseFallback = useMemo(
-    () => <PageMotionSuspenseFallback className={className}>{children}</PageMotionSuspenseFallback>,
-    [className, children],
-  )
-
-  return (
-    <Suspense fallback={suspenseFallback}>
+    const suspenseFallback = <PageMotionSuspenseFallback className={className}>{children}</PageMotionSuspenseFallback>;
+    return (<Suspense fallback={suspenseFallback}>
       <LazyRevealTransition>
         <PageMotionFadeIn className={className}>{children}</PageMotionFadeIn>
       </LazyRevealTransition>
-    </Suspense>
-  )
+    </Suspense>);
 }
-
 export function PageMotionShell({ children, className, reveal = true }: PageMotionShellProps) {
-  if (!reveal) {
-    return <PageMotionFadeIn className={className}>{children}</PageMotionFadeIn>
-  }
-
-  return <PageMotionRevealShell className={className}>{children}</PageMotionRevealShell>
+    if (!reveal) {
+        return <PageMotionFadeIn className={className}>{children}</PageMotionFadeIn>;
+    }
+    return <PageMotionRevealShell className={className}>{children}</PageMotionRevealShell>;
 }

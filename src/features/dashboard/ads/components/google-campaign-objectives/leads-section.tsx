@@ -1,48 +1,39 @@
 // =============================================================================
 // GOOGLE ADS LEADS SECTION
 // =============================================================================
-
-'use client'
-
-import { useCallback } from 'react'
-import { Label } from '@/shared/ui/label'
-import { Input } from '@/shared/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Switch } from '@/shared/ui/switch'
-import { Users, Phone, FileText } from 'lucide-react'
-import type { GoogleObjectiveComponentProps } from './types'
-import { GOOGLE_BIDDING_STRATEGIES } from './types'
-
+'use client';
+import { useCallback } from 'react';
+import { Label } from '@/shared/ui/label';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Switch } from '@/shared/ui/switch';
+import { Users, Phone, FileText } from 'lucide-react';
+import type { GoogleObjectiveComponentProps } from './types';
+import { GOOGLE_BIDDING_STRATEGIES } from './types';
 export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjectiveComponentProps) {
-  const biddingStrategies = GOOGLE_BIDDING_STRATEGIES['LEADS'] || []
-  const handleBiddingStrategyChange = useCallback((value: string) => {
-    onChange({ biddingStrategyType: value })
-  }, [onChange])
-
-  const handleTargetCpaChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    onChange({ targetCpa: parseFloat(event.target.value) })
-  }, [onChange])
-
-  const handleLeadFormExtensionChange = useCallback((checked: boolean) => {
-    onChange({ leadFormExtension: checked ? 'LEAD_FORM' : undefined })
-  }, [onChange])
-
-  const handlePhoneNumberChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    onChange({ phoneNumber: event.target.value })
-  }, [onChange])
-
-  const handleCallReportingChange = useCallback((checked: boolean) => {
-    onChange({ callReporting: checked })
-  }, [onChange])
-
-  return (
-    <div className="space-y-6">
+    const biddingStrategies = GOOGLE_BIDDING_STRATEGIES['LEADS'] || [];
+    const handleBiddingStrategyChange = (value: string) => {
+        onChange({ biddingStrategyType: value });
+    };
+    const handleTargetCpaChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        onChange({ targetCpa: parseFloat(event.target.value) });
+    };
+    const handleLeadFormExtensionChange = (checked: boolean) => {
+        onChange({ leadFormExtension: checked ? 'LEAD_FORM' : undefined });
+    };
+    const handlePhoneNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        onChange({ phoneNumber: event.target.value });
+    };
+    const handleCallReportingChange = (checked: boolean) => {
+        onChange({ callReporting: checked });
+    };
+    return (<div className="space-y-6">
       {/* Bidding Strategy */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="size-4 text-info" />
+            <Users className="size-4 text-info"/>
             Bidding Strategy
           </CardTitle>
           <CardDescription>
@@ -52,47 +43,28 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="bidding-strategy">Bidding Strategy</Label>
-            <Select
-              value={formData.biddingStrategyType}
-              onValueChange={handleBiddingStrategyChange}
-              disabled={disabled}
-            >
+            <Select value={formData.biddingStrategyType} onValueChange={handleBiddingStrategyChange} disabled={disabled}>
               <SelectTrigger id="bidding-strategy">
-                <SelectValue placeholder="Select bidding strategy" />
+                <SelectValue placeholder="Select bidding strategy"/>
               </SelectTrigger>
               <SelectContent>
-                {biddingStrategies.map((strategy) => (
-                  <SelectItem key={strategy.value} value={strategy.value}>
+                {biddingStrategies.map((strategy) => (<SelectItem key={strategy.value} value={strategy.value}>
                     <div className="flex flex-col items-start">
                       <span>{strategy.label}</span>
                       <span className="text-xs text-muted-foreground">{strategy.description}</span>
                     </div>
-                  </SelectItem>
-                ))}
+                  </SelectItem>))}
               </SelectContent>
             </Select>
           </div>
 
-          {formData.biddingStrategyType === 'TARGET_CPA' && (
-            <div className="space-y-2">
+          {formData.biddingStrategyType === 'TARGET_CPA' && (<div className="space-y-2">
               <Label htmlFor="target-cpa">Target CPA ($)</Label>
-              <input
-                id="target-cpa"
-                aria-label="Target CPA ($)"
-                type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="25.00"
-                value={formData.targetCpa || ''}
-                onChange={handleTargetCpaChange}
-                disabled={disabled}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              />
+              <input id="target-cpa" aria-label="Target CPA ($)" type="number" min="0.01" step="0.01" placeholder="25.00" value={formData.targetCpa || ''} onChange={handleTargetCpaChange} disabled={disabled} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"/>
               <p className="text-xs text-muted-foreground">
                 Target cost per lead
               </p>
-            </div>
-          )}
+            </div>)}
         </CardContent>
       </Card>
 
@@ -100,7 +72,7 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <FileText className="size-4 text-info" />
+            <FileText className="size-4 text-info"/>
             Lead Form Extension
           </CardTitle>
           <CardDescription>
@@ -115,12 +87,7 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
                 Users can submit their info without leaving Google
               </p>
             </div>
-            <Switch
-              id="lead-form"
-              checked={formData.leadFormExtension === 'LEAD_FORM'}
-              onCheckedChange={handleLeadFormExtensionChange}
-              disabled={disabled}
-            />
+            <Switch id="lead-form" checked={formData.leadFormExtension === 'LEAD_FORM'} onCheckedChange={handleLeadFormExtensionChange} disabled={disabled}/>
           </div>
         </CardContent>
       </Card>
@@ -129,7 +96,7 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Phone className="size-4 text-info" />
+            <Phone className="size-4 text-info"/>
             Call Extension
           </CardTitle>
           <CardDescription>
@@ -139,13 +106,7 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="phone-number">Phone Number</Label>
-            <Input
-              id="phone-number"
-              placeholder="+1 (555) 123-4567"
-              value={formData.phoneNumber || ''}
-              onChange={handlePhoneNumberChange}
-              disabled={disabled}
-            />
+            <Input id="phone-number" placeholder="+1 (555) 123-4567" value={formData.phoneNumber || ''} onChange={handlePhoneNumberChange} disabled={disabled}/>
           </div>
           
           <div className="flex items-center justify-between">
@@ -155,12 +116,7 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
                 Track calls as conversions
               </p>
             </div>
-            <Switch
-              id="call-reporting"
-              checked={formData.callReporting}
-              onCheckedChange={handleCallReportingChange}
-              disabled={disabled || !formData.phoneNumber}
-            />
+            <Switch id="call-reporting" checked={formData.callReporting} onCheckedChange={handleCallReportingChange} disabled={disabled || !formData.phoneNumber}/>
           </div>
         </CardContent>
       </Card>
@@ -169,7 +125,7 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
       <Card className="border-info/20 bg-info/5">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <Users className="size-5 text-info flex-shrink-0 mt-0.5" />
+            <Users className="size-5 text-info flex-shrink-0 mt-0.5"/>
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Leads Campaign Best Practices</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
@@ -183,6 +139,5 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
           </div>
         </CardContent>
       </Card>
-    </div>
-  )
+    </div>);
 }

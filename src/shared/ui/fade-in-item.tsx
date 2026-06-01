@@ -1,82 +1,37 @@
-'use client'
-
-import type { ReactNode } from 'react'
-import { useMemo } from 'react'
-import { LazyMotion, domAnimation, m, useReducedMotion } from '@/shared/ui/motion'
-
-import { motionEasing } from '@/lib/motion'
-import {
-  defaultFadeInDuration,
-  tagMap,
-  VIEWPORT_DEFAULT,
-  WHILE_IN_VIEW_FADE,
-  type BaseMotionProps,
-  type MotionElement,
-} from './animate-in-shared'
-
+'use client';
+import type { ReactNode } from 'react';
+import { useMemo } from 'react';
+import { LazyMotion, domAnimation, m, useReducedMotion } from '@/shared/ui/motion';
+import { motionEasing } from '@/lib/motion';
+import { defaultFadeInDuration, tagMap, VIEWPORT_DEFAULT, WHILE_IN_VIEW_FADE, type BaseMotionProps, type MotionElement, } from './animate-in-shared';
 type FadeInItemProps = Omit<BaseMotionProps, 'initial' | 'animate' | 'variants' | 'whileInView' | 'viewport' | 'transition'> & {
-  as?: MotionElement
-  y?: number
-  duration?: number
-  children?: ReactNode
-  className?: string
-  initial?: BaseMotionProps['initial']
-  whileInView?: BaseMotionProps['whileInView']
-  viewport?: BaseMotionProps['viewport']
-}
-
-export function FadeInItem({
-  children,
-  as,
-  y = 18,
-  duration = defaultFadeInDuration,
-  initial,
-  whileInView,
-  viewport,
-  ...props
-}: FadeInItemProps) {
-  const prefersReducedMotion = useReducedMotion()
-  const Tag = (as ? tagMap[as] : m.div) as typeof m.div
-
-  const resolvedViewport = useMemo(
-    () => viewport ?? VIEWPORT_DEFAULT,
-    [viewport],
-  )
-
-  const variants = useMemo(
-    () => ({
-      hidden: { opacity: 0, y },
-      visible: { opacity: 1, y: 0, transition: { duration, ease: motionEasing.out } },
-    }),
-    [y, duration],
-  )
-
-  if (prefersReducedMotion) {
-    return (
-      <LazyMotion features={domAnimation}>
-        <Tag
-          initial={false}
-          whileInView={WHILE_IN_VIEW_FADE}
-          viewport={resolvedViewport}
-          {...props}
-        >
+    as?: MotionElement;
+    y?: number;
+    duration?: number;
+    children?: ReactNode;
+    className?: string;
+    initial?: BaseMotionProps['initial'];
+    whileInView?: BaseMotionProps['whileInView'];
+    viewport?: BaseMotionProps['viewport'];
+};
+export function FadeInItem({ children, as, y = 18, duration = defaultFadeInDuration, initial, whileInView, viewport, ...props }: FadeInItemProps) {
+    const prefersReducedMotion = useReducedMotion();
+    const Tag = (as ? tagMap[as] : m.div) as typeof m.div;
+    const resolvedViewport = viewport ?? VIEWPORT_DEFAULT;
+    const variants = ({
+        hidden: { opacity: 0, y },
+        visible: { opacity: 1, y: 0, transition: { duration, ease: motionEasing.out } },
+    });
+    if (prefersReducedMotion) {
+        return (<LazyMotion features={domAnimation}>
+        <Tag initial={false} whileInView={WHILE_IN_VIEW_FADE} viewport={resolvedViewport} {...props}>
           {children}
         </Tag>
-      </LazyMotion>
-    )
-  }
-
-  return (
-    <LazyMotion features={domAnimation}>
-      <Tag
-        initial={initial ?? 'hidden'}
-        whileInView={whileInView ?? 'visible'}
-        viewport={resolvedViewport}
-        variants={variants}
-        {...props}
-      >
+      </LazyMotion>);
+    }
+    return (<LazyMotion features={domAnimation}>
+      <Tag initial={initial ?? 'hidden'} whileInView={whileInView ?? 'visible'} viewport={resolvedViewport} variants={variants} {...props}>
         {children}
       </Tag>
-    </LazyMotion>
-  )
+    </LazyMotion>);
 }

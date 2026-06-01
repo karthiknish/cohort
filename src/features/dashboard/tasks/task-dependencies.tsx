@@ -1,164 +1,109 @@
-'use client'
-
-import { useCallback, useState, type FormEvent, type ReactNode } from 'react'
-import { Link2, Unlink, Plus, ChevronRight, AlertTriangle } from 'lucide-react'
-import { Button } from '@/shared/ui/button'
-import { Badge } from '@/shared/ui/badge'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/shared/ui/popover'
-import { Input } from '@/shared/ui/input'
-import { ScrollArea } from '@/shared/ui/scroll-area'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/select'
-import { cn } from '@/lib/utils'
-import type { TaskDependency, TaskRecord } from '@/types/tasks'
-
+'use client';
+import { useCallback, useState, type FormEvent, type ReactNode } from 'react';
+import { Link2, Unlink, Plus, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Badge } from '@/shared/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger, } from '@/shared/ui/popover';
+import { Input } from '@/shared/ui/input';
+import { ScrollArea } from '@/shared/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
+import { cn } from '@/lib/utils';
+import type { TaskDependency, TaskRecord } from '@/types/tasks';
 type TaskDependencyManagerProps = {
-  task: TaskRecord
-  allTasks: TaskRecord[]
-  onUpdateDependencies: (dependencies: TaskDependency[]) => void
-  readonly?: boolean
-}
-
+    task: TaskRecord;
+    allTasks: TaskRecord[];
+    onUpdateDependencies: (dependencies: TaskDependency[]) => void;
+    readonly?: boolean;
+};
 const DEPENDENCY_TYPE_LABELS: Record<TaskDependency['type'], string> = {
-  blocks: 'Blocks',
-  'blocked-by': 'Blocked by',
-  related: 'Related to',
-  parent: 'Parent of',
-  child: 'Subtask of',
-}
-
+    blocks: 'Blocks',
+    'blocked-by': 'Blocked by',
+    related: 'Related to',
+    parent: 'Parent of',
+    child: 'Subtask of',
+};
 const DEPENDENCY_TYPE_COLORS: Record<TaskDependency['type'], string> = {
-  blocks: 'bg-destructive/10 text-destructive border-destructive/20',
-  'blocked-by': 'bg-warning/10 text-warning border-warning/20',
-  related: 'bg-info/10 text-info border-info/20',
-  parent: 'bg-accent/10 text-primary border-accent/20',
-  child: 'bg-success/10 text-success border-success/20',
-}
-
+    blocks: 'bg-destructive/10 text-destructive border-destructive/20',
+    'blocked-by': 'bg-warning/10 text-warning border-warning/20',
+    related: 'bg-info/10 text-info border-info/20',
+    parent: 'bg-accent/10 text-primary border-accent/20',
+    child: 'bg-success/10 text-success border-success/20',
+};
 function DependencyLink({ task, type, taskId, onRemove, readonly }: {
-  task: TaskRecord
-  type: TaskDependency['type']
-  taskId: string
-  onRemove?: (taskId: string) => void
-  readonly?: boolean
+    task: TaskRecord;
+    type: TaskDependency['type'];
+    taskId: string;
+    onRemove?: (taskId: string) => void;
+    readonly?: boolean;
 }) {
-  const handleRemove = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    const nextTaskId = event.currentTarget.dataset.taskId
-    if (nextTaskId) {
-      onRemove?.(nextTaskId)
-    }
-  }, [onRemove])
-
-  return (
-    <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/40 border border-border group">
-      <Link2 className="size-3.5 text-muted-foreground shrink-0" />
+    const handleRemove = (event: React.MouseEvent<HTMLButtonElement>) => {
+        const nextTaskId = event.currentTarget.dataset.taskId;
+        if (nextTaskId) {
+            onRemove?.(nextTaskId);
+        }
+    };
+    return (<div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/40 border border-border group">
+      <Link2 className="size-3.5 text-muted-foreground shrink-0"/>
       <span className="text-sm truncate font-medium">{task.title}</span>
-      <Badge
-        variant="outline"
-        className={cn('text-[10px] shrink-0', DEPENDENCY_TYPE_COLORS[type])}
-      >
+      <Badge variant="outline" className={cn('text-[10px] shrink-0', DEPENDENCY_TYPE_COLORS[type])}>
         {DEPENDENCY_TYPE_LABELS[type]}
       </Badge>
-      {!readonly && onRemove && (
-        <button
-          type="button"
-          data-task-id={taskId}
-          onClick={handleRemove}
-          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive motion-chromatic"
-        >
-          <Unlink className="size-3" />
-        </button>
-      )}
-    </div>
-  )
+      {!readonly && onRemove && (<button type="button" data-task-id={taskId} onClick={handleRemove} className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive motion-chromatic">
+          <Unlink className="size-3"/>
+        </button>)}
+    </div>);
 }
-
-export function TaskDependencyManager({
-  task,
-  allTasks,
-  onUpdateDependencies,
-  readonly = false,
-}: TaskDependencyManagerProps) {
-  const [open, setOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedType, setSelectedType] = useState<TaskDependency['type']>('related')
-
-  const handleTypeChange = useCallback((value: string) => {
-    setSelectedType(value as TaskDependency['type'])
-  }, [])
-
-  const handleSearchQueryChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value)
-  }, [])
-
-  const handleLinkTaskClick = useCallback(
-    (targetTaskId: string) => {
-      const newDependency: TaskDependency = {
-        taskId: targetTaskId,
-        type: selectedType,
-      }
-      onUpdateDependencies([...(task.dependencies || []), newDependency])
-      setSearchQuery('')
-    },
-    [onUpdateDependencies, selectedType, task.dependencies]
-  )
-
-  const handleUnlinkTaskClick = useCallback(
-    (taskId: string) => {
-      onUpdateDependencies((task.dependencies || []).filter((dependency) => dependency.taskId !== taskId))
-    },
-    [onUpdateDependencies, task.dependencies]
-  )
-
-  // Get linked tasks
-  const linkedTasks = (task.dependencies || []).flatMap((dep) => {
-    const linkedTask = allTasks.find(t => t.id === dep.taskId)
-    return linkedTask ? [{ ...dep, task: linkedTask }] : []
-  })
-
-  // Available tasks to link (exclude current task and already linked)
-  const linkedTaskIds = new Set((task.dependencies || []).map(d => d.taskId))
-  const availableTasks = allTasks.filter(
-    t => t.id !== task.id && !linkedTaskIds.has(t.id)
-  )
-
-  // Filter by search
-  const filteredTasks = searchQuery
-    ? availableTasks.filter(t =>
-        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : availableTasks
-
-  // Check for circular dependencies
-  const hasCircularDependency = (task.dependencies || []).some((dep) => {
-    if (dep.type === 'parent' || dep.type === 'child') {
-      const linkedTask = allTasks.find(t => t.id === dep.taskId)
-      return linkedTask?.parentId === task.id
-    }
-    return false
-  })
-
-  return (
-    <div className="space-y-3">
+export function TaskDependencyManager({ task, allTasks, onUpdateDependencies, readonly = false, }: TaskDependencyManagerProps) {
+    const [open, setOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedType, setSelectedType] = useState<TaskDependency['type']>('related');
+    const handleTypeChange = (value: string) => {
+        setSelectedType(value as TaskDependency['type']);
+    };
+    const handleSearchQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(event.target.value);
+    };
+    const handleLinkTaskClick = (targetTaskId: string) => {
+        const newDependency: TaskDependency = {
+            taskId: targetTaskId,
+            type: selectedType,
+        };
+        onUpdateDependencies([...(task.dependencies || []), newDependency]);
+        setSearchQuery('');
+    };
+    const handleUnlinkTaskClick = (taskId: string) => {
+        onUpdateDependencies((task.dependencies || []).filter((dependency) => dependency.taskId !== taskId));
+    };
+    // Get linked tasks
+    const linkedTasks = (task.dependencies || []).flatMap((dep) => {
+        const linkedTask = allTasks.find(t => t.id === dep.taskId);
+        return linkedTask ? [{ ...dep, task: linkedTask }] : [];
+    });
+    // Available tasks to link (exclude current task and already linked)
+    const linkedTaskIds = new Set((task.dependencies || []).map(d => d.taskId));
+    const availableTasks = allTasks.filter(t => t.id !== task.id && !linkedTaskIds.has(t.id));
+    // Filter by search
+    const filteredTasks = searchQuery
+        ? availableTasks.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            t.description?.toLowerCase().includes(searchQuery.toLowerCase()))
+        : availableTasks;
+    // Check for circular dependencies
+    const hasCircularDependency = (task.dependencies || []).some((dep) => {
+        if (dep.type === 'parent' || dep.type === 'child') {
+            const linkedTask = allTasks.find(t => t.id === dep.taskId);
+            return linkedTask?.parentId === task.id;
+        }
+        return false;
+    });
+    return (<div className="space-y-3">
       {/* Linked tasks */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-semibold">Dependencies</h4>
-          {!readonly && (
-            <Popover open={open} onOpenChange={setOpen}>
+          {!readonly && (<Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7 gap-1">
-                  <Plus className="size-3" />
+                  <Plus className="size-3"/>
                   Link Task
                 </Button>
               </PopoverTrigger>
@@ -181,182 +126,105 @@ export function TaskDependencyManager({
                   </Select>
 
                   {/* Search input */}
-                  <Input
-                    placeholder="Search tasks…"
-                    value={searchQuery}
-                    onChange={handleSearchQueryChange}
-                    className="h-8"
-                  />
+                  <Input placeholder="Search tasks…" value={searchQuery} onChange={handleSearchQueryChange} className="h-8"/>
 
                   {/* Task list */}
                   <ScrollArea className="h-48">
                     <div className="space-y-1 pr-2">
-                      {filteredTasks.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-4">
+                      {filteredTasks.length === 0 ? (<p className="text-xs text-muted-foreground text-center py-4">
                           {searchQuery ? 'No matching tasks' : 'No tasks available'}
-                        </p>
-                      ) : (
-                        filteredTasks.map((t) => (
-                          <TaskLinkResultButton
-                            key={t.id}
-                            taskId={t.id}
-                            onSelect={handleLinkTaskClick}
-                            className="w-full text-left p-2 rounded-md hover:bg-muted transition-colors"
-                          >
+                        </p>) : (filteredTasks.map((t) => (<TaskLinkResultButton key={t.id} taskId={t.id} onSelect={handleLinkTaskClick} className="w-full text-left p-2 rounded-md hover:bg-muted transition-colors">
                             <p className="text-sm font-medium truncate">{t.title}</p>
                             <p className="text-xs text-muted-foreground truncate">
                               {t.client && `${t.client} • `}
                               {t.status}
                             </p>
-                          </TaskLinkResultButton>
-                        ))
-                      )}
+                          </TaskLinkResultButton>)))}
                     </div>
                   </ScrollArea>
                 </div>
               </PopoverContent>
-            </Popover>
-          )}
+            </Popover>)}
         </div>
 
-        {hasCircularDependency && (
-          <div className="flex items-center gap-2 rounded-md bg-warning/10 px-2 py-1 text-xs text-warning">
-            <AlertTriangle className="size-3.5" />
+        {hasCircularDependency && (<div className="flex items-center gap-2 rounded-md bg-warning/10 px-2 py-1 text-xs text-warning">
+            <AlertTriangle className="size-3.5"/>
             <span>Circular dependency detected</span>
-          </div>
-        )}
+          </div>)}
 
-        {linkedTasks.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic py-2">
+        {linkedTasks.length === 0 ? (<p className="text-xs text-muted-foreground italic py-2">
             No dependencies. Link tasks to show relationships.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {linkedTasks.map((dep) => dep.task && (
-              <DependencyLink
-                key={dep.taskId}
-                task={dep.task}
-                type={dep.type}
-                taskId={dep.taskId}
-                onRemove={readonly ? undefined : handleUnlinkTaskClick}
-                readonly={readonly}
-              />
-            ))}
-          </div>
-        )}
+          </p>) : (<div className="space-y-2">
+            {linkedTasks.map((dep) => dep.task && (<DependencyLink key={dep.taskId} task={dep.task} type={dep.type} taskId={dep.taskId} onRemove={readonly ? undefined : handleUnlinkTaskClick} readonly={readonly}/>))}
+          </div>)}
       </div>
 
       {/* Dependency tree visualization */}
-      {linkedTasks.length > 0 && (
-        <div className="border-t border-muted pt-3">
+      {linkedTasks.length > 0 && (<div className="border-t border-muted pt-3">
           <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
             Dependency Map
           </h5>
           <div className="text-sm space-y-1">
-            {linkedTasks.flatMap((dep) =>
-              dep.type === 'child' && dep.task
-                ? [(
-                <div key={dep.taskId} className="flex items-center gap-1 text-muted-foreground">
-                  <ChevronRight className="size-3" />
+            {linkedTasks.flatMap((dep) => dep.type === 'child' && dep.task
+                ? [(<div key={dep.taskId} className="flex items-center gap-1 text-muted-foreground">
+                  <ChevronRight className="size-3"/>
                   <span className="truncate">{dep.task.title}</span>
-                </div>
-              )]
-                : [],
-            )}
+                </div>)]
+                : [])}
           </div>
-        </div>
-      )}
-    </div>
-  )
+        </div>)}
+    </div>);
 }
-
 // Subtask inline creation
-export function SubtaskCreator({
-  onCreateSubtask,
-  parentId,
-}: {
-  onCreateSubtask: (title: string, parentId: string) => void
-  parentId: string
+export function SubtaskCreator({ onCreateSubtask, parentId, }: {
+    onCreateSubtask: (title: string, parentId: string) => void;
+    parentId: string;
 }) {
-  const [title, setTitle] = useState('')
-  const [isExpanded, setIsExpanded] = useState(false)
-
-  const handleTitleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(event.target.value)
-  }, [])
-
-  const handleExpand = useCallback(() => {
-    setIsExpanded(true)
-  }, [])
-
-  const handleCollapse = useCallback(() => {
-    setIsExpanded(false)
-  }, [])
-
-  const handleSubmit = useCallback((e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (title.trim()) {
-      onCreateSubtask(title.trim(), parentId)
-      setTitle('')
-      setIsExpanded(false)
-    }
-  }, [onCreateSubtask, parentId, title])
-
-  if (!isExpanded) {
-    return (
-      <button
-        type="button"
-        onClick={handleExpand}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
-      >
-        <Plus className="size-4" />
+    const [title, setTitle] = useState('');
+    const [isExpanded, setIsExpanded] = useState(false);
+    const handleTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setTitle(event.target.value);
+    };
+    const handleExpand = () => {
+        setIsExpanded(true);
+    };
+    const handleCollapse = () => {
+        setIsExpanded(false);
+    };
+    const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (title.trim()) {
+            onCreateSubtask(title.trim(), parentId);
+            setTitle('');
+            setIsExpanded(false);
+        }
+    };
+    if (!isExpanded) {
+        return (<button type="button" onClick={handleExpand} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-1">
+        <Plus className="size-4"/>
         Add subtask
-      </button>
-    )
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex items-center gap-2">
-      <Input
-        placeholder="Subtask title…"
-        value={title}
-        onChange={handleTitleChange}
-        className="h-8 text-sm"
-      />
+      </button>);
+    }
+    return (<form onSubmit={handleSubmit} className="flex items-center gap-2">
+      <Input placeholder="Subtask title…" value={title} onChange={handleTitleChange} className="h-8 text-sm"/>
       <Button type="submit" size="sm" className="h-8">
         Add
       </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={handleCollapse}
-        className="h-8"
-      >
+      <Button type="button" variant="ghost" size="sm" onClick={handleCollapse} className="h-8">
         Cancel
       </Button>
-    </form>
-  )
+    </form>);
 }
-
-function TaskLinkResultButton({
-  taskId,
-  onSelect,
-  className,
-  children,
-}: {
-  taskId: string
-  onSelect: (taskId: string) => void
-  className?: string
-  children: ReactNode
+function TaskLinkResultButton({ taskId, onSelect, className, children, }: {
+    taskId: string;
+    onSelect: (taskId: string) => void;
+    className?: string;
+    children: ReactNode;
 }) {
-  const onSelectDependencyTask = useCallback(() => {
-    onSelect(taskId)
-  }, [onSelect, taskId])
-
-  return (
-    <button type="button" onClick={onSelectDependencyTask} className={className}>
+    const onSelectDependencyTask = () => {
+        onSelect(taskId);
+    };
+    return (<button type="button" onClick={onSelectDependencyTask} className={className}>
       {children}
-    </button>
-  )
+    </button>);
 }

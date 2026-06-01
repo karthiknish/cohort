@@ -1,16 +1,15 @@
-import type {
-    PreviewAlgorithmicInsight,
-    PreviewAnalyticsMetric,
-    PreviewProviderInsight,
-} from './types'
-import { isoDaysAgo } from './utils'
-
-const PREVIEW_ANALYTICS_CURRENCY = 'GBP'
-
+import type { PreviewAlgorithmicInsight, PreviewAnalyticsMetric, PreviewProviderInsight, } from './types';
+import { isoDaysAgo } from './utils';
+const PREVIEW_ANALYTICS_CURRENCY = 'GBP';
 export function getPreviewAnalyticsMetrics(): PreviewAnalyticsMetric[] {
-    const providers = ['google-analytics', 'google', 'facebook', 'linkedin']
-
-    const baseData: Record<string, Array<{ spend: number; impressions: number; clicks: number; conversions: number; revenue: number }>> = {
+    const providers = ['google-analytics', 'google', 'facebook', 'linkedin'];
+    const baseData: Record<string, Array<{
+        spend: number;
+        impressions: number;
+        clicks: number;
+        conversions: number;
+        revenue: number;
+    }>> = {
         'google-analytics': [
             { spend: 0, impressions: 4200, clicks: 5100, conversions: 160, revenue: 8200 },
             { spend: 0, impressions: 4550, clicks: 5450, conversions: 171, revenue: 8700 },
@@ -47,15 +46,14 @@ export function getPreviewAnalyticsMetrics(): PreviewAnalyticsMetric[] {
             { spend: 550, impressions: 45000, clicks: 950, conversions: 48, revenue: 9600 },
             { spend: 500, impressions: 40000, clicks: 860, conversions: 42, revenue: 8400 },
         ],
-    }
-
-    const records: PreviewAnalyticsMetric[] = []
-
+    };
+    const records: PreviewAnalyticsMetric[] = [];
     providers.forEach((provider) => {
-        const providerData = baseData[provider]
-        if (!providerData) return
+        const providerData = baseData[provider];
+        if (!providerData)
+            return;
         providerData.forEach((day, idx) => {
-            const [date = isoDaysAgo(6 - idx)] = isoDaysAgo(6 - idx).split('T')
+            const [date = isoDaysAgo(6 - idx)] = isoDaysAgo(6 - idx).split('T');
             const metric: PreviewAnalyticsMetric = {
                 id: `preview-analytics-${provider}-${idx}`,
                 providerId: provider,
@@ -66,8 +64,7 @@ export function getPreviewAnalyticsMetrics(): PreviewAnalyticsMetric[] {
                 clicks: day.clicks,
                 conversions: day.conversions,
                 revenue: day.revenue,
-            }
-
+            };
             // Add creatives for Facebook metrics
             if (provider === 'facebook') {
                 metric.creatives = [
@@ -101,19 +98,16 @@ export function getPreviewAnalyticsMetrics(): PreviewAnalyticsMetric[] {
                         conversions: Math.round(day.conversions * 0.25),
                         revenue: Math.round(day.revenue * 0.25),
                     },
-                ]
+                ];
             }
-
-            records.push(metric)
-        })
-    })
-
-    return records
+            records.push(metric);
+        });
+    });
+    return records;
 }
-
 export function getPreviewAnalyticsInsights(): {
-    insights: PreviewProviderInsight[]
-    algorithmic: PreviewAlgorithmicInsight[]
+    insights: PreviewProviderInsight[];
+    algorithmic: PreviewAlgorithmicInsight[];
 } {
     const insights: PreviewProviderInsight[] = [
         {
@@ -132,8 +126,7 @@ export function getPreviewAnalyticsInsights(): {
             providerId: 'linkedin',
             summary: 'LinkedIn Ads delivers the highest quality leads with a $185 average deal value. B2B targeting is precise, though CPCs remain elevated. Consider testing Sponsored InMail for decision-maker outreach.',
         },
-    ]
-
+    ];
     const algorithmic: PreviewAlgorithmicInsight[] = [
         {
             providerId: 'google-analytics',
@@ -210,7 +203,6 @@ export function getPreviewAnalyticsInsights(): {
                 },
             ],
         },
-    ]
-
-    return { insights, algorithmic }
+    ];
+    return { insights, algorithmic };
 }

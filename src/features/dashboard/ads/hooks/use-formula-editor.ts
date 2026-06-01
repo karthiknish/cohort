@@ -1,210 +1,175 @@
-'use client'
-
-import { notifyFailure } from '@/lib/notifications'
-import { useCallback, useMemo, useState } from 'react'
-import { useMutation, useQuery } from 'convex/react'
-
-import { useAuth } from '@/shared/contexts/auth-context'
-import { useClientContext } from '@/shared/contexts/client-context'
-import { useToast } from '@/shared/ui/use-toast'
-import { customFormulasApi } from '@/lib/convex-api'
-import { extractFormulaVariables, safeEvaluateFormula } from '@/lib/metrics'
-
+'use client';
+import { notifyFailure } from '@/lib/notifications';
+import { useCallback, useMemo, useState } from 'react';
+import { useMutation, useQuery } from 'convex/react';
+import { useAuth } from '@/shared/contexts/auth-context';
+import { useClientContext } from '@/shared/contexts/client-context';
+import { useToast } from '@/shared/ui/use-toast';
+import { customFormulasApi } from '@/lib/convex-api';
+import { extractFormulaVariables, safeEvaluateFormula } from '@/lib/metrics';
 // =============================================================================
 // TYPES
 // =============================================================================
-
 export type CustomFormula = {
-    workspaceId: string
-    formulaId: string
-    name: string
-    description?: string | null
-    formula: string
-    inputs: string[]
-    outputMetric: string
-    isActive: boolean
-    createdBy: string
-    createdAt?: string | null
-    updatedAt?: string | null
-    createdAtMs?: number
-    updatedAtMs?: number
-}
-
+    workspaceId: string;
+    formulaId: string;
+    name: string;
+    description?: string | null;
+    formula: string;
+    inputs: string[];
+    outputMetric: string;
+    isActive: boolean;
+    createdBy: string;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+    createdAtMs?: number;
+    updatedAtMs?: number;
+};
 export type CreateCustomFormulaInput = {
-    name: string
-    description?: string
-    formula: string
-    inputs: string[]
-    outputMetric: string
-}
-
+    name: string;
+    description?: string;
+    formula: string;
+    inputs: string[];
+    outputMetric: string;
+};
 export type UpdateCustomFormulaInput = {
-    formulaId: string
-    name?: string
-    description?: string | null
-    formula?: string
-    inputs?: string[]
-    outputMetric?: string
-    isActive?: boolean
-}
-
+    formulaId: string;
+    name?: string;
+    description?: string | null;
+    formula?: string;
+    inputs?: string[];
+    outputMetric?: string;
+    isActive?: boolean;
+};
 export interface FormulaValidationResult {
-    valid: boolean
-    error?: string
-    inputs?: string[]
+    valid: boolean;
+    error?: string;
+    inputs?: string[];
 }
-
 export interface UseFormulaEditorReturn {
     // State
-    formulas: CustomFormula[]
-    loading: boolean
-    error: string | null
-
+    formulas: CustomFormula[];
+    loading: boolean;
+    error: string | null;
     // Actions
-    loadFormulas: () => Promise<void>
-    createFormula: (input: CreateCustomFormulaInput) => Promise<CustomFormula | null>
-    updateFormula: (input: UpdateCustomFormulaInput) => Promise<void>
-    deleteFormula: (formulaId: string) => Promise<void>
-    validateFormula: (formula: string) => FormulaValidationResult
-
+    loadFormulas: () => Promise<void>;
+    createFormula: (input: CreateCustomFormulaInput) => Promise<CustomFormula | null>;
+    updateFormula: (input: UpdateCustomFormulaInput) => Promise<void>;
+    deleteFormula: (formulaId: string) => Promise<void>;
+    validateFormula: (formula: string) => FormulaValidationResult;
     // Execution
-    executeFormula: (formula: string, inputs: Record<string, number>) => number | null
+    executeFormula: (formula: string, inputs: Record<string, number>) => number | null;
 }
-
 type UseFormulaEditorOptions = {
-    isPreviewMode?: boolean
-}
-
+    isPreviewMode?: boolean;
+};
 // =============================================================================
 // CONSTANTS
 // =============================================================================
-
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
-
 /**
  * Extract variable names from a formula string
  */
 function extractVariables(formula: string): string[] {
-    return extractFormulaVariables(formula)
+    return extractFormulaVariables(formula);
 }
-
 /**
  * Validate formula syntax
  */
 function validateFormulaSyntax(formula: string): FormulaValidationResult {
     if (!formula.trim()) {
-        return { valid: false, error: 'Formula cannot be empty' }
+        return { valid: false, error: 'Formula cannot be empty' };
     }
-
     // Check for balanced parentheses
-    let parenCount = 0
+    let parenCount = 0;
     for (const char of formula) {
-        if (char === '(') parenCount++
-        if (char === ')') parenCount--
+        if (char === '(')
+            parenCount++;
+        if (char === ')')
+            parenCount--;
         if (parenCount < 0) {
-            return { valid: false, error: 'Unbalanced parentheses' }
+            return { valid: false, error: 'Unbalanced parentheses' };
         }
     }
     if (parenCount !== 0) {
-        return { valid: false, error: 'Unbalanced parentheses' }
+        return { valid: false, error: 'Unbalanced parentheses' };
     }
-
     // Check for invalid characters
-    const validChars = /^[a-zA-Z0-9_+\-*/().\s]+$/
+    const validChars = /^[a-zA-Z0-9_+\-*/().\s]+$/;
     if (!validChars.test(formula)) {
-        return { valid: false, error: 'Formula contains invalid characters' }
+        return { valid: false, error: 'Formula contains invalid characters' };
     }
-
     // Extract and validate inputs
-    const inputs = extractVariables(formula)
+    const inputs = extractVariables(formula);
     if (inputs.length === 0) {
-        return { valid: false, error: 'Formula must contain at least one metric variable' }
+        return { valid: false, error: 'Formula must contain at least one metric variable' };
     }
-
-    return { valid: true, inputs }
+    return { valid: true, inputs };
 }
-
 /**
  * Safely execute a formula with given inputs
  */
 function safeEvaluate(formula: string, inputs: Record<string, number>): number | null {
-    return safeEvaluateFormula(formula, inputs)
+    return safeEvaluateFormula(formula, inputs);
 }
-
 // =============================================================================
 // HOOK
 // =============================================================================
-
 /**
  * Hook for managing custom formula definitions
  */
 export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseFormulaEditorReturn {
-    const { isPreviewMode = false } = options
-    const { user } = useAuth()
-    const { selectedClientId } = useClientContext()
-    const { toast } = useToast()
-
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-
-    const formulasResult = useQuery(
-        customFormulasApi.listByWorkspace,
-        !isPreviewMode && selectedClientId ? { workspaceId: selectedClientId } : 'skip'
-    )
-
-    const createFormulaMutation = useMutation(customFormulasApi.create)
-    const updateFormulaMutation = useMutation(customFormulasApi.update)
-    const removeFormulaMutation = useMutation(customFormulasApi.remove)
-
-    const formulasFromQuery = useMemo(() => {
-        if (!Array.isArray(formulasResult)) return []
-
+    const { isPreviewMode = false } = options;
+    const { user } = useAuth();
+    const { selectedClientId } = useClientContext();
+    const { toast } = useToast();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const formulasResult = useQuery(customFormulasApi.listByWorkspace, !isPreviewMode && selectedClientId ? { workspaceId: selectedClientId } : 'skip');
+    const createFormulaMutation = useMutation(customFormulasApi.create);
+    const updateFormulaMutation = useMutation(customFormulasApi.update);
+    const removeFormulaMutation = useMutation(customFormulasApi.remove);
+    const formulasFromQuery = (() => {
+        if (!Array.isArray(formulasResult))
+            return [];
         return formulasResult.map((formula) => {
-            const typedFormula = formula as CustomFormula
-            const createdAtMs = typeof formula.createdAtMs === 'number' ? formula.createdAtMs : undefined
-            const updatedAtMs = typeof formula.updatedAtMs === 'number' ? formula.updatedAtMs : undefined
-
+            const typedFormula = formula as CustomFormula;
+            const createdAtMs = typeof formula.createdAtMs === 'number' ? formula.createdAtMs : undefined;
+            const updatedAtMs = typeof formula.updatedAtMs === 'number' ? formula.updatedAtMs : undefined;
             return {
                 ...typedFormula,
                 createdAtMs,
                 updatedAtMs,
                 createdAt: createdAtMs ? new Date(createdAtMs).toISOString() : null,
                 updatedAt: updatedAtMs ? new Date(updatedAtMs).toISOString() : null,
-            } satisfies CustomFormula
-        })
-    }, [formulasResult])
-
+            } satisfies CustomFormula;
+        });
+    })();
     // Load formulas from storage (compat shim)
-    const loadFormulas = useCallback(async () => {
+    const loadFormulas = async () => {
         // Data is reactive via Convex useQuery, manual refresh not needed
-    }, [])
-
+    };
     // Create a new formula
-    const handleCreateFormula = useCallback(async (
-        input: CreateCustomFormulaInput
-    ): Promise<CustomFormula | null> => {
+    const handleCreateFormula = async (input: CreateCustomFormulaInput): Promise<CustomFormula | null> => {
         if (!selectedClientId || !user?.id) {
             notifyFailure({
-        title: 'Error',
-        message: 'Not authenticated',
-      })
-            return null
+                title: 'Error',
+                message: 'Not authenticated',
+            });
+            return null;
         }
-
         // Validate formula first
-        const validation = validateFormulaSyntax(input.formula)
+        const validation = validateFormulaSyntax(input.formula);
         if (!validation.valid) {
             notifyFailure({
-              title: 'Invalid Formula',
-              message: validation.error ?? 'Invalid formula',
-            })
-            return null
+                title: 'Invalid Formula',
+                message: validation.error ?? 'Invalid formula',
+            });
+            return null;
         }
-
-        const legacyId = `formula_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-
+        const legacyId = `formula_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         try {
             await createFormulaMutation({
                 workspaceId: selectedClientId,
@@ -215,40 +180,35 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
                 inputs: validation.inputs ?? input.inputs,
                 outputMetric: input.outputMetric,
                 createdBy: user.id,
-            })
-
-            toast({ title: 'Formula Created', description: `"${input.name}" saved successfully` })
-
-            const created = formulasFromQuery.find((f) => f.formulaId === legacyId) ?? null
-            return created
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to create formula'
-            notifyFailure({
-        title: 'Error',
-        message: message,
-      })
-            return null
+            });
+            toast({ title: 'Formula Created', description: `"${input.name}" saved successfully` });
+            const created = formulasFromQuery.find((f) => f.formulaId === legacyId) ?? null;
+            return created;
         }
-    }, [selectedClientId, user?.id, toast, createFormulaMutation, formulasFromQuery])
-
+        catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to create formula';
+            notifyFailure({
+                title: 'Error',
+                message: message,
+            });
+            return null;
+        }
+    };
     // Update an existing formula
-    const handleUpdateFormula = useCallback(async (
-        input: UpdateCustomFormulaInput
-    ): Promise<void> => {
-        if (!selectedClientId) return
-
+    const handleUpdateFormula = async (input: UpdateCustomFormulaInput): Promise<void> => {
+        if (!selectedClientId)
+            return;
         // Validate if formula is being updated
         if (input.formula) {
-            const validation = validateFormulaSyntax(input.formula)
+            const validation = validateFormulaSyntax(input.formula);
             if (!validation.valid) {
                 notifyFailure({
-                  title: 'Invalid Formula',
-                  message: validation.error ?? 'Invalid formula',
-                })
-                return
+                    title: 'Invalid Formula',
+                    message: validation.error ?? 'Invalid formula',
+                });
+                return;
             }
         }
-
         try {
             await updateFormulaMutation({
                 workspaceId: selectedClientId,
@@ -259,47 +219,41 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
                 inputs: input.inputs,
                 outputMetric: input.outputMetric,
                 isActive: input.isActive,
-            })
-
-            toast({ title: 'Formula Updated' })
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to update formula'
-            notifyFailure({
-        title: 'Error',
-        message: message,
-      })
+            });
+            toast({ title: 'Formula Updated' });
         }
-    }, [selectedClientId, toast, updateFormulaMutation])
-
+        catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to update formula';
+            notifyFailure({
+                title: 'Error',
+                message: message,
+            });
+        }
+    };
     // Delete a formula
-    const handleDeleteFormula = useCallback(async (formulaId: string): Promise<void> => {
-        if (!selectedClientId) return
-
+    const handleDeleteFormula = async (formulaId: string): Promise<void> => {
+        if (!selectedClientId)
+            return;
         try {
-            await removeFormulaMutation({ workspaceId: selectedClientId, legacyId: formulaId })
-            toast({ title: 'Formula Deleted' })
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to delete formula'
-            notifyFailure({
-        title: 'Error',
-        message: message,
-      })
+            await removeFormulaMutation({ workspaceId: selectedClientId, legacyId: formulaId });
+            toast({ title: 'Formula Deleted' });
         }
-    }, [selectedClientId, toast, removeFormulaMutation])
-
+        catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to delete formula';
+            notifyFailure({
+                title: 'Error',
+                message: message,
+            });
+        }
+    };
     // Validate a formula
-    const validateFormula = useCallback((formula: string): FormulaValidationResult => {
-        return validateFormulaSyntax(formula)
-    }, [])
-
+    const validateFormula = (formula: string): FormulaValidationResult => {
+        return validateFormulaSyntax(formula);
+    };
     // Execute a formula with inputs
-    const executeFormula = useCallback((
-        formula: string,
-        inputs: Record<string, number>
-    ): number | null => {
-        return safeEvaluate(formula, inputs)
-    }, [])
-
+    const executeFormula = (formula: string, inputs: Record<string, number>): number | null => {
+        return safeEvaluate(formula, inputs);
+    };
     return {
         formulas: formulasFromQuery,
         loading,
@@ -310,5 +264,5 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
         deleteFormula: handleDeleteFormula,
         validateFormula,
         executeFormula,
-    }
+    };
 }

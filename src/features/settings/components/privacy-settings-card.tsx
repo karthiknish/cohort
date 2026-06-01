@@ -1,18 +1,14 @@
-'use client'
-
-import Link from 'next/link'
-import { Shield } from 'lucide-react'
-
-import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Separator } from '@/shared/ui/separator'
-
+'use client';
+import Link from 'next/link';
+import { Shield } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Separator } from '@/shared/ui/separator';
 export function PrivacySettingsCard() {
-  return (
-    <Card>
+    return (<Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Shield className="size-5" />
+          <Shield className="size-5"/>
           Privacy & Terms
         </CardTitle>
         <CardDescription>
@@ -42,6 +38,5 @@ export function PrivacySettingsCard() {
           </div>
         </div>
       </CardContent>
-    </Card>
-  )
+    </Card>);
 }

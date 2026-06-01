@@ -1,32 +1,17 @@
-'use client'
-
-import { useCallback } from 'react'
-import { Button } from '@/shared/ui/button'
-import {
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
-
-export function ProposalDeleteDialogContent({
-  isDeleting,
-  onConfirm,
-  onOpenChange,
-  proposalName,
-}: {
-  isDeleting: boolean
-  onConfirm: () => void
-  onOpenChange: (open: boolean) => void
-  proposalName: string | null
+'use client';
+import { useCallback } from 'react';
+import { Button } from '@/shared/ui/button';
+import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
+export function ProposalDeleteDialogContent({ isDeleting, onConfirm, onOpenChange, proposalName, }: {
+    isDeleting: boolean;
+    onConfirm: () => void;
+    onOpenChange: (open: boolean) => void;
+    proposalName: string | null;
 }) {
-  const handleCancel = useCallback(() => {
-    onOpenChange(false)
-  }, [onOpenChange])
-
-  return (
-    <DialogContent>
+    const handleCancel = () => {
+        onOpenChange(false);
+    };
+    return (<DialogContent>
       <DialogHeader>
         <DialogTitle>Delete proposal</DialogTitle>
         <DialogDescription>
@@ -41,6 +26,5 @@ export function ProposalDeleteDialogContent({
           {isDeleting ? 'Deleting…' : 'Delete'}
         </Button>
       </DialogFooter>
-    </DialogContent>
-  )
+    </DialogContent>);
 }

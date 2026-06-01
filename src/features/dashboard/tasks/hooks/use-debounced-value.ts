@@ -1,1 +1,1 @@
-export { useDebouncedValue } from '@/shared/hooks/use-debounce'
+export { useDebouncedValue } from '@/shared/hooks/use-debounce';

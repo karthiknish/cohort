@@ -1,58 +1,41 @@
-'use client'
-
-import { useState, useCallback } from 'react'
-import { FileText, Plus, Sparkles } from 'lucide-react'
-import { Button } from '@/shared/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/shared/ui/dialog'
-import { ScrollArea } from '@/shared/ui/scroll-area'
-import { Badge } from '@/shared/ui/badge'
-import type { TaskTemplate, TaskStatus, TaskPriority } from '@/types/tasks'
-import { DEFAULT_TASK_TEMPLATES } from './task-types'
-
+'use client';
+import { useState, useCallback } from 'react';
+import { FileText, Plus, Sparkles } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, } from '@/shared/ui/dialog';
+import { ScrollArea } from '@/shared/ui/scroll-area';
+import { Badge } from '@/shared/ui/badge';
+import type { TaskTemplate, TaskStatus, TaskPriority } from '@/types/tasks';
+import { DEFAULT_TASK_TEMPLATES } from './task-types';
 const TEMPLATE_CATEGORIES = [
-  { id: 'all', label: 'All Templates' },
-  { id: 'development', label: 'Development' },
-  { id: 'design', label: 'Design' },
-  { id: 'marketing', label: 'Marketing' },
-  { id: 'management', label: 'Management' },
-]
-
+    { id: 'all', label: 'All Templates' },
+    { id: 'development', label: 'Development' },
+    { id: 'design', label: 'Design' },
+    { id: 'marketing', label: 'Marketing' },
+    { id: 'management', label: 'Management' },
+];
 type TaskTemplateProps = {
-  onSelectTemplate: (template: TaskTemplate) => void
-}
-
+    onSelectTemplate: (template: TaskTemplate) => void;
+};
 export function TaskTemplatesDialog({ onSelectTemplate }: TaskTemplateProps) {
-  const [open, setOpen] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-
-  const filteredTemplates = DEFAULT_TASK_TEMPLATES.filter(t =>
-    selectedCategory === 'all' || t.tags.some(tag => tag.toLowerCase().includes(selectedCategory))
-  )
-
-  const handleSelectTemplate = useCallback((template: TaskTemplate) => {
-    onSelectTemplate(template)
-    setOpen(false)
-  }, [onSelectTemplate])
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    const [open, setOpen] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const filteredTemplates = DEFAULT_TASK_TEMPLATES.filter(t => selectedCategory === 'all' || t.tags.some(tag => tag.toLowerCase().includes(selectedCategory)));
+    const handleSelectTemplate = (template: TaskTemplate) => {
+        onSelectTemplate(template);
+        setOpen(false);
+    };
+    return (<Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
-          <Sparkles className="size-4" />
+          <Sparkles className="size-4"/>
           Use Template
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileText className="size-5" />
+            <FileText className="size-5"/>
             Task Templates
           </DialogTitle>
           <DialogDescription>
@@ -62,61 +45,40 @@ export function TaskTemplatesDialog({ onSelectTemplate }: TaskTemplateProps) {
 
         {/* Category filter */}
         <div className="flex flex-wrap gap-2 pb-2">
-          {TEMPLATE_CATEGORIES.map((cat) => (
-            <TaskTemplateCategoryButton
-              key={cat.id}
-              category={cat}
-              selected={selectedCategory === cat.id}
-              onSelect={setSelectedCategory}
-            />
-          ))}
+          {TEMPLATE_CATEGORIES.map((cat) => (<TaskTemplateCategoryButton key={cat.id} category={cat} selected={selectedCategory === cat.id} onSelect={setSelectedCategory}/>))}
         </div>
 
         <ScrollArea className="h-[400px] pr-4">
           <div className="grid gap-3">
-            {filteredTemplates.map((template) => (
-              <TaskTemplateCard key={template.id} template={template} onSelect={handleSelectTemplate} />
-            ))}
+            {filteredTemplates.map((template) => (<TaskTemplateCard key={template.id} template={template} onSelect={handleSelectTemplate}/>))}
           </div>
         </ScrollArea>
       </DialogContent>
-    </Dialog>
-  )
+    </Dialog>);
 }
-
-function TaskTemplateCategoryButton({
-  category,
-  selected,
-  onSelect,
-}: {
-  category: { id: string; label: string }
-  selected: boolean
-  onSelect: (categoryId: string) => void
+function TaskTemplateCategoryButton({ category, selected, onSelect, }: {
+    category: {
+        id: string;
+        label: string;
+    };
+    selected: boolean;
+    onSelect: (categoryId: string) => void;
 }) {
-  const onSelectCategory = useCallback(() => {
-    onSelect(category.id)
-  }, [category.id, onSelect])
-
-  return (
-    <Button variant={selected ? 'default' : 'outline'} size="sm" onClick={onSelectCategory} className="text-xs">
+    const onSelectCategory = () => {
+        onSelect(category.id);
+    };
+    return (<Button variant={selected ? 'default' : 'outline'} size="sm" onClick={onSelectCategory} className="text-xs">
       {category.label}
-    </Button>
-  )
+    </Button>);
 }
-
-function TaskTemplateCard({
-  template,
-  onSelect,
-}: {
-  template: TaskTemplate
-  onSelect: (template: TaskTemplate) => void
+function TaskTemplateCard({ template, onSelect, }: {
+    template: TaskTemplate;
+    onSelect: (template: TaskTemplate) => void;
 }) {
-  const onSelectTemplate = useCallback(() => {
-    onSelect(template)
-  }, [onSelect, template])
-
-  return (
-    <button type="button" onClick={onSelectTemplate} className="text-left group">
+    const onSelectTemplate = () => {
+        onSelect(template);
+    };
+    return (<button type="button" onClick={onSelectTemplate} className="text-left group">
       <div className="rounded-lg border border-muted/40 bg-background p-4 motion-chromatic hover:border-accent/40 hover:shadow-md">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 space-y-2">
@@ -132,11 +94,9 @@ function TaskTemplateCard({
               {template.description}
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {template.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-muted/40">
+              {template.tags.map((tag) => (<Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-muted/40">
                   #{tag}
-                </Badge>
-              ))}
+                </Badge>))}
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>Priority: <span className="font-medium capitalize">{template.priority}</span></span>
@@ -144,47 +104,39 @@ function TaskTemplateCard({
               <span>Status: <span className="font-medium">{template.status === 'todo' ? 'To Do' : template.status}</span></span>
             </div>
           </div>
-          <Plus className="size-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+          <Plus className="size-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0"/>
         </div>
       </div>
-    </button>
-  )
+    </button>);
 }
-
 // Hook to apply template to form state
 export function useTaskTemplates() {
-  const applyTemplate = useCallback((
-    template: TaskTemplate,
-    replacements?: Record<string, string>
-  ): {
-    title: string
-    description: string
-    status: TaskStatus
-    priority: TaskPriority
-    tags: string[]
-    estimatedMinutes: number
-  } => {
-    let title = template.title
-    let description = template.descriptionTemplate || ''
-
-    // Apply replacements
-    if (replacements) {
-      Object.entries(replacements).forEach(([key, value]) => {
-        const placeholder = `{${key}}`
-        title = title.replace(new RegExp(placeholder, 'g'), value)
-        description = description.replace(new RegExp(placeholder, 'g'), value)
-      })
-    }
-
-    return {
-      title,
-      description,
-      status: template.status,
-      priority: template.priority,
-      tags: template.tags,
-      estimatedMinutes: (template.estimatedHours ?? 0) * 60,
-    }
-  }, [])
-
-  return { applyTemplate, templates: DEFAULT_TASK_TEMPLATES }
+    const applyTemplate = (template: TaskTemplate, replacements?: Record<string, string>): {
+        title: string;
+        description: string;
+        status: TaskStatus;
+        priority: TaskPriority;
+        tags: string[];
+        estimatedMinutes: number;
+    } => {
+        let title = template.title;
+        let description = template.descriptionTemplate || '';
+        // Apply replacements
+        if (replacements) {
+            Object.entries(replacements).forEach(([key, value]) => {
+                const placeholder = `{${key}}`;
+                title = title.replace(new RegExp(placeholder, 'g'), value);
+                description = description.replace(new RegExp(placeholder, 'g'), value);
+            });
+        }
+        return {
+            title,
+            description,
+            status: template.status,
+            priority: template.priority,
+            tags: template.tags,
+            estimatedMinutes: (template.estimatedHours ?? 0) * 60,
+        };
+    };
+    return { applyTemplate, templates: DEFAULT_TASK_TEMPLATES };
 }

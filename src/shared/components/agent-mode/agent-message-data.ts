@@ -1,1 +1,1 @@
-export * from './agent-message-data/index'
+export * from './agent-message-data/index';

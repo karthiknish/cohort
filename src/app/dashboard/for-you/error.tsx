@@ -1,47 +1,33 @@
-'use client'
-
-import { useCallback, useEffect } from 'react'
-import Link from 'next/link'
-import { AlertTriangle, Home, RefreshCw } from 'lucide-react'
-
-import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-
-export default function DashboardForYouError({
-  error,
-  unstable_retry,
-  reset,
-}: {
-  error: Error & { digest?: string }
-  unstable_retry?: () => void
-  reset?: () => void
+'use client';
+import { useCallback, useEffect } from 'react';
+import Link from 'next/link';
+import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+export default function DashboardForYouError({ error, unstable_retry, reset, }: {
+    error: Error & {
+        digest?: string;
+    };
+    unstable_retry?: () => void;
+    reset?: () => void;
 }) {
-  useEffect(() => {
-    console.error('[DashboardForYouError]', error)
-  }, [error])
-
-  const handleRetry = useCallback(() => {
-    if (typeof unstable_retry === 'function') {
-      unstable_retry()
-      return
-    }
-
-    if (typeof reset === 'function') {
-      reset()
-    }
-  }, [reset, unstable_retry])
-
-  return (
-    <div className="flex min-h-[60vh] items-center justify-center bg-muted/20 p-4">
-      <Card
-        className="max-w-lg border-muted/60"
-        role="alert"
-        aria-live="assertive"
-        aria-atomic="true"
-      >
+    useEffect(() => {
+        console.error('[DashboardForYouError]', error);
+    }, [error]);
+    const handleRetry = () => {
+        if (typeof unstable_retry === 'function') {
+            unstable_retry();
+            return;
+        }
+        if (typeof reset === 'function') {
+            reset();
+        }
+    };
+    return (<div className="flex min-h-[60vh] items-center justify-center bg-muted/20 p-4">
+      <Card className="max-w-lg border-muted/60" role="alert" aria-live="assertive" aria-atomic="true">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="size-8 text-destructive" />
+            <AlertTriangle className="size-8 text-destructive"/>
           </div>
           <CardTitle className="text-xl">For You failed to load</CardTitle>
           <CardDescription>
@@ -50,20 +36,17 @@ export default function DashboardForYouError({
         </CardHeader>
         <CardContent className="space-y-3">
           <Button className="w-full" onClick={handleRetry} type="button">
-            <RefreshCw className="mr-2 size-4" />
+            <RefreshCw className="mr-2 size-4"/>
             Try again
           </Button>
           <Button variant="outline" asChild className="w-full">
             <Link href="/">
-              <Home className="mr-2 size-4" />
+              <Home className="mr-2 size-4"/>
               Go to home
             </Link>
           </Button>
-          {error.digest ? (
-            <p className="pt-2 text-center text-xs text-muted-foreground">Error ID: {error.digest}</p>
-          ) : null}
+          {error.digest ? (<p className="pt-2 text-center text-xs text-muted-foreground">Error ID: {error.digest}</p>) : null}
         </CardContent>
       </Card>
-    </div>
-  )
+    </div>);
 }

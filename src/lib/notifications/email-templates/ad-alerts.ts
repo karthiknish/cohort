@@ -1,22 +1,17 @@
-import { wrapEmailTemplate } from './utils'
-import { EMAIL_COLORS } from '@/lib/colors'
-import type { AlertResult } from '../../alerts/types'
-
+import { wrapEmailTemplate } from './utils';
+import { EMAIL_COLORS } from '@/lib/colors';
+import type { AlertResult } from '../../alerts/types';
 export interface AdAlertsTemplateParams {
-    alerts: AlertResult[]
-    providerId?: string
+    alerts: AlertResult[];
+    providerId?: string;
 }
-
 export function adAlertsTemplate(params: AdAlertsTemplateParams): string {
-    const { alerts, providerId } = params
-
-    const criticalCount = alerts.filter((a) => a.severity === 'critical').length
-
+    const { alerts, providerId } = params;
+    const criticalCount = alerts.filter((a) => a.severity === 'critical').length;
     const alertItems = alerts.map((alert) => {
-        const severityColor = alert.severity === 'critical' ? EMAIL_COLORS.error.text : alert.severity === 'warning' ? EMAIL_COLORS.warning.text : EMAIL_COLORS.info.text
-        const severityBg = alert.severity === 'critical' ? EMAIL_COLORS.error.bg : alert.severity === 'warning' ? EMAIL_COLORS.warning.bg : EMAIL_COLORS.info.bg
-        const severityBorder = alert.severity === 'critical' ? EMAIL_COLORS.error.border : alert.severity === 'warning' ? EMAIL_COLORS.warning.border : EMAIL_COLORS.info.border
-
+        const severityColor = alert.severity === 'critical' ? EMAIL_COLORS.error.text : alert.severity === 'warning' ? EMAIL_COLORS.warning.text : EMAIL_COLORS.info.text;
+        const severityBg = alert.severity === 'critical' ? EMAIL_COLORS.error.bg : alert.severity === 'warning' ? EMAIL_COLORS.warning.bg : EMAIL_COLORS.info.bg;
+        const severityBorder = alert.severity === 'critical' ? EMAIL_COLORS.error.border : alert.severity === 'warning' ? EMAIL_COLORS.warning.border : EMAIL_COLORS.info.border;
         return `
             <div style="padding: 20px; margin: 16px 0; background: ${severityBg}; border-left: 4px solid ${severityBorder}; border-radius: 8px;">
                 <div style="display: flex; align-items: center; margin-bottom: 8px;">
@@ -41,13 +36,11 @@ export function adAlertsTemplate(params: AdAlertsTemplateParams): string {
                     </div>
                 ` : ''}
             </div>
-        `
-    }).join('')
-
+        `;
+    }).join('');
     const headerTitle = criticalCount > 0
         ? `<span style="color: ${EMAIL_COLORS.error.text};">🚨 Critical Ad Alert</span>`
-        : `<span style="color: ${EMAIL_COLORS.warning.text};">⚠️ Ad Metrics Alert</span>`
-
+        : `<span style="color: ${EMAIL_COLORS.warning.text};">⚠️ Ad Metrics Alert</span>`;
     return wrapEmailTemplate(`
         <div style="margin-bottom: 24px;">
             <div style="font-size: 28px; font-weight: 800; color: ${EMAIL_COLORS.heading}; margin-bottom: 8px;">
@@ -74,5 +67,5 @@ export function adAlertsTemplate(params: AdAlertsTemplateParams): string {
         <div class="meta" style="text-align: center; margin-top: 24px;">
             Triggered at ${new Date().toLocaleString()} (UTC)
         </div>
-    `)
+    `);
 }

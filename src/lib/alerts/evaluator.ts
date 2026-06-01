@@ -1,78 +1,55 @@
 // =============================================================================
 // ALERT EVALUATOR - Batch evaluation of alerts
 // =============================================================================
-
-import type {
-    AlertRule,
-    AlertResult,
-    AlertEvaluationResult,
-    AlertEvaluationInput,
-    AlertNotificationPayload,
-} from './types'
-import { evaluateRule } from './rules-engine'
-import { enrichSummaryWithMetrics } from '../ad-algorithms/efficiency'
-import { calculateAlgorithmicInsights } from '../ad-algorithms/insights'
-import { adAlertsTemplate } from '../notifications/email-templates/ad-alerts'
-
+import type { AlertRule, AlertResult, AlertEvaluationResult, AlertEvaluationInput, AlertNotificationPayload, } from './types';
+import { evaluateRule } from './rules-engine';
+import { enrichSummaryWithMetrics } from '../ad-algorithms/efficiency';
+import { calculateAlgorithmicInsights } from '../ad-algorithms/insights';
+import { adAlertsTemplate } from '../notifications/email-templates/ad-alerts';
 // =============================================================================
 // BATCH EVALUATION
 // =============================================================================
-
 /**
  * Evaluate multiple rules against metric data
  */
-export function evaluateAlerts(
-    rules: AlertRule[],
-    input: AlertEvaluationInput,
-    formulas?: Record<string, { formula: string; inputs: string[] }>
-): AlertEvaluationResult {
+export function evaluateAlerts(rules: AlertRule[], input: AlertEvaluationInput, formulas?: Record<string, {
+    formula: string;
+    inputs: string[];
+}>): AlertEvaluationResult {
     const activeRules = rules.filter((rule) => {
-        if (!rule.enabled) return false
-        if (rule.type === 'algorithmic') return false // Handled separately
+        if (!rule.enabled)
+            return false;
+        if (rule.type === 'algorithmic')
+            return false; // Handled separately
         // Filter by provider if specified
         if (rule.providerId && input.providerId && rule.providerId !== input.providerId) {
-            return false
+            return false;
         }
         // Filter by campaign if specified
         if (rule.campaignId && input.campaignId && rule.campaignId !== input.campaignId) {
-            return false
+            return false;
         }
-        return true
-    })
-
-    const results: AlertResult[] = activeRules.map((rule) =>
-        evaluateRule(
-            rule,
-            input.current,
-            input.history,
-            rule.formulaId && formulas ? formulas[rule.formulaId] : undefined
-        )
-    )
-
+        return true;
+    });
+    const results: AlertResult[] = activeRules.map((rule) => evaluateRule(rule, input.current, input.history, rule.formulaId && formulas ? formulas[rule.formulaId] : undefined));
     // Add algorithmic alerts when configured
-    const algorithmicResults = evaluateAlgorithmicAlerts(input, rules)
-    results.push(...algorithmicResults)
-
-    const triggered = results.filter((r) => r.triggered)
-
+    const algorithmicResults = evaluateAlgorithmicAlerts(input, rules);
+    results.push(...algorithmicResults);
+    const triggered = results.filter((r) => r.triggered);
     return {
         evaluated: activeRules.length + rules.filter(r => r.type === 'algorithmic' && r.enabled).length,
         triggered: triggered.length,
         results,
         evaluatedAt: new Date().toISOString(),
-    }
+    };
 }
-
 /**
  * Evaluate algorithmic rules against current summary
  */
-export function evaluateAlgorithmicAlerts(
-    input: AlertEvaluationInput,
-    rules: AlertRule[]
-): AlertResult[] {
-    const algorithmicRules = rules.filter(r => r.type === 'algorithmic' && r.enabled)
-    if (algorithmicRules.length === 0) return []
-
+export function evaluateAlgorithmicAlerts(input: AlertEvaluationInput, rules: AlertRule[]): AlertResult[] {
+    const algorithmicRules = rules.filter(r => r.type === 'algorithmic' && r.enabled);
+    if (algorithmicRules.length === 0)
+        return [];
     // Convert input to AdMetricsSummary format expected by algorithm engine
     const summary = {
         providerId: input.providerId || 'unknown',
@@ -87,20 +64,14 @@ export function evaluateAlgorithmicAlerts(
         averageConvRate: input.current.clicks > 0 ? (input.current.conversions / input.current.clicks) * 100 : 0,
         period: '1d',
         dayCount: 1,
-    }
-
-    const enriched = enrichSummaryWithMetrics(summary)
-    const insights = calculateAlgorithmicInsights(enriched)
-
-    const results: AlertResult[] = []
-
+    };
+    const enriched = enrichSummaryWithMetrics(summary);
+    const insights = calculateAlgorithmicInsights(enriched);
+    const results: AlertResult[] = [];
     for (const rule of algorithmicRules) {
         // Find insights that match this rule's insightType configuration
-        const matchingInsights = insights.filter(i =>
-            (rule.insightType === 'all' || !rule.insightType || i.type === rule.insightType) &&
-            (i.level === 'critical' || i.level === 'warning')
-        )
-
+        const matchingInsights = insights.filter(i => (rule.insightType === 'all' || !rule.insightType || i.type === rule.insightType) &&
+            (i.level === 'critical' || i.level === 'warning'));
         for (const insight of matchingInsights) {
             results.push({
                 ruleId: rule.id,
@@ -113,35 +84,25 @@ export function evaluateAlgorithmicAlerts(
                 insightType: insight.type,
                 suggestion: insight.suggestion,
                 timestamp: new Date().toISOString()
-            })
+            });
         }
     }
-
-    return results
+    return results;
 }
-
 /**
  * Get only triggered alerts from evaluation
  */
-export function getTriggeredAlerts(
-    rules: AlertRule[],
-    input: AlertEvaluationInput
-): AlertResult[] {
-    const result = evaluateAlerts(rules, input)
-    return result.results.filter((r) => r.triggered)
+export function getTriggeredAlerts(rules: AlertRule[], input: AlertEvaluationInput): AlertResult[] {
+    const result = evaluateAlerts(rules, input);
+    return result.results.filter((r) => r.triggered);
 }
-
 // =============================================================================
 // NOTIFICATION HELPERS
 // =============================================================================
-
 /**
  * Convert an alert result to a notification payload
  */
-export function toNotificationPayload(
-    result: AlertResult,
-    providerId?: string
-): AlertNotificationPayload {
+export function toNotificationPayload(result: AlertResult, providerId?: string): AlertNotificationPayload {
     return {
         ruleId: result.ruleId,
         ruleName: result.ruleName,
@@ -152,39 +113,34 @@ export function toNotificationPayload(
         threshold: result.threshold,
         providerId,
         triggeredAt: result.timestamp,
-    }
+    };
 }
-
 /**
  * Group triggered alerts by severity for prioritized handling
  */
 export function groupAlertsBySeverity(alerts: AlertResult[]): {
-    critical: AlertResult[]
-    warning: AlertResult[]
-    info: AlertResult[]
+    critical: AlertResult[];
+    warning: AlertResult[];
+    info: AlertResult[];
 } {
     return {
         critical: alerts.filter((a) => a.severity === 'critical'),
         warning: alerts.filter((a) => a.severity === 'warning'),
         info: alerts.filter((a) => a.severity === 'info'),
-    }
+    };
 }
-
 /**
  * Format alerts for email notification
  */
 export function formatAlertsForEmail(alerts: AlertResult[], providerId?: string): {
-    subject: string
-    htmlContent: string
+    subject: string;
+    htmlContent: string;
 } {
-    const criticalCount = alerts.filter((a) => a.severity === 'critical').length
-    const warningCount = alerts.filter((a) => a.severity === 'warning').length
-
+    const criticalCount = alerts.filter((a) => a.severity === 'critical').length;
+    const warningCount = alerts.filter((a) => a.severity === 'warning').length;
     const subject = criticalCount > 0
         ? `🚨 Critical Ad Alert: ${criticalCount} issue(s) detected`
-        : `⚠️ Ad Metrics Alert: ${warningCount} warning(s)`
-
-    const htmlContent = adAlertsTemplate({ alerts, providerId })
-
-    return { subject, htmlContent }
+        : `⚠️ Ad Metrics Alert: ${warningCount} warning(s)`;
+    const htmlContent = adAlertsTemplate({ alerts, providerId });
+    return { subject, htmlContent };
 }

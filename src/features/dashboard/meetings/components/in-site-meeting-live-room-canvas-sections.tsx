@@ -1,305 +1,154 @@
-'use client'
-
-import {
-  ControlBar,
-  GridLayout,
-  LayoutContextProvider,
-  ParticipantTile,
-  RoomAudioRenderer,
-} from '@/shared/ui/livekit'
-import { LoaderCircle, Maximize2, Minimize2, PictureInPicture2, Radio, Sparkles } from 'lucide-react'
-import type { ComponentProps, ReactNode } from 'react'
-
-import { Badge } from '@/shared/ui/badge'
-import { Button } from '@/shared/ui/button'
-import { cn } from '@/lib/utils'
-
-import { InSiteMeetingRoomChat } from './in-site-meeting-room-chat'
-
-const MEETING_CONTROL_BAR_CONTROLS = { chat: false, settings: true }
-
-type LayoutContextValue = ComponentProps<typeof LayoutContextProvider>['value']
-type GridTracks = ComponentProps<typeof GridLayout>['tracks']
-
-export function LiveRoomCanvasHeader({
-  captureLabel,
-  compact,
-  isSupported,
-  meetingTitle,
-}: {
-  captureLabel: string
-  compact: boolean
-  isSupported: boolean
-  meetingTitle: string
+'use client';
+import { ControlBar, GridLayout, LayoutContextProvider, ParticipantTile, RoomAudioRenderer, } from '@/shared/ui/livekit';
+import { LoaderCircle, Maximize2, Minimize2, PictureInPicture2, Radio, Sparkles } from 'lucide-react';
+import type { ComponentProps, ReactNode } from 'react';
+import { Badge } from '@/shared/ui/badge';
+import { Button } from '@/shared/ui/button';
+import { cn } from '@/lib/utils';
+import { InSiteMeetingRoomChat } from './in-site-meeting-room-chat';
+const MEETING_CONTROL_BAR_CONTROLS = { chat: false, settings: true };
+type LayoutContextValue = ComponentProps<typeof LayoutContextProvider>['value'];
+type GridTracks = ComponentProps<typeof GridLayout>['tracks'];
+export function LiveRoomCanvasHeader({ captureLabel, compact, isSupported, meetingTitle, }: {
+    captureLabel: string;
+    compact: boolean;
+    isSupported: boolean;
+    meetingTitle: string;
 }) {
-  return (
-    <div
-      className={cn(
-        'flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background/95 backdrop-blur',
-        compact ? 'px-3 py-2.5' : 'px-4 py-3',
-      )}
-    >
+    return (<div className={cn('flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background/95 backdrop-blur', compact ? 'px-3 py-2.5' : 'px-4 py-3')}>
       <div>
         <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Live room</p>
         <p className={cn('mt-1 font-medium text-foreground', compact ? 'text-xs' : 'text-sm')}>{meetingTitle}</p>
       </div>
       <div className="flex flex-wrap gap-2">
         <Badge variant={captureLabel === 'Recording live' ? 'secondary' : 'outline'}>
-          <Radio className="size-3" />
+          <Radio className="size-3"/>
           {captureLabel}
         </Badge>
         <Badge variant={isSupported ? 'secondary' : 'outline'}>
           {isSupported ? 'Browser mic ready' : 'Browser mic unavailable'}
         </Badge>
       </div>
-    </div>
-  )
+    </div>);
 }
-
-export function LiveRoomCanvasOverlay({
-  aiStatusLabel,
-  autoSyncing,
-  canMinimize,
-  captureLabel,
-  compactBadgeTextColor,
-  finalizingSession,
-  isMinimized,
-  notesProcessingState,
-  onToggleMinimize,
-  onTogglePictureInPicture,
-  pipActive,
-  pipSupported,
-  transcriptProcessingState,
-  useDarkChrome,
-}: {
-  aiStatusLabel: string
-  autoSyncing: boolean
-  canMinimize: boolean
-  captureLabel: string
-  compactBadgeTextColor?: string
-  finalizingSession: boolean
-  isMinimized: boolean
-  notesProcessingState: 'idle' | 'processing' | 'failed'
-  onToggleMinimize: () => void
-  onTogglePictureInPicture: () => void
-  pipActive: boolean
-  pipSupported: boolean
-  transcriptProcessingState: 'idle' | 'processing' | 'failed'
-  useDarkChrome: boolean
+export function LiveRoomCanvasOverlay({ aiStatusLabel, autoSyncing, canMinimize, captureLabel, compactBadgeTextColor, finalizingSession, isMinimized, notesProcessingState, onToggleMinimize, onTogglePictureInPicture, pipActive, pipSupported, transcriptProcessingState, useDarkChrome, }: {
+    aiStatusLabel: string;
+    autoSyncing: boolean;
+    canMinimize: boolean;
+    captureLabel: string;
+    compactBadgeTextColor?: string;
+    finalizingSession: boolean;
+    isMinimized: boolean;
+    notesProcessingState: 'idle' | 'processing' | 'failed';
+    onToggleMinimize: () => void;
+    onTogglePictureInPicture: () => void;
+    pipActive: boolean;
+    pipSupported: boolean;
+    transcriptProcessingState: 'idle' | 'processing' | 'failed';
+    useDarkChrome: boolean;
 }) {
-  const chromeClassName = useDarkChrome
-    ? 'border-border/60 bg-card/90 text-card-foreground hover:bg-card'
-    : 'border border-border/60 bg-background/95'
-
-  return (
-    <div className="absolute inset-x-3 top-3 z-20 flex flex-wrap items-start justify-between gap-2">
+    const chromeClassName = useDarkChrome
+        ? 'border-border/60 bg-card/90 text-card-foreground hover:bg-card'
+        : 'border border-border/60 bg-background/95';
+    return (<div className="absolute inset-x-3 top-3 z-20 flex flex-wrap items-start justify-between gap-2">
       <div className="flex flex-wrap gap-2">
-        <div
-          className={cn(
-            'pointer-events-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur',
-            useDarkChrome
-              ? 'border-warning/20 bg-warning/10 text-warning-foreground'
-              : 'border-warning/20 bg-warning/10 text-warning-foreground',
-          )}
-        >
-          <span className="size-2.5 animate-pulse rounded-full bg-warning ring-4 ring-warning/20" />
+        <div className={cn('pointer-events-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur', useDarkChrome
+            ? 'border-warning/20 bg-warning/10 text-warning-foreground'
+            : 'border-warning/20 bg-warning/10 text-warning-foreground')}>
+          <span className="size-2.5 animate-pulse rounded-full bg-warning ring-4 ring-warning/20"/>
           <span className={compactBadgeTextColor}>{captureLabel}</span>
         </div>
 
-        {useDarkChrome ? (
-          <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/90 px-3 py-1.5 text-xs font-medium text-card-foreground shadow-sm backdrop-blur">
-            {autoSyncing || notesProcessingState === 'processing' || finalizingSession || transcriptProcessingState === 'processing' ? (
-              <LoaderCircle className="size-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="size-3.5 text-info" />
-            )}
+        {useDarkChrome ? (<div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/90 px-3 py-1.5 text-xs font-medium text-card-foreground shadow-sm backdrop-blur">
+            {autoSyncing || notesProcessingState === 'processing' || finalizingSession || transcriptProcessingState === 'processing' ? (<LoaderCircle className="size-3.5 animate-spin"/>) : (<Sparkles className="size-3.5 text-info"/>)}
             {aiStatusLabel}
-          </div>
-        ) : null}
+          </div>) : null}
       </div>
 
       <div className="pointer-events-auto flex gap-2">
-        {pipSupported ? (
-          <Button type="button" size="sm" variant="secondary" className={chromeClassName} onClick={onTogglePictureInPicture}>
-            <PictureInPicture2 className="mr-2 size-3.5" />
+        {pipSupported ? (<Button type="button" size="sm" variant="secondary" className={chromeClassName} onClick={onTogglePictureInPicture}>
+            <PictureInPicture2 className="mr-2 size-3.5"/>
             {pipActive ? 'Exit PiP' : 'Enter PiP'}
-          </Button>
-        ) : null}
-        {canMinimize ? (
-          <Button type="button" size="sm" variant="secondary" className={cn(chromeClassName, 'md:hidden')} onClick={onToggleMinimize}>
-            {isMinimized ? <Maximize2 className="mr-2 size-3.5" /> : <Minimize2 className="mr-2 size-3.5" />}
+          </Button>) : null}
+        {canMinimize ? (<Button type="button" size="sm" variant="secondary" className={cn(chromeClassName, 'md:hidden')} onClick={onToggleMinimize}>
+            {isMinimized ? <Maximize2 className="mr-2 size-3.5"/> : <Minimize2 className="mr-2 size-3.5"/>}
             {isMinimized ? 'Restore room' : 'Send to tray'}
-          </Button>
-        ) : null}
+          </Button>) : null}
       </div>
-    </div>
-  )
+    </div>);
 }
-
-export function LiveRoomCanvasEmptyState({ compact }: { compact: boolean }) {
-  return (
-    <div
-      className={cn(
-        'relative flex h-full items-center justify-center rounded-[26px] border border-dashed border-border bg-muted/20 px-6 text-center',
-        compact ? 'min-h-[150px]' : 'min-h-[420px]',
-      )}
-    >
+export function LiveRoomCanvasEmptyState({ compact }: {
+    compact: boolean;
+}) {
+    return (<div className={cn('relative flex h-full items-center justify-center rounded-[26px] border border-dashed border-border bg-muted/20 px-6 text-center', compact ? 'min-h-[150px]' : 'min-h-[420px]')}>
       <div className="max-w-md space-y-3">
         <p className="text-sm font-medium text-foreground">Camera tiles will appear here once someone joins with video.</p>
         <p className="text-sm text-muted-foreground">
           You can still start the room, use audio-only mode, and capture transcript data for AI notes.
         </p>
       </div>
-    </div>
-  )
+    </div>);
 }
-
-export function LiveRoomCanvasViewport({
-  aiStatusLabel,
-  autoSyncing,
-  canMinimize,
-  captureLabel,
-  compact,
-  finalizingSession,
-  isMinimized,
-  notesProcessingState,
-  onToggleMinimize,
-  onTogglePictureInPicture,
-  pipActive,
-  pipSupported,
-  recordingPrompt,
-  showRecordingPrompt = false,
-  tracks,
-  transcriptProcessingState,
-}: {
-  aiStatusLabel: string
-  autoSyncing: boolean
-  canMinimize: boolean
-  captureLabel: string
-  compact: boolean
-  finalizingSession: boolean
-  isMinimized: boolean
-  notesProcessingState: 'idle' | 'processing' | 'failed'
-  onToggleMinimize: () => void
-  onTogglePictureInPicture: () => void
-  pipActive: boolean
-  pipSupported: boolean
-  recordingPrompt?: ReactNode
-  showRecordingPrompt?: boolean
-  tracks: GridTracks
-  transcriptProcessingState: 'idle' | 'processing' | 'failed'
+export function LiveRoomCanvasViewport({ aiStatusLabel, autoSyncing, canMinimize, captureLabel, compact, finalizingSession, isMinimized, notesProcessingState, onToggleMinimize, onTogglePictureInPicture, pipActive, pipSupported, recordingPrompt, showRecordingPrompt = false, tracks, transcriptProcessingState, }: {
+    aiStatusLabel: string;
+    autoSyncing: boolean;
+    canMinimize: boolean;
+    captureLabel: string;
+    compact: boolean;
+    finalizingSession: boolean;
+    isMinimized: boolean;
+    notesProcessingState: 'idle' | 'processing' | 'failed';
+    onToggleMinimize: () => void;
+    onTogglePictureInPicture: () => void;
+    pipActive: boolean;
+    pipSupported: boolean;
+    recordingPrompt?: ReactNode;
+    showRecordingPrompt?: boolean;
+    tracks: GridTracks;
+    transcriptProcessingState: 'idle' | 'processing' | 'failed';
 }) {
-  return (
-    <div className={cn('min-h-0 flex-1 bg-background', compact ? 'p-2.5' : 'p-3 lg:p-4')}>
-      {tracks.length > 0 ? (
-        <div className="relative h-full">
-          <LiveRoomCanvasOverlay
-            aiStatusLabel={aiStatusLabel}
-            autoSyncing={autoSyncing}
-            canMinimize={canMinimize}
-            captureLabel={captureLabel}
-            finalizingSession={finalizingSession}
-            isMinimized={isMinimized}
-            notesProcessingState={notesProcessingState}
-            onToggleMinimize={onToggleMinimize}
-            onTogglePictureInPicture={onTogglePictureInPicture}
-            pipActive={pipActive}
-            pipSupported={pipSupported}
-            transcriptProcessingState={transcriptProcessingState}
-            useDarkChrome={true}
-          />
+    return (<div className={cn('min-h-0 flex-1 bg-background', compact ? 'p-2.5' : 'p-3 lg:p-4')}>
+      {tracks.length > 0 ? (<div className="relative h-full">
+          <LiveRoomCanvasOverlay aiStatusLabel={aiStatusLabel} autoSyncing={autoSyncing} canMinimize={canMinimize} captureLabel={captureLabel} finalizingSession={finalizingSession} isMinimized={isMinimized} notesProcessingState={notesProcessingState} onToggleMinimize={onToggleMinimize} onTogglePictureInPicture={onTogglePictureInPicture} pipActive={pipActive} pipSupported={pipSupported} transcriptProcessingState={transcriptProcessingState} useDarkChrome={true}/>
 
-          <GridLayout
-            tracks={tracks}
-            className={cn(
-              'h-full rounded-[26px] border border-border/80 bg-muted/20 p-2',
-              compact ? 'min-h-[150px]' : 'min-h-[420px]',
-            )}
-          >
+          <GridLayout tracks={tracks} className={cn('h-full rounded-[26px] border border-border/80 bg-muted/20 p-2', compact ? 'min-h-[150px]' : 'min-h-[420px]')}>
             <ParticipantTile />
           </GridLayout>
-          {showRecordingPrompt && recordingPrompt ? (
-            <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30 max-w-xl">{recordingPrompt}</div>
-          ) : null}
-          <InSiteMeetingRoomChat compact={compact} />
-        </div>
-      ) : (
-        <div className="relative h-full">
-          <LiveRoomCanvasOverlay
-            aiStatusLabel={aiStatusLabel}
-            autoSyncing={autoSyncing}
-            canMinimize={canMinimize}
-            captureLabel={captureLabel}
-            compactBadgeTextColor=""
-            finalizingSession={finalizingSession}
-            isMinimized={isMinimized}
-            notesProcessingState={notesProcessingState}
-            onToggleMinimize={onToggleMinimize}
-            onTogglePictureInPicture={onTogglePictureInPicture}
-            pipActive={pipActive}
-            pipSupported={pipSupported}
-            transcriptProcessingState={transcriptProcessingState}
-            useDarkChrome={false}
-          />
-          <LiveRoomCanvasEmptyState compact={compact} />
-          {showRecordingPrompt && recordingPrompt ? (
-            <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30 max-w-xl">{recordingPrompt}</div>
-          ) : null}
-          <InSiteMeetingRoomChat compact={compact} />
-        </div>
-      )}
-    </div>
-  )
+          {showRecordingPrompt && recordingPrompt ? (<div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30 max-w-xl">{recordingPrompt}</div>) : null}
+          <InSiteMeetingRoomChat compact={compact}/>
+        </div>) : (<div className="relative h-full">
+          <LiveRoomCanvasOverlay aiStatusLabel={aiStatusLabel} autoSyncing={autoSyncing} canMinimize={canMinimize} captureLabel={captureLabel} compactBadgeTextColor="" finalizingSession={finalizingSession} isMinimized={isMinimized} notesProcessingState={notesProcessingState} onToggleMinimize={onToggleMinimize} onTogglePictureInPicture={onTogglePictureInPicture} pipActive={pipActive} pipSupported={pipSupported} transcriptProcessingState={transcriptProcessingState} useDarkChrome={false}/>
+          <LiveRoomCanvasEmptyState compact={compact}/>
+          {showRecordingPrompt && recordingPrompt ? (<div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30 max-w-xl">{recordingPrompt}</div>) : null}
+          <InSiteMeetingRoomChat compact={compact}/>
+        </div>)}
+    </div>);
 }
-
-export function LiveRoomCanvasShell({
-  aiStatusLabel,
-  captureLabel,
-  children,
-  compact,
-  isSupported,
-  layoutContext,
-  meetingTitle,
-  roomViewportRef,
-  shouldUseAssertiveLiveRegion,
-}: {
-  aiStatusLabel: string
-  captureLabel: string
-  children: ReactNode
-  compact: boolean
-  isSupported: boolean
-  layoutContext: LayoutContextValue
-  meetingTitle: string
-  roomViewportRef: (node: HTMLDivElement | null) => void
-  shouldUseAssertiveLiveRegion: boolean
+export function LiveRoomCanvasShell({ aiStatusLabel, captureLabel, children, compact, isSupported, layoutContext, meetingTitle, roomViewportRef, shouldUseAssertiveLiveRegion, }: {
+    aiStatusLabel: string;
+    captureLabel: string;
+    children: ReactNode;
+    compact: boolean;
+    isSupported: boolean;
+    layoutContext: LayoutContextValue;
+    meetingTitle: string;
+    roomViewportRef: (node: HTMLDivElement | null) => void;
+    shouldUseAssertiveLiveRegion: boolean;
 }) {
-  return (
-    <LayoutContextProvider value={layoutContext}>
-      <div
-        ref={roomViewportRef}
-        className={cn(
-          'meeting-room-livekit-theme flex flex-col overflow-hidden border border-border bg-card shadow-sm',
-          compact ? 'min-h-[220px] rounded-[28px]' : 'min-h-[560px] rounded-[32px]',
-        )}
-      >
+    return (<LayoutContextProvider value={layoutContext}>
+      <div ref={roomViewportRef} className={cn('meeting-room-livekit-theme flex flex-col overflow-hidden border border-border bg-card shadow-sm', compact ? 'min-h-[220px] rounded-[28px]' : 'min-h-[560px] rounded-[32px]')}>
         <p className="sr-only" aria-live={shouldUseAssertiveLiveRegion ? 'assertive' : 'polite'}>
           {`Recording state: ${captureLabel}. Automation state: ${aiStatusLabel}.`}
         </p>
-        <LiveRoomCanvasHeader
-          captureLabel={captureLabel}
-          compact={compact}
-          isSupported={isSupported}
-          meetingTitle={meetingTitle}
-        />
+        <LiveRoomCanvasHeader captureLabel={captureLabel} compact={compact} isSupported={isSupported} meetingTitle={meetingTitle}/>
 
         {children}
 
         <div className={cn('border-t border-border bg-card/95 backdrop-blur', compact ? 'p-2.5' : 'p-3')}>
-          <ControlBar controls={MEETING_CONTROL_BAR_CONTROLS} />
+          <ControlBar controls={MEETING_CONTROL_BAR_CONTROLS}/>
         </div>
 
         <RoomAudioRenderer />
       </div>
-    </LayoutContextProvider>
-  )
+    </LayoutContextProvider>);
 }

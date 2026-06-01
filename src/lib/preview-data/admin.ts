@@ -1,120 +1,114 @@
-import type { AdminUserRecord, AdminUserRole } from '@/types/admin'
-import type { ClientRecord } from '@/types/clients'
-import type { FeatureItem, FeaturePriority, FeatureStatus } from '@/types/features'
-
-import { getPreviewClients } from './clients'
-import { isoDaysAgo } from './utils'
-
-const PREVIEW_ADMIN_WORKSPACE_ID = 'preview-agency'
-const PREVIEW_ADMIN_USER_ID = 'preview-admin-1'
-
+import type { AdminUserRecord, AdminUserRole } from '@/types/admin';
+import type { ClientRecord } from '@/types/clients';
+import type { FeatureItem, FeaturePriority, FeatureStatus } from '@/types/features';
+import { getPreviewClients } from './clients';
+import { isoDaysAgo } from './utils';
+const PREVIEW_ADMIN_WORKSPACE_ID = 'preview-agency';
+const PREVIEW_ADMIN_USER_ID = 'preview-admin-1';
 function isoHoursAgo(hoursAgo: number): string {
     const base = typeof window === 'undefined'
         ? new Date('2024-01-15T12:00:00.000Z')
-        : new Date()
-    base.setHours(base.getHours() - hoursAgo)
-    return base.toISOString()
+        : new Date();
+    base.setHours(base.getHours() - hoursAgo);
+    return base.toISOString();
 }
-
 function isoDateDaysAgo(daysAgo: number): string {
-    return (isoDaysAgo(daysAgo).split('T')[0] ?? isoDaysAgo(daysAgo))
+    return (isoDaysAgo(daysAgo).split('T')[0] ?? isoDaysAgo(daysAgo));
 }
-
 function clonePreviewClients(): ClientRecord[] {
     return getPreviewClients().map((client) => ({
         ...client,
         teamMembers: client.teamMembers.map((member) => ({ ...member })),
-    }))
+    }));
 }
-
 export type PreviewAdminInvitation = {
-    id: string
-    email: string
-    role: AdminUserRole
-    name: string | null
-    message: string | null
-    status: 'pending' | 'accepted' | 'expired' | 'revoked'
-    effectiveStatus: 'pending' | 'accepted' | 'expired' | 'revoked'
-    invitedBy: string
-    invitedByName: string | null
-    expiresAtMs: number
-    createdAtMs: number
-    acceptedAtMs: number | null
-}
-
+    id: string;
+    email: string;
+    role: AdminUserRole;
+    name: string | null;
+    message: string | null;
+    status: 'pending' | 'accepted' | 'expired' | 'revoked';
+    effectiveStatus: 'pending' | 'accepted' | 'expired' | 'revoked';
+    invitedBy: string;
+    invitedByName: string | null;
+    expiresAtMs: number;
+    createdAtMs: number;
+    acceptedAtMs: number | null;
+};
 export type PreviewAdminProblemReport = {
-    id: string
-    userId: string | null
-    userEmail: string | null
-    userName: string | null
-    workspaceId: string | null
-    title: string
-    description: string
-    severity: string
-    status: string
-    fixed: boolean | null
-    resolution: string | null
-    createdAt: string
-    updatedAt: string
-}
-
+    id: string;
+    userId: string | null;
+    userEmail: string | null;
+    userName: string | null;
+    workspaceId: string | null;
+    title: string;
+    description: string;
+    severity: string;
+    status: string;
+    fixed: boolean | null;
+    resolution: string | null;
+    createdAt: string;
+    updatedAt: string;
+};
 export type PreviewAdminHealthCheck = {
-    status: 'ok' | 'warning' | 'error'
-    message?: string
-    responseTime?: number
-    metadata?: Record<string, unknown>
-}
-
+    status: 'ok' | 'warning' | 'error';
+    message?: string;
+    responseTime?: number;
+    metadata?: Record<string, unknown>;
+};
 export type PreviewAdminHealthData = {
-    status: 'healthy' | 'degraded' | 'unhealthy'
-    timestamp: string
-    uptime: number
-    responseTime: number
-    checks: Record<string, PreviewAdminHealthCheck>
-    version: string
-}
-
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    timestamp: string;
+    uptime: number;
+    responseTime: number;
+    checks: Record<string, PreviewAdminHealthCheck>;
+    version: string;
+};
 export type PreviewAdminUsageStats = {
-    totalUsers: number
-    activeUsersToday: number
-    activeUsersWeek: number
-    activeUsersMonth: number
-    newUsersToday: number
-    newUsersWeek: number
-    totalProjects: number
-    projectsThisWeek: number
-    totalTasks: number
-    tasksCompletedThisWeek: number
-    totalClients: number
-    activeClientsWeek: number
-    agentConversations: number
-    agentActionsThisWeek: number
-    dailyActiveUsers: Array<{ date: string; count: number }>
-    featureUsage: Array<{ feature: string; count: number; trend: number }>
-}
-
+    totalUsers: number;
+    activeUsersToday: number;
+    activeUsersWeek: number;
+    activeUsersMonth: number;
+    newUsersToday: number;
+    newUsersWeek: number;
+    totalProjects: number;
+    projectsThisWeek: number;
+    totalTasks: number;
+    tasksCompletedThisWeek: number;
+    totalClients: number;
+    activeClientsWeek: number;
+    agentConversations: number;
+    agentActionsThisWeek: number;
+    dailyActiveUsers: Array<{
+        date: string;
+        count: number;
+    }>;
+    featureUsage: Array<{
+        feature: string;
+        count: number;
+        trend: number;
+    }>;
+};
 export type PreviewAdminRecentActivity = {
-    id: string
-    type: 'user_joined' | 'client_created' | 'lead_received' | 'sync_completed' | 'error' | 'new_user_signup'
-    title: string
-    description: string
-    timestamp: string
-}
-
+    id: string;
+    type: 'user_joined' | 'client_created' | 'lead_received' | 'sync_completed' | 'error' | 'new_user_signup';
+    title: string;
+    description: string;
+    timestamp: string;
+};
 export type PreviewAdminDashboardData = {
     stats: {
-        totalUsers: number
-        activeUsers: number
-        totalClients: number
-        activeClients: number
-        schedulerHealth: 'healthy' | 'warning' | 'error'
-        lastSyncTime: string | null
-        recentErrors: number
-    }
-    usageStats: PreviewAdminUsageStats
-    activities: PreviewAdminRecentActivity[]
-}
-
+        totalUsers: number;
+        activeUsers: number;
+        totalClients: number;
+        activeClients: number;
+        schedulerHealth: 'healthy' | 'warning' | 'error';
+        lastSyncTime: string | null;
+        recentErrors: number;
+    };
+    usageStats: PreviewAdminUsageStats;
+    activities: PreviewAdminRecentActivity[];
+};
 export function getPreviewAdminUsers(): AdminUserRecord[] {
     return [
         {
@@ -216,18 +210,15 @@ export function getPreviewAdminUsers(): AdminUserRecord[] {
             updatedAt: isoHoursAgo(22),
             lastLoginAt: null,
         },
-    ]
+    ];
 }
-
 export function getPreviewAdminClients(): ClientRecord[] {
-    return clonePreviewClients()
+    return clonePreviewClients();
 }
-
 export function getPreviewAdminInvitations(): PreviewAdminInvitation[] {
     const nowMs = typeof window === 'undefined'
         ? new Date('2024-01-15T12:00:00.000Z').getTime()
-        : Date.now()
-
+        : Date.now();
     return [
         {
             id: 'preview-invite-1',
@@ -285,9 +276,8 @@ export function getPreviewAdminInvitations(): PreviewAdminInvitation[] {
             expiresAtMs: nowMs + 2 * 24 * 60 * 60 * 1000,
             acceptedAtMs: null,
         },
-    ]
+    ];
 }
-
 export function getPreviewAdminProblemReports(): PreviewAdminProblemReport[] {
     return [
         {
@@ -335,9 +325,8 @@ export function getPreviewAdminProblemReports(): PreviewAdminProblemReport[] {
             createdAt: isoDaysAgo(2),
             updatedAt: isoHoursAgo(10),
         },
-    ]
+    ];
 }
-
 function buildFeature(id: string, title: string, status: FeatureStatus, priority: FeaturePriority, description: string): FeatureItem {
     return {
         id,
@@ -354,22 +343,19 @@ function buildFeature(id: string, title: string, status: FeatureStatus, priority
         ],
         createdAt: isoDaysAgo(14),
         updatedAt: isoHoursAgo(5),
-    }
+    };
 }
-
 export function getPreviewAdminFeatures(): FeatureItem[] {
     return [
         buildFeature('preview-feature-1', 'Campaign pacing drill-down', 'backlog', 'high', 'Add a top-level pacing anomaly strip to the ads overview.'),
         buildFeature('preview-feature-2', 'Workspace tour checkpoints', 'planned', 'medium', 'Guide first-time users through integrations, tasks, and proposals in one flow.'),
         buildFeature('preview-feature-3', 'Meeting recap publishing', 'in_progress', 'high', 'Turn meeting transcripts into a structured recap with action items and owners.'),
         buildFeature('preview-feature-4', 'Client-ready export themes', 'completed', 'medium', 'Provide branded export themes for decks and PDF summaries.'),
-    ]
+    ];
 }
-
 export function getPreviewAdminDashboardData(): PreviewAdminDashboardData {
-    const users = getPreviewAdminUsers()
-    const clients = getPreviewAdminClients()
-
+    const users = getPreviewAdminUsers();
+    const clients = getPreviewAdminClients();
     return {
         stats: {
             totalUsers: users.length,
@@ -442,9 +428,8 @@ export function getPreviewAdminDashboardData(): PreviewAdminDashboardData {
                 timestamp: isoHoursAgo(13),
             },
         ],
-    }
+    };
 }
-
 export function getPreviewAdminHealthData(): PreviewAdminHealthData {
     return {
         status: 'degraded',
@@ -510,5 +495,5 @@ export function getPreviewAdminHealthData(): PreviewAdminHealthData {
                 metadata: { mode: 'preview', nodeEnv: 'development' },
             },
         },
-    }
+    };
 }

@@ -1,64 +1,62 @@
-'use client'
-
-import { useRef } from 'react'
-
-type ChangedProp = { from: unknown; to: unknown }
-
+'use client';
+import { useEffect, useMemo, useRef } from 'react';
+type ChangedProp = {
+    from: unknown;
+    to: unknown;
+};
 type RenderLogEntry = {
-  name: string
-  renderCount: number
-  timestamp: string
-  changedProps: Record<string, ChangedProp> | string
-}
-
+    name: string;
+    renderCount: number;
+    timestamp: string;
+    changedProps: Record<string, ChangedProp> | string;
+};
 type RenderLogWindow = Window & {
-  __RENDER_LOGS__?: RenderLogEntry[]
-}
-
+    __RENDER_LOGS__?: RenderLogEntry[];
+};
 /**
  * Debug hook to track how many times a component renders and what changed.
  * Only active in development mode.
  */
 export function useRenderLog(name: string, props?: Record<string, unknown>) {
-  const countRef = useRef(0)
-  const prevPropsRef = useRef<Record<string, unknown>>({})
-
-  if (process.env.NODE_ENV !== 'development') {
-    return
-  }
-
-  countRef.current += 1
-  const changedProps: Record<string, ChangedProp> = {}
-
-  if (props) {
-    Object.keys(props).forEach((key) => {
-      if (prevPropsRef.current[key] !== props[key]) {
-        changedProps[key] = {
-          from: prevPropsRef.current[key],
-          to: props[key],
+    const countRef = useRef(0);
+    const prevPropsRef = useRef<Record<string, unknown>>({});
+    const propsKey = useMemo(() => (props ? JSON.stringify(props) : ''), [props]);
+    useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') {
+            return;
         }
-      }
-    })
-    prevPropsRef.current = { ...props }
-  }
-
-  const logEntry = {
-    name,
-    renderCount: countRef.current,
-    timestamp: new Date().toISOString(),
-    changedProps: Object.keys(changedProps).length > 0 ? changedProps : 'none (likely state or context change)',
-  }
-
-  if (typeof window !== 'undefined') {
-    const win = window as RenderLogWindow
-    if (!win.__RENDER_LOGS__) win.__RENDER_LOGS__ = []
-    win.__RENDER_LOGS__.push(logEntry)
-    if (win.__RENDER_LOGS__.length > 200) win.__RENDER_LOGS__.shift()
-  }
-
-  console.log(`[RenderLog] ${name} render #${countRef.current}`, logEntry)
-
-  if (countRef.current > 50) {
-    console.warn(`[RenderLog] ${name} has rendered more than 50 times! Potential loop detected.`)
-  }
+        countRef.current += 1;
+        const changedProps: Record<string, ChangedProp> = {};
+        if (props) {
+            for (const key of Object.keys(props)) {
+                if (prevPropsRef.current[key] !== props[key]) {
+                    changedProps[key] = {
+                        from: prevPropsRef.current[key],
+                        to: props[key],
+                    };
+                }
+            }
+            prevPropsRef.current = { ...props };
+        }
+        const logEntry = {
+            name,
+            renderCount: countRef.current,
+            timestamp: new Date().toISOString(),
+            changedProps: Object.keys(changedProps).length > 0
+                ? changedProps
+                : 'none (likely state or context change)',
+        };
+        if (typeof window !== 'undefined') {
+            const win = window as RenderLogWindow;
+            if (!win.__RENDER_LOGS__)
+                win.__RENDER_LOGS__ = [];
+            win.__RENDER_LOGS__.push(logEntry);
+            if (win.__RENDER_LOGS__.length > 200)
+                win.__RENDER_LOGS__.shift();
+        }
+        console.log(`[RenderLog] ${name} render #${countRef.current}`, logEntry);
+        if (countRef.current > 50) {
+            console.warn(`[RenderLog] ${name} has rendered more than 50 times! Potential loop detected.`);
+        }
+    }, [name, propsKey]);
 }

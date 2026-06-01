@@ -1,7 +1,5 @@
-'use client'
-
-import { PendingApprovalContent } from './pending-approval-content'
-
+'use client';
+import { PendingApprovalContent } from './pending-approval-content';
 export function PendingApprovalPageInner() {
-  return <PendingApprovalContent />
+    return <PendingApprovalContent />;
 }

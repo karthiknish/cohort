@@ -1,53 +1,47 @@
 // =============================================================================
 // AWARENESS OBJECTIVE SECTION - Brand awareness and reach
 // =============================================================================
-
-'use client'
-
-import { useCallback } from 'react'
-import { Label } from '@/shared/ui/label'
-import { Switch } from '@/shared/ui/switch'
-import { Slider } from '@/shared/ui/slider'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Eye, Target, Zap } from 'lucide-react'
-import type { ObjectiveComponentProps } from './types'
-
+'use client';
+import { useCallback } from 'react';
+import { Label } from '@/shared/ui/label';
+import { Switch } from '@/shared/ui/switch';
+import { Slider } from '@/shared/ui/slider';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Eye, Target, Zap } from 'lucide-react';
+import type { ObjectiveComponentProps } from './types';
 export function AwarenessObjectiveSection({ formData, onChange, disabled }: ObjectiveComponentProps) {
-  const handleReachClick = useCallback(() => onChange({ optimizationGoal: 'REACH' }), [onChange])
-  const handleImpressionsClick = useCallback(() => onChange({ optimizationGoal: 'IMPRESSIONS' }), [onChange])
-  const handleAdRecallLiftClick = useCallback(() => onChange({ optimizationGoal: 'AD_RECALL_LIFT' }), [onChange])
-
-  const optimizationGoalButtons = [
-    {
-      value: 'REACH' as const,
-      label: 'Reach',
-      desc: 'Maximize unique users who see your ad',
-      icon: Target,
-      onClick: handleReachClick,
-    },
-    {
-      value: 'IMPRESSIONS' as const,
-      label: 'Impressions',
-      desc: 'Maximize total ad views (may reach same users multiple times)',
-      icon: Eye,
-      onClick: handleImpressionsClick,
-    },
-    {
-      value: 'AD_RECALL_LIFT' as const,
-      label: 'Ad Recall Lift',
-      desc: 'Optimize for people likely to remember your ad (requires larger budget)',
-      icon: Zap,
-      onClick: handleAdRecallLiftClick,
-    },
-  ]
-
-  return (
-    <div className="space-y-6">
+    const handleReachClick = () => onChange({ optimizationGoal: 'REACH' });
+    const handleImpressionsClick = () => onChange({ optimizationGoal: 'IMPRESSIONS' });
+    const handleAdRecallLiftClick = () => onChange({ optimizationGoal: 'AD_RECALL_LIFT' });
+    const optimizationGoalButtons = [
+        {
+            value: 'REACH' as const,
+            label: 'Reach',
+            desc: 'Maximize unique users who see your ad',
+            icon: Target,
+            onClick: handleReachClick,
+        },
+        {
+            value: 'IMPRESSIONS' as const,
+            label: 'Impressions',
+            desc: 'Maximize total ad views (may reach same users multiple times)',
+            icon: Eye,
+            onClick: handleImpressionsClick,
+        },
+        {
+            value: 'AD_RECALL_LIFT' as const,
+            label: 'Ad Recall Lift',
+            desc: 'Optimize for people likely to remember your ad (requires larger budget)',
+            icon: Zap,
+            onClick: handleAdRecallLiftClick,
+        },
+    ];
+    return (<div className="space-y-6">
       {/* Awareness Strategy */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Eye className="size-4 text-info" />
+            <Eye className="size-4 text-info"/>
             Awareness Strategy
           </CardTitle>
           <CardDescription>
@@ -59,17 +53,7 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
           <div className="space-y-2">
             <Label htmlFor="awareness-goal">Optimization Goal</Label>
             <div className="grid grid-cols-1 gap-2">
-              {optimizationGoalButtons.map((option) => (
-                <OptimizationGoalButton
-                  key={option.value}
-                  active={formData.optimizationGoal === option.value}
-                  disabled={Boolean(disabled)}
-                  icon={option.icon}
-                  label={option.label}
-                  description={option.desc}
-                  onClick={option.onClick}
-                />
-              ))}
+              {optimizationGoalButtons.map((option) => (<OptimizationGoalButton key={option.value} active={formData.optimizationGoal === option.value} disabled={Boolean(disabled)} icon={option.icon} label={option.label} description={option.desc} onClick={option.onClick}/>))}
             </div>
           </div>
         </CardContent>
@@ -91,11 +75,7 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
                 Prevent ad fatigue by limiting impressions per user
               </p>
             </div>
-            <Switch
-              id="frequency-cap"
-              defaultChecked
-              disabled={disabled}
-            />
+            <Switch id="frequency-cap" defaultChecked disabled={disabled}/>
           </div>
 
           <div className="space-y-2">
@@ -103,13 +83,7 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
               <Label>Impressions per user per week</Label>
               <span className="text-sm font-medium">3</span>
             </div>
-            <Slider
-              defaultValue={[3]}
-              min={1}
-              max={10}
-              step={1}
-              disabled={disabled}
-            />
+            <Slider defaultValue={[3]} min={1} max={10} step={1} disabled={disabled}/>
             <p className="text-xs text-muted-foreground">
               Recommended: 2-4 impressions per week for awareness campaigns
             </p>
@@ -133,10 +107,7 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
                 Requires minimum $30,000 spend over 30 days
               </p>
             </div>
-            <Switch
-              id="brand-lift"
-              disabled={disabled}
-            />
+            <Switch id="brand-lift" disabled={disabled}/>
           </div>
         </CardContent>
       </Card>
@@ -145,7 +116,7 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
       <Card className="border-info/20 bg-info/10">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <Eye className="size-5 text-info flex-shrink-0 mt-0.5" />
+            <Eye className="size-5 text-info flex-shrink-0 mt-0.5"/>
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Awareness Campaign Tips</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
@@ -160,39 +131,21 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
           </div>
         </CardContent>
       </Card>
-    </div>
-  )
+    </div>);
 }
-
-function OptimizationGoalButton({
-  active,
-  disabled,
-  icon: Icon,
-  label,
-  description,
-  onClick,
-}: {
-  active: boolean
-  disabled: boolean
-  icon: typeof Eye
-  label: string
-  description: string
-  onClick: () => void
+function OptimizationGoalButton({ active, disabled, icon: Icon, label, description, onClick, }: {
+    active: boolean;
+    disabled: boolean;
+    icon: typeof Eye;
+    label: string;
+    description: string;
+    onClick: () => void;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex items-start gap-3 rounded-lg border p-3 text-left motion-chromatic ${
-        active ? 'border-info/20 bg-info/10' : 'border-border hover:border-info/50'
-      }`}
-    >
-      <Icon className="mt-0.5 size-5 text-info" />
+    return (<button type="button" onClick={onClick} disabled={disabled} className={`flex items-start gap-3 rounded-lg border p-3 text-left motion-chromatic ${active ? 'border-info/20 bg-info/10' : 'border-border hover:border-info/50'}`}>
+      <Icon className="mt-0.5 size-5 text-info"/>
       <div>
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-    </button>
-  )
+    </button>);
 }

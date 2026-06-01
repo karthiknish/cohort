@@ -1,289 +1,171 @@
-'use client'
-
-import { useState, useRef, useCallback } from 'react'
-import { Play, Pause, Volume2, VolumeX, Maximize2, Download } from 'lucide-react'
-import { Button } from '@/shared/ui/button'
-import { LazyImage } from '@/shared/ui/lazy-image'
-import { cn } from '@/lib/utils'
-import type { CollaborationAttachment } from '@/types/collaboration'
-
+'use client';
+import { useState, useRef, useCallback } from 'react';
+import { Play, Pause, Volume2, VolumeX, Maximize2, Download } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { LazyImage } from '@/shared/ui/lazy-image';
+import { cn } from '@/lib/utils';
+import type { CollaborationAttachment } from '@/types/collaboration';
 interface GifGalleryItemProps {
-  attachment: CollaborationAttachment
-  index?: number
-  className?: string
-  onPreview?: (attachment: CollaborationAttachment) => void
+    attachment: CollaborationAttachment;
+    index?: number;
+    className?: string;
+    onPreview?: (attachment: CollaborationAttachment) => void;
 }
-
 /**
  * Gallery item component with special handling for GIFs
  * Shows play/pause controls and prevents auto-playing GIFs until hovered
  */
-export function GifGalleryItem({
-  attachment,
-  className,
-  onPreview,
-}: GifGalleryItemProps) {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [isMuted, setIsMuted] = useState(true)
-  const [isLoading, setIsLoading] = useState(true)
-  const videoRef = useRef<HTMLVideoElement>(null)
-
-  const isGif = attachment.type?.includes('gif') || attachment.name.toLowerCase().endsWith('.gif')
-  const isVideo = attachment.type?.startsWith('video/') || attachment.name.toLowerCase().match(/\.(mp4|webm|mov|avi)$/i)
-
-  const handlePlayPause = useCallback(() => {
-    if (!videoRef.current) return
-
-    if (isPlaying) {
-      videoRef.current.pause()
-    } else {
-      videoRef.current.play()
+export function GifGalleryItem({ attachment, className, onPreview, }: GifGalleryItemProps) {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isMuted, setIsMuted] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const isGif = attachment.type?.includes('gif') || attachment.name.toLowerCase().endsWith('.gif');
+    const isVideo = attachment.type?.startsWith('video/') || attachment.name.toLowerCase().match(/\.(mp4|webm|mov|avi)$/i);
+    const handlePlayPause = () => {
+        if (!videoRef.current)
+            return;
+        if (isPlaying) {
+            videoRef.current.pause();
+        }
+        else {
+            videoRef.current.play();
+        }
+        setIsPlaying(!isPlaying);
+    };
+    const handleMuteToggle = () => {
+        if (!videoRef.current)
+            return;
+        videoRef.current.muted = !isMuted;
+        setIsMuted(!isMuted);
+    };
+    const handleMouseEnter = () => {
+        if (!videoRef.current || isPlaying)
+            return;
+        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
+            // Auto-play was blocked, user needs to interact first
+        });
+    };
+    const handleMouseLeave = () => {
+        if (!videoRef.current || !isPlaying)
+            return;
+        videoRef.current.pause();
+        setIsPlaying(false);
+    };
+    const handleDownload = () => {
+        const link = document.createElement('a');
+        link.href = attachment.url;
+        link.download = attachment.name;
+        link.click();
+    };
+    const handlePreview = () => {
+        onPreview?.(attachment);
+    };
+    const handleVideoLoadedData = () => {
+        setIsLoading(false);
+    };
+    // For regular images, show simple img tag
+    if (!isGif && !isVideo) {
+        return (<div className={cn('relative group rounded-lg overflow-hidden', className)}>
+        <LazyImage src={attachment.url} alt={attachment.name} className="w-full h-auto object-cover"/>
+        {onPreview && (<button type="button" onClick={handlePreview} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <Maximize2 className="size-8 text-viewer-chrome"/>
+          </button>)}
+      </div>);
     }
-    setIsPlaying(!isPlaying)
-  }, [isPlaying])
-
-  const handleMuteToggle = useCallback(() => {
-    if (!videoRef.current) return
-    videoRef.current.muted = !isMuted
-    setIsMuted(!isMuted)
-  }, [isMuted])
-
-  const handleMouseEnter = useCallback(() => {
-    if (!videoRef.current || isPlaying) return
-    videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
-      // Auto-play was blocked, user needs to interact first
-    })
-  }, [isPlaying])
-
-  const handleMouseLeave = useCallback(() => {
-    if (!videoRef.current || !isPlaying) return
-    videoRef.current.pause()
-    setIsPlaying(false)
-  }, [isPlaying])
-
-  const handleDownload = useCallback(() => {
-    const link = document.createElement('a')
-    link.href = attachment.url
-    link.download = attachment.name
-    link.click()
-  }, [attachment])
-
-  const handlePreview = useCallback(() => {
-    onPreview?.(attachment)
-  }, [attachment, onPreview])
-
-  const handleVideoLoadedData = useCallback(() => {
-    setIsLoading(false)
-  }, [])
-
-  // For regular images, show simple img tag
-  if (!isGif && !isVideo) {
-    return (
-      <div className={cn('relative group rounded-lg overflow-hidden', className)}>
-        <LazyImage
-          src={attachment.url}
-          alt={attachment.name}
-          className="w-full h-auto object-cover"
-        />
-        {onPreview && (
-          <button
-            type="button"
-            onClick={handlePreview}
-            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-          >
-            <Maximize2 className="size-8 text-viewer-chrome" />
-          </button>
-        )}
-      </div>
-    )
-  }
-
-  // For GIFs and videos, show with controls
-  return (
-    <div
-      className={cn('relative group rounded-lg overflow-hidden bg-black', className)}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
+    // For GIFs and videos, show with controls
+    return (<div className={cn('relative group rounded-lg overflow-hidden bg-black', className)} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
       {/* Video/GIF element */}
-      <video
-        ref={videoRef}
-        src={attachment.url}
-        aria-label={attachment.name || 'GIF or video attachment'}
-        className="w-full h-auto object-cover max-h-96"
-        muted={isMuted}
-        loop
-        playsInline
-        onLoadedData={handleVideoLoadedData}
-        poster={attachment.url.replace(/\.(gif|mp4|webm|mov)$/i, '.jpg')} // Try to find poster image
-      >
-        <track kind="captions" srcLang="en" label="No captions available" />
+      <video ref={videoRef} src={attachment.url} aria-label={attachment.name || 'GIF or video attachment'} className="w-full h-auto object-cover max-h-96" muted={isMuted} loop playsInline onLoadedData={handleVideoLoadedData} poster={attachment.url.replace(/\.(gif|mp4|webm|mov)$/i, '.jpg')} // Try to find poster image
+    >
+        <track kind="captions" srcLang="en" label="No captions available"/>
       </video>
 
       {/* Loading indicator */}
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-          <div className="size-8 animate-spin rounded-full border-2 border-background border-t-transparent" />
-        </div>
-      )}
+      {isLoading && (<div className="absolute inset-0 flex items-center justify-center bg-black/50">
+          <div className="size-8 animate-spin rounded-full border-2 border-background border-t-transparent"/>
+        </div>)}
 
       {/* Controls overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
         <div className="absolute bottom-0 left-0 right-0 p-3 flex items-center justify-between">
           {/* Play/Pause button */}
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="size-8 text-viewer-chrome hover:bg-viewer-chrome/20"
-            onClick={handlePlayPause}
-            aria-label={isPlaying ? 'Pause' : 'Play'}
-          >
-            {isPlaying ? (
-              <Pause className="size-4" aria-hidden />
-            ) : (
-              <Play className="size-4 ml-0.5" aria-hidden />
-            )}
+          <Button type="button" size="icon" variant="ghost" className="size-8 text-viewer-chrome hover:bg-viewer-chrome/20" onClick={handlePlayPause} aria-label={isPlaying ? 'Pause' : 'Play'}>
+            {isPlaying ? (<Pause className="size-4" aria-hidden/>) : (<Play className="size-4 ml-0.5" aria-hidden/>)}
           </Button>
 
           {/* Right side controls */}
           <div className="flex items-center gap-1">
             {/* Mute button */}
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="size-8 text-viewer-chrome hover:bg-viewer-chrome/20"
-              onClick={handleMuteToggle}
-              aria-label={isMuted ? 'Unmute' : 'Mute'}
-            >
-              {isMuted ? (
-                <VolumeX className="size-4" aria-hidden />
-              ) : (
-                <Volume2 className="size-4" aria-hidden />
-              )}
+            <Button type="button" size="icon" variant="ghost" className="size-8 text-viewer-chrome hover:bg-viewer-chrome/20" onClick={handleMuteToggle} aria-label={isMuted ? 'Unmute' : 'Mute'}>
+              {isMuted ? (<VolumeX className="size-4" aria-hidden/>) : (<Volume2 className="size-4" aria-hidden/>)}
             </Button>
 
             {/* Download button */}
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="size-8 text-viewer-chrome hover:bg-viewer-chrome/20"
-              onClick={handleDownload}
-              aria-label="Download"
-            >
-              <Download className="size-4" aria-hidden />
+            <Button type="button" size="icon" variant="ghost" className="size-8 text-viewer-chrome hover:bg-viewer-chrome/20" onClick={handleDownload} aria-label="Download">
+              <Download className="size-4" aria-hidden/>
             </Button>
 
             {/* Preview button */}
-            {onPreview && (
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="size-8 text-viewer-chrome hover:bg-viewer-chrome/20"
-                onClick={handlePreview}
-                aria-label="Open preview"
-              >
-                <Maximize2 className="size-4" aria-hidden />
-              </Button>
-            )}
+            {onPreview && (<Button type="button" size="icon" variant="ghost" className="size-8 text-viewer-chrome hover:bg-viewer-chrome/20" onClick={handlePreview} aria-label="Open preview">
+                <Maximize2 className="size-4" aria-hidden/>
+              </Button>)}
           </div>
         </div>
 
         {/* GIF badge */}
-        {isGif && (
-          <div className="absolute top-2 left-2">
+        {isGif && (<div className="absolute top-2 left-2">
             <span className="px-2 py-1 bg-black/70 rounded text-[10px] font-medium text-viewer-chrome uppercase">
               GIF
             </span>
-          </div>
-        )}
+          </div>)}
       </div>
 
       {/* Click to play overlay (for when user needs to interact first) */}
-      {!isPlaying && !isLoading && (
-        <button
-          type="button"
-          onClick={handlePlayPause}
-          className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
-          aria-label="Play video"
-        >
+      {!isPlaying && !isLoading && (<button type="button" onClick={handlePlayPause} className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors" aria-label="Play video">
           <div className="size-12 rounded-full bg-card/95 flex items-center justify-center shadow-sm ring-1 ring-border/50">
-            <Play className="size-5 text-foreground ml-0.5" aria-hidden />
+            <Play className="size-5 text-foreground ml-0.5" aria-hidden/>
           </div>
-        </button>
-      )}
-    </div>
-  )
+        </button>)}
+    </div>);
 }
-
 /**
  * Lightweight GIF thumbnail that loads the full GIF on hover
  */
-export function GifThumbnail({
-  attachment,
-  className,
-}: {
-  attachment: CollaborationAttachment
-  className?: string
+export function GifThumbnail({ attachment, className, }: {
+    attachment: CollaborationAttachment;
+    className?: string;
 }) {
-  const [isLoaded, setIsLoaded] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
-
-  const isGif = attachment.type?.includes('gif') || attachment.name.toLowerCase().endsWith('.gif')
-
-  const handleMouseEnter = useCallback(() => {
-    setIsHovered(true)
-  }, [])
-
-  const handleMouseLeave = useCallback(() => {
-    setIsHovered(false)
-  }, [])
-
-  const handleLoad = useCallback(() => {
-    setIsLoaded(true)
-  }, [])
-
-  if (!isGif) {
-    return (
-      <LazyImage
-        src={attachment.url}
-        alt={attachment.name}
-        className={cn('w-full h-auto object-cover rounded-lg', className)}
-      />
-    )
-  }
-
-  return (
-    <div
-      className={cn('relative rounded-lg overflow-hidden bg-muted', className)}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
+    const [isLoaded, setIsLoaded] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    const isGif = attachment.type?.includes('gif') || attachment.name.toLowerCase().endsWith('.gif');
+    const handleMouseEnter = () => {
+        setIsHovered(true);
+    };
+    const handleMouseLeave = () => {
+        setIsHovered(false);
+    };
+    const handleLoad = () => {
+        setIsLoaded(true);
+    };
+    if (!isGif) {
+        return (<LazyImage src={attachment.url} alt={attachment.name} className={cn('w-full h-auto object-cover rounded-lg', className)}/>);
+    }
+    return (<div className={cn('relative rounded-lg overflow-hidden bg-muted', className)} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
       {/* Static thumbnail - using first frame or poster */}
-      <LazyImage
-        src={attachment.url}
-        alt={attachment.name}
-        className={cn('w-full h-auto object-cover transition-opacity', isLoaded && 'opacity-100')}
-        onLoad={handleLoad}
-      />
+      <LazyImage src={attachment.url} alt={attachment.name} className={cn('w-full h-auto object-cover transition-opacity', isLoaded && 'opacity-100')} onLoad={handleLoad}/>
 
       {/* GIF badge */}
       <div className="absolute bottom-2 right-2">
         <span className="px-2 py-1 bg-black/70 rounded text-[10px] font-medium text-viewer-chrome uppercase flex items-center gap-1">
-          <Play className="size-3" />
+          <Play className="size-3"/>
           GIF
         </span>
       </div>
 
       {/* Loading indicator */}
-      {isHovered && !isLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-          <div className="size-6 animate-spin rounded-full border-2 border-viewer-chrome border-t-transparent" />
-        </div>
-      )}
-    </div>
-  )
+      {isHovered && !isLoaded && (<div className="absolute inset-0 flex items-center justify-center bg-black/50">
+          <div className="size-6 animate-spin rounded-full border-2 border-viewer-chrome border-t-transparent"/>
+        </div>)}
+    </div>);
 }

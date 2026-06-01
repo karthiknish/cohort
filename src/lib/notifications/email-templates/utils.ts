@@ -1,5 +1,4 @@
-import { EMAIL_COLORS } from '@/lib/colors'
-
+import { EMAIL_COLORS } from '@/lib/colors';
 export function wrapEmailTemplate(content: string): string {
     return `
 <!DOCTYPE html>
@@ -44,14 +43,13 @@ export function wrapEmailTemplate(content: string): string {
   </div>
 </body>
 </html>
-  `.trim()
+  `.trim();
 }
-
 export function escapeHtml(text: string): string {
     return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;')
+        .replace(/'/g, '&#039;');
 }

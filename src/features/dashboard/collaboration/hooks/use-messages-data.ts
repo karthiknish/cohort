@@ -1,662 +1,494 @@
-'use client'
-
-import { notifyFailure } from '@/lib/notifications'
-import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useConvex, useQuery } from 'convex/react'
-
-import { usePreview } from '@/shared/contexts/preview-context'
-import { collaborationApi } from '@/lib/convex-api'
-import { getPreviewCollaborationMessages } from '@/lib/preview-data'
-import type { ClientTeamMember } from '@/types/clients'
-import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
-
-import type { Channel } from '../types'
-import { formatConversationSnippet } from '../lib/chat-text'
-import { useChannelMessageSearch } from './use-channel-message-search'
-import { useMessageActions } from './use-message-actions'
-import { useRealtimeChannelSnapshot, useRealtimeTyping } from './use-realtime'
-import { useThreads } from './use-threads'
-import { useTyping } from './use-typing'
-import { useCollaborationExternalNotify } from './use-collaboration-external-notify'
-import { useChannelMessageSend } from './use-channel-message-send'
-import { useChannelMessagesQuery } from './use-channel-messages-query'
-import { useChannelReadReceipts } from './use-channel-read-receipts'
-import type { ChannelSummary, MessagesByChannelState, PendingAttachment } from './types'
-
+'use client';
+import { notifyFailure } from '@/lib/notifications';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { useConvex, useQuery } from 'convex/react';
+import { usePreview } from '@/shared/contexts/preview-context';
+import { collaborationApi } from '@/lib/convex-api';
+import { getPreviewCollaborationMessages } from '@/lib/preview-data';
+import type { ClientTeamMember } from '@/types/clients';
+import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration';
+import type { Channel } from '../types';
+import { formatConversationSnippet } from '../lib/chat-text';
+import { useChannelMessageSearch } from './use-channel-message-search';
+import { useMessageActions } from './use-message-actions';
+import { useRealtimeChannelSnapshot, useRealtimeTyping } from './use-realtime';
+import { useThreads } from './use-threads';
+import { useTyping } from './use-typing';
+import { useCollaborationExternalNotify } from './use-collaboration-external-notify';
+import { useChannelMessageSend } from './use-channel-message-send';
+import { useChannelMessagesQuery } from './use-channel-messages-query';
+import { useChannelReadReceipts } from './use-channel-read-receipts';
+import type { ChannelSummary, MessagesByChannelState, PendingAttachment } from './types';
 type ChannelMessagesSlice = {
-  messagesByChannel: MessagesByChannelState
-  nextCursorByChannel: Record<string, string | null>
-  loadingChannelId: string | null
-  messagesError: string | null
-}
-
+    messagesByChannel: MessagesByChannelState;
+    nextCursorByChannel: Record<string, string | null>;
+    loadingChannelId: string | null;
+    messagesError: string | null;
+};
 function createInitialChannelMessagesSlice(): ChannelMessagesSlice {
-  return {
-    messagesByChannel: {},
-    nextCursorByChannel: {},
-    loadingChannelId: null,
-    messagesError: null,
-  }
+    return {
+        messagesByChannel: {},
+        nextCursorByChannel: {},
+        loadingChannelId: null,
+        messagesError: null,
+    };
 }
-
 interface UseMessagesDataOptions {
-  workspaceId: string | null
-  currentUserId: string | null
-  selectedChannel: Channel | null
-  channels: Channel[]
-  channelParticipants: ClientTeamMember[]
-  fallbackDisplayName: string
-  fallbackRole: string
-  pendingAttachments: PendingAttachment[]
-  uploading: boolean
-  clearAttachments: () => void
-  uploadAttachments: (attachments: PendingAttachment[]) => Promise<CollaborationAttachment[]>
+    workspaceId: string | null;
+    currentUserId: string | null;
+    selectedChannel: Channel | null;
+    channels: Channel[];
+    channelParticipants: ClientTeamMember[];
+    fallbackDisplayName: string;
+    fallbackRole: string;
+    pendingAttachments: PendingAttachment[];
+    uploading: boolean;
+    clearAttachments: () => void;
+    uploadAttachments: (attachments: PendingAttachment[]) => Promise<CollaborationAttachment[]>;
 }
-
-export function useMessagesData({
-  workspaceId,
-  currentUserId,
-  selectedChannel,
-  channels,
-  channelParticipants,
-  fallbackDisplayName,
-  fallbackRole,
-  pendingAttachments,
-  uploading,
-  clearAttachments,
-  uploadAttachments,
-}: UseMessagesDataOptions) {
-  const { isPreviewMode } = usePreview()
-  const convex = useConvex()
-  const [channelMessagesState, setChannelMessagesState] = useState<ChannelMessagesSlice>(
-    createInitialChannelMessagesSlice,
-  )
-  const {
-    messagesByChannel,
-    nextCursorByChannel,
-    loadingChannelId,
-    messagesError,
-  } = channelMessagesState
-  const [loadingMoreChannelId, setLoadingMoreChannelId] = useState<string | null>(null)
-
-  const setMessagesByChannel = useCallback(
-    (action: React.SetStateAction<MessagesByChannelState>) => {
-      setChannelMessagesState((prev) => ({
-        ...prev,
-        messagesByChannel:
-          typeof action === 'function' ? action(prev.messagesByChannel) : action,
-      }))
-    },
-    [],
-  )
-
-  const setNextCursorByChannel = useCallback(
-    (action: React.SetStateAction<Record<string, string | null>>) => {
-      setChannelMessagesState((prev) => ({
-        ...prev,
-        nextCursorByChannel:
-          typeof action === 'function' ? action(prev.nextCursorByChannel) : action,
-      }))
-    },
-    [],
-  )
-
-  const applyRealtimeChannelLoading = useCallback((channelId: string) => {
-    setChannelMessagesState((prev) => ({
-      ...prev,
-      loadingChannelId: channelId,
-      messagesError: null,
-    }))
-  }, [])
-
-  const applyRealtimeChannelSuccess = useCallback(
-    (
-      channelId: string,
-      messages: CollaborationMessage[],
-      nextCursor: string | null,
-    ) => {
-      setChannelMessagesState((prev) => {
-        const existing = prev.messagesByChannel[channelId] ?? []
-        const serverMessageIds = new Set(messages.map((message) => message.id))
-        const localOnlyMessages = existing.filter((message) => !serverMessageIds.has(message.id))
-        const merged = [...messages, ...localOnlyMessages].sort(
-          (a, b) =>
-            new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime(),
-        )
-
-        return {
-          ...prev,
-          messagesByChannel: {
-            ...prev.messagesByChannel,
-            [channelId]: merged,
-          },
-          nextCursorByChannel: {
-            ...prev.nextCursorByChannel,
-            [channelId]: nextCursor,
-          },
-          loadingChannelId: prev.loadingChannelId === channelId ? null : prev.loadingChannelId,
-          messagesError: null,
+export function useMessagesData({ workspaceId, currentUserId, selectedChannel, channels, channelParticipants, fallbackDisplayName, fallbackRole, pendingAttachments, uploading, clearAttachments, uploadAttachments, }: UseMessagesDataOptions) {
+    const { isPreviewMode } = usePreview();
+    const convex = useConvex();
+    const [channelMessagesState, setChannelMessagesState] = useState<ChannelMessagesSlice>(createInitialChannelMessagesSlice);
+    const { messagesByChannel, nextCursorByChannel, loadingChannelId, messagesError, } = channelMessagesState;
+    const [loadingMoreChannelId, setLoadingMoreChannelId] = useState<string | null>(null);
+    const setMessagesByChannel = (action: React.SetStateAction<MessagesByChannelState>) => {
+        setChannelMessagesState((prev) => ({
+            ...prev,
+            messagesByChannel: typeof action === 'function' ? action(prev.messagesByChannel) : action,
+        }));
+    };
+    const setNextCursorByChannel = (action: React.SetStateAction<Record<string, string | null>>) => {
+        setChannelMessagesState((prev) => ({
+            ...prev,
+            nextCursorByChannel: typeof action === 'function' ? action(prev.nextCursorByChannel) : action,
+        }));
+    };
+    const applyRealtimeChannelLoading = (channelId: string) => {
+        setChannelMessagesState((prev) => ({
+            ...prev,
+            loadingChannelId: channelId,
+            messagesError: null,
+        }));
+    };
+    const applyRealtimeChannelSuccess = (channelId: string, messages: CollaborationMessage[], nextCursor: string | null) => {
+        setChannelMessagesState((prev) => {
+            const existing = prev.messagesByChannel[channelId] ?? [];
+            const serverMessageIds = new Set(messages.map((message) => message.id));
+            const localOnlyMessages = existing.filter((message) => !serverMessageIds.has(message.id));
+            const merged = [...messages, ...localOnlyMessages].sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime());
+            return {
+                ...prev,
+                messagesByChannel: {
+                    ...prev.messagesByChannel,
+                    [channelId]: merged,
+                },
+                nextCursorByChannel: {
+                    ...prev.nextCursorByChannel,
+                    [channelId]: nextCursor,
+                },
+                loadingChannelId: prev.loadingChannelId === channelId ? null : prev.loadingChannelId,
+                messagesError: null,
+            };
+        });
+    };
+    const applyRealtimeChannelError = (channelId: string, errorMessage: string) => {
+        setChannelMessagesState((prev) => ({
+            ...prev,
+            loadingChannelId: prev.loadingChannelId === channelId ? null : prev.loadingChannelId,
+            messagesError: errorMessage,
+        }));
+    };
+    const applyRealtimePreviewChannel = (channelId: string, previewMessages: CollaborationMessage[]) => {
+        setChannelMessagesState((prev) => {
+            const existing = prev.messagesByChannel[channelId];
+            const messagesByChannel = Array.isArray(existing)
+                ? prev.messagesByChannel
+                : {
+                    ...prev.messagesByChannel,
+                    [channelId]: previewMessages,
+                };
+            const nextCursorByChannel = prev.nextCursorByChannel[channelId] === null
+                ? prev.nextCursorByChannel
+                : {
+                    ...prev.nextCursorByChannel,
+                    [channelId]: null,
+                };
+            return {
+                messagesByChannel,
+                nextCursorByChannel,
+                loadingChannelId: null,
+                messagesError: null,
+            };
+        });
+    };
+    const [channelListRetryNonce, setChannelListRetryNonce] = useState(0);
+    const selectedChannelId = selectedChannel?.id ?? null;
+    const [draftByChannelId, setDraftByChannelId] = useState<Record<string, string>>({});
+    const [messageSearchByChannelId, setMessageSearchByChannelId] = useState<Record<string, string>>({});
+    const messageInput = selectedChannelId ? (draftByChannelId[selectedChannelId] ?? '') : '';
+    const messageSearchQuery = selectedChannelId
+        ? (messageSearchByChannelId[selectedChannelId] ?? '')
+        : '';
+    useEffect(() => {
+        setChannelListRetryNonce(0);
+    }, [selectedChannelId]);
+    const setMessageSearchQuery = (value: string) => {
+        if (!selectedChannelId)
+            return;
+        setMessageSearchByChannelId((prev) => ({
+            ...prev,
+            [selectedChannelId]: value,
+        }));
+    };
+    const messagesEndRef = useRef<HTMLDivElement | null>(null);
+    const previewReplyTimersRef = useRef<number[]>([]);
+    const lastRealtimeErrorToastKeyRef = useRef<string | null>(null);
+    const unreadCountsResult = useQuery(collaborationApi.getUnreadCountsByChannel, !isPreviewMode && workspaceId && currentUserId
+        ? {
+            workspaceId: String(workspaceId),
+            userId: String(currentUserId),
         }
-      })
-    },
-    [],
-  )
-
-  const applyRealtimeChannelError = useCallback((channelId: string, errorMessage: string) => {
-    setChannelMessagesState((prev) => ({
-      ...prev,
-      loadingChannelId: prev.loadingChannelId === channelId ? null : prev.loadingChannelId,
-      messagesError: errorMessage,
-    }))
-  }, [])
-
-  const applyRealtimePreviewChannel = useCallback(
-    (channelId: string, previewMessages: CollaborationMessage[]) => {
-      setChannelMessagesState((prev) => {
-        const existing = prev.messagesByChannel[channelId]
-        const messagesByChannel = Array.isArray(existing)
-          ? prev.messagesByChannel
-          : {
-              ...prev.messagesByChannel,
-              [channelId]: previewMessages,
+        : 'skip');
+    const previewMessagesByChannel = (() => {
+        if (!isPreviewMode || channels.length === 0) {
+            return {} as MessagesByChannelState;
+        }
+        const next: MessagesByChannelState = {};
+        for (const channel of channels) {
+            next[channel.id] = getPreviewCollaborationMessages(channel.type, channel.clientId ?? null, channel.projectId ?? null, currentUserId);
+        }
+        return next;
+    })();
+    const resolvedMessagesByChannel = (() => {
+        if (!isPreviewMode) {
+            return messagesByChannel;
+        }
+        return { ...previewMessagesByChannel, ...messagesByChannel };
+    })();
+    const resolvedNextCursorByChannel = (() => {
+        if (!isPreviewMode) {
+            return nextCursorByChannel;
+        }
+        const next = { ...nextCursorByChannel };
+        for (const channel of channels) {
+            next[channel.id] = null;
+        }
+        return next;
+    })();
+    const channelMessages = (selectedChannel ? resolvedMessagesByChannel[selectedChannel.id] ?? [] : []);
+    const threadRootIdsForUnread = (() => {
+        const ids = new Set<string>();
+        for (const message of channelMessages) {
+            if (message.parentMessageId)
+                continue;
+            const rootId = typeof message.threadRootId === 'string' && message.threadRootId.trim().length > 0
+                ? message.threadRootId.trim()
+                : message.id;
+            if (rootId) {
+                ids.add(rootId);
             }
-
-        const nextCursorByChannel =
-          prev.nextCursorByChannel[channelId] === null
-            ? prev.nextCursorByChannel
-            : {
-                ...prev.nextCursorByChannel,
-                [channelId]: null,
-              }
-
-        return {
-          messagesByChannel,
-          nextCursorByChannel,
-          loadingChannelId: null,
-          messagesError: null,
         }
-      })
-    },
-    [],
-  )
-  const [channelListRetryNonce, setChannelListRetryNonce] = useState(0)
-  const selectedChannelId = selectedChannel?.id ?? null
-  const [draftByChannelId, setDraftByChannelId] = useState<Record<string, string>>({})
-  const [messageSearchByChannelId, setMessageSearchByChannelId] = useState<Record<string, string>>({})
-  const messageInput = selectedChannelId ? (draftByChannelId[selectedChannelId] ?? '') : ''
-  const messageSearchQuery = selectedChannelId
-    ? (messageSearchByChannelId[selectedChannelId] ?? '')
-    : ''
-
-  useEffect(() => {
-    setChannelListRetryNonce(0)
-  }, [selectedChannelId])
-
-  const setMessageSearchQuery = useCallback(
-    (value: string) => {
-      if (!selectedChannelId) return
-      setMessageSearchByChannelId((prev) => ({
-        ...prev,
-        [selectedChannelId]: value,
-      }))
-    },
-    [selectedChannelId],
-  )
-
-  const messagesEndRef = useRef<HTMLDivElement | null>(null)
-  const previewReplyTimersRef = useRef<number[]>([])
-  const lastRealtimeErrorToastKeyRef = useRef<string | null>(null)
-
-  const unreadCountsResult = useQuery(
-    collaborationApi.getUnreadCountsByChannel,
-    !isPreviewMode && workspaceId && currentUserId
-      ? {
-          workspaceId: String(workspaceId),
-          userId: String(currentUserId),
+        return Array.from(ids).slice(0, 200);
+    })();
+    const selectedChannelIdArg = selectedChannel?.isCustom ? selectedChannel.id : null;
+    const threadUnreadCountsResult = useQuery(collaborationApi.getThreadUnreadCounts, !isPreviewMode && workspaceId && currentUserId && selectedChannel && threadRootIdsForUnread.length > 0
+        ? {
+            workspaceId: String(workspaceId),
+            channelId: selectedChannelIdArg,
+            channelType: selectedChannel.type,
+            clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
+            projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
+            threadRootIds: threadRootIdsForUnread,
+            userId: String(currentUserId),
         }
-      : 'skip'
-  )
-
-  const previewMessagesByChannel = useMemo(() => {
-    if (!isPreviewMode || channels.length === 0) {
-      return {} as MessagesByChannelState
-    }
-
-    const next: MessagesByChannelState = {}
-    for (const channel of channels) {
-      next[channel.id] = getPreviewCollaborationMessages(
-        channel.type,
-        channel.clientId ?? null,
-        channel.projectId ?? null,
-        currentUserId,
-      )
-    }
-    return next
-  }, [channels, currentUserId, isPreviewMode])
-
-  const resolvedMessagesByChannel = useMemo(() => {
-    if (!isPreviewMode) {
-      return messagesByChannel
-    }
-    return { ...previewMessagesByChannel, ...messagesByChannel }
-  }, [isPreviewMode, messagesByChannel, previewMessagesByChannel])
-
-  const resolvedNextCursorByChannel = useMemo(() => {
-    if (!isPreviewMode) {
-      return nextCursorByChannel
-    }
-
-    const next = { ...nextCursorByChannel }
-    for (const channel of channels) {
-      next[channel.id] = null
-    }
-    return next
-  }, [channels, isPreviewMode, nextCursorByChannel])
-
-  const channelMessages = useMemo(
-    () => (selectedChannel ? resolvedMessagesByChannel[selectedChannel.id] ?? [] : []),
-    [resolvedMessagesByChannel, selectedChannel],
-  )
-  const threadRootIdsForUnread = useMemo(() => {
-    const ids = new Set<string>()
-    for (const message of channelMessages) {
-      if (message.parentMessageId) continue
-
-      const rootId =
-        typeof message.threadRootId === 'string' && message.threadRootId.trim().length > 0
-          ? message.threadRootId.trim()
-          : message.id
-      if (rootId) {
-        ids.add(rootId)
-      }
-    }
-
-    return Array.from(ids).slice(0, 200)
-  }, [channelMessages])
-  const selectedChannelIdArg = selectedChannel?.isCustom ? selectedChannel.id : null
-
-  const threadUnreadCountsResult = useQuery(
-    collaborationApi.getThreadUnreadCounts,
-    !isPreviewMode && workspaceId && currentUserId && selectedChannel && threadRootIdsForUnread.length > 0
-      ? {
-          workspaceId: String(workspaceId),
-          channelId: selectedChannelIdArg,
-          channelType: selectedChannel.type,
-          clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
-          projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
-          threadRootIds: threadRootIdsForUnread,
-          userId: String(currentUserId),
+        : 'skip');
+    useEffect(() => {
+        const replyTimersRef = previewReplyTimersRef;
+        return () => {
+            replyTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+            replyTimersRef.current = [];
+        };
+    }, []);
+    const participantNameMap = new Map(channelParticipants.map((participant) => [participant.name.toLowerCase(), participant]));
+    const { normalizedMessageSearch, visibleMessages, searchingMessages, searchHighlights, searchError, retrySearch, } = useChannelMessageSearch({
+        convex,
+        workspaceId,
+        selectedChannel,
+        channelMessages,
+        messagesByChannel: resolvedMessagesByChannel,
+        messageSearchQuery,
+        isPreviewMode,
+    });
+    const isSearchActive = Boolean(normalizedMessageSearch);
+    const activeMessagesError = isSearchActive ? searchError : messagesError;
+    const retryMessagesError = () => {
+        if (isSearchActive) {
+            retrySearch();
+            return;
         }
-      : 'skip'
-  )
-
-  useEffect(() => {
-    const replyTimersRef = previewReplyTimersRef
-    return () => {
-      replyTimersRef.current.forEach((timerId) => window.clearTimeout(timerId))
-      replyTimersRef.current = []
-    }
-  }, [])
-
-  const participantNameMap = useMemo(
-    () => new Map(channelParticipants.map((participant) => [participant.name.toLowerCase(), participant])),
-    [channelParticipants]
-  )
-
-  const {
-    normalizedMessageSearch,
-    visibleMessages,
-    searchingMessages,
-    searchHighlights,
-    searchError,
-    retrySearch,
-  } = useChannelMessageSearch({
-    convex,
-    workspaceId,
-    selectedChannel,
-    channelMessages,
-    messagesByChannel: resolvedMessagesByChannel,
-    messageSearchQuery,
-    isPreviewMode,
-  })
-
-  const isSearchActive = Boolean(normalizedMessageSearch)
-  const activeMessagesError = isSearchActive ? searchError : messagesError
-
-  const retryMessagesError = useCallback(() => {
-    if (isSearchActive) {
-      retrySearch()
-      return
-    }
-
-    if (selectedChannel) {
-      applyRealtimeChannelLoading(selectedChannel.id)
-    } else {
-      setChannelMessagesState((prev) => ({ ...prev, messagesError: null }))
-    }
-    setChannelListRetryNonce((n) => n + 1)
-  }, [applyRealtimeChannelLoading, isSearchActive, retrySearch, selectedChannel])
-
-  const channelUnreadCounts = useMemo(() => {
-    if (isPreviewMode) {
-      return Object.fromEntries(
-        channels.map((channel) => {
-          const unreadCount = (resolvedMessagesByChannel[channel.id] ?? []).filter((message) => {
-            if (message.isDeleted || message.parentMessageId) return false
-            if (!currentUserId) return false
-            if (message.senderId === currentUserId) return false
-
-            const readBy = Array.isArray(message.readBy) ? message.readBy : []
-            return !readBy.includes(currentUserId)
-          }).length
-
-          return [channel.id, unreadCount]
-        })
-      )
-    }
-
-    const source = (unreadCountsResult as { countsByChannelId?: Record<string, number> } | null)?.countsByChannelId
-    if (!source || typeof source !== 'object') {
-      return {} as Record<string, number>
-    }
-
-    return Object.fromEntries(
-      Object.entries(source).map(([channelId, count]) => [
-        channelId,
-        Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0,
-      ]),
-    )
-  }, [channels, currentUserId, isPreviewMode, resolvedMessagesByChannel, unreadCountsResult])
-  const threadUnreadCountsByRootId = useMemo(() => {
-    const source =
-      (threadUnreadCountsResult as { countsByThreadRootId?: Record<string, number> } | null)?.countsByThreadRootId
-    if (!source || typeof source !== 'object') {
-      return {} as Record<string, number>
-    }
-
-    return Object.fromEntries(
-      Object.entries(source).map(([threadRootId, count]) => [
-        threadRootId,
-        Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0,
-      ]),
-    )
-  }, [threadUnreadCountsResult])
-
-  const channelSummaries = useMemo<Map<string, ChannelSummary>>(() => {
-    const result = new Map<string, ChannelSummary>()
-    Object.entries(resolvedMessagesByChannel).forEach(([channelId, list]) => {
-      if (list && list.length > 0) {
-        const last = list[list.length - 1]
-        if (last) {
-          result.set(channelId, {
-            lastMessage: formatConversationSnippet(last.content ?? '', 160),
-            lastTimestamp: last.createdAt,
-          })
-        }
-      }
-    })
-    return result
-  }, [resolvedMessagesByChannel])
-
-  const isCurrentChannelLoading = selectedChannel ? loadingChannelId === selectedChannel.id : false
-  const loadingMore = selectedChannel ? loadingMoreChannelId === selectedChannel.id : false
-  const canLoadMore = selectedChannel ? Boolean(resolvedNextCursorByChannel[selectedChannel.id]) : false
-
-  const resolveSenderDetails = useCallback(() => {
-    const participant = participantNameMap.get(fallbackDisplayName.toLowerCase())
-    return { senderName: fallbackDisplayName, senderRole: participant?.role ?? fallbackRole }
-  }, [fallbackDisplayName, fallbackRole, participantNameMap])
-
-  const {
-    stopTyping,
-    notifyTyping,
-    handleComposerFocus,
-    handleComposerBlur,
-  } = useTyping({
-    workspaceId,
-    selectedChannel,
-    resolveSenderDetails,
-  })
-
-  const {
-    threadMessagesByRootId,
-    threadNextCursorByRootId,
-    threadLoadingByRootId,
-    threadErrorsByRootId,
-    loadThreadReplies,
-    loadMoreThreadReplies,
-    clearThreadReplies,
-    addThreadReplyToState,
-    mutateThreadMessageById,
-  } = useThreads({ workspaceId, currentUserId })
-
-  const mutateChannelMessages = useCallback(
-    (channelId: string, updater: (messages: CollaborationMessage[]) => CollaborationMessage[]) => {
-      setMessagesByChannel((prev) => {
-        const current = prev[channelId] ?? []
-        const next = updater(current)
-        if (current === next) return prev
-        return { ...prev, [channelId]: next }
-      })
-    },
-    [setMessagesByChannel],
-  )
-
-  const {
-    messageUpdatingId,
-    messageDeletingId,
-    reactionUpdatingByMessage,
-    handleEditMessage: handleEditMessageBase,
-    handleDeleteMessage: handleDeleteMessageBase,
-    handleToggleReaction: handleToggleReactionBase,
-  } = useMessageActions({
-    workspaceId,
-    userId: currentUserId,
-    isPreviewMode,
-    channels,
-    channelParticipants,
-    mutateChannelMessages,
-    mutateThreadMessageById,
-  })
-
-  const handleRealtimeMessagesError = useCallback(
-    (channel: Channel, errorMessage: string) => {
-      const toastKey = `${channel.id}:${channelListRetryNonce}:${errorMessage}`
-      if (lastRealtimeErrorToastKeyRef.current === toastKey) {
-        return
-      }
-
-      lastRealtimeErrorToastKeyRef.current = toastKey
-      notifyFailure({
-        title: 'Unable to load messages',
-        message: '${channel.name}: ${errorMessage}',
-      })
-    },
-    [channelListRetryNonce],
-  )
-
-  const realtimeChannelSnapshot = useRealtimeChannelSnapshot({
-    workspaceId,
-    selectedChannel,
-    currentUserId,
-    channelListRetryNonce,
-  })
-
-  const realtimeSnapshotApplyKey = useMemo(() => {
-    switch (realtimeChannelSnapshot.kind) {
-      case 'idle':
-        return 'idle'
-      case 'loading':
-        return `loading:${realtimeChannelSnapshot.channelId}`
-      case 'success':
-        return `success:${realtimeChannelSnapshot.channelId}:${realtimeChannelSnapshot.messages.length}:${realtimeChannelSnapshot.nextCursor ?? ''}`
-      case 'error':
-        return `error:${realtimeChannelSnapshot.channelId}:${realtimeChannelSnapshot.errorMessage}`
-      case 'preview':
-        return `preview:${realtimeChannelSnapshot.channelId}:${realtimeChannelSnapshot.messages.length}`
-      default: {
-        const _exhaustive: never = realtimeChannelSnapshot
-        return _exhaustive
-      }
-    }
-  }, [realtimeChannelSnapshot])
-
-  const realtimeSnapshotApplyKeyRef = useRef<string | null>(null)
-  if (realtimeSnapshotApplyKeyRef.current !== realtimeSnapshotApplyKey) {
-    realtimeSnapshotApplyKeyRef.current = realtimeSnapshotApplyKey
-    switch (realtimeChannelSnapshot.kind) {
-      case 'idle':
-        break
-      case 'loading':
-        applyRealtimeChannelLoading(realtimeChannelSnapshot.channelId)
-        break
-      case 'success':
-        applyRealtimeChannelSuccess(
-          realtimeChannelSnapshot.channelId,
-          realtimeChannelSnapshot.messages,
-          realtimeChannelSnapshot.nextCursor,
-        )
-        break
-      case 'error':
-        applyRealtimeChannelError(realtimeChannelSnapshot.channelId, realtimeChannelSnapshot.errorMessage)
         if (selectedChannel) {
-          handleRealtimeMessagesError(selectedChannel, realtimeChannelSnapshot.errorMessage)
+            applyRealtimeChannelLoading(selectedChannel.id);
         }
-        break
-      case 'preview':
-        applyRealtimePreviewChannel(realtimeChannelSnapshot.channelId, realtimeChannelSnapshot.messages)
-        break
-      default: {
-        const _exhaustive: never = realtimeChannelSnapshot
-        break
-      }
-    }
-  }
-
-  const { typingParticipants } = useRealtimeTyping({
-    userId: currentUserId,
-    workspaceId,
-    selectedChannel,
-  })
-
-  const handleEditMessage = useCallback(
-    async (channelId: string, messageId: string, nextContent: string) => {
-      await handleEditMessageBase(channelId, messageId, nextContent)
-    },
-    [handleEditMessageBase]
-  )
-
-  const handleDeleteMessage = useCallback(
-    async (channelId: string, messageId: string) => {
-      await handleDeleteMessageBase(channelId, messageId)
-    },
-    [handleDeleteMessageBase]
-  )
-
-  const handleToggleReaction = useCallback(
-    async (channelId: string, messageId: string, emoji: string) => {
-      await handleToggleReactionBase(channelId, messageId, emoji)
-    },
-    [handleToggleReactionBase]
-  )
-
-  const { markChannelRead, markChannelReadPending, markThreadAsRead } = useChannelReadReceipts({
-    workspaceId,
-    currentUserId,
-    selectedChannel,
-    channelMessages,
-    isPreviewMode,
-    mutateChannelMessages,
-  })
-
-  const { sendCollaborationEmailCopy } = useCollaborationExternalNotify()
-
-  const { handleSendMessage, sending, isSendDisabled } = useChannelMessageSend({
-    workspaceId,
-    currentUserId,
-    selectedChannel,
-    channels,
-    channelMessages,
-    channelParticipants,
-    fallbackDisplayName,
-    fallbackRole,
-    messageInput,
-    setMessageInput: (value: string) => {
-      if (!selectedChannelId) return
-      setDraftByChannelId((prev) => ({ ...prev, [selectedChannelId]: value }))
-    },
-    pendingAttachments,
-    uploading,
-    clearAttachments,
-    uploadAttachments,
-    isPreviewMode,
-    stopTyping,
-    mutateChannelMessages,
-    addThreadReplyToState,
-    sendToExternalPlatforms: sendCollaborationEmailCopy,
-  })
-
-  const { handleLoadMore } = useChannelMessagesQuery({
-    convex,
-    workspaceId,
-    channels,
-    isPreviewMode,
-    nextCursorByChannel: resolvedNextCursorByChannel,
-    setLoadingMoreChannelId,
-    mutateChannelMessages,
-    setNextCursorByChannel,
-  })
-
-  const setMessageInput = useCallback(
-    (value: string) => {
-      if (!selectedChannelId) return
-      setDraftByChannelId((prev) => ({ ...prev, [selectedChannelId]: value }))
-      if (value.trim().length > 0) notifyTyping()
-    },
-    [notifyTyping, selectedChannelId],
-  )
-
-  return {
-    channelMessages,
-    visibleMessages,
-    searchingMessages,
-    searchHighlights,
-    messageSearchQuery,
-    setMessageSearchQuery,
-    isCurrentChannelLoading,
-    messagesError: activeMessagesError,
-    retryMessagesError,
-    channelSummaries,
-    messageInput,
-    setMessageInput,
-    typingParticipants,
-    handleComposerFocus,
-    handleComposerBlur,
-    handleSendMessage,
-    sending,
-    isSendDisabled,
-    messagesEndRef,
-    handleEditMessage,
-    handleDeleteMessage,
-    handleToggleReaction,
-    messageUpdatingId,
-    messageDeletingId,
-    handleLoadMore,
-    canLoadMore,
-    loadingMore,
-    threadMessagesByRootId,
-    threadNextCursorByRootId,
-    threadLoadingByRootId,
-    threadErrorsByRootId,
-    threadUnreadCountsByRootId,
-    loadThreadReplies,
-    loadMoreThreadReplies,
-    markThreadAsRead,
-    clearThreadReplies,
-    reactionPendingByMessage: reactionUpdatingByMessage,
-    channelUnreadCounts,
-    markChannelRead,
-    markChannelReadPending,
-  }
+        else {
+            setChannelMessagesState((prev) => ({ ...prev, messagesError: null }));
+        }
+        setChannelListRetryNonce((n) => n + 1);
+    };
+    const channelUnreadCounts = (() => {
+        if (isPreviewMode) {
+            return Object.fromEntries(channels.map((channel) => {
+                const unreadCount = (resolvedMessagesByChannel[channel.id] ?? []).filter((message) => {
+                    if (message.isDeleted || message.parentMessageId)
+                        return false;
+                    if (!currentUserId)
+                        return false;
+                    if (message.senderId === currentUserId)
+                        return false;
+                    const readBy = Array.isArray(message.readBy) ? message.readBy : [];
+                    return !readBy.includes(currentUserId);
+                }).length;
+                return [channel.id, unreadCount];
+            }));
+        }
+        const source = (unreadCountsResult as {
+            countsByChannelId?: Record<string, number>;
+        } | null)?.countsByChannelId;
+        if (!source || typeof source !== 'object') {
+            return {} as Record<string, number>;
+        }
+        return Object.fromEntries(Object.entries(source).map(([channelId, count]) => [
+            channelId,
+            Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0,
+        ]));
+    })();
+    const threadUnreadCountsByRootId = (() => {
+        const source = (threadUnreadCountsResult as {
+            countsByThreadRootId?: Record<string, number>;
+        } | null)?.countsByThreadRootId;
+        if (!source || typeof source !== 'object') {
+            return {} as Record<string, number>;
+        }
+        return Object.fromEntries(Object.entries(source).map(([threadRootId, count]) => [
+            threadRootId,
+            Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0,
+        ]));
+    })();
+    const channelSummaries = (() => {
+        const result = new Map<string, ChannelSummary>();
+        Object.entries(resolvedMessagesByChannel).forEach(([channelId, list]) => {
+            if (list && list.length > 0) {
+                const last = list[list.length - 1];
+                if (last) {
+                    result.set(channelId, {
+                        lastMessage: formatConversationSnippet(last.content ?? '', 160),
+                        lastTimestamp: last.createdAt,
+                    });
+                }
+            }
+        });
+        return result;
+    })();
+    const isCurrentChannelLoading = selectedChannel ? loadingChannelId === selectedChannel.id : false;
+    const loadingMore = selectedChannel ? loadingMoreChannelId === selectedChannel.id : false;
+    const canLoadMore = selectedChannel ? Boolean(resolvedNextCursorByChannel[selectedChannel.id]) : false;
+    const resolveSenderDetails = () => {
+        const participant = participantNameMap.get(fallbackDisplayName.toLowerCase());
+        return { senderName: fallbackDisplayName, senderRole: participant?.role ?? fallbackRole };
+    };
+    const { stopTyping, notifyTyping, handleComposerFocus, handleComposerBlur, } = useTyping({
+        workspaceId,
+        selectedChannel,
+        resolveSenderDetails,
+    });
+    const { threadMessagesByRootId, threadNextCursorByRootId, threadLoadingByRootId, threadErrorsByRootId, loadThreadReplies, loadMoreThreadReplies, clearThreadReplies, addThreadReplyToState, mutateThreadMessageById, } = useThreads({ workspaceId, currentUserId });
+    const mutateChannelMessages = (channelId: string, updater: (messages: CollaborationMessage[]) => CollaborationMessage[]) => {
+        setMessagesByChannel((prev) => {
+            const current = prev[channelId] ?? [];
+            const next = updater(current);
+            if (current === next)
+                return prev;
+            return { ...prev, [channelId]: next };
+        });
+    };
+    const { messageUpdatingId, messageDeletingId, reactionUpdatingByMessage, handleEditMessage: handleEditMessageBase, handleDeleteMessage: handleDeleteMessageBase, handleToggleReaction: handleToggleReactionBase, } = useMessageActions({
+        workspaceId,
+        userId: currentUserId,
+        isPreviewMode,
+        channels,
+        channelParticipants,
+        mutateChannelMessages,
+        mutateThreadMessageById,
+    });
+    const handleRealtimeMessagesError = (channel: Channel, errorMessage: string) => {
+        const toastKey = `${channel.id}:${channelListRetryNonce}:${errorMessage}`;
+        if (lastRealtimeErrorToastKeyRef.current === toastKey) {
+            return;
+        }
+        lastRealtimeErrorToastKeyRef.current = toastKey;
+        notifyFailure({
+            title: 'Unable to load messages',
+            message: '${channel.name}: ${errorMessage}',
+        });
+    };
+    const realtimeChannelSnapshot = useRealtimeChannelSnapshot({
+        workspaceId,
+        selectedChannel,
+        currentUserId,
+        channelListRetryNonce,
+    });
+    const realtimeSnapshotApplyKey = (() => {
+        switch (realtimeChannelSnapshot.kind) {
+            case 'idle':
+                return 'idle';
+            case 'loading':
+                return `loading:${realtimeChannelSnapshot.channelId}`;
+            case 'success':
+                return `success:${realtimeChannelSnapshot.channelId}:${realtimeChannelSnapshot.messages.length}:${realtimeChannelSnapshot.nextCursor ?? ''}`;
+            case 'error':
+                return `error:${realtimeChannelSnapshot.channelId}:${realtimeChannelSnapshot.errorMessage}`;
+            case 'preview':
+                return `preview:${realtimeChannelSnapshot.channelId}:${realtimeChannelSnapshot.messages.length}`;
+            default: {
+                const _exhaustive: never = realtimeChannelSnapshot;
+                return _exhaustive;
+            }
+        }
+    })();
+    const applyRealtimeSnapshot = useEffectEvent(() => {
+        switch (realtimeChannelSnapshot.kind) {
+            case 'idle':
+                break;
+            case 'loading':
+                applyRealtimeChannelLoading(realtimeChannelSnapshot.channelId);
+                break;
+            case 'success':
+                applyRealtimeChannelSuccess(realtimeChannelSnapshot.channelId, realtimeChannelSnapshot.messages, realtimeChannelSnapshot.nextCursor);
+                break;
+            case 'error':
+                applyRealtimeChannelError(realtimeChannelSnapshot.channelId, realtimeChannelSnapshot.errorMessage);
+                if (selectedChannel) {
+                    handleRealtimeMessagesError(selectedChannel, realtimeChannelSnapshot.errorMessage);
+                }
+                break;
+            case 'preview':
+                applyRealtimePreviewChannel(realtimeChannelSnapshot.channelId, realtimeChannelSnapshot.messages);
+                break;
+            default: {
+                const _exhaustive: never = realtimeChannelSnapshot;
+                break;
+            }
+        }
+    });
+    useEffect(() => {
+        applyRealtimeSnapshot();
+    }, [realtimeSnapshotApplyKey, realtimeChannelSnapshot, selectedChannel]);
+    const { typingParticipants } = useRealtimeTyping({
+        userId: currentUserId,
+        workspaceId,
+        selectedChannel,
+    });
+    const handleEditMessage = async (channelId: string, messageId: string, nextContent: string) => {
+        await handleEditMessageBase(channelId, messageId, nextContent);
+    };
+    const handleDeleteMessage = async (channelId: string, messageId: string) => {
+        await handleDeleteMessageBase(channelId, messageId);
+    };
+    const handleToggleReaction = async (channelId: string, messageId: string, emoji: string) => {
+        await handleToggleReactionBase(channelId, messageId, emoji);
+    };
+    const { markChannelRead, markChannelReadPending, markThreadAsRead } = useChannelReadReceipts({
+        workspaceId,
+        currentUserId,
+        selectedChannel,
+        channelMessages,
+        isPreviewMode,
+        mutateChannelMessages,
+    });
+    const { sendCollaborationEmailCopy } = useCollaborationExternalNotify();
+    const { handleSendMessage, sending, isSendDisabled } = useChannelMessageSend({
+        workspaceId,
+        currentUserId,
+        selectedChannel,
+        channels,
+        channelMessages,
+        channelParticipants,
+        fallbackDisplayName,
+        fallbackRole,
+        messageInput,
+        setMessageInput: (value: string) => {
+            if (!selectedChannelId)
+                return;
+            setDraftByChannelId((prev) => ({ ...prev, [selectedChannelId]: value }));
+        },
+        pendingAttachments,
+        uploading,
+        clearAttachments,
+        uploadAttachments,
+        isPreviewMode,
+        stopTyping,
+        mutateChannelMessages,
+        addThreadReplyToState,
+        sendToExternalPlatforms: sendCollaborationEmailCopy,
+    });
+    const { handleLoadMore } = useChannelMessagesQuery({
+        convex,
+        workspaceId,
+        channels,
+        isPreviewMode,
+        nextCursorByChannel: resolvedNextCursorByChannel,
+        setLoadingMoreChannelId,
+        mutateChannelMessages,
+        setNextCursorByChannel,
+    });
+    const setMessageInput = (value: string) => {
+        if (!selectedChannelId)
+            return;
+        setDraftByChannelId((prev) => ({ ...prev, [selectedChannelId]: value }));
+        if (value.trim().length > 0)
+            notifyTyping();
+    };
+    return {
+        channelMessages,
+        visibleMessages,
+        searchingMessages,
+        searchHighlights,
+        messageSearchQuery,
+        setMessageSearchQuery,
+        isCurrentChannelLoading,
+        messagesError: activeMessagesError,
+        retryMessagesError,
+        channelSummaries,
+        messageInput,
+        setMessageInput,
+        typingParticipants,
+        handleComposerFocus,
+        handleComposerBlur,
+        handleSendMessage,
+        sending,
+        isSendDisabled,
+        messagesEndRef,
+        handleEditMessage,
+        handleDeleteMessage,
+        handleToggleReaction,
+        messageUpdatingId,
+        messageDeletingId,
+        handleLoadMore,
+        canLoadMore,
+        loadingMore,
+        threadMessagesByRootId,
+        threadNextCursorByRootId,
+        threadLoadingByRootId,
+        threadErrorsByRootId,
+        threadUnreadCountsByRootId,
+        loadThreadReplies,
+        loadMoreThreadReplies,
+        markThreadAsRead,
+        clearThreadReplies,
+        reactionPendingByMessage: reactionUpdatingByMessage,
+        channelUnreadCounts,
+        markChannelRead,
+        markChannelReadPending,
+    };
 }

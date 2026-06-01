@@ -1,8 +1,6 @@
-import type { Activity } from './types'
-import { isoDaysAgo } from './utils'
-
+import type { Activity } from './types';
+import { isoDaysAgo } from './utils';
 export function getPreviewActivity(clientId: string | null): Activity[] {
-
     const activities: Activity[] = [
         {
             id: 'preview-activity-1',
@@ -84,8 +82,8 @@ export function getPreviewActivity(clientId: string | null): Activity[] {
             description: 'Final performance report shared with stakeholders',
             navigationUrl: '/dashboard/collaboration?projectId=preview-project-3',
         },
-    ]
-
-    if (!clientId) return activities
-    return activities.filter((a) => a.clientId === clientId)
+    ];
+    if (!clientId)
+        return activities;
+    return activities.filter((a) => a.clientId === clientId);
 }

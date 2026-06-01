@@ -1,24 +1,19 @@
-'use client'
-
-import { Suspense, type ReactNode } from 'react'
-import { ThemeProvider } from 'next-themes'
-
-import { AuthProvider } from '@/shared/contexts/auth-context'
-import { UrlSearchParamsProvider } from '@/shared/contexts/url-search-params-context'
-import { AnalyticsProvider } from '@/shared/providers/analytics-provider'
-import { PostHogProvider } from '@/shared/providers/posthog-provider'
-import { ConvexClientProvider } from '@/shared/providers/convex-provider'
-import { QueryProvider } from '@/shared/providers/query-provider'
-import { Toaster as SonnerToaster } from '@/shared/ui/sonner'
-
+'use client';
+import { Suspense, type ReactNode } from 'react';
+import { ThemeProvider } from 'next-themes';
+import { AuthProvider } from '@/shared/contexts/auth-context';
+import { UrlSearchParamsProvider } from '@/shared/contexts/url-search-params-context';
+import { AnalyticsProvider } from '@/shared/providers/analytics-provider';
+import { PostHogProvider } from '@/shared/providers/posthog-provider';
+import { ConvexClientProvider } from '@/shared/providers/convex-provider';
+import { QueryProvider } from '@/shared/providers/query-provider';
+import { Toaster as SonnerToaster } from '@/shared/ui/sonner';
 interface AppProvidersProps {
-  children: ReactNode
-  initialToken?: string | null
+    children: ReactNode;
+    initialToken?: string | null;
 }
-
 export function AppProviders({ children, initialToken }: AppProvidersProps) {
-  return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    return (<ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <ConvexClientProvider initialToken={initialToken}>
         <AuthProvider>
           <QueryProvider>
@@ -35,6 +30,5 @@ export function AppProviders({ children, initialToken }: AppProvidersProps) {
           </QueryProvider>
         </AuthProvider>
       </ConvexClientProvider>
-    </ThemeProvider>
-  )
+    </ThemeProvider>);
 }

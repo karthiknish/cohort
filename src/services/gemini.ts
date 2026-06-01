@@ -1,290 +1,258 @@
-import type { AIAnalysis, CampaignMetrics } from '@/types'
-
-export const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview'
-
+import type { AIAnalysis, CampaignMetrics } from '@/types';
+export const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
 export function resolveGeminiApiKey(): string {
-  const processEnv = typeof process !== 'undefined' ? process.env : undefined
-  return (processEnv?.GEMINI_API_KEY || processEnv?.GOOGLE_API_KEY || '').trim()
+    const processEnv = typeof process !== 'undefined' ? process.env : undefined;
+    return (processEnv?.GEMINI_API_KEY || processEnv?.GOOGLE_API_KEY || '').trim();
 }
-
 export function resolveGeminiModel(): string {
-  const processEnv = typeof process !== 'undefined' ? process.env : undefined
-  return processEnv?.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL
+    const processEnv = typeof process !== 'undefined' ? process.env : undefined;
+    return processEnv?.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
 }
-
 export interface GeminiPrompt {
-  type: 'performance' | 'recommendations' | 'summary' | 'forecast'
-  context: {
-    clientId?: string
-    campaignIds?: string[]
-    metrics?: CampaignMetrics[]
-    dateRange?: { start: Date; end: Date }
-    platform?: string
-  }
+    type: 'performance' | 'recommendations' | 'summary' | 'forecast';
+    context: {
+        clientId?: string;
+        campaignIds?: string[];
+        metrics?: CampaignMetrics[];
+        dateRange?: {
+            start: Date;
+            end: Date;
+        };
+        platform?: string;
+    };
 }
-
-export type GeminiRequestPart =
-  | { text: string }
-  | { inlineData: { mimeType: string; data: string } }
-
+export type GeminiRequestPart = {
+    text: string;
+} | {
+    inlineData: {
+        mimeType: string;
+        data: string;
+    };
+};
 export type GeminiSafetySetting = {
-  category:
-    | 'HARM_CATEGORY_HARASSMENT'
-    | 'HARM_CATEGORY_HATE_SPEECH'
-    | 'HARM_CATEGORY_SEXUALLY_EXPLICIT'
-    | 'HARM_CATEGORY_DANGEROUS_CONTENT'
-    | string
-  threshold: 'BLOCK_NONE' | 'BLOCK_ONLY_HIGH' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_LOW_AND_ABOVE' | string
-}
-
+    category: 'HARM_CATEGORY_HARASSMENT' | 'HARM_CATEGORY_HATE_SPEECH' | 'HARM_CATEGORY_SEXUALLY_EXPLICIT' | 'HARM_CATEGORY_DANGEROUS_CONTENT' | string;
+    threshold: 'BLOCK_NONE' | 'BLOCK_ONLY_HIGH' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_LOW_AND_ABOVE' | string;
+};
 export type GeminiContentGenerationOptions = {
-  systemInstruction?: string
-  temperature?: number
-  maxOutputTokens?: number
-  safetySettings?: GeminiSafetySetting[]
-}
-
+    systemInstruction?: string;
+    temperature?: number;
+    maxOutputTokens?: number;
+    safetySettings?: GeminiSafetySetting[];
+};
 export class GeminiAIService {
-  private apiKey: string
-  private model: string
-  private baseUrl: string
-
-  constructor(apiKey: string) {
-    this.apiKey = apiKey.trim()
-    this.model = resolveGeminiModel()
-    this.baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`
-  }
-
-  async generateContent(prompt: string): Promise<string> {
-    return this.generateContentWithParts([{ text: prompt }])
-  }
-
-  async generateContentWithOptions(prompt: string, options?: GeminiContentGenerationOptions): Promise<string> {
-    return this.generateContentWithParts([{ text: prompt }], options)
-  }
-
-  async generateContentWithParts(parts: GeminiRequestPart[], options?: GeminiContentGenerationOptions): Promise<string> {
-    const apiKey = this.resolveApiKey()
-
-    if (!apiKey) {
-      throw new Error('GEMINI_API_KEY (or GOOGLE_API_KEY) is not configured')
+    private apiKey: string;
+    private model: string;
+    private baseUrl: string;
+    constructor(apiKey: string) {
+        this.apiKey = apiKey.trim();
+        this.model = resolveGeminiModel();
+        this.baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`;
     }
-
-    if (parts.length === 0) {
-      throw new Error('Gemini request requires at least one content part')
+    async generateContent(prompt: string): Promise<string> {
+        return this.generateContentWithParts([{ text: prompt }]);
     }
-
-    try {
-      const response = await fetch(this.baseUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          ...(options?.systemInstruction
-            ? { system_instruction: { parts: [{ text: options.systemInstruction }] } }
-            : {}),
-          ...(options?.temperature !== undefined || options?.maxOutputTokens !== undefined
-            ? {
-                generationConfig: {
-                  ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
-                  ...(options.maxOutputTokens !== undefined ? { maxOutputTokens: options.maxOutputTokens } : {}),
-                },
-              }
-            : {}),
-          ...(options?.safetySettings?.length ? { safetySettings: options.safetySettings } : {}),
-          contents: [{
-            parts: parts.map((part) =>
-              'text' in part
-                ? { text: part.text }
-                : {
-                    inline_data: {
-                      mime_type: part.inlineData.mimeType,
-                      data: part.inlineData.data,
-                    },
-                  },
-            ),
-          }],
-        }),
-      })
-
-      if (!response.ok) {
-        const details = await response.text()
-        throw new Error(`Gemini API error ${response.status}: ${details}`)
-      }
-
-      const data = await response.json()
-      const text = this.extractTextFromResponse(data)
-
-      if (!text) {
-        throw new Error('Gemini API returned an empty response')
-      }
-
-      return text
-    } catch (error) {
-      console.error('Gemini API error:', error)
-
-      if (error instanceof Error) {
-        throw error
-      }
-
-      throw new Error('Failed to generate content with Gemini AI')
+    async generateContentWithOptions(prompt: string, options?: GeminiContentGenerationOptions): Promise<string> {
+        return this.generateContentWithParts([{ text: prompt }], options);
     }
-  }
-
-  getModel(): string {
-    return this.model
-  }
-
-  isConfigured(): boolean {
-    return Boolean(this.resolveApiKey())
-  }
-
-  private extractTextFromResponse(payload: unknown): string | null {
-    if (!payload || typeof payload !== 'object') {
-      return null
-    }
-
-    const root = payload as {
-      candidates?: Array<{
-        content?: { parts?: unknown[] }
-        text?: string
-      }>
-      promptFeedback?: { safetyRatings?: unknown }
-    }
-
-    const candidates = Array.isArray(root.candidates) ? root.candidates : []
-    for (const candidate of candidates) {
-      const parts = candidate?.content?.parts
-      if (Array.isArray(parts)) {
-        const firstText = parts
-          .flatMap((part: unknown) => {
-            if (typeof part === 'string') {
-              return [part]
-            }
-            if (typeof part === 'object' && part !== null && 'text' in part && typeof (part as { text: unknown }).text === 'string') {
-              return [(part as { text: string }).text]
-            }
-            return []
-          })
-          .join('\n')
-        if (firstText) {
-          return firstText.trim()
+    async generateContentWithParts(parts: GeminiRequestPart[], options?: GeminiContentGenerationOptions): Promise<string> {
+        const apiKey = this.resolveApiKey();
+        if (!apiKey) {
+            throw new Error('GEMINI_API_KEY (or GOOGLE_API_KEY) is not configured');
         }
-      }
-
-      if (typeof candidate?.text === 'string' && candidate.text.trim()) {
-        return candidate.text.trim()
-      }
+        if (parts.length === 0) {
+            throw new Error('Gemini request requires at least one content part');
+        }
+        try {
+            const response = await fetch(this.baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': apiKey,
+                },
+                body: JSON.stringify({
+                    ...(options?.systemInstruction
+                        ? { system_instruction: { parts: [{ text: options.systemInstruction }] } }
+                        : {}),
+                    ...(options?.temperature !== undefined || options?.maxOutputTokens !== undefined
+                        ? {
+                            generationConfig: {
+                                ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
+                                ...(options.maxOutputTokens !== undefined ? { maxOutputTokens: options.maxOutputTokens } : {}),
+                            },
+                        }
+                        : {}),
+                    ...(options?.safetySettings?.length ? { safetySettings: options.safetySettings } : {}),
+                    contents: [{
+                            parts: parts.map((part) => 'text' in part
+                                ? { text: part.text }
+                                : {
+                                    inline_data: {
+                                        mime_type: part.inlineData.mimeType,
+                                        data: part.inlineData.data,
+                                    },
+                                }),
+                        }],
+                }),
+            });
+            if (!response.ok) {
+                const details = await response.text();
+                throw new Error(`Gemini API error ${response.status}: ${details}`);
+            }
+            const data = await response.json();
+            const text = this.extractTextFromResponse(data);
+            if (!text) {
+                throw new Error('Gemini API returned an empty response');
+            }
+            return text;
+        }
+        catch (error) {
+            console.error('Gemini API error:', error);
+            if (error instanceof Error) {
+                throw error;
+            }
+            throw new Error('Failed to generate content with Gemini AI');
+        }
     }
-
-    const promptFeedback = root.promptFeedback
-    if (promptFeedback?.safetyRatings) {
-      console.warn('Gemini safety feedback:', promptFeedback.safetyRatings)
+    getModel(): string {
+        return this.model;
     }
-
-    return null
-  }
-
-  private resolveApiKey(): string {
-    if (this.apiKey) {
-      return this.apiKey
+    isConfigured(): boolean {
+        return Boolean(this.resolveApiKey());
     }
-
-    const candidate = resolveGeminiApiKey()
-
-    if (candidate) {
-      this.apiKey = candidate
-      return candidate
+    private extractTextFromResponse(payload: unknown): string | null {
+        if (!payload || typeof payload !== 'object') {
+            return null;
+        }
+        const root = payload as {
+            candidates?: Array<{
+                content?: {
+                    parts?: unknown[];
+                };
+                text?: string;
+            }>;
+            promptFeedback?: {
+                safetyRatings?: unknown;
+            };
+        };
+        const candidates = Array.isArray(root.candidates) ? root.candidates : [];
+        for (const candidate of candidates) {
+            const parts = candidate?.content?.parts;
+            if (Array.isArray(parts)) {
+                const firstText = parts
+                    .flatMap((part: unknown) => {
+                    if (typeof part === 'string') {
+                        return [part];
+                    }
+                    if (typeof part === 'object' && part !== null && 'text' in part && typeof (part as {
+                        text: unknown;
+                    }).text === 'string') {
+                        return [(part as {
+                                text: string;
+                            }).text];
+                    }
+                    return [];
+                })
+                    .join('\n');
+                if (firstText) {
+                    return firstText.trim();
+                }
+            }
+            if (typeof candidate?.text === 'string' && candidate.text.trim()) {
+                return candidate.text.trim();
+            }
+        }
+        const promptFeedback = root.promptFeedback;
+        if (promptFeedback?.safetyRatings) {
+            console.warn('Gemini safety feedback:', promptFeedback.safetyRatings);
+        }
+        return null;
     }
-
-    return ''
-  }
-  async analyzePerformance(context: GeminiPrompt['context']): Promise<AIAnalysis> {
-    const prompt = this.buildPerformancePrompt(context)
-    
-    try {
-      const content = await this.generateContent(prompt)
-      
-      return {
-        id: `analysis-${Date.now()}`,
-        type: 'performance',
-        content,
-        clientId: context.clientId,
-        campaignIds: context.campaignIds,
-        generatedAt: new Date(),
-        confidence: 0.85 // Mock confidence score
-      }
-    } catch {
-      throw new Error('Failed to analyze performance with Gemini AI')
+    private resolveApiKey(): string {
+        if (this.apiKey) {
+            return this.apiKey;
+        }
+        const candidate = resolveGeminiApiKey();
+        if (candidate) {
+            this.apiKey = candidate;
+            return candidate;
+        }
+        return '';
     }
-  }
-
-  async generateRecommendations(context: GeminiPrompt['context']): Promise<AIAnalysis> {
-    const prompt = this.buildRecommendationsPrompt(context)
-    
-    try {
-      const content = await this.generateContent(prompt)
-      
-      return {
-        id: `recommendations-${Date.now()}`,
-        type: 'recommendations',
-        content,
-        clientId: context.clientId,
-        campaignIds: context.campaignIds,
-        generatedAt: new Date(),
-        confidence: 0.82
-      }
-    } catch {
-      throw new Error('Failed to generate recommendations with Gemini AI')
+    async analyzePerformance(context: GeminiPrompt['context']): Promise<AIAnalysis> {
+        const prompt = this.buildPerformancePrompt(context);
+        try {
+            const content = await this.generateContent(prompt);
+            return {
+                id: `analysis-${Date.now()}`,
+                type: 'performance',
+                content,
+                clientId: context.clientId,
+                campaignIds: context.campaignIds,
+                generatedAt: new Date(),
+                confidence: 0.85 // Mock confidence score
+            };
+        }
+        catch {
+            throw new Error('Failed to analyze performance with Gemini AI');
+        }
     }
-  }
-
-  async generateSummary(context: GeminiPrompt['context']): Promise<AIAnalysis> {
-    const prompt = this.buildSummaryPrompt(context)
-    
-    try {
-      const content = await this.generateContent(prompt)
-      
-      return {
-        id: `summary-${Date.now()}`,
-        type: 'summary',
-        content,
-        clientId: context.clientId,
-        campaignIds: context.campaignIds,
-        generatedAt: new Date(),
-        confidence: 0.90
-      }
-    } catch {
-      throw new Error('Failed to generate summary with Gemini AI')
+    async generateRecommendations(context: GeminiPrompt['context']): Promise<AIAnalysis> {
+        const prompt = this.buildRecommendationsPrompt(context);
+        try {
+            const content = await this.generateContent(prompt);
+            return {
+                id: `recommendations-${Date.now()}`,
+                type: 'recommendations',
+                content,
+                clientId: context.clientId,
+                campaignIds: context.campaignIds,
+                generatedAt: new Date(),
+                confidence: 0.82
+            };
+        }
+        catch {
+            throw new Error('Failed to generate recommendations with Gemini AI');
+        }
     }
-  }
-
-  async generateForecast(context: GeminiPrompt['context']): Promise<AIAnalysis> {
-    const prompt = this.buildForecastPrompt(context)
-    
-    try {
-      const content = await this.generateContent(prompt)
-      
-      return {
-        id: `forecast-${Date.now()}`,
-        type: 'forecast',
-        content,
-        clientId: context.clientId,
-        campaignIds: context.campaignIds,
-        generatedAt: new Date(),
-        confidence: 0.75
-      }
-    } catch {
-      throw new Error('Failed to generate forecast with Gemini AI')
+    async generateSummary(context: GeminiPrompt['context']): Promise<AIAnalysis> {
+        const prompt = this.buildSummaryPrompt(context);
+        try {
+            const content = await this.generateContent(prompt);
+            return {
+                id: `summary-${Date.now()}`,
+                type: 'summary',
+                content,
+                clientId: context.clientId,
+                campaignIds: context.campaignIds,
+                generatedAt: new Date(),
+                confidence: 0.90
+            };
+        }
+        catch {
+            throw new Error('Failed to generate summary with Gemini AI');
+        }
     }
-  }
-
-  private buildPerformancePrompt(context: GeminiPrompt['context']): string {
-    const { metrics, platform, dateRange } = context
-    
-    return `
+    async generateForecast(context: GeminiPrompt['context']): Promise<AIAnalysis> {
+        const prompt = this.buildForecastPrompt(context);
+        try {
+            const content = await this.generateContent(prompt);
+            return {
+                id: `forecast-${Date.now()}`,
+                type: 'forecast',
+                content,
+                clientId: context.clientId,
+                campaignIds: context.campaignIds,
+                generatedAt: new Date(),
+                confidence: 0.75
+            };
+        }
+        catch {
+            throw new Error('Failed to generate forecast with Gemini AI');
+        }
+    }
+    private buildPerformancePrompt(context: GeminiPrompt['context']): string {
+        const { metrics, platform, dateRange } = context;
+        return `
       As a digital marketing expert, analyze the following campaign performance data:
       
       Platform: ${platform || 'Multiple platforms'}
@@ -310,13 +278,11 @@ export class GeminiAIService {
       5. Comparison with industry benchmarks (where applicable)
       
       Format the response in a clear, actionable manner suitable for a marketing agency dashboard.
-    `
-  }
-
-  private buildRecommendationsPrompt(context: GeminiPrompt['context']): string {
-    const { metrics, platform, dateRange } = context
-    
-    return `
+    `;
+    }
+    private buildRecommendationsPrompt(context: GeminiPrompt['context']): string {
+        const { metrics, platform, dateRange } = context;
+        return `
       As a digital marketing strategist, review the campaign performance data and provide actionable recommendations:
       
       Platform: ${platform || 'Multiple platforms'}
@@ -339,13 +305,11 @@ export class GeminiAIService {
       6. Testing opportunities
       
       Prioritize recommendations by potential impact and ease of implementation.
-    `
-  }
-
-  private buildSummaryPrompt(context: GeminiPrompt['context']): string {
-    const { metrics, platform, dateRange } = context
-    
-    return `
+    `;
+    }
+    private buildSummaryPrompt(context: GeminiPrompt['context']): string {
+        const { metrics, platform, dateRange } = context;
+        return `
       Create a concise executive summary of the campaign performance for stakeholders:
       
       Platform: ${platform || 'Multiple platforms'}
@@ -365,13 +329,11 @@ export class GeminiAIService {
       4. Next steps or areas of focus
       
       Keep it professional, data-driven, and easy to understand.
-    `
-  }
-
-  private buildForecastPrompt(context: GeminiPrompt['context']): string {
-    const { metrics, platform, dateRange } = context
-    
-    return `
+    `;
+    }
+    private buildForecastPrompt(context: GeminiPrompt['context']): string {
+        const { metrics, platform, dateRange } = context;
+        return `
       Based on the historical campaign data, provide a performance forecast for the next 30-90 days:
       
       Platform: ${platform || 'Multiple platforms'}
@@ -391,8 +353,7 @@ export class GeminiAIService {
       5. Confidence levels for predictions
       
       Include specific metrics and confidence intervals where possible.
-    `
-  }
+    `;
+    }
 }
-
-export const geminiAI = new GeminiAIService(process.env.GEMINI_API_KEY || '')
+export const geminiAI = new GeminiAIService(process.env.GEMINI_API_KEY || '');

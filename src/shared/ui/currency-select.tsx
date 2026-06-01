@@ -1,61 +1,27 @@
-'use client'
-
-import * as React from 'react'
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/select'
-import { cn } from '@/lib/utils'
-import {
-  SUPPORTED_CURRENCIES,
-  POPULAR_CURRENCIES,
-  type CurrencyCode,
-  getCurrencyOptions,
-} from '@/constants/currencies'
-
+'use client';
+import * as React from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
+import { cn } from '@/lib/utils';
+import { SUPPORTED_CURRENCIES, POPULAR_CURRENCIES, type CurrencyCode, getCurrencyOptions, } from '@/constants/currencies';
 interface CurrencySelectProps {
-  value: string
-  onValueChange: (value: CurrencyCode) => void
-  disabled?: boolean
-  placeholder?: string
-  className?: string
-  showPopular?: boolean
-  compact?: boolean
-  /** Passed to the trigger for label / `htmlFor` pairing (a11y). */
-  id?: string
+    value: string;
+    onValueChange: (value: CurrencyCode) => void;
+    disabled?: boolean;
+    placeholder?: string;
+    className?: string;
+    showPopular?: boolean;
+    compact?: boolean;
+    /** Passed to the trigger for label / `htmlFor` pairing (a11y). */
+    id?: string;
 }
-
-export function CurrencySelect({
-  value,
-  onValueChange,
-  disabled = false,
-  placeholder = 'Currency',
-  className,
-  showPopular = true,
-  compact = false,
-  id,
-}: CurrencySelectProps) {
-  const normalizedValue = (value?.toUpperCase() || 'USD') as CurrencyCode
-  const currencyInfo = SUPPORTED_CURRENCIES[normalizedValue] ?? SUPPORTED_CURRENCIES.USD
-  const allOptions = getCurrencyOptions()
-
-  const handleValueChange = React.useCallback(
-    (nextValue: string) => {
-      onValueChange(nextValue as CurrencyCode)
-    },
-    [onValueChange]
-  )
-
-  return (
-    <Select
-      value={normalizedValue}
-      onValueChange={handleValueChange}
-      disabled={disabled}
-    >
+export function CurrencySelect({ value, onValueChange, disabled = false, placeholder = 'Currency', className, showPopular = true, compact = false, id, }: CurrencySelectProps) {
+    const normalizedValue = (value?.toUpperCase() || 'USD') as CurrencyCode;
+    const currencyInfo = SUPPORTED_CURRENCIES[normalizedValue] ?? SUPPORTED_CURRENCIES.USD;
+    const allOptions = getCurrencyOptions();
+    const handleValueChange = (nextValue: string) => {
+        onValueChange(nextValue as CurrencyCode);
+    };
+    return (<Select value={normalizedValue} onValueChange={handleValueChange} disabled={disabled}>
       <SelectTrigger id={id} className={cn(compact ? 'w-[100px]' : 'w-[140px]', className)}>
         <SelectValue placeholder={placeholder}>
           <span className="flex items-center gap-1.5">
@@ -65,13 +31,11 @@ export function CurrencySelect({
         </SelectValue>
       </SelectTrigger>
       <SelectContent className="max-h-[300px]">
-        {showPopular && (
-          <>
+        {showPopular && (<>
             <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
               Popular
             </div>
-            {POPULAR_CURRENCIES.map((code) => (
-              <SelectItem key={code} value={code}>
+            {POPULAR_CURRENCIES.map((code) => (<SelectItem key={code} value={code}>
                 <span className="flex items-center gap-2">
                   <span className="w-6 font-medium">{SUPPORTED_CURRENCIES[code].symbol}</span>
                   <span className="w-10">{code}</span>
@@ -79,18 +43,14 @@ export function CurrencySelect({
                     {SUPPORTED_CURRENCIES[code].name}
                   </span>
                 </span>
-              </SelectItem>
-            ))}
-            <div className="my-1 border-t border-muted" />
+              </SelectItem>))}
+            <div className="my-1 border-t border-muted"/>
             <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
               All currencies
             </div>
-          </>
-        )}
-        {allOptions.flatMap((opt) =>
-          !showPopular || !POPULAR_CURRENCIES.includes(opt.value)
-            ? [(
-            <SelectItem key={opt.value} value={opt.value}>
+          </>)}
+        {allOptions.flatMap((opt) => !showPopular || !POPULAR_CURRENCIES.includes(opt.value)
+            ? [(<SelectItem key={opt.value} value={opt.value}>
               <span className="flex items-center gap-2">
                 <span className="w-6 font-medium">{opt.symbol}</span>
                 <span className="w-10">{opt.value}</span>
@@ -98,34 +58,21 @@ export function CurrencySelect({
                   {SUPPORTED_CURRENCIES[opt.value].name}
                 </span>
               </span>
-            </SelectItem>
-          )]
-            : [],
-        )}
+            </SelectItem>)]
+            : [])}
       </SelectContent>
-    </Select>
-  )
+    </Select>);
 }
-
 // Compact currency badge for display
 interface CurrencyBadgeProps {
-  currency: string
-  className?: string
+    currency: string;
+    className?: string;
 }
-
 export function CurrencyBadge({ currency, className }: CurrencyBadgeProps) {
-  const normalizedCode = (currency?.toUpperCase() || 'USD') as CurrencyCode
-  const info = SUPPORTED_CURRENCIES[normalizedCode] ?? SUPPORTED_CURRENCIES.USD
-
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium',
-        className
-      )}
-    >
+    const normalizedCode = (currency?.toUpperCase() || 'USD') as CurrencyCode;
+    const info = SUPPORTED_CURRENCIES[normalizedCode] ?? SUPPORTED_CURRENCIES.USD;
+    return (<span className={cn('inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium', className)}>
       <span>{info.symbol}</span>
       <span className="text-muted-foreground">{normalizedCode}</span>
-    </span>
-  )
+    </span>);
 }

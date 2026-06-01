@@ -1,6 +1,5 @@
-import type { WorkspaceNotification } from './types'
-import { isoDaysAgo, withPreviewModeSearchParam } from './utils'
-
+import type { WorkspaceNotification } from './types';
+import { isoDaysAgo, withPreviewModeSearchParam } from './utils';
 export function getPreviewNotifications(clientId: string | null = null): WorkspaceNotification[] {
     const notifications: WorkspaceNotification[] = [
         {
@@ -143,18 +142,15 @@ export function getPreviewNotifications(clientId: string | null = null): Workspa
             read: false,
             acknowledged: false,
         },
-    ]
-
+    ];
     if (!clientId) {
-        return notifications
+        return notifications;
     }
-
     return notifications.filter((notification) => {
         const recipientIds = [
             notification.recipients.clientId ?? null,
             ...(notification.recipients.clientIds ?? []),
-        ].filter((value): value is string => typeof value === 'string' && value.length > 0)
-
-        return recipientIds.length === 0 || recipientIds.includes(clientId)
-    })
+        ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+        return recipientIds.length === 0 || recipientIds.includes(clientId);
+    });
 }

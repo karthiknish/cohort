@@ -1,44 +1,31 @@
-'use client'
-
-import type { RefObject } from 'react'
-import { createContext, use, useCallback, useMemo } from 'react'
-
-import { LoaderCircle, RefreshCw } from 'lucide-react'
-
-import { Button } from '@/shared/ui/button'
-import { cn } from '@/lib/utils'
-import type { CollaborationMessage } from '@/types/collaboration'
-
-import {
-  extractUrlsFromContent,
-  isLikelyImageUrl,
-} from '../../utils'
-import { MessageAttachments } from './message-attachments'
-import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
-import {
-  DateSeparator,
-  EmptyMessagesState,
-  MessagesErrorState,
-  NoSearchResultsState,
-} from './message-pane-parts'
-import {
-  DeletingOverlay,
-  DeletedMessageInfo,
-  MessageActionsBar,
-  MessageAvatar,
-  MessageEditForm,
-  MessageHeader,
-  ReplyActionsBar,
-} from './message-item-parts'
-import { MessageList } from './message-list'
-import { toMessageContentComponent } from './message-list-render-utils'
-import { collaborationToUnifiedMessage } from './message-list-utils'
-import { MessageContent } from './message-content'
-import { MessageReactions } from './message-reactions'
-import { SharedPlatformIcons } from './message-share-button'
-import { ThreadSection } from './thread-section'
-import { ImageUrlPreview } from './image-url-preview'
-import { LinkPreviewCard } from './link-preview-card'
-export type CollaborationFlattenedMessageItem =
-  | { id: string; type: 'separator'; label: string }
-  | { id: string; type: 'message'; message: CollaborationMessage; isFirstInGroup: boolean }
+'use client';
+import type { RefObject } from 'react';
+import { createContext, use, useCallback, useMemo } from 'react';
+import { LoaderCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { cn } from '@/lib/utils';
+import type { CollaborationMessage } from '@/types/collaboration';
+import { extractUrlsFromContent, isLikelyImageUrl, } from '../../utils';
+import { MessageAttachments } from './message-attachments';
+import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator';
+import { DateSeparator, EmptyMessagesState, MessagesErrorState, NoSearchResultsState, } from './message-pane-parts';
+import { DeletingOverlay, DeletedMessageInfo, MessageActionsBar, MessageAvatar, MessageEditForm, MessageHeader, ReplyActionsBar, } from './message-item-parts';
+import { MessageList } from './message-list';
+import { toMessageContentComponent } from './message-list-render-utils';
+import { collaborationToUnifiedMessage } from './message-list-utils';
+import { MessageContent } from './message-content';
+import { MessageReactions } from './message-reactions';
+import { SharedPlatformIcons } from './message-share-button';
+import { ThreadSection } from './thread-section';
+import { ImageUrlPreview } from './image-url-preview';
+import { LinkPreviewCard } from './link-preview-card';
+export type CollaborationFlattenedMessageItem = {
+    id: string;
+    type: 'separator';
+    label: string;
+} | {
+    id: string;
+    type: 'message';
+    message: CollaborationMessage;
+    isFirstInGroup: boolean;
+};

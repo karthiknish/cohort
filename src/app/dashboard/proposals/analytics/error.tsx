@@ -1,3 +1,2 @@
-'use client'
-
-export { default } from '../error'
+'use client';
+export { default } from '../error';

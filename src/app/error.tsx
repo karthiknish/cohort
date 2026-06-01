@@ -1,47 +1,38 @@
-'use client'
-
-import { useCallback, useEffect } from 'react'
-import Link from 'next/link'
-import { AlertTriangle, Home, RefreshCw } from 'lucide-react'
-
-import { logRouteError } from '@/shared/ui/log-route-error'
-import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-
+'use client';
+import { useCallback, useEffect } from 'react';
+import Link from 'next/link';
+import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
+import { logRouteError } from '@/shared/ui/log-route-error';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 /**
  * Root segment error boundary (marketing and other top-level routes under `app/`).
  */
-export default function RootAppError({
-  error,
-  unstable_retry,
-  reset,
-}: {
-  error: Error & { digest?: string }
-  unstable_retry?: () => void
-  reset?: () => void
+export default function RootAppError({ error, unstable_retry, reset, }: {
+    error: Error & {
+        digest?: string;
+    };
+    unstable_retry?: () => void;
+    reset?: () => void;
 }) {
-  useEffect(() => {
-    logRouteError(error, 'root')
-  }, [error])
-
-  const handleRetry = useCallback(() => {
-    if (typeof unstable_retry === 'function') {
-      unstable_retry()
-      return
-    }
-    if (typeof reset === 'function') {
-      reset()
-    }
-  }, [reset, unstable_retry])
-
-  const isDevelopment = process.env.NODE_ENV === 'development'
-
-  return (
-    <div className="flex min-h-[60vh] items-center justify-center bg-muted/20 p-4">
+    useEffect(() => {
+        logRouteError(error, 'root');
+    }, [error]);
+    const handleRetry = () => {
+        if (typeof unstable_retry === 'function') {
+            unstable_retry();
+            return;
+        }
+        if (typeof reset === 'function') {
+            reset();
+        }
+    };
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    return (<div className="flex min-h-[60vh] items-center justify-center bg-muted/20 p-4">
       <Card className="max-w-lg border-muted/60" role="alert" aria-live="assertive" aria-atomic="true">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="size-8 text-destructive" aria-hidden />
+            <AlertTriangle className="size-8 text-destructive" aria-hidden/>
           </div>
           <CardTitle className="text-xl">Something went wrong</CardTitle>
           <CardDescription>
@@ -49,26 +40,21 @@ export default function RootAppError({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {isDevelopment ? (
-            <p className="wrap-break-word rounded-md border border-destructive/30 bg-destructive/5 p-2 text-left text-xs font-mono text-destructive">
+          {isDevelopment ? (<p className="wrap-break-word rounded-md border border-destructive/30 bg-destructive/5 p-2 text-left text-xs font-mono text-destructive">
               {error.message}
-            </p>
-          ) : null}
+            </p>) : null}
           <Button className="w-full" onClick={handleRetry} type="button">
-            <RefreshCw className="mr-2 size-4" />
+            <RefreshCw className="mr-2 size-4"/>
             Try again
           </Button>
           <Button variant="outline" asChild className="w-full">
             <Link href="/">
-              <Home className="mr-2 size-4" />
+              <Home className="mr-2 size-4"/>
               Go to home
             </Link>
           </Button>
-          {error.digest ? (
-            <p className="pt-2 text-center text-xs text-muted-foreground">Error ID: {error.digest}</p>
-          ) : null}
+          {error.digest ? (<p className="pt-2 text-center text-xs text-muted-foreground">Error ID: {error.digest}</p>) : null}
         </CardContent>
       </Card>
-    </div>
-  )
+    </div>);
 }

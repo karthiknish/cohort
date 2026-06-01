@@ -73,7 +73,7 @@ const securityHeaders = [
 ] satisfies NonNullable<Awaited<ReturnType<NonNullable<NextConfig['headers']>>>[number]>['headers']
 
 const nextConfig: NextConfig = {
-  // reactCompiler: true, // Temporarily disabled - causes build issues with _global-error
+  reactCompiler: true,
   images: {
     remotePatterns: [
       {

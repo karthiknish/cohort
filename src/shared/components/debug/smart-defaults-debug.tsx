@@ -1,14 +1,10 @@
-'use client'
-
-import { useSmartDefaults } from '@/shared/hooks/use-smart-defaults'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Badge } from '@/shared/ui/badge'
-
+'use client';
+import { useSmartDefaults } from '@/shared/hooks/use-smart-defaults';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Badge } from '@/shared/ui/badge';
 export function SmartDefaultsDebug() {
-  const { taskDefaults, contextInfo } = useSmartDefaults()
-
-  return (
-    <Card className="w-full max-w-md">
+    const { taskDefaults, contextInfo } = useSmartDefaults();
+    return (<Card className="w-full max-w-md">
       <CardHeader>
         <CardTitle className="text-sm">Smart Defaults Debug</CardTitle>
       </CardHeader>
@@ -67,6 +63,5 @@ export function SmartDefaultsDebug() {
           </div>
         </div>
       </CardContent>
-    </Card>
-  )
+    </Card>);
 }

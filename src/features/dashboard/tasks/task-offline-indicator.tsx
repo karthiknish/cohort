@@ -1,1 +1,1 @@
-export { NetworkStatusBanner as OfflineIndicator, SyncStatusBadge } from '@/shared/components/network-status-banner'
+export { NetworkStatusBanner as OfflineIndicator, SyncStatusBadge } from '@/shared/components/network-status-banner';

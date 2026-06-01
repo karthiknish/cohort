@@ -1,33 +1,27 @@
-'use client'
-
-import { useMemo } from 'react'
-import { isToday, isThisWeek } from 'date-fns'
-import { cn } from '@/lib/utils'
-import type { EnhancedActivity } from '../types'
-
+'use client';
+import { useMemo } from 'react';
+import { isToday, isThisWeek } from 'date-fns';
+import { cn } from '@/lib/utils';
+import type { EnhancedActivity } from '../types';
 interface ActivityStatsProps {
-  activities: EnhancedActivity[]
-  className?: string
+    activities: EnhancedActivity[];
+    className?: string;
 }
-
 export function ActivityStats({ activities, className }: ActivityStatsProps) {
-  const stats = useMemo(() => {
-    const todayActivities = activities.filter((a) => isToday(new Date(a.timestamp)))
-    const weekActivities = activities.filter((a) => isThisWeek(new Date(a.timestamp)))
-    const unreadCount = activities.filter((a) => !a.isRead).length
-    const pinnedCount = activities.filter((a) => a.isPinned).length
-
-    return {
-      todayCount: todayActivities.length,
-      weekCount: weekActivities.length,
-      unreadCount,
-      pinnedCount,
-      totalCount: activities.length,
-    }
-  }, [activities])
-
-  return (
-    <div className={cn('grid grid-cols-2 gap-4 sm:grid-cols-5', className)}>
+    const stats = (() => {
+        const todayActivities = activities.filter((a) => isToday(new Date(a.timestamp)));
+        const weekActivities = activities.filter((a) => isThisWeek(new Date(a.timestamp)));
+        const unreadCount = activities.filter((a) => !a.isRead).length;
+        const pinnedCount = activities.filter((a) => a.isPinned).length;
+        return {
+            todayCount: todayActivities.length,
+            weekCount: weekActivities.length,
+            unreadCount,
+            pinnedCount,
+            totalCount: activities.length,
+        };
+    })();
+    return (<div className={cn('grid grid-cols-2 gap-4 sm:grid-cols-5', className)}>
       <div className="space-y-1">
         <p className="text-xs text-muted-foreground">Today</p>
         <p className="text-2xl font-semibold tabular-nums">{stats.todayCount}</p>
@@ -48,6 +42,5 @@ export function ActivityStats({ activities, className }: ActivityStatsProps) {
         <p className="text-xs text-muted-foreground">Total</p>
         <p className="text-2xl font-semibold tabular-nums">{stats.totalCount}</p>
       </div>
-    </div>
-  )
+    </div>);
 }

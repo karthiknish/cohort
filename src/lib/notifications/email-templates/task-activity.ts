@@ -1,24 +1,19 @@
-import { wrapEmailTemplate } from './utils'
-import { EMAIL_COLORS } from '@/lib/colors'
-
+import { wrapEmailTemplate } from './utils';
+import { EMAIL_COLORS } from '@/lib/colors';
 export interface TaskActivityTemplateParams {
-    taskTitle: string
-    actorName: string
-    action: 'commented' | 'completed' | 'updated'
-    snippet?: string
-    priority?: string
-    status?: string
-    taskUrl: string
+    taskTitle: string;
+    actorName: string;
+    action: 'commented' | 'completed' | 'updated';
+    snippet?: string;
+    priority?: string;
+    status?: string;
+    taskUrl: string;
 }
-
 export function taskActivityTemplate(params: TaskActivityTemplateParams): string {
-    const { taskTitle, actorName, action, snippet, priority, status, taskUrl } = params
-
+    const { taskTitle, actorName, action, snippet, priority, status, taskUrl } = params;
     const actionText = action === 'commented' ? 'added a comment to' :
-        action === 'completed' ? 'marked as complete' : 'updated'
-
-    const priorityEmoji = priority === 'high' ? '🔴' : priority === 'medium' ? '🟡' : '🟢'
-
+        action === 'completed' ? 'marked as complete' : 'updated';
+    const priorityEmoji = priority === 'high' ? '🔴' : priority === 'medium' ? '🟡' : '🟢';
     return wrapEmailTemplate(`
         <div style="margin-bottom: 24px;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
@@ -62,5 +57,5 @@ export function taskActivityTemplate(params: TaskActivityTemplateParams): string
                 View Task
             </a>
         </div>
-    `)
+    `);
 }

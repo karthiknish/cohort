@@ -1,41 +1,25 @@
 // =============================================================================
 // TRAFFIC OBJECTIVE SECTION - Drive traffic to destinations
 // =============================================================================
-
-'use client'
-
-import { useCallback } from 'react'
-import { Label } from '@/shared/ui/label'
-import { Input } from '@/shared/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { ExternalLink, Globe, MessageCircle } from 'lucide-react'
-import { DESTINATION_TYPES } from './types'
-import type { ObjectiveComponentProps } from './types'
-
+'use client';
+import { useCallback } from 'react';
+import { Label } from '@/shared/ui/label';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { ExternalLink, Globe, MessageCircle } from 'lucide-react';
+import { DESTINATION_TYPES } from './types';
+import type { ObjectiveComponentProps } from './types';
 export function TrafficObjectiveSection({ formData, onChange, disabled }: ObjectiveComponentProps) {
-  const handleDestinationTypeChange = useCallback(
-    (value: string) => onChange({ destinationType: value as 'WEBSITE' | 'APP' | 'MESSENGER' }),
-    [onChange]
-  )
-
-  const handleDestinationUrlChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => onChange({ destinationUrl: event.target.value }),
-    [onChange]
-  )
-
-  const handleOptimizationGoalChange = useCallback(
-    (value: string) => onChange({ optimizationGoal: value }),
-    [onChange]
-  )
-
-  return (
-    <div className="space-y-6">
+    const handleDestinationTypeChange = (value: string) => onChange({ destinationType: value as 'WEBSITE' | 'APP' | 'MESSENGER' });
+    const handleDestinationUrlChange = (event: React.ChangeEvent<HTMLInputElement>) => onChange({ destinationUrl: event.target.value });
+    const handleOptimizationGoalChange = (value: string) => onChange({ optimizationGoal: value });
+    return (<div className="space-y-6">
       {/* Destination Configuration */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <ExternalLink className="size-4 text-warning" />
+            <ExternalLink className="size-4 text-warning"/>
             Traffic Destination
           </CardTitle>
           <CardDescription>
@@ -46,56 +30,39 @@ export function TrafficObjectiveSection({ formData, onChange, disabled }: Object
           {/* Destination Type */}
           <div className="space-y-2">
             <Label htmlFor="destination-type">Destination Type</Label>
-            <Select
-              value={formData.destinationType}
-              onValueChange={handleDestinationTypeChange}
-              disabled={disabled}
-            >
+            <Select value={formData.destinationType} onValueChange={handleDestinationTypeChange} disabled={disabled}>
               <SelectTrigger id="destination-type">
-                <SelectValue placeholder="Select destination type" />
+                <SelectValue placeholder="Select destination type"/>
               </SelectTrigger>
               <SelectContent>
-                {DESTINATION_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
+                {DESTINATION_TYPES.map((type) => (<SelectItem key={type.value} value={type.value}>
                     <div className="flex items-center gap-2">
-                      {type.value === 'WEBSITE' && <Globe className="size-4" />}
-                      {type.value === 'MESSENGER' && <MessageCircle className="size-4" />}
+                      {type.value === 'WEBSITE' && <Globe className="size-4"/>}
+                      {type.value === 'MESSENGER' && <MessageCircle className="size-4"/>}
                       <div className="flex flex-col items-start">
                         <span>{type.label}</span>
                         <span className="text-xs text-muted-foreground">{type.description}</span>
                       </div>
                     </div>
-                  </SelectItem>
-                ))}
+                  </SelectItem>))}
               </SelectContent>
             </Select>
           </div>
 
           {/* URL Input */}
-          {(formData.destinationType === 'WEBSITE' || formData.destinationType === 'APP') && (
-            <div className="space-y-2">
+          {(formData.destinationType === 'WEBSITE' || formData.destinationType === 'APP') && (<div className="space-y-2">
               <Label htmlFor="destination-url">
                 {formData.destinationType === 'APP' ? 'App Deep Link' : 'Website URL'}
               </Label>
-              <Input
-                id="destination-url"
-                type="url"
-                placeholder={
-                  formData.destinationType === 'APP'
-                    ? 'e.g., myapp://product/123'
-                    : 'https://example.com/landing-page'
-                }
-                value={formData.destinationUrl || ''}
-                onChange={handleDestinationUrlChange}
-                disabled={disabled}
-              />
+              <Input id="destination-url" type="url" placeholder={formData.destinationType === 'APP'
+                ? 'e.g., myapp://product/123'
+                : 'https://example.com/landing-page'} value={formData.destinationUrl || ''} onChange={handleDestinationUrlChange} disabled={disabled}/>
               <p className="text-xs text-muted-foreground">
                 {formData.destinationType === 'APP'
-                  ? 'Deep link that opens your app to a specific screen'
-                  : 'Use a dedicated landing page for best results'}
+                ? 'Deep link that opens your app to a specific screen'
+                : 'Use a dedicated landing page for best results'}
               </p>
-            </div>
-          )}
+            </div>)}
         </CardContent>
       </Card>
 
@@ -110,13 +77,9 @@ export function TrafficObjectiveSection({ formData, onChange, disabled }: Object
         <CardContent>
           <div className="space-y-2">
             <Label htmlFor="optimization-goal">Optimization Goal</Label>
-            <Select
-              value={formData.optimizationGoal}
-              onValueChange={handleOptimizationGoalChange}
-              disabled={disabled}
-            >
+            <Select value={formData.optimizationGoal} onValueChange={handleOptimizationGoalChange} disabled={disabled}>
               <SelectTrigger id="optimization-goal">
-                <SelectValue placeholder="Select optimization goal" />
+                <SelectValue placeholder="Select optimization goal"/>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="LINK_CLICKS">Link Clicks (Most traffic)</SelectItem>
@@ -133,7 +96,7 @@ export function TrafficObjectiveSection({ formData, onChange, disabled }: Object
       <Card className="border-warning/20 bg-warning/5">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <ExternalLink className="size-5 text-warning flex-shrink-0 mt-0.5" />
+            <ExternalLink className="size-5 text-warning flex-shrink-0 mt-0.5"/>
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Traffic Campaign Tips</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
@@ -147,6 +110,5 @@ export function TrafficObjectiveSection({ formData, onChange, disabled }: Object
           </div>
         </CardContent>
       </Card>
-    </div>
-  )
+    </div>);
 }

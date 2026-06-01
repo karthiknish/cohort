@@ -1,49 +1,30 @@
-'use client'
-
-import { useCallback } from 'react'
-import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data'
-import { useToast } from '@/shared/ui/use-toast'
-import type { ProposalFormData } from '@/lib/proposals'
-import type { ProposalPresentationDeck } from '@/types/proposals'
-import {
-  ProposalSubmittedPanelLayout,
-} from './proposal-submitted-panel-sections'
-
+'use client';
+import { useCallback } from 'react';
+import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data';
+import { useToast } from '@/shared/ui/use-toast';
+import type { ProposalFormData } from '@/lib/proposals';
+import type { ProposalPresentationDeck } from '@/types/proposals';
+import { ProposalSubmittedPanelLayout, } from './proposal-submitted-panel-sections';
 interface ProposalSubmittedPanelProps {
-  summary: ProposalFormData
-  presentationDeck: ProposalPresentationDeck | null
-  deckDownloadUrl: string | null
-  activeProposalIdForDeck: string | null
-  canResumeSubmission: boolean
-  onResumeSubmission: () => void
-  onRecheckDeck?: () => Promise<void>
-  isRecheckingDeck?: boolean
-  isSubmitting: boolean
+    summary: ProposalFormData;
+    presentationDeck: ProposalPresentationDeck | null;
+    deckDownloadUrl: string | null;
+    activeProposalIdForDeck: string | null;
+    canResumeSubmission: boolean;
+    onResumeSubmission: () => void;
+    onRecheckDeck?: () => Promise<void>;
+    isRecheckingDeck?: boolean;
+    isSubmitting: boolean;
 }
-
-export function ProposalSubmittedPanel({
-  summary,
-  presentationDeck,
-  deckDownloadUrl,
-  activeProposalIdForDeck,
-  canResumeSubmission,
-  onResumeSubmission,
-  onRecheckDeck,
-  isRecheckingDeck = false,
-  isSubmitting,
-}: ProposalSubmittedPanelProps) {
-  const { toast } = useToast()
-  const viewerHref = activeProposalIdForDeck
-    ? withPreviewModeSearchParamIfEnabled(
-        `/dashboard/proposals/${activeProposalIdForDeck}/deck`,
-        isPreviewModeEnabled(),
-      )
-    : deckDownloadUrl
-      ? `/dashboard/proposals/viewer?src=${encodeURIComponent(deckDownloadUrl)}`
-      : null
-
-  const handleCopySummary = useCallback(() => {
-    const text = `
+export function ProposalSubmittedPanel({ summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, canResumeSubmission, onResumeSubmission, onRecheckDeck, isRecheckingDeck = false, isSubmitting, }: ProposalSubmittedPanelProps) {
+    const { toast } = useToast();
+    const viewerHref = activeProposalIdForDeck
+        ? withPreviewModeSearchParamIfEnabled(`/dashboard/proposals/${activeProposalIdForDeck}/deck`, isPreviewModeEnabled())
+        : deckDownloadUrl
+            ? `/dashboard/proposals/viewer?src=${encodeURIComponent(deckDownloadUrl)}`
+            : null;
+    const handleCopySummary = () => {
+        const text = `
 Company: ${summary.company.name}
 Industry: ${summary.company.industry}
 Website: ${summary.company.website}
@@ -56,38 +37,17 @@ Challenges: ${summary.goals.challenges.join(', ')}
 
 Scope: ${summary.scope.services.join(', ')}
 Timeline: ${summary.timelines.startTime}
-    `.trim()
-
-    navigator.clipboard.writeText(text)
-    toast({ title: "Summary copied to clipboard" })
-  }, [summary, toast])
-
-  const handleCopyShareLink = useCallback(() => {
-    if (activeProposalIdForDeck) {
-      const sharePath = withPreviewModeSearchParamIfEnabled(
-        `/dashboard/proposals/${activeProposalIdForDeck}/deck`,
-        isPreviewModeEnabled(),
-      )
-      const shareLink = `${window.location.origin}${sharePath}`
-      navigator.clipboard.writeText(shareLink)
-      toast({ title: 'Share link copied!' })
-    }
-  }, [activeProposalIdForDeck, toast])
-
-  return (
-    <ProposalSubmittedPanelLayout
-      activeProposalIdForDeck={activeProposalIdForDeck}
-      canResumeSubmission={canResumeSubmission}
-      deckDownloadUrl={deckDownloadUrl}
-      isRecheckingDeck={isRecheckingDeck}
-      isSubmitting={isSubmitting}
-      onCopyShareLink={handleCopyShareLink}
-      onCopySummary={handleCopySummary}
-      onRecheckDeck={onRecheckDeck}
-      onResumeSubmission={onResumeSubmission}
-      presentationDeck={presentationDeck}
-      summary={summary}
-      viewerHref={viewerHref}
-    />
-  )
+    `.trim();
+        navigator.clipboard.writeText(text);
+        toast({ title: "Summary copied to clipboard" });
+    };
+    const handleCopyShareLink = () => {
+        if (activeProposalIdForDeck) {
+            const sharePath = withPreviewModeSearchParamIfEnabled(`/dashboard/proposals/${activeProposalIdForDeck}/deck`, isPreviewModeEnabled());
+            const shareLink = `${window.location.origin}${sharePath}`;
+            navigator.clipboard.writeText(shareLink);
+            toast({ title: 'Share link copied!' });
+        }
+    };
+    return (<ProposalSubmittedPanelLayout activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} deckDownloadUrl={deckDownloadUrl} isRecheckingDeck={isRecheckingDeck} isSubmitting={isSubmitting} onCopyShareLink={handleCopyShareLink} onCopySummary={handleCopySummary} onRecheckDeck={onRecheckDeck} onResumeSubmission={onResumeSubmission} presentationDeck={presentationDeck} summary={summary} viewerHref={viewerHref}/>);
 }

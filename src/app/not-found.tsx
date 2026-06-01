@@ -1,10 +1,7 @@
-import Link from 'next/link'
-
-import { Button } from '@/shared/ui/button'
-
+import Link from 'next/link';
+import { Button } from '@/shared/ui/button';
 export default function NotFound() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-gradient-to-br from-background via-muted/40 to-background px-6 py-24 text-center">
+    return (<main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-gradient-to-br from-background via-muted/40 to-background px-6 py-24 text-center">
       <div className="space-y-4">
         <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
           404: Not Found
@@ -23,6 +20,5 @@ export default function NotFound() {
           <Link href="/auth">Go to sign in</Link>
         </Button>
       </div>
-    </main>
-  )
+    </main>);
 }

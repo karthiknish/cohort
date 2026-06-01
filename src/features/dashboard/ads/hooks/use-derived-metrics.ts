@@ -1,119 +1,95 @@
-'use client'
-
-import { useMemo } from 'react'
-
-import type { MetricRecord } from '../components/types'
-
+'use client';
+import { useMemo } from 'react';
+import type { MetricRecord } from '../components/types';
 // =============================================================================
 // TYPES
 // =============================================================================
-
 export interface DerivedMetrics {
     // Moving Averages
-    movingAverage7Day: MovingAverageResult
-    movingAverage30Day: MovingAverageResult
-
+    movingAverage7Day: MovingAverageResult;
+    movingAverage30Day: MovingAverageResult;
     // Growth Rates
-    growthWeekOverWeek: GrowthRateResult
-    growthMonthOverMonth: GrowthRateResult
-
+    growthWeekOverWeek: GrowthRateResult;
+    growthMonthOverMonth: GrowthRateResult;
     // Custom KPIs
-    kpis: CustomKPIs
-
+    kpis: CustomKPIs;
     // Totals
-    totals: MetricTotals
+    totals: MetricTotals;
 }
-
 export interface MovingAverageResult {
-    spend: number | null
-    impressions: number | null
-    clicks: number | null
-    conversions: number | null
-    revenue: number | null
-    ctr: number | null
-    cpc: number | null
-    roas: number | null
+    spend: number | null;
+    impressions: number | null;
+    clicks: number | null;
+    conversions: number | null;
+    revenue: number | null;
+    ctr: number | null;
+    cpc: number | null;
+    roas: number | null;
 }
-
 export interface GrowthRateResult {
-    spend: number | null
-    impressions: number | null
-    clicks: number | null
-    conversions: number | null
-    revenue: number | null
+    spend: number | null;
+    impressions: number | null;
+    clicks: number | null;
+    conversions: number | null;
+    revenue: number | null;
 }
-
 export interface CustomKPIs {
     /** Cost per acquisition */
-    cpa: number | null
+    cpa: number | null;
     /** Return on ad spend */
-    roas: number | null
+    roas: number | null;
     /** Click-through rate */
-    ctr: number | null
+    ctr: number | null;
     /** Cost per click */
-    cpc: number | null
+    cpc: number | null;
     /** Cost per mille (1000 impressions) */
-    cpm: number | null
+    cpm: number | null;
     /** Conversion rate */
-    conversionRate: number | null
+    conversionRate: number | null;
     /** Revenue per click */
-    revenuePerClick: number | null
+    revenuePerClick: number | null;
     /** Profit (revenue - spend) */
-    profit: number | null
+    profit: number | null;
     /** Profit margin */
-    profitMargin: number | null
+    profitMargin: number | null;
 }
-
 export interface MetricTotals {
-    spend: number
-    impressions: number
-    clicks: number
-    conversions: number
-    revenue: number
-    days: number
+    spend: number;
+    impressions: number;
+    clicks: number;
+    conversions: number;
+    revenue: number;
+    days: number;
 }
-
 export interface UseDerivedMetricsOptions {
     /** Processed metrics from useAdsMetrics */
-    metrics: MetricRecord[]
+    metrics: MetricRecord[];
     /** Optional provider filter */
-    providerId?: string
+    providerId?: string;
 }
-
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
-
 function safeDiv(numerator: number, denominator: number): number | null {
-    if (denominator === 0 || !isFinite(denominator)) return null
-    const result = numerator / denominator
-    return isFinite(result) ? result : null
+    if (denominator === 0 || !isFinite(denominator))
+        return null;
+    const result = numerator / denominator;
+    return isFinite(result) ? result : null;
 }
-
 function calculateTotals(metrics: MetricRecord[]): MetricTotals {
-    return metrics.reduce(
-        (acc, m) => ({
-            spend: acc.spend + m.spend,
-            impressions: acc.impressions + m.impressions,
-            clicks: acc.clicks + m.clicks,
-            conversions: acc.conversions + m.conversions,
-            revenue: acc.revenue + (m.revenue ?? 0),
-            days: acc.days + 1,
-        }),
-        { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0, days: 0 }
-    )
+    return metrics.reduce((acc, m) => ({
+        spend: acc.spend + m.spend,
+        impressions: acc.impressions + m.impressions,
+        clicks: acc.clicks + m.clicks,
+        conversions: acc.conversions + m.conversions,
+        revenue: acc.revenue + (m.revenue ?? 0),
+        days: acc.days + 1,
+    }), { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0, days: 0 });
 }
-
-function calculateMovingAverage(
-    metrics: MetricRecord[],
-    days: number
-): MovingAverageResult {
+function calculateMovingAverage(metrics: MetricRecord[], days: number): MovingAverageResult {
     // Sort by date descending and take last N days
-    const sorted = metrics.toSorted(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    )
-    const subset = sorted.slice(0, days)
-
+    const sorted = metrics.toSorted((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const subset = sorted.slice(0, days);
     if (subset.length === 0) {
         return {
             spend: null,
@@ -124,12 +100,10 @@ function calculateMovingAverage(
             ctr: null,
             cpc: null,
             roas: null,
-        }
+        };
     }
-
-    const totals = calculateTotals(subset)
-    const count = subset.length
-
+    const totals = calculateTotals(subset);
+    const count = subset.length;
     return {
         spend: totals.spend / count,
         impressions: totals.impressions / count,
@@ -139,36 +113,26 @@ function calculateMovingAverage(
         ctr: safeDiv(totals.clicks, totals.impressions),
         cpc: safeDiv(totals.spend, totals.clicks),
         roas: safeDiv(totals.revenue, totals.spend),
-    }
+    };
 }
-
-function calculateGrowthRate(
-    current: MetricTotals,
-    previous: MetricTotals
-): GrowthRateResult {
+function calculateGrowthRate(current: MetricTotals, previous: MetricTotals): GrowthRateResult {
     return {
         spend: safeDiv(current.spend - previous.spend, previous.spend),
         impressions: safeDiv(current.impressions - previous.impressions, previous.impressions),
         clicks: safeDiv(current.clicks - previous.clicks, previous.clicks),
         conversions: safeDiv(current.conversions - previous.conversions, previous.conversions),
         revenue: safeDiv(current.revenue - previous.revenue, previous.revenue),
-    }
+    };
 }
-
-function splitMetricsByPeriod(
-    metrics: MetricRecord[],
-    daysPerPeriod: number
-): { current: MetricRecord[]; previous: MetricRecord[] } {
-    const sorted = metrics.toSorted(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    )
-
-    const current = sorted.slice(0, daysPerPeriod)
-    const previous = sorted.slice(daysPerPeriod, daysPerPeriod * 2)
-
-    return { current, previous }
+function splitMetricsByPeriod(metrics: MetricRecord[], daysPerPeriod: number): {
+    current: MetricRecord[];
+    previous: MetricRecord[];
+} {
+    const sorted = metrics.toSorted((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const current = sorted.slice(0, daysPerPeriod);
+    const previous = sorted.slice(daysPerPeriod, daysPerPeriod * 2);
+    return { current, previous };
 }
-
 function calculateKPIs(totals: MetricTotals): CustomKPIs {
     return {
         cpa: safeDiv(totals.spend, totals.conversions),
@@ -180,62 +144,47 @@ function calculateKPIs(totals: MetricTotals): CustomKPIs {
         revenuePerClick: safeDiv(totals.revenue, totals.clicks),
         profit: totals.revenue - totals.spend,
         profitMargin: safeDiv(totals.revenue - totals.spend, totals.revenue),
-    }
+    };
 }
-
 // =============================================================================
 // HOOK
 // =============================================================================
-
 /**
  * Hook for real-time derived metric calculations
  * Uses memoization for performance with expensive calculations
  */
 export function useDerivedMetrics(options: UseDerivedMetricsOptions): DerivedMetrics {
-    const { metrics, providerId } = options
-
+    const { metrics, providerId } = options;
     // Filter by provider if specified
-    const filteredMetrics = useMemo(() => {
-        if (!providerId) return metrics
-        return metrics.filter((m) => m.providerId === providerId)
-    }, [metrics, providerId])
-
+    const filteredMetrics = (() => {
+        if (!providerId)
+            return metrics;
+        return metrics.filter((m) => m.providerId === providerId);
+    })();
     // Calculate totals (memoized)
-    const totals = useMemo(() => calculateTotals(filteredMetrics), [filteredMetrics])
-
+    const totals = calculateTotals(filteredMetrics);
     // Calculate 7-day moving average (memoized)
-    const movingAverage7Day = useMemo(
-        () => calculateMovingAverage(filteredMetrics, 7),
-        [filteredMetrics]
-    )
-
+    const movingAverage7Day = calculateMovingAverage(filteredMetrics, 7);
     // Calculate 30-day moving average (memoized)
-    const movingAverage30Day = useMemo(
-        () => calculateMovingAverage(filteredMetrics, 30),
-        [filteredMetrics]
-    )
-
+    const movingAverage30Day = calculateMovingAverage(filteredMetrics, 30);
     // Calculate week-over-week growth (memoized)
-    const growthWeekOverWeek = useMemo(() => {
-        const { current, previous } = splitMetricsByPeriod(filteredMetrics, 7)
+    const growthWeekOverWeek = (() => {
+        const { current, previous } = splitMetricsByPeriod(filteredMetrics, 7);
         if (previous.length === 0) {
-            return { spend: null, impressions: null, clicks: null, conversions: null, revenue: null }
+            return { spend: null, impressions: null, clicks: null, conversions: null, revenue: null };
         }
-        return calculateGrowthRate(calculateTotals(current), calculateTotals(previous))
-    }, [filteredMetrics])
-
+        return calculateGrowthRate(calculateTotals(current), calculateTotals(previous));
+    })();
     // Calculate month-over-month growth (memoized)
-    const growthMonthOverMonth = useMemo(() => {
-        const { current, previous } = splitMetricsByPeriod(filteredMetrics, 30)
+    const growthMonthOverMonth = (() => {
+        const { current, previous } = splitMetricsByPeriod(filteredMetrics, 30);
         if (previous.length === 0) {
-            return { spend: null, impressions: null, clicks: null, conversions: null, revenue: null }
+            return { spend: null, impressions: null, clicks: null, conversions: null, revenue: null };
         }
-        return calculateGrowthRate(calculateTotals(current), calculateTotals(previous))
-    }, [filteredMetrics])
-
+        return calculateGrowthRate(calculateTotals(current), calculateTotals(previous));
+    })();
     // Calculate custom KPIs (memoized)
-    const kpis = useMemo(() => calculateKPIs(totals), [totals])
-
+    const kpis = calculateKPIs(totals);
     return {
         movingAverage7Day,
         movingAverage30Day,
@@ -243,5 +192,5 @@ export function useDerivedMetrics(options: UseDerivedMetricsOptions): DerivedMet
         growthMonthOverMonth,
         kpis,
         totals,
-    }
+    };
 }

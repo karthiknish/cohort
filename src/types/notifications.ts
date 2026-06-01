@@ -1,44 +1,39 @@
-export type WorkspaceNotificationRole = 'admin' | 'team' | 'client'
-
-export type WorkspaceNotificationKind =
-  | 'task.created'
-  | 'task.updated'
-  | 'task.comment'
-  | 'task.mention'
-  | 'project.created'
-  | 'collaboration.message'
-  | 'collaboration.mention'
-  | 'proposal.deck.ready'
-  | 'report.generated'
-
-export type WorkspaceNotificationResource =
-  | { type: 'task'; id: string }
-  | { type: 'project'; id: string }
-  | { type: 'collaboration'; id: string }
-  | { type: 'proposal'; id: string }
-
+export type WorkspaceNotificationRole = 'admin' | 'team' | 'client';
+export type WorkspaceNotificationKind = 'task.created' | 'task.updated' | 'task.comment' | 'task.mention' | 'project.created' | 'collaboration.message' | 'collaboration.mention' | 'proposal.deck.ready' | 'report.generated';
+export type WorkspaceNotificationResource = {
+    type: 'task';
+    id: string;
+} | {
+    type: 'project';
+    id: string;
+} | {
+    type: 'collaboration';
+    id: string;
+} | {
+    type: 'proposal';
+    id: string;
+};
 export type WorkspaceNotification = {
-  id: string
-  kind: WorkspaceNotificationKind
-  title: string
-  body: string
-  actor: {
-    id: string | null
-    name: string | null
-  }
-  resource: WorkspaceNotificationResource
-  recipients: {
-    roles: WorkspaceNotificationRole[]
-    clientIds?: string[]
-    clientId?: string | null
-    userIds?: string[]
-  }
-  metadata?: Record<string, unknown>
-  navigationUrl?: string | null
-  createdAt: string | null
-  updatedAt: string | null
-  read: boolean
-  acknowledged: boolean
-}
-
-export type WorkspaceNotificationUpdateAction = 'read' | 'dismiss'
+    id: string;
+    kind: WorkspaceNotificationKind;
+    title: string;
+    body: string;
+    actor: {
+        id: string | null;
+        name: string | null;
+    };
+    resource: WorkspaceNotificationResource;
+    recipients: {
+        roles: WorkspaceNotificationRole[];
+        clientIds?: string[];
+        clientId?: string | null;
+        userIds?: string[];
+    };
+    metadata?: Record<string, unknown>;
+    navigationUrl?: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    read: boolean;
+    acknowledged: boolean;
+};
+export type WorkspaceNotificationUpdateAction = 'read' | 'dismiss';

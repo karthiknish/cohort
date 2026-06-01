@@ -1,1 +1,1 @@
-export { default } from '@/features/dashboard/ads/campaigns/[providerId]/[campaignId]/creative/[creativeId]/page'
+export { default } from '@/features/dashboard/ads/campaigns/[providerId]/[campaignId]/creative/[creativeId]/page';

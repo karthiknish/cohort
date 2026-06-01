@@ -1,1 +1,1 @@
-export { default } from '@/features/dashboard/notifications/page'
+export { default } from '@/features/dashboard/notifications/page';

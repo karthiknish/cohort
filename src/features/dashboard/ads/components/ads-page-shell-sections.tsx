@@ -1,76 +1,47 @@
-'use client'
-
-import { useState, type ReactNode } from 'react'
-import { Link2, LineChart, Settings2 } from 'lucide-react'
-
-import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
-import { cn } from '@/lib/utils'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/shared/ui/collapsible'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
-import { Button } from '@/shared/ui/button'
-
+'use client';
+import { useState, type ReactNode } from 'react';
+import { Link2, LineChart, Settings2 } from 'lucide-react';
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme';
+import { cn } from '@/lib/utils';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger, } from '@/shared/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+import { Button } from '@/shared/ui/button';
 type AdsPageLayoutProps = {
-  setup: ReactNode
-  analytics: ReactNode
-  advancedAnalytics?: ReactNode
-  showSetup: boolean
-  connectedAccountCount: number
-  hasPendingSetup?: boolean
-}
-
-export function AdsPageLayout({
-  setup,
-  analytics,
-  advancedAnalytics,
-  showSetup,
-  connectedAccountCount,
-  hasPendingSetup = false,
-}: AdsPageLayoutProps) {
-  const defaultTab =
-    connectedAccountCount > 0 && !hasPendingSetup ? 'performance' : 'setup'
-  const [mobileTab, setMobileTab] = useState(defaultTab)
-
-  const advancedAnalyticsBlock = advancedAnalytics ? (
-    <AdsAdvancedAnalyticsCollapsible>{advancedAnalytics}</AdsAdvancedAnalyticsCollapsible>
-  ) : null
-
-  if (!showSetup) {
-    return (
-      <div className="space-y-8">
+    setup: ReactNode;
+    analytics: ReactNode;
+    advancedAnalytics?: ReactNode;
+    showSetup: boolean;
+    connectedAccountCount: number;
+    hasPendingSetup?: boolean;
+};
+export function AdsPageLayout({ setup, analytics, advancedAnalytics, showSetup, connectedAccountCount, hasPendingSetup = false, }: AdsPageLayoutProps) {
+    const defaultTab = connectedAccountCount > 0 && !hasPendingSetup ? 'performance' : 'setup';
+    const [mobileTab, setMobileTab] = useState(defaultTab);
+    const advancedAnalyticsBlock = advancedAnalytics ? (<AdsAdvancedAnalyticsCollapsible>{advancedAnalytics}</AdsAdvancedAnalyticsCollapsible>) : null;
+    if (!showSetup) {
+        return (<div className="space-y-8">
         {analytics}
         {advancedAnalyticsBlock}
-      </div>
-    )
-  }
-
-  const setupBlock = <AdsSetupSection>{setup}</AdsSetupSection>
-  const analyticsBlock = (
-    <>
+      </div>);
+    }
+    const setupBlock = <AdsSetupSection>{setup}</AdsSetupSection>;
+    const analyticsBlock = (<>
       <AdsAnalyticsSection>{analytics}</AdsAnalyticsSection>
       {advancedAnalyticsBlock}
-    </>
-  )
-
-  return (
-    <>
+    </>);
+    return (<>
       <Tabs value={mobileTab} onValueChange={setMobileTab} className="w-full lg:hidden">
         <TabsList className={ADS_PAGE_THEME.mobileTabs}>
           <TabsTrigger value="performance" className={ADS_PAGE_THEME.mobileTabTrigger}>
-            <LineChart className="size-3.5 shrink-0" aria-hidden />
+            <LineChart className="size-3.5 shrink-0" aria-hidden/>
             Performance
           </TabsTrigger>
           <TabsTrigger value="setup" className={ADS_PAGE_THEME.mobileTabTrigger}>
-            <Link2 className="size-3.5 shrink-0" aria-hidden />
+            <Link2 className="size-3.5 shrink-0" aria-hidden/>
             Accounts
-            {connectedAccountCount > 0 ? (
-              <span className="rounded-full bg-background px-1.5 py-0 text-[10px] font-semibold tabular-nums text-foreground shadow-sm">
+            {connectedAccountCount > 0 ? (<span className="rounded-full bg-background px-1.5 py-0 text-[10px] font-semibold tabular-nums text-foreground shadow-sm">
                 {connectedAccountCount}
-              </span>
-            ) : null}
+              </span>) : null}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="performance" className="mt-5 space-y-8 focus-visible:outline-none">
@@ -86,59 +57,40 @@ export function AdsPageLayout({
         {setupBlock}
         {analyticsBlock}
       </div>
-    </>
-  )
+    </>);
 }
-
-function AdsSectionHeader({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string
-  title: string
-  description: string
+function AdsSectionHeader({ eyebrow, title, description, }: {
+    eyebrow: string;
+    title: string;
+    description: string;
 }) {
-  return (
-    <div className="space-y-1 border-b border-border/50 pb-4">
+    return (<div className="space-y-1 border-b border-border/50 pb-4">
       <p className={ADS_PAGE_THEME.sectionEyebrow}>{eyebrow}</p>
       <h2 className={ADS_PAGE_THEME.sectionTitle}>{title}</h2>
       <p className={ADS_PAGE_THEME.sectionDescription}>{description}</p>
-    </div>
-  )
+    </div>);
 }
-
-export function AdsSetupSection({ children }: { children: ReactNode }) {
-  return (
-    <section aria-label="Ad platform setup" className="space-y-6">
-      <AdsSectionHeader
-        eyebrow="Workspace setup"
-        title="Accounts & campaigns"
-        description="Connect platforms, finish account selection, and manage per-provider campaigns for the date range in the header."
-      />
+export function AdsSetupSection({ children }: {
+    children: ReactNode;
+}) {
+    return (<section aria-label="Ad platform setup" className="space-y-6">
+      <AdsSectionHeader eyebrow="Workspace setup" title="Accounts & campaigns" description="Connect platforms, finish account selection, and manage per-provider campaigns for the date range in the header."/>
       <div className="space-y-6">{children}</div>
-    </section>
-  )
+    </section>);
 }
-
-export function AdsAnalyticsSection({ children }: { children: ReactNode }) {
-  return (
-    <section aria-label="Ad performance" className="space-y-6">
-      <AdsSectionHeader
-        eyebrow="Reporting"
-        title="Cross-channel performance"
-        description="Aggregate KPIs, provider breakdowns, algorithmic insights, and trend charts from your latest successful sync."
-      />
+export function AdsAnalyticsSection({ children }: {
+    children: ReactNode;
+}) {
+    return (<section aria-label="Ad performance" className="space-y-6">
+      <AdsSectionHeader eyebrow="Reporting" title="Cross-channel performance" description="Aggregate KPIs, provider breakdowns, algorithmic insights, and trend charts from your latest successful sync."/>
       <div className="space-y-6">{children}</div>
-    </section>
-  )
+    </section>);
 }
-
-function AdsAdvancedAnalyticsCollapsible({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <Collapsible open={open} onOpenChange={setOpen} className={ADS_PAGE_THEME.advancedPanel}>
+function AdsAdvancedAnalyticsCollapsible({ children }: {
+    children: ReactNode;
+}) {
+    const [open, setOpen] = useState(false);
+    return (<Collapsible open={open} onOpenChange={setOpen} className={ADS_PAGE_THEME.advancedPanel}>
       <div className="flex items-center justify-between gap-3 p-4 sm:px-5">
         <div className="min-w-0 space-y-0.5">
           <p className="text-sm font-semibold tracking-tight text-foreground">Analytics tools</p>
@@ -148,7 +100,7 @@ function AdsAdvancedAnalyticsCollapsible({ children }: { children: ReactNode }) 
         </div>
         <CollapsibleTrigger asChild>
           <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-xl">
-            <Settings2 className="size-3.5" aria-hidden />
+            <Settings2 className="size-3.5" aria-hidden/>
             {open ? 'Hide' : 'Show'}
           </Button>
         </CollapsibleTrigger>
@@ -156,15 +108,11 @@ function AdsAdvancedAnalyticsCollapsible({ children }: { children: ReactNode }) 
       <CollapsibleContent className={cn('space-y-6 border-t border-border/50 px-4 py-5 sm:px-5')}>
         {children}
       </CollapsibleContent>
-    </Collapsible>
-  )
+    </Collapsible>);
 }
-
 /** @deprecated Use AdsSetupSection — kept for imports during migration */
-export const AdsAccountsPanel = AdsSetupSection
-
+export const AdsAccountsPanel = AdsSetupSection;
 /** @deprecated Use AdsAnalyticsSection */
-export const AdsPerformancePanel = AdsAnalyticsSection
-
+export const AdsPerformancePanel = AdsAnalyticsSection;
 /** @deprecated Use AdsPageLayout */
-export const AdsPageWorkspace = AdsPageLayout
+export const AdsPageWorkspace = AdsPageLayout;

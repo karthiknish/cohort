@@ -170,9 +170,10 @@ export const listCampaigns = action({
     }
 
     // facebook
-    const { listMetaCampaigns } = await import('@/services/integrations/meta-ads')
-
-    const adAccountId = await requireFacebookAdAccount(integration)
+    const [{ listMetaCampaigns }, adAccountId] = await Promise.all([
+      import('@/services/integrations/meta-ads'),
+      requireFacebookAdAccount(integration),
+    ])
 
     const [metaCampaigns, accountMeta] = await Promise.all([
       listMetaCampaigns({ accessToken, adAccountId }),

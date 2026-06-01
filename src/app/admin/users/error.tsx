@@ -1,3 +1,2 @@
-'use client'
-
-export { default } from '@/app/admin/error'
+'use client';
+export { default } from '@/app/admin/error';

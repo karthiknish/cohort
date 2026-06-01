@@ -91,14 +91,11 @@ export const sendCapiEvents = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const [accessToken, { sendMetaCapiEvents }] = await Promise.all([
+      const [accessToken, { sendMetaCapiEvents }, events] = await Promise.all([
         resolveFacebookAccessToken(args.workspaceId, integration, clientId),
         import('@/services/integrations/meta-ads/capi'),
+        Promise.all(args.events.map((row) => mapCapiEvent(row, 'website'))),
       ])
-
-      const events = await Promise.all(
-        args.events.map((row) => mapCapiEvent(row, 'website')),
-      )
 
       const result = await sendMetaCapiEvents({
         accessToken,
@@ -139,14 +136,11 @@ export const sendOfflineEvents = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const [accessToken, { sendMetaOfflineEvents }] = await Promise.all([
+      const [accessToken, { sendMetaOfflineEvents }, events] = await Promise.all([
         resolveFacebookAccessToken(args.workspaceId, integration, clientId),
         import('@/services/integrations/meta-ads/capi'),
+        Promise.all(args.events.map((row) => mapCapiEvent(row, 'physical_store'))),
       ])
-
-      const events = await Promise.all(
-        args.events.map((row) => mapCapiEvent(row, 'physical_store')),
-      )
 
       const result = await sendMetaOfflineEvents({
         accessToken,

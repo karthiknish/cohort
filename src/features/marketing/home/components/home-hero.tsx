@@ -1,22 +1,15 @@
-'use client'
-
-import { CircleCheck } from 'lucide-react'
-
-import { FadeIn, FadeInItem, FadeInStagger } from '@/shared/ui/animate-in'
-
-import type { HERO_HIGHLIGHTS } from './home-content'
-
-type Highlight = (typeof HERO_HIGHLIGHTS)[number]
-
+'use client';
+import { CircleCheck } from 'lucide-react';
+import { FadeIn, FadeInItem, FadeInStagger } from '@/shared/ui/animate-in';
+import type { HERO_HIGHLIGHTS } from './home-content';
+type Highlight = (typeof HERO_HIGHLIGHTS)[number];
 type HomeHeroProps = {
-  headline: string
-  subhead: string
-  highlights: readonly Highlight[]
-}
-
+    headline: string;
+    subhead: string;
+    highlights: readonly Highlight[];
+};
 export function HomeHero({ headline, subhead, highlights }: HomeHeroProps) {
-  return (
-    <FadeIn as="section" className="flex w-full max-w-2xl flex-col justify-center gap-y-10 lg:py-12">
+    return (<FadeIn as="section" className="flex w-full max-w-2xl flex-col justify-center gap-y-10 lg:py-12">
       <div className="space-y-6">
         <div className="inline-flex items-center rounded-full border bg-background px-3 py-1 text-sm font-medium shadow-sm">
           <span className="flex size-2 rounded-full bg-success mr-2" aria-hidden="true"></span>
@@ -29,22 +22,15 @@ export function HomeHero({ headline, subhead, highlights }: HomeHeroProps) {
       </div>
 
       <FadeInStagger className="grid gap-5 sm:grid-cols-2">
-        {highlights.map((item) => (
-          <FadeInItem
-            key={item.title}
-            as="div"
-            className="group flex gap-4 rounded-2xl border border-border/50 bg-background/50 p-5 shadow-sm motion-chromatic hover:border-accent/20 hover:bg-background hover:shadow-md"
-          >
+        {highlights.map((item) => (<FadeInItem key={item.title} as="div" className="group flex gap-4 rounded-2xl border border-border/50 bg-background/50 p-5 shadow-sm motion-chromatic hover:border-accent/20 hover:bg-background hover:shadow-md">
             <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-              <CircleCheck className="size-5" />
+              <CircleCheck className="size-5"/>
             </div>
             <div className="space-y-1">
               <p className="font-semibold text-foreground">{item.title}</p>
               <p className="text-sm text-muted-foreground leading-snug">{item.description}</p>
             </div>
-          </FadeInItem>
-        ))}
+          </FadeInItem>))}
       </FadeInStagger>
-    </FadeIn>
-  )
+    </FadeIn>);
 }

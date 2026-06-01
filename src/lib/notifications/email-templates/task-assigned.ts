@@ -1,20 +1,16 @@
 /**
  * Task Assigned Email Template
  */
-
-import { wrapEmailTemplate } from './utils'
-
+import { wrapEmailTemplate } from './utils';
 export interface TaskAssignedTemplateParams {
-    taskTitle: string
-    priority: string
-    dueDate: string | null
-    assignedBy: string | null
-    clientName: string | null
+    taskTitle: string;
+    priority: string;
+    dueDate: string | null;
+    assignedBy: string | null;
+    clientName: string | null;
 }
-
 export function taskAssignedTemplate(params: TaskAssignedTemplateParams): string {
-    const { taskTitle, priority, dueDate, assignedBy, clientName } = params
-
+    const { taskTitle, priority, dueDate, assignedBy, clientName } = params;
     return wrapEmailTemplate(`
     <div class="header">New Task Assigned</div>
     <div class="content">
@@ -28,5 +24,5 @@ export function taskAssignedTemplate(params: TaskAssignedTemplateParams): string
       </div>
       <p>Log in to view details and get started.</p>
     </div>
-  `)
+  `);
 }

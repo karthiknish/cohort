@@ -1,235 +1,101 @@
-'use client'
-
-import * as React from 'react'
-import { useRouter } from 'next/navigation'
-import { emptyStateEnterClass } from '@/lib/motion'
-import { cn } from '@/lib/utils'
-import { Button } from './button'
-import { Inbox, FileSearch, Users, FolderOpen, CircleAlert, Plus, Calendar, MessageSquare, BarChart3, RefreshCw, WifiOff } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-
-import { emptyStateIcons } from '@/shared/ui/empty-state-icons'
-
+'use client';
+import * as React from 'react';
+import { useRouter } from 'next/navigation';
+import { emptyStateEnterClass } from '@/lib/motion';
+import { cn } from '@/lib/utils';
+import { Button } from './button';
+import { Inbox, FileSearch, Users, FolderOpen, CircleAlert, Plus, Calendar, MessageSquare, BarChart3, RefreshCw, WifiOff } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { emptyStateIcons } from '@/shared/ui/empty-state-icons';
 export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
-  icon?: LucideIcon
-  title: string
-  description?: string
-  action?: {
-    label: string
-    onClick: () => void
-    icon?: LucideIcon
-  }
-  secondaryAction?: {
-    label: string
-    onClick: () => void
-  }
-  variant?: 'default' | 'card' | 'inline'
+    icon?: LucideIcon;
+    title: string;
+    description?: string;
+    action?: {
+        label: string;
+        onClick: () => void;
+        icon?: LucideIcon;
+    };
+    secondaryAction?: {
+        label: string;
+        onClick: () => void;
+    };
+    variant?: 'default' | 'card' | 'inline';
 }
-
-const iconMap = emptyStateIcons
-
+const iconMap = emptyStateIcons;
 function createNetworkErrorAction(action: EmptyStateProps['action'], onRetry: () => void) {
-  return (
-    action || {
-      label: 'Retry',
-      onClick: onRetry,
-      icon: RefreshCw,
-    }
-  )
+    return (action || {
+        label: 'Retry',
+        onClick: onRetry,
+        icon: RefreshCw,
+    });
 }
-
-export function EmptyState({
-  className,
-  icon: Icon = Inbox,
-  title,
-  description,
-  action,
-  secondaryAction,
-  variant = 'default',
-  ...props
-}: EmptyStateProps) {
-  const ActionIcon = action?.icon || Plus
-
-  if (variant === 'inline') {
-    return (
-      <div
-        className={cn(
-          'flex items-center gap-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4',
-          className
-        )}
-        {...props}
-      >
+export function EmptyState({ className, icon: Icon = Inbox, title, description, action, secondaryAction, variant = 'default', ...props }: EmptyStateProps) {
+    const ActionIcon = action?.icon || Plus;
+    if (variant === 'inline') {
+        return (<div className={cn('flex items-center gap-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4', className)} {...props}>
         <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
-          <Icon className="size-5 text-muted-foreground" />
+          <Icon className="size-5 text-muted-foreground"/>
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">{title}</p>
-          {description && (
-            <p className="mt-0.5 text-sm text-muted-foreground line-clamp-1">{description}</p>
-          )}
+          {description && (<p className="mt-0.5 text-sm text-muted-foreground line-clamp-1">{description}</p>)}
         </div>
-        {action && (
-          <Button onClick={action.onClick} size="sm" variant="outline">
-            <ActionIcon className="mr-1.5 size-3.5" />
+        {action && (<Button onClick={action.onClick} size="sm" variant="outline">
+            <ActionIcon className="mr-1.5 size-3.5"/>
             {action.label}
-          </Button>
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <div
-      className={cn(
-        'flex flex-col items-center justify-center text-center',
-        emptyStateEnterClass,
-        variant === 'card' && 'rounded-lg border border-dashed border-muted-foreground/30 bg-muted/10',
-        variant === 'default' ? 'py-12 px-4' : 'p-8',
-        className
-      )}
-      {...props}
-    >
+          </Button>)}
+      </div>);
+    }
+    return (<div className={cn('flex flex-col items-center justify-center text-center', emptyStateEnterClass, variant === 'card' && 'rounded-lg border border-dashed border-muted-foreground/30 bg-muted/10', variant === 'default' ? 'py-12 px-4' : 'p-8', className)} {...props}>
       <div className="flex size-14 items-center justify-center rounded-full bg-muted/80 ring-4 ring-muted/40 mb-4">
-        <Icon className="size-7 text-muted-foreground" />
+        <Icon className="size-7 text-muted-foreground"/>
       </div>
       <h3 className="text-base font-semibold text-foreground">{title}</h3>
-      {description && (
-        <p className="mt-1.5 max-w-sm text-sm text-muted-foreground leading-relaxed">{description}</p>
-      )}
-      {(action || secondaryAction) && (
-        <div className="mt-5 flex items-center gap-3">
-          {action && (
-            <Button onClick={action.onClick} size="sm">
-              <ActionIcon className="mr-1.5 size-4" />
+      {description && (<p className="mt-1.5 max-w-sm text-sm text-muted-foreground leading-relaxed">{description}</p>)}
+      {(action || secondaryAction) && (<div className="mt-5 flex items-center gap-3">
+          {action && (<Button onClick={action.onClick} size="sm">
+              <ActionIcon className="mr-1.5 size-4"/>
               {action.label}
-            </Button>
-          )}
-          {secondaryAction && (
-            <Button onClick={secondaryAction.onClick} size="sm" variant="ghost">
+            </Button>)}
+          {secondaryAction && (<Button onClick={secondaryAction.onClick} size="sm" variant="ghost">
               {secondaryAction.label}
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
-  )
+            </Button>)}
+        </div>)}
+    </div>);
 }
-
 // Preset empty states for common use cases
 export function NoDataEmptyState(props: Partial<EmptyStateProps>) {
-  return (
-    <EmptyState
-      icon={Inbox}
-      title="No data available"
-      description="Data will appear here once it's been added."
-      {...props}
-    />
-  )
+    return (<EmptyState icon={Inbox} title="No data available" description="Data will appear here once it's been added." {...props}/>);
 }
-
 export function NoResultsEmptyState(props: Partial<EmptyStateProps>) {
-  return (
-    <EmptyState
-      icon={FileSearch}
-      title="No results found"
-      description="Try adjusting your search or filter criteria."
-      {...props}
-    />
-  )
+    return (<EmptyState icon={FileSearch} title="No results found" description="Try adjusting your search or filter criteria." {...props}/>);
 }
-
 export function NoAccessEmptyState(props: Partial<EmptyStateProps>) {
-  return (
-    <EmptyState
-      icon={CircleAlert}
-      title="Access restricted"
-      description="You don't have permission to view this content."
-      {...props}
-    />
-  )
+    return (<EmptyState icon={CircleAlert} title="Access restricted" description="You don't have permission to view this content." {...props}/>);
 }
-
 export function NoClientsEmptyState(props: Partial<EmptyStateProps>) {
-  return (
-    <EmptyState
-      icon={Users}
-      title="No clients yet"
-      description="Add your first client to get started with project management."
-      {...props}
-    />
-  )
+    return (<EmptyState icon={Users} title="No clients yet" description="Add your first client to get started with project management." {...props}/>);
 }
-
 export function NoProjectsEmptyState(props: Partial<EmptyStateProps>) {
-  return (
-    <EmptyState
-      icon={FolderOpen}
-      title="No projects found"
-      description="Create a project to start tracking work and tasks."
-      {...props}
-    />
-  )
+    return (<EmptyState icon={FolderOpen} title="No projects found" description="Create a project to start tracking work and tasks." {...props}/>);
 }
-
 export function NoTasksEmptyState(props: Partial<EmptyStateProps>) {
-  return (
-    <EmptyState
-      icon={CircleAlert}
-      title="No tasks yet"
-      description="Tasks will appear here once they're assigned."
-      {...props}
-    />
-  )
+    return (<EmptyState icon={CircleAlert} title="No tasks yet" description="Tasks will appear here once they're assigned." {...props}/>);
 }
-
 export function NoEventsEmptyState(props: Partial<EmptyStateProps>) {
-  return (
-    <EmptyState
-      icon={Calendar}
-      title="No upcoming events"
-      description="Your schedule is clear. New events will appear here."
-      {...props}
-    />
-  )
+    return (<EmptyState icon={Calendar} title="No upcoming events" description="Your schedule is clear. New events will appear here." {...props}/>);
 }
-
 export function NoMessagesEmptyState(props: Partial<EmptyStateProps>) {
-  return (
-    <EmptyState
-      icon={MessageSquare}
-      title="No messages"
-      description="Start a conversation to see messages here."
-      {...props}
-    />
-  )
+    return (<EmptyState icon={MessageSquare} title="No messages" description="Start a conversation to see messages here." {...props}/>);
 }
-
 export function NoAnalyticsEmptyState(props: Partial<EmptyStateProps>) {
-  return (
-    <EmptyState
-      icon={BarChart3}
-      title="No analytics data"
-      description="Analytics will be available once you have enough data."
-      {...props}
-    />
-  )
+    return (<EmptyState icon={BarChart3} title="No analytics data" description="Analytics will be available once you have enough data." {...props}/>);
 }
-
 export function NetworkErrorEmptyState(props: Partial<EmptyStateProps>) {
-  const { refresh } = useRouter()
-
-  const handleRetry = React.useCallback(() => {
-    refresh()
-  }, [refresh])
-
-  return (
-    <EmptyState
-      icon={WifiOff}
-      title="Connection error"
-      description="Unable to load data. Please check your connection and try again."
-      action={createNetworkErrorAction(props.action, handleRetry)}
-      {...props}
-    />
-  )
+    const { refresh } = useRouter();
+    const handleRetry = () => {
+        refresh();
+    };
+    return (<EmptyState icon={WifiOff} title="Connection error" description="Unable to load data. Please check your connection and try again." action={createNetworkErrorAction(props.action, handleRetry)} {...props}/>);
 }
-

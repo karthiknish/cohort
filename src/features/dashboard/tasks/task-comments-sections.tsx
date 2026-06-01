@@ -1,101 +1,73 @@
-'use client'
-
-import { useCallback, type ChangeEvent, type RefObject } from 'react'
-import { formatDistanceToNowStrict } from 'date-fns'
-import { LoaderCircle, MoreHorizontal, Paperclip, Pencil, Reply, Send, Trash2, X } from 'lucide-react'
-
-import { MessageAttachments } from '@/features/dashboard/collaboration/components/message-attachments'
-import { PendingAttachmentsList } from '@/features/dashboard/collaboration/components/message-composer'
-import { MessageContent } from '@/features/dashboard/collaboration/components/message-content'
-import { RichComposer } from '@/features/dashboard/collaboration/components/rich-composer'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/shared/ui/alert-dialog'
-import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
-import { Button } from '@/shared/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
-import type { TaskComment } from '@/types/task-comments'
-
+'use client';
+import { useCallback, type ChangeEvent, type RefObject } from 'react';
+import { formatDistanceToNowStrict } from 'date-fns';
+import { LoaderCircle, MoreHorizontal, Paperclip, Pencil, Reply, Send, Trash2, X } from 'lucide-react';
+import { MessageAttachments } from '@/features/dashboard/collaboration/components/message-attachments';
+import { PendingAttachmentsList } from '@/features/dashboard/collaboration/components/message-composer';
+import { MessageContent } from '@/features/dashboard/collaboration/components/message-content';
+import { RichComposer } from '@/features/dashboard/collaboration/components/rich-composer';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/shared/ui/alert-dialog';
+import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
+import { Button } from '@/shared/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import type { TaskComment } from '@/types/task-comments';
 export type TaskCommentComposerAttachment = {
-  id: string
-  file: File
-  name: string
-  mimeType: string
-  sizeLabel: string
-}
-
+    id: string;
+    file: File;
+    name: string;
+    mimeType: string;
+    sizeLabel: string;
+};
 function getInitials(name: string | null | undefined): string {
-  const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return 'TC'
-  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('')
+    const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0)
+        return 'TC';
+    return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('');
 }
-
 function formatCommentTimestamp(comment: TaskComment): string {
-  const source = comment.updatedAt ?? comment.createdAt
-  if (!source) return ''
-  const date = new Date(source)
-  const relative = formatDistanceToNowStrict(date, { addSuffix: true })
-  return comment.isEdited ? `${relative} · edited` : relative
+    const source = comment.updatedAt ?? comment.createdAt;
+    if (!source)
+        return '';
+    const date = new Date(source);
+    const relative = formatDistanceToNowStrict(date, { addSuffix: true });
+    return comment.isEdited ? `${relative} · edited` : relative;
 }
-
 function sortCommentsChronologically(items: TaskComment[]): TaskComment[] {
-  return items.toSorted((a, b) => {
-    const aMs = new Date(a.createdAt ?? 0).getTime()
-    const bMs = new Date(b.createdAt ?? 0).getTime()
-    return aMs - bMs
-  })
+    return items.toSorted((a, b) => {
+        const aMs = new Date(a.createdAt ?? 0).getTime();
+        const bMs = new Date(b.createdAt ?? 0).getTime();
+        return aMs - bMs;
+    });
 }
-
-function TaskCommentThreadItem({
-  comment,
-  depth = 0,
-  repliesByParent,
-  replyToId,
-  editingCommentId,
-  deletingCommentId,
-  canManageComment,
-  onStartReply,
-  onStartEdit,
-  onRequestDelete,
-}: {
-  comment: TaskComment
-  depth?: number
-  repliesByParent: Map<string, TaskComment[]>
-  replyToId: string | null
-  editingCommentId: string | null
-  deletingCommentId: string | null
-  canManageComment: (comment: TaskComment) => boolean
-  onStartReply: (comment: TaskComment) => void
-  onStartEdit: (comment: TaskComment) => void
-  onRequestDelete: (comment: TaskComment) => void
+function TaskCommentThreadItem({ comment, depth = 0, repliesByParent, replyToId, editingCommentId, deletingCommentId, canManageComment, onStartReply, onStartEdit, onRequestDelete, }: {
+    comment: TaskComment;
+    depth?: number;
+    repliesByParent: Map<string, TaskComment[]>;
+    replyToId: string | null;
+    editingCommentId: string | null;
+    deletingCommentId: string | null;
+    canManageComment: (comment: TaskComment) => boolean;
+    onStartReply: (comment: TaskComment) => void;
+    onStartEdit: (comment: TaskComment) => void;
+    onRequestDelete: (comment: TaskComment) => void;
 }) {
-  const replies = sortCommentsChronologically(repliesByParent.get(comment.id) ?? [])
-  const isActiveReply = replyToId === comment.id
-  const isActiveEdit = editingCommentId === comment.id
-  const isBusy = deletingCommentId === comment.id
-  const isBeingEdited = isActiveEdit
-
-  const handleStartReplyClick = useCallback(() => {
-    onStartReply(comment)
-  }, [comment, onStartReply])
-
-  const handleStartEditClick = useCallback(() => {
-    onStartEdit(comment)
-  }, [comment, onStartEdit])
-
-  const handleRequestDeleteClick = useCallback(() => {
-    onRequestDelete(comment)
-  }, [comment, onRequestDelete])
-
-  return (
-    <div key={comment.id} className="space-y-3">
-      <div
-        className={cn(
-          'rounded-lg border border-border/70 p-3 transition-colors',
-          depth > 0 && 'bg-muted/20',
-          isActiveReply && 'border-primary/30 bg-primary/5',
-          isBeingEdited && 'border-primary/30 bg-primary/5 opacity-90',
-        )}
-      >
+    const replies = sortCommentsChronologically(repliesByParent.get(comment.id) ?? []);
+    const isActiveReply = replyToId === comment.id;
+    const isActiveEdit = editingCommentId === comment.id;
+    const isBusy = deletingCommentId === comment.id;
+    const isBeingEdited = isActiveEdit;
+    const handleStartReplyClick = () => {
+        onStartReply(comment);
+    };
+    const handleStartEditClick = () => {
+        onStartEdit(comment);
+    };
+    const handleRequestDeleteClick = () => {
+        onRequestDelete(comment);
+    };
+    return (<div key={comment.id} className="space-y-3">
+      <div className={cn('rounded-lg border border-border/70 p-3 transition-colors', depth > 0 && 'bg-muted/20', isActiveReply && 'border-primary/30 bg-primary/5', isBeingEdited && 'border-primary/30 bg-primary/5 opacity-90')}>
         <div className="flex items-start gap-3">
           <Avatar className="mt-0.5 size-10 border border-border/60 bg-background shadow-sm">
             <AvatarFallback className="bg-muted text-[11px] font-semibold text-muted-foreground">
@@ -108,123 +80,76 @@ function TaskCommentThreadItem({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate text-sm font-semibold text-foreground">{comment.authorName}</span>
-                  {comment.authorRole ? (
-                    <span className="rounded-full border border-border/60 bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  {comment.authorRole ? (<span className="rounded-full border border-border/60 bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                       {comment.authorRole}
-                    </span>
-                  ) : null}
+                    </span>) : null}
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">{formatCommentTimestamp(comment)}</p>
               </div>
 
               <div className="flex items-center gap-1">
-                {depth === 0 && replies.length > 0 ? (
-                  <span className="rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                {depth === 0 && replies.length > 0 ? (<span className="rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
                     {replies.length} repl{replies.length === 1 ? 'y' : 'ies'}
-                  </span>
-                ) : null}
+                  </span>) : null}
 
-                {canManageComment(comment) ? (
-                  <DropdownMenu>
+                {canManageComment(comment) ? (<DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="size-8 rounded-full text-muted-foreground" aria-label="Comment actions">
-                        <MoreHorizontal className="size-4" />
+                        <MoreHorizontal className="size-4"/>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-44 rounded-xl">
                       <DropdownMenuItem onSelect={handleStartReplyClick}>
-                        <Reply className="size-4" />
+                        <Reply className="size-4"/>
                         Reply
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={handleStartEditClick}>
-                        <Pencil className="size-4" />
+                        <Pencil className="size-4"/>
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuItem variant="destructive" onSelect={handleRequestDeleteClick}>
-                        <Trash2 className="size-4" />
+                        <Trash2 className="size-4"/>
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-muted-foreground" onClick={handleStartReplyClick}>
-                    <Reply className="mr-1.5 size-3.5" />
+                  </DropdownMenu>) : (<Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-muted-foreground" onClick={handleStartReplyClick}>
+                    <Reply className="mr-1.5 size-3.5"/>
                     Reply
-                  </Button>
-                )}
+                  </Button>)}
               </div>
             </div>
 
-            {isBeingEdited ? (
-              <p className="text-xs font-medium text-primary">Editing in the composer below…</p>
-            ) : (
-              <div className="space-y-3">
-                <MessageContent content={comment.content} mentions={comment.mentions} />
-                {comment.attachments && comment.attachments.length > 0 ? (
-                  <MessageAttachments attachments={comment.attachments} />
-                ) : null}
-              </div>
-            )}
+            {isBeingEdited ? (<p className="text-xs font-medium text-primary">Editing in the composer below…</p>) : (<div className="space-y-3">
+                <MessageContent content={comment.content} mentions={comment.mentions}/>
+                {comment.attachments && comment.attachments.length > 0 ? (<MessageAttachments attachments={comment.attachments}/>) : null}
+              </div>)}
 
-            {!isBeingEdited ? (
-              <div className="flex flex-wrap items-center gap-1 pt-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 rounded-lg px-2.5 text-muted-foreground hover:text-foreground"
-                  onClick={handleStartReplyClick}
-                >
-                  <Reply className="mr-1.5 size-3.5" />
+            {!isBeingEdited ? (<div className="flex flex-wrap items-center gap-1 pt-1">
+                <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2.5 text-muted-foreground hover:text-foreground" onClick={handleStartReplyClick}>
+                  <Reply className="mr-1.5 size-3.5"/>
                   Reply
                 </Button>
-                {isBusy ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <LoaderCircle className="size-3.5 animate-spin" />
+                {isBusy ? (<span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <LoaderCircle className="size-3.5 animate-spin"/>
                     Updating…
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
+                  </span>) : null}
+              </div>) : null}
           </div>
         </div>
       </div>
 
-      {replies.length > 0 ? (
-        <div className={cn('space-y-3 border-l border-dashed border-border pl-4 md:pl-6', depth === 0 && 'ml-5')}>
-          {replies.map((reply) => (
-            <TaskCommentThreadItem
-              key={reply.id}
-              comment={reply}
-              depth={depth + 1}
-              repliesByParent={repliesByParent}
-              replyToId={replyToId}
-              editingCommentId={editingCommentId}
-              deletingCommentId={deletingCommentId}
-              canManageComment={canManageComment}
-              onStartReply={onStartReply}
-              onStartEdit={onStartEdit}
-              onRequestDelete={onRequestDelete}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  )
+      {replies.length > 0 ? (<div className={cn('space-y-3 border-l border-dashed border-border pl-4 md:pl-6', depth === 0 && 'ml-5')}>
+          {replies.map((reply) => (<TaskCommentThreadItem key={reply.id} comment={reply} depth={depth + 1} repliesByParent={repliesByParent} replyToId={replyToId} editingCommentId={editingCommentId} deletingCommentId={deletingCommentId} canManageComment={canManageComment} onStartReply={onStartReply} onStartEdit={onStartEdit} onRequestDelete={onRequestDelete}/>))}
+        </div>) : null}
+    </div>);
 }
-
-export function TaskCommentsSummaryHeader({
-  commentsCount,
-  replyCount,
-  replyTo,
-  editingCommentId,
-}: {
-  commentsCount: number
-  replyCount: number
-  replyTo: TaskComment | null
-  editingCommentId: string | null
+export function TaskCommentsSummaryHeader({ commentsCount, replyCount, replyTo, editingCommentId, }: {
+    commentsCount: number;
+    replyCount: number;
+    replyTo: TaskComment | null;
+    editingCommentId: string | null;
 }) {
-  return (
-    <div className="flex items-start justify-between gap-3">
+    return (<div className="flex items-start justify-between gap-3">
       <div>
         <h3 className="text-sm font-semibold text-foreground">Conversation</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -232,237 +157,109 @@ export function TaskCommentsSummaryHeader({
           {replyCount > 0 ? ` · ${replyCount} repl${replyCount === 1 ? 'y' : 'ies'}` : ''}
         </p>
       </div>
-      {replyTo ? (
-        <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+      {replyTo ? (<span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
           Replying
-        </span>
-      ) : editingCommentId ? (
-        <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground">
+        </span>) : editingCommentId ? (<span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground">
           Editing
-        </span>
-      ) : null}
-    </div>
-  )
+        </span>) : null}
+    </div>);
 }
-
-export function TaskCommentsThreadList({
-  loading,
-  roots,
-  repliesByParent,
-  replyToId,
-  editingCommentId,
-  deletingCommentId,
-  canManageComment,
-  onStartReply,
-  onStartEdit,
-  onRequestDelete,
-}: {
-  loading: boolean
-  roots: TaskComment[]
-  repliesByParent: Map<string, TaskComment[]>
-  replyToId: string | null
-  editingCommentId: string | null
-  deletingCommentId: string | null
-  canManageComment: (comment: TaskComment) => boolean
-  onStartReply: (comment: TaskComment) => void
-  onStartEdit: (comment: TaskComment) => void
-  onRequestDelete: (comment: TaskComment) => void
+export function TaskCommentsThreadList({ loading, roots, repliesByParent, replyToId, editingCommentId, deletingCommentId, canManageComment, onStartReply, onStartEdit, onRequestDelete, }: {
+    loading: boolean;
+    roots: TaskComment[];
+    repliesByParent: Map<string, TaskComment[]>;
+    replyToId: string | null;
+    editingCommentId: string | null;
+    deletingCommentId: string | null;
+    canManageComment: (comment: TaskComment) => boolean;
+    onStartReply: (comment: TaskComment) => void;
+    onStartEdit: (comment: TaskComment) => void;
+    onRequestDelete: (comment: TaskComment) => void;
 }) {
-  const sortedRoots = sortCommentsChronologically(roots)
-
-  return (
-    <div className="space-y-3">
-      {loading ? (
-        <p className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-          <LoaderCircle className="size-4 animate-spin text-primary" />
+    const sortedRoots = sortCommentsChronologically(roots);
+    return (<div className="space-y-3">
+      {loading ? (<p className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+          <LoaderCircle className="size-4 animate-spin text-primary"/>
           Loading conversation…
-        </p>
-      ) : sortedRoots.length === 0 ? (
-        <div className="py-6 text-center">
+        </p>) : sortedRoots.length === 0 ? (<div className="py-6 text-center">
           <p className="text-sm text-muted-foreground">No comments yet.</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Add context or @mention teammates below.
           </p>
-        </div>
-      ) : (
-        sortedRoots.map((comment) => (
-          <TaskCommentThreadItem
-            key={comment.id}
-            comment={comment}
-            repliesByParent={repliesByParent}
-            replyToId={replyToId}
-            editingCommentId={editingCommentId}
-            deletingCommentId={deletingCommentId}
-            canManageComment={canManageComment}
-            onStartReply={onStartReply}
-            onStartEdit={onStartEdit}
-            onRequestDelete={onRequestDelete}
-          />
-        ))
-      )}
-    </div>
-  )
+        </div>) : (sortedRoots.map((comment) => (<TaskCommentThreadItem key={comment.id} comment={comment} repliesByParent={repliesByParent} replyToId={replyToId} editingCommentId={editingCommentId} deletingCommentId={deletingCommentId} canManageComment={canManageComment} onStartReply={onStartReply} onStartEdit={onStartEdit} onRequestDelete={onRequestDelete}/>)))}
+    </div>);
 }
-
-export function TaskCommentsComposerSection({
-  fileInputRef,
-  replyTo,
-  editingCommentId,
-  composerTitle,
-  composerDescription,
-  composerPlaceholder,
-  pendingAttachments,
-  uploading,
-  isSubmitting,
-  composerValue,
-  composerParticipants,
-  onReset,
-  onAddAttachments,
-  onRemovePendingAttachment,
-  onAttachClick,
-  onComposerChange,
-  onSubmit,
-}: {
-  fileInputRef: RefObject<HTMLInputElement | null>
-  replyTo: TaskComment | null
-  editingCommentId: string | null
-  composerTitle: string
-  composerDescription: string
-  composerPlaceholder: string
-  pendingAttachments: TaskCommentComposerAttachment[]
-  uploading: boolean
-  isSubmitting: boolean
-  composerValue: string
-  composerParticipants: Array<{ name: string; role: string }>
-  onReset: () => void
-  onAddAttachments: (files: FileList | null) => void
-  onRemovePendingAttachment: (attachmentId: string) => void
-  onAttachClick: () => void
-  onComposerChange: (value: string) => void
-  onSubmit: () => void
+export function TaskCommentsComposerSection({ fileInputRef, replyTo, editingCommentId, composerTitle, composerDescription, composerPlaceholder, pendingAttachments, uploading, isSubmitting, composerValue, composerParticipants, onReset, onAddAttachments, onRemovePendingAttachment, onAttachClick, onComposerChange, onSubmit, }: {
+    fileInputRef: RefObject<HTMLInputElement | null>;
+    replyTo: TaskComment | null;
+    editingCommentId: string | null;
+    composerTitle: string;
+    composerDescription: string;
+    composerPlaceholder: string;
+    pendingAttachments: TaskCommentComposerAttachment[];
+    uploading: boolean;
+    isSubmitting: boolean;
+    composerValue: string;
+    composerParticipants: Array<{
+        name: string;
+        role: string;
+    }>;
+    onReset: () => void;
+    onAddAttachments: (files: FileList | null) => void;
+    onRemovePendingAttachment: (attachmentId: string) => void;
+    onAttachClick: () => void;
+    onComposerChange: (value: string) => void;
+    onSubmit: () => void;
 }) {
-  const handleFileChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      onAddAttachments(event.target.files)
-      event.currentTarget.value = ''
-    },
-    [onAddAttachments]
-  )
-
-  return (
-    <div className="space-y-3">
+    const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+        onAddAttachments(event.target.files);
+        event.currentTarget.value = '';
+    };
+    return (<div className="space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">{composerTitle}</p>
-          {replyTo ? (
-            <p className="mt-1.5 line-clamp-2 text-xs italic text-muted-foreground">{composerDescription}</p>
-          ) : (
-            <p className="mt-0.5 text-xs text-muted-foreground">{composerDescription}</p>
-          )}
+          {replyTo ? (<p className="mt-1.5 line-clamp-2 text-xs italic text-muted-foreground">{composerDescription}</p>) : (<p className="mt-0.5 text-xs text-muted-foreground">{composerDescription}</p>)}
         </div>
-        {replyTo || editingCommentId ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 shrink-0 rounded-lg text-muted-foreground"
-            onClick={onReset}
-            aria-label="Cancel reply or edit"
-          >
-            <X className="mr-1 size-3.5" />
+        {replyTo || editingCommentId ? (<Button variant="ghost" size="sm" className="h-8 shrink-0 rounded-lg text-muted-foreground" onClick={onReset} aria-label="Cancel reply or edit">
+            <X className="mr-1 size-3.5"/>
             Cancel
-          </Button>
-        ) : null}
+          </Button>) : null}
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        aria-label="Attach files to comment"
-        className="hidden"
-        onChange={handleFileChange}
-      />
+      <input ref={fileInputRef} type="file" multiple aria-label="Attach files to comment" className="hidden" onChange={handleFileChange}/>
 
-      {pendingAttachments.length > 0 && !editingCommentId ? (
-        <div className="mt-4">
-          <PendingAttachmentsList
-            attachments={pendingAttachments}
-            uploading={uploading}
-            onRemove={onRemovePendingAttachment}
-          />
-        </div>
-      ) : null}
+      {pendingAttachments.length > 0 && !editingCommentId ? (<div className="mt-4">
+          <PendingAttachmentsList attachments={pendingAttachments} uploading={uploading} onRemove={onRemovePendingAttachment}/>
+        </div>) : null}
 
       <div className="mt-4 flex items-start gap-3">
         <div className="flex-1">
-          <RichComposer
-            value={composerValue}
-            onChange={onComposerChange}
-            onSend={onSubmit}
-            disabled={isSubmitting}
-            placeholder={composerPlaceholder}
-            participants={composerParticipants}
-            onAttachClick={editingCommentId ? undefined : onAttachClick}
-            hasAttachments={!editingCommentId && pendingAttachments.length > 0}
-          />
+          <RichComposer value={composerValue} onChange={onComposerChange} onSend={onSubmit} disabled={isSubmitting} placeholder={composerPlaceholder} participants={composerParticipants} onAttachClick={editingCommentId ? undefined : onAttachClick} hasAttachments={!editingCommentId && pendingAttachments.length > 0}/>
         </div>
 
         <div className="flex flex-col gap-2 pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={onAttachClick}
-            disabled={isSubmitting || Boolean(editingCommentId)}
-            title={editingCommentId ? 'Attachments cannot be changed while editing' : 'Attach files'}
-            className="size-10 rounded-2xl border-border/60 bg-background"
-            aria-label={editingCommentId ? 'Attachments cannot be changed while editing' : 'Attach files'}
-          >
-            <Paperclip className="size-4" />
+          <Button type="button" variant="outline" size="icon" onClick={onAttachClick} disabled={isSubmitting || Boolean(editingCommentId)} title={editingCommentId ? 'Attachments cannot be changed while editing' : 'Attach files'} className="size-10 rounded-2xl border-border/60 bg-background" aria-label={editingCommentId ? 'Attachments cannot be changed while editing' : 'Attach files'}>
+            <Paperclip className="size-4"/>
           </Button>
-          <Button
-            type="button"
-            size={editingCommentId ? 'sm' : 'icon'}
-            onClick={onSubmit}
-            disabled={isSubmitting || composerValue.trim().length === 0}
-            title={editingCommentId ? 'Save changes' : 'Post comment'}
-            className={cn(editingCommentId ? 'h-10 rounded-lg px-4' : 'size-10 rounded-xl')}
-            aria-label={editingCommentId ? 'Save changes' : 'Post comment'}
-          >
-            {isSubmitting ? (
-              <LoaderCircle className="size-4 animate-spin" />
-            ) : editingCommentId ? (
-              'Save'
-            ) : (
-              <Send className="size-4" />
-            )}
+          <Button type="button" size={editingCommentId ? 'sm' : 'icon'} onClick={onSubmit} disabled={isSubmitting || composerValue.trim().length === 0} title={editingCommentId ? 'Save changes' : 'Post comment'} className={cn(editingCommentId ? 'h-10 rounded-lg px-4' : 'size-10 rounded-xl')} aria-label={editingCommentId ? 'Save changes' : 'Post comment'}>
+            {isSubmitting ? (<LoaderCircle className="size-4 animate-spin"/>) : editingCommentId ? ('Save') : (<Send className="size-4"/>)}
           </Button>
         </div>
       </div>
-    </div>
-  )
+    </div>);
 }
-
-export function TaskCommentsDeleteDialog({
-  deleteTarget,
-  deletingCommentId,
-  onClose,
-  onConfirm,
-}: {
-  deleteTarget: TaskComment | null
-  deletingCommentId: string | null
-  onClose: () => void
-  onConfirm: () => void
+export function TaskCommentsDeleteDialog({ deleteTarget, deletingCommentId, onClose, onConfirm, }: {
+    deleteTarget: TaskComment | null;
+    deletingCommentId: string | null;
+    onClose: () => void;
+    onConfirm: () => void;
 }) {
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) onClose()
-    },
-    [onClose]
-  )
-
-  return (
-    <AlertDialog open={Boolean(deleteTarget)} onOpenChange={handleOpenChange}>
+    const handleOpenChange = (open: boolean) => {
+        if (!open)
+            onClose();
+    };
+    return (<AlertDialog open={Boolean(deleteTarget)} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete comment</AlertDialogTitle>
@@ -472,15 +269,10 @@ export function TaskCommentsDeleteDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={Boolean(deletingCommentId)}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            disabled={Boolean(deletingCommentId)}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
+          <AlertDialogAction onClick={onConfirm} disabled={Boolean(deletingCommentId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
             {deletingCommentId ? 'Deleting…' : 'Delete'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
-    </AlertDialog>
-  )
+    </AlertDialog>);
 }

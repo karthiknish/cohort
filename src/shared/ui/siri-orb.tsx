@@ -1,106 +1,84 @@
-'use client'
-
-import { useMemo, type CSSProperties } from 'react'
-
-import { cn } from '@/lib/utils'
-
-const SIZE_THRESHOLD_SMALL = 50
-const SIZE_THRESHOLD_TINY = 30
-const SIZE_THRESHOLD_MEDIUM = 100
-const BLUR_MULTIPLIER_SMALL = 0.008
-const BLUR_MIN_SMALL = 1
-const BLUR_MULTIPLIER_LARGE = 0.015
-const BLUR_MIN_LARGE = 4
-const CONTRAST_MULTIPLIER_SMALL = 0.004
-const CONTRAST_MIN_SMALL = 1.2
-const CONTRAST_MULTIPLIER_LARGE = 0.008
-const CONTRAST_MIN_LARGE = 1.5
-const DOT_SIZE_MULTIPLIER_SMALL = 0.004
-const DOT_SIZE_MIN_SMALL = 0.05
-const DOT_SIZE_MULTIPLIER_LARGE = 0.008
-const DOT_SIZE_MIN_LARGE = 0.1
-const SHADOW_MULTIPLIER_SMALL = 0.004
-const SHADOW_MIN_SMALL = 0.5
-const SHADOW_MULTIPLIER_LARGE = 0.008
-const SHADOW_MIN_LARGE = 2
-const MASK_RADIUS_TINY = '0%'
-const MASK_RADIUS_SMALL = '5%'
-const MASK_RADIUS_MEDIUM = '15%'
-const MASK_RADIUS_LARGE = '25%'
-const CONTRAST_TINY = 1.1
-const CONTRAST_MULTIPLIER_FINAL = 1.2
-const CONTRAST_MIN_FINAL = 1.3
-
+'use client';
+import { useMemo, type CSSProperties } from 'react';
+import { cn } from '@/lib/utils';
+const SIZE_THRESHOLD_SMALL = 50;
+const SIZE_THRESHOLD_TINY = 30;
+const SIZE_THRESHOLD_MEDIUM = 100;
+const BLUR_MULTIPLIER_SMALL = 0.008;
+const BLUR_MIN_SMALL = 1;
+const BLUR_MULTIPLIER_LARGE = 0.015;
+const BLUR_MIN_LARGE = 4;
+const CONTRAST_MULTIPLIER_SMALL = 0.004;
+const CONTRAST_MIN_SMALL = 1.2;
+const CONTRAST_MULTIPLIER_LARGE = 0.008;
+const CONTRAST_MIN_LARGE = 1.5;
+const DOT_SIZE_MULTIPLIER_SMALL = 0.004;
+const DOT_SIZE_MIN_SMALL = 0.05;
+const DOT_SIZE_MULTIPLIER_LARGE = 0.008;
+const DOT_SIZE_MIN_LARGE = 0.1;
+const SHADOW_MULTIPLIER_SMALL = 0.004;
+const SHADOW_MIN_SMALL = 0.5;
+const SHADOW_MULTIPLIER_LARGE = 0.008;
+const SHADOW_MIN_LARGE = 2;
+const MASK_RADIUS_TINY = '0%';
+const MASK_RADIUS_SMALL = '5%';
+const MASK_RADIUS_MEDIUM = '15%';
+const MASK_RADIUS_LARGE = '25%';
+const CONTRAST_TINY = 1.1;
+const CONTRAST_MULTIPLIER_FINAL = 1.2;
+const CONTRAST_MIN_FINAL = 1.3;
 const DEFAULT_SIRI_ORB_COLORS = {
-  bg: 'var(--background)',
-  c1: 'var(--chart-5)',
-  c2: 'var(--chart-2)',
-  c3: 'var(--chart-1)',
-} as const
-
+    bg: 'var(--background)',
+    c1: 'var(--chart-5)',
+    c2: 'var(--chart-2)',
+    c3: 'var(--chart-1)',
+} as const;
 export type SiriOrbProps = {
-  animationDuration?: number
-  className?: string
-  colors?: {
-    bg?: string
-    c1?: string
-    c2?: string
-    c3?: string
-  }
-  size?: string
-}
-
-export function SiriOrb({
-  size = '192px',
-  className,
-  colors,
-  animationDuration = 20,
-}: SiriOrbProps) {
-  const finalColors = { ...DEFAULT_SIRI_ORB_COLORS, ...colors }
-  const sizeValue = Number.parseInt(size.replace('px', ''), 10)
-
-  const blurAmount =
-    sizeValue < SIZE_THRESHOLD_SMALL
-      ? Math.max(sizeValue * BLUR_MULTIPLIER_SMALL, BLUR_MIN_SMALL)
-      : Math.max(sizeValue * BLUR_MULTIPLIER_LARGE, BLUR_MIN_LARGE)
-
-  const contrastAmount =
-    sizeValue < SIZE_THRESHOLD_SMALL
-      ? Math.max(sizeValue * CONTRAST_MULTIPLIER_SMALL, CONTRAST_MIN_SMALL)
-      : Math.max(sizeValue * CONTRAST_MULTIPLIER_LARGE, CONTRAST_MIN_LARGE)
-
-  const dotSize =
-    sizeValue < SIZE_THRESHOLD_SMALL
-      ? Math.max(sizeValue * DOT_SIZE_MULTIPLIER_SMALL, DOT_SIZE_MIN_SMALL)
-      : Math.max(sizeValue * DOT_SIZE_MULTIPLIER_LARGE, DOT_SIZE_MIN_LARGE)
-
-  const shadowSpread =
-    sizeValue < SIZE_THRESHOLD_SMALL
-      ? Math.max(sizeValue * SHADOW_MULTIPLIER_SMALL, SHADOW_MIN_SMALL)
-      : Math.max(sizeValue * SHADOW_MULTIPLIER_LARGE, SHADOW_MIN_LARGE)
-
-  const getMaskRadius = (value: number) => {
-    if (value < SIZE_THRESHOLD_TINY) return MASK_RADIUS_TINY
-    if (value < SIZE_THRESHOLD_SMALL) return MASK_RADIUS_SMALL
-    if (value < SIZE_THRESHOLD_MEDIUM) return MASK_RADIUS_MEDIUM
-    return MASK_RADIUS_LARGE
-  }
-
-  const maskRadius = getMaskRadius(sizeValue)
-
-  const getFinalContrast = (value: number) => {
-    if (value < SIZE_THRESHOLD_TINY) return CONTRAST_TINY
-    if (value < SIZE_THRESHOLD_SMALL) {
-      return Math.max(contrastAmount * CONTRAST_MULTIPLIER_FINAL, CONTRAST_MIN_FINAL)
-    }
-    return contrastAmount
-  }
-
-  const finalContrast = getFinalContrast(sizeValue)
-
-  const orbStyle = useMemo(
-    () =>
-      ({
+    animationDuration?: number;
+    className?: string;
+    colors?: {
+        bg?: string;
+        c1?: string;
+        c2?: string;
+        c3?: string;
+    };
+    size?: string;
+};
+export function SiriOrb({ size = '192px', className, colors, animationDuration = 20, }: SiriOrbProps) {
+    const finalColors = { ...DEFAULT_SIRI_ORB_COLORS, ...colors };
+    const sizeValue = Number.parseInt(size.replace('px', ''), 10);
+    const blurAmount = sizeValue < SIZE_THRESHOLD_SMALL
+        ? Math.max(sizeValue * BLUR_MULTIPLIER_SMALL, BLUR_MIN_SMALL)
+        : Math.max(sizeValue * BLUR_MULTIPLIER_LARGE, BLUR_MIN_LARGE);
+    const contrastAmount = sizeValue < SIZE_THRESHOLD_SMALL
+        ? Math.max(sizeValue * CONTRAST_MULTIPLIER_SMALL, CONTRAST_MIN_SMALL)
+        : Math.max(sizeValue * CONTRAST_MULTIPLIER_LARGE, CONTRAST_MIN_LARGE);
+    const dotSize = sizeValue < SIZE_THRESHOLD_SMALL
+        ? Math.max(sizeValue * DOT_SIZE_MULTIPLIER_SMALL, DOT_SIZE_MIN_SMALL)
+        : Math.max(sizeValue * DOT_SIZE_MULTIPLIER_LARGE, DOT_SIZE_MIN_LARGE);
+    const shadowSpread = sizeValue < SIZE_THRESHOLD_SMALL
+        ? Math.max(sizeValue * SHADOW_MULTIPLIER_SMALL, SHADOW_MIN_SMALL)
+        : Math.max(sizeValue * SHADOW_MULTIPLIER_LARGE, SHADOW_MIN_LARGE);
+    const getMaskRadius = (value: number) => {
+        if (value < SIZE_THRESHOLD_TINY)
+            return MASK_RADIUS_TINY;
+        if (value < SIZE_THRESHOLD_SMALL)
+            return MASK_RADIUS_SMALL;
+        if (value < SIZE_THRESHOLD_MEDIUM)
+            return MASK_RADIUS_MEDIUM;
+        return MASK_RADIUS_LARGE;
+    };
+    const maskRadius = getMaskRadius(sizeValue);
+    const getFinalContrast = (value: number) => {
+        if (value < SIZE_THRESHOLD_TINY)
+            return CONTRAST_TINY;
+        if (value < SIZE_THRESHOLD_SMALL) {
+            return Math.max(contrastAmount * CONTRAST_MULTIPLIER_FINAL, CONTRAST_MIN_FINAL);
+        }
+        return contrastAmount;
+    };
+    const finalContrast = getFinalContrast(sizeValue);
+    const orbStyle = ({
         width: size,
         height: size,
         '--bg': finalColors.bg,
@@ -113,24 +91,8 @@ export function SiriOrb({
         '--dot-size': `${dotSize}px`,
         '--shadow-spread': `${shadowSpread}px`,
         '--mask-radius': maskRadius,
-      }) as CSSProperties,
-    [
-      animationDuration,
-      blurAmount,
-      dotSize,
-      finalColors.bg,
-      finalColors.c1,
-      finalColors.c2,
-      finalColors.c3,
-      finalContrast,
-      maskRadius,
-      shadowSpread,
-      size,
-    ],
-  )
-
-  return (
-    <div className={cn('siri-orb', className)} style={orbStyle}>
+    }) as CSSProperties;
+    return (<div className={cn('siri-orb', className)} style={orbStyle}>
       <style>{`
         @property --angle {
           syntax: "<angle>";
@@ -235,6 +197,5 @@ export function SiriOrb({
           }
         }
       `}</style>
-    </div>
-  )
+    </div>);
 }

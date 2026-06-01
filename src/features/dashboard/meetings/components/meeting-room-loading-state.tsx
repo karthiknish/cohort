@@ -1,18 +1,13 @@
-'use client'
-
-import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
-import { Button } from '@/shared/ui/button'
-
+'use client';
+import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
+import { Button } from '@/shared/ui/button';
 type MeetingRoomLoadingStateProps = {
-  sharedRoomName: string
-  onBack: () => void
-}
-
+    sharedRoomName: string;
+    onBack: () => void;
+};
 export function MeetingRoomLoadingState(props: MeetingRoomLoadingStateProps) {
-  const { sharedRoomName, onBack } = props
-
-  return (
-    <>
+    const { sharedRoomName, onBack } = props;
+    return (<>
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-[28px] border border-border bg-card px-5 py-4 shadow-sm">
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.32em] text-muted-foreground">Meetings</p>
@@ -30,6 +25,5 @@ export function MeetingRoomLoadingState(props: MeetingRoomLoadingStateProps) {
         <AlertTitle>Loading room</AlertTitle>
         <AlertDescription>Preparing the in-site meeting workspace.</AlertDescription>
       </Alert>
-    </>
-  )
+    </>);
 }

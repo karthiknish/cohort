@@ -1,60 +1,45 @@
-"use client"
-
-import Link from 'next/link'
-import { redirect } from "next/navigation"
-import { Suspense } from "react"
-
-import { FeaturesBento } from "@/features/marketing/home/components/features-bento"
-import { HeroBackground } from "@/features/marketing/home/components/hero-background"
-import { SectionGlow } from "@/features/marketing/home/components/section-glow"
-import { HOME_HERO_BRAND_ORDER, PlatformLogoStrip } from "@/features/marketing/home/components/platform-brand-logos"
-import { FeaturesSection } from "@/features/marketing/home/components/features-section"
-import { HERO_HEADLINE, HERO_SUBHEAD } from "@/features/marketing/home/components/home-content"
-import { MinifiedSoftwarePreview } from "@/features/marketing/home/components/minified-software-preview"
-import { OperationsExpansionSection } from "@/features/marketing/home/components/operations-expansion-section"
-import { SupportProofSection } from "@/features/marketing/home/components/support-proof-section"
-import { authClient } from "@/lib/auth-client"
-import { FadeIn } from "@/shared/ui/animate-in"
-import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary'
-import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
-
-import { MarketingHomePageSkeleton } from '@/features/marketing/home/components/marketing-home-page-skeleton'
-
-const HOME_PAGE_FALLBACK = (
-  <RevealTransitionFallback>
+"use client";
+import Link from 'next/link';
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { FeaturesBento } from "@/features/marketing/home/components/features-bento";
+import { HeroBackground } from "@/features/marketing/home/components/hero-background";
+import { SectionGlow } from "@/features/marketing/home/components/section-glow";
+import { HOME_HERO_BRAND_ORDER, PlatformLogoStrip } from "@/features/marketing/home/components/platform-brand-logos";
+import { FeaturesSection } from "@/features/marketing/home/components/features-section";
+import { HERO_HEADLINE, HERO_SUBHEAD } from "@/features/marketing/home/components/home-content";
+import { MinifiedSoftwarePreview } from "@/features/marketing/home/components/minified-software-preview";
+import { OperationsExpansionSection } from "@/features/marketing/home/components/operations-expansion-section";
+import { SupportProofSection } from "@/features/marketing/home/components/support-proof-section";
+import { authClient } from "@/lib/auth-client";
+import { FadeIn } from "@/shared/ui/animate-in";
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
+import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition';
+import { MarketingHomePageSkeleton } from '@/features/marketing/home/components/marketing-home-page-skeleton';
+const HOME_PAGE_FALLBACK = (<RevealTransitionFallback>
     <MarketingHomePageSkeleton />
-  </RevealTransitionFallback>
-)
-
+  </RevealTransitionFallback>);
 function resolveDashboardDestination(): string {
-  if (typeof window !== 'undefined') {
-    const lastTab = window.localStorage.getItem('cohorts_last_tab')
-    if (lastTab === '/for-you' || lastTab?.startsWith('/for-you')) {
-      return '/for-you'
+    if (typeof window !== 'undefined') {
+        const lastTab = window.localStorage.getItem('cohorts_last_tab');
+        if (lastTab === '/for-you' || lastTab?.startsWith('/for-you')) {
+            return '/for-you';
+        }
+        if (lastTab?.startsWith('/dashboard')) {
+            return lastTab;
+        }
     }
-    if (lastTab?.startsWith('/dashboard')) {
-      return lastTab
-    }
-  }
-
-  return '/for-you'
+    return '/for-you';
 }
-
 function HomePageContent() {
-  const { data: session, isPending: sessionPending } = authClient.useSession()
-  const user = session?.user ?? null
-  const authenticatedDestination = !sessionPending && user ? resolveDashboardDestination() : null
-
-  if (authenticatedDestination) {
-    redirect(authenticatedDestination)
-  }
-
-  return (
-    <RevealTransition>
-      <PageSkeletonBoundary
-        loading={sessionPending && !user}
-        loadingContent={<MarketingHomePageSkeleton />}
-      >
+    const { data: session, isPending: sessionPending } = authClient.useSession();
+    const user = session?.user ?? null;
+    const authenticatedDestination = !sessionPending && user ? resolveDashboardDestination() : null;
+    if (authenticatedDestination) {
+        redirect(authenticatedDestination);
+    }
+    return (<RevealTransition>
+      <PageSkeletonBoundary loading={sessionPending && !user} loadingContent={<MarketingHomePageSkeleton />}>
       <div className="w-full bg-background">
       {/* ── Hero section ── */}
       <section className="relative overflow-hidden border-b border-primary/10 px-6 pb-16 pt-24 text-center">
@@ -62,7 +47,7 @@ function HomePageContent() {
         <div className="relative z-10 mx-auto max-w-6xl">
           <div className="mx-auto max-w-4xl">
             <div className="mb-8 inline-flex items-center rounded-full border border-primary/20 bg-primary/[0.08] px-4 py-1.5 text-sm font-medium text-foreground shadow-sm shadow-primary/5 backdrop-blur-md">
-              <span className="mr-2 size-2 rounded-full bg-primary shadow-[0_0_8px_rgb(from_var(--primary)_r_g_b_/_0.45)]" aria-hidden="true" />
+              <span className="mr-2 size-2 rounded-full bg-primary shadow-[0_0_8px_rgb(from_var(--primary)_r_g_b_/_0.45)]" aria-hidden="true"/>
               Now in public beta
             </div>
 
@@ -78,20 +63,14 @@ function HomePageContent() {
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary/70">
                 Native connectors
               </p>
-              <PlatformLogoStrip brands={HOME_HERO_BRAND_ORDER} variant="pill" />
+              <PlatformLogoStrip brands={HOME_HERO_BRAND_ORDER} variant="pill"/>
             </div>
 
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link
-                href="/auth?tab=signup"
-                className="rounded-full bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
+              <Link href="/auth?tab=signup" className="rounded-full bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                 Get started free
               </Link>
-              <Link
-                href="/auth?tab=signin"
-                className="rounded-full border border-primary/20 bg-background/70 px-8 py-3 text-sm font-semibold text-foreground shadow-sm backdrop-blur-sm transition-colors duration-200 hover:border-primary/30 hover:bg-primary/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
+              <Link href="/auth?tab=signin" className="rounded-full border border-primary/20 bg-background/70 px-8 py-3 text-sm font-semibold text-foreground shadow-sm backdrop-blur-sm transition-colors duration-200 hover:border-primary/30 hover:bg-primary/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                 Sign in
               </Link>
             </div>
@@ -100,7 +79,7 @@ function HomePageContent() {
       </section>
 
       <section className="relative overflow-hidden border-t border-border/40 bg-gradient-to-b from-background via-primary/[0.03] to-background px-6 py-14 sm:py-16">
-        <SectionGlow variant="features" />
+        <SectionGlow variant="features"/>
         <div className="mx-auto max-w-6xl space-y-5">
           <div className="text-center">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -119,7 +98,7 @@ function HomePageContent() {
 
       {/* ── Features bento ── */}
       <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.04] via-muted/30 to-background py-16 sm:py-24">
-        <SectionGlow variant="integrations" />
+        <SectionGlow variant="integrations"/>
         <div className="mx-auto max-w-6xl px-6">
           <FadeIn className="mb-16 text-center">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Features</p>
@@ -139,7 +118,7 @@ function HomePageContent() {
 
       {/* ── CTA ── */}
       <section className="relative overflow-hidden border-t border-border/40 bg-gradient-to-b from-background via-secondary/[0.04] to-primary/[0.06] px-6 py-24">
-        <SectionGlow variant="contact" />
+        <SectionGlow variant="contact"/>
         <div className="relative mx-auto max-w-4xl rounded-3xl border border-primary/15 bg-card p-8 shadow-xl shadow-primary/[0.08] sm:p-12">
           <FadeIn className="text-center">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Get Started</p>
@@ -150,16 +129,10 @@ function HomePageContent() {
               Create your account or sign back in without leaving the marketing flow. Teams, clients, and admins all enter through the same focused auth experience.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link
-                href="/auth?tab=signup"
-                className="rounded-full bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100 hover:scale-[1.02] hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
+              <Link href="/auth?tab=signup" className="rounded-full bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100 hover:scale-[1.02] hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                 Create account
               </Link>
-              <Link
-                href="/auth?tab=signin"
-                className="rounded-full border border-border px-8 py-3 text-sm font-semibold text-foreground transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-              >
+              <Link href="/auth?tab=signin" className="rounded-full border border-border px-8 py-3 text-sm font-semibold text-foreground transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
                 Sign in
               </Link>
             </div>
@@ -168,10 +141,8 @@ function HomePageContent() {
       </section>
       </div>
       </PageSkeletonBoundary>
-    </RevealTransition>
-  )
+    </RevealTransition>);
 }
-
 export default function HomePage() {
-  return <Suspense fallback={HOME_PAGE_FALLBACK}><HomePageContent /></Suspense>
+    return <Suspense fallback={HOME_PAGE_FALLBACK}><HomePageContent /></Suspense>;
 }

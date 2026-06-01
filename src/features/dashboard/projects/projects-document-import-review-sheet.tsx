@@ -1,57 +1,34 @@
-'use client'
-
-import { useCallback } from 'react'
-
-import { Button } from '@/shared/ui/button'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet'
-import { cn } from '@/lib/utils'
-
-import { PROJECTS_THEME } from './components/projects-theme'
-import type { ProposedImportProject } from './projects-document-import-types'
-import {
-  buildProjectImportReviewDescription,
-  getProjectImportReviewBlocker,
-} from './projects-document-import-review'
-import { ImportReviewProjectRow } from './projects-document-import-review-sheet-sections'
-
+'use client';
+import { useCallback } from 'react';
+import { Button } from '@/shared/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
+import { cn } from '@/lib/utils';
+import { PROJECTS_THEME } from './components/projects-theme';
+import type { ProposedImportProject } from './projects-document-import-types';
+import { buildProjectImportReviewDescription, getProjectImportReviewBlocker, } from './projects-document-import-review';
+import { ImportReviewProjectRow } from './projects-document-import-review-sheet-sections';
 type ProjectsDocumentImportReviewSheetProps = {
-  open: boolean
-  documentSummary: string | null
-  proposedProjects: ProposedImportProject[]
-  clients: Array<{ id: string; name: string }>
-  preferredClientName: string | null
-  onUpdateProject: (localId: string, patch: Partial<ProposedImportProject>) => void
-  onConfirm: () => void
-  onDiscard: () => void
-}
-
-export function ProjectsDocumentImportReviewSheet({
-  open,
-  documentSummary,
-  proposedProjects,
-  clients,
-  preferredClientName,
-  onUpdateProject,
-  onConfirm,
-  onDiscard,
-}: ProjectsDocumentImportReviewSheetProps) {
-  const selectedCount = proposedProjects.filter((project) => project.include).length
-  const reviewBlocker = getProjectImportReviewBlocker(proposedProjects)
-  const reviewDescription = buildProjectImportReviewDescription(
-    documentSummary,
-    proposedProjects,
-    preferredClientName,
-  )
-
-  const handleOpenChange = useCallback(
-    (next: boolean) => {
-      if (!next) onDiscard()
-    },
-    [onDiscard],
-  )
-
-  return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
+    open: boolean;
+    documentSummary: string | null;
+    proposedProjects: ProposedImportProject[];
+    clients: Array<{
+        id: string;
+        name: string;
+    }>;
+    preferredClientName: string | null;
+    onUpdateProject: (localId: string, patch: Partial<ProposedImportProject>) => void;
+    onConfirm: () => void;
+    onDiscard: () => void;
+};
+export function ProjectsDocumentImportReviewSheet({ open, documentSummary, proposedProjects, clients, preferredClientName, onUpdateProject, onConfirm, onDiscard, }: ProjectsDocumentImportReviewSheetProps) {
+    const selectedCount = proposedProjects.filter((project) => project.include).length;
+    const reviewBlocker = getProjectImportReviewBlocker(proposedProjects);
+    const reviewDescription = buildProjectImportReviewDescription(documentSummary, proposedProjects, preferredClientName);
+    const handleOpenChange = (next: boolean) => {
+        if (!next)
+            onDiscard();
+    };
+    return (<Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="right" className={cn('overflow-y-auto sm:max-w-xl', PROJECTS_THEME.content)}>
         <SheetHeader className="border-b border-border/60 pb-4 text-left">
           <SheetTitle>Review imported projects</SheetTitle>
@@ -59,16 +36,7 @@ export function ProjectsDocumentImportReviewSheet({
         </SheetHeader>
 
         <div className="flex flex-1 flex-col gap-4 py-4">
-          {proposedProjects.map((project, index) => (
-            <ImportReviewProjectRow
-              key={project.localId}
-              project={project}
-              index={index}
-              clients={clients}
-              preferredClientName={preferredClientName}
-              onUpdateProject={onUpdateProject}
-            />
-          ))}
+          {proposedProjects.map((project, index) => (<ImportReviewProjectRow key={project.localId} project={project} index={index} clients={clients} preferredClientName={preferredClientName} onUpdateProject={onUpdateProject}/>))}
         </div>
 
         <div className="sticky bottom-0 flex flex-col gap-2 border-t border-border/60 bg-background py-4">
@@ -81,6 +49,5 @@ export function ProjectsDocumentImportReviewSheet({
           </Button>
         </div>
       </SheetContent>
-    </Sheet>
-  )
+    </Sheet>);
 }

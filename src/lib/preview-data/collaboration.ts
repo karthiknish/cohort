@@ -1,48 +1,40 @@
-import type { CollaborationChannelType, CollaborationMessage, DirectConversation, DirectMessage } from '@/types/collaboration'
-
-import { isoDaysAgo } from './utils'
-
+import type { CollaborationChannelType, CollaborationMessage, DirectConversation, DirectMessage } from '@/types/collaboration';
+import { isoDaysAgo } from './utils';
 export type PreviewCollaborationParticipant = {
-    id: string
-    name: string
-    email: string
-    role: string | null
-}
-
+    id: string;
+    name: string;
+    email: string;
+    role: string | null;
+};
 type PreviewSelfContext = {
-    id?: string | null
-    name?: string | null
-    role?: string | null
-}
-
-type PreviewThreadMap = Record<string, CollaborationMessage[]>
-
+    id?: string | null;
+    name?: string | null;
+    role?: string | null;
+};
+type PreviewThreadMap = Record<string, CollaborationMessage[]>;
 type PreviewDirectConversationSeed = {
-    legacyId: string
-    otherParticipantId: string
-}
-
+    legacyId: string;
+    otherParticipantId: string;
+};
 type PreviewDirectMessageSeed = {
-    id: string
-    senderId: string
-    content: string
-    createdAtMs: number
-    edited?: boolean
-    editedAtMs?: number | null
-    deleted?: boolean
-    deletedAtMs?: number | null
-    deletedBy?: string | null
-    attachments?: DirectMessage['attachments']
-    reactions?: DirectMessage['reactions']
-    readBy?: string[]
-    deliveredTo?: string[]
-    readAtMs?: number | null
-    sharedTo?: Array<'email'> | null
-    updatedAtMs?: number | null
-}
-
-const PREVIEW_SELF_TOKEN = '__preview_self__'
-
+    id: string;
+    senderId: string;
+    content: string;
+    createdAtMs: number;
+    edited?: boolean;
+    editedAtMs?: number | null;
+    deleted?: boolean;
+    deletedAtMs?: number | null;
+    deletedBy?: string | null;
+    attachments?: DirectMessage['attachments'];
+    reactions?: DirectMessage['reactions'];
+    readBy?: string[];
+    deliveredTo?: string[];
+    readAtMs?: number | null;
+    sharedTo?: Array<'email'> | null;
+    updatedAtMs?: number | null;
+};
+const PREVIEW_SELF_TOKEN = '__preview_self__';
 const PREVIEW_PARTICIPANTS: PreviewCollaborationParticipant[] = [
     {
         id: 'preview-user-1',
@@ -98,16 +90,14 @@ const PREVIEW_PARTICIPANTS: PreviewCollaborationParticipant[] = [
         email: 'lena.ortiz@preview.cohort',
         role: 'Lifecycle Strategist',
     },
-]
-
+];
 const PREVIEW_DIRECT_CONVERSATIONS: PreviewDirectConversationSeed[] = [
     { legacyId: 'preview-dm-alex', otherParticipantId: 'preview-user-1' },
     { legacyId: 'preview-dm-sam', otherParticipantId: 'preview-user-4' },
     { legacyId: 'preview-dm-casey', otherParticipantId: 'preview-user-6' },
     { legacyId: 'preview-dm-priya', otherParticipantId: 'preview-user-3' },
     { legacyId: 'preview-dm-noah', otherParticipantId: 'preview-user-8' },
-]
-
+];
 const PREVIEW_DIRECT_MESSAGES: Record<string, PreviewDirectMessageSeed[]> = {
     'preview-dm-alex': [
         {
@@ -248,8 +238,7 @@ const PREVIEW_DIRECT_MESSAGES: Record<string, PreviewDirectMessageSeed[]> = {
             deliveredTo: ['preview-user-8', PREVIEW_SELF_TOKEN],
         },
     ],
-}
-
+};
 const PREVIEW_CHANNEL_MESSAGES: CollaborationMessage[] = [
     {
         id: 'preview-collab-team-1',
@@ -497,8 +486,7 @@ const PREVIEW_CHANNEL_MESSAGES: CollaborationMessage[] = [
         threadReplyCount: 2,
         threadLastReplyAt: isoDaysAgo(0),
     },
-]
-
+];
 const PREVIEW_THREAD_REPLIES: PreviewThreadMap = {
     'preview-collab-team-1': [
         {
@@ -700,31 +688,26 @@ const PREVIEW_THREAD_REPLIES: PreviewThreadMap = {
             deliveredTo: [PREVIEW_SELF_TOKEN, 'preview-user-3', 'preview-user-9'],
         },
     ],
-}
-
+};
 function resolveSelfContext(self?: PreviewSelfContext) {
     return {
         id: self?.id?.trim() || 'preview-current-user',
         name: self?.name?.trim() || 'You',
         role: self?.role ?? 'Account Owner',
-    }
+    };
 }
-
 function maybeReplaceSelfToken(value: string, self: ReturnType<typeof resolveSelfContext>) {
-    return value === PREVIEW_SELF_TOKEN ? self.id : value
+    return value === PREVIEW_SELF_TOKEN ? self.id : value;
 }
-
 function mapDirectMessage(message: PreviewDirectMessageSeed, self?: PreviewSelfContext): DirectMessage {
-    const resolvedSelf = resolveSelfContext(self)
-    const senderParticipant =
-        message.senderId === PREVIEW_SELF_TOKEN
-            ? { id: resolvedSelf.id, name: resolvedSelf.name, role: resolvedSelf.role }
-            : PREVIEW_PARTICIPANTS.find((participant) => participant.id === message.senderId) ?? {
-                id: message.senderId,
-                name: 'Unknown teammate',
-                role: null,
-            }
-
+    const resolvedSelf = resolveSelfContext(self);
+    const senderParticipant = message.senderId === PREVIEW_SELF_TOKEN
+        ? { id: resolvedSelf.id, name: resolvedSelf.name, role: resolvedSelf.role }
+        : PREVIEW_PARTICIPANTS.find((participant) => participant.id === message.senderId) ?? {
+            id: message.senderId,
+            name: 'Unknown teammate',
+            role: null,
+        };
     return {
         id: message.id,
         legacyId: message.id,
@@ -745,11 +728,10 @@ function mapDirectMessage(message: PreviewDirectMessageSeed, self?: PreviewSelfC
         sharedTo: message.sharedTo ?? null,
         createdAtMs: message.createdAtMs,
         updatedAtMs: message.updatedAtMs ?? message.createdAtMs,
-    }
+    };
 }
-
 function mapCollaborationMessage(message: CollaborationMessage, viewerId?: string | null): CollaborationMessage {
-    const resolvedViewerId = viewerId?.trim() || 'preview-current-user'
+    const resolvedViewerId = viewerId?.trim() || 'preview-current-user';
     return {
         ...message,
         readBy: Array.isArray(message.readBy)
@@ -764,102 +746,76 @@ function mapCollaborationMessage(message: CollaborationMessage, viewerId?: strin
                 userIds: reaction.userIds.map((entry) => (entry === PREVIEW_SELF_TOKEN ? resolvedViewerId : entry)),
             }))
             : undefined,
-    }
+    };
 }
-
-function selectPreviewChannelResponder(
-    channelType: CollaborationChannelType,
-    clientId: string | null,
-    projectId: string | null,
-    viewerId?: string | null,
-): PreviewCollaborationParticipant {
-    const preferredParticipantId =
-        channelType === 'team'
-            ? 'preview-user-5'
-            : channelType === 'project' && projectId === 'preview-project-1'
-                ? 'preview-user-2'
-                : channelType === 'project' && projectId === 'preview-project-5'
-                    ? 'preview-user-4'
-                    : channelType === 'client' && clientId === 'preview-startupxyz'
-                        ? 'preview-user-3'
-                        : channelType === 'client' && clientId === 'preview-retail-store'
-                            ? 'preview-user-5'
-                            : 'preview-user-1'
-
-    const preferred = PREVIEW_PARTICIPANTS.find((participant) => participant.id === preferredParticipantId)
+function selectPreviewChannelResponder(channelType: CollaborationChannelType, clientId: string | null, projectId: string | null, viewerId?: string | null): PreviewCollaborationParticipant {
+    const preferredParticipantId = channelType === 'team'
+        ? 'preview-user-5'
+        : channelType === 'project' && projectId === 'preview-project-1'
+            ? 'preview-user-2'
+            : channelType === 'project' && projectId === 'preview-project-5'
+                ? 'preview-user-4'
+                : channelType === 'client' && clientId === 'preview-startupxyz'
+                    ? 'preview-user-3'
+                    : channelType === 'client' && clientId === 'preview-retail-store'
+                        ? 'preview-user-5'
+                        : 'preview-user-1';
+    const preferred = PREVIEW_PARTICIPANTS.find((participant) => participant.id === preferredParticipantId);
     if (preferred && preferred.id !== viewerId) {
-        return preferred
+        return preferred;
     }
-
-    return PREVIEW_PARTICIPANTS.find((participant) => participant.id !== viewerId) ?? PREVIEW_PARTICIPANTS[0]!
+    return PREVIEW_PARTICIPANTS.find((participant) => participant.id !== viewerId) ?? PREVIEW_PARTICIPANTS[0]!;
 }
-
 function buildPreviewAutoReplyContent(content: string, responderName: string): string {
-    const normalized = content.trim().toLowerCase()
-
+    const normalized = content.trim().toLowerCase();
     if (normalized.includes('timeline') || normalized.includes('schedule') || normalized.includes('when')) {
-        return `${responderName}: for the sample timeline, kickoff stays on Monday, internal review lands mid-week, and the client-ready deck can go out Friday morning.`
+        return `${responderName}: for the sample timeline, kickoff stays on Monday, internal review lands mid-week, and the client-ready deck can go out Friday morning.`;
     }
-
     if (normalized.includes('budget') || normalized.includes('spend') || normalized.includes('pacing')) {
-        return `${responderName}: sample pacing still looks healthy. I would hold spend flat for now and push the next budget move after the retargeting review.`
+        return `${responderName}: sample pacing still looks healthy. I would hold spend flat for now and push the next budget move after the retargeting review.`;
     }
-
     if (normalized.includes('launch') || normalized.includes('ship') || normalized.includes('publish')) {
-        return `${responderName}: for the demo flow, I would lock approvals today, QA tomorrow, and keep the post-launch recap draft ready before we publish.`
+        return `${responderName}: for the demo flow, I would lock approvals today, QA tomorrow, and keep the post-launch recap draft ready before we publish.`;
     }
-
     if (normalized.includes('approve') || normalized.includes('review') || normalized.includes('feedback')) {
-        return `${responderName}: looks solid from the sample side. I would mark this ready for review and add one short stakeholder summary before sharing.`
+        return `${responderName}: looks solid from the sample side. I would mark this ready for review and add one short stakeholder summary before sharing.`;
     }
-
-    return `${responderName}: received. I added a sample follow-up so the conversation stays active during the demo.`
+    return `${responderName}: received. I added a sample follow-up so the conversation stays active during the demo.`;
 }
-
 export function getPreviewCollaborationParticipants(): PreviewCollaborationParticipant[] {
-    return PREVIEW_PARTICIPANTS.map((participant) => ({ ...participant }))
+    return PREVIEW_PARTICIPANTS.map((participant) => ({ ...participant }));
 }
-
-export function getPreviewCollaborationMessages(
-    channelType: CollaborationChannelType,
-    clientId: string | null,
-    projectId: string | null,
-    viewerId?: string | null,
-): CollaborationMessage[] {
+export function getPreviewCollaborationMessages(channelType: CollaborationChannelType, clientId: string | null, projectId: string | null, viewerId?: string | null): CollaborationMessage[] {
     return PREVIEW_CHANNEL_MESSAGES
         .flatMap((message) => {
-            if (message.channelType !== channelType) return []
-            if (channelType === 'client' && message.clientId !== clientId) return []
-            if (channelType === 'project' && message.projectId !== projectId) return []
-            return [mapCollaborationMessage(message, viewerId)]
-        })
-        .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
+        if (message.channelType !== channelType)
+            return [];
+        if (channelType === 'client' && message.clientId !== clientId)
+            return [];
+        if (channelType === 'project' && message.projectId !== projectId)
+            return [];
+        return [mapCollaborationMessage(message, viewerId)];
+    })
+        .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime());
 }
-
 export function getPreviewCollaborationThreadReplies(threadRootId: string, viewerId?: string | null): CollaborationMessage[] {
-    const replies = PREVIEW_THREAD_REPLIES[threadRootId] ?? []
+    const replies = PREVIEW_THREAD_REPLIES[threadRootId] ?? [];
     return replies
         .map((message) => mapCollaborationMessage(message, viewerId))
-        .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
+        .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime());
 }
-
 export function getPreviewDirectConversations(self?: PreviewSelfContext): DirectConversation[] {
-    const resolvedSelf = resolveSelfContext(self)
-
+    const resolvedSelf = resolveSelfContext(self);
     return PREVIEW_DIRECT_CONVERSATIONS.map((seed) => {
-        const otherParticipant = PREVIEW_PARTICIPANTS.find((participant) => participant.id === seed.otherParticipantId)
-        const messages = getPreviewDirectMessages(seed.legacyId, resolvedSelf)
+        const otherParticipant = PREVIEW_PARTICIPANTS.find((participant) => participant.id === seed.otherParticipantId);
+        const messages = getPreviewDirectMessages(seed.legacyId, resolvedSelf);
         const lastMessage = messages.reduce<typeof messages[number] | null>((latest, message) => {
             if (latest === null || message.createdAtMs > latest.createdAtMs) {
-                return message
+                return message;
             }
-
-            return latest
-        }, null)
-        const isRead = !messages.some(
-            (message) => message.senderId !== resolvedSelf.id && !message.readBy.includes(resolvedSelf.id)
-        )
-
+            return latest;
+        }, null);
+        const isRead = !messages.some((message) => message.senderId !== resolvedSelf.id && !message.readBy.includes(resolvedSelf.id));
         return {
             id: seed.legacyId,
             legacyId: seed.legacyId,
@@ -874,36 +830,28 @@ export function getPreviewDirectConversations(self?: PreviewSelfContext): Direct
             isMuted: seed.legacyId === 'preview-dm-sam',
             createdAtMs: messages[0]?.createdAtMs ?? Date.now(),
             updatedAtMs: lastMessage?.createdAtMs ?? Date.now(),
-        } satisfies DirectConversation
-    }).sort((a, b) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0))
+        } satisfies DirectConversation;
+    }).sort((a, b) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0));
 }
-
 export function getPreviewDirectMessages(conversationLegacyId: string, self?: PreviewSelfContext): DirectMessage[] {
-    const seeds = PREVIEW_DIRECT_MESSAGES[conversationLegacyId] ?? []
+    const seeds = PREVIEW_DIRECT_MESSAGES[conversationLegacyId] ?? [];
     return seeds
         .map((message) => mapDirectMessage(message, self))
-        .sort((a, b) => b.createdAtMs - a.createdAtMs)
+        .sort((a, b) => b.createdAtMs - a.createdAtMs);
 }
-
 export function getPreviewCollaborationAutoReply(params: {
-    channelType: CollaborationChannelType
-    clientId: string | null
-    projectId: string | null
-    content: string
-    viewerId?: string | null
-    parentMessageId?: string | null
-    threadRootId?: string | null
-    createdAt?: Date
+    channelType: CollaborationChannelType;
+    clientId: string | null;
+    projectId: string | null;
+    content: string;
+    viewerId?: string | null;
+    parentMessageId?: string | null;
+    threadRootId?: string | null;
+    createdAt?: Date;
 }): CollaborationMessage {
-    const responder = selectPreviewChannelResponder(
-        params.channelType,
-        params.clientId,
-        params.projectId,
-        params.viewerId,
-    )
-    const timestamp = params.createdAt ?? new Date()
-    const createdAt = timestamp.toISOString()
-
+    const responder = selectPreviewChannelResponder(params.channelType, params.clientId, params.projectId, params.viewerId);
+    const timestamp = params.createdAt ?? new Date();
+    const createdAt = timestamp.toISOString();
     return {
         id: `preview-collab-reply-${timestamp.getTime()}`,
         channelType: params.channelType,
@@ -925,21 +873,19 @@ export function getPreviewCollaborationAutoReply(params: {
         deliveredTo: params.viewerId ? [params.viewerId, responder.id] : [responder.id],
         parentMessageId: params.parentMessageId ?? null,
         threadRootId: params.threadRootId ?? null,
-    }
+    };
 }
-
 export function getPreviewDirectAutoReply(params: {
-    conversationLegacyId: string
-    otherParticipantId: string
-    otherParticipantName: string
-    otherParticipantRole?: string | null
-    content: string
-    currentUserId?: string | null
-    createdAt?: number
+    conversationLegacyId: string;
+    otherParticipantId: string;
+    otherParticipantName: string;
+    otherParticipantRole?: string | null;
+    content: string;
+    currentUserId?: string | null;
+    createdAt?: number;
 }): DirectMessage {
-    const timestamp = params.createdAt ?? Date.now()
-    const responder = PREVIEW_PARTICIPANTS.find((participant) => participant.id === params.otherParticipantId)
-
+    const timestamp = params.createdAt ?? Date.now();
+    const responder = PREVIEW_PARTICIPANTS.find((participant) => participant.id === params.otherParticipantId);
     return {
         id: `preview-dm-auto-reply-${timestamp}`,
         legacyId: `preview-dm-auto-reply-${timestamp}`,
@@ -960,5 +906,5 @@ export function getPreviewDirectAutoReply(params: {
         sharedTo: null,
         createdAtMs: timestamp,
         updatedAtMs: timestamp,
-    }
+    };
 }

@@ -1,229 +1,166 @@
-'use client'
-
-import { exportCohortsSpreadsheet } from '@/lib/export/cohorts-spreadsheet'
-import { buildSpreadsheetChartsFromTableData } from '@/lib/export/cohorts-spreadsheet-charts'
-import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { SvglExcelIcon, SvglPdfIcon } from '@/shared/components/svgl-brand-logo'
-import { useCallback, useState } from 'react'
-import { Download, FileImage, FileJson, LoaderCircle } from 'lucide-react'
-import { Button } from '@/shared/ui/button'
-import { Label } from '@/shared/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/shared/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/select'
-import { Checkbox } from '@/shared/ui/checkbox'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { cn } from '@/lib/utils'
-import { useToast } from '@/shared/ui/use-toast'
-import type { ChartDataPoint } from './interactive-chart'
-
-export type ExportFormat = 'csv' | 'excel' | 'pdf' | 'json' | 'png'
-
+'use client';
+import { exportCohortsSpreadsheet } from '@/lib/export/cohorts-spreadsheet';
+import { buildSpreadsheetChartsFromTableData } from '@/lib/export/cohorts-spreadsheet-charts';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { SvglExcelIcon, SvglPdfIcon } from '@/shared/components/svgl-brand-logo';
+import { useCallback, useState } from 'react';
+import { Download, FileImage, FileJson, LoaderCircle } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Label } from '@/shared/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from '@/shared/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
+import { Checkbox } from '@/shared/ui/checkbox';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/shared/ui/use-toast';
+import type { ChartDataPoint } from './interactive-chart';
+export type ExportFormat = 'csv' | 'excel' | 'pdf' | 'json' | 'png';
 interface ExportOption {
-  value: ExportFormat
-  label: string
-  icon: React.ComponentType<{ className?: string }>
-  description: string
+    value: ExportFormat;
+    label: string;
+    icon: React.ComponentType<{
+        className?: string;
+    }>;
+    description: string;
 }
-
-function DashboardExportMenuOption({
-  option,
-  isExporting,
-  onSelect,
-}: {
-  option: ExportOption
-  isExporting: boolean
-  onSelect: (format: ExportFormat) => void
+function DashboardExportMenuOption({ option, isExporting, onSelect, }: {
+    option: ExportOption;
+    isExporting: boolean;
+    onSelect: (format: ExportFormat) => void;
 }) {
-  const onSelectExportFormat = useCallback(() => {
-    onSelect(option.value)
-  }, [onSelect, option.value])
-
-  return (
-    <DropdownMenuItem onClick={onSelectExportFormat} disabled={isExporting}>
-      <option.icon className="mr-2 size-4" />
+    const onSelectExportFormat = () => {
+        onSelect(option.value);
+    };
+    return (<DropdownMenuItem onClick={onSelectExportFormat} disabled={isExporting}>
+      <option.icon className="mr-2 size-4"/>
       <div>
         <div className="font-medium">{option.label}</div>
         <div className="text-xs text-muted-foreground">{option.description}</div>
       </div>
-    </DropdownMenuItem>
-  )
+    </DropdownMenuItem>);
 }
-
-function DashboardExportGridOption({
-  option,
-  isExporting,
-  onSelect,
-}: {
-  option: ExportOption
-  isExporting: boolean
-  onSelect: (format: ExportFormat) => void
+function DashboardExportGridOption({ option, isExporting, onSelect, }: {
+    option: ExportOption;
+    isExporting: boolean;
+    onSelect: (format: ExportFormat) => void;
 }) {
-  const onSelectExportFormat = useCallback(() => {
-    onSelect(option.value)
-  }, [onSelect, option.value])
-  const Icon = option.icon
-
-  return (
-    <button
-      type="button"
-      onClick={onSelectExportFormat}
-      disabled={isExporting}
-      className={cn(
-        'flex items-center gap-2 rounded-lg border p-3 text-left transition-colors hover:bg-accent',
-        isExporting && 'pointer-events-none opacity-50'
-      )}
-    >
-      <Icon className="size-5 text-muted-foreground" />
+    const onSelectExportFormat = () => {
+        onSelect(option.value);
+    };
+    const Icon = option.icon;
+    return (<button type="button" onClick={onSelectExportFormat} disabled={isExporting} className={cn('flex items-center gap-2 rounded-lg border p-3 text-left transition-colors hover:bg-accent', isExporting && 'pointer-events-none opacity-50')}>
+      <Icon className="size-5 text-muted-foreground"/>
       <div>
         <p className="font-medium">{option.label}</p>
         <p className="text-xs text-muted-foreground">{option.description}</p>
       </div>
-      {isExporting && <LoaderCircle className="ml-auto size-4 animate-spin" />}
-    </button>
-  )
+      {isExporting && <LoaderCircle className="ml-auto size-4 animate-spin"/>}
+    </button>);
 }
-
 const EXPORT_OPTIONS: ExportOption[] = [
-  {
-    value: 'excel',
-    label: 'Excel',
-    icon: SvglExcelIcon,
-    description: 'Branded Cohorts spreadsheet',
-  },
-  {
-    value: 'pdf',
-    label: 'PDF',
-    icon: SvglPdfIcon,
-    description: 'PDF document',
-  },
-  {
-    value: 'json',
-    label: 'JSON',
-    icon: FileJson,
-    description: 'Raw data in JSON format',
-  },
-  {
-    value: 'png',
-    label: 'Image',
-    icon: FileImage,
-    description: 'PNG image snapshot',
-  },
-]
-
+    {
+        value: 'excel',
+        label: 'Excel',
+        icon: SvglExcelIcon,
+        description: 'Branded Cohorts spreadsheet',
+    },
+    {
+        value: 'pdf',
+        label: 'PDF',
+        icon: SvglPdfIcon,
+        description: 'PDF document',
+    },
+    {
+        value: 'json',
+        label: 'JSON',
+        icon: FileJson,
+        description: 'Raw data in JSON format',
+    },
+    {
+        value: 'png',
+        label: 'Image',
+        icon: FileImage,
+        description: 'PNG image snapshot',
+    },
+];
 interface DashboardExportProps {
-  data: ChartDataPoint[] | Record<string, unknown>[]
-  filename?: string
-  title?: string
-  formats?: ExportOption[]
-  includeFormats?: ExportOption[]
-  onExport?: (format: ExportFormat, options: ExportOptions) => Promise<void>
-  trigger?: React.ReactNode
-  buttonVariant?: 'default' | 'outline' | 'ghost'
-  buttonSize?: 'default' | 'sm' | 'icon'
-  className?: string
+    data: ChartDataPoint[] | Record<string, unknown>[];
+    filename?: string;
+    title?: string;
+    formats?: ExportOption[];
+    includeFormats?: ExportOption[];
+    onExport?: (format: ExportFormat, options: ExportOptions) => Promise<void>;
+    trigger?: React.ReactNode;
+    buttonVariant?: 'default' | 'outline' | 'ghost';
+    buttonSize?: 'default' | 'sm' | 'icon';
+    className?: string;
 }
-
 export interface ExportOptions {
-  includeHeaders?: boolean
-  includeMetadata?: boolean
-  dateRange?: { start: Date; end: Date }
-  selectedFields?: string[]
+    includeHeaders?: boolean;
+    includeMetadata?: boolean;
+    dateRange?: {
+        start: Date;
+        end: Date;
+    };
+    selectedFields?: string[];
 }
-
 /**
  * Export button with multiple format support
  */
-export function DashboardExport({
-  formats = EXPORT_OPTIONS,
-  onExport,
-  trigger,
-  buttonVariant = 'outline',
-  buttonSize = 'sm',
-  className,
-}: DashboardExportProps) {
-  const { toast } = useToast()
-  const [open, setOpen] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
-  const [includeHeaders, setIncludeHeaders] = useState(true)
-  const [includeMetadata, setIncludeMetadata] = useState(false)
-  const handleClose = useCallback(() => {
-    setOpen(false)
-  }, [])
-
-  const handleExport = useCallback(
-    async (format: ExportFormat) => {
-      setIsExporting(true)
-      await Promise.resolve(onExport?.(format, {
-        includeHeaders,
-        includeMetadata,
-      }))
-        .then(() => {
-          toast({
-            title: 'Export successful',
-            description: `Your data has been exported as ${format.toUpperCase()}.`,
-          })
-          setOpen(false)
+export function DashboardExport({ formats = EXPORT_OPTIONS, onExport, trigger, buttonVariant = 'outline', buttonSize = 'sm', className, }: DashboardExportProps) {
+    const { toast } = useToast();
+    const [open, setOpen] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const [includeHeaders, setIncludeHeaders] = useState(true);
+    const [includeMetadata, setIncludeMetadata] = useState(false);
+    const handleClose = () => {
+        setOpen(false);
+    };
+    const handleExport = async (format: ExportFormat) => {
+        setIsExporting(true);
+        await Promise.resolve(onExport?.(format, {
+            includeHeaders,
+            includeMetadata,
+        }))
+            .then(() => {
+            toast({
+                title: 'Export successful',
+                description: `Your data has been exported as ${format.toUpperCase()}.`,
+            });
+            setOpen(false);
         })
-        .catch((error) => {
-          reportConvexFailure({
-        error: error,
-        context: 'DashboardExport:handleExport',
-        title: 'Export failed',
-        fallbackMessage: 'Export failed',
+            .catch((error) => {
+            reportConvexFailure({
+                error: error,
+                context: 'DashboardExport:handleExport',
+                title: 'Export failed',
+                fallbackMessage: 'Export failed',
+            });
         })
-        })
-        .finally(() => {
-          setIsExporting(false)
-        })
-    },
-    [onExport, includeHeaders, includeMetadata, toast]
-  )
-
-  const defaultTrigger = (
-    <DropdownMenu>
+            .finally(() => {
+            setIsExporting(false);
+        });
+    };
+    const defaultTrigger = (<DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant={buttonVariant} size={buttonSize} className={className}>
-          <Download className="size-4" />
+          <Download className="size-4"/>
           Export
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        {formats.map((option) => (
-          <DashboardExportMenuOption key={option.value} option={option} isExporting={isExporting} onSelect={handleExport} />
-        ))}
+        {formats.map((option) => (<DashboardExportMenuOption key={option.value} option={option} isExporting={isExporting} onSelect={handleExport}/>))}
       </DropdownMenuContent>
-    </DropdownMenu>
-  )
-
-  return (
-    <>
+    </DropdownMenu>);
+    return (<>
       {trigger || defaultTrigger}
       {/* Full export dialog with options */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Download className="size-5" />
+              <Download className="size-5"/>
               Export Dashboard Data
             </DialogTitle>
             <DialogDescription>
@@ -237,10 +174,8 @@ export function DashboardExport({
               <Label>Export Format</Label>
               <div className="grid grid-cols-2 gap-2">
                 {formats.map((option) => {
-                  return (
-                    <DashboardExportGridOption key={option.value} option={option} isExporting={isExporting} onSelect={handleExport} />
-                  )
-                })}
+            return (<DashboardExportGridOption key={option.value} option={option} isExporting={isExporting} onSelect={handleExport}/>);
+        })}
               </div>
             </div>
 
@@ -248,20 +183,12 @@ export function DashboardExport({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label htmlFor="headers">Include column headers</Label>
-                <Checkbox
-                  id="headers"
-                  checked={includeHeaders}
-                  onCheckedChange={setIncludeHeaders}
-                />
+                <Checkbox id="headers" checked={includeHeaders} onCheckedChange={setIncludeHeaders}/>
               </div>
 
               <div className="flex items-center justify-between">
                 <Label htmlFor="metadata">Include metadata (dates, IDs)</Label>
-                <Checkbox
-                  id="metadata"
-                  checked={includeMetadata}
-                  onCheckedChange={setIncludeMetadata}
-                />
+                <Checkbox id="metadata" checked={includeMetadata} onCheckedChange={setIncludeMetadata}/>
               </div>
             </div>
           </div>
@@ -273,164 +200,131 @@ export function DashboardExport({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
-  )
+    </>);
 }
-
 /**
  * Quick export button for single format
  */
-export function QuickExportButton({
-  format,
-  data,
-  filename,
-  icon: Icon,
-  disabled,
-  onComplete,
-}: {
-  format: ExportFormat
-  data: ChartDataPoint[] | Record<string, unknown>[]
-  filename?: string
-  icon?: React.ComponentType<{ className?: string }>
-  disabled?: boolean
-  onComplete?: () => void
+export function QuickExportButton({ format, data, filename, icon: Icon, disabled, onComplete, }: {
+    format: ExportFormat;
+    data: ChartDataPoint[] | Record<string, unknown>[];
+    filename?: string;
+    icon?: React.ComponentType<{
+        className?: string;
+    }>;
+    disabled?: boolean;
+    onComplete?: () => void;
 }) {
-  const { toast } = useToast()
-  const [isExporting, setIsExporting] = useState(false)
-
-  const handleExport = useCallback(async () => {
-    setIsExporting(true)
-
-    try {
-      if (format === 'excel' || format === 'csv') {
-        const rows = data as Record<string, unknown>[]
-        await exportCohortsSpreadsheet({
-          data: rows,
-          filename: `${filename || 'export'}.xlsx`,
-          title: filename || 'Dashboard export',
-          charts: buildSpreadsheetChartsFromTableData(rows, filename || 'Dashboard export'),
-        })
-        toast({
-          title: 'Export complete',
-          description: 'Your data has been exported as XLSX.',
-        })
-        onComplete?.()
-        return
-      }
-
-      if (format === 'json') {
-        const content = JSON.stringify(data, null, 2)
-        const blob = new Blob([content], { type: 'application/json;charset=utf-8;' })
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `${filename || 'export'}.json`
-        link.click()
-        URL.revokeObjectURL(url)
-
-        toast({
-          title: 'Export complete',
-          description: 'Your data has been exported as JSON.',
-        })
-        onComplete?.()
-        return
-      }
-
-      throw new Error(`Unsupported format: ${format}`)
-    } catch (error) {
-      reportConvexFailure({
-        error,
-        context: 'QuickExportButton:handleExport',
-        title: 'Export failed',
-        fallbackMessage: 'Export failed',
-      })
-    } finally {
-      setIsExporting(false)
-    }
-  }, [data, filename, format, toast, onComplete])
-
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={handleExport}
-      disabled={disabled || isExporting}
-      className="gap-1.5"
-    >
-      {isExporting ? (
-        <LoaderCircle className="size-4 animate-spin" />
-      ) : Icon ? (
-        <Icon className="size-4" />
-      ) : null}
+    const { toast } = useToast();
+    const [isExporting, setIsExporting] = useState(false);
+    const handleExport = async () => {
+        setIsExporting(true);
+        try {
+            if (format === 'excel' || format === 'csv') {
+                const rows = data as Record<string, unknown>[];
+                await exportCohortsSpreadsheet({
+                    data: rows,
+                    filename: `${filename || 'export'}.xlsx`,
+                    title: filename || 'Dashboard export',
+                    charts: buildSpreadsheetChartsFromTableData(rows, filename || 'Dashboard export'),
+                });
+                toast({
+                    title: 'Export complete',
+                    description: 'Your data has been exported as XLSX.',
+                });
+                onComplete?.();
+                return;
+            }
+            if (format === 'json') {
+                const content = JSON.stringify(data, null, 2);
+                const blob = new Blob([content], { type: 'application/json;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${filename || 'export'}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+                toast({
+                    title: 'Export complete',
+                    description: 'Your data has been exported as JSON.',
+                });
+                onComplete?.();
+                return;
+            }
+            throw new Error(`Unsupported format: ${format}`);
+        }
+        catch (error) {
+            reportConvexFailure({
+                error,
+                context: 'QuickExportButton:handleExport',
+                title: 'Export failed',
+                fallbackMessage: 'Export failed',
+            });
+        }
+        finally {
+            setIsExporting(false);
+        }
+    };
+    return (<Button type="button" variant="outline" size="sm" onClick={handleExport} disabled={disabled || isExporting} className="gap-1.5">
+      {isExporting ? (<LoaderCircle className="size-4 animate-spin"/>) : Icon ? (<Icon className="size-4"/>) : null}
       {isExporting ? 'Exporting...' : format.toUpperCase()}
-    </Button>
-  )
+    </Button>);
 }
-
 /**
  * Scheduled export configuration dialog
  */
-export function ScheduledExportDialog({
-  trigger,
-  onSchedule,
-}: {
-  trigger?: React.ReactNode
-  onSchedule?: (config: {
-    format: ExportFormat
-    frequency: 'daily' | 'weekly' | 'monthly'
-    recipients: string[]
-  }) => void
+export function ScheduledExportDialog({ trigger, onSchedule, }: {
+    trigger?: React.ReactNode;
+    onSchedule?: (config: {
+        format: ExportFormat;
+        frequency: 'daily' | 'weekly' | 'monthly';
+        recipients: string[];
+    }) => void;
 }) {
-  const { toast } = useToast()
-  const [open, setOpen] = useState(false)
-  const [format, setFormat] = useState<ExportFormat>('excel')
-  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('weekly')
-  const [isScheduling, setIsScheduling] = useState(false)
-  const handleClose = useCallback(() => {
-    setOpen(false)
-  }, [])
-  const handleFormatChange = useCallback((value: ExportFormat) => {
-    setFormat(value)
-  }, [])
-  const handleFrequencyChange = useCallback((value: 'daily' | 'weekly' | 'monthly') => {
-    setFrequency(value)
-  }, [])
-
-  const handleSchedule = useCallback(() => {
-    const recipients: string[] = []
-    setIsScheduling(true)
-    void Promise.resolve()
-      .then(() => {
-        onSchedule?.({ format, frequency, recipients })
-        toast({
-          title: 'Scheduled export created',
-          description: `You'll receive ${format.toUpperCase()} exports ${frequency}.`,
+    const { toast } = useToast();
+    const [open, setOpen] = useState(false);
+    const [format, setFormat] = useState<ExportFormat>('excel');
+    const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
+    const [isScheduling, setIsScheduling] = useState(false);
+    const handleClose = () => {
+        setOpen(false);
+    };
+    const handleFormatChange = (value: ExportFormat) => {
+        setFormat(value);
+    };
+    const handleFrequencyChange = (value: 'daily' | 'weekly' | 'monthly') => {
+        setFrequency(value);
+    };
+    const handleSchedule = () => {
+        const recipients: string[] = [];
+        setIsScheduling(true);
+        void Promise.resolve()
+            .then(() => {
+            onSchedule?.({ format, frequency, recipients });
+            toast({
+                title: 'Scheduled export created',
+                description: `You'll receive ${format.toUpperCase()} exports ${frequency}.`,
+            });
+            setOpen(false);
         })
-        setOpen(false)
-      })
-      .catch((error) => {
-        reportConvexFailure({
-        error: error,
-        context: 'ScheduledExportDialog:handleSchedule',
-        title: 'Failed to schedule',
-        fallbackMessage: 'Failed to schedule',
+            .catch((error) => {
+            reportConvexFailure({
+                error: error,
+                context: 'ScheduledExportDialog:handleSchedule',
+                title: 'Failed to schedule',
+                fallbackMessage: 'Failed to schedule',
+            });
         })
-      })
-      .finally(() => {
-        setIsScheduling(false)
-      })
-  }, [format, frequency, onSchedule, toast])
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
+            .finally(() => {
+            setIsScheduling(false);
+        });
+    };
+    return (<Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm" className="gap-2">
-            <Download className="size-4" />
+        {trigger || (<Button variant="outline" size="sm" className="gap-2">
+            <Download className="size-4"/>
             Schedule Export
-          </Button>
-        )}
+          </Button>)}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -486,6 +380,5 @@ export function ScheduledExportDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
-  )
+    </Dialog>);
 }

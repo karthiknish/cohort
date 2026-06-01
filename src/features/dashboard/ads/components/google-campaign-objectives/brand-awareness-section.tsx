@@ -1,78 +1,55 @@
 // =============================================================================
 // GOOGLE ADS BRAND AWARENESS SECTION
 // =============================================================================
-
-'use client'
-
-import { useCallback } from 'react'
-
-import { Label } from '@/shared/ui/label'
-import { Switch } from '@/shared/ui/switch'
-import { Slider } from '@/shared/ui/slider'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Eye, Target } from 'lucide-react'
-import type { GoogleObjectiveComponentProps } from './types'
-
+'use client';
+import { useCallback } from 'react';
+import { Label } from '@/shared/ui/label';
+import { Switch } from '@/shared/ui/switch';
+import { Slider } from '@/shared/ui/slider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Eye, Target } from 'lucide-react';
+import type { GoogleObjectiveComponentProps } from './types';
 const IMPRESSION_SHARE_TARGETS = [
-  { value: 'ABSOLUTE_TOP_OF_PAGE', label: 'Absolute Top of Page', description: 'Position 1 on search results' },
-  { value: 'TOP_OF_PAGE', label: 'Top of Page', description: 'Top positions on search results' },
-  { value: 'ANYWHERE_ON_PAGE', label: 'Anywhere on Page', description: 'Any position on search results' },
-]
-
+    { value: 'ABSOLUTE_TOP_OF_PAGE', label: 'Absolute Top of Page', description: 'Position 1 on search results' },
+    { value: 'TOP_OF_PAGE', label: 'Top of Page', description: 'Top positions on search results' },
+    { value: 'ANYWHERE_ON_PAGE', label: 'Anywhere on Page', description: 'Any position on search results' },
+];
 const FREQUENCY_CAP_TIME_UNITS = [
-  { value: 'DAY', label: 'Per Day' },
-  { value: 'WEEK', label: 'Per Week' },
-  { value: 'MONTH', label: 'Per Month' },
-]
-
+    { value: 'DAY', label: 'Per Day' },
+    { value: 'WEEK', label: 'Per Week' },
+    { value: 'MONTH', label: 'Per Month' },
+];
 export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: GoogleObjectiveComponentProps) {
-  const handleTargetLocationChange = useCallback(
-    (value: string) => {
-      onChange({ targetImpressionShareLocation: value })
-    },
-    [onChange]
-  )
-
-  const handleTargetPercentageChange = useCallback(
-    ([value]: [number]) => {
-      onChange({ targetImpressionSharePercentage: value })
-    },
-    [onChange]
-  )
-
-  const handleFrequencyCapChange = useCallback(
-    (checked: boolean) => {
-      onChange({
-        frequencyCapLevel: checked ? 'CAMPAIGN' : undefined,
-        frequencyCapEvents: checked ? 3 : undefined,
-        frequencyCapTimeUnit: checked ? 'WEEK' : undefined,
-      })
-    },
-    [onChange]
-  )
-
-  const handleFrequencyCapEventsChange = useCallback(
-    ([value]: [number]) => {
-      onChange({ frequencyCapEvents: value })
-    },
-    [onChange]
-  )
-
-  const handleFrequencyCapTimeUnitChange = useCallback(
-    (value: string) => {
-      onChange({ frequencyCapTimeUnit: value as 'DAY' | 'WEEK' | 'MONTH' })
-    },
-    [onChange]
-  )
-
-  return (
-    <div className="space-y-6">
+    const handleTargetLocationChange = (value: string) => {
+        onChange({ targetImpressionShareLocation: value });
+    };
+    const handleTargetPercentageChange = ([value]: [
+        number
+    ]) => {
+        onChange({ targetImpressionSharePercentage: value });
+    };
+    const handleFrequencyCapChange = (checked: boolean) => {
+        onChange({
+            frequencyCapLevel: checked ? 'CAMPAIGN' : undefined,
+            frequencyCapEvents: checked ? 3 : undefined,
+            frequencyCapTimeUnit: checked ? 'WEEK' : undefined,
+        });
+    };
+    const handleFrequencyCapEventsChange = ([value]: [
+        number
+    ]) => {
+        onChange({ frequencyCapEvents: value });
+    };
+    const handleFrequencyCapTimeUnitChange = (value: string) => {
+        onChange({ frequencyCapTimeUnit: value as 'DAY' | 'WEEK' | 'MONTH' });
+    };
+    return (<div className="space-y-6">
       {/* Target Impression Share */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Target className="size-4 text-accent" />
+            <Target className="size-4 text-accent"/>
             Target Impression Share
           </CardTitle>
           <CardDescription>
@@ -82,23 +59,17 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="impression-share-target">Target Location</Label>
-            <Select
-              value={formData.targetImpressionShareLocation}
-              onValueChange={handleTargetLocationChange}
-              disabled={disabled}
-            >
+            <Select value={formData.targetImpressionShareLocation} onValueChange={handleTargetLocationChange} disabled={disabled}>
               <SelectTrigger id="impression-share-target">
-                <SelectValue placeholder="Select target location" />
+                <SelectValue placeholder="Select target location"/>
               </SelectTrigger>
               <SelectContent>
-                {IMPRESSION_SHARE_TARGETS.map((target) => (
-                  <SelectItem key={target.value} value={target.value}>
+                {IMPRESSION_SHARE_TARGETS.map((target) => (<SelectItem key={target.value} value={target.value}>
                     <div className="flex flex-col items-start">
                       <span>{target.label}</span>
                       <span className="text-xs text-muted-foreground">{target.description}</span>
                     </div>
-                  </SelectItem>
-                ))}
+                  </SelectItem>))}
               </SelectContent>
             </Select>
           </div>
@@ -108,14 +79,7 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
               <Label>Target Percentage</Label>
               <span className="text-sm font-medium">{formData.targetImpressionSharePercentage || 80}%</span>
             </div>
-            <Slider
-              value={[formData.targetImpressionSharePercentage || 80]}
-              onValueChange={handleTargetPercentageChange}
-              min={1}
-              max={100}
-              step={1}
-              disabled={disabled}
-            />
+            <Slider value={[formData.targetImpressionSharePercentage || 80]} onValueChange={handleTargetPercentageChange} min={1} max={100} step={1} disabled={disabled}/>
             <p className="text-xs text-muted-foreground">
               Percentage of eligible impressions you want to capture
             </p>
@@ -139,52 +103,32 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
                 Prevent ad fatigue
               </p>
             </div>
-            <Switch
-              id="frequency-cap"
-              checked={!!formData.frequencyCapLevel}
-              onCheckedChange={handleFrequencyCapChange}
-              disabled={disabled}
-            />
+            <Switch id="frequency-cap" checked={!!formData.frequencyCapLevel} onCheckedChange={handleFrequencyCapChange} disabled={disabled}/>
           </div>
 
-          {formData.frequencyCapLevel && (
-            <>
+          {formData.frequencyCapLevel && (<>
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <Label>Max Impressions</Label>
                   <span className="text-sm font-medium">{formData.frequencyCapEvents || 3}</span>
                 </div>
-                <Slider
-                  value={[formData.frequencyCapEvents || 3]}
-                  onValueChange={handleFrequencyCapEventsChange}
-                  min={1}
-                  max={20}
-                  step={1}
-                  disabled={disabled}
-                />
+                <Slider value={[formData.frequencyCapEvents || 3]} onValueChange={handleFrequencyCapEventsChange} min={1} max={20} step={1} disabled={disabled}/>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="time-unit">Time Period</Label>
-                <Select
-                  value={formData.frequencyCapTimeUnit}
-                  onValueChange={handleFrequencyCapTimeUnitChange}
-                  disabled={disabled}
-                >
+                <Select value={formData.frequencyCapTimeUnit} onValueChange={handleFrequencyCapTimeUnitChange} disabled={disabled}>
                   <SelectTrigger id="time-unit">
-                    <SelectValue placeholder="Select time period" />
+                    <SelectValue placeholder="Select time period"/>
                   </SelectTrigger>
                   <SelectContent>
-                    {FREQUENCY_CAP_TIME_UNITS.map((unit) => (
-                      <SelectItem key={unit.value} value={unit.value}>
+                    {FREQUENCY_CAP_TIME_UNITS.map((unit) => (<SelectItem key={unit.value} value={unit.value}>
                         {unit.label}
-                      </SelectItem>
-                    ))}
+                      </SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
-            </>
-          )}
+            </>)}
         </CardContent>
       </Card>
 
@@ -192,7 +136,7 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
       <Card className="border-accent/20 bg-accent/5">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <Eye className="size-5 text-accent flex-shrink-0 mt-0.5" />
+            <Eye className="size-5 text-accent flex-shrink-0 mt-0.5"/>
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Brand Awareness Best Practices</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
@@ -206,6 +150,5 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
           </div>
         </CardContent>
       </Card>
-    </div>
-  )
+    </div>);
 }

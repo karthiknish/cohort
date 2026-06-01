@@ -1,237 +1,190 @@
-import { useEffect, useMemo, useReducer } from 'react'
-import { useAuth } from '@/shared/contexts/auth-context'
-import { usePreview } from '@/shared/contexts/preview-context'
-import { useConvexAuth, useConvex } from 'convex/react'
-import { getPreviewMetrics } from '@/lib/preview-data'
-import type { MetricRecord, ClientComparisonSummary, ComparisonInsight } from '@/types/dashboard'
-import {
-    buildClientComparisonSummary,
-    groupMetricsByClient,
-    formatRoas,
-    formatCpa,
-} from '@/lib/dashboard-utils'
-import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors'
-import { formatCurrency } from '@/lib/utils'
-import { Trophy, ArrowUpRight, TriangleAlert } from 'lucide-react'
-import type { ClientRecord } from '@/types/clients'
-import { adsMetricsApi } from '@/lib/convex-api'
-import {
-    comparisonDataReducer,
-    createInitialComparisonDataState,
-} from './use-comparison-data-reducer'
-
+import { useEffect, useMemo, useReducer } from 'react';
+import { useAuth } from '@/shared/contexts/auth-context';
+import { usePreview } from '@/shared/contexts/preview-context';
+import { useConvexAuth, useConvex } from 'convex/react';
+import { getPreviewMetrics } from '@/lib/preview-data';
+import type { MetricRecord, ClientComparisonSummary, ComparisonInsight } from '@/types/dashboard';
+import { buildClientComparisonSummary, groupMetricsByClient, formatRoas, formatCpa, } from '@/lib/dashboard-utils';
+import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors';
+import { formatCurrency } from '@/lib/utils';
+import { Trophy, ArrowUpRight, TriangleAlert } from 'lucide-react';
+import type { ClientRecord } from '@/types/clients';
+import { adsMetricsApi } from '@/lib/convex-api';
+import { comparisonDataReducer, createInitialComparisonDataState, } from './use-comparison-data-reducer';
 function isAuthError(error: unknown): boolean {
-    const code = extractErrorCode(error)
-    return code === 'UNAUTHORIZED' || code === 'FORBIDDEN'
+    const code = extractErrorCode(error);
+    return code === 'UNAUTHORIZED' || code === 'FORBIDDEN';
 }
-
 export interface UseComparisonDataOptions {
-    clients: ClientRecord[]
-    selectedClientId: string | null
-    comparisonClientIds: string[]
-    comparisonPeriodDays: number
+    clients: ClientRecord[];
+    selectedClientId: string | null;
+    comparisonClientIds: string[];
+    comparisonPeriodDays: number;
 }
-
 export interface UseComparisonDataReturn {
-    comparisonSummaries: ClientComparisonSummary[]
-    comparisonLoading: boolean
-    comparisonError: string | null
-    comparisonInsights: ComparisonInsight[]
-    comparisonAggregate: ComparisonAggregate | null
-    comparisonTargets: string[]
-    comparisonHasSelection: boolean
+    comparisonSummaries: ClientComparisonSummary[];
+    comparisonLoading: boolean;
+    comparisonError: string | null;
+    comparisonInsights: ComparisonInsight[];
+    comparisonAggregate: ComparisonAggregate | null;
+    comparisonTargets: string[];
+    comparisonHasSelection: boolean;
 }
-
 export interface ComparisonAggregate {
-    totalRevenue: number
-    totalAdSpend: number
-    totalConversions: number
-    avgRoas: number | null
-    selectionCount: number
-    currency: string | null
-    mixedCurrencies: boolean
+    totalRevenue: number;
+    totalAdSpend: number;
+    totalConversions: number;
+    avgRoas: number | null;
+    selectionCount: number;
+    currency: string | null;
+    mixedCurrencies: boolean;
 }
-
 export function useComparisonData(options: UseComparisonDataOptions): UseComparisonDataReturn {
-    const { clients, selectedClientId, comparisonClientIds, comparisonPeriodDays } = options
-    const { user } = useAuth()
-    const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
-    const convex = useConvex()
-    const { isPreviewMode } = usePreview()
-    
+    const { clients, selectedClientId, comparisonClientIds, comparisonPeriodDays } = options;
+    const { user } = useAuth();
+    const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexLoading } = useConvexAuth();
+    const convex = useConvex();
+    const { isPreviewMode } = usePreview();
     // Don't run queries until Convex auth is ready
-    const canQueryConvex = isConvexAuthenticated && !isConvexLoading && !!user?.id
-
-    const [comparisonState, dispatchComparison] = useReducer(
-        comparisonDataReducer,
-        undefined,
-        createInitialComparisonDataState,
-    )
-    const { summaries: comparisonSummaries, loading: comparisonLoading, error: comparisonError } = comparisonState
-
-    const comparisonTargets = useMemo(() => {
-        return comparisonClientIds.length > 0
-            ? comparisonClientIds
-            : selectedClientId
-                ? [selectedClientId]
-                : []
-    }, [comparisonClientIds, selectedClientId])
-
-    const comparisonHasSelection = comparisonTargets.length > 0
-
+    const canQueryConvex = isConvexAuthenticated && !isConvexLoading && !!user?.id;
+    const [comparisonState, dispatchComparison] = useReducer(comparisonDataReducer, undefined, createInitialComparisonDataState);
+    const { summaries: comparisonSummaries, loading: comparisonLoading, error: comparisonError } = comparisonState;
+    const comparisonTargets = comparisonClientIds.length > 0
+        ? comparisonClientIds
+        : selectedClientId
+            ? [selectedClientId]
+            : [];
+    const comparisonHasSelection = comparisonTargets.length > 0;
     useEffect(() => {
-        let isCancelled = false
-
+        let isCancelled = false;
         if (!user?.id) {
-            dispatchComparison({ type: 'reset' })
+            dispatchComparison({ type: 'reset' });
             return () => {
-                isCancelled = true
-            }
+                isCancelled = true;
+            };
         }
-
         if (isPreviewMode) {
-            const targets = comparisonClientIds.length > 0 ? comparisonClientIds : selectedClientId ? [selectedClientId] : []
-
+            const targets = comparisonClientIds.length > 0 ? comparisonClientIds : selectedClientId ? [selectedClientId] : [];
             if (targets.length === 0) {
-                dispatchComparison({ type: 'reset' })
+                dispatchComparison({ type: 'reset' });
                 return () => {
-                    isCancelled = true
-                }
+                    isCancelled = true;
+                };
             }
-
-            dispatchComparison({ type: 'begin' })
-
+            dispatchComparison({ type: 'begin' });
             try {
                 const summaries = targets.map((clientId) => {
-                    const name = clients.find((c) => c.id === clientId)?.name ?? 'Client'
+                    const name = clients.find((c) => c.id === clientId)?.name ?? 'Client';
                     return buildClientComparisonSummary({
                         clientId,
                         clientName: name,
                         metrics: getPreviewMetrics(clientId),
                         periodDays: comparisonPeriodDays,
-                    })
-                })
-
+                    });
+                });
                 if (!isCancelled) {
-                    dispatchComparison({ type: 'success', summaries })
-                 }
-             } catch (error) {
-                 if (!isCancelled) {
-                     logError(error, 'useComparisonData:loadPreview')
-                     dispatchComparison({ type: 'failure', error: asErrorMessage(error) })
-                 }
-             }
-
-            return () => {
-                isCancelled = true
+                    dispatchComparison({ type: 'success', summaries });
+                }
             }
+            catch (error) {
+                if (!isCancelled) {
+                    logError(error, 'useComparisonData:loadPreview');
+                    dispatchComparison({ type: 'failure', error: asErrorMessage(error) });
+                }
+            }
+            return () => {
+                isCancelled = true;
+            };
         }
-
-        const targets = comparisonClientIds.length > 0 ? comparisonClientIds : selectedClientId ? [selectedClientId] : []
-
+        const targets = comparisonClientIds.length > 0 ? comparisonClientIds : selectedClientId ? [selectedClientId] : [];
         if (targets.length === 0) {
-            dispatchComparison({ type: 'reset' })
+            dispatchComparison({ type: 'reset' });
             return () => {
-                isCancelled = true
-            }
+                isCancelled = true;
+            };
         }
-
         const loadComparison = async () => {
-            dispatchComparison({ type: 'begin' })
+            dispatchComparison({ type: 'begin' });
             try {
                 // Wait for Convex auth to be ready
                 if (!canQueryConvex) {
-                    dispatchComparison({ type: 'setLoading', value: false })
-                    return
+                    dispatchComparison({ type: 'setLoading', value: false });
+                    return;
                 }
-
                 // Fetch metrics from Convex - use clientIds array for multi-client query
                 const metricsPromise = convex.query(adsMetricsApi.listMetricsWithSummary, {
                     workspaceId: user?.agencyId as string,
                     clientIds: targets,
                     limit: 250,
-                }) as Promise<{ metrics: MetricRecord[] }>
-
-                const metricsData = await metricsPromise
-
-                const groupedMetrics = groupMetricsByClient(metricsData?.metrics ?? [])
-
+                }) as Promise<{
+                    metrics: MetricRecord[];
+                }>;
+                const metricsData = await metricsPromise;
+                const groupedMetrics = groupMetricsByClient(metricsData?.metrics ?? []);
                 const summaries = targets.map((clientId) => {
-                    const metricsForClient = groupedMetrics.get(clientId) ?? []
-                    const clientName = clients.find((client) => client.id === clientId)?.name ?? 'Workspace'
-
+                    const metricsForClient = groupedMetrics.get(clientId) ?? [];
+                    const clientName = clients.find((client) => client.id === clientId)?.name ?? 'Workspace';
                     return buildClientComparisonSummary({
                         clientId,
                         clientName,
                         metrics: metricsForClient,
                         periodDays: comparisonPeriodDays,
-                    })
-                })
-
+                    });
+                });
                 if (!isCancelled) {
                     const ordered = summaries.toSorted((a, b) => {
                         if (a.totalRevenue === b.totalRevenue) {
-                            return b.totalAdSpend - a.totalAdSpend
+                            return b.totalAdSpend - a.totalAdSpend;
                         }
-                        return b.totalRevenue - a.totalRevenue
-                    })
-                    dispatchComparison({ type: 'success', summaries: ordered })
-                 }
-              } catch (error) {
-                  if (!isCancelled) {
-                      logError(error, 'useComparisonData:loadComparison')
-                      const message = isAuthError(error)
-                         ? 'Your session is not ready yet. Please refresh, or sign in again.'
-                         : asErrorMessage(error)
-                     dispatchComparison({ type: 'failure', error: message })
-                 }
-             }
-        }
-
-        void loadComparison()
-
+                        return b.totalRevenue - a.totalRevenue;
+                    });
+                    dispatchComparison({ type: 'success', summaries: ordered });
+                }
+            }
+            catch (error) {
+                if (!isCancelled) {
+                    logError(error, 'useComparisonData:loadComparison');
+                    const message = isAuthError(error)
+                        ? 'Your session is not ready yet. Please refresh, or sign in again.'
+                        : asErrorMessage(error);
+                    dispatchComparison({ type: 'failure', error: message });
+                }
+            }
+        };
+        void loadComparison();
         return () => {
-            isCancelled = true
-        }
-    }, [clients, comparisonClientIds, comparisonPeriodDays, selectedClientId, user?.id, user?.agencyId, isPreviewMode, canQueryConvex, convex])
-
-    const comparisonInsights = useMemo<ComparisonInsight[]>(() => {
+            isCancelled = true;
+        };
+    }, [clients, comparisonClientIds, comparisonPeriodDays, selectedClientId, user?.id, user?.agencyId, isPreviewMode, canQueryConvex, convex]);
+    const comparisonInsights = (() => {
         if (comparisonSummaries.length === 0) {
-            return []
+            return [];
         }
-
         const roasLeader = comparisonSummaries
             .filter((summary) => Number.isFinite(summary.roas) && summary.roas !== 0)
             .reduce<ClientComparisonSummary | undefined>((leader, summary) => {
-                if (!leader) {
-                    return summary
-                }
-
-                const leaderRoas = leader.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : leader.roas
-                const summaryRoas = summary.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : summary.roas
-                return summaryRoas > leaderRoas ? summary : leader
-            }, undefined)
-
+            if (!leader) {
+                return summary;
+            }
+            const leaderRoas = leader.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : leader.roas;
+            const summaryRoas = summary.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : summary.roas;
+            return summaryRoas > leaderRoas ? summary : leader;
+        }, undefined);
         const spendLeader = comparisonSummaries.reduce<ClientComparisonSummary | undefined>((leader, summary) => {
             if (!leader || summary.totalAdSpend > leader.totalAdSpend) {
-                return summary
+                return summary;
             }
-
-            return leader
-        }, undefined)
-
+            return leader;
+        }, undefined);
         const cpaRisk = comparisonSummaries
             .filter((summary) => summary.cpa !== null)
             .reduce<ClientComparisonSummary | undefined>((leader, summary) => {
-                if (!leader || (summary.cpa ?? 0) > (leader.cpa ?? 0)) {
-                    return summary
-                }
-
-                return leader
-            }, undefined)
-
-        const insights: ComparisonInsight[] = []
-
+            if (!leader || (summary.cpa ?? 0) > (leader.cpa ?? 0)) {
+                return summary;
+            }
+            return leader;
+        }, undefined);
+        const insights: ComparisonInsight[] = [];
         if (roasLeader) {
             insights.push({
                 id: 'roas-leader',
@@ -240,9 +193,8 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
                 body: `${formatRoas(roasLeader.roas)} over the past ${roasLeader.periodDays} days`,
                 tone: 'positive',
                 icon: Trophy,
-            })
+            });
         }
-
         if (spendLeader) {
             insights.push({
                 id: 'spend-leader',
@@ -251,9 +203,8 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
                 body: `${formatCurrency(spendLeader.totalAdSpend, spendLeader.currency)} spent`,
                 tone: 'neutral',
                 icon: ArrowUpRight,
-            })
+            });
         }
-
         if (cpaRisk) {
             insights.push({
                 id: 'cpa-risk',
@@ -262,23 +213,20 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
                 body: `${formatCpa(cpaRisk.cpa, cpaRisk.currency)} per conversion`,
                 tone: 'warning',
                 icon: TriangleAlert,
-            })
+            });
         }
-
-        return insights
-    }, [comparisonSummaries])
-
-    const comparisonAggregate = useMemo<ComparisonAggregate | null>(() => {
+        return insights;
+    })();
+    const comparisonAggregate = (() => {
         if (comparisonSummaries.length === 0) {
-            return null
+            return null;
         }
-        const totalRevenue = comparisonSummaries.reduce((sum, summary) => sum + summary.totalRevenue, 0)
-        const totalAdSpend = comparisonSummaries.reduce((sum, summary) => sum + summary.totalAdSpend, 0)
-        const totalConversions = comparisonSummaries.reduce((sum, summary) => sum + summary.totalConversions, 0)
-        const currencySet = new Set(comparisonSummaries.map((summary) => summary.currency))
-        const singleCurrency = currencySet.size === 1 ? (comparisonSummaries[0]?.currency ?? null) : null
-        const avgRoas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : totalRevenue > 0 ? Number.POSITIVE_INFINITY : null
-
+        const totalRevenue = comparisonSummaries.reduce((sum, summary) => sum + summary.totalRevenue, 0);
+        const totalAdSpend = comparisonSummaries.reduce((sum, summary) => sum + summary.totalAdSpend, 0);
+        const totalConversions = comparisonSummaries.reduce((sum, summary) => sum + summary.totalConversions, 0);
+        const currencySet = new Set(comparisonSummaries.map((summary) => summary.currency));
+        const singleCurrency = currencySet.size === 1 ? (comparisonSummaries[0]?.currency ?? null) : null;
+        const avgRoas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : totalRevenue > 0 ? Number.POSITIVE_INFINITY : null;
         return {
             totalRevenue,
             totalAdSpend,
@@ -287,10 +235,9 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
             selectionCount: comparisonSummaries.length,
             currency: singleCurrency,
             mixedCurrencies: singleCurrency === null,
-        }
-    }, [comparisonSummaries])
-
-    return useMemo(() => ({
+        };
+    })();
+    return ({
         comparisonSummaries,
         comparisonLoading,
         comparisonError,
@@ -298,13 +245,5 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
         comparisonAggregate,
         comparisonTargets,
         comparisonHasSelection,
-    }), [
-        comparisonSummaries,
-        comparisonLoading,
-        comparisonError,
-        comparisonInsights,
-        comparisonAggregate,
-        comparisonTargets,
-        comparisonHasSelection,
-    ])
+    });
 }

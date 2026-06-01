@@ -2,11 +2,9 @@
  * Centralized Status Messages
  * Single source of truth for HTTP status code messages
  */
-
 // =============================================================================
 // STATUS MESSAGE MAPS
 // =============================================================================
-
 /**
  * Technical error messages (for server-side / API responses)
  */
@@ -25,8 +23,7 @@ export const API_STATUS_MESSAGES: Record<number, string> = {
     502: 'Bad gateway',
     503: 'Service temporarily unavailable',
     504: 'Gateway timeout',
-}
-
+};
 /**
  * User-friendly messages (for client-side toast/UI)
  * These are written in a friendly, helpful tone without technical jargon
@@ -46,8 +43,7 @@ export const USER_FRIENDLY_MESSAGES: Record<number, string> = {
     502: "We're having trouble connecting to our servers. Please try again in a few moments.",
     503: "We're temporarily down for maintenance. Please check back shortly.",
     504: 'The server took too long to respond. Please try again.',
-}
-
+};
 /**
  * Error codes mapped to HTTP status
  */
@@ -67,8 +63,7 @@ export const ERROR_CODES: Record<string, number> = {
     SERVICE_UNAVAILABLE: 503,
     GATEWAY_TIMEOUT: 504,
     NETWORK_ERROR: 0,
-}
-
+};
 /**
  * Suggested actions by status code
  * These provide clear, actionable next steps for users
@@ -88,50 +83,43 @@ export const SUGGESTED_ACTIONS: Record<number, string[]> = {
     502: ['Wait a moment', 'Try again'],
     503: ['Check back soon', 'Contact support'],
     504: ['Check connection', 'Try again'],
-}
-
+};
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
-
 /**
  * Get API/technical status message
  */
 export function getStatusMessage(status: number): string {
-    return API_STATUS_MESSAGES[status] ?? 'An error occurred'
+    return API_STATUS_MESSAGES[status] ?? 'An error occurred';
 }
-
 /**
  * Get user-friendly message for display
  */
 export function getUserFriendlyMessage(status: number): string {
-    return USER_FRIENDLY_MESSAGES[status] ?? "Something didn't work as expected. Please try again, or contact support if the problem continues."
+    return USER_FRIENDLY_MESSAGES[status] ?? "Something didn't work as expected. Please try again, or contact support if the problem continues.";
 }
-
 /**
  * Get suggested actions for a status code
  */
 export function getSuggestedActions(status: number): string[] {
-    return SUGGESTED_ACTIONS[status] ?? ['Try again', 'Contact support']
+    return SUGGESTED_ACTIONS[status] ?? ['Try again', 'Contact support'];
 }
-
 /**
  * Check if status code is retryable
  */
 export function isRetryableStatus(status: number): boolean {
-    return status === 429 || status === 502 || status === 503 || status === 504
+    return status === 429 || status === 502 || status === 503 || status === 504;
 }
-
 /**
  * Check if status indicates auth error
  */
 export function isAuthStatus(status: number): boolean {
-    return status === 401 || status === 403
+    return status === 401 || status === 403;
 }
-
 /**
  * Check if status is a validation error
  */
 export function isValidationStatus(status: number): boolean {
-    return status === 400 || status === 422
+    return status === 400 || status === 422;
 }

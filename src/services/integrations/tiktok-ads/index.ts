@@ -1,41 +1,16 @@
 // =============================================================================
 // TIKTOK ADS - Main entry point (re-exports)
 // =============================================================================
-
 // Types
-export * from './types'
-
+export * from './types';
 // Errors
-export * from './errors'
-
+export * from './errors';
 // Client utilities
-export { executeTikTokApiRequest, coerceNumber, DEFAULT_RETRY_CONFIG } from './client'
-
+export { executeTikTokApiRequest, coerceNumber, DEFAULT_RETRY_CONFIG } from './client';
 // Metrics
-export {
-  fetchTikTokAdAccounts,
-  fetchTikTokAdsMetrics,
-  checkTikTokIntegrationHealth,
-} from './metrics'
-
+export { fetchTikTokAdAccounts, fetchTikTokAdsMetrics, checkTikTokIntegrationHealth, } from './metrics';
 // Campaigns
-export {
-  listTikTokCampaigns,
-  updateTikTokCampaignStatus,
-  updateTikTokCampaignBudget,
-  updateTikTokCampaignBidding,
-  removeTikTokCampaign,
-  updateTikTokAdStatus,
-  fetchTikTokAdMetrics,
-  fetchTikTokCreatives,
-  fetchTikTokAudienceTargeting,
-  createTikTokAudience,
-} from './campaigns'
-
+export { listTikTokCampaigns, updateTikTokCampaignStatus, updateTikTokCampaignBudget, updateTikTokCampaignBidding, removeTikTokCampaign, updateTikTokAdStatus, fetchTikTokAdMetrics, fetchTikTokCreatives, fetchTikTokAudienceTargeting, createTikTokAudience, } from './campaigns';
 // Insights
-export {
-  calculateTikTokAdsInsights,
-  calculateTikTokAdsMetrics,
-  generateTikTokAdsInsights,
-} from './insights'
-export type { TikTokAdsRawMetrics } from './insights'
+export { calculateTikTokAdsInsights, calculateTikTokAdsMetrics, generateTikTokAdsInsights, } from './insights';
+export type { TikTokAdsRawMetrics } from './insights';

@@ -1,153 +1,140 @@
 // =============================================================================
 // PLATFORM INSIGHTS - Shared Types
 // =============================================================================
-
 /**
  * Insight type categories for ad metrics
  */
-export type InsightType = 'performance' | 'efficiency' | 'creative' | 'audience' | 'budget' | 'engagement'
-
+export type InsightType = 'performance' | 'efficiency' | 'creative' | 'audience' | 'budget' | 'engagement';
 /**
  * Severity level for insights
  */
-export type InsightLevel = 'success' | 'warning' | 'info' | 'critical'
-
+export type InsightLevel = 'success' | 'warning' | 'info' | 'critical';
 /**
  * Single platform insight with actionable information
  */
 export interface PlatformInsight {
     /** Category of the insight */
-    type: InsightType
+    type: InsightType;
     /** Severity level */
-    level: InsightLevel
+    level: InsightLevel;
     /** Name of the metric this insight relates to */
-    metric: string
+    metric: string;
     /** Current value of the metric */
-    value: number
+    value: number;
     /** Industry or platform benchmark for comparison */
-    benchmark?: number
+    benchmark?: number;
     /** Human-readable message explaining the insight */
-    message: string
+    message: string;
     /** Actionable recommendation */
-    recommendation?: string
+    recommendation?: string;
 }
-
 /**
  * Extended metrics from a platform with calculated fields and insights
  */
 export interface EnrichedMetrics<TRaw, TCalculated extends Record<string, number | null> = Record<string, number | null>> {
     /** Original raw metrics from the platform */
-    raw: TRaw
+    raw: TRaw;
     /** Calculated/derived metric values */
-    calculated: TCalculated
+    calculated: TCalculated;
     /** Generated insights based on the metrics */
-    insights: PlatformInsight[]
+    insights: PlatformInsight[];
 }
-
 /**
  * Platform-specific insight result
  */
 export interface PlatformInsightResult {
     /** Platform identifier */
-    providerId: string
+    providerId: string;
     /** Calculated metrics specific to this platform */
-    calculatedMetrics: Record<string, number | null>
+    calculatedMetrics: Record<string, number | null>;
     /** Generated insights */
-    insights: PlatformInsight[]
+    insights: PlatformInsight[];
     /** ISO timestamp when calculated */
-    calculatedAt: string
+    calculatedAt: string;
 }
-
 // =============================================================================
 // GOOGLE ADS SPECIFIC TYPES
 // =============================================================================
-
 export interface GoogleAdsCalculatedMetrics {
     /** Quality Score rating (1-10 normalized to tier) */
-    qualityScoreRating: number | null
+    qualityScoreRating: number | null;
     /** Search impression share percentage */
-    searchImpressionShare: number | null
+    searchImpressionShare: number | null;
     /** Impression share lost due to budget */
-    impressionShareLostBudget: number | null
+    impressionShareLostBudget: number | null;
     /** Impression share lost due to rank */
-    impressionShareLostRank: number | null
+    impressionShareLostRank: number | null;
     /** Top position impression percentage */
-    topPositionRate: number | null
+    topPositionRate: number | null;
     /** Absolute top position impression percentage */
-    absoluteTopPositionRate: number | null
+    absoluteTopPositionRate: number | null;
     /** Average CPC */
-    averageCpc: number | null
+    averageCpc: number | null;
     /** CTR */
-    ctr: number | null
+    ctr: number | null;
     /** Conversion rate */
-    conversionRate: number | null
+    conversionRate: number | null;
 }
-
 // =============================================================================
 // META ADS SPECIFIC TYPES
 // =============================================================================
-
 export interface MetaAdsCalculatedMetrics {
     /** Frequency: avg times ad shown to each person */
-    frequency: number | null
+    frequency: number | null;
     /** CPM: Cost per 1000 impressions */
-    cpm: number | null
+    cpm: number | null;
     /** Cost per unique reach */
-    costPerReach: number | null
+    costPerReach: number | null;
     /** ThruPlay rate for video ads */
-    thruPlayRate: number | null
+    thruPlayRate: number | null;
     /** Hook rate: 3s video views / impressions */
-    hookRate: number | null
+    hookRate: number | null;
     /** CTR */
-    ctr: number | null
+    ctr: number | null;
     /** Outbound CTR (link clicks specifically) */
-    outboundCtr: number | null
+    outboundCtr: number | null;
     /** Cost per result */
-    costPerResult: number | null
+    costPerResult: number | null;
 }
-
 // =============================================================================
 // TIKTOK ADS SPECIFIC TYPES
 // =============================================================================
-
 export interface TikTokAdsCalculatedMetrics {
     /** Video view rate (2s views / impressions) */
-    videoViewRate: number | null
+    videoViewRate: number | null;
     /** 6-second view rate */
-    sixSecondViewRate: number | null
+    sixSecondViewRate: number | null;
     /** Video completion rate */
-    completionRate: number | null
+    completionRate: number | null;
     /** Engagement rate: (likes + comments + shares) / impressions */
-    engagementRate: number | null
+    engagementRate: number | null;
     /** Profile visits rate */
-    profileVisitsRate: number | null
+    profileVisitsRate: number | null;
     /** CTR */
-    ctr: number | null
+    ctr: number | null;
     /** CPC */
-    cpc: number | null
+    cpc: number | null;
     /** Average watch time (seconds) */
-    averageWatchTime: number | null
+    averageWatchTime: number | null;
 }
-
 // =============================================================================
 // LINKEDIN ADS SPECIFIC TYPES
 // =============================================================================
-
 export interface LinkedInAdsCalculatedMetrics {
     /** Engagement rate: total engagements / impressions */
-    engagementRate: number | null
+    engagementRate: number | null;
     /** Social engagement rate: (reactions + comments + shares) / impressions */
-    socialEngagementRate: number | null
+    socialEngagementRate: number | null;
     /** Click-to-lead rate */
-    clickToLeadRate: number | null
+    clickToLeadRate: number | null;
     /** Lead form completion rate */
-    leadFormCompletionRate: number | null
+    leadFormCompletionRate: number | null;
     /** Video completion rate */
-    videoCompletionRate: number | null
+    videoCompletionRate: number | null;
     /** Cost per engagement */
-    costPerEngagement: number | null
+    costPerEngagement: number | null;
     /** CTR */
-    ctr: number | null
+    ctr: number | null;
     /** Viral rate: shares / impressions */
-    viralRate: number | null
+    viralRate: number | null;
 }

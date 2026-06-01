@@ -1,20 +1,15 @@
-'use client'
-
-import { useSyncExternalStore } from 'react'
-
+'use client';
+import { useSyncExternalStore } from 'react';
 function subscribe() {
-  return () => {}
+    return () => { };
 }
-
 function getClientSnapshot() {
-  return true
+    return true;
 }
-
 function getServerSnapshot() {
-  return false
+    return false;
 }
-
 /** True after hydration; false during SSR and the first server render. */
 export function useIsClientMounted(): boolean {
-  return useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot)
+    return useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
 }

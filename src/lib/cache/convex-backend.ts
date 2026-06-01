@@ -1,83 +1,77 @@
-import { createHash } from 'crypto'
-import { ConvexHttpClient } from 'convex/browser'
-
-import { internal } from '/_generated/api'
-import type { CacheBackend } from './cache-manager'
-
+import { createHash } from 'crypto';
+import { ConvexHttpClient } from 'convex/browser';
+import { internal } from '/_generated/api';
+import type { CacheBackend } from './cache-manager';
 export type ConvexCacheBackendOptions = {
-  /** Optional Convex URL override (defaults to env vars) */
-  convexUrl?: string
-}
-
+    /** Optional Convex URL override (defaults to env vars) */
+    convexUrl?: string;
+};
 function hashKey(key: string): string {
-  return createHash('sha256').update(key).digest('hex')
+    return createHash('sha256').update(key).digest('hex');
 }
-
-type QueryReference = Parameters<ConvexHttpClient['query']>[0]
-type MutationReference = Parameters<ConvexHttpClient['mutation']>[0]
-
+type QueryReference = Parameters<ConvexHttpClient['query']>[0];
+type MutationReference = Parameters<ConvexHttpClient['mutation']>[0];
 // Lazy-init Convex client
-let _convexClient: ConvexHttpClient | null = null
+let _convexClient: ConvexHttpClient | null = null;
 function getConvexClient(url?: string): ConvexHttpClient | null {
-  if (_convexClient) return _convexClient
-  const resolvedUrl = url ?? process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
-  if (!resolvedUrl) return null
-  _convexClient = new ConvexHttpClient(resolvedUrl)
-  return _convexClient
+    if (_convexClient)
+        return _convexClient;
+    const resolvedUrl = url ?? process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL;
+    if (!resolvedUrl)
+        return null;
+    _convexClient = new ConvexHttpClient(resolvedUrl);
+    return _convexClient;
 }
-
 export class ConvexCacheBackend implements CacheBackend {
-  private readonly client: ConvexHttpClient | null
-
-  constructor(opts: ConvexCacheBackendOptions = {}) {
-    this.client = getConvexClient(opts.convexUrl)
-  }
-
-  async get(key: string): Promise<string | null> {
-    if (!this.client) return null
-
-    try {
-      const keyHash = hashKey(key)
-      const result = await this.client.mutation(internal.serverCache.get as unknown as MutationReference, { keyHash })
-      return result?.value ?? null
-    } catch {
-      return null
+    private readonly client: ConvexHttpClient | null;
+    constructor(opts: ConvexCacheBackendOptions = {}) {
+        this.client = getConvexClient(opts.convexUrl);
     }
-  }
-
-  async set(key: string, value: string, ttlMs: number): Promise<void> {
-    if (!this.client) return
-
-    const ttl = Number(ttlMs)
-    if (!Number.isFinite(ttl) || ttl <= 0) {
-      await this.invalidate(key)
-      return
+    async get(key: string): Promise<string | null> {
+        if (!this.client)
+            return null;
+        try {
+            const keyHash = hashKey(key);
+            const result = await this.client.mutation(internal.serverCache.get as unknown as MutationReference, { keyHash });
+            return result?.value ?? null;
+        }
+        catch {
+            return null;
+        }
     }
-
-    try {
-      const keyHash = hashKey(key)
-      await this.client.mutation(internal.serverCache.set as unknown as MutationReference, {
-        keyHash,
-        key,
-        value,
-        ttlMs: ttl,
-      })
-    } catch {
-      // Silently fail - cache is best-effort
+    async set(key: string, value: string, ttlMs: number): Promise<void> {
+        if (!this.client)
+            return;
+        const ttl = Number(ttlMs);
+        if (!Number.isFinite(ttl) || ttl <= 0) {
+            await this.invalidate(key);
+            return;
+        }
+        try {
+            const keyHash = hashKey(key);
+            await this.client.mutation(internal.serverCache.set as unknown as MutationReference, {
+                keyHash,
+                key,
+                value,
+                ttlMs: ttl,
+            });
+        }
+        catch {
+            // Silently fail - cache is best-effort
+        }
     }
-  }
-
-  async invalidate(pattern: string): Promise<void> {
-    if (!this.client) return
-
-    try {
-      const keyHash = pattern && !pattern.endsWith('*') ? hashKey(pattern) : undefined
-      await this.client.mutation(internal.serverCache.invalidate as unknown as MutationReference, {
-        pattern,
-        keyHash,
-      })
-    } catch {
-      // Silently fail - cache is best-effort
+    async invalidate(pattern: string): Promise<void> {
+        if (!this.client)
+            return;
+        try {
+            const keyHash = pattern && !pattern.endsWith('*') ? hashKey(pattern) : undefined;
+            await this.client.mutation(internal.serverCache.invalidate as unknown as MutationReference, {
+                pattern,
+                keyHash,
+            });
+        }
+        catch {
+            // Silently fail - cache is best-effort
+        }
     }
-  }
 }

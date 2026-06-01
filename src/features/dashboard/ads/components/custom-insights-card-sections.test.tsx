@@ -1,69 +1,47 @@
-import { renderToStaticMarkup } from 'react-dom/server'
-
-import { Target } from 'lucide-react'
-import { describe, expect, it } from 'vitest'
-
-import {
-  CustomInsightsCardHeader,
-  CustomInsightsEmptyState,
-  CustomInsightsGrid,
-  CustomInsightsLoadingState,
-} from './custom-insights-card-sections'
-
+import { renderToStaticMarkup } from 'react-dom/server';
+import { Target } from 'lucide-react';
+import { describe, expect, it } from 'vitest';
+import { CustomInsightsCardHeader, CustomInsightsEmptyState, CustomInsightsGrid, CustomInsightsLoadingState, } from './custom-insights-card-sections';
 describe('custom insights card sections', () => {
-  it('renders the header, loading state, and empty state', () => {
-    const headerMarkup = renderToStaticMarkup(<CustomInsightsCardHeader anomalyCount={2} />)
-    const loadingMarkup = renderToStaticMarkup(<CustomInsightsLoadingState />)
-    const emptyMarkup = renderToStaticMarkup(<CustomInsightsEmptyState />)
-
-    expect(headerMarkup).toContain('Custom Insights')
-    expect(headerMarkup).toContain('2 anomalies')
-    expect(loadingMarkup).toContain('skeleton-shimmer')
-    expect(emptyMarkup).toContain('No metrics data available to calculate insights.')
-  })
-
-  it('renders the KPI grid tiles', () => {
-    const markup = renderToStaticMarkup(
-      <CustomInsightsGrid
-        currency="GBP"
-        items={[
-          {
-            label: 'CPA',
-            value: 42,
-            format: 'currency',
-            icon: <Target className="size-4" />,
-            trend: -0.12,
-            benchmark: 20,
-            invertTrend: true,
-            theme: 'destructive',
-          },
-        ]}
-      />,
-    )
-
-    expect(markup).toContain('CPA')
-    expect(markup).toContain('£42')
-    expect(markup).toContain('12.0%')
-    expect(markup).toContain('ring-warning/50')
-  })
-
-  it('does not invent a USD symbol when no currency is provided', () => {
-    const markup = renderToStaticMarkup(
-      <CustomInsightsGrid
-        items={[
-          {
-            label: 'Profit',
-            value: 42,
-            format: 'currency',
-            icon: <Target className="size-4" />,
-            trend: null,
-            theme: 'success',
-          },
-        ]}
-      />,
-    )
-
-    expect(markup).toContain('42')
-    expect(markup).not.toContain('$42')
-  })
-})
+    it('renders the header, loading state, and empty state', () => {
+        const headerMarkup = renderToStaticMarkup(<CustomInsightsCardHeader anomalyCount={2}/>);
+        const loadingMarkup = renderToStaticMarkup(<CustomInsightsLoadingState />);
+        const emptyMarkup = renderToStaticMarkup(<CustomInsightsEmptyState />);
+        expect(headerMarkup).toContain('Custom Insights');
+        expect(headerMarkup).toContain('2 anomalies');
+        expect(loadingMarkup).toContain('skeleton-shimmer');
+        expect(emptyMarkup).toContain('No metrics data available to calculate insights.');
+    });
+    it('renders the KPI grid tiles', () => {
+        const markup = renderToStaticMarkup(<CustomInsightsGrid currency="GBP" items={[
+                {
+                    label: 'CPA',
+                    value: 42,
+                    format: 'currency',
+                    icon: <Target className="size-4"/>,
+                    trend: -0.12,
+                    benchmark: 20,
+                    invertTrend: true,
+                    theme: 'destructive',
+                },
+            ]}/>);
+        expect(markup).toContain('CPA');
+        expect(markup).toContain('£42');
+        expect(markup).toContain('12.0%');
+        expect(markup).toContain('ring-warning/50');
+    });
+    it('does not invent a USD symbol when no currency is provided', () => {
+        const markup = renderToStaticMarkup(<CustomInsightsGrid items={[
+                {
+                    label: 'Profit',
+                    value: 42,
+                    format: 'currency',
+                    icon: <Target className="size-4"/>,
+                    trend: null,
+                    theme: 'success',
+                },
+            ]}/>);
+        expect(markup).toContain('42');
+        expect(markup).not.toContain('$42');
+    });
+});

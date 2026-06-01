@@ -1,30 +1,24 @@
-'use client'
-
-import Link from 'next/link'
-import { ArrowUpRight, Clock3, Shield, Trophy } from 'lucide-react'
-
-import { FadeIn } from '@/shared/ui/animate-in'
-import { Button } from '@/shared/ui/button'
-import { Card, CardContent } from '@/shared/ui/card'
-import { usePreview } from '@/shared/contexts/preview-context'
-
+'use client';
+import Link from 'next/link';
+import { ArrowUpRight, Clock3, Shield, Trophy } from 'lucide-react';
+import { FadeIn } from '@/shared/ui/animate-in';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent } from '@/shared/ui/card';
+import { usePreview } from '@/shared/contexts/preview-context';
 type DashboardRoleBannerProps = {
-  userRole?: string | null
-  userDisplayName?: string | null
-}
-
+    userRole?: string | null;
+    userDisplayName?: string | null;
+};
 export function DashboardRoleBanner({ userRole, userDisplayName }: DashboardRoleBannerProps) {
-  const { isPreviewMode } = usePreview()
-
-  if (isPreviewMode) return null
-
-  if (userRole === 'admin') {
-    return (
-      <FadeIn>
+    const { isPreviewMode } = usePreview();
+    if (isPreviewMode)
+        return null;
+    if (userRole === 'admin') {
+        return (<FadeIn>
         <Card className="border-accent/25 bg-accent/5">
           <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent/12">
-              <Shield className="size-5 text-primary" />
+              <Shield className="size-5 text-primary"/>
             </div>
             <div className="min-w-0 flex-1 space-y-1">
               <p className="font-medium text-foreground">Administrator view</p>
@@ -35,22 +29,19 @@ export function DashboardRoleBanner({ userRole, userDisplayName }: DashboardRole
             </div>
             <Link href="/admin" className="shrink-0">
               <Button variant="outline" size="sm" className="border-accent/30 hover:bg-accent/10">
-                Admin panel <ArrowUpRight className="ml-1 size-3" />
+                Admin panel <ArrowUpRight className="ml-1 size-3"/>
               </Button>
             </Link>
           </CardContent>
         </Card>
-      </FadeIn>
-    )
-  }
-
-  if (userRole === 'team') {
-    return (
-      <FadeIn>
+      </FadeIn>);
+    }
+    if (userRole === 'team') {
+        return (<FadeIn>
         <Card className="border-info/25 bg-info/5">
           <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-info/15">
-              <Clock3 className="size-5 text-info" />
+              <Clock3 className="size-5 text-info"/>
             </div>
             <div className="min-w-0 flex-1 space-y-1">
               <p className="font-medium text-foreground">Team operations</p>
@@ -61,22 +52,19 @@ export function DashboardRoleBanner({ userRole, userDisplayName }: DashboardRole
             </div>
             <Link href="/dashboard/projects" className="shrink-0">
               <Button variant="outline" size="sm" className="border-info/30 text-info hover:bg-info/10">
-                Projects <ArrowUpRight className="ml-1 size-3" />
+                Projects <ArrowUpRight className="ml-1 size-3"/>
               </Button>
             </Link>
           </CardContent>
         </Card>
-      </FadeIn>
-    )
-  }
-
-  if (userRole === 'client') {
-    return (
-      <FadeIn>
+      </FadeIn>);
+    }
+    if (userRole === 'client') {
+        return (<FadeIn>
         <Card className="border-success/25 bg-success/5">
           <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-success/15">
-              <Trophy className="size-5 text-success" />
+              <Trophy className="size-5 text-success"/>
             </div>
             <div className="min-w-0 flex-1 space-y-1">
               <p className="font-medium text-foreground">
@@ -89,14 +77,12 @@ export function DashboardRoleBanner({ userRole, userDisplayName }: DashboardRole
             </div>
             <Link href="/dashboard/proposals" className="shrink-0">
               <Button variant="outline" size="sm" className="border-success/30 text-success hover:bg-success/10">
-                Proposals <ArrowUpRight className="ml-1 size-3" />
+                Proposals <ArrowUpRight className="ml-1 size-3"/>
               </Button>
             </Link>
           </CardContent>
         </Card>
-      </FadeIn>
-    )
-  }
-
-  return null
+      </FadeIn>);
+    }
+    return null;
 }

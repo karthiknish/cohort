@@ -1,1 +1,1 @@
-export * from '../lib/dashboard-calculations'
+export * from '../lib/dashboard-calculations';

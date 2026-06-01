@@ -1,73 +1,98 @@
-'use client'
-
-import { ArrowRight, CircleCheck, Info, Lightbulb, TrendingUp, TriangleAlert, Zap } from 'lucide-react'
-
-import { Badge } from '@/shared/ui/badge'
-import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Skeleton } from '@/shared/ui/skeleton'
-import type { AlgorithmicInsight } from '@/lib/ad-algorithms'
-import { formatProviderName } from '@/lib/themes'
-import { cn } from '@/lib/utils'
-
-function InsightLevelIcon({ level }: { level: AlgorithmicInsight['level'] }) {
-  const icons = { success: CircleCheck, info: Info, warning: TriangleAlert, critical: Zap }
-  const Icon = icons[level] || Info
-  return <Icon className="size-4 shrink-0" />
+'use client';
+import { ArrowRight, CircleCheck, Info, Lightbulb, TrendingUp, TriangleAlert, Zap } from 'lucide-react';
+import { Badge } from '@/shared/ui/badge';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Skeleton } from '@/shared/ui/skeleton';
+import type { AlgorithmicInsight } from '@/lib/ad-algorithms';
+import { formatProviderName } from '@/lib/themes';
+import { cn } from '@/lib/utils';
+function InsightLevelIcon({ level }: {
+    level: AlgorithmicInsight['level'];
+}) {
+    const icons = { success: CircleCheck, info: Info, warning: TriangleAlert, critical: Zap };
+    const Icon = icons[level] || Info;
+    return <Icon className="size-4 shrink-0"/>;
 }
-
-function InsightLevelBadge({ level }: { level: AlgorithmicInsight['level'] }) {
-  const styles = {
-    success: 'bg-success/10 text-success border-success/20',
-    info: 'bg-info/10 text-info border-info/20',
-    warning: 'bg-warning/10 text-warning border-warning/20',
-    critical: 'bg-destructive/10 text-destructive border-destructive/20',
-  }
-  const labels = { success: 'Performing Well', info: 'Suggestion', warning: 'Needs Attention', critical: 'Critical' }
-  return <Badge variant="outline" className={cn('text-[10px] font-semibold uppercase', styles[level])}>{labels[level]}</Badge>
+function InsightLevelBadge({ level }: {
+    level: AlgorithmicInsight['level'];
+}) {
+    const styles = {
+        success: 'bg-success/10 text-success border-success/20',
+        info: 'bg-info/10 text-info border-info/20',
+        warning: 'bg-warning/10 text-warning border-warning/20',
+        critical: 'bg-destructive/10 text-destructive border-destructive/20',
+    };
+    const labels = { success: 'Performing Well', info: 'Suggestion', warning: 'Needs Attention', critical: 'Critical' };
+    return <Badge variant="outline" className={cn('text-[10px] font-semibold uppercase', styles[level])}>{labels[level]}</Badge>;
 }
-
-function InsightItem({ compact, insight }: { compact?: boolean; insight: AlgorithmicInsight }) {
-  const levelStyles = { success: 'border-l-success', info: 'border-l-info', warning: 'border-l-warning', critical: 'border-l-destructive' }
-  return <div className={cn('rounded-lg border border-l-4 bg-background p-4 transition-colors hover:bg-muted/50', levelStyles[insight.level])}><div className="flex items-start gap-3"><div className={cn('mt-0.5 rounded-full p-1', insight.level === 'success' && 'bg-success/10 text-success', insight.level === 'info' && 'bg-info/10 text-info', insight.level === 'warning' && 'bg-warning/10 text-warning', insight.level === 'critical' && 'bg-destructive/10 text-destructive')}><InsightLevelIcon level={insight.level} /></div><div className="flex-1 space-y-1"><div className="flex items-center gap-2"><h4 className="text-sm font-semibold">{insight.title}</h4>{!compact ? <InsightLevelBadge level={insight.level} /> : null}</div><p className="text-sm text-muted-foreground">{insight.message}</p>{!compact && insight.suggestion ? <div className="mt-2 flex items-start gap-2 rounded-md bg-muted/50 p-2 text-xs text-muted-foreground"><Lightbulb className="mt-0.5 size-3.5 shrink-0 text-warning" /><span>{insight.suggestion}</span></div> : null}</div>{insight.score !== undefined ? <div className="text-right"><span className="text-lg font-bold">{insight.score}</span><span className="text-xs text-muted-foreground">/100</span></div> : null}</div></div>
+function InsightItem({ compact, insight }: {
+    compact?: boolean;
+    insight: AlgorithmicInsight;
+}) {
+    const levelStyles = { success: 'border-l-success', info: 'border-l-info', warning: 'border-l-warning', critical: 'border-l-destructive' };
+    return <div className={cn('rounded-lg border border-l-4 bg-background p-4 transition-colors hover:bg-muted/50', levelStyles[insight.level])}><div className="flex items-start gap-3"><div className={cn('mt-0.5 rounded-full p-1', insight.level === 'success' && 'bg-success/10 text-success', insight.level === 'info' && 'bg-info/10 text-info', insight.level === 'warning' && 'bg-warning/10 text-warning', insight.level === 'critical' && 'bg-destructive/10 text-destructive')}><InsightLevelIcon level={insight.level}/></div><div className="flex-1 space-y-1"><div className="flex items-center gap-2"><h4 className="text-sm font-semibold">{insight.title}</h4>{!compact ? <InsightLevelBadge level={insight.level}/> : null}</div><p className="text-sm text-muted-foreground">{insight.message}</p>{!compact && insight.suggestion ? <div className="mt-2 flex items-start gap-2 rounded-md bg-muted/50 p-2 text-xs text-muted-foreground"><Lightbulb className="mt-0.5 size-3.5 shrink-0 text-warning"/><span>{insight.suggestion}</span></div> : null}</div>{insight.score !== undefined ? <div className="text-right"><span className="text-lg font-bold">{insight.score}</span><span className="text-xs text-muted-foreground">/100</span></div> : null}</div></div>;
 }
-
 function getInsightKey(insight: AlgorithmicInsight) {
-  return insight.id || `${insight.type}-${insight.level}-${insight.title}-${insight.message}`
+    return insight.id || `${insight.type}-${insight.level}-${insight.title}-${insight.message}`;
 }
-
-function EfficiencyScoreRing({ score, size = 'md' }: { score: number; size?: 'sm' | 'md' | 'lg' }) {
-  const dimensions = {
-    sm: { container: 'size-20', text: 'text-xl', label: 'text-[8px]', radius: 32, stroke: 6 },
-    md: { container: 'size-28', text: 'text-3xl', label: 'text-[10px]', radius: 38, stroke: 7 },
-    lg: { container: 'size-36', text: 'text-4xl', label: 'text-xs', radius: 42, stroke: 8 },
-  }
-  const d = dimensions[size]
-  const circumference = 2 * Math.PI * d.radius
-  const offset = circumference * (1 - score / 100)
-  const performanceLevel = score > 70 ? 'good' : score > 40 ? 'moderate' : 'needs improvement'
-  return <figure className={cn('relative flex items-center justify-center', d.container)} aria-label={`Efficiency Score: ${score} out of 100, performance is ${performanceLevel}`}><svg className="size-full" viewBox="0 0 100 100" aria-hidden="true"><circle className="stroke-muted/20" strokeWidth={d.stroke} fill="transparent" r={d.radius} cx="50" cy="50" /><circle className={cn('motion-chromatic-xslow', score > 70 ? 'stroke-success' : score > 40 ? 'stroke-warning' : 'stroke-destructive')} strokeWidth={d.stroke} strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" r={d.radius} cx="50" cy="50" transform="rotate(-90 50 50)" /></svg><div className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true"><span className={cn('font-black tracking-tighter', d.text)}>{score}</span><span className={cn('font-bold uppercase tracking-widest text-muted-foreground/60', d.label)}>Score</span></div></figure>
+function EfficiencyScoreRing({ score, size = 'md' }: {
+    score: number;
+    size?: 'sm' | 'md' | 'lg';
+}) {
+    const dimensions = {
+        sm: { container: 'size-20', text: 'text-xl', label: 'text-[8px]', radius: 32, stroke: 6 },
+        md: { container: 'size-28', text: 'text-3xl', label: 'text-[10px]', radius: 38, stroke: 7 },
+        lg: { container: 'size-36', text: 'text-4xl', label: 'text-xs', radius: 42, stroke: 8 },
+    };
+    const d = dimensions[size];
+    const circumference = 2 * Math.PI * d.radius;
+    const offset = circumference * (1 - score / 100);
+    const performanceLevel = score > 70 ? 'good' : score > 40 ? 'moderate' : 'needs improvement';
+    return <figure className={cn('relative flex items-center justify-center', d.container)} aria-label={`Efficiency Score: ${score} out of 100, performance is ${performanceLevel}`}><svg className="size-full" viewBox="0 0 100 100" aria-hidden="true"><circle className="stroke-muted/20" strokeWidth={d.stroke} fill="transparent" r={d.radius} cx="50" cy="50"/><circle className={cn('motion-chromatic-xslow', score > 70 ? 'stroke-success' : score > 40 ? 'stroke-warning' : 'stroke-destructive')} strokeWidth={d.stroke} strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" r={d.radius} cx="50" cy="50" transform="rotate(-90 50 50)"/></svg><div className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true"><span className={cn('font-black tracking-tighter', d.text)}>{score}</span><span className={cn('font-bold uppercase tracking-widest text-muted-foreground/60', d.label)}>Score</span></div></figure>;
 }
-
-function InsightsSkeleton({ compact }: { compact?: boolean }) {
-  if (compact) {
-    return <div className="space-y-3">{['a', 'b', 'c'].map((slot) => <Skeleton key={slot} className="h-16 w-full rounded-lg" />)}</div>
-  }
-  return <div className="grid gap-6 lg:grid-cols-3"><Skeleton className="h-48 w-full rounded-lg" /><div className="space-y-3 lg:col-span-2">{['d', 'e', 'f'].map((slot) => <Skeleton key={slot} className="h-24 w-full rounded-lg" />)}</div></div>
+function InsightsSkeleton({ compact }: {
+    compact?: boolean;
+}) {
+    if (compact) {
+        return <div className="space-y-3">{['a', 'b', 'c'].map((slot) => <Skeleton key={slot} className="h-16 w-full rounded-lg"/>)}</div>;
+    }
+    return <div className="grid gap-6 lg:grid-cols-3"><Skeleton className="h-48 w-full rounded-lg"/><div className="space-y-3 lg:col-span-2">{['d', 'e', 'f'].map((slot) => <Skeleton key={slot} className="h-24 w-full rounded-lg"/>)}</div></div>;
 }
-
-export function AlgorithmicInsightsLoadingCard({ compact, title }: { compact?: boolean; title: string }) {
-  return <Card className="shadow-sm"><CardHeader><CardTitle className="text-lg">{title}</CardTitle><CardDescription>Analyzing your performance data…</CardDescription></CardHeader><CardContent><InsightsSkeleton compact={compact} /></CardContent></Card>
+export function AlgorithmicInsightsLoadingCard({ compact, title }: {
+    compact?: boolean;
+    title: string;
+}) {
+    return <Card className="shadow-sm"><CardHeader><CardTitle className="text-lg">{title}</CardTitle><CardDescription>Analyzing your performance data…</CardDescription></CardHeader><CardContent><InsightsSkeleton compact={compact}/></CardContent></Card>;
 }
-
-export function AlgorithmicInsightsEmptyCard({ description, emptyMessage, title }: { description: string; emptyMessage: string; title: string }) {
-  return <Card className="shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Lightbulb className="size-5 text-warning" />{title}</CardTitle><CardDescription>{description}</CardDescription></CardHeader><CardContent><div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground"><Lightbulb className="size-8 text-muted-foreground/50" /><p>{emptyMessage}</p></div></CardContent></Card>
+export function AlgorithmicInsightsEmptyCard({ description, emptyMessage, title }: {
+    description: string;
+    emptyMessage: string;
+    title: string;
+}) {
+    return <Card className="shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Lightbulb className="size-5 text-warning"/>{title}</CardTitle><CardDescription>{description}</CardDescription></CardHeader><CardContent><div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground"><Lightbulb className="size-8 text-muted-foreground/50"/><p>{emptyMessage}</p></div></CardContent></Card>;
 }
-
-export function AlgorithmicInsightsCompactCard({ criticalCount, displayedInsights, globalEfficiencyScore, hasMoreInsights, insightsCount, onViewAll, title, warningCount }: { criticalCount: number; displayedInsights: AlgorithmicInsight[]; globalEfficiencyScore: number; hasMoreInsights: boolean; insightsCount: number; onViewAll?: () => void; title: string; warningCount: number }) {
-  return <Card className="shadow-sm"><CardHeader className="pb-3"><div className="flex items-center justify-between"><div><CardTitle className="flex items-center gap-2 text-base"><Lightbulb className="size-4 text-warning" />{title}{criticalCount > 0 || warningCount > 0 ? <Badge variant="outline" className="border-warning/50 text-xs text-warning">{criticalCount + warningCount} action{criticalCount + warningCount !== 1 ? 's' : ''} needed</Badge> : null}</CardTitle></div><div className="flex items-center gap-2"><EfficiencyScoreRing score={globalEfficiencyScore} size="sm" /></div></div></CardHeader><CardContent className="space-y-2">{displayedInsights.map((insight) => <InsightItem key={getInsightKey(insight)} insight={insight} compact />)}{hasMoreInsights && onViewAll ? <Button variant="ghost" size="sm" className="w-full" onClick={onViewAll}>View all {insightsCount} insights<ArrowRight className="ml-1 size-3" /></Button> : null}</CardContent></Card>
+export function AlgorithmicInsightsCompactCard({ criticalCount, displayedInsights, globalEfficiencyScore, hasMoreInsights, insightsCount, onViewAll, title, warningCount }: {
+    criticalCount: number;
+    displayedInsights: AlgorithmicInsight[];
+    globalEfficiencyScore: number;
+    hasMoreInsights: boolean;
+    insightsCount: number;
+    onViewAll?: () => void;
+    title: string;
+    warningCount: number;
+}) {
+    return <Card className="shadow-sm"><CardHeader className="pb-3"><div className="flex items-center justify-between"><div><CardTitle className="flex items-center gap-2 text-base"><Lightbulb className="size-4 text-warning"/>{title}{criticalCount > 0 || warningCount > 0 ? <Badge variant="outline" className="border-warning/50 text-xs text-warning">{criticalCount + warningCount} action{criticalCount + warningCount !== 1 ? 's' : ''} needed</Badge> : null}</CardTitle></div><div className="flex items-center gap-2"><EfficiencyScoreRing score={globalEfficiencyScore} size="sm"/></div></div></CardHeader><CardContent className="space-y-2">{displayedInsights.map((insight) => <InsightItem key={getInsightKey(insight)} insight={insight} compact/>)}{hasMoreInsights && onViewAll ? <Button variant="ghost" size="sm" className="w-full" onClick={onViewAll}>View all {insightsCount} insights<ArrowRight className="ml-1 size-3"/></Button> : null}</CardContent></Card>;
 }
-
-export function AlgorithmicInsightsFullCard({ criticalCount, description, displayedInsights, globalEfficiencyScore, hasMoreInsights, onViewAll, providerEfficiencyScores, title }: { criticalCount: number; description: string; displayedInsights: AlgorithmicInsight[]; globalEfficiencyScore: number; hasMoreInsights: boolean; onViewAll?: () => void; providerEfficiencyScores: Record<string, number>; title: string }) {
-  return <Card className="shadow-sm"><CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle className="flex items-center gap-2 text-lg"><Lightbulb className="size-5 text-warning" />{title}{criticalCount > 0 ? <Badge variant="destructive" className="text-xs">{criticalCount} critical</Badge> : null}</CardTitle><CardDescription>{description}</CardDescription></div>{onViewAll && hasMoreInsights ? <Button variant="outline" size="sm" onClick={onViewAll}>View all insights<ArrowRight className="ml-1 size-3" /></Button> : null}</div></CardHeader><CardContent><div className="grid gap-6 lg:grid-cols-3"><div className="flex flex-col items-center justify-center gap-y-4 rounded-lg border bg-muted/30 p-6"><EfficiencyScoreRing score={globalEfficiencyScore} size="lg" /><div className="text-center"><p className="text-sm font-medium">Overall Efficiency</p><p className="text-xs text-muted-foreground">{globalEfficiencyScore > 70 ? 'Your campaigns are performing well' : globalEfficiencyScore > 40 ? 'There is room for improvement' : 'Immediate attention recommended'}</p></div>{Object.keys(providerEfficiencyScores).length > 1 ? <div className="flex flex-wrap justify-center gap-2">{Object.entries(providerEfficiencyScores).map(([provider, score]) => <Badge key={provider} variant="secondary" className="text-xs">{formatProviderName(provider)}: {score}%</Badge>)}</div> : null}</div><div className="space-y-3 lg:col-span-2">{displayedInsights.length === 0 ? <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-8 text-center"><TrendingUp className="size-8 text-success" /><p className="font-medium">All systems nominal</p><p className="text-sm text-muted-foreground">No immediate actions required. Keep up the good work!</p></div> : displayedInsights.map((insight) => <InsightItem key={getInsightKey(insight)} insight={insight} />)}</div></div></CardContent></Card>
+export function AlgorithmicInsightsFullCard({ criticalCount, description, displayedInsights, globalEfficiencyScore, hasMoreInsights, onViewAll, providerEfficiencyScores, title }: {
+    criticalCount: number;
+    description: string;
+    displayedInsights: AlgorithmicInsight[];
+    globalEfficiencyScore: number;
+    hasMoreInsights: boolean;
+    onViewAll?: () => void;
+    providerEfficiencyScores: Record<string, number>;
+    title: string;
+}) {
+    return <Card className="shadow-sm"><CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle className="flex items-center gap-2 text-lg"><Lightbulb className="size-5 text-warning"/>{title}{criticalCount > 0 ? <Badge variant="destructive" className="text-xs">{criticalCount} critical</Badge> : null}</CardTitle><CardDescription>{description}</CardDescription></div>{onViewAll && hasMoreInsights ? <Button variant="outline" size="sm" onClick={onViewAll}>View all insights<ArrowRight className="ml-1 size-3"/></Button> : null}</div></CardHeader><CardContent><div className="grid gap-6 lg:grid-cols-3"><div className="flex flex-col items-center justify-center gap-y-4 rounded-lg border bg-muted/30 p-6"><EfficiencyScoreRing score={globalEfficiencyScore} size="lg"/><div className="text-center"><p className="text-sm font-medium">Overall Efficiency</p><p className="text-xs text-muted-foreground">{globalEfficiencyScore > 70 ? 'Your campaigns are performing well' : globalEfficiencyScore > 40 ? 'There is room for improvement' : 'Immediate attention recommended'}</p></div>{Object.keys(providerEfficiencyScores).length > 1 ? <div className="flex flex-wrap justify-center gap-2">{Object.entries(providerEfficiencyScores).map(([provider, score]) => <Badge key={provider} variant="secondary" className="text-xs">{formatProviderName(provider)}: {score}%</Badge>)}</div> : null}</div><div className="space-y-3 lg:col-span-2">{displayedInsights.length === 0 ? <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-8 text-center"><TrendingUp className="size-8 text-success"/><p className="font-medium">All systems nominal</p><p className="text-sm text-muted-foreground">No immediate actions required. Keep up the good work!</p></div> : displayedInsights.map((insight) => <InsightItem key={getInsightKey(insight)} insight={insight}/>)}</div></div></CardContent></Card>;
 }

@@ -1,73 +1,49 @@
 // =============================================================================
 // FORMULA ENGINE - Custom Metrics Calculators
 // =============================================================================
-
-import type {
-    NormalizedAdMetric,
-    MetricField,
-    MovingAverageResult,
-    GrowthRateResult,
-    BenchmarkResult,
-    KpiConfig,
-    CustomKpiResult,
-} from './types'
-
+import type { NormalizedAdMetric, MetricField, MovingAverageResult, GrowthRateResult, BenchmarkResult, KpiConfig, CustomKpiResult, } from './types';
 // =============================================================================
 // WEIGHTED AVERAGES
 // =============================================================================
-
 /**
  * Calculates spend-weighted ROAS across all metrics.
  * Platforms with higher spend have more influence on the result.
  */
 export function calculateWeightedRoas(metrics: NormalizedAdMetric[]): number {
-    const totalSpend = metrics.reduce((sum, m) => sum + m.spend, 0)
-    if (totalSpend === 0) return 0
-
-    const totalRevenue = metrics.reduce((sum, m) => sum + m.revenue, 0)
-    return totalRevenue / totalSpend
+    const totalSpend = metrics.reduce((sum, m) => sum + m.spend, 0);
+    if (totalSpend === 0)
+        return 0;
+    const totalRevenue = metrics.reduce((sum, m) => sum + m.revenue, 0);
+    return totalRevenue / totalSpend;
 }
-
 /**
  * Calculates spend-weighted average for a numeric metric field.
  */
-export function calculateWeightedAverage(
-    metrics: NormalizedAdMetric[],
-    field: MetricField
-): number {
-    const totalSpend = metrics.reduce((sum, m) => sum + m.spend, 0)
-    if (totalSpend === 0) return 0
-
+export function calculateWeightedAverage(metrics: NormalizedAdMetric[], field: MetricField): number {
+    const totalSpend = metrics.reduce((sum, m) => sum + m.spend, 0);
+    if (totalSpend === 0)
+        return 0;
     const weightedSum = metrics.reduce((sum, m) => {
-        const value = m[field] ?? 0
-        return sum + value * m.spend
-    }, 0)
-
-    return weightedSum / totalSpend
+        const value = m[field] ?? 0;
+        return sum + value * m.spend;
+    }, 0);
+    return weightedSum / totalSpend;
 }
-
 // =============================================================================
 // MOVING AVERAGES
 // =============================================================================
-
 /**
  * Groups metrics by date and sums the values for a given field.
  */
-function groupByDate(
-    metrics: NormalizedAdMetric[],
-    field: MetricField
-): Map<string, number> {
-    const grouped = new Map<string, number>()
-
+function groupByDate(metrics: NormalizedAdMetric[], field: MetricField): Map<string, number> {
+    const grouped = new Map<string, number>();
     for (const m of metrics) {
-        const existing = grouped.get(m.date) || 0
-        const value = m[field] ?? 0
-        grouped.set(m.date, existing + value)
+        const existing = grouped.get(m.date) || 0;
+        const value = m[field] ?? 0;
+        grouped.set(m.date, existing + value);
     }
-
-    return grouped
+    return grouped;
 }
-
 /**
  * Calculates simple moving average for a given field over a window of days.
  * @param metrics - Normalized ad metrics
@@ -75,193 +51,139 @@ function groupByDate(
  * @param windowDays - Number of days in the moving average window (7 or 30)
  * @returns Array of moving average results per date
  */
-export function calculateMovingAverage(
-    metrics: NormalizedAdMetric[],
-    field: MetricField,
-    windowDays: number
-): MovingAverageResult[] {
-    if (metrics.length === 0) return []
-
+export function calculateMovingAverage(metrics: NormalizedAdMetric[], field: MetricField, windowDays: number): MovingAverageResult[] {
+    if (metrics.length === 0)
+        return [];
     // Group by date and sum values
-    const dailyValues = groupByDate(metrics, field)
-
+    const dailyValues = groupByDate(metrics, field);
     // Sort dates chronologically
-    const sortedDates = Array.from(dailyValues.keys()).toSorted()
-
-    if (sortedDates.length === 0) return []
-
-    const results: MovingAverageResult[] = []
-
+    const sortedDates = Array.from(dailyValues.keys()).toSorted();
+    if (sortedDates.length === 0)
+        return [];
+    const results: MovingAverageResult[] = [];
     for (let i = 0; i < sortedDates.length; i++) {
-        const currentDate = sortedDates[i]!
-        const rawValue = dailyValues.get(currentDate) || 0
-
+        const currentDate = sortedDates[i]!;
+        const rawValue = dailyValues.get(currentDate) || 0;
         // Get the window of values (current day and previous windowDays-1 days)
-        const windowStart = Math.max(0, i - windowDays + 1)
+        const windowStart = Math.max(0, i - windowDays + 1);
         const windowValues = sortedDates
             .slice(windowStart, i + 1)
-            .map((d) => dailyValues.get(d!) || 0)
-
+            .map((d) => dailyValues.get(d!) || 0);
         // Calculate average
-        const sum = windowValues.reduce((a, b) => a + b, 0)
-        const avg = windowValues.length > 0 ? sum / windowValues.length : 0
-
+        const sum = windowValues.reduce((a, b) => a + b, 0);
+        const avg = windowValues.length > 0 ? sum / windowValues.length : 0;
         results.push({
             date: currentDate,
             value: avg,
             rawValue,
-        })
+        });
     }
-
-    return results
+    return results;
 }
-
 /**
  * Calculates moving average for ROAS specifically (requires revenue/spend ratio).
  */
-export function calculateRoasMovingAverage(
-    metrics: NormalizedAdMetric[],
-    windowDays: number
-): MovingAverageResult[] {
-    if (metrics.length === 0) return []
-
+export function calculateRoasMovingAverage(metrics: NormalizedAdMetric[], windowDays: number): MovingAverageResult[] {
+    if (metrics.length === 0)
+        return [];
     // Group revenue and spend by date
-    const dailyRevenue = groupByDate(metrics, 'revenue')
-    const dailySpend = groupByDate(metrics, 'spend')
-
+    const dailyRevenue = groupByDate(metrics, 'revenue');
+    const dailySpend = groupByDate(metrics, 'spend');
     // Sort dates chronologically
-    const sortedDates = Array.from(
-        new Set([...dailyRevenue.keys(), ...dailySpend.keys()])
-    ).sort()
-
-    if (sortedDates.length === 0) return []
-
-    const results: MovingAverageResult[] = []
-
+    const sortedDates = Array.from(new Set([...dailyRevenue.keys(), ...dailySpend.keys()])).sort();
+    if (sortedDates.length === 0)
+        return [];
+    const results: MovingAverageResult[] = [];
     for (let i = 0; i < sortedDates.length; i++) {
-        const currentDate = sortedDates[i]!
-        const currentSpend = dailySpend.get(currentDate) || 0
-        const currentRevenue = dailyRevenue.get(currentDate) || 0
-        const rawRoas = currentSpend > 0 ? currentRevenue / currentSpend : 0
-
+        const currentDate = sortedDates[i]!;
+        const currentSpend = dailySpend.get(currentDate) || 0;
+        const currentRevenue = dailyRevenue.get(currentDate) || 0;
+        const rawRoas = currentSpend > 0 ? currentRevenue / currentSpend : 0;
         // Get the window values
-        const windowStart = Math.max(0, i - windowDays + 1)
-        const windowDates = sortedDates.slice(windowStart, i + 1)
-
+        const windowStart = Math.max(0, i - windowDays + 1);
+        const windowDates = sortedDates.slice(windowStart, i + 1);
         // Sum revenue and spend in window, then calculate ROAS
-        const windowRevenue = windowDates.reduce(
-            (sum, d) => sum + (dailyRevenue.get(d!) || 0),
-            0
-        )
-        const windowSpend = windowDates.reduce(
-            (sum, d) => sum + (dailySpend.get(d!) || 0),
-            0
-        )
-
-        const maRoas = windowSpend > 0 ? windowRevenue / windowSpend : 0
-
+        const windowRevenue = windowDates.reduce((sum, d) => sum + (dailyRevenue.get(d!) || 0), 0);
+        const windowSpend = windowDates.reduce((sum, d) => sum + (dailySpend.get(d!) || 0), 0);
+        const maRoas = windowSpend > 0 ? windowRevenue / windowSpend : 0;
         results.push({
             date: currentDate,
             value: maRoas,
             rawValue: rawRoas,
-        })
+        });
     }
-
-    return results
+    return results;
 }
-
 // =============================================================================
 // GROWTH RATES
 // =============================================================================
-
 /**
  * Calculates the sum of a field within a date range.
  */
-function sumInDateRange(
-    metrics: NormalizedAdMetric[],
-    field: MetricField,
-    startDate: Date,
-    endDate: Date
-): number {
+function sumInDateRange(metrics: NormalizedAdMetric[], field: MetricField, startDate: Date, endDate: Date): number {
     return metrics
         .filter((m) => {
-            const d = new Date(m.date)
-            return d >= startDate && d <= endDate
-        })
-        .reduce((sum, m) => sum + (m[field] ?? 0), 0)
+        const d = new Date(m.date);
+        return d >= startDate && d <= endDate;
+    })
+        .reduce((sum, m) => sum + (m[field] ?? 0), 0);
 }
-
 /**
  * Calculates percentage change between two values.
  * Returns null if the previous value is 0.
  */
-function calculatePercentageChange(
-    current: number,
-    previous: number
-): number | null {
-    if (previous === 0) return current > 0 ? 100 : null
-    return ((current - previous) / previous) * 100
+function calculatePercentageChange(current: number, previous: number): number | null {
+    if (previous === 0)
+        return current > 0 ? 100 : null;
+    return ((current - previous) / previous) * 100;
 }
-
 /**
  * Calculates week-over-week and month-over-month growth rates.
  * Uses the most recent complete periods for comparison.
  */
-export function calculateGrowthRates(
-    metrics: NormalizedAdMetric[]
-): GrowthRateResult {
+export function calculateGrowthRates(metrics: NormalizedAdMetric[]): GrowthRateResult {
     if (metrics.length === 0) {
         return {
             weekOverWeek: { spend: null, conversions: null, revenue: null, roas: null },
             monthOverMonth: { spend: null, conversions: null, revenue: null, roas: null },
-        }
+        };
     }
-
     // Find date range
-    const maxDate = new Date(Math.max(...metrics.map((m) => new Date(m.date).getTime())))
-
+    const maxDate = new Date(Math.max(...metrics.map((m) => new Date(m.date).getTime())));
     // Calculate WoW: compare last 7 days vs previous 7 days
-    const thisWeekEnd = maxDate
-    const thisWeekStart = new Date(maxDate)
-    thisWeekStart.setDate(thisWeekStart.getDate() - 6)
-
-    const lastWeekEnd = new Date(thisWeekStart)
-    lastWeekEnd.setDate(lastWeekEnd.getDate() - 1)
-    const lastWeekStart = new Date(lastWeekEnd)
-    lastWeekStart.setDate(lastWeekStart.getDate() - 6)
-
+    const thisWeekEnd = maxDate;
+    const thisWeekStart = new Date(maxDate);
+    thisWeekStart.setDate(thisWeekStart.getDate() - 6);
+    const lastWeekEnd = new Date(thisWeekStart);
+    lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
+    const lastWeekStart = new Date(lastWeekEnd);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 6);
     // Calculate MoM: compare last 30 days vs previous 30 days
-    const thisMonthEnd = maxDate
-    const thisMonthStart = new Date(maxDate)
-    thisMonthStart.setDate(thisMonthStart.getDate() - 29)
-
-    const lastMonthEnd = new Date(thisMonthStart)
-    lastMonthEnd.setDate(lastMonthEnd.getDate() - 1)
-    const lastMonthStart = new Date(lastMonthEnd)
-    lastMonthStart.setDate(lastMonthStart.getDate() - 29)
-
+    const thisMonthEnd = maxDate;
+    const thisMonthStart = new Date(maxDate);
+    thisMonthStart.setDate(thisMonthStart.getDate() - 29);
+    const lastMonthEnd = new Date(thisMonthStart);
+    lastMonthEnd.setDate(lastMonthEnd.getDate() - 1);
+    const lastMonthStart = new Date(lastMonthEnd);
+    lastMonthStart.setDate(lastMonthStart.getDate() - 29);
     // WoW calculations
-    const thisWeekSpend = sumInDateRange(metrics, 'spend', thisWeekStart, thisWeekEnd)
-    const lastWeekSpend = sumInDateRange(metrics, 'spend', lastWeekStart, lastWeekEnd)
-    const thisWeekConversions = sumInDateRange(metrics, 'conversions', thisWeekStart, thisWeekEnd)
-    const lastWeekConversions = sumInDateRange(metrics, 'conversions', lastWeekStart, lastWeekEnd)
-    const thisWeekRevenue = sumInDateRange(metrics, 'revenue', thisWeekStart, thisWeekEnd)
-    const lastWeekRevenue = sumInDateRange(metrics, 'revenue', lastWeekStart, lastWeekEnd)
-
-    const thisWeekRoas = thisWeekSpend > 0 ? thisWeekRevenue / thisWeekSpend : 0
-    const lastWeekRoas = lastWeekSpend > 0 ? lastWeekRevenue / lastWeekSpend : 0
-
+    const thisWeekSpend = sumInDateRange(metrics, 'spend', thisWeekStart, thisWeekEnd);
+    const lastWeekSpend = sumInDateRange(metrics, 'spend', lastWeekStart, lastWeekEnd);
+    const thisWeekConversions = sumInDateRange(metrics, 'conversions', thisWeekStart, thisWeekEnd);
+    const lastWeekConversions = sumInDateRange(metrics, 'conversions', lastWeekStart, lastWeekEnd);
+    const thisWeekRevenue = sumInDateRange(metrics, 'revenue', thisWeekStart, thisWeekEnd);
+    const lastWeekRevenue = sumInDateRange(metrics, 'revenue', lastWeekStart, lastWeekEnd);
+    const thisWeekRoas = thisWeekSpend > 0 ? thisWeekRevenue / thisWeekSpend : 0;
+    const lastWeekRoas = lastWeekSpend > 0 ? lastWeekRevenue / lastWeekSpend : 0;
     // MoM calculations
-    const thisMonthSpend = sumInDateRange(metrics, 'spend', thisMonthStart, thisMonthEnd)
-    const lastMonthSpend = sumInDateRange(metrics, 'spend', lastMonthStart, lastMonthEnd)
-    const thisMonthConversions = sumInDateRange(metrics, 'conversions', thisMonthStart, thisMonthEnd)
-    const lastMonthConversions = sumInDateRange(metrics, 'conversions', lastMonthStart, lastMonthEnd)
-    const thisMonthRevenue = sumInDateRange(metrics, 'revenue', thisMonthStart, thisMonthEnd)
-    const lastMonthRevenue = sumInDateRange(metrics, 'revenue', lastMonthStart, lastMonthEnd)
-
-    const thisMonthRoas = thisMonthSpend > 0 ? thisMonthRevenue / thisMonthSpend : 0
-    const lastMonthRoas = lastMonthSpend > 0 ? lastMonthRevenue / lastMonthSpend : 0
-
+    const thisMonthSpend = sumInDateRange(metrics, 'spend', thisMonthStart, thisMonthEnd);
+    const lastMonthSpend = sumInDateRange(metrics, 'spend', lastMonthStart, lastMonthEnd);
+    const thisMonthConversions = sumInDateRange(metrics, 'conversions', thisMonthStart, thisMonthEnd);
+    const lastMonthConversions = sumInDateRange(metrics, 'conversions', lastMonthStart, lastMonthEnd);
+    const thisMonthRevenue = sumInDateRange(metrics, 'revenue', thisMonthStart, thisMonthEnd);
+    const lastMonthRevenue = sumInDateRange(metrics, 'revenue', lastMonthStart, lastMonthEnd);
+    const thisMonthRoas = thisMonthSpend > 0 ? thisMonthRevenue / thisMonthSpend : 0;
+    const lastMonthRoas = lastMonthSpend > 0 ? lastMonthRevenue / lastMonthSpend : 0;
     return {
         weekOverWeek: {
             spend: calculatePercentageChange(thisWeekSpend, lastWeekSpend),
@@ -275,43 +197,30 @@ export function calculateGrowthRates(
             revenue: calculatePercentageChange(thisMonthRevenue, lastMonthRevenue),
             roas: calculatePercentageChange(thisMonthRoas, lastMonthRoas),
         },
-    }
+    };
 }
-
 // =============================================================================
 // CROSS-PLATFORM BENCHMARKS
 // =============================================================================
-
-export type BenchmarkMetricKey =
-    | 'cpa'
-    | 'roas'
-    | 'ctr'
-    | 'cpc'
-    | 'cpm'
-    | 'conversionRate'
-    | 'profitMargin'
-
+export type BenchmarkMetricKey = 'cpa' | 'roas' | 'ctr' | 'cpc' | 'cpm' | 'conversionRate' | 'profitMargin';
 export type MetricBenchmark = {
-    metric: BenchmarkMetricKey
+    metric: BenchmarkMetricKey;
     /** Benchmark value in UI-friendly units (e.g. CTR as 0-1 fraction, not percent). */
-    value: number
-    source: 'historical_median' | 'fallback'
-}
-
+    value: number;
+    source: 'historical_median' | 'fallback';
+};
 export type PlatformIndustryRoasComparison = {
-    providerId: string
-    roas: number
-    industryRoas: number | null
+    providerId: string;
+    roas: number;
+    industryRoas: number | null;
     /** Percentage difference from industry baseline (e.g. +10 means 10% above). */
-    vsIndustryPercent: number | null
-}
-
+    vsIndustryPercent: number | null;
+};
 export type BenchmarksSummary = {
-    benchmarks: MetricBenchmark[]
-    platformBenchmarks: BenchmarkResult[]
-    roasIndustryComparisons: PlatformIndustryRoasComparison[]
-}
-
+    benchmarks: MetricBenchmark[];
+    platformBenchmarks: BenchmarkResult[];
+    roasIndustryComparisons: PlatformIndustryRoasComparison[];
+};
 const FALLBACK_BENCHMARKS: Record<BenchmarkMetricKey, number> = {
     cpa: 50,
     roas: 3,
@@ -320,31 +229,30 @@ const FALLBACK_BENCHMARKS: Record<BenchmarkMetricKey, number> = {
     cpm: 10,
     conversionRate: 0.03,
     profitMargin: 0.2,
-}
-
+};
 // Conservative placeholders; adjust per your vertical.
 const INDUSTRY_ROAS_BY_PROVIDER: Record<string, number> = {
     google: 3,
     facebook: 2.5,
     linkedin: 3,
     tiktok: 2,
-}
-
+};
 function median(values: number[]): number | null {
-    const filtered = values.filter((v) => Number.isFinite(v))
-    if (filtered.length === 0) return null
-    const sorted = filtered.toSorted((a, b) => a - b)
-    const mid = Math.floor(sorted.length / 2)
-    if (sorted.length % 2 === 1) return sorted[mid]!
-    return (sorted[mid - 1]! + sorted[mid]!) / 2
+    const filtered = values.filter((v) => Number.isFinite(v));
+    if (filtered.length === 0)
+        return null;
+    const sorted = filtered.toSorted((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    if (sorted.length % 2 === 1)
+        return sorted[mid]!;
+    return (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
-
 function safeRatio(numerator: number, denominator: number): number | null {
-    if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return null
-    const result = numerator / denominator
-    return Number.isFinite(result) ? result : null
+    if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0)
+        return null;
+    const result = numerator / denominator;
+    return Number.isFinite(result) ? result : null;
 }
-
 /**
  * Calculates UI-facing benchmarks from historical metrics.
  *
@@ -362,52 +270,55 @@ export function calculateBenchmarks(metrics: NormalizedAdMetric[]): BenchmarksSu
             })),
             platformBenchmarks: [],
             roasIndustryComparisons: [],
-        }
+        };
     }
-
     // 1) Historical (per-day) blended KPIs
-    const byDate = new Map<string, { spend: number; revenue: number; conversions: number; clicks: number; impressions: number }>()
+    const byDate = new Map<string, {
+        spend: number;
+        revenue: number;
+        conversions: number;
+        clicks: number;
+        impressions: number;
+    }>();
     for (const m of metrics) {
-        const existing = byDate.get(m.date) ?? { spend: 0, revenue: 0, conversions: 0, clicks: 0, impressions: 0 }
-        existing.spend += m.spend
-        existing.revenue += m.revenue
-        existing.conversions += m.conversions
-        existing.clicks += m.clicks
-        existing.impressions += m.impressions
-        byDate.set(m.date, existing)
+        const existing = byDate.get(m.date) ?? { spend: 0, revenue: 0, conversions: 0, clicks: 0, impressions: 0 };
+        existing.spend += m.spend;
+        existing.revenue += m.revenue;
+        existing.conversions += m.conversions;
+        existing.clicks += m.clicks;
+        existing.impressions += m.impressions;
+        byDate.set(m.date, existing);
     }
-
-    const dailyCpa: number[] = []
-    const dailyRoas: number[] = []
-    const dailyCtr: number[] = []
-    const dailyCpc: number[] = []
-    const dailyCpm: number[] = []
-    const dailyConversionRate: number[] = []
-    const dailyProfitMargin: number[] = []
-
+    const dailyCpa: number[] = [];
+    const dailyRoas: number[] = [];
+    const dailyCtr: number[] = [];
+    const dailyCpc: number[] = [];
+    const dailyCpm: number[] = [];
+    const dailyConversionRate: number[] = [];
+    const dailyProfitMargin: number[] = [];
     for (const totals of byDate.values()) {
-        const roas = safeRatio(totals.revenue, totals.spend)
-        if (roas !== null) dailyRoas.push(roas)
-
-        const cpa = safeRatio(totals.spend, totals.conversions)
-        if (cpa !== null) dailyCpa.push(cpa)
-
-        const ctr = safeRatio(totals.clicks, totals.impressions)
-        if (ctr !== null) dailyCtr.push(ctr)
-
-        const cpc = safeRatio(totals.spend, totals.clicks)
-        if (cpc !== null) dailyCpc.push(cpc)
-
-        const cpm = safeRatio(totals.spend * 1000, totals.impressions)
-        if (cpm !== null) dailyCpm.push(cpm)
-
-        const conversionRate = safeRatio(totals.conversions, totals.clicks)
-        if (conversionRate !== null) dailyConversionRate.push(conversionRate)
-
-        const profitMargin = safeRatio(totals.revenue - totals.spend, totals.revenue)
-        if (profitMargin !== null) dailyProfitMargin.push(profitMargin)
+        const roas = safeRatio(totals.revenue, totals.spend);
+        if (roas !== null)
+            dailyRoas.push(roas);
+        const cpa = safeRatio(totals.spend, totals.conversions);
+        if (cpa !== null)
+            dailyCpa.push(cpa);
+        const ctr = safeRatio(totals.clicks, totals.impressions);
+        if (ctr !== null)
+            dailyCtr.push(ctr);
+        const cpc = safeRatio(totals.spend, totals.clicks);
+        if (cpc !== null)
+            dailyCpc.push(cpc);
+        const cpm = safeRatio(totals.spend * 1000, totals.impressions);
+        if (cpm !== null)
+            dailyCpm.push(cpm);
+        const conversionRate = safeRatio(totals.conversions, totals.clicks);
+        if (conversionRate !== null)
+            dailyConversionRate.push(conversionRate);
+        const profitMargin = safeRatio(totals.revenue - totals.spend, totals.revenue);
+        if (profitMargin !== null)
+            dailyProfitMargin.push(profitMargin);
     }
-
     const computed: Partial<Record<BenchmarkMetricKey, number>> = {
         cpa: median(dailyCpa) ?? undefined,
         roas: median(dailyRoas) ?? undefined,
@@ -416,88 +327,74 @@ export function calculateBenchmarks(metrics: NormalizedAdMetric[]): BenchmarksSu
         cpm: median(dailyCpm) ?? undefined,
         conversionRate: median(dailyConversionRate) ?? undefined,
         profitMargin: median(dailyProfitMargin) ?? undefined,
-    }
-
+    };
     const benchmarks: MetricBenchmark[] = (Object.keys(FALLBACK_BENCHMARKS) as BenchmarkMetricKey[]).map((metric) => {
-        const value = computed[metric]
+        const value = computed[metric];
         if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
-            return { metric, value, source: 'historical_median' }
+            return { metric, value, source: 'historical_median' };
         }
-        return { metric, value: FALLBACK_BENCHMARKS[metric], source: 'fallback' }
-    })
-
+        return { metric, value: FALLBACK_BENCHMARKS[metric], source: 'fallback' };
+    });
     // 2) Cross-platform (per-provider) benchmarks vs blended average
-    const platformBenchmarks = calculateCrossplatformBenchmarks(metrics)
-
+    const platformBenchmarks = calculateCrossplatformBenchmarks(metrics);
     // 3) ROAS vs industry baseline (per provider)
-    const byProvider = new Map<string, { spend: number; revenue: number }>()
+    const byProvider = new Map<string, {
+        spend: number;
+        revenue: number;
+    }>();
     for (const m of metrics) {
-        const existing = byProvider.get(m.providerId) ?? { spend: 0, revenue: 0 }
-        existing.spend += m.spend
-        existing.revenue += m.revenue
-        byProvider.set(m.providerId, existing)
+        const existing = byProvider.get(m.providerId) ?? { spend: 0, revenue: 0 };
+        existing.spend += m.spend;
+        existing.revenue += m.revenue;
+        byProvider.set(m.providerId, existing);
     }
-
-    const roasIndustryComparisons: PlatformIndustryRoasComparison[] = Array.from(byProvider.entries()).map(
-        ([providerId, totals]) => {
-            const roas = safeRatio(totals.revenue, totals.spend) ?? 0
-            const industryRoas = INDUSTRY_ROAS_BY_PROVIDER[providerId] ?? null
-            const vsIndustryPercent = industryRoas && industryRoas > 0 ? ((roas - industryRoas) / industryRoas) * 100 : null
-            return { providerId, roas, industryRoas, vsIndustryPercent }
-        }
-    )
-
-    return { benchmarks, platformBenchmarks, roasIndustryComparisons }
+    const roasIndustryComparisons: PlatformIndustryRoasComparison[] = Array.from(byProvider.entries()).map(([providerId, totals]) => {
+        const roas = safeRatio(totals.revenue, totals.spend) ?? 0;
+        const industryRoas = INDUSTRY_ROAS_BY_PROVIDER[providerId] ?? null;
+        const vsIndustryPercent = industryRoas && industryRoas > 0 ? ((roas - industryRoas) / industryRoas) * 100 : null;
+        return { providerId, roas, industryRoas, vsIndustryPercent };
+    });
+    return { benchmarks, platformBenchmarks, roasIndustryComparisons };
 }
-
 /**
  * Calculates platform-level benchmarks and compares to blended average.
  */
-export function calculateCrossplatformBenchmarks(
-    metrics: NormalizedAdMetric[]
-): BenchmarkResult[] {
-    if (metrics.length === 0) return []
-
+export function calculateCrossplatformBenchmarks(metrics: NormalizedAdMetric[]): BenchmarkResult[] {
+    if (metrics.length === 0)
+        return [];
     // Group metrics by provider
-    const byProvider = new Map<string, NormalizedAdMetric[]>()
+    const byProvider = new Map<string, NormalizedAdMetric[]>();
     for (const m of metrics) {
-        const existing = byProvider.get(m.providerId) || []
-        existing.push(m)
-        byProvider.set(m.providerId, existing)
+        const existing = byProvider.get(m.providerId) || [];
+        existing.push(m);
+        byProvider.set(m.providerId, existing);
     }
-
     // Calculate blended averages across all providers
-    const totalSpend = metrics.reduce((sum, m) => sum + m.spend, 0)
-    const totalRevenue = metrics.reduce((sum, m) => sum + m.revenue, 0)
-    const totalConversions = metrics.reduce((sum, m) => sum + m.conversions, 0)
-    const totalClicks = metrics.reduce((sum, m) => sum + m.clicks, 0)
-    const totalImpressions = metrics.reduce((sum, m) => sum + m.impressions, 0)
-
-    const blendedRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0
-    const blendedCpa = totalConversions > 0 ? totalSpend / totalConversions : 0
-    const blendedCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
-    const blendedCpc = totalClicks > 0 ? totalSpend / totalClicks : 0
-
-    const results: BenchmarkResult[] = []
-
+    const totalSpend = metrics.reduce((sum, m) => sum + m.spend, 0);
+    const totalRevenue = metrics.reduce((sum, m) => sum + m.revenue, 0);
+    const totalConversions = metrics.reduce((sum, m) => sum + m.conversions, 0);
+    const totalClicks = metrics.reduce((sum, m) => sum + m.clicks, 0);
+    const totalImpressions = metrics.reduce((sum, m) => sum + m.impressions, 0);
+    const blendedRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+    const blendedCpa = totalConversions > 0 ? totalSpend / totalConversions : 0;
+    const blendedCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+    const blendedCpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
+    const results: BenchmarkResult[] = [];
     for (const [providerId, providerMetrics] of byProvider) {
-        const pSpend = providerMetrics.reduce((sum, m) => sum + m.spend, 0)
-        const pRevenue = providerMetrics.reduce((sum, m) => sum + m.revenue, 0)
-        const pConversions = providerMetrics.reduce((sum, m) => sum + m.conversions, 0)
-        const pClicks = providerMetrics.reduce((sum, m) => sum + m.clicks, 0)
-        const pImpressions = providerMetrics.reduce((sum, m) => sum + m.impressions, 0)
-
-        const roas = pSpend > 0 ? pRevenue / pSpend : 0
-        const cpa = pConversions > 0 ? pSpend / pConversions : 0
-        const ctr = pImpressions > 0 ? (pClicks / pImpressions) * 100 : 0
-        const cpc = pClicks > 0 ? pSpend / pClicks : 0
-
+        const pSpend = providerMetrics.reduce((sum, m) => sum + m.spend, 0);
+        const pRevenue = providerMetrics.reduce((sum, m) => sum + m.revenue, 0);
+        const pConversions = providerMetrics.reduce((sum, m) => sum + m.conversions, 0);
+        const pClicks = providerMetrics.reduce((sum, m) => sum + m.clicks, 0);
+        const pImpressions = providerMetrics.reduce((sum, m) => sum + m.impressions, 0);
+        const roas = pSpend > 0 ? pRevenue / pSpend : 0;
+        const cpa = pConversions > 0 ? pSpend / pConversions : 0;
+        const ctr = pImpressions > 0 ? (pClicks / pImpressions) * 100 : 0;
+        const cpc = pClicks > 0 ? pSpend / pClicks : 0;
         // Calculate percentage difference from blended average
-        const roasDiff = blendedRoas > 0 ? ((roas - blendedRoas) / blendedRoas) * 100 : 0
-        const cpaDiff = blendedCpa > 0 ? ((cpa - blendedCpa) / blendedCpa) * 100 : 0
-        const ctrDiff = blendedCtr > 0 ? ((ctr - blendedCtr) / blendedCtr) * 100 : 0
-        const cpcDiff = blendedCpc > 0 ? ((cpc - blendedCpc) / blendedCpc) * 100 : 0
-
+        const roasDiff = blendedRoas > 0 ? ((roas - blendedRoas) / blendedRoas) * 100 : 0;
+        const cpaDiff = blendedCpa > 0 ? ((cpa - blendedCpa) / blendedCpa) * 100 : 0;
+        const ctrDiff = blendedCtr > 0 ? ((ctr - blendedCtr) / blendedCtr) * 100 : 0;
+        const cpcDiff = blendedCpc > 0 ? ((cpc - blendedCpc) / blendedCpc) * 100 : 0;
         results.push({
             providerId,
             metrics: { roas, cpa, ctr, cpc },
@@ -507,80 +404,62 @@ export function calculateCrossplatformBenchmarks(
                 ctr: ctrDiff,
                 cpc: cpcDiff,
             },
-        })
+        });
     }
-
-    return results
+    return results;
 }
-
 // =============================================================================
 // CUSTOM KPIs
 // =============================================================================
-
 /**
  * Calculates custom KPIs including CPA, LTV, ROI, and attribution-adjusted metrics.
  */
-export function calculateCustomKpis(
-    metrics: NormalizedAdMetric[],
-    config?: KpiConfig
-): CustomKpiResult {
-    const totalSpend = metrics.reduce((sum, m) => sum + m.spend, 0)
-    const totalRevenue = metrics.reduce((sum, m) => sum + m.revenue, 0)
-    const totalConversions = metrics.reduce((sum, m) => sum + m.conversions, 0)
-    const totalClicks = metrics.reduce((sum, m) => sum + m.clicks, 0)
-
+export function calculateCustomKpis(metrics: NormalizedAdMetric[], config?: KpiConfig): CustomKpiResult {
+    const totalSpend = metrics.reduce((sum, m) => sum + m.spend, 0);
+    const totalRevenue = metrics.reduce((sum, m) => sum + m.revenue, 0);
+    const totalConversions = metrics.reduce((sum, m) => sum + m.conversions, 0);
+    const totalClicks = metrics.reduce((sum, m) => sum + m.clicks, 0);
     // CPA - Cost Per Acquisition
-    const cpa = totalConversions > 0 ? totalSpend / totalConversions : 0
-
+    const cpa = totalConversions > 0 ? totalSpend / totalConversions : 0;
     // Blended CPA (same as CPA when all platforms combined)
-    const blendedCpa = cpa
-
+    const blendedCpa = cpa;
     // LTV - Lifetime Value (uses config or returns null)
-    const ltv = config?.averageLifetimeValue ?? null
-
+    const ltv = config?.averageLifetimeValue ?? null;
     // ROI - Return on Investment
-    const roi = totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : 0
-
+    const roi = totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : 0;
     // MER - Marketing Efficiency Ratio (Revenue / Spend, similar to ROAS)
-    const mer = totalSpend > 0 ? totalRevenue / totalSpend : 0
-
+    const mer = totalSpend > 0 ? totalRevenue / totalSpend : 0;
     // AOV - Average Order Value
-    const aov = totalConversions > 0 ? totalRevenue / totalConversions : 0
-
+    const aov = totalConversions > 0 ? totalRevenue / totalConversions : 0;
     // RPC - Revenue Per Click
-    const rpc = totalClicks > 0 ? totalRevenue / totalClicks : 0
-
+    const rpc = totalClicks > 0 ? totalRevenue / totalClicks : 0;
     // Profit
-    const profit = totalRevenue - totalSpend
-
+    const profit = totalRevenue - totalSpend;
     // Profit Margin
-    const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0
-
+    const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
     // Attribution-adjusted conversions (simple model implementations)
-    let adjustedConversions: number | undefined
-
+    let adjustedConversions: number | undefined;
     if (config?.attributionModel && totalConversions > 0) {
         switch (config.attributionModel) {
             case 'lastClick':
                 // Last click gets 100% credit (default behavior)
-                adjustedConversions = totalConversions
-                break
+                adjustedConversions = totalConversions;
+                break;
             case 'firstClick':
                 // First click gets 100% credit (same as last for aggregated data)
-                adjustedConversions = totalConversions
-                break
+                adjustedConversions = totalConversions;
+                break;
             case 'linear':
                 // Linear attribution - evenly distributed
-                adjustedConversions = totalConversions
-                break
+                adjustedConversions = totalConversions;
+                break;
             case 'timeDecay':
                 // Time decay - more recent interactions get more credit
                 // For aggregated data, apply a 0.85 factor as a simplified model
-                adjustedConversions = totalConversions * 0.85
-                break
+                adjustedConversions = totalConversions * 0.85;
+                break;
         }
     }
-
     return {
         cpa,
         blendedCpa,
@@ -592,271 +471,238 @@ export function calculateCustomKpis(
         profit,
         profitMargin,
         adjustedConversions,
-    }
+    };
 }
-
 // =============================================================================
 // DYNAMIC FORMULA EVALUATION
 // =============================================================================
-
-const SUPPORTED_FUNCTIONS = ['abs', 'min', 'max', 'round', 'floor', 'ceil']
-
-type SupportedFunctionName = (typeof SUPPORTED_FUNCTIONS)[number]
-
-type FormulaToken =
-    | { type: 'number'; value: number }
-    | { type: 'operator'; value: '+' | '-' | '*' | '/' }
-    | { type: 'leftParen' }
-    | { type: 'rightParen' }
-    | { type: 'comma' }
-    | { type: 'function'; value: SupportedFunctionName }
-
-const SUPPORTED_FUNCTION_SET = new Set<SupportedFunctionName>(SUPPORTED_FUNCTIONS)
-
+const SUPPORTED_FUNCTIONS = ['abs', 'min', 'max', 'round', 'floor', 'ceil'];
+type SupportedFunctionName = (typeof SUPPORTED_FUNCTIONS)[number];
+type FormulaToken = {
+    type: 'number';
+    value: number;
+} | {
+    type: 'operator';
+    value: '+' | '-' | '*' | '/';
+} | {
+    type: 'leftParen';
+} | {
+    type: 'rightParen';
+} | {
+    type: 'comma';
+} | {
+    type: 'function';
+    value: SupportedFunctionName;
+};
+const SUPPORTED_FUNCTION_SET = new Set<SupportedFunctionName>(SUPPORTED_FUNCTIONS);
 function tokenizeFormula(formula: string, inputs: Record<string, number>): FormulaToken[] | null {
-    const tokens: FormulaToken[] = []
-    let index = 0
-
+    const tokens: FormulaToken[] = [];
+    let index = 0;
     while (index < formula.length) {
-        const char = formula[index]
-
-        if (!char) break
-
+        const char = formula[index];
+        if (!char)
+            break;
         if (/\s/.test(char)) {
-            index += 1
-            continue
+            index += 1;
+            continue;
         }
-
         if (/[0-9.]/.test(char)) {
-            let end = index + 1
+            let end = index + 1;
             while (end < formula.length && /[0-9.]/.test(formula[end] ?? '')) {
-                end += 1
+                end += 1;
             }
-
-            const rawNumber = formula.slice(index, end)
+            const rawNumber = formula.slice(index, end);
             if (!/^\d+(?:\.\d+)?$|^\.\d+$/.test(rawNumber)) {
-                return null
+                return null;
             }
-
-            const value = Number(rawNumber)
+            const value = Number(rawNumber);
             if (!Number.isFinite(value)) {
-                return null
+                return null;
             }
-
-            tokens.push({ type: 'number', value })
-            index = end
-            continue
+            tokens.push({ type: 'number', value });
+            index = end;
+            continue;
         }
-
         if (/[a-zA-Z_]/.test(char)) {
-            let end = index + 1
+            let end = index + 1;
             while (end < formula.length && /[a-zA-Z0-9_]/.test(formula[end] ?? '')) {
-                end += 1
+                end += 1;
             }
-
-            const identifier = formula.slice(index, end)
-            const normalized = identifier.toLowerCase()
-
+            const identifier = formula.slice(index, end);
+            const normalized = identifier.toLowerCase();
             if (SUPPORTED_FUNCTION_SET.has(normalized as SupportedFunctionName)) {
-                tokens.push({ type: 'function', value: normalized as SupportedFunctionName })
-                index = end
-                continue
+                tokens.push({ type: 'function', value: normalized as SupportedFunctionName });
+                index = end;
+                continue;
             }
-
-            const inputValue = inputs[identifier]
+            const inputValue = inputs[identifier];
             if (typeof inputValue !== 'number' || !Number.isFinite(inputValue)) {
-                return null
+                return null;
             }
-
-            tokens.push({ type: 'number', value: inputValue })
-            index = end
-            continue
+            tokens.push({ type: 'number', value: inputValue });
+            index = end;
+            continue;
         }
-
         if (char === '+' || char === '-' || char === '*' || char === '/') {
-            tokens.push({ type: 'operator', value: char })
-            index += 1
-            continue
+            tokens.push({ type: 'operator', value: char });
+            index += 1;
+            continue;
         }
-
         if (char === '(') {
-            tokens.push({ type: 'leftParen' })
-            index += 1
-            continue
+            tokens.push({ type: 'leftParen' });
+            index += 1;
+            continue;
         }
-
         if (char === ')') {
-            tokens.push({ type: 'rightParen' })
-            index += 1
-            continue
+            tokens.push({ type: 'rightParen' });
+            index += 1;
+            continue;
         }
-
         if (char === ',') {
-            tokens.push({ type: 'comma' })
-            index += 1
-            continue
+            tokens.push({ type: 'comma' });
+            index += 1;
+            continue;
         }
-
-        return null
+        return null;
     }
-
-    return tokens
+    return tokens;
 }
-
 class FormulaParser {
-    private readonly tokens: FormulaToken[]
-    private position = 0
-
+    private readonly tokens: FormulaToken[];
+    private position = 0;
     constructor(tokens: FormulaToken[]) {
-        this.tokens = tokens
+        this.tokens = tokens;
     }
-
     parse(): number | null {
-        const value = this.parseExpression()
+        const value = this.parseExpression();
         if (value === null || this.position !== this.tokens.length || !Number.isFinite(value)) {
-            return null
+            return null;
         }
-        return value
+        return value;
     }
-
     private parseExpression(): number | null {
-        let value = this.parseTerm()
-        if (value === null) return null
-
+        let value = this.parseTerm();
+        if (value === null)
+            return null;
         while (true) {
-            const token = this.peek()
+            const token = this.peek();
             if (!token || token.type !== 'operator' || (token.value !== '+' && token.value !== '-')) {
-                break
+                break;
             }
-
-            this.position += 1
-            const right = this.parseTerm()
-            if (right === null) return null
-
-            value = token.value === '+' ? value + right : value - right
+            this.position += 1;
+            const right = this.parseTerm();
+            if (right === null)
+                return null;
+            value = token.value === '+' ? value + right : value - right;
         }
-
-        return value
+        return value;
     }
-
     private parseTerm(): number | null {
-        let value = this.parseFactor()
-        if (value === null) return null
-
+        let value = this.parseFactor();
+        if (value === null)
+            return null;
         while (true) {
-            const token = this.peek()
+            const token = this.peek();
             if (!token || token.type !== 'operator' || (token.value !== '*' && token.value !== '/')) {
-                break
+                break;
             }
-
-            this.position += 1
-            const right = this.parseFactor()
-            if (right === null) return null
+            this.position += 1;
+            const right = this.parseFactor();
+            if (right === null)
+                return null;
             if (token.value === '/' && right === 0) {
-                return null
+                return null;
             }
-
-            value = token.value === '*' ? value * right : value / right
+            value = token.value === '*' ? value * right : value / right;
         }
-
-        return value
+        return value;
     }
-
     private parseFactor(): number | null {
-        const token = this.peek()
-        if (!token) return null
-
+        const token = this.peek();
+        if (!token)
+            return null;
         if (token.type === 'operator' && (token.value === '+' || token.value === '-')) {
-            this.position += 1
-            const value = this.parseFactor()
-            if (value === null) return null
-            return token.value === '-' ? -value : value
+            this.position += 1;
+            const value = this.parseFactor();
+            if (value === null)
+                return null;
+            return token.value === '-' ? -value : value;
         }
-
         if (token.type === 'number') {
-            this.position += 1
-            return token.value
+            this.position += 1;
+            return token.value;
         }
-
         if (token.type === 'leftParen') {
-            this.position += 1
-            const value = this.parseExpression()
-            if (value === null) return null
-
-            const closing = this.peek()
+            this.position += 1;
+            const value = this.parseExpression();
+            if (value === null)
+                return null;
+            const closing = this.peek();
             if (!closing || closing.type !== 'rightParen') {
-                return null
+                return null;
             }
-
-            this.position += 1
-            return value
+            this.position += 1;
+            return value;
         }
-
         if (token.type === 'function') {
-            return this.parseFunctionCall(token.value)
+            return this.parseFunctionCall(token.value);
         }
-
-        return null
+        return null;
     }
-
     private parseFunctionCall(name: SupportedFunctionName): number | null {
-        this.position += 1
-
-        const open = this.peek()
+        this.position += 1;
+        const open = this.peek();
         if (!open || open.type !== 'leftParen') {
-            return null
+            return null;
         }
-        this.position += 1
-
-        const args: number[] = []
-        const next = this.peek()
+        this.position += 1;
+        const args: number[] = [];
+        const next = this.peek();
         if (!next || next.type === 'rightParen') {
-            return null
+            return null;
         }
-
         while (true) {
-            const value = this.parseExpression()
-            if (value === null) return null
-            args.push(value)
-
-            const separator = this.peek()
-            if (!separator) return null
+            const value = this.parseExpression();
+            if (value === null)
+                return null;
+            args.push(value);
+            const separator = this.peek();
+            if (!separator)
+                return null;
             if (separator.type === 'comma') {
-                this.position += 1
-                continue
+                this.position += 1;
+                continue;
             }
             if (separator.type === 'rightParen') {
-                this.position += 1
-                break
+                this.position += 1;
+                break;
             }
-            return null
+            return null;
         }
-
-        return applySupportedFunction(name, args)
+        return applySupportedFunction(name, args);
     }
-
     private peek(): FormulaToken | undefined {
-        return this.tokens[this.position]
+        return this.tokens[this.position];
     }
 }
-
 function applySupportedFunction(name: SupportedFunctionName, args: number[]): number | null {
     switch (name) {
         case 'abs':
         case 'round':
         case 'floor':
         case 'ceil':
-            if (args.length !== 1) return null
-            return Math[name](args[0]!)
+            if (args.length !== 1)
+                return null;
+            return Math[name](args[0]!);
         case 'min':
         case 'max':
-            if (args.length < 1) return null
-            return Math[name](...args)
+            if (args.length < 1)
+                return null;
+            return Math[name](...args);
         default:
-            return null
+            return null;
     }
 }
-
 /**
  * Extract variable names from a formula string
  */
@@ -864,32 +710,24 @@ export function extractFormulaVariables(formula: string): string[] {
     // Remove numbers, operators, and whitespace to find variable names
     const cleaned = formula
         .replace(/[0-9.]+/g, ' ')
-        .replace(/[+\-*/()]/g, ' ')
-
-    const words = cleaned.split(/\s+/).filter(Boolean)
-
+        .replace(/[+\-*/()]/g, ' ');
+    const words = cleaned.split(/\s+/).filter(Boolean);
     // Filter out known functions and reserved words
-    const variables = words.filter((word) =>
-        !SUPPORTED_FUNCTIONS.includes(word.toLowerCase()) &&
-        /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(word)
-    )
-
-    return [...new Set(variables)]
+    const variables = words.filter((word) => !SUPPORTED_FUNCTIONS.includes(word.toLowerCase()) &&
+        /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(word));
+    return [...new Set(variables)];
 }
-
 /**
  * Safely evaluate a formula with given inputs
  */
 export function safeEvaluateFormula(formula: string, inputs: Record<string, number>): number | null {
-    const tokens = tokenizeFormula(formula, inputs)
+    const tokens = tokenizeFormula(formula, inputs);
     if (!tokens || tokens.length === 0) {
-        return null
+        return null;
     }
-
-    const result = new FormulaParser(tokens).parse()
+    const result = new FormulaParser(tokens).parse();
     if (result === null || !Number.isFinite(result)) {
-        return null
+        return null;
     }
-
-    return result
+    return result;
 }

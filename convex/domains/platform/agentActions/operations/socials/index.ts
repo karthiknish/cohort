@@ -62,7 +62,7 @@ async function processQueuedSocialSyncJobs(
     if (remaining <= 0) return
 
     const job = await ctx.runMutation(
-      internalRef(socialInternal['socialIntegrations/syncJobs'].claimNextSyncJobInternal),
+      internalRef(socialInternal['domains/marketing/socialIntegrations/syncJobs'].claimNextSyncJobInternal),
       {
         workspaceId,
       },
@@ -80,10 +80,10 @@ async function processQueuedSocialSyncJobs(
         })
         .then(async () => {
           await Promise.all([
-            ctx.runMutation(internalRef(socialInternal['socialIntegrations/syncJobs'].completeSyncJobInternal), {
+            ctx.runMutation(internalRef(socialInternal['domains/marketing/socialIntegrations/syncJobs'].completeSyncJobInternal), {
               jobId: job.id,
             }),
-            ctx.runMutation(internalRef(socialInternal['socialIntegrations/settings'].updateIntegrationStatusInternal), {
+            ctx.runMutation(internalRef(socialInternal['domains/marketing/socialIntegrations/settings'].updateIntegrationStatusInternal), {
               workspaceId,
               clientId: job.clientId,
               status: 'success',
@@ -95,11 +95,11 @@ async function processQueuedSocialSyncJobs(
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       await Promise.all([
-        ctx.runMutation(internalRef(socialInternal['socialIntegrations/syncJobs'].failSyncJobInternal), {
+        ctx.runMutation(internalRef(socialInternal['domains/marketing/socialIntegrations/syncJobs'].failSyncJobInternal), {
           jobId: job.id,
           message,
         }),
-        ctx.runMutation(internalRef(socialInternal['socialIntegrations/settings'].updateIntegrationStatusInternal), {
+        ctx.runMutation(internalRef(socialInternal['domains/marketing/socialIntegrations/settings'].updateIntegrationStatusInternal), {
           workspaceId,
           clientId: job.clientId,
           status: 'error',

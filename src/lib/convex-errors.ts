@@ -1,132 +1,119 @@
-import { ConvexError } from 'convex/values'
-
+import { ConvexError } from 'convex/values';
 /**
  * Standardized error data passed to ConvexError.
  * Must match the definition in convex/errors.ts
  */
 export type AppErrorData = {
-  code: string
-  message: string
-  details?: Record<string, unknown>
-}
-
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+};
 /**
  * Logs an error to the console with rich context.
  * Use this in catch blocks before displaying a toast to the user.
  */
 export function logError(error: unknown, context?: string): void {
-  const code = extractErrorCode(error)
-  const details = extractErrorDetails(error)
-  const message = asErrorMessage(error)
-
-  // Console logging for debugging
-  console.group(`[Error]${context ? ` ${context}` : ''}`)
-  console.error('Message:', message)
-  if (code) console.error('Code:', code)
-  if (details) console.error('Details:', details)
-  console.error('Raw Error:', error)
-  console.groupEnd()
+    const code = extractErrorCode(error);
+    const details = extractErrorDetails(error);
+    const message = asErrorMessage(error);
+    // Console logging for debugging
+    console.group(`[Error]${context ? ` ${context}` : ''}`);
+    console.error('Message:', message);
+    if (code)
+        console.error('Code:', code);
+    if (details)
+        console.error('Details:', details);
+    console.error('Raw Error:', error);
+    console.groupEnd();
 }
-
 /**
  * Extract a user-friendly error message from unknown error values,
  * including standardized ConvexError objects.
  */
 export function asErrorMessage(error: unknown): string {
-  if (error instanceof ConvexError) {
-    const data = error.data as AppErrorData
-    return data?.message ?? 'An error occurred'
-  }
-  if (error instanceof Error) {
-    return error.message
-  }
-  if (typeof error === 'string') {
-    return error
-  }
-  return 'An unexpected error occurred'
+    if (error instanceof ConvexError) {
+        const data = error.data as AppErrorData;
+        return data?.message ?? 'An error occurred';
+    }
+    if (error instanceof Error) {
+        return error.message;
+    }
+    if (typeof error === 'string') {
+        return error;
+    }
+    return 'An unexpected error occurred';
 }
-
 /**
  * Extract the standardized error code from a ConvexError.
  */
 export function extractErrorCode(error: unknown): string | null {
-  if (error instanceof ConvexError) {
-    const data = error.data as AppErrorData
-    return data?.code ?? null
-  }
-  return null
+    if (error instanceof ConvexError) {
+        const data = error.data as AppErrorData;
+        return data?.code ?? null;
+    }
+    return null;
 }
-
 /**
  * Extract the details from a ConvexError.
  */
 export function extractErrorDetails(error: unknown): Record<string, unknown> | null {
-  if (error instanceof ConvexError) {
-    const data = error.data as AppErrorData
-    return data?.details ?? null
-  }
-  return null
+    if (error instanceof ConvexError) {
+        const data = error.data as AppErrorData;
+        return data?.details ?? null;
+    }
+    return null;
 }
-
 /** Matches `ErrorCode.BASE.READ_LIMIT` from convex/errors.ts */
 export function isReadLimitAppError(error: unknown): boolean {
-  return extractErrorCode(error) === 'READ_LIMIT'
+    return extractErrorCode(error) === 'READ_LIMIT';
 }
-
 /** Matches `ErrorCode.BASE.CONFLICT` from convex/errors.ts */
 export function isConflictAppError(error: unknown): boolean {
-  return extractErrorCode(error) === 'CONFLICT'
+    return extractErrorCode(error) === 'CONFLICT';
 }
-
 /** Matches `ErrorCode.RESOURCE.NOT_FOUND` from convex/errors.ts */
 export function isNotFoundAppError(error: unknown): boolean {
-  return extractErrorCode(error) === 'NOT_FOUND'
+    return extractErrorCode(error) === 'NOT_FOUND';
 }
-
 /** Matches `ErrorCode.INTEGRATION.INSUFFICIENT_SCOPE` from convex/errors.ts */
 export function isIntegrationScopeAppError(error: unknown): boolean {
-  return extractErrorCode(error) === 'INTEGRATION_INSUFFICIENT_SCOPE'
+    return extractErrorCode(error) === 'INTEGRATION_INSUFFICIENT_SCOPE';
 }
-
 /** Map ConvexError to HTTP status for API routes (createApiHandler). */
 export function resolveConvexApiErrorResponse(error: unknown): {
-  status: number
-  code: string
-  message: string
+    status: number;
+    code: string;
+    message: string;
 } | null {
-  if (!(error instanceof ConvexError)) {
-    return null
-  }
-
-  const data = error.data as AppErrorData
-  const code = data?.code ?? 'INTERNAL_ERROR'
-  const message = data?.message ?? 'An error occurred'
-
-  const statusByCode: Record<string, number> = {
-    TOO_MANY_REQUESTS: 429,
-    READ_LIMIT: 429,
-    CONFLICT: 409,
-    UNAUTHORIZED: 401,
-    FORBIDDEN: 403,
-    NOT_FOUND: 404,
-    BAD_REQUEST: 400,
-    INVALID_INPUT: 400,
-    VALIDATION_ERROR: 400,
-    INVALID_STATE: 400,
-    WORKSPACE_ACCESS_DENIED: 403,
-    ADMIN_REQUIRED: 403,
-  }
-
-  return {
-    status: statusByCode[code] ?? 500,
-    code,
-    message,
-  }
+    if (!(error instanceof ConvexError)) {
+        return null;
+    }
+    const data = error.data as AppErrorData;
+    const code = data?.code ?? 'INTERNAL_ERROR';
+    const message = data?.message ?? 'An error occurred';
+    const statusByCode: Record<string, number> = {
+        TOO_MANY_REQUESTS: 429,
+        READ_LIMIT: 429,
+        CONFLICT: 409,
+        UNAUTHORIZED: 401,
+        FORBIDDEN: 403,
+        NOT_FOUND: 404,
+        BAD_REQUEST: 400,
+        INVALID_INPUT: 400,
+        VALIDATION_ERROR: 400,
+        INVALID_STATE: 400,
+        WORKSPACE_ACCESS_DENIED: 403,
+        ADMIN_REQUIRED: 403,
+    };
+    return {
+        status: statusByCode[code] ?? 500,
+        code,
+        message,
+    };
 }
-
 export function mapGoogleAnalyticsIntegrationError(error: unknown): string {
-  if (isIntegrationScopeAppError(error)) {
-    return 'Google Analytics needs updated permissions. Disconnect the integration, then connect again and approve all requested access.'
-  }
-  return asErrorMessage(error)
+    if (isIntegrationScopeAppError(error)) {
+        return 'Google Analytics needs updated permissions. Disconnect the integration, then connect again and approve all requested access.';
+    }
+    return asErrorMessage(error);
 }

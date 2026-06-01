@@ -1,188 +1,152 @@
-'use client'
-
-import { useCallback, useEffect, useRef } from 'react'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-
+'use client';
+import { useEffect, useEffectEvent, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 export type LocationMarker = {
-  id: string
-  name: string
-  lat: number
-  lng: number
-  type?: string
-  radius?: number
-}
-
+    id: string;
+    name: string;
+    lat: number;
+    lng: number;
+    type?: string;
+    radius?: number;
+};
 type LeafletMapProps = {
-  locations: LocationMarker[]
-  interactive?: boolean
-  onMarkerClick?: (location: LocationMarker) => void
-}
-
+    locations: LocationMarker[];
+    interactive?: boolean;
+    onMarkerClick?: (location: LocationMarker) => void;
+};
 type LeafletMarkerBinding = {
-  marker: L.Marker
-  clickHandler?: () => void
-}
-
+    marker: L.Marker;
+    clickHandler?: () => void;
+};
 function getZoomForLocation(location: LocationMarker) {
-  const type = location.type?.toLowerCase() ?? ''
-
-  if (type.includes('country')) return 5
-  if (type.includes('state') || type.includes('region') || type.includes('province')) return 7
-  if (type.includes('city') || type.includes('town') || type.includes('village')) return 10
-  if (type.includes('neighborhood') || type.includes('suburb') || type.includes('borough') || type.includes('district')) return 12
-
-  return 9
+    const type = location.type?.toLowerCase() ?? '';
+    if (type.includes('country'))
+        return 5;
+    if (type.includes('state') || type.includes('region') || type.includes('province'))
+        return 7;
+    if (type.includes('city') || type.includes('town') || type.includes('village'))
+        return 10;
+    if (type.includes('neighborhood') || type.includes('suburb') || type.includes('borough') || type.includes('district'))
+        return 12;
+    return 9;
 }
-
 export function LeafletMap({ locations, interactive = false, onMarkerClick }: LeafletMapProps) {
-  const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<L.Map | null>(null)
-  const markersRef = useRef<LeafletMarkerBinding[]>([])
-  const mapReadyRef = useRef(false)
-  const initialViewRef = useRef<{ center: L.LatLngTuple; zoom: number }>(
-    locations.length === 1
-      ? { center: [locations[0]!.lat, locations[0]!.lng], zoom: getZoomForLocation(locations[0]!) }
-      : locations.length > 1
-        ? { center: [locations[0]!.lat, locations[0]!.lng], zoom: 4 }
-        : { center: [20, 0], zoom: 2 }
-  )
-
-  const syncMarkers = useCallback(() => {
-    const map = mapInstanceRef.current
-    if (!map || !mapReadyRef.current) {
-      return undefined
-    }
-
-    let frameId: number | null = null
-
-    markersRef.current.forEach(({ marker, clickHandler }) => {
-      if (clickHandler) {
-        marker.off('click', clickHandler)
-      }
-      marker.remove()
-    })
-    markersRef.current = []
-
-    const validLocations = locations.filter(
-      (loc) => Number.isFinite(loc.lat) && Number.isFinite(loc.lng) && !(loc.lat === 0 && loc.lng === 0)
-    )
-
-    if (validLocations.length === 0) {
-      map.setView([20, 0], 2)
-      return undefined
-    }
-
-    validLocations.forEach((loc) => {
-      const marker = L.marker([loc.lat, loc.lng])
-        .addTo(map)
-        .bindPopup(
-          `<div class="text-sm"><p class="font-medium">${loc.name}</p>${loc.type ? `<p class="text-xs opacity-70 capitalize">${loc.type}</p>` : ''}</div>`
-        )
-
-      let clickHandler: (() => void) | undefined
-
-      if (onMarkerClick) {
-        clickHandler = () => onMarkerClick(loc)
-        marker.on('click', clickHandler)
-      }
-
-      markersRef.current.push({ marker, clickHandler })
-    })
-
-    // Ensure the map has a real size before fitting/centering.
-    frameId = requestAnimationFrame(() => {
-      map.invalidateSize()
-
-      if (validLocations.length === 1) {
-        const zoomLevel = getZoomForLocation(validLocations[0]!)
-        map.setView([validLocations[0]!.lat, validLocations[0]!.lng], zoomLevel, { animate: false })
-        return
-      }
-
-      const bounds = L.latLngBounds(validLocations.map((loc) => [loc.lat, loc.lng] as L.LatLngTuple))
-
-      // If all coordinates are nearly identical, fitBounds can look like it "didn't zoom".
-      // Expand the bounds slightly to force a sensible zoom.
-      if (bounds.isValid()) {
-        const northEast = bounds.getNorthEast()
-        const southWest = bounds.getSouthWest()
-        const latSpan = Math.abs(northEast.lat - southWest.lat)
-        const lngSpan = Math.abs(northEast.lng - southWest.lng)
-
-        if (latSpan < 0.01 && lngSpan < 0.01) {
-          bounds.extend([northEast.lat + 0.05, northEast.lng + 0.05])
-          bounds.extend([southWest.lat - 0.05, southWest.lng - 0.05])
+    const mapRef = useRef<HTMLDivElement>(null);
+    const mapInstanceRef = useRef<L.Map | null>(null);
+    const markersRef = useRef<LeafletMarkerBinding[]>([]);
+    const mapReadyRef = useRef(false);
+    const initialViewRef = useRef<{
+        center: L.LatLngTuple;
+        zoom: number;
+    }>(locations.length === 1
+        ? { center: [locations[0]!.lat, locations[0]!.lng], zoom: getZoomForLocation(locations[0]!) }
+        : locations.length > 1
+            ? { center: [locations[0]!.lat, locations[0]!.lng], zoom: 4 }
+            : { center: [20, 0], zoom: 2 });
+    const syncMarkers = useEffectEvent(() => {
+        const map = mapInstanceRef.current;
+        if (!map || !mapReadyRef.current) {
+            return undefined;
         }
-      }
-
-      map.fitBounds(bounds, { padding: [50, 50], animate: false, maxZoom: 12 })
-    })
-
-    return () => {
-      if (frameId !== null) {
-        cancelAnimationFrame(frameId)
-      }
-
-      markersRef.current.forEach(({ marker, clickHandler }) => {
-        if (clickHandler) {
-          marker.off('click', clickHandler)
+        let frameId: number | null = null;
+        markersRef.current.forEach(({ marker, clickHandler }) => {
+            if (clickHandler) {
+                marker.off('click', clickHandler);
+            }
+            marker.remove();
+        });
+        markersRef.current = [];
+        const validLocations = locations.filter((loc) => Number.isFinite(loc.lat) && Number.isFinite(loc.lng) && !(loc.lat === 0 && loc.lng === 0));
+        if (validLocations.length === 0) {
+            map.setView([20, 0], 2);
+            return undefined;
         }
-        marker.remove()
-      })
-      markersRef.current = []
-    }
-  }, [locations, onMarkerClick])
-
-  const syncMarkersRef = useRef(syncMarkers)
-  syncMarkersRef.current = syncMarkers
-
-  useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return
-
-    delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-      iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-    })
-
-    const map = L.map(mapRef.current, {
-      center: initialViewRef.current.center,
-      zoom: initialViewRef.current.zoom,
-      scrollWheelZoom: interactive,
-      dragging: interactive,
-      zoomControl: interactive,
-    })
-
-    if (interactive) {
-      L.control.zoom({ position: 'topright' }).addTo(map)
-    }
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map)
-
-    mapInstanceRef.current = map
-
-    const handleMapReady = () => {
-      mapReadyRef.current = true
-      syncMarkersRef.current()
-    }
-
-    map.whenReady(handleMapReady)
-
-    return () => {
-      map.off('load', handleMapReady)
-      map.remove()
-      mapInstanceRef.current = null
-      mapReadyRef.current = false
-    }
-  }, [interactive])
-
-  useEffect(() => {
-    return syncMarkers()
-  }, [syncMarkers])
-
-  return <div ref={mapRef} className="size-full" />
+        validLocations.forEach((loc) => {
+            const marker = L.marker([loc.lat, loc.lng])
+                .addTo(map)
+                .bindPopup(`<div class="text-sm"><p class="font-medium">${loc.name}</p>${loc.type ? `<p class="text-xs opacity-70 capitalize">${loc.type}</p>` : ''}</div>`);
+            let clickHandler: (() => void) | undefined;
+            if (onMarkerClick) {
+                clickHandler = () => onMarkerClick(loc);
+                marker.on('click', clickHandler);
+            }
+            markersRef.current.push({ marker, clickHandler });
+        });
+        // Ensure the map has a real size before fitting/centering.
+        frameId = requestAnimationFrame(() => {
+            map.invalidateSize();
+            if (validLocations.length === 1) {
+                const zoomLevel = getZoomForLocation(validLocations[0]!);
+                map.setView([validLocations[0]!.lat, validLocations[0]!.lng], zoomLevel, { animate: false });
+                return;
+            }
+            const bounds = L.latLngBounds(validLocations.map((loc) => [loc.lat, loc.lng] as L.LatLngTuple));
+            // If all coordinates are nearly identical, fitBounds can look like it "didn't zoom".
+            // Expand the bounds slightly to force a sensible zoom.
+            if (bounds.isValid()) {
+                const northEast = bounds.getNorthEast();
+                const southWest = bounds.getSouthWest();
+                const latSpan = Math.abs(northEast.lat - southWest.lat);
+                const lngSpan = Math.abs(northEast.lng - southWest.lng);
+                if (latSpan < 0.01 && lngSpan < 0.01) {
+                    bounds.extend([northEast.lat + 0.05, northEast.lng + 0.05]);
+                    bounds.extend([southWest.lat - 0.05, southWest.lng - 0.05]);
+                }
+            }
+            map.fitBounds(bounds, { padding: [50, 50], animate: false, maxZoom: 12 });
+        });
+        return () => {
+            if (frameId !== null) {
+                cancelAnimationFrame(frameId);
+            }
+            markersRef.current.forEach(({ marker, clickHandler }) => {
+                if (clickHandler) {
+                    marker.off('click', clickHandler);
+                }
+                marker.remove();
+            });
+            markersRef.current = [];
+        };
+    });
+    const locationsKey = locations.map((location) => `${location.id}:${location.lat}:${location.lng}:${location.name}`).join('|');
+    useEffect(() => {
+        if (!mapRef.current || mapInstanceRef.current)
+            return;
+        delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        });
+        const map = L.map(mapRef.current, {
+            center: initialViewRef.current.center,
+            zoom: initialViewRef.current.zoom,
+            scrollWheelZoom: interactive,
+            dragging: interactive,
+            zoomControl: interactive,
+        });
+        if (interactive) {
+            L.control.zoom({ position: 'topright' }).addTo(map);
+        }
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        }).addTo(map);
+        mapInstanceRef.current = map;
+        const handleMapReady = () => {
+            mapReadyRef.current = true;
+            syncMarkers();
+        };
+        map.whenReady(handleMapReady);
+        return () => {
+            map.off('load', handleMapReady);
+            map.remove();
+            mapInstanceRef.current = null;
+            mapReadyRef.current = false;
+        };
+    }, [interactive]);
+    useEffect(() => {
+        return syncMarkers();
+    }, [interactive, locationsKey, onMarkerClick]);
+    return <div ref={mapRef} className="size-full"/>;
 }

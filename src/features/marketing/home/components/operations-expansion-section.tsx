@@ -1,55 +1,47 @@
-'use client'
-
-import Link from 'next/link'
-import { ArrowUpRight, CalendarDays, Check, Clock3, MessageSquare } from 'lucide-react'
-
-import { PlatformLogoStrip } from '@/features/marketing/home/components/platform-brand-logos'
-import { FadeIn } from '@/shared/ui/animate-in'
-import { Badge } from '@/shared/ui/badge'
-import { cn } from '@/lib/utils'
-
-const PAID_MEDIA_BRANDS = ['googleads', 'meta', 'linkedin', 'tiktok'] as const
-
+'use client';
+import Link from 'next/link';
+import { ArrowUpRight, CalendarDays, Check, Clock3, MessageSquare } from 'lucide-react';
+import { PlatformLogoStrip } from '@/features/marketing/home/components/platform-brand-logos';
+import { FadeIn } from '@/shared/ui/animate-in';
+import { Badge } from '@/shared/ui/badge';
+import { cn } from '@/lib/utils';
+const PAID_MEDIA_BRANDS = ['googleads', 'meta', 'linkedin', 'tiktok'] as const;
 const PILLARS = [
-  {
-    title: 'Delivery layer',
-    description: 'Projects, tasks, and milestones stay at the center of how your agency runs client work.',
-    icon: Clock3,
-    href: '/dashboard/projects',
-    badge: 'Core',
-  },
-  {
-    title: 'Communication layer',
-    description: 'Team chat and collaboration live next to delivery work.',
-    icon: MessageSquare,
-    href: '/dashboard/collaboration',
-    badge: 'P1',
-  },
-  {
-    title: 'Growth layer',
-    description: 'Ads, analytics, and proposals in the same workspace as execution.',
-    icon: CalendarDays,
-    href: '/dashboard/ads',
-    badge: 'P2',
-  },
-] as const
-
+    {
+        title: 'Delivery layer',
+        description: 'Projects, tasks, and milestones stay at the center of how your agency runs client work.',
+        icon: Clock3,
+        href: '/dashboard/projects',
+        badge: 'Core',
+    },
+    {
+        title: 'Communication layer',
+        description: 'Team chat and collaboration live next to delivery work.',
+        icon: MessageSquare,
+        href: '/dashboard/collaboration',
+        badge: 'P1',
+    },
+    {
+        title: 'Growth layer',
+        description: 'Ads, analytics, and proposals in the same workspace as execution.',
+        icon: CalendarDays,
+        href: '/dashboard/ads',
+        badge: 'P2',
+    },
+] as const;
 const WHAT_CHANGED = [
-  'Grouped dashboard navigation makes the new modules feel deliberate instead of bolted on.',
-  'Every route ships with preview fixtures so the UX can be refined before backend wiring starts.',
-  'Homepage messaging reflects the expanded workspace without abandoning the agency thesis.',
-] as const
-
+    'Grouped dashboard navigation makes the new modules feel deliberate instead of bolted on.',
+    'Every route ships with preview fixtures so the UX can be refined before backend wiring starts.',
+    'Homepage messaging reflects the expanded workspace without abandoning the agency thesis.',
+] as const;
 const ROLLOUT_STEPS = [
-  { step: '1', title: 'Projects and tasks', detail: 'Delivery spine first' },
-  { step: '2', title: 'Collaboration and messaging', detail: 'Team coordination' },
-  { step: '3', title: 'Ads and analytics', detail: 'Growth workflows' },
-] as const
-
+    { step: '1', title: 'Projects and tasks', detail: 'Delivery spine first' },
+    { step: '2', title: 'Collaboration and messaging', detail: 'Team coordination' },
+    { step: '3', title: 'Ads and analytics', detail: 'Growth workflows' },
+] as const;
 export function OperationsExpansionSection() {
-  return (
-    <section className="relative overflow-hidden border-y border-border/50 bg-gradient-to-b from-background via-secondary/[0.04] to-primary/[0.03] px-6 py-20 sm:py-28">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden />
+    return (<section className="relative overflow-hidden border-y border-border/50 bg-gradient-to-b from-background via-secondary/[0.04] to-primary/[0.03] px-6 py-20 sm:py-28">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden/>
       <div className="mx-auto max-w-6xl space-y-12">
         <FadeIn className="max-w-3xl space-y-4">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Expanded surface area</p>
@@ -70,13 +62,10 @@ export function OperationsExpansionSection() {
               </p>
             </div>
             <div className="flex flex-col gap-4 sm:items-end">
-              <PlatformLogoStrip brands={[...PAID_MEDIA_BRANDS]} variant="plain" className="justify-start sm:justify-end" />
-              <Link
-                href="/dashboard/ads"
-                className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-foreground underline-offset-4 transition-colors hover:underline"
-              >
+              <PlatformLogoStrip brands={[...PAID_MEDIA_BRANDS]} variant="plain" className="justify-start sm:justify-end"/>
+              <Link href="/dashboard/ads" className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-foreground underline-offset-4 transition-colors hover:underline">
                 Open Ads workspace
-                <ArrowUpRight className="size-4 shrink-0" aria-hidden />
+                <ArrowUpRight className="size-4 shrink-0" aria-hidden/>
               </Link>
             </div>
           </div>
@@ -85,7 +74,7 @@ export function OperationsExpansionSection() {
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
           <FadeIn>
             <div className="relative overflow-hidden rounded-[2rem] border border-border/60 bg-card p-6 text-foreground shadow-xl shadow-black/[0.06] sm:p-8">
-              <div className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-muted/40 blur-2xl" aria-hidden />
+              <div className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-muted/40 blur-2xl" aria-hidden/>
               <div className="relative space-y-5">
                 <Badge variant="secondary" className="rounded-full border-border/60 bg-muted/50 font-medium text-foreground">
                   New operating system layer
@@ -99,29 +88,17 @@ export function OperationsExpansionSection() {
               </div>
 
               <div className="relative mt-8 grid gap-4 md:grid-cols-3">
-                {PILLARS.map((pillar) => (
-                  <Link
-                    key={pillar.title}
-                    href={pillar.href}
-                    className={cn(
-                      'group relative rounded-2xl border border-border/50 bg-muted/25 p-4 transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
-                      'hover:-translate-y-0.5 hover:border-border hover:bg-muted/50 hover:shadow-md',
-                    )}
-                  >
+                {PILLARS.map((pillar) => (<Link key={pillar.title} href={pillar.href} className={cn('group relative rounded-2xl border border-border/50 bg-muted/25 p-4 transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0', 'hover:-translate-y-0.5 hover:border-border hover:bg-muted/50 hover:shadow-md')}>
                     <div className="flex items-start justify-between gap-2">
                       <span className="flex size-9 items-center justify-center rounded-xl bg-background ring-1 ring-border/60">
-                        <pillar.icon className="size-4 text-foreground" aria-hidden />
+                        <pillar.icon className="size-4 text-foreground" aria-hidden/>
                       </span>
                       <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{pillar.badge}</span>
                     </div>
                     <p className="mt-4 font-medium text-foreground">{pillar.title}</p>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">{pillar.description}</p>
-                    <ArrowUpRight
-                      className="absolute right-3 top-3 size-4 text-muted-foreground opacity-0 transition-all motion-reduce:transition-none group-hover:opacity-100"
-                      aria-hidden
-                    />
-                  </Link>
-                ))}
+                    <ArrowUpRight className="absolute right-3 top-3 size-4 text-muted-foreground opacity-0 transition-all motion-reduce:transition-none group-hover:opacity-100" aria-hidden/>
+                  </Link>))}
               </div>
             </div>
           </FadeIn>
@@ -131,28 +108,20 @@ export function OperationsExpansionSection() {
               <div className="rounded-[1.75rem] border border-border/60 bg-card/80 p-6 shadow-sm">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">What changed</p>
                 <ul className="mt-4 space-y-3">
-                  {WHAT_CHANGED.map((line) => (
-                    <li key={line} className="flex gap-3 text-sm leading-6 text-muted-foreground">
+                  {WHAT_CHANGED.map((line) => (<li key={line} className="flex gap-3 text-sm leading-6 text-muted-foreground">
                       <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-                        <Check className="size-3" strokeWidth={2.5} aria-hidden />
+                        <Check className="size-3" strokeWidth={2.5} aria-hidden/>
                       </span>
                       <span>{line}</span>
-                    </li>
-                  ))}
+                    </li>))}
                 </ul>
               </div>
 
               <div className="rounded-[1.75rem] border border-border/60 bg-gradient-to-br from-card to-muted/25 p-6 shadow-sm">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">Suggested rollout</p>
                 <ol className="mt-5 space-y-0">
-                  {ROLLOUT_STEPS.map((item, i) => (
-                    <li key={item.step} className="relative flex gap-4 pb-6 last:pb-0">
-                      {i < ROLLOUT_STEPS.length - 1 ? (
-                        <span
-                          className="absolute left-[15px] top-8 bottom-0 w-px bg-border/80"
-                          aria-hidden
-                        />
-                      ) : null}
+                  {ROLLOUT_STEPS.map((item, i) => (<li key={item.step} className="relative flex gap-4 pb-6 last:pb-0">
+                      {i < ROLLOUT_STEPS.length - 1 ? (<span className="absolute left-[15px] top-8 bottom-0 w-px bg-border/80" aria-hidden/>) : null}
                       <span className="relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold text-foreground">
                         {item.step}
                       </span>
@@ -160,14 +129,12 @@ export function OperationsExpansionSection() {
                         <p className="font-medium text-foreground">{item.title}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">{item.detail}</p>
                       </div>
-                    </li>
-                  ))}
+                    </li>))}
                 </ol>
               </div>
             </div>
           </FadeIn>
         </div>
       </div>
-    </section>
-  )
+    </section>);
 }

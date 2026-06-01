@@ -1,256 +1,204 @@
-'use client'
-
-import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useState, useEffect, useMemo } from 'react'
-import { useMutation, useQuery, useConvexAuth } from 'convex/react'
-import Link from 'next/link'
-import {
-  BarChart3,
-  CheckSquare,
-  FileText,
-  MessageSquare,
-  Home,
-  Briefcase,
-  Megaphone,
-  Video,
-  Users,
-  Keyboard,
-  ArrowRight,
-  Sparkles,
-  CircleHelp,
-} from 'lucide-react'
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
-import { Button } from '@/shared/ui/button'
-import { Badge } from '@/shared/ui/badge'
-import { ScrollArea } from '@/shared/ui/scroll-area'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
-import { useAuth } from '@/shared/contexts/auth-context'
-import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { onboardingApi } from '@/lib/convex-api'
-import { useToast } from '@/shared/ui/use-toast'
-import { useOnboardingTour } from '@/shared/hooks/use-onboarding-tour'
-import { canAccessPath } from '@/lib/access-control/dashboard-access'
-import { getShortcutsForRole } from './keyboard-shortcuts'
-
-function HelpStepActionLink({
-  href,
-  label,
-  onClose,
-}: {
-  href: string
-  label: string
-  onClose: () => void
+'use client';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useCallback, useState, useEffect, useMemo } from 'react';
+import { useMutation, useQuery, useConvexAuth } from 'convex/react';
+import Link from 'next/link';
+import { BarChart3, CheckSquare, FileText, MessageSquare, Home, Briefcase, Megaphone, Video, Users, Keyboard, ArrowRight, Sparkles, CircleHelp, } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Badge } from '@/shared/ui/badge';
+import { ScrollArea } from '@/shared/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+import { useAuth } from '@/shared/contexts/auth-context';
+import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
+import { onboardingApi } from '@/lib/convex-api';
+import { useToast } from '@/shared/ui/use-toast';
+import { useOnboardingTour } from '@/shared/hooks/use-onboarding-tour';
+import { canAccessPath } from '@/lib/access-control/dashboard-access';
+import { getShortcutsForRole } from './keyboard-shortcuts';
+function HelpStepActionLink({ href, label, onClose, }: {
+    href: string;
+    label: string;
+    onClose: () => void;
 }) {
-  const onCloseHelpModal = useCallback(() => {
-    onClose()
-  }, [onClose])
-
-  return (
-    <Button asChild size="sm" variant="ghost" className="shrink-0">
+    const onCloseHelpModal = () => {
+        onClose();
+    };
+    return (<Button asChild size="sm" variant="ghost" className="shrink-0">
       <Link href={href} onClick={onCloseHelpModal}>
         {label}
-        <ArrowRight className="ml-1 size-3" />
+        <ArrowRight className="ml-1 size-3"/>
       </Link>
-    </Button>
-  )
+    </Button>);
 }
-
-function HelpNavigationLink({
-  href,
-  icon: Icon,
-  item,
-  onClose,
-}: {
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  item: { name: string; description: string }
-  onClose: () => void
+function HelpNavigationLink({ href, icon: Icon, item, onClose, }: {
+    href: string;
+    icon: React.ComponentType<{
+        className?: string;
+    }>;
+    item: {
+        name: string;
+        description: string;
+    };
+    onClose: () => void;
 }) {
-  const onCloseHelpModal = useCallback(() => {
-    onClose()
-  }, [onClose])
-
-  return (
-    <Link
-      href={href}
-      onClick={onCloseHelpModal}
-      className="group flex items-start gap-3 rounded-lg border border-muted/60 p-3 transition hover:border-accent/40 hover:bg-muted/30"
-    >
+    const onCloseHelpModal = () => {
+        onClose();
+    };
+    return (<Link href={href} onClick={onCloseHelpModal} className="group flex items-start gap-3 rounded-lg border border-muted/60 p-3 transition hover:border-accent/40 hover:bg-muted/30">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-primary">
-        <Icon className="size-4" />
+        <Icon className="size-4"/>
       </span>
       <div className="flex-1 space-y-1">
         <div className="flex items-center gap-2">
           <h4 className="font-medium text-foreground group-hover:text-primary">{item.name}</h4>
-          <ArrowRight className="size-3 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
+          <ArrowRight className="size-3 text-muted-foreground opacity-0 transition group-hover:opacity-100"/>
         </div>
         <p className="text-sm text-muted-foreground">{item.description}</p>
       </div>
-    </Link>
-  )
+    </Link>);
 }
-
 interface HelpModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  showWelcome?: boolean
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    showWelcome?: boolean;
 }
-
 const navigationGuide = [
-  {
-    name: 'Dashboard',
-    href: '/dashboard',
-    icon: Home,
-    description: 'Your home base with key metrics, workspace comparison, quick actions, and recent activity.',
-    tips: ['Use the client selector to filter by workspace', 'Compare multiple clients if you are an admin'],
-  },
-  {
-    name: 'Clients',
-    href: '/admin/clients',
-    icon: Users,
-    description: 'Manage your client workspaces, add new clients, and configure workspace settings from the admin area.',
-    tips: ['Click a client to see detailed information', 'Use the search to quickly find clients'],
-  },
-  {
-    name: 'Analytics',
-    href: '/dashboard/analytics',
-    icon: BarChart3,
-    description: 'Deep dive into performance data across all your connected ad platforms.',
-    tips: ['Filter by platform and date range', 'Check AI-generated insights for quick recommendations'],
-  },
-  {
-    name: 'Ads',
-    href: '/dashboard/ads',
-    icon: Megaphone,
-    description: 'Connect and manage your ad platform integrations (Google, Meta, LinkedIn, TikTok).',
-    tips: ['Connect platforms to sync metrics automatically', 'Monitor sync status and refresh data'],
-  },
-  {
-    name: 'Meetings',
-    href: '/dashboard/meetings',
-    icon: Video,
-    description: 'Schedule native meeting rooms, invite attendees through Calendar, and review transcript-driven notes.',
-    tips: ['Connect Google Workspace first', 'Client users can join and review notes in read-only mode'],
-  },
-  {
-    name: 'Tasks',
-    href: '/dashboard/tasks',
-    icon: CheckSquare,
-    description: 'Track and manage tasks for you and your team across all client projects.',
-    tips: ['Assign tasks to team members', 'Set priorities and due dates'],
-  },
-  {
-    name: 'Proposals',
-    href: '/dashboard/proposals',
-    icon: FileText,
-    description: 'Create AI-powered proposals and pitch decks for new and existing clients.',
-    tips: ['Use templates to speed up creation', 'Generate professional slide decks instantly'],
-  },
-  {
-    name: 'Collaboration',
-    href: '/dashboard/collaboration',
-    icon: MessageSquare,
-    description: 'Team chat with project channels, file sharing, and message threading.',
-    tips: ['Use markdown and code blocks in messages', 'React to messages and create threads'],
-  },
-  {
-    name: 'Projects',
-    href: '/dashboard/projects',
-    icon: Briefcase,
-    description: 'Organize work into projects linked to clients for better tracking.',
-    tips: ['Link tasks and messages to projects', 'Track project progress and deadlines'],
-  },
-]
-
+    {
+        name: 'Dashboard',
+        href: '/dashboard',
+        icon: Home,
+        description: 'Your home base with key metrics, workspace comparison, quick actions, and recent activity.',
+        tips: ['Use the client selector to filter by workspace', 'Compare multiple clients if you are an admin'],
+    },
+    {
+        name: 'Clients',
+        href: '/admin/clients',
+        icon: Users,
+        description: 'Manage your client workspaces, add new clients, and configure workspace settings from the admin area.',
+        tips: ['Click a client to see detailed information', 'Use the search to quickly find clients'],
+    },
+    {
+        name: 'Analytics',
+        href: '/dashboard/analytics',
+        icon: BarChart3,
+        description: 'Deep dive into performance data across all your connected ad platforms.',
+        tips: ['Filter by platform and date range', 'Check AI-generated insights for quick recommendations'],
+    },
+    {
+        name: 'Ads',
+        href: '/dashboard/ads',
+        icon: Megaphone,
+        description: 'Connect and manage your ad platform integrations (Google, Meta, LinkedIn, TikTok).',
+        tips: ['Connect platforms to sync metrics automatically', 'Monitor sync status and refresh data'],
+    },
+    {
+        name: 'Meetings',
+        href: '/dashboard/meetings',
+        icon: Video,
+        description: 'Schedule native meeting rooms, invite attendees through Calendar, and review transcript-driven notes.',
+        tips: ['Connect Google Workspace first', 'Client users can join and review notes in read-only mode'],
+    },
+    {
+        name: 'Tasks',
+        href: '/dashboard/tasks',
+        icon: CheckSquare,
+        description: 'Track and manage tasks for you and your team across all client projects.',
+        tips: ['Assign tasks to team members', 'Set priorities and due dates'],
+    },
+    {
+        name: 'Proposals',
+        href: '/dashboard/proposals',
+        icon: FileText,
+        description: 'Create AI-powered proposals and pitch decks for new and existing clients.',
+        tips: ['Use templates to speed up creation', 'Generate professional slide decks instantly'],
+    },
+    {
+        name: 'Collaboration',
+        href: '/dashboard/collaboration',
+        icon: MessageSquare,
+        description: 'Team chat with project channels, file sharing, and message threading.',
+        tips: ['Use markdown and code blocks in messages', 'React to messages and create threads'],
+    },
+    {
+        name: 'Projects',
+        href: '/dashboard/projects',
+        icon: Briefcase,
+        description: 'Organize work into projects linked to clients for better tracking.',
+        tips: ['Link tasks and messages to projects', 'Track project progress and deadlines'],
+    },
+];
 function helpNavigationForRole(role: string | null): typeof navigationGuide {
-  return navigationGuide.filter((item) => canAccessPath(role, item.href))
+    return navigationGuide.filter((item) => canAccessPath(role, item.href));
 }
-
 function gettingStartedStepsForRole(role: string | null) {
-  const r = (role ?? 'client') as 'admin' | 'team' | 'client'
-  const steps = [...gettingStartedSteps]
-  if (r !== 'admin') {
-    steps[0] = {
-      ...steps[0]!,
-      title: 'Select your client workspace',
-      description: 'Use the workspace switcher in the header to focus on a client, or start from the dashboard home.',
-      action: { label: 'Open dashboard', href: '/dashboard' },
+    const r = (role ?? 'client') as 'admin' | 'team' | 'client';
+    const steps = [...gettingStartedSteps];
+    if (r !== 'admin') {
+        steps[0] = {
+            ...steps[0]!,
+            title: 'Select your client workspace',
+            description: 'Use the workspace switcher in the header to focus on a client, or start from the dashboard home.',
+            action: { label: 'Open dashboard', href: '/dashboard' },
+        };
     }
-  }
-  if (r === 'client') {
-    return steps.filter((s) => canAccessPath('client', s.action.href))
-  }
-  return steps
+    if (r === 'client') {
+        return steps.filter((s) => canAccessPath('client', s.action.href));
+    }
+    return steps;
 }
-
 const gettingStartedSteps = [
-  {
-    title: 'Select or create a client workspace',
-    description: 'Use the dropdown in the header to switch between client workspaces or create a new one.',
-    action: { label: 'Go to Clients', href: '/admin/clients' },
-  },
-  {
-    title: 'Connect your ad platforms',
-    description: 'Link Google Ads, Meta, LinkedIn, or TikTok to automatically sync campaign performance.',
-    action: { label: 'Setup Integrations', href: '/dashboard/ads' },
-  },
-  {
-    title: 'Create your first task',
-    description: 'Capture an immediate priority and assign ownership so your team can execute quickly.',
-    action: { label: 'Open Tasks', href: '/dashboard/tasks?action=create' },
-  },
-  {
-    title: 'Create a proposal',
-    description: 'Use AI to generate professional proposals and pitch decks in minutes.',
-    action: { label: 'Create Proposal', href: '/dashboard/proposals' },
-  },
-]
-
+    {
+        title: 'Select or create a client workspace',
+        description: 'Use the dropdown in the header to switch between client workspaces or create a new one.',
+        action: { label: 'Go to Clients', href: '/admin/clients' },
+    },
+    {
+        title: 'Connect your ad platforms',
+        description: 'Link Google Ads, Meta, LinkedIn, or TikTok to automatically sync campaign performance.',
+        action: { label: 'Setup Integrations', href: '/dashboard/ads' },
+    },
+    {
+        title: 'Create your first task',
+        description: 'Capture an immediate priority and assign ownership so your team can execute quickly.',
+        action: { label: 'Open Tasks', href: '/dashboard/tasks?action=create' },
+    },
+    {
+        title: 'Create a proposal',
+        description: 'Use AI to generate professional proposals and pitch decks in minutes.',
+        action: { label: 'Create Proposal', href: '/dashboard/proposals' },
+    },
+];
 export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModalProps) {
-  const { user } = useAuth()
-  const defaultTab = showWelcome ? 'welcome' : 'navigation'
-  const { startTour } = useOnboardingTour()
-  const navigationForUser = useMemo(() => helpNavigationForRole(user?.role ?? null), [user?.role])
-  const gettingStartedForUser = useMemo(() => gettingStartedStepsForRole(user?.role ?? null), [user?.role])
-
-  const keyboardShortcuts = useMemo(
-    () => getShortcutsForRole(user?.role, 'global').map(({ combo, description }) => ({ combo, description })),
-    [user?.role]
-  )
-  const handleLaunchTour = useCallback(() => {
-    onOpenChange(false)
-    void startTour({ ensureDashboard: true })
-  }, [onOpenChange, startTour])
-
-  const handleSkipWelcome = useCallback(() => {
-    localStorage.setItem('cohorts_welcome_seen', 'true')
-    onOpenChange(false)
-  }, [onOpenChange])
-
-  const handleClose = useCallback(() => {
-    onOpenChange(false)
-  }, [onOpenChange])
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    const { user } = useAuth();
+    const defaultTab = showWelcome ? 'welcome' : 'navigation';
+    const { startTour } = useOnboardingTour();
+    const navigationForUser = helpNavigationForRole(user?.role ?? null);
+    const gettingStartedForUser = gettingStartedStepsForRole(user?.role ?? null);
+    const keyboardShortcuts = getShortcutsForRole(user?.role, 'global').map(({ combo, description }) => ({ combo, description }));
+    const handleLaunchTour = () => {
+        onOpenChange(false);
+        void startTour({ ensureDashboard: true });
+    };
+    const handleSkipWelcome = () => {
+        localStorage.setItem('cohorts_welcome_seen', 'true');
+        onOpenChange(false);
+    };
+    const handleClose = () => {
+        onOpenChange(false);
+    };
+    return (<Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden p-0 z-[1100]">
         <DialogHeader className="px-6 pt-6">
           <DialogTitle className="flex items-center gap-2">
-            <CircleHelp className="size-5 text-primary" />
+            <CircleHelp className="size-5 text-primary"/>
             {showWelcome ? 'Welcome to Cohorts' : 'Help & Navigation'}
           </DialogTitle>
           <DialogDescription>
             {showWelcome
-              ? 'Get started with your agency workspace in a few simple steps.'
-              : 'Learn how to navigate and make the most of your workspace.'}
+            ? 'Get started with your agency workspace in a few simple steps.'
+            : 'Learn how to navigate and make the most of your workspace.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -265,21 +213,13 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
           </div>
 
           <ScrollArea className="h-[400px] px-6 pb-6">
-            {showWelcome && (
-              <TabsContent value="welcome" className="mt-4 space-y-4">
+            {showWelcome && (<TabsContent value="welcome" className="mt-4 space-y-4">
                 <div className="pt-2 flex flex-col gap-2">
-                  <Button
-                    onClick={handleLaunchTour}
-                    className="w-full bg-gradient-to-r from-primary to-primary/80"
-                  >
-                    <Sparkles className="mr-2 size-4" />
+                  <Button onClick={handleLaunchTour} className="w-full bg-gradient-to-r from-primary to-primary/80">
+                    <Sparkles className="mr-2 size-4"/>
                     Launch Interactive Tour
                   </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={handleSkipWelcome}
-                    className="w-full text-muted-foreground"
-                  >
+                  <Button variant="ghost" onClick={handleSkipWelcome} className="w-full text-muted-foreground">
                     Skip to dashboard
                   </Button>
                 </div>
@@ -287,23 +227,19 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                 <div className="rounded-lg border border-accent/20 bg-accent/5 p-4">
                   <div className="flex items-start gap-3">
                     <span className="flex size-8 items-center justify-center rounded-full bg-accent/20 text-primary">
-                      <Sparkles className="size-4" />
+                      <Sparkles className="size-4"/>
                     </span>
                     <div>
                       <h4 className="font-semibold text-foreground">Quick tip</h4>
                       <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                        Press <KeyboardShortcutBadge combo="mod+k" /> to quickly navigate across pages.
+                        Press <KeyboardShortcutBadge combo="mod+k"/> to quickly navigate across pages.
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  {gettingStartedForUser.map((step, index) => (
-                    <div
-                      key={step.title}
-                      className="group flex items-start gap-4 rounded-lg border border-muted/60 p-4 transition hover:border-accent/40 hover:bg-muted/30"
-                    >
+                  {gettingStartedForUser.map((step, index) => (<div key={step.title} className="group flex items-start gap-4 rounded-lg border border-muted/60 p-4 transition hover:border-accent/40 hover:bg-muted/30">
                       <Badge variant="secondary" className="shrink-0">
                         {index + 1}
                       </Badge>
@@ -311,32 +247,22 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                         <h4 className="font-medium text-foreground">{step.title}</h4>
                         <p className="text-sm text-muted-foreground">{step.description}</p>
                       </div>
-                      <HelpStepActionLink href={step.action.href} label={step.action.label} onClose={handleClose} />
-                    </div>
-                  ))}
+                      <HelpStepActionLink href={step.action.href} label={step.action.label} onClose={handleClose}/>
+                    </div>))}
                 </div>
-              </TabsContent>
-            )}
+              </TabsContent>)}
 
             <TabsContent value="navigation" className="mt-4 space-y-3">
               {navigationForUser.map((item) => {
-                const Icon = item.icon
-                return (
-                  <HelpNavigationLink
-                    key={item.name}
-                    href={item.href}
-                    icon={Icon}
-                    item={item}
-                    onClose={handleClose}
-                  />
-                )
-              })}
+            const Icon = item.icon;
+            return (<HelpNavigationLink key={item.name} href={item.href} icon={Icon} item={item} onClose={handleClose}/>);
+        })}
             </TabsContent>
 
             <TabsContent value="shortcuts" className="mt-4 space-y-4">
               <div className="rounded-lg border border-muted/60 p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Keyboard className="size-4" />
+                  <Keyboard className="size-4"/>
                   Keyboard Shortcuts
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -345,20 +271,14 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
               </div>
 
               <div className="space-y-2">
-                {keyboardShortcuts.map((shortcut) => (
-                  <div
-                    key={shortcut.description}
-                    className="flex items-center justify-between rounded-lg border border-muted/40 px-4 py-3"
-                  >
+                {keyboardShortcuts.map((shortcut) => (<div key={shortcut.description} className="flex items-center justify-between rounded-lg border border-muted/40 px-4 py-3">
                     <span className="text-sm text-foreground">{shortcut.description}</span>
-                    <KeyboardShortcutBadge combo={shortcut.combo} />
-                  </div>
-                ))}
+                    <KeyboardShortcutBadge combo={shortcut.combo}/>
+                  </div>))}
               </div>
             </TabsContent>
 
-            {!showWelcome && (
-              <TabsContent value="tips" className="mt-4 space-y-4">
+            {!showWelcome && (<TabsContent value="tips" className="mt-4 space-y-4">
                 <div className="rounded-lg border border-accent/20 bg-accent/5 p-4">
                   <h4 className="font-semibold text-foreground">Pro tips for power users</h4>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -399,143 +319,118 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                     </p>
                   </div>
                 </div>
-              </TabsContent>
-            )}
+              </TabsContent>)}
           </ScrollArea>
         </Tabs>
       </DialogContent>
-    </Dialog>
-  )
+    </Dialog>);
 }
-
 export function useHelpModal() {
-  const [open, setOpen] = useState(false)
-  const [showWelcome, setShowWelcome] = useState(false)
-  const { toast } = useToast()
-  const { user } = useAuth()
-  const userId = user?.id
-  const userCreatedAt = user?.createdAt
-
-  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth()
-
-  const onboardingState = useQuery(
-    onboardingApi.getByUserId,
-    userId && isConvexAuthenticated ? { userId } : 'skip'
-  ) as {
-    welcomeSeenAtMs?: number | null
-    welcomeSeen?: boolean
-    onboardingTourCompleted?: boolean
-    onboardingTourCompletedAtMs?: number | null
-  } | null | undefined
-
-  const upsertOnboarding = useMutation(onboardingApi.upsert)
-
-  useEffect(() => {
-    if (!userId) return
-
-    const uid = userId
-    const createdAt = userCreatedAt
-
-    let cancelled = false
-
-    async function run() {
-      // Wait for onboarding state to load before making decisions
-      // onboardingState is undefined while loading, null if no record exists
-      if (onboardingState === undefined) return
-
-      // Local fallback cache (kept for fast repeat loads)
-      const hasSeenWelcomeLocal = typeof window !== 'undefined'
-        ? window.localStorage.getItem('cohorts_welcome_seen')
-        : null
-
-      let hasSeenWelcomeRemote = Boolean(onboardingState?.welcomeSeen || onboardingState?.welcomeSeenAtMs)
-      const onboardingTourCompleted = Boolean(onboardingState?.onboardingTourCompleted)
-      const onboardingTourCompletedAtMs = onboardingState?.onboardingTourCompletedAtMs ?? null
-
-      const persistWelcomeSeen = async (): Promise<boolean> => {
-        return upsertOnboarding({
-          userId: uid,
-          onboardingTourCompleted,
-          onboardingTourCompletedAtMs,
-          welcomeSeen: true,
-          welcomeSeenAtMs: Date.now(),
-        })
-          .then(() => true)
-          .catch((error) => {
-            logError(error, 'useHelpModal:persistWelcomeSeen')
-            return false
-          })
-      }
-
-      // Backfill remote state if the user already saw the welcome (local-only legacy)
-      if (hasSeenWelcomeLocal && !hasSeenWelcomeRemote) {
-        const persisted = await persistWelcomeSeen()
-        if (persisted) {
-          hasSeenWelcomeRemote = true
+    const [open, setOpen] = useState(false);
+    const [showWelcome, setShowWelcome] = useState(false);
+    const { toast } = useToast();
+    const { user } = useAuth();
+    const userId = user?.id;
+    const userCreatedAt = user?.createdAt;
+    const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
+    const onboardingState = useQuery(onboardingApi.getByUserId, userId && isConvexAuthenticated ? { userId } : 'skip') as {
+        welcomeSeenAtMs?: number | null;
+        welcomeSeen?: boolean;
+        onboardingTourCompleted?: boolean;
+        onboardingTourCompletedAtMs?: number | null;
+    } | null | undefined;
+    const upsertOnboarding = useMutation(onboardingApi.upsert);
+    useEffect(() => {
+        if (!userId)
+            return;
+        const uid = userId;
+        const createdAt = userCreatedAt;
+        let cancelled = false;
+        async function run() {
+            // Wait for onboarding state to load before making decisions
+            // onboardingState is undefined while loading, null if no record exists
+            if (onboardingState === undefined)
+                return;
+            // Local fallback cache (kept for fast repeat loads)
+            const hasSeenWelcomeLocal = typeof window !== 'undefined'
+                ? window.localStorage.getItem('cohorts_welcome_seen')
+                : null;
+            let hasSeenWelcomeRemote = Boolean(onboardingState?.welcomeSeen || onboardingState?.welcomeSeenAtMs);
+            const onboardingTourCompleted = Boolean(onboardingState?.onboardingTourCompleted);
+            const onboardingTourCompletedAtMs = onboardingState?.onboardingTourCompletedAtMs ?? null;
+            const persistWelcomeSeen = async (): Promise<boolean> => {
+                return upsertOnboarding({
+                    userId: uid,
+                    onboardingTourCompleted,
+                    onboardingTourCompletedAtMs,
+                    welcomeSeen: true,
+                    welcomeSeenAtMs: Date.now(),
+                })
+                    .then(() => true)
+                    .catch((error) => {
+                    logError(error, 'useHelpModal:persistWelcomeSeen');
+                    return false;
+                });
+            };
+            // Backfill remote state if the user already saw the welcome (local-only legacy)
+            if (hasSeenWelcomeLocal && !hasSeenWelcomeRemote) {
+                const persisted = await persistWelcomeSeen();
+                if (persisted) {
+                    hasSeenWelcomeRemote = true;
+                }
+            }
+            // Auto-open only for genuinely new users who have not completed onboarding
+            const created = createdAt ? new Date(createdAt) : new Date();
+            const now = new Date();
+            const isNewUser = (now.getTime() - created.getTime()) < 24 * 60 * 60 * 1000;
+            const shouldShowWelcome = !hasSeenWelcomeRemote && !hasSeenWelcomeLocal && isNewUser;
+            if (!cancelled && shouldShowWelcome) {
+                setShowWelcome(true);
+                setOpen(true);
+            }
+            if (!cancelled && !shouldShowWelcome && hasSeenWelcomeLocal && !hasSeenWelcomeRemote) {
+                await persistWelcomeSeen();
+            }
         }
-      }
-
-      // Auto-open only for genuinely new users who have not completed onboarding
-      const created = createdAt ? new Date(createdAt) : new Date()
-      const now = new Date()
-      const isNewUser = (now.getTime() - created.getTime()) < 24 * 60 * 60 * 1000
-
-      const shouldShowWelcome = !hasSeenWelcomeRemote && !hasSeenWelcomeLocal && isNewUser
-
-      if (!cancelled && shouldShowWelcome) {
-        setShowWelcome(true)
-        setOpen(true)
-      }
-
-      if (!cancelled && !shouldShowWelcome && hasSeenWelcomeLocal && !hasSeenWelcomeRemote) {
-        await persistWelcomeSeen()
-      }
-    }
-
-    void run()
-
-    return () => {
-      cancelled = true
-    }
-  }, [userId, userCreatedAt, onboardingState, upsertOnboarding])
-
-  const markWelcomeSeen = async () => {
-    try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('cohorts_welcome_seen', '1')
-      }
-    } catch {
-      // Ignore localStorage failures.
-    }
-
-    if (!userId) return
-
-    const onboardingTourCompleted = Boolean(onboardingState?.onboardingTourCompleted)
-    const onboardingTourCompletedAtMs = onboardingState?.onboardingTourCompletedAtMs ?? null
-
-    await upsertOnboarding({
-      userId,
-      onboardingTourCompleted,
-      onboardingTourCompletedAtMs,
-      welcomeSeen: true,
-      welcomeSeenAtMs: Date.now(),
-    }).catch((error: unknown) => {
-      reportConvexFailure({
-        error: error,
-        context: 'useHelpModal:markWelcomeSeen',
-        title: 'Could not save welcome state',
-        fallbackMessage: 'Could not save welcome state',
-        })
-    })
-  }
-
-  const onOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen)
-
-    if (!nextOpen && showWelcome && userId) {
-      setShowWelcome(false)
-      void markWelcomeSeen()
-    }
-  }
-  return { open, setOpen, onOpenChange, showWelcome, setShowWelcome }
+        void run();
+        return () => {
+            cancelled = true;
+        };
+    }, [userId, userCreatedAt, onboardingState, upsertOnboarding]);
+    const markWelcomeSeen = async () => {
+        try {
+            if (typeof window !== 'undefined') {
+                window.localStorage.setItem('cohorts_welcome_seen', '1');
+            }
+        }
+        catch {
+            // Ignore localStorage failures.
+        }
+        if (!userId)
+            return;
+        const onboardingTourCompleted = Boolean(onboardingState?.onboardingTourCompleted);
+        const onboardingTourCompletedAtMs = onboardingState?.onboardingTourCompletedAtMs ?? null;
+        await upsertOnboarding({
+            userId,
+            onboardingTourCompleted,
+            onboardingTourCompletedAtMs,
+            welcomeSeen: true,
+            welcomeSeenAtMs: Date.now(),
+        }).catch((error: unknown) => {
+            reportConvexFailure({
+                error: error,
+                context: 'useHelpModal:markWelcomeSeen',
+                title: 'Could not save welcome state',
+                fallbackMessage: 'Could not save welcome state',
+            });
+        });
+    };
+    const onOpenChange = (nextOpen: boolean) => {
+        setOpen(nextOpen);
+        if (!nextOpen && showWelcome && userId) {
+            setShowWelcome(false);
+            void markWelcomeSeen();
+        }
+    };
+    return { open, setOpen, onOpenChange, showWelcome, setShowWelcome };
 }

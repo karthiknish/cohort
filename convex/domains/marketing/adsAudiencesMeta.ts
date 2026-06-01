@@ -65,13 +65,17 @@ export const createLookalikeAudience = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const [accessToken, adAccountId, { createMetaLookalikeAudience }] = await Promise.all([
+      const [
+        accessToken,
+        adAccountId,
+        { createMetaLookalikeAudience },
+        { buildMetaLookalikeSpec },
+      ] = await Promise.all([
         resolveFacebookAccessToken(args.workspaceId, integration, clientId),
         requireFacebookAdAccount(integration),
         import('@/services/integrations/meta-ads/campaign-modules/audiences'),
+        import('@/lib/meta-lookalike-spec'),
       ])
-
-      const { buildMetaLookalikeSpec } = await import('@/lib/meta-lookalike-spec')
       buildMetaLookalikeSpec(args.country, args.ratio)
 
       const result = await createMetaLookalikeAudience({
@@ -107,17 +111,20 @@ export const uploadAudienceUsers = action({
 
       const clientId = normalizeClientId(args.clientId ?? null)
       const integration = await getFacebookIntegration(ctx, args.workspaceId, clientId)
-      const [accessToken, { uploadMetaAudienceUsers }, { hashMetaCustomerEmail }] = await Promise.all([
+      const [
+        accessToken,
+        { uploadMetaAudienceUsers },
+        { hashMetaCustomerEmail, normalizeValidMetaCustomerEmails },
+      ] = await Promise.all([
         resolveFacebookAccessToken(args.workspaceId, integration, clientId),
         import('@/services/integrations/meta-ads/campaign-modules/audiences'),
         import('../../lib/metaAudienceHash'),
       ])
-      const hashes: string[] = []
-      for (const email of args.emails) {
-        const normalized = email.trim().toLowerCase()
-        if (!normalized.includes('@')) continue
-        hashes.push(await hashMetaCustomerEmail(normalized))
-      }
+      const validEmails = normalizeValidMetaCustomerEmails(args.emails)
+
+      const hashes = await Promise.all(
+        validEmails.map((normalized) => hashMetaCustomerEmail(normalized)),
+      )
 
       if (hashes.length === 0) {
         throw Errors.base.badRequest('Add at least one valid email address.')

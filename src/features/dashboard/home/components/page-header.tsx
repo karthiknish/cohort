@@ -1,80 +1,49 @@
-'use client'
-
-import Link from 'next/link'
-import { ArrowLeft, CircleHelp } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-
-import { Button } from '@/shared/ui/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/shared/ui/tooltip'
-import { Badge } from '@/shared/ui/badge'
-import { cn } from '@/lib/utils'
-
+'use client';
+import Link from 'next/link';
+import { ArrowLeft, CircleHelp } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
+import { Badge } from '@/shared/ui/badge';
+import { cn } from '@/lib/utils';
 interface PageHeaderProps {
-  title: string
-  description?: string
-  icon?: LucideIcon
-  backHref?: string
-  backLabel?: string
-  badge?: string
-  badgeVariant?: 'default' | 'secondary' | 'destructive' | 'outline'
-  helpText?: string
-  actions?: React.ReactNode
-  className?: string
+    title: string;
+    description?: string;
+    icon?: LucideIcon;
+    backHref?: string;
+    backLabel?: string;
+    badge?: string;
+    badgeVariant?: 'default' | 'secondary' | 'destructive' | 'outline';
+    helpText?: string;
+    actions?: React.ReactNode;
+    className?: string;
 }
-
-export function PageHeader({
-  title,
-  description,
-  icon: Icon,
-  backHref,
-  backLabel = 'Back',
-  badge,
-  badgeVariant = 'secondary',
-  helpText,
-  actions,
-  className,
-}: PageHeaderProps) {
-  return (
-    <div className={cn('space-y-3', className)}>
-      {backHref && (
-        <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground">
+export function PageHeader({ title, description, icon: Icon, backHref, backLabel = 'Back', badge, badgeVariant = 'secondary', helpText, actions, className, }: PageHeaderProps) {
+    return (<div className={cn('space-y-3', className)}>
+      {backHref && (<Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground">
           <Link href={backHref}>
-            <ArrowLeft className="size-4" />
+            <ArrowLeft className="size-4"/>
             {backLabel}
           </Link>
-        </Button>
-      )}
+        </Button>)}
       
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
           <div className="flex items-center gap-3">
-            {Icon && (
-              <span className="flex size-10 items-center justify-center rounded-lg bg-accent/10 text-primary">
-                <Icon className="size-5" />
-              </span>
-            )}
+            {Icon && (<span className="flex size-10 items-center justify-center rounded-lg bg-accent/10 text-primary">
+                <Icon className="size-5"/>
+              </span>)}
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl tracking-tight text-foreground">
                   {title}
                 </h1>
-                {badge && (
-                  <Badge variant={badgeVariant}>{badge}</Badge>
-                )}
-                {helpText && (
-                  <TooltipProvider>
+                {badge && (<Badge variant={badgeVariant}>{badge}</Badge>)}
+                {helpText && (<TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
-                        >
-                          <CircleHelp className="size-4" />
+                        <button type="button" className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground">
+                          <CircleHelp className="size-4"/>
                           <span className="sr-only">Help</span>
                         </button>
                       </TooltipTrigger>
@@ -82,22 +51,16 @@ export function PageHeader({
                         <p>{helpText}</p>
                       </TooltipContent>
                     </Tooltip>
-                  </TooltipProvider>
-                )}
+                  </TooltipProvider>)}
               </div>
-              {description && (
-                <p className="text-sm text-muted-foreground">{description}</p>
-              )}
+              {description && (<p className="text-sm text-muted-foreground">{description}</p>)}
             </div>
           </div>
         </div>
         
-        {actions && (
-          <div className="flex items-center gap-2 flex-wrap">
+        {actions && (<div className="flex items-center gap-2 flex-wrap">
             {actions}
-          </div>
-        )}
+          </div>)}
       </div>
-    </div>
-  )
+    </div>);
 }

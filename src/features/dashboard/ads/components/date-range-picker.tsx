@@ -1,118 +1,79 @@
-'use client'
-
-import { useCallback, useMemo, useState } from 'react'
-import { format, subDays, startOfDay, endOfDay } from 'date-fns'
-import { CalendarIcon, ChevronDown } from 'lucide-react'
-
-import { Button } from '@/shared/ui/button'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/shared/ui/popover'
-import { Calendar } from '@/shared/ui/calendar'
-import { cn } from '@/lib/utils'
-
+'use client';
+import { useCallback, useMemo, useState } from 'react';
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { CalendarIcon, ChevronDown } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Popover, PopoverContent, PopoverTrigger, } from '@/shared/ui/popover';
+import { Calendar } from '@/shared/ui/calendar';
+import { cn } from '@/lib/utils';
 type DayPickerRange = {
-  from: Date
-  to: Date
-}
-
+    from: Date;
+    to: Date;
+};
 export interface DateRange {
-  start: Date
-  end: Date
+    start: Date;
+    end: Date;
 }
-
 interface DateRangePickerProps {
-  value: DateRange
-  onChange: (range: DateRange) => void
-  className?: string
-  lifetimeRange?: DateRange | null
+    value: DateRange;
+    onChange: (range: DateRange) => void;
+    className?: string;
+    lifetimeRange?: DateRange | null;
 }
-
 const PRESETS = [
-  { label: 'Last 7 days', days: 7 },
-  { label: 'Last 14 days', days: 14 },
-  { label: 'Last 30 days', days: 30 },
-  { label: 'Last 90 days', days: 90 },
-] as const
-
+    { label: 'Last 7 days', days: 7 },
+    { label: 'Last 14 days', days: 14 },
+    { label: 'Last 30 days', days: 30 },
+    { label: 'Last 90 days', days: 90 },
+] as const;
 function getPresetRange(days: number): DateRange {
-  const end = endOfDay(new Date())
-  const start = startOfDay(subDays(end, days - 1))
-  return { start, end }
+    const end = endOfDay(new Date());
+    const start = startOfDay(subDays(end, days - 1));
+    return { start, end };
 }
-
 function formatDateRange(range: DateRange): string {
-  const startStr = format(range.start, 'MMM d')
-  const endStr = format(range.end, 'MMM d, yyyy')
-  return `${startStr} – ${endStr}`
+    const startStr = format(range.start, 'MMM d');
+    const endStr = format(range.end, 'MMM d, yyyy');
+    return `${startStr} – ${endStr}`;
 }
-
 export function DateRangePicker({ value, onChange, className, lifetimeRange }: DateRangePickerProps) {
-  const [open, setOpen] = useState(false)
-
-  const dateRange = useMemo<DayPickerRange>(
-    () => ({
-      from: value.start,
-      to: value.end,
-    }),
-    [value.end, value.start]
-  )
-
-  const handleSelect = useCallback(
-    (range: Partial<DayPickerRange> | undefined) => {
-      if (range?.from && range?.to) {
-        onChange({
-          start: startOfDay(range.from),
-          end: endOfDay(range.to),
-        })
-      }
-    },
-    [onChange]
-  )
-
-  const handlePresetSelect = useCallback(
-    (days: number) => {
-      onChange(getPresetRange(days))
-      setOpen(false)
-    },
-    [onChange]
-  )
-
-  const handleLifetimeSelect = useCallback(() => {
-    if (!lifetimeRange) return
-    onChange(lifetimeRange)
-    setOpen(false)
-  }, [lifetimeRange, onChange])
-
-  const handleDisabledDate = useCallback((date: Date) => date > new Date(), [])
-
-  const presetHandlers = useMemo(
-    () => ({
-      7: () => handlePresetSelect(7),
-      14: () => handlePresetSelect(14),
-      30: () => handlePresetSelect(30),
-      90: () => handlePresetSelect(90),
-    }),
-    [handlePresetSelect]
-  )
-
-  return (
-    <div className={cn('grid gap-2', className)}>
+    const [open, setOpen] = useState(false);
+    const dateRange = ({
+        from: value.start,
+        to: value.end,
+    });
+    const handleSelect = (range: Partial<DayPickerRange> | undefined) => {
+        if (range?.from && range?.to) {
+            onChange({
+                start: startOfDay(range.from),
+                end: endOfDay(range.to),
+            });
+        }
+    };
+    const handlePresetSelect = (days: number) => {
+        onChange(getPresetRange(days));
+        setOpen(false);
+    };
+    const handleLifetimeSelect = () => {
+        if (!lifetimeRange)
+            return;
+        onChange(lifetimeRange);
+        setOpen(false);
+    };
+    const handleDisabledDate = (date: Date) => date > new Date();
+    const presetHandlers = ({
+        7: () => handlePresetSelect(7),
+        14: () => handlePresetSelect(14),
+        30: () => handlePresetSelect(30),
+        90: () => handlePresetSelect(90),
+    });
+    return (<div className={cn('grid gap-2', className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            id="date"
-            variant="outline"
-            className={cn(
-              'w-fit justify-start text-left font-normal',
-              !value && 'text-muted-foreground'
-            )}
-          >
-            <CalendarIcon className="mr-2 size-4" />
+          <Button id="date" variant="outline" className={cn('w-fit justify-start text-left font-normal', !value && 'text-muted-foreground')}>
+            <CalendarIcon className="mr-2 size-4"/>
             {formatDateRange(value)}
-            <ChevronDown className="ml-2 size-4 opacity-50" />
+            <ChevronDown className="ml-2 size-4 opacity-50"/>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="end">
@@ -121,42 +82,18 @@ export function DateRangePicker({ value, onChange, className, lifetimeRange }: D
               <span className="mb-2 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Presets
               </span>
-              {lifetimeRange ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start font-normal"
-                  onClick={handleLifetimeSelect}
-                >
+              {lifetimeRange ? (<Button variant="ghost" size="sm" className="justify-start font-normal" onClick={handleLifetimeSelect}>
                   Lifetime
-                </Button>
-              ) : null}
-              {PRESETS.map((preset) => (
-                <Button
-                  key={preset.days}
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start font-normal"
-                  onClick={presetHandlers[preset.days]}
-                >
+                </Button>) : null}
+              {PRESETS.map((preset) => (<Button key={preset.days} variant="ghost" size="sm" className="justify-start font-normal" onClick={presetHandlers[preset.days]}>
                   {preset.label}
-                </Button>
-              ))}
+                </Button>))}
             </div>
             <div className="p-1">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={dateRange.from}
-                selected={dateRange}
-                onSelect={handleSelect}
-                numberOfMonths={2}
-                disabled={handleDisabledDate}
-              />
+              <Calendar initialFocus mode="range" defaultMonth={dateRange.from} selected={dateRange} onSelect={handleSelect} numberOfMonths={2} disabled={handleDisabledDate}/>
             </div>
           </div>
         </PopoverContent>
       </Popover>
-    </div>
-  )
+    </div>);
 }

@@ -1,49 +1,40 @@
 /**
  * Meeting Scheduled Email Template
  */
-
-import { getMeetingEmailDateFormatter, getMeetingEmailTimeFormatter } from '@/lib/intl/meeting-email-formatters'
-
-import { escapeHtml, wrapEmailTemplate } from './utils'
-
+import { getMeetingEmailDateFormatter, getMeetingEmailTimeFormatter } from '@/lib/intl/meeting-email-formatters';
+import { escapeHtml, wrapEmailTemplate } from './utils';
 export interface MeetingScheduledTemplateParams {
-  meetingTitle: string
-  meetingStartIso: string
-  meetingEndIso?: string | null
-  meetingTimezone: string
-  organizerName: string
-  meetLink: string | null
-  inSiteJoinUrl?: string | null
+    meetingTitle: string;
+    meetingStartIso: string;
+    meetingEndIso?: string | null;
+    meetingTimezone: string;
+    organizerName: string;
+    meetLink: string | null;
+    inSiteJoinUrl?: string | null;
 }
-
 function formatMeetingTime(startIso: string, endIso: string | null | undefined, timezone: string): string {
-  try {
-    const start = new Date(startIso)
-    const dateLabel = getMeetingEmailDateFormatter(timezone).format(start)
-
-    const startLabel = getMeetingEmailTimeFormatter(timezone).format(start)
-
-    if (!endIso) {
-      return `${dateLabel} at ${startLabel}`
+    try {
+        const start = new Date(startIso);
+        const dateLabel = getMeetingEmailDateFormatter(timezone).format(start);
+        const startLabel = getMeetingEmailTimeFormatter(timezone).format(start);
+        if (!endIso) {
+            return `${dateLabel} at ${startLabel}`;
+        }
+        const end = new Date(endIso);
+        const endLabel = getMeetingEmailTimeFormatter(timezone).format(end);
+        return `${dateLabel} at ${startLabel} - ${endLabel}`;
     }
-
-    const end = new Date(endIso)
-    const endLabel = getMeetingEmailTimeFormatter(timezone).format(end)
-
-    return `${dateLabel} at ${startLabel} - ${endLabel}`
-  } catch {
-    return startIso
-  }
+    catch {
+        return startIso;
+    }
 }
-
 export function meetingScheduledTemplate(params: MeetingScheduledTemplateParams): string {
-  const { meetingTitle, meetingStartIso, meetingEndIso, meetingTimezone, organizerName, meetLink, inSiteJoinUrl } = params
-  const formattedTime = formatMeetingTime(meetingStartIso, meetingEndIso, meetingTimezone)
-  const safeTitle = escapeHtml(meetingTitle)
-  const safeTimezone = escapeHtml(meetingTimezone)
-  const safeOrganizer = escapeHtml(organizerName)
-
-  return wrapEmailTemplate(`
+    const { meetingTitle, meetingStartIso, meetingEndIso, meetingTimezone, organizerName, meetLink, inSiteJoinUrl } = params;
+    const formattedTime = formatMeetingTime(meetingStartIso, meetingEndIso, meetingTimezone);
+    const safeTitle = escapeHtml(meetingTitle);
+    const safeTimezone = escapeHtml(meetingTimezone);
+    const safeOrganizer = escapeHtml(organizerName);
+    return wrapEmailTemplate(`
     <div class="header">Cohorts Meeting Scheduled</div>
     <div class="content">
       <p>Your meeting is confirmed and has been added to the calendar workflow.</p>
@@ -57,5 +48,5 @@ export function meetingScheduledTemplate(params: MeetingScheduledTemplateParams)
       ${inSiteJoinUrl ? `<p class="meta">Prefer joining in-app? Use your workspace meeting room: <a href="${inSiteJoinUrl}">${inSiteJoinUrl}</a></p>` : ''}
       <p class="meta">This notification was sent by Cohorts Meetings.</p>
     </div>
-  `)
+  `);
 }

@@ -1,177 +1,139 @@
-'use client'
-
-import Link from 'next/link'
-import {
-  ArrowUpRight,
-  BarChart3,
-  Bell,
-  BriefcaseBusiness,
-  CheckSquare,
-  FileText,
-  Home,
-  Megaphone,
-  MessageSquare,
-  Video,
-  type LucideIcon,
-} from 'lucide-react'
-
-import { cn } from '@/lib/utils'
-import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
-import { can, capabilityForHref, type DashboardCapability } from '@/lib/access-control/dashboard-access'
-import type { AuthRole } from '@/services/auth/types'
-import { Badge } from '@/shared/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-
+'use client';
+import Link from 'next/link';
+import { ArrowUpRight, BarChart3, Bell, BriefcaseBusiness, CheckSquare, FileText, Home, Megaphone, MessageSquare, Video, type LucideIcon, } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
+import { can, capabilityForHref, type DashboardCapability } from '@/lib/access-control/dashboard-access';
+import type { AuthRole } from '@/services/auth/types';
+import { Badge } from '@/shared/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 type HubTile = {
-  href: string
-  title: string
-  description: string
-  icon: LucideIcon
-  roles?: AuthRole[]
-  capability?: DashboardCapability
-}
-
+    href: string;
+    title: string;
+    description: string;
+    icon: LucideIcon;
+    roles?: AuthRole[];
+    capability?: DashboardCapability;
+};
 const CORE_DELIVERY_TILES: HubTile[] = [
-  {
-    href: '/dashboard/tasks',
-    title: 'Tasks',
-    description: 'Assignments, status, and due dates.',
-    icon: CheckSquare,
-  },
-  {
-    href: '/dashboard/projects',
-    title: 'Projects',
-    description: 'Milestones and delivery context.',
-    icon: BriefcaseBusiness,
-  },
-  {
-    href: '/dashboard/meetings',
-    title: 'Meetings',
-    description: 'Rooms, invites, and notes.',
-    icon: Video,
-  },
-  {
-    href: '/for-you',
-    title: 'For You',
-    description: 'Personalized priorities and activity.',
-    icon: Home,
-  },
-]
-
+    {
+        href: '/dashboard/tasks',
+        title: 'Tasks',
+        description: 'Assignments, status, and due dates.',
+        icon: CheckSquare,
+    },
+    {
+        href: '/dashboard/projects',
+        title: 'Projects',
+        description: 'Milestones and delivery context.',
+        icon: BriefcaseBusiness,
+    },
+    {
+        href: '/dashboard/meetings',
+        title: 'Meetings',
+        description: 'Rooms, invites, and notes.',
+        icon: Video,
+    },
+    {
+        href: '/for-you',
+        title: 'For You',
+        description: 'Personalized priorities and activity.',
+        icon: Home,
+    },
+];
 const GROWTH_TILES: HubTile[] = [
-  {
-    href: '/dashboard/analytics',
-    title: 'Analytics',
-    description: 'Traffic, funnels, and trends.',
-    icon: BarChart3,
-    capability: 'analytics.view',
-  },
-  {
-    href: '/dashboard/ads',
-    title: 'Ads',
-    description: 'Paid media sync and performance.',
-    icon: Megaphone,
-    capability: 'agency.ads',
-  },
-  {
-    href: '/dashboard/proposals',
-    title: 'Proposals',
-    description: 'Decks and client-ready assets.',
-    icon: FileText,
-    capability: 'proposals.view',
-  },
-]
-
+    {
+        href: '/dashboard/analytics',
+        title: 'Analytics',
+        description: 'Traffic, funnels, and trends.',
+        icon: BarChart3,
+        capability: 'analytics.view',
+    },
+    {
+        href: '/dashboard/ads',
+        title: 'Ads',
+        description: 'Paid media sync and performance.',
+        icon: Megaphone,
+        capability: 'agency.ads',
+    },
+    {
+        href: '/dashboard/proposals',
+        title: 'Proposals',
+        description: 'Decks and client-ready assets.',
+        icon: FileText,
+        capability: 'proposals.view',
+    },
+];
 const CLIENT_EXTRA_TILES: HubTile[] = [
-  {
-    href: '/dashboard/collaboration',
-    title: 'Collaboration',
-    description: 'Channels and direct messages.',
-    icon: MessageSquare,
-  },
-  {
-    href: '/dashboard/notifications',
-    title: 'Notifications',
-    description: 'Mentions and system alerts.',
-    icon: Bell,
-  },
-]
-
+    {
+        href: '/dashboard/collaboration',
+        title: 'Collaboration',
+        description: 'Channels and direct messages.',
+        icon: MessageSquare,
+    },
+    {
+        href: '/dashboard/notifications',
+        title: 'Notifications',
+        description: 'Mentions and system alerts.',
+        icon: Bell,
+    },
+];
 function filterByRole(tiles: HubTile[], role: AuthRole): HubTile[] {
-  return tiles.filter((tile) => {
-    const capability = tile.capability ?? capabilityForHref(tile.href)
-    if (capability) return can(role, capability)
-    if (!tile.roles) return true
-    return tile.roles.includes(role)
-  })
+    return tiles.filter((tile) => {
+        const capability = tile.capability ?? capabilityForHref(tile.href);
+        if (capability)
+            return can(role, capability);
+        if (!tile.roles)
+            return true;
+        return tile.roles.includes(role);
+    });
 }
-
-function HubCluster({
-  label,
-  description,
-  tiles,
-}: {
-  label: string
-  description?: string
-  tiles: Array<{ href: string; title: string; description: string; icon: LucideIcon }>
+function HubCluster({ label, description, tiles, }: {
+    label: string;
+    description?: string;
+    tiles: Array<{
+        href: string;
+        title: string;
+        description: string;
+        icon: LucideIcon;
+    }>;
 }) {
-  if (tiles.length === 0) return null
-
-  return (
-    <div className="space-y-3">
+    if (tiles.length === 0)
+        return null;
+    return (<div className="space-y-3">
       <div className="flex flex-col gap-0.5 border-b border-muted/40 pb-2">
         <p className={DASHBOARD_THEME.stats.label}>{label}</p>
         {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {tiles.map((tile) => {
-          const Icon = tile.icon
-          return (
-            <Link
-              key={tile.href}
-              href={tile.href}
-              className={cn(
-                'group flex min-h-[5.5rem] flex-col rounded-xl border border-muted/50 bg-background/80 p-4 shadow-sm transition',
-                'hover:border-accent/30 hover:bg-accent/[0.03] hover:shadow-md',
-              )}
-            >
+            const Icon = tile.icon;
+            return (<Link key={tile.href} href={tile.href} className={cn('group flex min-h-[5.5rem] flex-col rounded-xl border border-muted/50 bg-background/80 p-4 shadow-sm transition', 'hover:border-accent/30 hover:bg-accent/[0.03] hover:shadow-md')}>
               <div className="flex items-start justify-between gap-2">
-                <span
-                  className={cn(
-                    'inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary ring-1 ring-primary/10',
-                  )}
-                >
-                  <Icon className="size-5" aria-hidden />
+                <span className={cn('inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary ring-1 ring-primary/10')}>
+                  <Icon className="size-5" aria-hidden/>
                 </span>
-                <ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" aria-hidden />
+                <ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" aria-hidden/>
               </div>
               <p className="mt-3 text-sm font-semibold text-foreground">{tile.title}</p>
               <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{tile.description}</p>
-            </Link>
-          )
+            </Link>);
         })}
       </div>
-    </div>
-  )
+    </div>);
 }
-
 type DashboardWorkHubProps = {
-  userRole: string | null
-}
-
+    userRole: string | null;
+};
 /** Hub for core delivery and agency tools. */
 export function DashboardWorkHub({ userRole }: DashboardWorkHubProps) {
-  const role = (userRole ?? 'client') as AuthRole
-  const isClient = role === 'client'
-
-  const coreTiles = isClient
-    ? [...filterByRole(CORE_DELIVERY_TILES, role), ...CLIENT_EXTRA_TILES]
-    : filterByRole(CORE_DELIVERY_TILES, role)
-
-  const growthTiles = filterByRole(GROWTH_TILES, role)
-
-  return (
-    <Card className={cn(DASHBOARD_THEME.cards.base)}>
+    const role = (userRole ?? 'client') as AuthRole;
+    const isClient = role === 'client';
+    const coreTiles = isClient
+        ? [...filterByRole(CORE_DELIVERY_TILES, role), ...CLIENT_EXTRA_TILES]
+        : filterByRole(CORE_DELIVERY_TILES, role);
+    const growthTiles = filterByRole(GROWTH_TILES, role);
+    return (<Card className={cn(DASHBOARD_THEME.cards.base)}>
       <CardHeader className="space-y-2 border-b border-muted/40 pb-4">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="text-lg tracking-tight">Work hub</CardTitle>
@@ -184,20 +146,9 @@ export function DashboardWorkHub({ userRole }: DashboardWorkHubProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8 pt-6">
-        <HubCluster
-          label={isClient ? 'Your workspace' : 'Core delivery'}
-          description={isClient ? 'Tasks, projects, and team touchpoints.' : 'Execution threads everyone shares.'}
-          tiles={coreTiles}
-        />
+        <HubCluster label={isClient ? 'Your workspace' : 'Core delivery'} description={isClient ? 'Tasks, projects, and team touchpoints.' : 'Execution threads everyone shares.'} tiles={coreTiles}/>
 
-        {!isClient && growthTiles.length > 0 ? (
-          <HubCluster
-            label="Agency tools"
-            description="Analytics, ads, proposals, and measurement."
-            tiles={growthTiles}
-          />
-        ) : null}
+        {!isClient && growthTiles.length > 0 ? (<HubCluster label="Agency tools" description="Analytics, ads, proposals, and measurement." tiles={growthTiles}/>) : null}
       </CardContent>
-    </Card>
-  )
+    </Card>);
 }

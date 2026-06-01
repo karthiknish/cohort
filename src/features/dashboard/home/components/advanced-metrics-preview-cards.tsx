@@ -1,22 +1,17 @@
-'use client'
-
-import { Info } from 'lucide-react'
-
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Skeleton } from '@/shared/ui/skeleton'
-import { formatCurrency } from '@/lib/utils'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip'
-
+'use client';
+import { Info } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Skeleton } from '@/shared/ui/skeleton';
+import { formatCurrency } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 type Props = {
-  mer: number
-  aov: number
-  rpc: number
-  isLoading: boolean
-}
-
+    mer: number;
+    aov: number;
+    rpc: number;
+    isLoading: boolean;
+};
 export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props) {
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    return (<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <Card className="border-muted/30 bg-muted/5 shadow-sm motion-chromatic hover:bg-muted/10">
         <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-1.5">
           <div className="flex items-center gap-2">
@@ -24,7 +19,7 @@ export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props)
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="size-3 text-muted-foreground/40 transition-colors hover:text-primary" />
+                  <Info className="size-3 text-muted-foreground/40 transition-colors hover:text-primary"/>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs">Marketing Efficiency Ratio: Total Revenue / Total Spend</p>
@@ -34,7 +29,7 @@ export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props)
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? <Skeleton className="h-7 w-16 rounded-lg" /> : <div className="text-xl font-bold tracking-tight text-foreground">{mer.toFixed(2)}x</div>}
+          {isLoading ? <Skeleton className="h-7 w-16 rounded-lg"/> : <div className="text-xl font-bold tracking-tight text-foreground">{mer.toFixed(2)}x</div>}
         </CardContent>
       </Card>
 
@@ -45,7 +40,7 @@ export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props)
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="size-3 text-muted-foreground/40 transition-colors hover:text-primary" />
+                  <Info className="size-3 text-muted-foreground/40 transition-colors hover:text-primary"/>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs">Average revenue generated per conversion</p>
@@ -55,7 +50,7 @@ export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props)
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? <Skeleton className="h-7 w-20 rounded-lg" /> : <div className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(aov)}</div>}
+          {isLoading ? <Skeleton className="h-7 w-20 rounded-lg"/> : <div className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(aov)}</div>}
         </CardContent>
       </Card>
 
@@ -66,7 +61,7 @@ export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props)
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="size-3 text-muted-foreground/40 transition-colors hover:text-primary" />
+                  <Info className="size-3 text-muted-foreground/40 transition-colors hover:text-primary"/>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs">Average revenue generated for every click</p>
@@ -76,9 +71,8 @@ export function AdvancedMetricsPreviewCards({ mer, aov, rpc, isLoading }: Props)
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? <Skeleton className="h-7 w-16 rounded-lg" /> : <div className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(rpc)}</div>}
+          {isLoading ? <Skeleton className="h-7 w-16 rounded-lg"/> : <div className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(rpc)}</div>}
         </CardContent>
       </Card>
-    </div>
-  )
+    </div>);
 }

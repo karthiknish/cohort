@@ -1,1 +1,1 @@
-export * from '../lib/client-summary'
+export * from '../lib/client-summary';

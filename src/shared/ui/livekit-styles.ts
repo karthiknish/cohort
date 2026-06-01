@@ -1,1 +1,1 @@
-import '@livekit/components-styles'
+import '@livekit/components-styles';

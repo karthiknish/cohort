@@ -1,13 +1,11 @@
-import type { ProjectRecord, TaskRecord } from './types'
-import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
-import type { MilestoneRecord } from '@/types/milestones'
-import { mergeProposalForm } from '@/lib/proposals'
-import { getPreviewClients } from './clients'
-import { isoDaysAgo, withPreviewModeSearchParam } from './utils'
-
+import type { ProjectRecord, TaskRecord } from './types';
+import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals';
+import type { MilestoneRecord } from '@/types/milestones';
+import { mergeProposalForm } from '@/lib/proposals';
+import { getPreviewClients } from './clients';
+import { isoDaysAgo, withPreviewModeSearchParam } from './utils';
 function buildPreviewDeck(proposalId: string, instructions: string): ProposalPresentationDeck {
-    const previewRoute = withPreviewModeSearchParam(`/dashboard/proposals/${proposalId}/deck`)
-
+    const previewRoute = withPreviewModeSearchParam(`/dashboard/proposals/${proposalId}/deck`);
     return {
         generationId: `preview-deck-${proposalId}`,
         status: 'ready',
@@ -21,13 +19,11 @@ function buildPreviewDeck(proposalId: string, instructions: string): ProposalPre
         pdfStorageUrl: null,
         warnings: null,
         error: null,
-    }
+    };
 }
-
 export function getPreviewProjects(clientId: string | null): ProjectRecord[] {
-    const clients = getPreviewClients()
-    const clientNameFromId = new Map(clients.map((c) => [c.id, c.name]))
-
+    const clients = getPreviewClients();
+    const clientNameFromId = new Map(clients.map((c) => [c.id, c.name]));
     const projects: ProjectRecord[] = [
         {
             id: 'preview-project-1',
@@ -114,21 +110,16 @@ export function getPreviewProjects(clientId: string | null): ProjectRecord[] {
             openTaskCount: 3,
             recentActivityAt: isoDaysAgo(10),
         },
-    ]
-
-    if (!clientId) return projects
-    return projects.filter((p) => p.clientId === clientId)
+    ];
+    if (!clientId)
+        return projects;
+    return projects.filter((p) => p.clientId === clientId);
 }
-
-export function getPreviewProjectMilestones(
-    clientId: string | null,
-    projectIds?: string[],
-): Record<string, MilestoneRecord[]> {
-    const visibleProjectIds = new Set(getPreviewProjects(clientId).map((project) => project.id))
+export function getPreviewProjectMilestones(clientId: string | null, projectIds?: string[]): Record<string, MilestoneRecord[]> {
+    const visibleProjectIds = new Set(getPreviewProjects(clientId).map((project) => project.id));
     const scopedProjectIds = Array.isArray(projectIds) && projectIds.length > 0
         ? new Set(projectIds.filter((projectId) => visibleProjectIds.has(projectId)))
-        : visibleProjectIds
-
+        : visibleProjectIds;
     const milestones: MilestoneRecord[] = [
         {
             id: 'preview-milestone-1',
@@ -260,24 +251,20 @@ export function getPreviewProjectMilestones(
             createdAt: isoDaysAgo(18),
             updatedAt: isoDaysAgo(6),
         },
-    ]
-
+    ];
     return milestones.reduce<Record<string, MilestoneRecord[]>>((acc, milestone) => {
         if (!scopedProjectIds.has(milestone.projectId)) {
-            return acc
+            return acc;
         }
-
-        const existing = acc[milestone.projectId] ?? []
-        acc[milestone.projectId] = [...existing, milestone].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        return acc
-    }, {})
+        const existing = acc[milestone.projectId] ?? [];
+        acc[milestone.projectId] = [...existing, milestone].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        return acc;
+    }, {});
 }
-
 export function getPreviewTasks(clientId: string | null): TaskRecord[] {
-    const clientNameFromId = new Map(getPreviewClients().map((c) => [c.id, c.name]))
+    const clientNameFromId = new Map(getPreviewClients().map((c) => [c.id, c.name]));
     // During SSR, use a fixed date to prevent hydration mismatches
-    const now = typeof window === 'undefined' ? new Date('2024-01-15T12:00:00.000Z') : new Date()
-
+    const now = typeof window === 'undefined' ? new Date('2024-01-15T12:00:00.000Z') : new Date();
     const tasks: TaskRecord[] = [
         {
             id: 'preview-task-1',
@@ -478,16 +465,14 @@ export function getPreviewTasks(clientId: string | null): TaskRecord[] {
             timeSpentMinutes: 160,
             estimatedMinutes: 150,
         },
-    ]
-
-    if (!clientId) return tasks
-    return tasks.filter((t) => t.clientId === clientId)
+    ];
+    if (!clientId)
+        return tasks;
+    return tasks.filter((t) => t.clientId === clientId);
 }
-
 export function getPreviewProposals(clientId: string | null): ProposalDraft[] {
-    const clients = getPreviewClients()
-    const clientNameFromId = new Map(clients.map((c) => [c.id, c.name]))
-
+    const clients = getPreviewClients();
+    const clientNameFromId = new Map(clients.map((c) => [c.id, c.name]));
     const proposals: ProposalDraft[] = [
         {
             id: 'preview-proposal-1',
@@ -536,10 +521,7 @@ export function getPreviewProposals(clientId: string | null): ProposalDraft[] {
                 summary: 'Prioritize LinkedIn demand capture with executive-proof creative themes and use Google Search to harvest high-intent demand already in market.',
             },
             aiSuggestions: 'Based on your goals, we recommend focusing on LinkedIn and Google Ads for B2B lead generation, combined with thought leadership content to build brand authority.',
-            presentationDeck: buildPreviewDeck(
-                'preview-proposal-1',
-                'Slide 1: Executive Growth Snapshot * Position Cohorts as the paid growth partner for Tech Corp * Align around pipeline quality, brand recall, and faster sales cycles Slide 2: Market Opportunity * Capture high-intent demand on Google Search * Build category authority with LinkedIn thought leadership Slide 3: Campaign Architecture * Search for intent capture * LinkedIn for ICP education and retargeting * Landing pages tuned for demo conversion Slide 4: Creative Direction * Executive-proof messaging * Proof-led customer stories * Clear value framing by funnel stage Slide 5: Measurement Plan * Weekly pacing and creative diagnostics * Pipeline contribution dashboard * Monthly board-ready narrative recap'
-            ),
+            presentationDeck: buildPreviewDeck('preview-proposal-1', 'Slide 1: Executive Growth Snapshot * Position Cohorts as the paid growth partner for Tech Corp * Align around pipeline quality, brand recall, and faster sales cycles Slide 2: Market Opportunity * Capture high-intent demand on Google Search * Build category authority with LinkedIn thought leadership Slide 3: Campaign Architecture * Search for intent capture * LinkedIn for ICP education and retargeting * Landing pages tuned for demo conversion Slide 4: Creative Direction * Executive-proof messaging * Proof-led customer stories * Clear value framing by funnel stage Slide 5: Measurement Plan * Weekly pacing and creative diagnostics * Pipeline contribution dashboard * Monthly board-ready narrative recap'),
             pptUrl: withPreviewModeSearchParam('/dashboard/proposals/preview-proposal-1/deck'),
             pdfUrl: null,
             createdAt: isoDaysAgo(7),
@@ -648,18 +630,15 @@ export function getPreviewProposals(clientId: string | null): ProposalDraft[] {
                 summary: 'Retention gains will likely come from pairing dynamic remarketing with segmented lifecycle email flows for high-value customers and lapsed holiday buyers.',
             },
             aiSuggestions: 'For retail, we suggest a multi-touch approach combining retargeting ads, personalized email sequences, and a referral program to maximize customer lifetime value.',
-            presentationDeck: buildPreviewDeck(
-                'preview-proposal-3',
-                'Slide 1: Retention Growth Plan * Focus on repeat purchase rate and AOV expansion * Align promotions to lifecycle triggers Slide 2: Audience Segments * VIP loyalists * Recent one-time buyers * Lapsed holiday purchasers Slide 3: Channel Mix * Meta dynamic remarketing for product recall * Email journeys for replenishment and loyalty nudges * Referral loop for advocacy Slide 4: Offer Strategy * Tiered loyalty perks * Bundled spring promotions * Margin-safe win-back offers Slide 5: Measurement Plan * Repeat purchase rate by segment * Revenue per recipient * Incremental ROAS from remarketing cohorts'
-            ),
+            presentationDeck: buildPreviewDeck('preview-proposal-3', 'Slide 1: Retention Growth Plan * Focus on repeat purchase rate and AOV expansion * Align promotions to lifecycle triggers Slide 2: Audience Segments * VIP loyalists * Recent one-time buyers * Lapsed holiday purchasers Slide 3: Channel Mix * Meta dynamic remarketing for product recall * Email journeys for replenishment and loyalty nudges * Referral loop for advocacy Slide 4: Offer Strategy * Tiered loyalty perks * Bundled spring promotions * Margin-safe win-back offers Slide 5: Measurement Plan * Repeat purchase rate by segment * Revenue per recipient * Incremental ROAS from remarketing cohorts'),
             pptUrl: withPreviewModeSearchParam('/dashboard/proposals/preview-proposal-3/deck'),
             pdfUrl: null,
             createdAt: isoDaysAgo(14),
             updatedAt: isoDaysAgo(10),
             lastAutosaveAt: isoDaysAgo(10),
         },
-    ]
-
-    if (!clientId) return proposals
-    return proposals.filter((p) => p.clientId === clientId)
+    ];
+    if (!clientId)
+        return proposals;
+    return proposals.filter((p) => p.clientId === clientId);
 }

@@ -1,37 +1,22 @@
-'use client'
-
+'use client';
 /**
  * @deprecated Use global notification settings at /settings?tab=notifications.
  * This entry opens the workspace notification preferences panel.
  */
-import Link from 'next/link'
-import { Bell } from 'lucide-react'
-
-import { Button } from '@/shared/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/shared/ui/dialog'
-
+import Link from 'next/link';
+import { Bell } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from '@/shared/ui/dialog';
 type NotificationSettingsProps = {
-  trigger?: React.ReactNode
-}
-
+    trigger?: React.ReactNode;
+};
 export function NotificationSettings({ trigger }: NotificationSettingsProps) {
-  return (
-    <Dialog>
+    return (<Dialog>
       <DialogTrigger asChild>
-        {trigger ?? (
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs">
-            <Bell className="size-3.5" aria-hidden />
+        {trigger ?? (<Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs">
+            <Bell className="size-3.5" aria-hidden/>
             Notifications
-          </Button>
-        )}
+          </Button>)}
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -50,6 +35,5 @@ export function NotificationSettings({ trigger }: NotificationSettingsProps) {
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
-  )
+    </Dialog>);
 }

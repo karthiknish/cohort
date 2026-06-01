@@ -1,101 +1,47 @@
-'use client'
-
-import { useCallback, useMemo } from 'react'
-import Link from 'next/link'
-import {
-  CircleAlert,
-  MoreHorizontal,
-  RefreshCw,
-  ShieldCheck,
-  Trash2,
-  UserPlus,
-  Users as UsersIcon,
-} from 'lucide-react'
-
-import { Badge } from '@/shared/ui/badge'
-import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Checkbox } from '@/shared/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/shared/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu'
-import { Input } from '@/shared/ui/input'
-import { Label } from '@/shared/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
-import { formatRelativeTime } from '@/lib/dates'
-import { cn } from '@/lib/utils'
-import { ADMIN_USER_ROLES, type AdminUserRecord, type AdminUserRole } from '@/types/admin'
-import { AdminActionErrorAlert } from '../components/admin-action-error-alert'
-import { AdminQueryErrorAlert } from '../components/admin-query-error-alert'
-import { AdminPageShell } from '../components/admin-page-shell'
-import {
-  INVITATION_STATUSES,
-  ROLE_ASSIGNABLE,
-  STATUS_OPTIONS,
-  invitationStatusLabel,
-  roleLabel,
-  statusLabel,
-  type AdminInvitationRecord,
-  type InvitationLifecycleStatus,
-} from './admin-users-types'
-
+'use client';
+import { useCallback, useMemo } from 'react';
+import Link from 'next/link';
+import { CircleAlert, MoreHorizontal, RefreshCw, ShieldCheck, Trash2, UserPlus, Users as UsersIcon, } from 'lucide-react';
+import { Badge } from '@/shared/ui/badge';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Checkbox } from '@/shared/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from '@/shared/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
+import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+import { formatRelativeTime } from '@/lib/dates';
+import { cn } from '@/lib/utils';
+import { ADMIN_USER_ROLES, type AdminUserRecord, type AdminUserRole } from '@/types/admin';
+import { AdminActionErrorAlert } from '../components/admin-action-error-alert';
+import { AdminQueryErrorAlert } from '../components/admin-query-error-alert';
+import { AdminPageShell } from '../components/admin-page-shell';
+import { INVITATION_STATUSES, ROLE_ASSIGNABLE, STATUS_OPTIONS, invitationStatusLabel, roleLabel, statusLabel, type AdminInvitationRecord, type InvitationLifecycleStatus, } from './admin-users-types';
 export function AdminUsersSignInRequired() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
+    return (<div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
       <Card className="max-w-md border-muted/60">
         <CardHeader>
           <CardTitle className="text-lg">Sign in required</CardTitle>
           <CardDescription>Log in to an admin account to approve new users.</CardDescription>
         </CardHeader>
       </Card>
-    </div>
-  )
+    </div>);
 }
-
-function UserRow({
-  record,
-  savingId,
-  onRoleChange,
-  onApprovalToggle,
-  onViewDetails,
-  onRevokeAccess,
-}: {
-  record: AdminUserRecord
-  savingId: string | null
-  onRoleChange: (record: AdminUserRecord, role: AdminUserRole) => void
-  onApprovalToggle: (record: AdminUserRecord, approved: boolean) => void
-  onViewDetails: (user: AdminUserRecord) => void
-  onRevokeAccess: (user: AdminUserRecord) => void
+function UserRow({ record, savingId, onRoleChange, onApprovalToggle, onViewDetails, onRevokeAccess, }: {
+    record: AdminUserRecord;
+    savingId: string | null;
+    onRoleChange: (record: AdminUserRecord, role: AdminUserRole) => void;
+    onApprovalToggle: (record: AdminUserRecord, approved: boolean) => void;
+    onViewDetails: (user: AdminUserRecord) => void;
+    onRevokeAccess: (user: AdminUserRecord) => void;
 }) {
-  const handleRoleChange = useCallback(
-    (value: string) => onRoleChange(record, value as AdminUserRole),
-    [onRoleChange, record]
-  )
-
-  const handleApprovalToggle = useCallback(
-    (checked: boolean | 'indeterminate') => onApprovalToggle(record, checked === true),
-    [onApprovalToggle, record]
-  )
-
-  const handleViewDetails = useCallback(() => onViewDetails(record), [onViewDetails, record])
-  const handleRevokeAccess = useCallback(() => onRevokeAccess(record), [onRevokeAccess, record])
-
-  return (
-    <tr className="border-b border-muted/20">
+    const handleRoleChange = (value: string) => onRoleChange(record, value as AdminUserRole);
+    const handleApprovalToggle = (checked: boolean | 'indeterminate') => onApprovalToggle(record, checked === true);
+    const handleViewDetails = () => onViewDetails(record);
+    const handleRevokeAccess = () => onRevokeAccess(record);
+    return (<tr className="border-b border-muted/20">
       <th scope="row" className="py-3 pr-3 text-left font-normal">
         <div className="flex items-center gap-3">
           <div className="flex flex-col">
@@ -105,29 +51,19 @@ function UserRow({
         </div>
       </th>
       <td className="py-3 pr-3">
-        <Select
-          value={record.role}
-          onValueChange={handleRoleChange}
-          disabled={savingId === record.id}
-        >
+        <Select value={record.role} onValueChange={handleRoleChange} disabled={savingId === record.id}>
           <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {ROLE_ASSIGNABLE.map((role) => (
-              <SelectItem key={role} value={role}>
+            {ROLE_ASSIGNABLE.map((role) => (<SelectItem key={role} value={role}>
                 {roleLabel(role)}
-              </SelectItem>
-            ))}
+              </SelectItem>))}
           </SelectContent>
         </Select>
       </td>
       <td className="py-3 pr-3 text-center">
-        <Checkbox
-          checked={record.status === 'active'}
-          onCheckedChange={handleApprovalToggle}
-          disabled={savingId === record.id}
-        />
+        <Checkbox checked={record.status === 'active'} onCheckedChange={handleApprovalToggle} disabled={savingId === record.id}/>
       </td>
       <td className="py-3 pr-3">
         <Badge variant={record.status === 'active' ? 'default' : 'secondary'}>
@@ -141,7 +77,7 @@ function UserRow({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="ghost" size="sm" aria-label={`Actions for ${record.name}`}>
-              <MoreHorizontal className="size-4" aria-hidden />
+              <MoreHorizontal className="size-4" aria-hidden/>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -149,39 +85,25 @@ function UserRow({
               View details
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleRevokeAccess}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="mr-2 size-4" />
+            <DropdownMenuItem onClick={handleRevokeAccess} className="text-destructive focus:text-destructive">
+              <Trash2 className="mr-2 size-4"/>
               Revoke access
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </td>
-    </tr>
-  )
+    </tr>);
 }
-
-function InvitationRow({
-  invitation,
-  invitationActionKey,
-  onResend,
-  onRevoke,
-}: {
-  invitation: AdminInvitationRecord
-  invitationActionKey: string | null
-  onResend: (invitation: AdminInvitationRecord) => void
-  onRevoke: (invitation: AdminInvitationRecord) => void
+function InvitationRow({ invitation, invitationActionKey, onResend, onRevoke, }: {
+    invitation: AdminInvitationRecord;
+    invitationActionKey: string | null;
+    onResend: (invitation: AdminInvitationRecord) => void;
+    onRevoke: (invitation: AdminInvitationRecord) => void;
 }) {
-  const isLoading = invitationActionKey === invitation.id
-
-  const handleResend = useCallback(() => onResend(invitation), [invitation, onResend])
-
-  const handleRevoke = useCallback(() => onRevoke(invitation), [invitation, onRevoke])
-
-  return (
-    <tr className="border-b border-muted/20">
+    const isLoading = invitationActionKey === invitation.id;
+    const handleResend = () => onResend(invitation);
+    const handleRevoke = () => onRevoke(invitation);
+    return (<tr className="border-b border-muted/20">
       <th scope="row" className="py-3 pr-3 text-left font-normal">
         <div className="flex flex-col">
           <span className="font-medium">{invitation.name || invitation.email}</span>
@@ -192,17 +114,13 @@ function InvitationRow({
         <Badge variant="outline">{invitation.role}</Badge>
       </td>
       <td className="py-3 pr-3">
-        <Badge
-          variant={
-            invitation.effectiveStatus === 'accepted'
-              ? 'default'
-              : invitation.effectiveStatus === 'expired'
-              ? 'destructive'
-              : invitation.effectiveStatus === 'revoked'
-              ? 'secondary'
-              : 'outline'
-          }
-        >
+        <Badge variant={invitation.effectiveStatus === 'accepted'
+            ? 'default'
+            : invitation.effectiveStatus === 'expired'
+                ? 'destructive'
+                : invitation.effectiveStatus === 'revoked'
+                    ? 'secondary'
+                    : 'outline'}>
           {invitation.effectiveStatus}
         </Badge>
       </td>
@@ -217,45 +135,31 @@ function InvitationRow({
       </td>
       <td className="py-3 text-right">
         <div className="flex justify-end gap-2">
-          {invitation.effectiveStatus === 'pending' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleResend}
-              disabled={isLoading}
-            >
+          {invitation.effectiveStatus === 'pending' && (<Button variant="outline" size="sm" onClick={handleResend} disabled={isLoading}>
               Resend
-            </Button>
-          )}
-          {(invitation.effectiveStatus === 'pending' || invitation.effectiveStatus === 'expired') && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRevoke}
-              disabled={isLoading}
-              className="text-destructive hover:text-destructive"
-            >
+            </Button>)}
+          {(invitation.effectiveStatus === 'pending' || invitation.effectiveStatus === 'expired') && (<Button variant="outline" size="sm" onClick={handleRevoke} disabled={isLoading} className="text-destructive hover:text-destructive">
               Revoke
-            </Button>
-          )}
+            </Button>)}
         </div>
       </td>
-    </tr>
-  )
+    </tr>);
 }
-
 type AdminUsersSummaryCardsProps = {
-  summary: { total: number; pending: number; internal: number; clients: number }
-  loading: boolean
-}
-
+    summary: {
+        total: number;
+        pending: number;
+        internal: number;
+        clients: number;
+    };
+    loading: boolean;
+};
 export function AdminUsersSummaryCards({ summary, loading }: AdminUsersSummaryCardsProps) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    return (<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Card className="border-muted/60 bg-background">
         <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total users</CardTitle>
-          <UsersIcon className={cn('size-4 text-muted-foreground', loading && 'animate-spin')} />
+          <UsersIcon className={cn('size-4 text-muted-foreground', loading && 'animate-spin')}/>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-semibold">{summary.total}</div>
@@ -266,7 +170,7 @@ export function AdminUsersSummaryCards({ summary, loading }: AdminUsersSummaryCa
       <Card className="border-muted/60 bg-background">
         <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Pending approval</CardTitle>
-          <CircleAlert className="size-4 text-warning" />
+          <CircleAlert className="size-4 text-warning"/>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-semibold">{summary.pending}</div>
@@ -277,7 +181,7 @@ export function AdminUsersSummaryCards({ summary, loading }: AdminUsersSummaryCa
       <Card className="border-muted/60 bg-background">
         <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Internal team</CardTitle>
-          <ShieldCheck className="size-4 text-primary" />
+          <ShieldCheck className="size-4 text-primary"/>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-semibold">{summary.internal}</div>
@@ -288,104 +192,71 @@ export function AdminUsersSummaryCards({ summary, loading }: AdminUsersSummaryCa
       <Card className="border-muted/60 bg-background">
         <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Client access</CardTitle>
-          <UsersIcon className="size-4 text-muted-foreground" />
+          <UsersIcon className="size-4 text-muted-foreground"/>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-semibold">{summary.clients}</div>
           <p className="text-xs text-muted-foreground">Accounts currently marked as client users</p>
         </CardContent>
       </Card>
-    </div>
-  )
+    </div>);
 }
-
 type AdminUsersDirectorySectionProps = {
-  loading: boolean
-  listQueryError: string | null
-  actionError: string | null
-  clearActionError: () => void
-  searchTerm: string
-  statusFilter: string
-  roleFilter: string
-  filteredUsers: AdminUserRecord[]
-  savingId: string | null
-  paginatedStatus: string
-  loadingMore: boolean
-  onSearchChange: (event: React.ChangeEvent<HTMLInputElement>) => void
-  onStatusFilterChange: (value: string) => void
-  onRoleFilterChange: (value: string) => void
-  onRoleChange: (record: AdminUserRecord, role: AdminUserRole) => void
-  onApprovalToggle: (record: AdminUserRecord, approved: boolean) => void
-  onViewDetails: (user: AdminUserRecord) => void
-  onRevokeAccess: (user: AdminUserRecord) => void
-  onLoadMore: () => void
-}
-
-export function AdminUsersDirectorySection({
-  loading,
-  listQueryError,
-  actionError,
-  clearActionError,
-  searchTerm,
-  statusFilter,
-  roleFilter,
-  filteredUsers,
-  savingId,
-  paginatedStatus,
-  loadingMore,
-  onSearchChange,
-  onStatusFilterChange,
-  onRoleFilterChange,
-  onRoleChange,
-  onApprovalToggle,
-  onViewDetails,
-  onRevokeAccess,
-  onLoadMore,
-}: AdminUsersDirectorySectionProps) {
-  return (
-    <Card className="border-muted/60 bg-background">
+    loading: boolean;
+    listQueryError: string | null;
+    actionError: string | null;
+    clearActionError: () => void;
+    searchTerm: string;
+    statusFilter: string;
+    roleFilter: string;
+    filteredUsers: AdminUserRecord[];
+    savingId: string | null;
+    paginatedStatus: string;
+    loadingMore: boolean;
+    onSearchChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onStatusFilterChange: (value: string) => void;
+    onRoleFilterChange: (value: string) => void;
+    onRoleChange: (record: AdminUserRecord, role: AdminUserRole) => void;
+    onApprovalToggle: (record: AdminUserRecord, approved: boolean) => void;
+    onViewDetails: (user: AdminUserRecord) => void;
+    onRevokeAccess: (user: AdminUserRecord) => void;
+    onLoadMore: () => void;
+};
+export function AdminUsersDirectorySection({ loading, listQueryError, actionError, clearActionError, searchTerm, statusFilter, roleFilter, filteredUsers, savingId, paginatedStatus, loadingMore, onSearchChange, onStatusFilterChange, onRoleFilterChange, onRoleChange, onApprovalToggle, onViewDetails, onRevokeAccess, onLoadMore, }: AdminUsersDirectorySectionProps) {
+    return (<Card className="border-muted/60 bg-background">
       <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <CardTitle className="text-lg">Account directory</CardTitle>
           <CardDescription>Filter by status or role, approve users, and assign access. Internal staffing and client ownership are managed on the Team and Client pages.</CardDescription>
         </div>
         <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-center">
-          <Input
-            placeholder="Search by name or email"
-            value={searchTerm}
-            onChange={onSearchChange}
-            className="lg:w-64"
-          />
+          <Input placeholder="Search by name or email" value={searchTerm} onChange={onSearchChange} className="lg:w-64"/>
           <Select value={statusFilter} onValueChange={onStatusFilterChange}>
             <SelectTrigger className="lg:w-40">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder="Filter by status"/>
             </SelectTrigger>
             <SelectContent>
-              {STATUS_OPTIONS.map((status) => (
-                <SelectItem key={status} value={status}>
+              {STATUS_OPTIONS.map((status) => (<SelectItem key={status} value={status}>
                   {statusLabel(status)}
-                </SelectItem>
-              ))}
+                </SelectItem>))}
             </SelectContent>
           </Select>
           <Select value={roleFilter} onValueChange={onRoleFilterChange}>
             <SelectTrigger className="lg:w-40">
-              <SelectValue placeholder="Filter by role" />
+              <SelectValue placeholder="Filter by role"/>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All roles</SelectItem>
-              {ADMIN_USER_ROLES.map((role) => (
-                <SelectItem key={role} value={role}>
+              {ADMIN_USER_ROLES.map((role) => (<SelectItem key={role} value={role}>
                   {role.charAt(0).toUpperCase() + role.slice(1)}
-                </SelectItem>
-              ))}
+                </SelectItem>))}
             </SelectContent>
           </Select>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <AdminQueryErrorAlert error={listQueryError} title="Unable to load workspace data" />
-        <AdminActionErrorAlert error={actionError} onDismiss={clearActionError} />
+        <AdminQueryErrorAlert error={listQueryError} title="Unable to load workspace data"/>
+        <AdminActionErrorAlert error={actionError} onDismiss={clearActionError}/>
         <div className="overflow-x-auto rounded-md border border-muted/40">
           <table className="min-w-full table-fixed text-left text-sm">
             <caption className="sr-only">Workspace users, roles, and approval status</caption>
@@ -400,79 +271,42 @@ export function AdminUsersDirectorySection({
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.length === 0 ? (
-                <tr>
+              {filteredUsers.length === 0 ? (<tr>
                   <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                     {loading
-                      ? 'Loading users…'
-                      : listQueryError
-                        ? listQueryError
-                        : 'No users match the current filters.'}
+                ? 'Loading users…'
+                : listQueryError
+                    ? listQueryError
+                    : 'No users match the current filters.'}
                   </td>
-                </tr>
-              ) : (
-                filteredUsers.map((record) => (
-                  <UserRow
-                    key={record.id}
-                    record={record}
-                    savingId={savingId}
-                    onRoleChange={onRoleChange}
-                    onApprovalToggle={onApprovalToggle}
-                    onViewDetails={onViewDetails}
-                    onRevokeAccess={onRevokeAccess}
-                  />
-                ))
-              )}
+                </tr>) : (filteredUsers.map((record) => (<UserRow key={record.id} record={record} savingId={savingId} onRoleChange={onRoleChange} onApprovalToggle={onApprovalToggle} onViewDetails={onViewDetails} onRevokeAccess={onRevokeAccess}/>)))}
             </tbody>
           </table>
         </div>
 
-        {paginatedStatus === 'CanLoadMore' ? (
-          <div className="mt-6 flex justify-center">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onLoadMore}
-              disabled={loadingMore}
-              className="inline-flex items-center gap-2"
-            >
-              {loadingMore ? <RefreshCw className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+        {paginatedStatus === 'CanLoadMore' ? (<div className="mt-6 flex justify-center">
+            <Button type="button" variant="outline" onClick={onLoadMore} disabled={loadingMore} className="inline-flex items-center gap-2">
+              {loadingMore ? <RefreshCw className="size-4 animate-spin"/> : <RefreshCw className="size-4"/>}
               {loadingMore ? 'Loading…' : 'Load more'}
             </Button>
-          </div>
-        ) : null}
+          </div>) : null}
       </CardContent>
-    </Card>
-  )
+    </Card>);
 }
-
 type AdminUsersInvitationsSectionProps = {
-  invitationSearchTerm: string
-  invitationStatusFilter: InvitationLifecycleStatus
-  invitationSummary: Record<InvitationLifecycleStatus, number>
-  invitationsLoading: boolean
-  filteredInvitations: AdminInvitationRecord[]
-  invitationActionKey: string | null
-  onInvitationSearchChange: (event: React.ChangeEvent<HTMLInputElement>) => void
-  onInvitationStatusFilterChange: (value: string) => void
-  onResend: (invitation: AdminInvitationRecord) => void
-  onRevoke: (invitation: AdminInvitationRecord) => void
-}
-
-export function AdminUsersInvitationsSection({
-  invitationSearchTerm,
-  invitationStatusFilter,
-  invitationSummary,
-  invitationsLoading,
-  filteredInvitations,
-  invitationActionKey,
-  onInvitationSearchChange,
-  onInvitationStatusFilterChange,
-  onResend,
-  onRevoke,
-}: AdminUsersInvitationsSectionProps) {
-  return (
-    <Card className="border-muted/60 bg-background">
+    invitationSearchTerm: string;
+    invitationStatusFilter: InvitationLifecycleStatus;
+    invitationSummary: Record<InvitationLifecycleStatus, number>;
+    invitationsLoading: boolean;
+    filteredInvitations: AdminInvitationRecord[];
+    invitationActionKey: string | null;
+    onInvitationSearchChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onInvitationStatusFilterChange: (value: string) => void;
+    onResend: (invitation: AdminInvitationRecord) => void;
+    onRevoke: (invitation: AdminInvitationRecord) => void;
+};
+export function AdminUsersInvitationsSection({ invitationSearchTerm, invitationStatusFilter, invitationSummary, invitationsLoading, filteredInvitations, invitationActionKey, onInvitationSearchChange, onInvitationStatusFilterChange, onResend, onRevoke, }: AdminUsersInvitationsSectionProps) {
+    return (<Card className="border-muted/60 bg-background">
       <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <CardTitle className="text-lg">Invitation lifecycle</CardTitle>
@@ -480,25 +314,14 @@ export function AdminUsersInvitationsSection({
             Track pending, accepted, expired, and revoked invitations. Resend expired invites or revoke outstanding ones.
           </CardDescription>
         </div>
-        <Input
-          value={invitationSearchTerm}
-          onChange={onInvitationSearchChange}
-          placeholder="Search invitations by name or email"
-          className="lg:w-72"
-        />
+        <Input value={invitationSearchTerm} onChange={onInvitationSearchChange} placeholder="Search invitations by name or email" className="lg:w-72"/>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Tabs
-          value={invitationStatusFilter}
-          onValueChange={onInvitationStatusFilterChange}
-          className="space-y-4"
-        >
+        <Tabs value={invitationStatusFilter} onValueChange={onInvitationStatusFilterChange} className="space-y-4">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
-            {INVITATION_STATUSES.map((status) => (
-              <TabsTrigger key={status} value={status} className="capitalize">
+            {INVITATION_STATUSES.map((status) => (<TabsTrigger key={status} value={status} className="capitalize">
                 {invitationStatusLabel(status)} ({invitationSummary[status]})
-              </TabsTrigger>
-            ))}
+              </TabsTrigger>))}
           </TabsList>
         </Tabs>
 
@@ -517,62 +340,34 @@ export function AdminUsersInvitationsSection({
               </tr>
             </thead>
             <tbody>
-              {filteredInvitations.length === 0 ? (
-                <tr>
+              {filteredInvitations.length === 0 ? (<tr>
                   <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                     {invitationsLoading
-                      ? 'Loading invitation lifecycle…'
-                      : 'No invitations match this lifecycle status and search.'}
+                ? 'Loading invitation lifecycle…'
+                : 'No invitations match this lifecycle status and search.'}
                   </td>
-                </tr>
-              ) : (
-                filteredInvitations.map((invitation) => (
-                  <InvitationRow
-                    key={invitation.id}
-                    invitation={invitation}
-                    invitationActionKey={invitationActionKey}
-                    onResend={onResend}
-                    onRevoke={onRevoke}
-                  />
-                ))
-              )}
+                </tr>) : (filteredInvitations.map((invitation) => (<InvitationRow key={invitation.id} invitation={invitation} invitationActionKey={invitationActionKey} onResend={onResend} onRevoke={onRevoke}/>)))}
             </tbody>
           </table>
         </div>
       </CardContent>
-    </Card>
-  )
+    </Card>);
 }
-
 type AdminUsersPageActionsProps = {
-  loading: boolean
-  inviteOpen: boolean
-  inviteEmail: string
-  inviteRole: string
-  inviteSending: boolean
-  onRefresh: () => void
-  onInviteOpenChange: (open: boolean) => void
-  onInviteEmailChange: (event: React.ChangeEvent<HTMLInputElement>) => void
-  onInviteRoleChange: (value: string) => void
-  onInviteClose: () => void
-  onInviteUser: () => void
-}
-
-export function AdminUsersPageActions({
-  loading,
-  inviteOpen,
-  inviteEmail,
-  inviteRole,
-  inviteSending,
-  onRefresh,
-  onInviteOpenChange,
-  onInviteEmailChange,
-  onInviteRoleChange,
-  onInviteClose,
-  onInviteUser,
-}: AdminUsersPageActionsProps) {
-  return (
-    <>
+    loading: boolean;
+    inviteOpen: boolean;
+    inviteEmail: string;
+    inviteRole: string;
+    inviteSending: boolean;
+    onRefresh: () => void;
+    onInviteOpenChange: (open: boolean) => void;
+    onInviteEmailChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onInviteRoleChange: (value: string) => void;
+    onInviteClose: () => void;
+    onInviteUser: () => void;
+};
+export function AdminUsersPageActions({ loading, inviteOpen, inviteEmail, inviteRole, inviteSending, onRefresh, onInviteOpenChange, onInviteEmailChange, onInviteRoleChange, onInviteClose, onInviteUser, }: AdminUsersPageActionsProps) {
+    return (<>
       <Button asChild variant="outline" size="sm">
         <Link href="/admin/team">Team management</Link>
       </Button>
@@ -580,12 +375,12 @@ export function AdminUsersPageActions({
         <Link href="/admin/clients">Client workspaces</Link>
       </Button>
       <Button type="button" variant="outline" size="sm" onClick={onRefresh} disabled={loading} className="inline-flex items-center gap-2">
-        <RefreshCw className={cn('size-4', loading && 'animate-spin')} /> Refresh
+        <RefreshCw className={cn('size-4', loading && 'animate-spin')}/> Refresh
       </Button>
       <Dialog open={inviteOpen} onOpenChange={onInviteOpenChange}>
         <DialogTrigger asChild>
           <Button size="sm" className="gap-2">
-            <UserPlus className="size-4" /> Invite user
+            <UserPlus className="size-4"/> Invite user
           </Button>
         </DialogTrigger>
         <DialogContent>
@@ -598,12 +393,7 @@ export function AdminUsersPageActions({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email address</Label>
-              <Input
-                id="email"
-                placeholder="colleague@company.com"
-                value={inviteEmail}
-                onChange={onInviteEmailChange}
-              />
+              <Input id="email" placeholder="colleague@company.com" value={inviteEmail} onChange={onInviteEmailChange}/>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="role">Role</Label>
@@ -627,27 +417,17 @@ export function AdminUsersPageActions({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
-  )
+    </>);
 }
-
 type AdminUsersRevokeDialogProps = {
-  revokeOpen: boolean
-  selectedUser: AdminUserRecord | null
-  onOpenChange: (open: boolean) => void
-  onClose: () => void
-  onConfirm: () => void
-}
-
-export function AdminUsersRevokeDialog({
-  revokeOpen,
-  selectedUser,
-  onOpenChange,
-  onClose,
-  onConfirm,
-}: AdminUsersRevokeDialogProps) {
-  return (
-    <Dialog open={revokeOpen} onOpenChange={onOpenChange}>
+    revokeOpen: boolean;
+    selectedUser: AdminUserRecord | null;
+    onOpenChange: (open: boolean) => void;
+    onClose: () => void;
+    onConfirm: () => void;
+};
+export function AdminUsersRevokeDialog({ revokeOpen, selectedUser, onOpenChange, onClose, onConfirm, }: AdminUsersRevokeDialogProps) {
+    return (<Dialog open={revokeOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Revoke access?</DialogTitle>
@@ -662,32 +442,22 @@ export function AdminUsersRevokeDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
-  )
+    </Dialog>);
 }
-
 type AdminUsersDetailDialogProps = {
-  detailsOpen: boolean
-  selectedUser: AdminUserRecord | null
-  onOpenChange: (open: boolean) => void
-  onClose: () => void
-}
-
-export function AdminUsersDetailDialog({
-  detailsOpen,
-  selectedUser,
-  onOpenChange,
-  onClose,
-}: AdminUsersDetailDialogProps) {
-  return (
-    <Dialog open={detailsOpen} onOpenChange={onOpenChange}>
+    detailsOpen: boolean;
+    selectedUser: AdminUserRecord | null;
+    onOpenChange: (open: boolean) => void;
+    onClose: () => void;
+};
+export function AdminUsersDetailDialog({ detailsOpen, selectedUser, onOpenChange, onClose, }: AdminUsersDetailDialogProps) {
+    return (<Dialog open={detailsOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{selectedUser?.name ?? 'User details'}</DialogTitle>
           <DialogDescription>{selectedUser?.email ?? 'Account information'}</DialogDescription>
         </DialogHeader>
-        {selectedUser ? (
-          <dl className="grid gap-3 py-2 text-sm">
+        {selectedUser ? (<dl className="grid gap-3 py-2 text-sm">
             <div className="grid grid-cols-[7rem_1fr] gap-2">
               <dt className="text-muted-foreground">Role</dt>
               <dd>{roleLabel(selectedUser.role)}</dd>
@@ -708,215 +478,84 @@ export function AdminUsersDetailDialog({
               <dt className="text-muted-foreground">Last login</dt>
               <dd>{selectedUser.lastLoginAt ? formatRelativeTime(selectedUser.lastLoginAt) : 'Never'}</dd>
             </div>
-          </dl>
-        ) : null}
+          </dl>) : null}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
-  )
+    </Dialog>);
 }
-
 type AdminUsersPageContentProps = {
-  isPreviewMode: boolean
-  loading: boolean
-  summary: { total: number; pending: number; internal: number; clients: number }
-  listQueryError: string | null
-  actionError: string | null
-  clearActionError: () => void
-  searchTerm: string
-  statusFilter: string
-  roleFilter: string
-  filteredUsers: AdminUserRecord[]
-  savingId: string | null
-  paginatedStatus: string
-  loadingMore: boolean
-  invitationSearchTerm: string
-  invitationStatusFilter: InvitationLifecycleStatus
-  invitationSummary: Record<InvitationLifecycleStatus, number>
-  invitationsLoading: boolean
-  filteredInvitations: AdminInvitationRecord[]
-  invitationActionKey: string | null
-  inviteOpen: boolean
-  inviteEmail: string
-  inviteRole: string
-  inviteSending: boolean
-  revokeOpen: boolean
-  detailsOpen: boolean
-  selectedUser: AdminUserRecord | null
-  onRefresh: () => void
-  onInviteOpenChange: (open: boolean) => void
-  onInviteEmailChange: (event: React.ChangeEvent<HTMLInputElement>) => void
-  onInviteRoleChange: (value: string) => void
-  onInviteClose: () => void
-  onInviteUser: () => void
-  onSearchChange: (event: React.ChangeEvent<HTMLInputElement>) => void
-  onStatusFilterChange: (value: string) => void
-  onRoleFilterChange: (value: string) => void
-  onRoleChange: (record: AdminUserRecord, role: AdminUserRole) => void
-  onApprovalToggle: (record: AdminUserRecord, approved: boolean) => void
-  onViewDetails: (user: AdminUserRecord) => void
-  onRevokeAccess: (user: AdminUserRecord) => void
-  onLoadMore: () => void
-  onInvitationSearchChange: (event: React.ChangeEvent<HTMLInputElement>) => void
-  onInvitationStatusFilterChange: (value: string) => void
-  onResendInvitation: (invitation: AdminInvitationRecord) => void
-  onRevokeInvitation: (invitation: AdminInvitationRecord) => void
-  onDetailsOpenChange: (open: boolean) => void
-  onDetailsClose: () => void
-  onRevokeOpenChange: (open: boolean) => void
-  onRevokeClose: () => void
-  onRevokeConfirm: () => void
-}
-
+    isPreviewMode: boolean;
+    loading: boolean;
+    summary: {
+        total: number;
+        pending: number;
+        internal: number;
+        clients: number;
+    };
+    listQueryError: string | null;
+    actionError: string | null;
+    clearActionError: () => void;
+    searchTerm: string;
+    statusFilter: string;
+    roleFilter: string;
+    filteredUsers: AdminUserRecord[];
+    savingId: string | null;
+    paginatedStatus: string;
+    loadingMore: boolean;
+    invitationSearchTerm: string;
+    invitationStatusFilter: InvitationLifecycleStatus;
+    invitationSummary: Record<InvitationLifecycleStatus, number>;
+    invitationsLoading: boolean;
+    filteredInvitations: AdminInvitationRecord[];
+    invitationActionKey: string | null;
+    inviteOpen: boolean;
+    inviteEmail: string;
+    inviteRole: string;
+    inviteSending: boolean;
+    revokeOpen: boolean;
+    detailsOpen: boolean;
+    selectedUser: AdminUserRecord | null;
+    onRefresh: () => void;
+    onInviteOpenChange: (open: boolean) => void;
+    onInviteEmailChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onInviteRoleChange: (value: string) => void;
+    onInviteClose: () => void;
+    onInviteUser: () => void;
+    onSearchChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onStatusFilterChange: (value: string) => void;
+    onRoleFilterChange: (value: string) => void;
+    onRoleChange: (record: AdminUserRecord, role: AdminUserRole) => void;
+    onApprovalToggle: (record: AdminUserRecord, approved: boolean) => void;
+    onViewDetails: (user: AdminUserRecord) => void;
+    onRevokeAccess: (user: AdminUserRecord) => void;
+    onLoadMore: () => void;
+    onInvitationSearchChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onInvitationStatusFilterChange: (value: string) => void;
+    onResendInvitation: (invitation: AdminInvitationRecord) => void;
+    onRevokeInvitation: (invitation: AdminInvitationRecord) => void;
+    onDetailsOpenChange: (open: boolean) => void;
+    onDetailsClose: () => void;
+    onRevokeOpenChange: (open: boolean) => void;
+    onRevokeClose: () => void;
+    onRevokeConfirm: () => void;
+};
 export function AdminUsersPageContent(props: AdminUsersPageContentProps) {
-  const {
-    isPreviewMode,
-    loading,
-    summary,
-    listQueryError,
-    actionError,
-    clearActionError,
-    searchTerm,
-    statusFilter,
-    roleFilter,
-    filteredUsers,
-    savingId,
-    paginatedStatus,
-    loadingMore,
-    invitationSearchTerm,
-    invitationStatusFilter,
-    invitationSummary,
-    invitationsLoading,
-    filteredInvitations,
-    invitationActionKey,
-    inviteOpen,
-    inviteEmail,
-    inviteRole,
-    inviteSending,
-    revokeOpen,
-    detailsOpen,
-    selectedUser,
-    onRefresh,
-    onInviteOpenChange,
-    onInviteEmailChange,
-    onInviteRoleChange,
-    onInviteClose,
-    onInviteUser,
-    onSearchChange,
-    onStatusFilterChange,
-    onRoleFilterChange,
-    onRoleChange,
-    onApprovalToggle,
-    onViewDetails,
-    onRevokeAccess,
-    onLoadMore,
-    onInvitationSearchChange,
-    onInvitationStatusFilterChange,
-    onResendInvitation,
-    onRevokeInvitation,
-    onDetailsOpenChange,
-    onDetailsClose,
-    onRevokeOpenChange,
-    onRevokeClose,
-    onRevokeConfirm,
-  } = props
-
-  const pageActions = useMemo(
-    () => (
-      <AdminUsersPageActions
-        loading={loading}
-        inviteOpen={inviteOpen}
-        inviteEmail={inviteEmail}
-        inviteRole={inviteRole}
-        inviteSending={inviteSending}
-        onRefresh={onRefresh}
-        onInviteOpenChange={onInviteOpenChange}
-        onInviteEmailChange={onInviteEmailChange}
-        onInviteRoleChange={onInviteRoleChange}
-        onInviteClose={onInviteClose}
-        onInviteUser={onInviteUser}
-      />
-    ),
-    [
-      loading,
-      inviteOpen,
-      inviteEmail,
-      inviteRole,
-      inviteSending,
-      onRefresh,
-      onInviteOpenChange,
-      onInviteEmailChange,
-      onInviteRoleChange,
-      onInviteClose,
-      onInviteUser,
-    ],
-  )
-
-  return (
-    <>
-      <AdminPageShell
-        title="Users and approvals"
-        description={
-          <>
+    const { isPreviewMode, loading, summary, listQueryError, actionError, clearActionError, searchTerm, statusFilter, roleFilter, filteredUsers, savingId, paginatedStatus, loadingMore, invitationSearchTerm, invitationStatusFilter, invitationSummary, invitationsLoading, filteredInvitations, invitationActionKey, inviteOpen, inviteEmail, inviteRole, inviteSending, revokeOpen, detailsOpen, selectedUser, onRefresh, onInviteOpenChange, onInviteEmailChange, onInviteRoleChange, onInviteClose, onInviteUser, onSearchChange, onStatusFilterChange, onRoleFilterChange, onRoleChange, onApprovalToggle, onViewDetails, onRevokeAccess, onLoadMore, onInvitationSearchChange, onInvitationStatusFilterChange, onResendInvitation, onRevokeInvitation, onDetailsOpenChange, onDetailsClose, onRevokeOpenChange, onRevokeClose, onRevokeConfirm, } = props;
+    const pageActions = (<AdminUsersPageActions loading={loading} inviteOpen={inviteOpen} inviteEmail={inviteEmail} inviteRole={inviteRole} inviteSending={inviteSending} onRefresh={onRefresh} onInviteOpenChange={onInviteOpenChange} onInviteEmailChange={onInviteEmailChange} onInviteRoleChange={onInviteRoleChange} onInviteClose={onInviteClose} onInviteUser={onInviteUser}/>);
+    return (<>
+      <AdminPageShell title="Users and approvals" description={<>
             Approve new accounts and assign access. Use Team management for internal staffing and Client workspaces for client allocation.
             {isPreviewMode ? ' Preview mode keeps user changes local to this session.' : ''}
-          </>
-        }
-        isPreviewMode={isPreviewMode}
-        actions={pageActions}
-      >
-        <AdminUsersSummaryCards summary={summary} loading={loading} />
-        <AdminUsersDirectorySection
-          loading={loading}
-          listQueryError={listQueryError}
-          actionError={actionError}
-          clearActionError={clearActionError}
-          searchTerm={searchTerm}
-          statusFilter={statusFilter}
-          roleFilter={roleFilter}
-          filteredUsers={filteredUsers}
-          savingId={savingId}
-          paginatedStatus={paginatedStatus}
-          loadingMore={loadingMore}
-          onSearchChange={onSearchChange}
-          onStatusFilterChange={onStatusFilterChange}
-          onRoleFilterChange={onRoleFilterChange}
-          onRoleChange={onRoleChange}
-          onApprovalToggle={onApprovalToggle}
-          onViewDetails={onViewDetails}
-          onRevokeAccess={onRevokeAccess}
-          onLoadMore={onLoadMore}
-        />
-        <AdminUsersInvitationsSection
-          invitationSearchTerm={invitationSearchTerm}
-          invitationStatusFilter={invitationStatusFilter}
-          invitationSummary={invitationSummary}
-          invitationsLoading={invitationsLoading}
-          filteredInvitations={filteredInvitations}
-          invitationActionKey={invitationActionKey}
-          onInvitationSearchChange={onInvitationSearchChange}
-          onInvitationStatusFilterChange={onInvitationStatusFilterChange}
-          onResend={onResendInvitation}
-          onRevoke={onRevokeInvitation}
-        />
+          </>} isPreviewMode={isPreviewMode} actions={pageActions}>
+        <AdminUsersSummaryCards summary={summary} loading={loading}/>
+        <AdminUsersDirectorySection loading={loading} listQueryError={listQueryError} actionError={actionError} clearActionError={clearActionError} searchTerm={searchTerm} statusFilter={statusFilter} roleFilter={roleFilter} filteredUsers={filteredUsers} savingId={savingId} paginatedStatus={paginatedStatus} loadingMore={loadingMore} onSearchChange={onSearchChange} onStatusFilterChange={onStatusFilterChange} onRoleFilterChange={onRoleFilterChange} onRoleChange={onRoleChange} onApprovalToggle={onApprovalToggle} onViewDetails={onViewDetails} onRevokeAccess={onRevokeAccess} onLoadMore={onLoadMore}/>
+        <AdminUsersInvitationsSection invitationSearchTerm={invitationSearchTerm} invitationStatusFilter={invitationStatusFilter} invitationSummary={invitationSummary} invitationsLoading={invitationsLoading} filteredInvitations={filteredInvitations} invitationActionKey={invitationActionKey} onInvitationSearchChange={onInvitationSearchChange} onInvitationStatusFilterChange={onInvitationStatusFilterChange} onResend={onResendInvitation} onRevoke={onRevokeInvitation}/>
       </AdminPageShell>
 
-      <AdminUsersDetailDialog
-        detailsOpen={detailsOpen}
-        selectedUser={selectedUser}
-        onOpenChange={onDetailsOpenChange}
-        onClose={onDetailsClose}
-      />
+      <AdminUsersDetailDialog detailsOpen={detailsOpen} selectedUser={selectedUser} onOpenChange={onDetailsOpenChange} onClose={onDetailsClose}/>
 
-      <AdminUsersRevokeDialog
-        revokeOpen={revokeOpen}
-        selectedUser={selectedUser}
-        onOpenChange={onRevokeOpenChange}
-        onClose={onRevokeClose}
-        onConfirm={onRevokeConfirm}
-      />
-    </>
-  )
+      <AdminUsersRevokeDialog revokeOpen={revokeOpen} selectedUser={selectedUser} onOpenChange={onRevokeOpenChange} onClose={onRevokeClose} onConfirm={onRevokeConfirm}/>
+    </>);
 }

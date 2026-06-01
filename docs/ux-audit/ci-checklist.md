@@ -2,7 +2,7 @@
 
 ### Required checks
 
-- [ ] `bun run ci:check` (Biome, app + Convex typecheck, oxlint on `src/`)
+- [ ] `bun run ci:check` (Biome, app + Convex typecheck, oxlint on `src/` — no `react-perf`; those rules live in React Doctor only)
 - [ ] `bun run ci:test`
 - [ ] targeted lint for touched files passes
 - [ ] `bunx react-doctor@latest . --verbose --diff` shows no new errors for touched files

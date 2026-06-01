@@ -1,16 +1,13 @@
-import { wrapEmailTemplate } from './utils'
-import { EMAIL_COLORS } from '@/lib/colors'
-
+import { wrapEmailTemplate } from './utils';
+import { EMAIL_COLORS } from '@/lib/colors';
 export interface WorkspaceInviteTemplateParams {
-    invitedByName: string
-    workspaceName: string
-    inviteUrl: string
-    role?: string
+    invitedByName: string;
+    workspaceName: string;
+    inviteUrl: string;
+    role?: string;
 }
-
 export function workspaceInviteTemplate(params: WorkspaceInviteTemplateParams): string {
-    const { invitedByName, workspaceName, inviteUrl, role } = params
-
+    const { invitedByName, workspaceName, inviteUrl, role } = params;
     return wrapEmailTemplate(`
         <div style="margin-bottom: 24px; text-align: center;">
             <div style="font-size: 28px; font-weight: 800; color: ${EMAIL_COLORS.heading}; margin-bottom: 12px;">
@@ -53,5 +50,5 @@ export function workspaceInviteTemplate(params: WorkspaceInviteTemplateParams): 
                 <span style="word-break: break-all; color: ${EMAIL_COLORS.mutedText};">${inviteUrl}</span>
             </p>
         </div>
-    `)
+    `);
 }

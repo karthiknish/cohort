@@ -1,5 +1,4 @@
-import { getChartColor } from '@/lib/colors'
-
+import { getChartColor } from '@/lib/colors';
 export function getAgentChartFill(index: number): string {
-  return getChartColor(index)
+    return getChartColor(index);
 }
