@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { extractCampaignQueryFromIntent, getPeriodWindow, parseRelativeDayRangeFromIntent, resolveDeterministicAgentIntent, resolveReportWindow, resolveWeakCommandClarification } from './helpers'
+import { getPreviousCalendarMonthRange } from './helpers/dates'
 
 describe('resolveDeterministicAgentIntent', () => {
   it('routes organic social summaries to summarizeSocialPerformance', () => {
@@ -71,7 +72,8 @@ describe('resolveDeterministicAgentIntent', () => {
     })
   })
 
-  it('routes ads summaries with last-month typos to April calendar window', () => {
+  it('routes ads summaries with last-month typos to previous calendar month', () => {
+    const { startDate, endDate } = getPreviousCalendarMonthRange()
     const intent = resolveDeterministicAgentIntent('give me ads summary from ;ast month')
 
     expect(intent).toMatchObject({
@@ -79,8 +81,8 @@ describe('resolveDeterministicAgentIntent', () => {
       operation: 'summarizeAdsPerformance',
       params: {
         period: 'monthly',
-        startDate: '2026-04-01',
-        endDate: '2026-04-30',
+        startDate,
+        endDate,
       },
     })
   })
@@ -257,6 +259,7 @@ describe('resolveDeterministicAgentIntent', () => {
   })
 
   it('routes sync analytics requests to requestAnalyticsSync', () => {
+    const { startDate, endDate } = getPreviousCalendarMonthRange()
     const intent = resolveDeterministicAgentIntent('sync google analytics for last month')
 
     expect(intent).toMatchObject({
@@ -264,8 +267,8 @@ describe('resolveDeterministicAgentIntent', () => {
       operation: 'requestAnalyticsSync',
       params: {
         period: 'monthly',
-        startDate: '2026-04-01',
-        endDate: '2026-04-30',
+        startDate,
+        endDate,
       },
     })
   })
@@ -301,6 +304,7 @@ describe('resolveDeterministicAgentIntent', () => {
   })
 
   it('routes excel export requests to exportSpreadsheet', () => {
+    const { startDate, endDate } = getPreviousCalendarMonthRange()
     const intent = resolveDeterministicAgentIntent('export ads summary from last month to excel')
 
     expect(intent).toMatchObject({
@@ -309,8 +313,8 @@ describe('resolveDeterministicAgentIntent', () => {
       params: {
         source: 'ads',
         period: 'monthly',
-        startDate: '2026-04-01',
-        endDate: '2026-04-30',
+        startDate,
+        endDate,
       },
     })
   })
