@@ -162,7 +162,9 @@ export const workspaceTables = {
     .index('by_workspace_projectId_createdAtMs', ['workspaceId', 'projectId', 'createdAtMs'])
     .index('by_workspace_clientId_updatedAtMs_legacyId', ['workspaceId', 'clientId', 'updatedAtMs', 'legacyId'])
     /** Platform-wide admin metrics (leading field is not workspace-scoped). */
-    .index('by_createdAtMs', ['createdAtMs']),
+    .index('by_createdAtMs', ['createdAtMs'])
+    .index('by_deletedAtMs_createdAtMs', ['deletedAtMs', 'createdAtMs'])
+    .index('by_deletedAtMs_status_updatedAtMs', ['deletedAtMs', 'status', 'updatedAtMs']),
 
   taskComments: defineTable({
     workspaceId: v.string(),

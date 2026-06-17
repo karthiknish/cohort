@@ -5,6 +5,9 @@ import { asR2ObjectRef } from './fileStorage'
 
 const PRIVATE_CACHE = 'private, max-age=31536000'
 
+/** @convex-dev/r2 types runQuery like QueryCtx; ActionCtx is compatible at runtime. */
+type R2StoreCtx = Parameters<R2['store']>[0]
+
 export type StoreR2ArtifactArgs = {
   r2: R2
   ctx: ActionCtx
@@ -27,7 +30,7 @@ export async function storeR2Artifact({
 }: StoreR2ArtifactArgs): Promise<string> {
   const blob = body instanceof Blob ? body : new Blob([body], { type: contentType })
 
-  await r2.store(ctx, blob, {
+  await r2.store(ctx as unknown as R2StoreCtx, blob, {
     key,
     type: contentType,
     disposition: `attachment; filename="${downloadFilename}"`,

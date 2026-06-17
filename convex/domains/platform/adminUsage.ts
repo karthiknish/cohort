@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 
+import type { DataModel, Doc } from '../../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../../_generated/server'
 import { internalMutation } from '../../_generated/server'
 import { Errors, asErrorMessage, isAppError } from '../../errors'
@@ -37,6 +38,7 @@ const adminUsageStatsValidator = v.object({
 
 const ADMIN_USAGE_CACHE_KEY = 'adminUsage:getStats:global'
 const ADMIN_USAGE_CACHE_TTL_MS = 10 * 60 * 1000
+const COUNT_PAGE_SIZE = 500
 
 type AdminUsageStats = {
   totalUsers: number
@@ -60,9 +62,36 @@ type AdminUsageStats = {
 type CachedAdminUsageStats = {
   stats: AdminUsageStats
   isFresh: boolean
+  refreshedAtMs: number
 }
 
 type AdminUsageStatsDb = QueryCtx['db'] | MutationCtx['db']
+type PaginatedQuery<T extends Doc<keyof DataModel>> = {
+  paginate: (args: { numItems: number; cursor: string | null }) => Promise<{
+    page: T[]
+    isDone: boolean
+    continueCursor: string
+  }>
+}
+
+const EMPTY_ADMIN_USAGE_STATS: AdminUsageStats = {
+  totalUsers: 0,
+  activeUsersToday: 0,
+  activeUsersWeek: 0,
+  activeUsersMonth: 0,
+  newUsersToday: 0,
+  newUsersWeek: 0,
+  totalProjects: 0,
+  projectsThisWeek: 0,
+  totalTasks: 0,
+  tasksCompletedThisWeek: 0,
+  totalClients: 0,
+  activeClientsWeek: 0,
+  agentConversations: 0,
+  agentActionsThisWeek: 0,
+  dailyActiveUsers: [],
+  featureUsage: [],
+}
 
 function startOfDay(ts: Date) {
   return new Date(ts.getFullYear(), ts.getMonth(), ts.getDate())
@@ -80,6 +109,139 @@ function throwAdminUsageError(operation: string, error: unknown): never {
   )
 }
 
+async function countPaginated<T extends Doc<keyof DataModel>>(
+  buildQuery: () => PaginatedQuery<T>,
+): Promise<number> {
+  let count = 0
+  let cursor: string | null = null
+
+  while (true) {
+    const result = await buildQuery().paginate({ numItems: COUNT_PAGE_SIZE, cursor })
+    count += result.page.length
+    if (result.isDone) {
+      return count
+    }
+    cursor = result.continueCursor
+  }
+}
+
+async function countUsersUpdatedSince(ctx: { db: AdminUsageStatsDb }, sinceMs: number): Promise<number> {
+  return countPaginated(() =>
+    ctx.db
+      .query('users')
+      .withIndex('by_updatedAtMs_legacyId', (q) => q.gte('updatedAtMs', sinceMs)),
+  )
+}
+
+async function countUsersCreatedSince(ctx: { db: AdminUsageStatsDb }, sinceMs: number): Promise<number> {
+  return countPaginated(() =>
+    ctx.db
+      .query('users')
+      .withIndex('by_createdAtMs', (q) => q.gte('createdAtMs', sinceMs)),
+  )
+}
+
+async function countActiveRecordsCreatedSince(
+  ctx: { db: AdminUsageStatsDb },
+  table: 'projects' | 'tasks' | 'clients',
+  sinceMs: number,
+): Promise<number> {
+  return countPaginated(() =>
+    ctx.db
+      .query(table)
+      .withIndex('by_deletedAtMs_createdAtMs', (q) =>
+        q.eq('deletedAtMs', null).gte('createdAtMs', sinceMs),
+      ),
+  )
+}
+
+async function countActiveRecords(
+  ctx: { db: AdminUsageStatsDb },
+  table: 'projects' | 'tasks' | 'clients',
+): Promise<number> {
+  return countPaginated(() =>
+    ctx.db
+      .query(table)
+      .withIndex('by_deletedAtMs_createdAtMs', (q) => q.eq('deletedAtMs', null)),
+  )
+}
+
+async function countActiveClientsUpdatedSince(
+  ctx: { db: AdminUsageStatsDb },
+  sinceMs: number,
+): Promise<number> {
+  return countPaginated(() =>
+    ctx.db
+      .query('clients')
+      .withIndex('by_deletedAtMs_updatedAtMs', (q) =>
+        q.eq('deletedAtMs', null).gte('updatedAtMs', sinceMs),
+      ),
+  )
+}
+
+async function countCompletedTasksUpdatedSince(
+  ctx: { db: AdminUsageStatsDb },
+  sinceMs: number,
+): Promise<number> {
+  return countPaginated(() =>
+    ctx.db
+      .query('tasks')
+      .withIndex('by_deletedAtMs_status_updatedAtMs', (q) =>
+        q.eq('deletedAtMs', null).eq('status', 'completed').gte('updatedAtMs', sinceMs),
+      ),
+  )
+}
+
+async function countAgentConversationsCreatedSince(
+  ctx: { db: AdminUsageStatsDb },
+  sinceMs: number,
+): Promise<number> {
+  return countPaginated(() =>
+    ctx.db
+      .query('agentConversations')
+      .withIndex('by_createdAt', (q) => q.gte('createdAt', sinceMs)),
+  )
+}
+
+async function computeDailyActiveUsers(
+  ctx: { db: AdminUsageStatsDb },
+  now: Date,
+  weekStartMs: number,
+): Promise<Array<{ date: string; count: number }>> {
+  const dailyCounts = new Map<string, number>()
+
+  for (let i = 6; i >= 0; i--) {
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
+    const date = dayStart.toISOString().split('T')[0] ?? ''
+    dailyCounts.set(date, 0)
+  }
+
+  let cursor: string | null = null
+
+  while (true) {
+    const result = await ctx.db
+      .query('users')
+      .withIndex('by_updatedAtMs_legacyId', (q) => q.gte('updatedAtMs', weekStartMs))
+      .paginate({ numItems: COUNT_PAGE_SIZE, cursor })
+
+    for (const user of result.page) {
+      const updatedAtMs = user.updatedAtMs ?? 0
+      const date = startOfDay(new Date(updatedAtMs)).toISOString().split('T')[0] ?? ''
+      if (!dailyCounts.has(date)) {
+        continue
+      }
+      dailyCounts.set(date, (dailyCounts.get(date) ?? 0) + 1)
+    }
+
+    if (result.isDone) {
+      break
+    }
+    cursor = result.continueCursor
+  }
+
+  return Array.from(dailyCounts.entries()).map(([date, count]) => ({ date, count }))
+}
+
 async function computeLiveUsageStats(ctx: { db: AdminUsageStatsDb }): Promise<AdminUsageStats> {
   const now = new Date()
   const todayStart = startOfDay(now)
@@ -92,57 +254,39 @@ async function computeLiveUsageStats(ctx: { db: AdminUsageStatsDb }): Promise<Ad
   const weekAgoMs = weekAgo.getTime()
   const monthAgoMs = monthAgo.getTime()
 
-  const [users, recentUsers] = await Promise.all([
-    ctx.db.query('users').withIndex('by_createdAtMs', (q) => q).collect(),
-    ctx.db
-      .query('users')
-      .withIndex('by_createdAtMs', (q) => q.gte('createdAtMs', weekAgoMs))
-      .collect(),
+  const [
+    totalUsers,
+    activeUsersToday,
+    activeUsersWeek,
+    activeUsersMonth,
+    newUsersToday,
+    newUsersWeek,
+    totalProjects,
+    projectsThisWeek,
+    totalTasks,
+    tasksCompletedThisWeek,
+    totalClients,
+    activeClientsWeek,
+    agentConversations,
+    agentActionsThisWeek,
+    dailyActiveUsers,
+  ] = await Promise.all([
+    countPaginated(() => ctx.db.query('users').withIndex('by_legacyId', (q) => q)),
+    countUsersUpdatedSince(ctx, todayMs),
+    countUsersUpdatedSince(ctx, weekAgoMs),
+    countUsersUpdatedSince(ctx, monthAgoMs),
+    countUsersCreatedSince(ctx, todayMs),
+    countUsersCreatedSince(ctx, weekAgoMs),
+    countActiveRecords(ctx, 'projects'),
+    countActiveRecordsCreatedSince(ctx, 'projects', weekAgoMs),
+    countActiveRecords(ctx, 'tasks'),
+    countCompletedTasksUpdatedSince(ctx, weekAgoMs),
+    countActiveRecords(ctx, 'clients'),
+    countActiveClientsUpdatedSince(ctx, weekAgoMs),
+    countPaginated(() => ctx.db.query('agentConversations').withIndex('by_createdAt', (q) => q)),
+    countAgentConversationsCreatedSince(ctx, weekAgoMs),
+    computeDailyActiveUsers(ctx, now, weekAgoMs),
   ])
-
-  const totalUsers = users.length
-  const activeUsersToday = users.filter((u) => (u.updatedAtMs ?? 0) >= todayMs).length
-  const activeUsersWeek = users.filter((u) => (u.updatedAtMs ?? 0) >= weekAgoMs).length
-  const activeUsersMonth = users.filter((u) => (u.updatedAtMs ?? 0) >= monthAgoMs).length
-  const newUsersToday = recentUsers.filter((u) => (u.createdAtMs ?? 0) >= todayMs).length
-  const newUsersWeek = recentUsers.length
-
-  const [projectRows, taskRows, clientRows, conversations] = await Promise.all([
-    ctx.db.query('projects').withIndex('by_createdAtMs', (q) => q).collect(),
-    ctx.db.query('tasks').withIndex('by_createdAtMs', (q) => q).collect(),
-    ctx.db.query('clients').withIndex('by_createdAtMs', (q) => q).collect(),
-    ctx.db.query('agentConversations').withIndex('by_createdAt', (q) => q).collect(),
-  ])
-
-  const projects = projectRows.filter((p) => p.deletedAtMs == null)
-  const tasks = taskRows.filter((t) => t.deletedAtMs == null)
-  const clients = clientRows.filter((c) => c.deletedAtMs == null)
-
-  const totalProjects = projects.length
-  const projectsThisWeek = projects.filter((p) => (p.createdAtMs ?? 0) >= weekAgoMs).length
-  const totalTasks = tasks.length
-  const tasksCompletedThisWeek = tasks.filter(
-    (t) => t.status === 'completed' && (t.updatedAtMs ?? 0) >= weekAgoMs,
-  ).length
-  const totalClients = clients.length
-  const activeClientsWeek = clients.filter((c) => (c.updatedAtMs ?? 0) >= weekAgoMs).length
-  const agentConversations = conversations.length
-  const agentActionsThisWeek = conversations.filter((c) => (c.createdAt ?? 0) >= weekAgoMs).length
-
-  const dailyActiveUsers: Array<{ date: string; count: number }> = []
-  for (let i = 6; i >= 0; i--) {
-    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
-    const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1)
-    const dayStartMs = dayStart.getTime()
-    const dayEndMs = dayEnd.getTime()
-
-    const count = users.filter((u) => {
-      const last = u.updatedAtMs ?? 0
-      return last >= dayStartMs && last < dayEndMs
-    }).length
-
-    dailyActiveUsers.push({ date: dayStart.toISOString().split('T')[0] ?? '', count })
-  }
 
   const featureUsage = [
     { feature: 'Projects', count: projectsThisWeek, trend: projectsThisWeek > 0 ? 15 : 0 },
@@ -196,14 +340,20 @@ async function readCachedAdminUsageStats(ctx: { db: AdminUsageStatsDb }): Promis
   return {
     stats,
     isFresh: entry.expiresAtMs > Date.now(),
+    refreshedAtMs: entry.updatedAtMs,
   }
 }
 
 export const refreshStatsCache = internalMutation({
   args: {},
-  returns: v.object({ ok: v.literal(true), refreshedAtMs: v.number() }),
+  returns: v.object({ ok: v.literal(true), refreshedAtMs: v.number(), skipped: v.boolean() }),
   handler: async (ctx) => {
     try {
+      const cached = await readCachedAdminUsageStats(ctx)
+      if (cached?.isFresh) {
+        return { ok: true as const, refreshedAtMs: cached.refreshedAtMs, skipped: true }
+      }
+
       const stats = await computeLiveUsageStats(ctx)
       const refreshedAtMs = Date.now()
       const existing = await ctx.db
@@ -228,7 +378,7 @@ export const refreshStatsCache = internalMutation({
         })
       }
 
-      return { ok: true as const, refreshedAtMs }
+      return { ok: true as const, refreshedAtMs, skipped: false }
     } catch (error) {
       throwAdminUsageError('refreshStatsCache', error)
     }
@@ -241,15 +391,11 @@ export const getStats = adminQuery({
   handler: async (ctx) => {
     try {
       const cached = await readCachedAdminUsageStats(ctx)
-      if (cached?.isFresh) {
-        return cached.stats
-      }
-
       if (cached) {
         return cached.stats
       }
 
-      return await computeLiveUsageStats(ctx)
+      return EMPTY_ADMIN_USAGE_STATS
     } catch (error) {
       throwAdminUsageError('getStats', error)
     }

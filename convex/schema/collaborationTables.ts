@@ -168,7 +168,9 @@ export const collaborationTables = {
     .index('by_workspace_deletedAtMs', ['workspaceId', 'deletedAtMs'])
     .index('by_workspace_createdAtMs_legacyId', ['workspaceId', 'createdAtMs', 'legacyId'])
     /** Platform-wide admin metrics. */
-    .index('by_createdAtMs', ['createdAtMs']),
+    .index('by_createdAtMs', ['createdAtMs'])
+    .index('by_deletedAtMs_createdAtMs', ['deletedAtMs', 'createdAtMs'])
+    .index('by_deletedAtMs_updatedAtMs', ['deletedAtMs', 'updatedAtMs']),
 
   projects: defineTable({
     workspaceId: v.string(),
@@ -193,7 +195,8 @@ export const collaborationTables = {
     .index('by_workspace_clientId_updatedAtMs_legacyId', ['workspaceId', 'clientId', 'updatedAtMs', 'legacyId'])
     .index('by_workspace_status_clientId_updatedAtMs_legacyId', ['workspaceId', 'status', 'clientId', 'updatedAtMs', 'legacyId'])
     /** Platform-wide admin metrics. */
-    .index('by_createdAtMs', ['createdAtMs']),
+    .index('by_createdAtMs', ['createdAtMs'])
+    .index('by_deletedAtMs_createdAtMs', ['deletedAtMs', 'createdAtMs']),
 
   projectMilestones: defineTable({
     workspaceId: v.string(),
