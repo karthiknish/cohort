@@ -43,8 +43,8 @@
     "r2:sync-svgl": "node scripts/sync-public-svgl-to-r2.mjs",
     "r2:configure-cors": "node scripts/configure-r2-cors.mjs",
     "dev:start": "vite dev --config vite.config.mts",
-    "build:start": "vite build --config vite.config.mts",
-    "start:start": "node .output/server/index.mjs"
+    "build:start": "cross-env NODE_ENV=production vite build --config vite.config.mts",
+    "start:start": "bun .output/server/index.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs,json,jsonc}": [

@@ -2,6 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+import { nitro } from 'nitro/vite'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -37,6 +38,11 @@ export default defineConfig({
         exclude: [/\/routes\//],
       },
     }),
+    // Nitro handles the production server build. On Vercel it auto-detects
+    // the `VERCEL` environment and emits `.vercel/output` (Build Output API),
+    // which Vercel deploys directly. Locally / for `start:start` it emits a
+    // Node server under `.output/`.
+    nitro(),
     viteReact(),
     tailwindcss(),
   ],
