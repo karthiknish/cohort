@@ -154,9 +154,7 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
                 fallbackMessage: asErrorMessage(error),
             });
         }
-        finally {
-            dispatch({ type: 'setLoading', value: false });
-        }
+        dispatch({ type: 'setLoading', value: false });
     };
     const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
         dispatch({ type: 'setName', value: event.target.value });

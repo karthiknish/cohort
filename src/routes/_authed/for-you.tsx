@@ -26,6 +26,7 @@ const loadForYouShell = createServerFn({ method: 'GET' }).handler(async () => {
 })
 
 export const Route = createFileRoute('/_authed/for-you')({
+  loader: () => loadForYouShell(),
   head: () => ({
     meta: [
       { title: 'For You | Cohorts' },
@@ -36,7 +37,6 @@ export const Route = createFileRoute('/_authed/for-you')({
       },
     ],
   }),
-  loader: () => loadForYouShell(),
   component: ForYouRoute,
   errorComponent: ForYouError,
   pendingComponent: ForYouLoading,

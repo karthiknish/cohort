@@ -8,6 +8,9 @@ export default {
       "cohort/only-shadcn-components",
       "convex-unused/no-unused-functions"
     ],
+    files: [
+      ".output/**"
+    ],
     overrides: [
       {
         files: [

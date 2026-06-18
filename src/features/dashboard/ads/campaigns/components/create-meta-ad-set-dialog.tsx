@@ -62,17 +62,6 @@ export function CreateMetaAdSetDialog({ open, onOpenChange, campaignId, campaign
         }
         : undefined;
     useEffect(() => {
-        if (!open)
-            return;
-        setObjectiveForm(createInitialObjectiveForm(campaignObjective));
-        setPageId('');
-        setName('');
-        setDailyBudget('');
-    }, [campaignObjective, open]);
-    useEffect(() => {
-        setObjectiveForm((prev) => ({ ...prev, postId: undefined, eventId: undefined }));
-    }, [pageId]);
-    useEffect(() => {
         if (!open || !workspaceId)
             return;
         let cancelled = false;
@@ -166,9 +155,7 @@ export function CreateMetaAdSetDialog({ open, onOpenChange, campaignId, campaign
                 fallbackMessage: asErrorMessage(error),
             });
         }
-        finally {
-            setLoading(false);
-        }
+        setLoading(false);
     };
     const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
         setName(event.target.value);
@@ -192,7 +179,7 @@ export function CreateMetaAdSetDialog({ open, onOpenChange, campaignId, campaign
             && objectiveForm.salesOptimizationMode === 'catalog'
             && !objectiveForm.productCatalogId);
     return (<Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent key={`adset-${open}-${campaignObjective}`} className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create ad set</DialogTitle>
           <DialogDescription>
@@ -222,7 +209,7 @@ export function CreateMetaAdSetDialog({ open, onOpenChange, campaignId, campaign
               </Select>
             </FormField>) : null}
 
-          {showObjectiveFlow && normalizedObjective ? (<ObjectiveRenderer objective={normalizedObjective as CampaignObjective} formData={objectiveForm} onChange={handleObjectiveChange} disabled={loading} providerId="facebook" metaContext={metaContext}/>) : null}
+          {showObjectiveFlow && normalizedObjective ? (<ObjectiveRenderer key={`objective-${pageId}`} objective={normalizedObjective as CampaignObjective} formData={objectiveForm} onChange={handleObjectiveChange} disabled={loading} providerId="facebook" metaContext={metaContext}/>) : null}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel} disabled={loading}>

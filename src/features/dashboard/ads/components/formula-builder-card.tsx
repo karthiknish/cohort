@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { Card, } from '@/shared/ui/card';
 import { FormulaBuilderDialog, FormulaBuilderEmptyState, FormulaBuilderHeader, FormulaBuilderList, FormulaBuilderLoadingState, } from './formula-builder-card-sections';
 import type { CustomFormula, UseFormulaEditorReturn, FormulaValidationResult } from '../hooks/use-formula-editor';
@@ -137,14 +138,21 @@ export function FormulaBuilderCard({ formulaEditor, metricTotals, loading, }: Fo
                 outputMetric: outputMetric.trim(),
             });
             if (!created) {
+                dispatch({ type: 'setSavingFormula', value: false });
                 return;
             }
             // Reset form only after a confirmed successful save.
             dispatch({ type: 'resetForm' });
         }
-        finally {
-            dispatch({ type: 'setSavingFormula', value: false });
+        catch (error) {
+            reportConvexFailure({
+                error,
+                context: 'FormulaBuilderCard:handleSave',
+                title: 'Could not save formula',
+                fallbackMessage: 'Formula was not saved.',
+            });
         }
+        dispatch({ type: 'setSavingFormula', value: false });
     };
     const handleInsertMetric = (metricName: string) => {
         dispatch({

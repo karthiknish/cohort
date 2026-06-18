@@ -11,7 +11,9 @@ export function SiteFooter() {
     const isAppShellRoute = pathname.startsWith('/dashboard')
         || pathname.startsWith('/admin')
         || pathname.startsWith('/settings')
-        || pathname.startsWith('/auth');
+        || pathname.startsWith('/auth')
+        || pathname.startsWith('/for-you')
+        || pathname.startsWith('/pending-approval');
     if (isAppShellRoute) {
         return null;
     }

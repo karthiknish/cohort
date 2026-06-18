@@ -29,7 +29,8 @@ function isAuthError(error: unknown): boolean {
 export default function AdsPage() {
     const { isPreviewMode } = usePreview();
     const { toast } = useToast();
-    const shownErrorsRef = useRef<Set<string>>(new Set());
+    const shownErrorsRef = useRef<Set<string>>(null!);
+    if (shownErrorsRef.current === null) shownErrorsRef.current = new Set();
     const connections = useAdsConnections();
     const metrics = useAdsMetrics({ refreshTick: connections.refreshTick });
     const derivedMetrics = useDerivedMetrics({ metrics: metrics.processedMetrics });

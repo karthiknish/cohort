@@ -23,7 +23,7 @@ import { GoogleAnalyticsScript } from '@/shared/providers/google-analytics-scrip
 import { getToken } from '@/lib/auth-server'
 import { RootNotFound } from '@/shared/ui/route-boundaries/root-not-found'
 import { RootAppError } from '@/shared/ui/route-boundaries/root-error'
-import { MarketingHomePageSkeleton } from '@/features/marketing/home/components/marketing-home-page-skeleton'
+import { NeutralPendingSkeleton } from '@/shared/ui/neutral-pending-skeleton'
 
 const fontVariables: Record<string, string> = {
   '--font-geist-sans': "'Geist Variable', sans-serif",
@@ -44,6 +44,7 @@ const resolveInitialToken = createServerFn({ method: 'GET' }).handler(async () =
 })
 
 export const Route = createRootRoute({
+  loader: () => resolveInitialToken(),
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
@@ -56,11 +57,10 @@ export const Route = createRootRoute({
       },
     ],
   }),
-  loader: () => resolveInitialToken(),
   component: RootComponent,
   notFoundComponent: RootNotFound,
   errorComponent: RootAppError,
-  pendingComponent: () => <MarketingHomePageSkeleton />,
+  pendingComponent: () => <NeutralPendingSkeleton />,
 })
 
 const showAgentation =

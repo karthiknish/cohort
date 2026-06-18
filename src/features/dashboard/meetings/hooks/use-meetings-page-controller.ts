@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from '@/shared/ui/navigation';
 import { useMutation, useQuery } from 'convex/react';
 import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
@@ -48,6 +49,9 @@ export function useMeetingsPageController() {
     const { selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
     const { toast } = useToast();
+    const { replace } = useRouter();
+    const pathname = usePathname();
+    const urlSearchParams = useSearchParams();
     const workspaceId = getWorkspaceId(user);
     const canSchedule = user?.role === 'admin' || user?.role === 'team';
     const [title, setTitle] = useState('');
@@ -128,14 +132,13 @@ export function useMeetingsPageController() {
     const scheduleAttendees = meetingAttendees.schedule;
     const quickAttendees = meetingAttendees.quick;
     useEffect(() => {
-        if (oauthHandledRef.current || typeof window === 'undefined')
+        if (oauthHandledRef.current)
             return;
-        const searchParams = new URLSearchParams(window.location.search);
-        const oauthSuccess = searchParams.get('oauth_success') === 'true';
-        const oauthError = searchParams.get('oauth_error');
-        const provider = searchParams.get('provider');
-        const message = searchParams.get('message');
-        const roomParam = searchParams.get('room');
+        const oauthSuccess = urlSearchParams.get('oauth_success') === 'true';
+        const oauthError = urlSearchParams.get('oauth_error');
+        const provider = urlSearchParams.get('provider');
+        const message = urlSearchParams.get('message');
+        const roomParam = urlSearchParams.get('room');
         setSharedRoomName(roomParam && roomParam.trim().length > 0 ? roomParam.trim() : null);
         if (!oauthSuccess && !oauthError) {
             oauthHandledRef.current = true;
@@ -152,14 +155,15 @@ export function useMeetingsPageController() {
                 notifyFailure({ title: 'Google Workspace connection failed', message: message || 'Please retry the OAuth flow.' });
             }
         }
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('oauth_success');
-        newUrl.searchParams.delete('oauth_error');
-        newUrl.searchParams.delete('provider');
-        newUrl.searchParams.delete('message');
-        window.history.replaceState({}, '', newUrl.toString());
+        const cleanedParams = new URLSearchParams(urlSearchParams.toString());
+        cleanedParams.delete('oauth_success');
+        cleanedParams.delete('oauth_error');
+        cleanedParams.delete('provider');
+        cleanedParams.delete('message');
+        const nextQuery = cleanedParams.toString();
+        replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
         oauthHandledRef.current = true;
-    }, [toast]);
+    }, [pathname, replace, toast, urlSearchParams]);
     const upcomingMeetings = (() => {
         const sourceMeetings = isPreviewMode ? previewMeetings : (meetings ?? []);
         const mergedMeetings = sourceMeetings.map((meeting) => meetingOverrides[meeting.legacyId] ?? meeting);
@@ -183,16 +187,15 @@ export function useMeetingsPageController() {
         quickAttendees.reset();
     };
     const setRoomUrlState = (roomName: string | null) => {
-        if (typeof window === 'undefined')
-            return;
-        const nextUrl = new URL(window.location.href);
+        const cleanedParams = new URLSearchParams(urlSearchParams.toString());
         if (roomName) {
-            nextUrl.searchParams.set('room', roomName);
+            cleanedParams.set('room', roomName);
         }
         else {
-            nextUrl.searchParams.delete('room');
+            cleanedParams.delete('room');
         }
-        window.history.replaceState({}, '', nextUrl.toString());
+        const nextQuery = cleanedParams.toString();
+        replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
         setSharedRoomName(roomName);
     };
     const handleConnectGoogleWorkspace = async () => {

@@ -1,6 +1,7 @@
 'use client';
 import { Suspense, createContext, use, useMemo, type ReactNode } from 'react';
 import { useSearchParams } from '@/shared/ui/navigation';
+import { UrlSearchParamsFallback } from '@/shared/ui/url-search-params-fallback';
 const UrlSearchParamsContext = createContext<URLSearchParams | null>(null);
 function UrlSearchParamsReader({ children }: {
     children: ReactNode;
@@ -12,7 +13,7 @@ function UrlSearchParamsReader({ children }: {
 export function UrlSearchParamsProvider({ children }: {
     children: ReactNode;
 }) {
-    return (<Suspense fallback={null}>
+    return (<Suspense fallback={<UrlSearchParamsFallback />}>
       <UrlSearchParamsReader>{children}</UrlSearchParamsReader>
     </Suspense>);
 }

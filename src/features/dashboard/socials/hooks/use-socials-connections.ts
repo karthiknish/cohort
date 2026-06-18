@@ -2,7 +2,7 @@
 import { notifyFailure } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from '@/shared/ui/navigation';
+import { usePathname, useRouter, useSearchParams } from '@/shared/ui/navigation';
 import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
@@ -37,6 +37,9 @@ export type UseSocialsConnectionsReturn = {
 export function useSocialsConnections(): UseSocialsConnectionsReturn {
     const { user, startMetaOauth } = useAuth();
     const router = useRouter();
+    const { replace } = router;
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
     const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
@@ -81,9 +84,8 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
     }, [status?.lastSyncStatus]);
     const oauthProcessedRef = useRef(false);
     useEffect(() => {
-        if (typeof window === 'undefined' || isPreviewMode)
+        if (isPreviewMode)
             return;
-        const searchParams = new URLSearchParams(window.location.search);
         const oauthSuccess = searchParams.get('oauth_success') === 'true';
         const oauthError = searchParams.get('oauth_error');
         const message = searchParams.get('message');
@@ -92,14 +94,15 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
         if (oauthProcessedRef.current)
             return;
         oauthProcessedRef.current = true;
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('oauth_success');
-        newUrl.searchParams.delete('oauth_error');
-        newUrl.searchParams.delete('provider');
-        newUrl.searchParams.delete('message');
-        newUrl.searchParams.delete('clientId');
-        newUrl.searchParams.delete('surface');
-        window.history.replaceState({}, '', newUrl.toString());
+        const cleanedParams = new URLSearchParams(searchParams.toString());
+        cleanedParams.delete('oauth_success');
+        cleanedParams.delete('oauth_error');
+        cleanedParams.delete('provider');
+        cleanedParams.delete('message');
+        cleanedParams.delete('clientId');
+        cleanedParams.delete('surface');
+        const nextQuery = cleanedParams.toString();
+        replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
         if (oauthSuccess) {
             toast({
                 title: 'Meta connected',
@@ -115,7 +118,7 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
                 message: errorMessage,
             });
         }
-    }, [isPreviewMode, toast]);
+    }, [isPreviewMode, pathname, replace, searchParams, toast]);
     const showPreviewModeToast = (description: string) => {
         toast({
             title: 'Preview mode',

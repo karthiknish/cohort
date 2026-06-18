@@ -1,6 +1,6 @@
 'use client';
 import { useAction, useMutation } from 'convex/react';
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { readFileAsBase64, getPdfUploadSizeError } from '@/lib/agent-attachments';
@@ -70,7 +70,7 @@ export function useProjectsDocumentImport({ workspaceId, ownerId, clients, prefe
     const [documentSummary, setDocumentSummary] = useState<string | null>(null);
     const dragDepthRef = useRef(0);
     const abortRef = useRef(false);
-    const resetImport = () => {
+    const resetImport = useCallback(() => {
         abortRef.current = false;
         dragDepthRef.current = 0;
         setPhase('idle');
@@ -78,7 +78,7 @@ export function useProjectsDocumentImport({ workspaceId, ownerId, clients, prefe
         setErrorMessage(null);
         setProposedProjects([]);
         setDocumentSummary(null);
-    };
+    }, []);
     const extractPdfOnServer = async (file: File) => {
         if (!workspaceId || isPreviewModeEnabled())
             return null;
@@ -311,10 +311,10 @@ export function useProjectsDocumentImport({ workspaceId, ownerId, clients, prefe
             return;
         void runDocumentImport(Array.from(files));
     };
-    const handleCancel = useEffectEvent(() => {
+    const handleCancel = useCallback(() => {
         abortRef.current = true;
         resetImport();
-    });
+    }, [resetImport]);
     const handleConfirmReview = () => {
         void createProjectsFromProposals(proposedProjects);
     };
@@ -331,7 +331,7 @@ export function useProjectsDocumentImport({ workspaceId, ownerId, clients, prefe
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [phase]);
+    }, [phase, handleCancel]);
     const overlayVisible = phase === 'dragging' ||
         phase === 'extracting' ||
         phase === 'analyzing' ||

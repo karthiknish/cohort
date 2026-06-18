@@ -2,6 +2,7 @@
 import { notifyFailure } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useEffectEvent, useMemo, useReducer, useRef } from 'react';
+import { useBlocker } from '@tanstack/react-router';
 import { useParams } from '@/shared/ui/navigation';
 import { toast } from '@/shared/ui/use-toast';
 import { useClientContext } from '@/shared/contexts/client-context';
@@ -23,6 +24,7 @@ import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { CreativeDetailPageContent } from './creative-detail-page-client-sections';
 import { CreativeDetailPageLoadingState } from './creative-detail-page-client-loading';
 import { CreativeDetailPageNotFoundState } from './creative-detail-page-client-not-found';
+import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
 export type CreativeDetailPageClientProps = {
     campaignName?: string | null;
     currency?: string | null;
@@ -123,7 +125,7 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
         workspaceId,
         selectedClientId,
     ]);
-    const fetchMetrics = useEffectEvent(async () => {
+    const fetchMetrics = useCallback(async () => {
         if (!convexProviderId) {
             dispatch({ type: 'setCreativeMetrics', value: null });
             metricsErrorRef.current = 'Unsupported provider';
@@ -174,7 +176,7 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
             .finally(() => {
             metricsLoadingRef.current = false;
         });
-    });
+    }, [convexProviderId, isPreviewMode, params.creativeId, params.campaignId, days, workspaceId, selectedClientId, creative?.adGroupId, creative?.adId, listAdMetrics]);
     useEffect(() => {
         const frameId = requestAnimationFrame(() => {
             void fetchCreative();
@@ -619,7 +621,18 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
             return [];
         return calculateAlgorithmicInsights(performanceSummary);
     })();
-    return (<PageSkeletonBoundary loading={loading} loadingContent={<CreativeDetailPageLoadingState />}>
+    const leaveBlocker = useBlocker({
+        shouldBlockFn: () => isDirty && !isSaving,
+        enableBeforeUnload: () => isDirty && !isSaving,
+        withResolver: true,
+    });
+    return (<>
+    <ConfirmDialog open={leaveBlocker.status === 'blocked'} onOpenChange={(open) => {
+            if (!open)
+                leaveBlocker.reset?.();
+        }} title="Discard unsaved changes?" description="You have unsaved creative edits. Leaving now will discard them." confirmLabel="Discard changes" cancelLabel="Keep editing" variant="warning" onConfirm={() => leaveBlocker.proceed?.()} onCancel={() => leaveBlocker.reset?.()}/>
+    <PageSkeletonBoundary loading={loading} loadingContent={<CreativeDetailPageLoadingState />}>
   {!creative && !loading ? (<CreativeDetailPageNotFoundState backUrl={backUrl}/>) : creative ? (<CreativeDetailPageContent creative={creative} previewCreative={previewCreative ?? creative} backUrl={backUrl} campaignName={campaignName} displayName={displayName} isDirty={isDirty} isSaving={isSaving} copiedField={copiedField} isEditing={isEditing} editedHeadlines={editedHeadlines} editedDescriptions={editedDescriptions} editedCta={editedCta} editedLandingPage={editedLandingPage} previewHeadlineIndex={previewHeadlineIndex} previewDescriptionIndex={previewDescriptionIndex} generatingHeadlines={generatingHeadlines} generatingDescriptions={generatingDescriptions} performanceSummary={performanceSummary} efficiencyScore={efficiencyScore} algorithmicInsights={algorithmicInsights} onCopy={handleCopy} onCancelEditing={cancelEditing} onSave={handleSave} onRefreshCreative={fetchCreative} onRefreshPerformance={fetchMetrics} onPreviewHeadlineIndexChange={setPreviewHeadlineIndex} onPreviewDescriptionIndexChange={setPreviewDescriptionIndex} onAddHeadline={addHeadline} onRemoveHeadline={removeHeadline} onUpdateHeadline={updateHeadline} onAddDescription={addDescription} onRemoveDescription={removeDescription} onUpdateDescription={updateDescription} onChangeCta={setEditedCta} onChangeLandingPage={setEditedLandingPage} onGenerateHeadlines={handleGenerateHeadlines} onGenerateDescriptions={handleGenerateDescriptions}/>) : null}
-    </PageSkeletonBoundary>);
+    </PageSkeletonBoundary>
+    </>);
 }

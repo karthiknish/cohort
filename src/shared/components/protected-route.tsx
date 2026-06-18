@@ -168,6 +168,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
             redirectToAuth();
         });
     });
+    const scheduleSessionPromptsRef = useRef<(metadata: SessionMetadata | null) => void>(() => {});
     const scheduleSessionPrompts = useEffectEvent((metadata: SessionMetadata | null) => {
         clearSessionTimers();
         if (!metadata?.hasSession || !metadata.expiresAt) {
@@ -198,7 +199,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
                                 message: 'Your workspace session is active again.',
                                 duration: 4000,
                             });
-                            scheduleSessionPrompts(nextMetadata);
+                            scheduleSessionPromptsRef.current(nextMetadata);
                         })
                             .catch(() => {
                             notifyFailure({
@@ -221,6 +222,9 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
         expiryTimerRef.current = setTimeout(() => {
             handleSessionExpired();
         }, remainingMs);
+    });
+    useEffect(() => {
+        scheduleSessionPromptsRef.current = scheduleSessionPrompts;
     });
     useEffect(() => {
         if (hasPreviewAccess || authPhase !== 'ready_active' || !user) {
@@ -268,6 +272,17 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
         const status = user?.status ?? 'pending';
         window.location.href = `/pending-approval?status=${encodeURIComponent(status)}`;
     }, [authPhase, hasPreviewAccess, pathname, user?.status]);
+    const redirectedUnauthRef = useRef(false);
+    useEffect(() => {
+        if (hasPreviewAccess ||
+            authPhase !== 'unauthenticated' ||
+            pathname === '/auth' ||
+            redirectedUnauthRef.current) {
+            return;
+        }
+        redirectedUnauthRef.current = true;
+        redirectToAuth();
+    }, [authPhase, hasPreviewAccess, pathname]);
     if (hasPreviewAccess) {
         return <>{children}</>;
     }
@@ -278,7 +293,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
         return (<AccessOverlay title="Could not connect your workspace" message={authError?.message ?? 'We could not finish securing your session. Try again or sign in once more.'} actionLabel="Retry" actionOnClick={handleRetrySync} secondaryActionLabel="Sign out" secondaryActionOnClick={handleSignOutAfterSyncFailure}/>);
     }
     if (authPhase === 'unauthenticated') {
-        return (<AccessOverlay title="Sign in required" message="You need to sign in to access this area of the application." actionLabel="Go to sign in" actionHref="/auth"/>);
+        return (<AccessOverlay title="Signing you in" message="Redirecting to the sign-in page..." showLogo showSpinner/>);
     }
     if (authPhase === 'ready_pending') {
         return (<AccessOverlay title="Checking account access" message="Taking you to your account status page so you can review the next steps." showLogo showSpinner/>);

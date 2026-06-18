@@ -1,5 +1,5 @@
 'use client';
-import { createContext, use, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';
 import { isFeatureEnabled } from '@/lib/features';
@@ -41,7 +41,7 @@ export function NavigationProvider({ children }: {
         lastViewedChannel: null,
     });
     // Cleanup old localStorage data to prevent hitting limits
-    const cleanupOldData = () => {
+    const cleanupOldData = useCallback(() => {
         if (typeof window === 'undefined')
             return;
         try {
@@ -70,8 +70,8 @@ export function NavigationProvider({ children }: {
         catch (error) {
             console.warn('[NavigationProvider] Failed to cleanup old data:', error);
         }
-    };
-    const loadNavigationState = useEffectEvent(() => {
+    }, []);
+    const loadNavigationState = useCallback(() => {
         if (typeof window === 'undefined')
             return;
         try {
@@ -90,7 +90,7 @@ export function NavigationProvider({ children }: {
         catch (error) {
             console.warn('[NavigationProvider] Failed to load navigation state:', error);
         }
-    });
+    }, [selectedClientId, cleanupOldData]);
     const saveNavigationState = (state: NavigationState) => {
         if (!isFeatureEnabled('NAVIGATION_PERSISTENCE') || typeof window === 'undefined') {
             return;
@@ -123,7 +123,7 @@ export function NavigationProvider({ children }: {
             };
         }
         return undefined;
-    }, [selectedClientId]);
+    }, [selectedClientId, loadNavigationState]);
     // Initialize on first mount
     useEffect(() => {
         if (mountedRef.current) {
@@ -142,6 +142,7 @@ export function NavigationProvider({ children }: {
             };
         }
         return undefined;
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: init-once pattern with mountedRef guard
     }, []);
     // Sync with URL parameters (URL takes precedence over localStorage)
     useEffect(() => {

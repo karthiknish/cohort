@@ -251,7 +251,14 @@ export function QuickExportButton({ format, data, filename, icon: Icon, disabled
                 onComplete?.();
                 return;
             }
-            throw new Error(`Unsupported format: ${format}`);
+            setIsExporting(false);
+            reportConvexFailure({
+                error: new Error(`Unsupported format: ${format}`),
+                context: 'QuickExportButton:handleExport',
+                title: 'Export failed',
+                fallbackMessage: 'Export failed',
+            });
+            return;
         }
         catch (error) {
             reportConvexFailure({
@@ -261,9 +268,7 @@ export function QuickExportButton({ format, data, filename, icon: Icon, disabled
                 fallbackMessage: 'Export failed',
             });
         }
-        finally {
-            setIsExporting(false);
-        }
+        setIsExporting(false);
     };
     return (<Button type="button" variant="outline" size="sm" onClick={handleExport} disabled={disabled || isExporting} className="gap-1.5">
       {isExporting ? (<LoaderCircle className="size-4 animate-spin"/>) : Icon ? (<Icon className="size-4"/>) : null}

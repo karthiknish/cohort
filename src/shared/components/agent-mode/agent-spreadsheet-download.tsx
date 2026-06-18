@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useConvex, useMutation } from 'convex/react';
 import { Download, LoaderCircle } from 'lucide-react';
 import type { AgentAttachmentContext } from '@/lib/agent-attachments';
@@ -28,7 +28,7 @@ export function AgentSpreadsheetDownload({ messageId, conversationId, workspaceI
     const [isDownloading, setIsDownloading] = useState(false);
     const [isStoring, setIsStoring] = useState(false);
     const persistAttemptedRef = useRef(false);
-    const getPublicUrl = (args: {
+    const getPublicUrl = useCallback((args: {
         storageId: string;
     }) => {
         if (!workspaceId) {
@@ -38,8 +38,8 @@ export function AgentSpreadsheetDownload({ messageId, conversationId, workspaceI
             workspaceId,
             storageId: args.storageId,
         });
-    };
-    const storeExport = useEffectEvent(async () => {
+    }, [workspaceId, convex]);
+    const storeExport = useCallback(async () => {
         if (!payload || !conversationId || !workspaceId || isPreviewModeEnabled() || alreadyStored) {
             return null;
         }
@@ -67,25 +67,24 @@ export function AgentSpreadsheetDownload({ messageId, conversationId, workspaceI
                 },
             });
             onStored?.(messageId, attachment);
+            setIsStoring(false);
             return attachment;
         }
         catch (error) {
+            setIsStoring(false);
             notifyFailure({
                 title: 'Could not save Excel file',
                 message: error instanceof Error ? error.message : 'Upload to storage failed.',
             });
             return null;
         }
-        finally {
-            setIsStoring(false);
-        }
-    });
+    }, [payload, conversationId, workspaceId, alreadyStored, messageId, persistAgentSpreadsheetExport, generateUploadUrl, syncMetadata, getPublicUrl, attachSpreadsheetExport, onStored]);
     useEffect(() => {
         if (!payload || alreadyStored || persistAttemptedRef.current)
             return;
         persistAttemptedRef.current = true;
         void storeExport();
-    }, [alreadyStored, conversationId, messageId, payload, workspaceId]);
+    }, [alreadyStored, conversationId, messageId, payload, workspaceId, storeExport]);
     const handleDownload = async () => {
         if (!payload || isDownloading)
             return;
@@ -102,9 +101,7 @@ export function AgentSpreadsheetDownload({ messageId, conversationId, workspaceI
                 message: error instanceof Error ? error.message : 'Could not build the spreadsheet.',
             });
         }
-        finally {
-            setIsDownloading(false);
-        }
+        setIsDownloading(false);
     };
     const handleDownloadClick = () => {
         void handleDownload();

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useEffectEvent, useRef, type Dispatch, type SetStateAction } from 'react';
+import { usePathname, useRouter, useSearchParams } from '@/shared/ui/navigation';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { convexErrorMessage, reportConvexFailure } from '@/lib/handle-convex-error';
 import { notifyFailure } from '@/lib/notifications';
@@ -28,6 +29,9 @@ type UseAdsOauthCallbackArgs = {
 };
 export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAccountSelection, googleAccountOptionsLength, metaAccountOptionsLength, loadingGoogleAccountOptions, loadingMetaAccountOptions, loadGoogleAdAccounts, loadMetaAdAccounts, initializeLinkedInIntegration, initializeTikTokIntegration, setGoogleSetupUi, setGoogleSetupMessage, setMetaSetupMessage, setConnectionErrors, triggerRefresh, }: UseAdsOauthCallbackArgs) {
     const { toast } = useToast();
+    const { replace } = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const oauthProcessedRef = useRef<Record<string, boolean>>({});
     const processOauthRedirect = useEffectEvent(({ oauthSuccess, oauthError, providerId, message, oauthClientId, }: {
         oauthSuccess: boolean;
@@ -115,10 +119,6 @@ export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAcco
         }
     });
     useEffect(() => {
-        if (typeof window === 'undefined') {
-            return;
-        }
-        const searchParams = new URLSearchParams(window.location.search);
         const oauthSuccess = searchParams.get('oauth_success') === 'true';
         const oauthError = searchParams.get('oauth_error');
         const providerId = searchParams.get('provider');
@@ -135,13 +135,14 @@ export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAcco
             return;
         }
         oauthProcessedRef.current[processingKey] = true;
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('oauth_success');
-        newUrl.searchParams.delete('oauth_error');
-        newUrl.searchParams.delete('provider');
-        newUrl.searchParams.delete('message');
-        newUrl.searchParams.delete('clientId');
-        window.history.replaceState({}, '', newUrl.toString());
+        const cleanedParams = new URLSearchParams(searchParams.toString());
+        cleanedParams.delete('oauth_success');
+        cleanedParams.delete('oauth_error');
+        cleanedParams.delete('provider');
+        cleanedParams.delete('message');
+        cleanedParams.delete('clientId');
+        const nextQuery = cleanedParams.toString();
+        replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
         processOauthRedirect({
             oauthSuccess,
             oauthError: Boolean(oauthError),
@@ -149,7 +150,7 @@ export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAcco
             message,
             oauthClientId,
         });
-    }, []);
+    }, [pathname, processOauthRedirect, replace, searchParams]);
     useEffect(() => {
         if (!googleNeedsAccountSelection) {
             return;

@@ -43,7 +43,7 @@ export function TaskFilters({ searchQuery, onSearchChange, selectedStatus, onSta
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden/>
         <Input id="task-search" value={searchQuery} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown} placeholder="Search by title, client, or assignee…" className="h-9 border-border/60 bg-background pl-9 pr-20 text-sm shadow-sm" aria-label="Search tasks"/>
         <span className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 sm:inline-flex">
-          <KeyboardShortcutBadge combo="mod+k" className="scale-90 opacity-70"/>
+          <KeyboardShortcutBadge combo="mod+f" className="scale-90 opacity-70"/>
         </span>
       </div>
 

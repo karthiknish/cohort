@@ -108,7 +108,8 @@ function matchesShortcutCombo(event: KeyboardEvent, combo: string, sequenceState
 export function useKeyboardShortcut(shortcut: KeyboardShortcut, options: UseKeyboardShortcutOptions = {}) {
     const { enabled = true, targetRef, allowInInput = false } = options;
     const callbackRef = useRef(shortcut.callback);
-    const sequenceStatesRef = useRef(new Map<string, SequenceState>());
+    const sequenceStatesRef = useRef<Map<string, SequenceState>>(null!);
+    if (sequenceStatesRef.current === null) sequenceStatesRef.current = new Map<string, SequenceState>();
     // Keep callback ref up to date
     useEffect(() => {
         callbackRef.current = shortcut.callback;
@@ -154,7 +155,8 @@ export function useKeyboardShortcut(shortcut: KeyboardShortcut, options: UseKeyb
 // Hook for multiple shortcuts
 export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[], options: UseKeyboardShortcutOptions = {}) {
     const { enabled = true, targetRef, allowInInput = false } = options;
-    const sequenceStatesRef = useRef(new Map<string, SequenceState>());
+    const sequenceStatesRef = useRef<Map<string, SequenceState>>(null!);
+    if (sequenceStatesRef.current === null) sequenceStatesRef.current = new Map<string, SequenceState>();
     const shortcutsRef = useRef(shortcuts);
     shortcutsRef.current = shortcuts;
     const handleKeyDown = useEffectEvent((event: KeyboardEvent) => {

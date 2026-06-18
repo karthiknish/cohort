@@ -17,10 +17,9 @@ export default function ProposalDeckViewerPageClient({ src = null }: ProposalDec
           </Button>
           <Card className="border-destructive/40 bg-destructive/5">
             <CardHeader>
-              <CardTitle className="text-destructive">No deck URL provided</CardTitle>
+              <CardTitle className="text-destructive">This deck isn&apos;t available</CardTitle>
               <CardDescription className="text-destructive/80">
-                Open a proposal and use Preview, or add a valid <code className="text-xs">src</code> query
-                parameter to this page.
+                Open a proposal from your dashboard and choose Preview to view the deck here.
               </CardDescription>
             </CardHeader>
           </Card>

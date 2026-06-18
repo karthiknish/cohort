@@ -90,11 +90,9 @@ export function MetaAdvancedToolsPanel({ workspaceId, clientId, campaignObjectiv
     const [webhookFields, setWebhookFields] = useState<Set<string>>(new Set());
     const [loadingWebhooks, setLoadingWebhooks] = useState(false);
     const [savingWebhooks, setSavingWebhooks] = useState(false);
-    useEffect(() => {
-        if (advancedTabs.length > 0 && !advancedTabs.includes(activeTab as 'pixel' | 'business' | 'adlibrary' | 'webhooks')) {
-            setActiveTab(advancedTabs[0]!);
-        }
-    }, [activeTab, advancedTabs]);
+    const syncedActiveTab = advancedTabs.length > 0 && advancedTabs.includes(activeTab as 'pixel' | 'business' | 'adlibrary' | 'webhooks')
+        ? activeTab
+        : advancedTabs[0] ?? activeTab;
     useEffect(() => {
         if (!visibility.showPixelInsights) {
             dispatchPixels({ rows: [], loading: false });
@@ -298,7 +296,7 @@ export function MetaAdvancedToolsPanel({ workspaceId, clientId, campaignObjectiv
                 ? 'Search the public Ad Library and manage Business Manager and webhook settings.'
                 : 'Business Manager and ad account webhook tools for your connected Meta app.';
     return (<MetaToolsPanelShell icon={Activity} title="Pixel insights & integrations" description={shellDescription}>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={syncedActiveTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="h-9 w-full flex-wrap justify-start gap-1 bg-muted/40 p-1">
           {visibility.showPixelInsights ? (<TabsTrigger value="pixel" className="gap-1.5 text-xs sm:text-sm">
               <Activity className="size-3.5 shrink-0" aria-hidden/>

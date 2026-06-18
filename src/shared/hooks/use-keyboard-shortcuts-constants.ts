@@ -1,5 +1,6 @@
 export const APP_SHORTCUTS = {
     SEARCH: 'mod+k',
+    PAGE_SEARCH: 'mod+f',
     SHORTCUTS: 'shift+?',
     NEW_ITEM: 'mod+n',
     SAVE: 'mod+s',

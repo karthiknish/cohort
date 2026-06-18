@@ -13,16 +13,18 @@ export function RootNotFound() {
         </h1>
         <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
           The link you followed may be broken, or the page may have been moved.
-          Double-check the URL or head back to the dashboard to keep working on
-          your campaigns.
+          Double-check the URL or head back to the home page.
         </p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Button asChild>
-          <Link href="/dashboard">Back to dashboard</Link>
+          <Link href="/">Go home</Link>
         </Button>
         <Button asChild variant="outline">
-          <Link href="/auth">Go to sign in</Link>
+          <Link href="/dashboard">Dashboard</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/auth">Sign in</Link>
         </Button>
       </div>
     </main>

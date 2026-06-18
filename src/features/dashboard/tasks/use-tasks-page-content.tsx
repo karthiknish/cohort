@@ -230,7 +230,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     });
     // Keyboard shortcuts
     useKeyboardShortcut({
-        combo: 'mod+k',
+        combo: 'mod+f',
         callback: () => {
             document.getElementById('task-search')?.focus();
         },

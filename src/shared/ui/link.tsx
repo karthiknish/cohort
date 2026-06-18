@@ -9,7 +9,7 @@
  */
 import { forwardRef } from 'react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouter as useTanStackRouter } from '@tanstack/react-router'
 
 type LinkUrl = {
   pathname: string
@@ -50,9 +50,11 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
     href,
     children,
     onClick,
+    onMouseEnter,
+    onPointerDown,
     replace,
     target,
-    prefetch: _prefetch,
+    prefetch = true,
     scroll: _scroll,
     passHref: _passHref,
     legacyBehavior: _legacy,
@@ -64,13 +66,27 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
   ref,
 ) {
   const navigate = useNavigate()
+  const router = useTanStackRouter()
   const to = resolveHref(href)
+
+  const warmRoute = () => {
+    if (prefetch === false) return
+    void router.preloadRoute({ to: to as never })
+  }
 
   return (
     <a
       ref={ref}
       href={to}
       target={target}
+      onMouseEnter={(e) => {
+        warmRoute()
+        onMouseEnter?.(e)
+      }}
+      onPointerDown={(e) => {
+        warmRoute()
+        onPointerDown?.(e)
+      }}
       onClick={(e) => {
         onClick?.(e)
         if (e.defaultPrevented) return

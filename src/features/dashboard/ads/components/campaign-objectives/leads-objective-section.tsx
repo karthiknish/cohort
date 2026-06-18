@@ -181,9 +181,7 @@ export function LeadsObjectiveSection({ formData, onChange, disabled, providerId
                 fallbackMessage: 'Could not create lead form',
             });
         }
-        finally {
-            dispatch({ type: 'setCreatingForm', value: false });
-        }
+        dispatch({ type: 'setCreatingForm', value: false });
     };
     const handleToggleCreateForm = () => {
         dispatch({ type: 'setShowCreateForm', value: (value) => !value });

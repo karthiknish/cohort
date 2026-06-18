@@ -49,9 +49,7 @@ export function MeetingArtifactsDownload({ className, legacyId, meetingTitle, no
                 fallbackMessage: 'Unable to download meeting notes as PDF.',
             });
         }
-        finally {
-            setDownloading(null);
-        }
+        setDownloading(null);
     };
     const handleDownloadTranscript = () => {
         const content = transcriptText?.trim();
@@ -62,16 +60,23 @@ export function MeetingArtifactsDownload({ className, legacyId, meetingTitle, no
         try {
             downloadTextArtifact(content, buildMeetingArtifactFilename(meetingTitle, 'transcript'));
         }
-        finally {
-            setDownloading(null);
+        catch {
         }
+        setDownloading(null);
     };
     const handleDownloadNotesFromCloud = async () => {
         setDownloading('notes-cloud');
         try {
             const url = artifactUrls?.notesDownloadUrl;
             if (!url) {
-                throw new Error('Meeting notes are still syncing to cloud storage. Try again in a moment.');
+                setDownloading(null);
+                reportConvexFailure({
+                    error: new Error('url missing'),
+                    context: 'MeetingArtifactsDownload:notesCloudUrl',
+                    title: 'Not ready yet',
+                    fallbackMessage: 'Meeting notes are still syncing to cloud storage. Try again in a moment.',
+                });
+                return;
             }
             await downloadUrlArtifact(url, buildMeetingArtifactFilename(meetingTitle, 'notes-pdf'));
         }
@@ -83,16 +88,21 @@ export function MeetingArtifactsDownload({ className, legacyId, meetingTitle, no
                 fallbackMessage: 'Unable to download archived meeting notes.',
             });
         }
-        finally {
-            setDownloading(null);
-        }
+        setDownloading(null);
     };
     const handleDownloadTranscriptFromCloud = async () => {
         setDownloading('transcript-cloud');
         try {
             const url = artifactUrls?.transcriptDownloadUrl;
             if (!url) {
-                throw new Error('Meeting transcript is still syncing to cloud storage. Try again in a moment.');
+                setDownloading(null);
+                reportConvexFailure({
+                    error: new Error('url missing'),
+                    context: 'MeetingArtifactsDownload:transcriptCloudUrl',
+                    title: 'Not ready yet',
+                    fallbackMessage: 'Meeting transcript is still syncing to cloud storage. Try again in a moment.',
+                });
+                return;
             }
             await downloadUrlArtifact(url, buildMeetingArtifactFilename(meetingTitle, 'transcript'));
         }
@@ -104,9 +114,7 @@ export function MeetingArtifactsDownload({ className, legacyId, meetingTitle, no
                 fallbackMessage: 'Unable to download archived meeting transcript.',
             });
         }
-        finally {
-            setDownloading(null);
-        }
+        setDownloading(null);
     };
     const handleNotesCloudClick = () => {
         void handleDownloadNotesFromCloud();

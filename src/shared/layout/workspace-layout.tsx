@@ -37,7 +37,7 @@ export function WorkspaceLayoutInner({
                 <Header />
                 <NetworkStatusBanner />
                 <ScrollArea className="min-h-0 flex-1">
-                  <main className="min-h-full">
+                  <div className="min-h-full">
                     <DashboardMainRoleFrame>
                       <NavigationBreadcrumbs />
                       <PreviewDataBanner />
@@ -45,7 +45,7 @@ export function WorkspaceLayoutInner({
                         <DashboardAgencyRoutesGate>{children}</DashboardAgencyRoutesGate>
                       </ClientAccessGate>
                     </DashboardMainRoleFrame>
-                  </main>
+                  </div>
                 </ScrollArea>
               </div>
             </div>

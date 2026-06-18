@@ -1,6 +1,6 @@
 'use client';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useMemo, useReducer, useRef } from 'react';
 import { useConvex, useMutation, useQuery } from 'convex/react';
 import { useToast } from '@/shared/ui/use-toast';
 import { filesApi } from '@/lib/convex-api';
@@ -239,17 +239,11 @@ export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
         });
     })();
     const loading = convexEnabled && convexRows === undefined;
-    const previousCommentCountRef = useRef<number | null>(null);
-    useEffect(() => {
-        if (!onCommentCountChange) {
-            return;
-        }
-        if (previousCommentCountRef.current === comments.length) {
-            return;
-        }
+    const previousCommentCountRef = useRef(comments.length);
+    if (onCommentCountChange && previousCommentCountRef.current !== comments.length) {
         previousCommentCountRef.current = comments.length;
         onCommentCountChange(comments.length);
-    }, [comments.length, onCommentCountChange]);
+    }
     const activeReplyTo = (() => {
         if (!replyTo)
             return null;

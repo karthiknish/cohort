@@ -47,6 +47,8 @@ const errorMap: Record<string, string> = {
     'EMAIL_NOT_VERIFIED': 'Please verify your email address to continue.',
     'ACCOUNT_DISABLED': 'Your account has been disabled. Please contact support.',
     'ACCOUNT_SUSPENDED': 'Your account has been suspended. Please contact support.',
+    'account_disabled': 'Your account has been disabled. Please contact support.',
+    'account_suspended': 'Your account has been suspended. Please contact support.',
     'ACCOUNT_PENDING': 'Your account is pending approval.',
     'SESSION_EXPIRED': 'Your session has expired. Please sign in again.',
     'INVALID_TOKEN': 'Invalid authentication token. Please sign in again.',
@@ -91,6 +93,9 @@ export function getFriendlyAuthErrorMessage(error: unknown): string {
     if (typeof error === 'string') {
         if (errorMap[error])
             return errorMap[error];
+        const normalized = error.toUpperCase().replace(/-/g, '_');
+        if (errorMap[normalized])
+            return errorMap[normalized];
         if (isBetterAuthGenericFailureMessage(error))
             return AUTH_MISCONFIGURED_MESSAGE;
         return error;

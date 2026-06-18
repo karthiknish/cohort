@@ -1,6 +1,6 @@
 'use client';
 import { useAction } from 'convex/react';
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Loader2, Send, Server, Store, Zap } from 'lucide-react';
 import { adsMetaEventsApi, adsMetaToolsApi } from '@/lib/convex-api';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
@@ -55,7 +55,6 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
         loading: boolean;
     }) => value, { rows: [], loading: false });
     const [pixelId, setPixelId] = useState('');
-    const [eventName, setEventName] = useState('Purchase');
     const [actionSource, setActionSource] = useState('website');
     const [email, setEmail] = useState('');
     const [value, setValue] = useState('');
@@ -68,14 +67,15 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
     const [runningBatch, setRunningBatch] = useState(false);
     const [batchResult, setBatchResult] = useState('');
     const needsPixelList = visibility.showCapi || visibility.showOfflineEvents;
-    useEffect(() => {
-        if (eventTabs.length > 0 && !eventTabs.includes(activeTab as 'capi' | 'offline' | 'batch')) {
-            setActiveTab(defaultEventsTab(eventTabs));
-        }
-    }, [activeTab, eventTabs]);
-    useEffect(() => {
+    const syncedActiveTab = eventTabs.includes(activeTab as 'capi' | 'offline' | 'batch')
+        ? activeTab
+        : defaultEventsTab(eventTabs);
+    const prevDefaultEventName = useRef(visibility.defaultCapiEventName);
+    const [eventName, setEventName] = useState(visibility.defaultCapiEventName || 'Purchase');
+    if (prevDefaultEventName.current !== visibility.defaultCapiEventName) {
+        prevDefaultEventName.current = visibility.defaultCapiEventName;
         setEventName(visibility.defaultCapiEventName);
-    }, [visibility.defaultCapiEventName]);
+    }
     useEffect(() => {
         if (!needsPixelList) {
             dispatchPixels({ rows: [], loading: false });
@@ -195,11 +195,9 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
             body?: string;
             name?: string;
         }>;
+        let parsed: unknown;
         try {
-            const parsed = JSON.parse(batchJson) as unknown;
-            if (!Array.isArray(parsed))
-                throw new Error('Batch payload must be a JSON array');
-            requests = parsed as typeof requests;
+            parsed = JSON.parse(batchJson);
         }
         catch {
             toast({
@@ -209,6 +207,15 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
             });
             return;
         }
+        if (!Array.isArray(parsed)) {
+            toast({
+                title: 'Invalid batch JSON',
+                description: 'Provide an array of { method, relativeUrl, body?, name? }.',
+                variant: 'destructive',
+            });
+            return;
+        }
+        requests = parsed as typeof requests;
         setRunningBatch(true);
         setBatchResult('');
         void executeBatch({ workspaceId, clientId: clientId ?? null, requests })
@@ -244,7 +251,7 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
                 ? 'Upload in-store or CRM conversions with a physical-store action source.'
                 : 'Run grouped Graph API requests in a single call (max 50).';
     return (<MetaToolsPanelShell icon={Server} title="Conversions API & events" description={shellDescription}>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={syncedActiveTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="h-9 w-full flex-wrap justify-start gap-1 bg-muted/40 p-1">
           {visibility.showCapi ? (<TabsTrigger value="capi" className="gap-1.5 text-xs sm:text-sm">
               <Send className="size-3.5 shrink-0" aria-hidden/>

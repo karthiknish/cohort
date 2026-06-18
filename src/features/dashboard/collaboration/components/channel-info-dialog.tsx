@@ -86,9 +86,7 @@ export function ChannelInfoDialog({ open, onOpenChange, channel, channelMessages
                 fallbackMessage: 'Could not update photo',
             });
         }
-        finally {
-            setUploading(false);
-        }
+        setUploading(false);
     };
     const handleRemovePhoto = async () => {
         if (!isAdmin || !channel.avatarUrl)
@@ -113,9 +111,7 @@ export function ChannelInfoDialog({ open, onOpenChange, channel, channelMessages
                 fallbackMessage: 'Could not remove photo',
             });
         }
-        finally {
-            setRemoving(false);
-        }
+        setRemoving(false);
     };
     const handleRemovePhotoClick = () => {
         void handleRemovePhoto();

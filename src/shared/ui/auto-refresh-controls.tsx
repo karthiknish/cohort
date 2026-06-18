@@ -37,7 +37,7 @@ export function AutoRefreshControls({ onRefresh, disabled = false, isRefreshing 
             timeoutRef.current = undefined;
         }
     };
-    const startAutoRefresh = (intervalMs: number | null) => {
+    const startAutoRefresh = useCallback((intervalMs: number | null) => {
         clearAutoRefresh();
         if (!intervalMs) {
             return;
@@ -45,7 +45,7 @@ export function AutoRefreshControls({ onRefresh, disabled = false, isRefreshing 
         timeoutRef.current = setInterval(() => {
             void onRefreshRef.current();
         }, intervalMs);
-    };
+    }, []);
     // Handle interval change
     const handleIntervalChange = (newInterval: RefreshInterval) => {
         setRefreshInterval(newInterval);

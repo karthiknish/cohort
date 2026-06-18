@@ -293,11 +293,11 @@ export function NotificationsPageContent() {
       <LiveRegion message={page.notificationAnnouncement}/>
 
       <FadeIn>
-      <NotificationsPageHeader onRefresh={page.handleRefresh} onMarkAllRead={page.handleMarkAllRead} onClearAll={page.handleClearAll} refreshing={!page.isPreviewMode && page.notificationsInfiniteQuery.isFetching} unreadCount={page.unreadCount} notificationsCount={page.notifications.length} ackInFlight={page.ackInFlight}/>
+      <NotificationsPageHeader onRefresh={page.handleRefresh} onMarkAllRead={page.handleMarkAllRead} onClearAll={page.handleClearAll} refreshing={!page.isPreviewMode && page.loading} unreadCount={page.unreadCount} notificationsCount={page.notifications.length} ackInFlight={page.ackInFlight}/>
 
       {page.isPreviewMode ? <NotificationsPreviewAlert /> : null}
 
-      {page.error ? (<NotificationsErrorAlert error={page.error} isPreviewMode={page.isPreviewMode} retrying={page.notificationsInfiniteQuery.isFetching} onRetry={page.handleRetryNotificationsQuery}/>) : null}
+      {page.error ? (<NotificationsErrorAlert error={page.error} isPreviewMode={page.isPreviewMode} retrying={page.loading} onRetry={page.handleRetryNotificationsQuery}/>) : null}
 
       <Tabs value={page.activeFilter} onValueChange={page.handleActiveFilterChange}>
         <NotificationsFilterTabsList activeFilter={page.activeFilter} notificationsCount={page.notifications.length} unreadCount={page.unreadCount}/>

@@ -1,5 +1,4 @@
-import { Outlet, createFileRoute, useLocation } from '@tanstack/react-router'
-import { Link as TanStackLink } from '@tanstack/react-router'
+import { Link as TanStackLink, Outlet, createFileRoute, useLocation } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import React from 'react'
 import { AdminError } from '@/shared/ui/route-boundaries/admin-error'

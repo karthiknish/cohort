@@ -62,9 +62,7 @@ function EditMetaCampaignFormBody({ campaignId, initialName, initialStartTime, i
                 fallbackMessage: asErrorMessage(error),
             });
         }
-        finally {
-            setLoading(false);
-        }
+        setLoading(false);
     };
     const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
         setName(event.target.value);

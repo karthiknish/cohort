@@ -25,10 +25,13 @@ const loadSettingsShell = createServerFn({ method: 'GET' }).handler(async () => 
 })
 
 export const Route = createFileRoute('/_authed/settings')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: typeof search.tab === 'string' ? search.tab : undefined,
+  }),
+  loader: () => loadSettingsShell(),
   head: () => ({
     meta: [{ title: 'Settings | Cohorts' }],
   }),
-  loader: () => loadSettingsShell(),
   component: SettingsRoute,
   errorComponent: SettingsError,
   pendingComponent: SettingsLoading,

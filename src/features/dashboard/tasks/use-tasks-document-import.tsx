@@ -1,6 +1,6 @@
 'use client';
 import { useAction, useConvex, useMutation } from 'convex/react';
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { readFileAsBase64, getPdfUploadSizeError } from '@/lib/agent-attachments';
 import { asErrorMessage } from '@/lib/convex-errors';
 import { agentApi, filesApi, tasksDocumentImportApi } from '@/lib/convex-api';
@@ -79,7 +79,7 @@ export function useTasksDocumentImport({ workspaceId, userId, participants, clie
     const [attachSourceDocuments, setAttachSourceDocuments] = useState(true);
     const dragDepthRef = useRef(0);
     const abortRef = useRef(false);
-    const resetImport = () => {
+    const resetImport = useCallback(() => {
         abortRef.current = false;
         dragDepthRef.current = 0;
         setPhase('idle');
@@ -89,7 +89,7 @@ export function useTasksDocumentImport({ workspaceId, userId, participants, clie
         setDocumentSummary(null);
         setSourceFiles([]);
         setAttachSourceDocuments(true);
-    };
+    }, []);
     const extractPdfOnServer = async (file: File) => {
         if (!workspaceId || isPreviewModeEnabled())
             return null;
@@ -325,10 +325,10 @@ export function useTasksDocumentImport({ workspaceId, userId, participants, clie
             return;
         void runDocumentImport(Array.from(files));
     };
-    const handleCancel = useEffectEvent(() => {
+    const handleCancel = useCallback(() => {
         abortRef.current = true;
         resetImport();
-    });
+    }, [resetImport]);
     const handleConfirmReview = () => {
         void createTasksFromProposals(proposedTasks);
     };
@@ -345,7 +345,7 @@ export function useTasksDocumentImport({ workspaceId, userId, participants, clie
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [phase]);
+    }, [phase, handleCancel]);
     const overlayVisible = phase === 'dragging' || phase === 'extracting' || phase === 'analyzing' || phase === 'creating' || phase === 'error';
     return {
         phase,

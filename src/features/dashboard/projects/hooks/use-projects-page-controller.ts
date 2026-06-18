@@ -59,7 +59,7 @@ export function useProjectsPageController() {
         }
     };
     useKeyboardShortcut({
-        combo: 'mod+k',
+        combo: 'mod+f',
         callback: () => {
             document.getElementById('project-search')?.focus();
         },

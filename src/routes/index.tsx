@@ -5,12 +5,6 @@ import { getServerRequest } from '@/lib/server-request.server'
 import { hasValidSession } from '@/lib/auth-guard'
 
 export const Route = createFileRoute('/')({
-  head: () => ({
-    meta: [
-      { title: marketingHomeMetadata.title as string },
-      { name: 'description', content: marketingHomeMetadata.description as string },
-    ],
-  }),
   beforeLoad: async () => {
     let request: Request | undefined
     try {
@@ -23,6 +17,12 @@ export const Route = createFileRoute('/')({
       throw redirect({ to: '/for-you' })
     }
   },
+  head: () => ({
+    meta: [
+      { title: marketingHomeMetadata.title as string },
+      { name: 'description', content: marketingHomeMetadata.description as string },
+    ],
+  }),
   component: HomePage,
 })
 

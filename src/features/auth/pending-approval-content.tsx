@@ -49,13 +49,13 @@ export function PendingApprovalContent() {
             return;
         }
         if (authPhase === 'unauthenticated') {
-            window.location.href = '/auth';
+            replace('/auth');
             return;
         }
         if (authPhase === 'ready_active') {
-            window.location.href = '/for-you';
+            replace('/for-you');
         }
-    }, [authPhase]);
+    }, [authPhase, replace]);
     const statusCopy = getStatusCopy(user?.status ?? requestedStatus);
     const handleRefreshStatus = () => {
         void retrySync();

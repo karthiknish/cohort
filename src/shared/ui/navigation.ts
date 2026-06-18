@@ -55,7 +55,9 @@ export function useRouter(): Router {
     back: () => router.history.back(),
     forward: () => router.history.forward(),
     refresh: () => void router.invalidate(),
-    prefetch: () => undefined,
+    prefetch: (href?: string) => {
+      if (href) void router.preloadRoute({ to: href as never })
+    },
   }
 }
 

@@ -91,7 +91,7 @@ function ProjectsHeaderSection() {
         </div>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
-            <KeyboardShortcutBadge combo="mod+k" className="origin-left scale-90"/>
+            <KeyboardShortcutBadge combo="mod+f" className="origin-left scale-90"/>
             Search backlog
           </span>
           <span className="text-muted-foreground/40" aria-hidden>

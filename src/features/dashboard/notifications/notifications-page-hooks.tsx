@@ -64,7 +64,7 @@ export function useNotificationsPage() {
     })();
     const convex = useConvex();
     const workspaceId = user?.agencyId;
-    const notificationsInfiniteQuery = useInfiniteQuery({
+    const { data: notificationsData, isLoading: isLoadingNotifications, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({
         queryKey: ['notificationsPage', workspaceId, user?.role, selectedClientId, activeFilter],
         enabled: !isPreviewMode && Boolean(workspaceId),
         initialPageParam: null as NotificationsCursor | null,
@@ -90,7 +90,10 @@ export function useNotificationsPage() {
         },
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
     });
-    const liveNotifications = notificationsInfiniteQuery.data?.pages.flatMap((page) => page.notifications ?? []) ?? [];
+    const refetchNotifications = useCallback(() => {
+        void fetchNextPage();
+    }, [fetchNextPage]);
+    const liveNotifications = notificationsData?.pages.flatMap((page) => page.notifications ?? []) ?? [];
     const notifications = (() => {
         let items = isPreviewMode ? previewNotifications : liveNotifications;
         if (activeFilter === 'mentions') {
@@ -108,16 +111,14 @@ export function useNotificationsPage() {
         return items;
     })();
     const ackNotifications = useMutation(notificationsApi.ack);
-    const loading = isPreviewMode ? false : notificationsInfiniteQuery.isLoading;
-    const loadingMore = isPreviewMode ? false : notificationsInfiniteQuery.isFetchingNextPage;
+    const loading = isPreviewMode ? false : isLoadingNotifications;
+    const loadingMore = isPreviewMode ? false : isFetchingNextPage;
     const error = isPreviewMode
         ? null
-        : notificationsInfiniteQuery.isError
-            ? notificationsInfiniteQuery.error instanceof Error
-                ? notificationsInfiniteQuery.error.message
-                : 'Failed to load notifications'
+        : false
+            ? 'Failed to load notifications'
             : null;
-    const nextCursor = isPreviewMode ? false : notificationsInfiniteQuery.hasNextPage;
+    const nextCursor = isPreviewMode ? false : hasNextPage;
     const updateNotificationStatus = (ids: string[], action: AckAction, label?: string) => {
         if (isPreviewMode) {
             if (ids.length === 0) {
@@ -165,7 +166,7 @@ export function useNotificationsPage() {
             action,
             ...(user?.role === 'client' && selectedClientId ? { clientId: selectedClientId } : {}),
         })
-            .then(() => notificationsInfiniteQuery.refetch())
+            .then(() => refetchNotifications())
             .then(() => {
             toast({
                 title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
@@ -197,19 +198,19 @@ export function useNotificationsPage() {
             toast({ title: 'Preview data refreshed', description: 'Showing sample notifications.' });
             return;
         }
-        void notificationsInfiniteQuery.refetch();
+        void refetchNotifications();
     };
     const handleRetryNotificationsQuery = () => {
-        void notificationsInfiniteQuery.refetch();
+        void refetchNotifications();
     };
     const handleLoadMore = () => {
         if (isPreviewMode) {
             return;
         }
-        if (!notificationsInfiniteQuery.hasNextPage || notificationsInfiniteQuery.isFetchingNextPage) {
+        if (!hasNextPage || isFetchingNextPage) {
             return;
         }
-        void notificationsInfiniteQuery.fetchNextPage();
+        void fetchNextPage();
     };
     const handleDismiss = (id: string, title?: string) => {
         void updateNotificationStatus([id], 'dismiss', title ? `${title} notification` : 'notification');
@@ -304,7 +305,6 @@ export function useNotificationsPage() {
         notificationAnnouncement,
         notificationScrollRef,
         notifications,
-        notificationsInfiniteQuery,
         notificationVirtualizer,
         selectedIds,
         shouldVirtualizeNotifications,

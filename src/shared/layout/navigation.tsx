@@ -71,7 +71,8 @@ function NavigationList({ onNavigate, collapsed = false }: {
     const pathname = usePathname();
     const { prefetch } = useRouter();
     const { user } = useAuth();
-    const prefetchedRef = useRef<Set<string>>(new Set());
+    const prefetchedRef = useRef<Set<string>>(null!);
+    if (prefetchedRef.current === null) prefetchedRef.current = new Set();
     const prefetchRoute = (href: string) => {
         if (!href)
             return;

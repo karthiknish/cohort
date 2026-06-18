@@ -1,5 +1,5 @@
 'use client';
-import { useCallback } from 'react';
+import { useCallback, createElement } from 'react';
 import { Link } from '@/shared/ui/link';
 import { Filter, Info, X } from 'lucide-react';
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme';
@@ -17,18 +17,22 @@ import type { MetricRecord, SummaryCard } from './types';
 import { DateRangePicker, type DateRange } from './date-range-picker';
 import { getProviderIcon, formatProviderName } from './utils';
 import { adsMetricsEmptyCopy, type AdsMetricsDisplayState, } from './ads-metrics-display-state';
+function ProviderIcon({ providerId, className }: { providerId: string; className?: string }) {
+    const Icon = getProviderIcon(providerId);
+    if (!Icon) return null;
+    return createElement(Icon, { className });
+}
 function ProviderFilterOption({ providerId, selectedProviders, onToggleProvider, }: {
     providerId: string;
     selectedProviders: string[];
     onToggleProvider: (providerId: string) => void;
 }) {
-    const ProviderIcon = getProviderIcon(providerId);
     const handleCheckedChange = () => {
         onToggleProvider(providerId);
     };
     return (<DropdownMenuCheckboxItem checked={selectedProviders.includes(providerId)} onCheckedChange={handleCheckedChange}>
       <span className="flex items-center gap-2">
-        {ProviderIcon ? <ProviderIcon className="size-4"/> : null}
+        <ProviderIcon providerId={providerId} className="size-4"/>
         {formatProviderName(providerId)}
       </span>
     </DropdownMenuCheckboxItem>);

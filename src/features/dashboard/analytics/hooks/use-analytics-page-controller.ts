@@ -2,6 +2,7 @@
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { differenceInDays, endOfDay, format, startOfDay } from 'date-fns';
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from '@/shared/ui/navigation';
 import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
@@ -96,6 +97,9 @@ export function useAnalyticsPageController() {
     const { toast } = useToast();
     const { isPreviewMode } = usePreview();
     const { user } = useAuth();
+    const { replace } = useRouter();
+    const pathname = usePathname();
+    const urlSearchParams = useSearchParams();
     const preferenceCurrency = useCurrency();
     const previewGoogleAnalyticsStatus = getPreviewGoogleAnalyticsStatus();
     const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => {
@@ -224,22 +228,21 @@ export function useAnalyticsPageController() {
         });
     });
     useEffect(() => {
-        if (typeof window === 'undefined')
-            return;
-        const url = new URL(window.location.href);
-        const oauthSuccess = url.searchParams.get('oauth_success') === 'true';
-        const oauthError = url.searchParams.get('oauth_error');
-        const provider = url.searchParams.get('provider');
-        const message = url.searchParams.get('message');
+        const oauthSuccess = urlSearchParams.get('oauth_success') === 'true';
+        const oauthError = urlSearchParams.get('oauth_error');
+        const provider = urlSearchParams.get('provider');
+        const message = urlSearchParams.get('message');
         if (!oauthSuccess && !oauthError)
             return;
         if (provider !== 'google-analytics')
             return;
-        url.searchParams.delete('oauth_success');
-        url.searchParams.delete('oauth_error');
-        url.searchParams.delete('provider');
-        url.searchParams.delete('message');
-        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+        const cleanedParams = new URLSearchParams(urlSearchParams.toString());
+        cleanedParams.delete('oauth_success');
+        cleanedParams.delete('oauth_error');
+        cleanedParams.delete('provider');
+        cleanedParams.delete('message');
+        const nextQuery = cleanedParams.toString();
+        replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
         requestAnimationFrame(() => {
             setGaSetupFlow((prev) => ({
                 ...prev,
@@ -264,7 +267,7 @@ export function useAnalyticsPageController() {
                 message: mapOauthErrorToMessage(oauthError, message),
             });
         }
-    }, [toast]);
+    }, [loadGoogleAnalyticsPropertyOptions, pathname, replace, toast, urlSearchParams]);
     const gaPropertyAutoLoadRef = useRef(false);
     const autoLoadGoogleAnalyticsProperties = useEffectEvent(() => {
         if (!gaNeedsPropertySelection || isPreviewMode) {

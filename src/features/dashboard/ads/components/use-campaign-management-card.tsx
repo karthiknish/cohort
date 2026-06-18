@@ -113,23 +113,23 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             endDate,
             limit: 2000,
         }) as HistoricalMetricRow[] | undefined;
-    const historicalCampaigns = buildHistoricalCampaigns(historicalMetrics, adsProviderId);
+    const historicalCampaigns = useMemo(() => buildHistoricalCampaigns(historicalMetrics, adsProviderId), [historicalMetrics, adsProviderId]);
     const selectedBudgetTarget = selectedGroup ?? selectedCampaign;
     const selectedCurrencyCode = normalizeCurrencyCode(selectedBudgetTarget?.currency);
     const selectedCurrencyInfo = (isSupportedCurrency(selectedCurrencyCode) ? getCurrencyInfo(selectedCurrencyCode) : null);
     const selectedCurrencyLabel = selectedCurrencyInfo
         ? `${selectedCurrencyInfo.symbol} ${selectedCurrencyCode}`
         : selectedCurrencyCode;
-    const openCampaignBudgetDialog = (campaign: Campaign) => {
+    const openCampaignBudgetDialog = useCallback((campaign: Campaign) => {
         dispatch({ type: 'openCampaignBudgetDialog', campaign });
-    };
-    const openGroupBudgetDialog = (group: CampaignGroup) => {
+    }, []);
+    const openGroupBudgetDialog = useCallback((group: CampaignGroup) => {
         dispatch({ type: 'openGroupBudgetDialog', group });
-    };
-    const openCampaignBiddingDialog = (campaign: Campaign) => {
+    }, []);
+    const openCampaignBiddingDialog = useCallback((campaign: Campaign) => {
         dispatch({ type: 'openCampaignBiddingDialog', campaign });
-    };
-    const fetchCampaigns = async () => {
+    }, []);
+    const fetchCampaigns = useCallback(async () => {
         if (!isConnected || setupRequired || !canQueryConvex)
             return;
         dispatch({ type: 'setLoading', loading: true });
@@ -157,8 +157,8 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             .finally(() => {
             dispatch({ type: 'setLoading', loading: false });
         });
-    };
-    const fetchGroups = async () => {
+    }, [isConnected, setupRequired, canQueryConvex, workspaceId, listCampaigns, adsProviderId, selectedClientId, historicalCampaigns]);
+    const fetchGroups = useCallback(async () => {
         if (!isConnected || setupRequired || adsProviderId !== 'linkedin' || !canQueryConvex)
             return;
         dispatch({ type: 'setGroupsLoading', groupsLoading: true });
@@ -185,7 +185,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             .finally(() => {
             dispatch({ type: 'setGroupsLoading', groupsLoading: false });
         });
-    };
+    }, [isConnected, setupRequired, adsProviderId, canQueryConvex, workspaceId, listCampaignGroups, selectedClientId]);
     const handleRefresh = () => {
         if (view === 'groups') {
             void fetchGroups();
@@ -210,11 +210,11 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
     }, [
         adsProviderId,
         canQueryConvex,
-        fetchCampaigns,
-        fetchGroups,
         isConnected,
         setupRequired,
         workspaceId,
+        fetchCampaigns,
+        fetchGroups,
     ]);
     const openInsightsPage = (campaignOrGroupId: string, name: string) => {
         const params = new URLSearchParams({ startDate, endDate });
@@ -223,7 +223,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
         params.set('campaignName', name);
         push(withPreviewModeSearchParamIfEnabled(`/dashboard/ads/campaigns/${adsProviderId}/${campaignOrGroupId}?${params.toString()}`, isPreviewModeEnabled()), { transitionTypes: ['nav-forward'] });
     };
-    const handleAction = async (campaignId: string, action: 'enable' | 'pause' | 'remove') => {
+    const handleAction = useCallback(async (campaignId: string, action: 'enable' | 'pause' | 'remove') => {
         dispatch({ type: 'setActionLoading', actionLoading: campaignId });
         if (!workspaceId) {
             notifyFailure({
@@ -259,8 +259,8 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             .finally(() => {
             dispatch({ type: 'setActionLoading', actionLoading: null });
         });
-    };
-    const handleGroupAction = async (groupId: string, action: 'enable' | 'pause') => {
+    }, [workspaceId, adsProviderId, selectedClientId, updateCampaign, fetchCampaigns, onRefresh]);
+    const handleGroupAction = useCallback(async (groupId: string, action: 'enable' | 'pause') => {
         dispatch({ type: 'setActionLoading', actionLoading: groupId });
         if (!workspaceId) {
             notifyFailure({
@@ -296,7 +296,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             .finally(() => {
             dispatch({ type: 'setActionLoading', actionLoading: null });
         });
-    };
+    }, [workspaceId, selectedClientId, updateCampaignGroup, fetchGroups, onRefresh]);
     const handleBudgetUpdate = async () => {
         const isGroup = view === 'groups';
         const targetId = isGroup ? selectedGroup?.id : selectedCampaign?.id;

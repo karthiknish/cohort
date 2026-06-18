@@ -1,8 +1,8 @@
 'use client';
 import { notifyFailure } from '@/lib/notifications';
 import { LoaderCircle } from 'lucide-react';
-import { useRouter, redirect } from '@/shared/ui/navigation';
-import { Suspense, useCallback, useEffect, useMemo, useReducer } from 'react';
+import { useRouter, redirect, usePathname, useSearchParams } from '@/shared/ui/navigation';
+import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { AuthCard } from '@/features/auth/components/auth-card';
 import { AuthPageSkeleton } from '@/features/auth/components/auth-page-skeleton';
@@ -159,7 +159,9 @@ function HomeAuthPageContent() {
     const { data: session, isPending: sessionPending } = authClient.useSession();
     const user = session?.user ?? null;
     const loading = sessionPending;
-    const { push } = useRouter();
+    const { push, replace } = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { toast } = useToast();
     const { signIn, signUp } = useAuth();
     useEffect(() => {
@@ -170,23 +172,23 @@ function HomeAuthPageContent() {
             signInEmail: window.localStorage.getItem(REMEMBER_ME_KEY) ?? '',
         });
     }, []);
+    const oauthErrorHandledRef = useRef(false);
     useEffect(() => {
-        if (typeof window === 'undefined')
+        const oauthError = searchParams.get('error');
+        if (!oauthError || oauthErrorHandledRef.current)
             return;
-        const params = new URLSearchParams(window.location.search);
-        const oauthError = params.get('error');
-        if (!oauthError)
-            return;
+        oauthErrorHandledRef.current = true;
         notifyFailure({
             title: 'Google sign-in failed',
             message: getFriendlyAuthErrorMessage(oauthError),
         });
+        const params = new URLSearchParams(searchParams.toString());
         params.delete('error');
         params.delete('error_description');
         const nextQuery = params.toString();
-        const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`;
-        window.history.replaceState(null, '', nextUrl);
-    }, [toast]);
+        const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+        replace(nextUrl, { scroll: false });
+    }, [pathname, replace, searchParams]);
     const getRedirectParam = () => {
         if (typeof window === 'undefined') {
             return null;
@@ -215,9 +217,10 @@ function HomeAuthPageContent() {
         }
         try {
             window.localStorage.setItem(TAB_STORAGE_KEY, nextTab);
-            const nextUrl = new URL(window.location.href);
-            nextUrl.searchParams.set('tab', nextTab);
-            window.history.replaceState(null, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+            const params = new URLSearchParams(searchParams.toString());
+            params.set('tab', nextTab);
+            const nextQuery = params.toString();
+            replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
         }
         catch (error) {
             logError(error, 'AuthPage:persistTab');

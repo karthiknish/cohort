@@ -48,7 +48,7 @@ export function ActivityFilters({ searchQuery, onSearchChange, typeFilter, onTyp
         <svg aria-hidden="true" className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>
-        <Input id="activity-search" aria-label="Search activity" placeholder="Search activity… (⌘K)" className="pl-9" value={searchQuery} onChange={handleSearchChange}/>
+        <Input id="activity-search" aria-label="Search activity" placeholder="Search activity… (⌘F)" className="pl-9" value={searchQuery} onChange={handleSearchChange}/>
         {searchQuery && (<button type="button" onClick={handleClearSearch} className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground" aria-label="Clear search">
             <X className="size-4"/>
           </button>)}

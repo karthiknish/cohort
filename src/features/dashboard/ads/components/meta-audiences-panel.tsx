@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAction } from 'convex/react';
 import { Loader2, Sparkles, Trash2, Users } from 'lucide-react';
 import { adsAudiencesApi } from '@/lib/convex-api';
@@ -52,7 +52,7 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
     const [lookalikeCountry, setLookalikeCountry] = useState<string>(META_LOOKALIKE_COUNTRIES[0].code);
     const [lookalikeRatio, setLookalikeRatio] = useState(String(META_LOOKALIKE_RATIO_PRESETS[0].ratio));
     const [creatingLookalike, setCreatingLookalike] = useState(false);
-    const loadAudiences = useEffectEvent(() => {
+    const loadAudiences = useCallback(() => {
         setLoading(true);
         return listAudiences({
             workspaceId,
@@ -73,7 +73,7 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
             .finally(() => {
             setLoading(false);
         });
-    });
+    }, [listAudiences, workspaceId, clientId]);
     useEffect(() => {
         void loadAudiences();
     }, [clientId, workspaceId]);
@@ -106,10 +106,8 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
                 fallbackMessage: 'Check Meta permissions and try again.',
             });
         }
-        finally {
-            setDeletingId(null);
-            setPendingDelete(null);
-        }
+        setDeletingId(null);
+        setPendingDelete(null);
     };
     const handleDeleteDialogOpenChange = (open: boolean) => {
         if (!open)

@@ -101,7 +101,8 @@ export function NotificationPreferencesPanel() {
         fallbackMessage: 'Unable to load notification preferences.',
     });
     const updatePrefs = useMutation(settingsApi.updateMyNotificationPreferences);
-    const previewPrefsRef = useRef(getPreviewSettingsNotificationPreferences());
+    const previewPrefsRef = useRef<ReturnType<typeof getPreviewSettingsNotificationPreferences>>(null!);
+    if (previewPrefsRef.current === null) previewPrefsRef.current = getPreviewSettingsNotificationPreferences();
     const [state, dispatch] = useReducer(notificationPreferencesPanelReducer, undefined, createInitialNotificationPreferencesPanelState);
     const { localPrefs, loading, saving, error } = state;
     const displayError = mergeQueryErrors(error, prefsQueryError);
