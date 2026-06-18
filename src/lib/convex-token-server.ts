@@ -1,6 +1,7 @@
 import { headers } from './server-headers';
 import { getToken as getBetterAuthUtilsToken } from '@convex-dev/better-auth/utils';
-import { convexSiteUrl, getToken as getNextJsToken } from '@/lib/auth-server';
+import { getToken as getNextJsToken } from '@/lib/auth-server';
+import { getConvexSiteUrl } from '@/lib/convex-env';
 /**
  * Resolves a Convex JWT for API route handlers.
  * Prefers the Next.js app proxy so session cookies on localhost stay valid.
@@ -44,7 +45,7 @@ export async function resolveConvexTokenFromRequest(req: Request): Promise<strin
         mutable.delete('content-length');
         mutable.delete('transfer-encoding');
         mutable.set('accept-encoding', 'identity');
-        const result = await getBetterAuthUtilsToken(convexSiteUrl, mutable, { forceRefresh: true });
+        const result = await getBetterAuthUtilsToken(getConvexSiteUrl(), mutable, { forceRefresh: true });
         if (typeof result?.token === 'string' && result.token.length > 0) {
             return result.token;
         }
@@ -55,7 +56,7 @@ export async function resolveConvexTokenFromRequest(req: Request): Promise<strin
     try {
         const mutable = new Headers(req.headers);
         mutable.set('accept-encoding', 'identity');
-        const result = await getBetterAuthUtilsToken(convexSiteUrl, mutable, { forceRefresh: true });
+        const result = await getBetterAuthUtilsToken(getConvexSiteUrl(), mutable, { forceRefresh: true });
         if (typeof result?.token === 'string' && result.token.length > 0) {
             return result.token;
         }

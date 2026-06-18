@@ -11,7 +11,8 @@ export interface AuthResult {
 import { ApiError } from './api-errors';
 import { decodeJwtSubject } from './jwt-utils';
 import { ConvexHttpClient } from 'convex/browser';
-import { convexSiteUrl, getToken as getNextJsToken } from '@/lib/auth-server';
+import { getToken as getNextJsToken } from '@/lib/auth-server';
+import { getConvexSiteUrl } from '@/lib/convex-env';
 import { api } from '/_generated/api';
 class AuthenticationError extends ApiError {
     constructor(message: string, status = 401) {
@@ -176,7 +177,7 @@ async function resolveBetterAuthToken(request: NextRequest): Promise<string | nu
         // Fall through to the raw request-header lookup below.
     }
     try {
-        const tokenResult = await getBetterAuthToken(convexSiteUrl, request.headers);
+        const tokenResult = await getBetterAuthToken(getConvexSiteUrl(), request.headers);
         const token = tokenResult?.token;
         if (typeof token === 'string' && token.length > 0) {
             return token;

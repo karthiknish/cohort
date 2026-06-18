@@ -1,11 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { proxyAuthToConvex } from '@/lib/auth-server'
 
 export const Route = createFileRoute('/api/auth/$')({
   server: {
     handlers: {
-      GET: async ({ request }) => proxyAuthToConvex(request),
-      POST: async ({ request }) => proxyAuthToConvex(request),
+      GET: async ({ request }) => {
+        const { proxyAuthToConvex } = await import('@/lib/auth-server')
+        return proxyAuthToConvex(request)
+      },
+      POST: async ({ request }) => {
+        const { proxyAuthToConvex } = await import('@/lib/auth-server')
+        return proxyAuthToConvex(request)
+      },
     },
   },
 })

@@ -27,6 +27,12 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.mts", "src/routeTree.gen.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.mts",
+    "src/**/*.d.ts",
+    "src/routeTree.gen.ts"
+  ],
   "exclude": ["node_modules", "convex", "**/*.test.ts", "**/*.test.tsx"]
 }

@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import { nitro } from 'nitro/vite'
 import viteReact from '@vitejs/plugin-react'
@@ -9,13 +9,30 @@ import tailwindcss from '@tailwindcss/vite'
 const root = path.dirname(fileURLToPath(import.meta.url))
 const isProduction = process.env.NODE_ENV === 'production'
 
+function publicEnvDefine(mode: string): Record<string, string> {
+  const env = { ...loadEnv(mode, root, ''), ...process.env }
+  const define: Record<string, string> = {}
+  for (const [key, value] of Object.entries(env)) {
+    if (
+      (key.startsWith('NEXT_PUBLIC_') || key.startsWith('VITE_')) &&
+      typeof value === 'string' &&
+      value.length > 0
+    ) {
+      define[`process.env.${key}`] = JSON.stringify(value)
+    }
+  }
+  return define
+}
+
 /**
  * TanStack Start Vite config.
  *
  * `tanstackStart()` MUST come before `viteReact()`. Path aliases mirror
  * `tsconfig.json` `paths`.
  */
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  envPrefix: ['NEXT_PUBLIC_', 'VITE_'],
+  define: publicEnvDefine(mode),
   resolve: {
     alias: {
       '@': path.resolve(root, 'src'),
@@ -56,4 +73,4 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['@tanstack/react-start'],
   },
-})
+}))

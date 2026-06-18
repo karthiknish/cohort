@@ -5,6 +5,7 @@ import { ConvexProvider, ConvexReactClient, useConvexAuth } from 'convex/react';
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react';
 import { AlertTriangle } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
+import { getPublicEnv } from '@/lib/public-env';
 function AuthDebug() {
     const { isLoading, isAuthenticated } = useConvexAuth();
     useEffect(() => {
@@ -19,8 +20,8 @@ interface ConvexClientProviderProps {
     initialToken?: string | null;
 }
 export function ConvexClientProvider({ children, initialToken }: ConvexClientProviderProps) {
-    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-    const useBetterAuth = process.env.NEXT_PUBLIC_USE_BETTER_AUTH !== 'false';
+    const convexUrl = getPublicEnv('NEXT_PUBLIC_CONVEX_URL');
+    const useBetterAuth = getPublicEnv('NEXT_PUBLIC_USE_BETTER_AUTH') !== 'false';
     const client = (() => {
         if (!convexUrl)
             return null;

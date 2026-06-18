@@ -20,7 +20,6 @@ import { PWAProvider } from '@/shared/providers/pwa-provider'
 import { AppProviders } from '@/shared/providers/app-providers'
 import { MotionProvider } from '@/shared/providers/motion-provider'
 import { GoogleAnalyticsScript } from '@/shared/providers/google-analytics-script'
-import { getToken } from '@/lib/auth-server'
 import { RootNotFound } from '@/shared/ui/route-boundaries/root-not-found'
 import { RootAppError } from '@/shared/ui/route-boundaries/root-error'
 import { NeutralPendingSkeleton } from '@/shared/ui/neutral-pending-skeleton'
@@ -40,6 +39,7 @@ const resolveInitialToken = createServerFn({ method: 'GET' }).handler(async () =
     pathname.startsWith('/admin') ||
     pathname.startsWith('/settings')
   if (!needsConvexToken) return null
+  const { getToken } = await import('@/lib/auth-server')
   return (await getToken()) ?? null
 })
 
@@ -56,6 +56,7 @@ export const Route = createRootRoute({
         content: 'Unified client management & analytics dashboard for marketing agencies',
       },
     ],
+    links: [{ rel: 'icon', href: '/favicon.ico' }],
   }),
   component: RootComponent,
   notFoundComponent: RootNotFound,
