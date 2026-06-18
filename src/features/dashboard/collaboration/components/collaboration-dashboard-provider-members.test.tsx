@@ -5,7 +5,7 @@ vi.mock('convex/react', () => ({
     useMutation: () => vi.fn(),
     useQuery: (...args: unknown[]) => useQueryMock(...args),
 }));
-vi.mock('next/navigation', () => ({
+vi.mock('@/shared/ui/navigation', () => ({
     usePathname: () => '/dashboard/collaboration',
     useRouter: () => ({ replace: vi.fn() }),
     useSearchParams: () => ({

@@ -21,7 +21,7 @@ vi.mock('framer-motion', () => ({
         }) => <div>{children}</div>,
     },
 }));
-vi.mock('next/navigation', () => ({
+vi.mock('@/shared/ui/navigation', () => ({
     usePathname: () => '/dashboard',
     useRouter: () => ({ replace: vi.fn() }),
     useSearchParams: () => new URLSearchParams(),
