@@ -1,6 +1,6 @@
 'use client';
 import { useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/shared/ui/navigation';
 import type { WorkspaceNotification } from '@/types/notifications';
 export function useNotificationNavigation(onNavigate?: () => void) {
     const { push } = useRouter();

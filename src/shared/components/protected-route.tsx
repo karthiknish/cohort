@@ -1,7 +1,7 @@
 'use client';
 import { LoaderCircle } from 'lucide-react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { Link } from '@/shared/ui/link';
+import { usePathname, useRouter } from '@/shared/ui/navigation';
 import { useEffect, useEffectEvent, useRef } from 'react';
 import { isLoadingPhase } from '@/lib/auth-phase';
 import { Button } from '@/shared/ui/button';

@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useId, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type SyntheticEvent } from 'react';
+import { useEffect, useId, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type SyntheticEvent } from 'react';
 import { User, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { HoverPreview } from '@/shared/ui/hover-preview';
@@ -193,15 +193,24 @@ export function useMentionInput({ value, onChange, users, placeholder = 'Type @ 
     const handleUserSelect = (user: MentionableUser) => {
         insertMention(user);
     };
-    const handleInputRef = (node: HTMLInputElement | null) => {
-        inputRef.current = node;
+    // Forward ref to parent after the DOM node is mounted.
+    // Separated from the callback ref so React Compiler can optimize the hook body.
+    useEffect(() => {
         if (typeof ref === 'function') {
-            ref(node);
+            ref(inputRef.current);
         }
         else if (ref) {
-            ref.current = node;
+            ref.current = inputRef.current;
         }
-    };
+        return () => {
+            if (typeof ref === 'function') {
+                ref(null);
+            }
+            else if (ref) {
+                ref.current = null;
+            }
+        };
+    }, [ref]);
     const removeMentionHandlers = Object.fromEntries(selectedMentions.map((mention) => [mention.id, () => removeMention(mention)])) as Record<string, () => void>;
     const mentionOptionHandlers = Object.fromEntries(mentionResults.map((user, index) => [user.id, {
             onClick: () => handleUserSelect(user),
@@ -281,7 +290,7 @@ export function useMentionInput({ value, onChange, users, placeholder = 'Type @ 
           <p id={mentionInstructionsId} className="sr-only">
             Type the at symbol to open mention suggestions. Use the arrow keys to move through suggestions and press Enter to select.
           </p>
-          <Input ref={handleInputRef} id={inputId} type="text" value={value} onChange={handleInputChange} onKeyDown={handleKeyDown} onSelect={handleInputSelect} onClick={handleInputSelect} onFocus={handleInputFocus} onBlur={handleInputBlur} placeholder={placeholder} disabled={disabled} autoComplete="off" aria-autocomplete="list" role="combobox" aria-expanded={showDropdown} aria-controls={showDropdown ? `${inputId}-mentions` : undefined} aria-activedescendant={activeDescendantId} aria-describedby={`${mentionInstructionsId} ${mentionStatusId}`} className={cn('h-11 rounded-lg', inputClassName)}/>
+          <Input ref={inputRef} id={inputId} type="text" value={value} onChange={handleInputChange} onKeyDown={handleKeyDown} onSelect={handleInputSelect} onClick={handleInputSelect} onFocus={handleInputFocus} onBlur={handleInputBlur} placeholder={placeholder} disabled={disabled} autoComplete="off" aria-autocomplete="list" role="combobox" aria-expanded={showDropdown} aria-controls={showDropdown ? `${inputId}-mentions` : undefined} aria-activedescendant={activeDescendantId} aria-describedby={`${mentionInstructionsId} ${mentionStatusId}`} className={cn('h-11 rounded-lg', inputClassName)}/>
 
           {showDropdown && (<div role="presentation" className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border border-muted/60 bg-popover shadow-lg" onMouseDown={handleDropdownMouseDown}>
             <ul id={`${inputId}-mentions`} aria-label="Mention suggestions" tabIndex={-1} className="list-none">

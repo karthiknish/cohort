@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Shield, Database, Eye, Lock, Clock, UserCheck, Globe, Share2, RefreshCw, ArrowLeft, } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';

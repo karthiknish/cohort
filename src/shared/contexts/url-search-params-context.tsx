@@ -1,6 +1,6 @@
 'use client';
 import { Suspense, createContext, use, useMemo, type ReactNode } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams } from '@/shared/ui/navigation';
 const UrlSearchParamsContext = createContext<URLSearchParams | null>(null);
 function UrlSearchParamsReader({ children }: {
     children: ReactNode;

@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { useConvexAuth, useQuery } from 'convex/react';

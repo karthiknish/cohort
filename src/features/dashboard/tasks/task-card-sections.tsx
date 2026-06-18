@@ -1,7 +1,7 @@
 'use client';
 import { useCallback } from 'react';
 import type { ReactNode } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Calendar, CalendarX2, ChevronRight, ChevronUp, Clock4, Copy, FolderKanban, Link2, ListTodo, LoaderCircle, MessageCircle, MoreHorizontal, Paperclip, Pencil, Repeat, Trash2, User, } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';

@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { useMemo } from 'react';
 import { ArrowRight, BarChart3 } from 'lucide-react';
 import { LazyMotion, domAnimation, m, useReducedMotion } from '@/shared/ui/motion';

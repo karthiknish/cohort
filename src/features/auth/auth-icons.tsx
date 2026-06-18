@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Lock, Mail, User } from 'lucide-react';
 export const authMailIconSm = <Mail className="size-4" aria-hidden/>;
 export const authMailIconLg = <Mail className="size-6" aria-hidden/>;

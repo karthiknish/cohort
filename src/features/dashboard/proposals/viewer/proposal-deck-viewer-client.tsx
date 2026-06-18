@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { ArrowLeft } from 'lucide-react';
 import { DeckDocumentViewer } from '@/features/dashboard/proposals/viewer/components/deck-document-viewer';
 import { Button } from '@/shared/ui/button';

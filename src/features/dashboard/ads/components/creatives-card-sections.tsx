@@ -1,5 +1,5 @@
 'use client';
-import NextImage from 'next/image';
+import NextImage from '@/shared/ui/image';
 import { useCallback, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { BarChart2, CheckSquare, ExternalLink, FileText, GalleryHorizontal, Image as ImageIcon, ImageOff, Layers, Link2, ShoppingBag, Square, Video } from 'lucide-react';

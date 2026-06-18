@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Button } from '@/shared/ui/button';

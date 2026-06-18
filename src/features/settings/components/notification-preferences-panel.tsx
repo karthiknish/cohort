@@ -1,6 +1,6 @@
 'use client';
 import { notifyFailure } from '@/lib/notifications';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { useCallback, useEffect, useRef, useReducer } from 'react';
 import { Bell, ExternalLink, LoaderCircle, Moon } from 'lucide-react';
 import { useMutation, useQuery } from 'convex/react';

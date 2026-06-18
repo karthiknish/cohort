@@ -1,5 +1,11 @@
-import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import { hasUsableAttachmentContext, type AgentAttachmentContext, } from '@/lib/agent-attachments';
+/**
+ * Minimal router shape consumed by `applyAgentResponse` (a `push(href)` call).
+ * Matches the `useRouter()` return from `@/shared/ui/navigation`.
+ */
+type AppRouterInstance = {
+    push: (href: string, opts?: Record<string, unknown>) => void
+};
 import { readAgentPanelLayout, shouldKeepAgentOpenOnNavigate } from '@/lib/agent-panel-layout';
 import { buildCompletedStepsFromResponse, deriveAgentStatusFromResponse, type AgentSendResponse, } from '@/lib/agent-message-lifecycle';
 import type { AgentMessage } from './types';

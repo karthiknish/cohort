@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { HelpCircle, LogOut, Settings, Shield } from 'lucide-react';
 import { useDashboardRoleAccent } from '@/shared/hooks/use-dashboard-role-accent';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';

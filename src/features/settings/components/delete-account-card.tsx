@@ -1,7 +1,7 @@
 'use client';
 import { notifyFailure } from '@/lib/notifications';
 import { useState, useCallback, useEffect, type ChangeEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/shared/ui/navigation';
 import { LoaderCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { usePreview } from '@/shared/contexts/preview-context';

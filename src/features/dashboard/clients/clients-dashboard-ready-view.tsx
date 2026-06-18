@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Download, RefreshCcw, Settings, Users as UsersIcon } from 'lucide-react';
 import { DashboardPageHero } from '@/shared/components/dashboard-page-hero';
 import { BackLink } from '@/shared/components/back-link';

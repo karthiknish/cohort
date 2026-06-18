@@ -1,6 +1,6 @@
 'use client';
-import Image from 'next/image';
-import Link from 'next/link';
+import Image from '@/shared/ui/image';
+import { Link } from '@/shared/ui/link';
 import { LayoutDashboard } from 'lucide-react';
 import { getButtonClasses } from '@/lib/dashboard-theme';
 import { cn } from '@/lib/utils';

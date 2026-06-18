@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from '@/shared/ui/navigation';
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';
 type UsePersistedTabOptions<TValue extends string> = {
     /** Query param key to use in the URL (default: "tab") */

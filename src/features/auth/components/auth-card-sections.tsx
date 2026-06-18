@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Check, Eye, EyeOff, LoaderCircle, Shield, X, } from 'lucide-react';
 import type { FormEventHandler, MouseEvent } from 'react';
 import { authForgotPasswordLink, authLockIconSm, authMailIconSm, authUserIconSm, } from '@/features/auth/auth-icons';

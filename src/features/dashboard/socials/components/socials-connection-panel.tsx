@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { AlertCircle, CheckCircle2, Circle, LoaderCircle, RefreshCw, Shield, Unplug, } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { Badge } from '@/shared/ui/badge';

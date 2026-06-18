@@ -1,6 +1,6 @@
 'use client';
 import { useCallback } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Search, UserPlus, Users as UsersIcon, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/ui/button';

@@ -1,6 +1,6 @@
 'use client';
 import { notifyFailure } from '@/lib/notifications';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/shared/ui/navigation';
 import { Suspense, createElement, useCallback, useEffectEvent, useLayoutEffect, useMemo, useState } from 'react';
 import { Users as UsersIcon } from 'lucide-react';
 import { ClientAccessGate } from '@/features/dashboard/home/components/client-access-gate';

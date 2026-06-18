@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import type { LucideIcon } from 'lucide-react';
 import { BarChart3, Bell, BriefcaseBusiness, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';

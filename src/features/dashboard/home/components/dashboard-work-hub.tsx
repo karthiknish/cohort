@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { ArrowUpRight, BarChart3, Bell, BriefcaseBusiness, CheckSquare, FileText, Home, Megaphone, MessageSquare, Video, type LucideIcon, } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme';

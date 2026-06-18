@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState, } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/shared/ui/navigation';
 import { deriveActiveContextFromPath } from '@/lib/agent-context';
 import { upsertAgentMessage, type AgentExecutionStep, type AgentMessageLifecycle, type AgentMessageMetadata, } from '@/lib/agent-message-lifecycle';
 import { useAuth } from '@/shared/contexts/auth-context';

@@ -23,7 +23,7 @@ export function AdminFeaturesToolbarActions({ refreshing, onRefresh, }: {
 export function AdminFeaturesLoadingShell() {
     return (<AdminPageShell title="Feature planning" description="Loading the platform backlog…">
       <div className="grid gap-4 lg:grid-cols-4">
-        {['sk-a', 'sk-b', 'sk-c', 'sk-d'].map((key) => (<div key={key} className="space-y-3 rounded-lg border border-border/60 bg-card/50 p-4">
+        {['skeleton-a', 'skeleton-b', 'skeleton-c', 'skeleton-d'].map((key) => (<div key={key} className="space-y-3 rounded-lg border border-border/60 bg-card/50 p-4">
             <Skeleton className="h-4 w-24"/>
             <div className="space-y-2">
               <Skeleton className="h-16 w-full rounded-md"/>

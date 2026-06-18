@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useMemo } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from '@/shared/ui/navigation';
 import { driver, type DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useMutation } from 'convex/react';

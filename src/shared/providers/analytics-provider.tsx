@@ -1,6 +1,6 @@
 'use client';
 import { useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/shared/ui/navigation';
 import { logPageView, setAnalyticsUserId } from '@/lib/analytics';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';

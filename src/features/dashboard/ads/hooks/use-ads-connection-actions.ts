@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/shared/ui/navigation';
 import { useAction, useMutation } from 'convex/react';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { adsIntegrationsApi } from '@/lib/convex-api';

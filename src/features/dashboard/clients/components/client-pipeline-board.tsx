@@ -1,7 +1,7 @@
 // =============================================================================
 // CLIENTS PAGE - Pipeline Board Component
 // =============================================================================
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Badge } from '@/shared/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';
 import { ClientFormattedDate } from '@/shared/components/client-formatted-date';

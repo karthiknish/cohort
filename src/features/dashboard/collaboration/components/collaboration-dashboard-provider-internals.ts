@@ -1,7 +1,7 @@
 'use client';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from '@/shared/ui/navigation';
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import type { DirectConversation } from '../hooks/use-direct-messages';

@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Headphones, ShieldCheck, Sparkles, TimerReset } from 'lucide-react';
 import { HOME_HERO_BRAND_ORDER, PlatformLogoStrip } from '@/features/marketing/home/components/platform-brand-logos';
 import { FadeIn } from '@/shared/ui/animate-in';

@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/ui/button';

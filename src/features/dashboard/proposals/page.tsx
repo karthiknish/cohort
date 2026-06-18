@@ -1,6 +1,6 @@
 'use client';
 import { Suspense, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams } from '@/shared/ui/navigation';
 import { DashboardSkeleton } from '@/features/dashboard/home/components/dashboard-skeleton';
 import { PageMotionShell } from '@/shared/components/page-motion-shell';
 import { useClientContext } from '@/shared/contexts/client-context';

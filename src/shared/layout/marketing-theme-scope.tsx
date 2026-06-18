@@ -1,5 +1,5 @@
 'use client';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/shared/ui/navigation';
 import { cn } from '@/lib/utils';
 function isAppShellRoute(pathname: string | null): boolean {
     if (!pathname) {

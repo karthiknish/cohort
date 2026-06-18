@@ -1,6 +1,6 @@
 'use client';
 import type { ReactNode } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/shared/ui/navigation';
 import { ViewTransition } from 'react';
 const DIRECTIONAL_TRANSITIONS = {
     'nav-forward': 'nav-forward',

@@ -1,10 +1,29 @@
-import type { Metadata } from 'next';
 /**
  * SEO / social metadata for the public marketing home.
  * Wording tracks real product surface: Meta Graph Marketing API integration
  * (`src/services/integrations/meta-ads`), OAuth + token refresh, sync jobs,
  * dashboard ads UX, plus other paid-media connectors—not speculative features.
+ *
+ * `PageMetadata` mirrors the subset of the former `next`'s `Metadata` type
+ * that this project consumes (title + description for TanStack `head`).
  */
+type PageMetadata = {
+    title?: string;
+    description?: string;
+    keywords?: string[];
+    metadataBase?: URL;
+    openGraph?: {
+        title?: string;
+        description?: string;
+        type?: string;
+        siteName?: string;
+    };
+    twitter?: {
+        card?: string;
+        title?: string;
+        description?: string;
+    };
+};
 function metadataBase(): URL | undefined {
     const raw = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
     if (!raw?.trim())
@@ -42,7 +61,7 @@ const KEYWORDS: string[] = [
     'client workspace',
 ];
 const DEFAULT_TITLE = 'Cohorts | Agency Operations Platform';
-export const marketingHomeMetadata: Metadata = {
+export const marketingHomeMetadata: PageMetadata = {
     metadataBase: metadataBase(),
     title: DEFAULT_TITLE,
     description: SHORT_DESCRIPTION,

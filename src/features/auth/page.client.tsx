@@ -1,7 +1,7 @@
 'use client';
 import { notifyFailure } from '@/lib/notifications';
 import { LoaderCircle } from 'lucide-react';
-import { useRouter, redirect } from 'next/navigation';
+import { useRouter, redirect } from '@/shared/ui/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useReducer } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { AuthCard } from '@/features/auth/components/auth-card';

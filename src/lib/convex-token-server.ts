@@ -1,4 +1,4 @@
-import { headers } from 'next/headers';
+import { headers } from './server-headers';
 import { getToken as getBetterAuthUtilsToken } from '@convex-dev/better-auth/utils';
 import { convexSiteUrl, getToken as getNextJsToken } from '@/lib/auth-server';
 /**

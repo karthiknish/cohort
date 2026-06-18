@@ -1,6 +1,6 @@
 'use client';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { Link } from '@/shared/ui/link';
+import { usePathname, useRouter } from '@/shared/ui/navigation';
 import type { CSSProperties } from 'react';
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { chromaticTransitionClass, chromaticTransitionNormalClass } from '@/lib/motion';

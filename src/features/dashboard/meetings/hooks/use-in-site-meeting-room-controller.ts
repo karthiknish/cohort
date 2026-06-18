@@ -1,7 +1,7 @@
 'use client';
 import { notifyFailure } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
-import { useCreateLayoutContext } from '@/shared/ui/livekit';
+import { useCreateLayoutContext } from '@livekit/components-react';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useToast } from '@/shared/ui/use-toast';
 import type { CaptureStatus, LiveKitJoinPayload, MeetingRoomPageProps, TranscriptActionResult, } from '../components/in-site-meeting-card.shared';

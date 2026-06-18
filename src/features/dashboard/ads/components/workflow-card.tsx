@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { CheckCircle2, Link2 } from 'lucide-react';
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';

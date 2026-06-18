@@ -1,5 +1,5 @@
 'use client';
-import dynamic from 'next/dynamic';
+import { dynamic } from '@/shared/ui/dynamic';
 /** Defer date-fns + infinite query bundle off header critical path. */
 export const NotificationsDropdownDynamic = dynamic(() => import('./notifications-dropdown').then((m) => m.NotificationsDropdown), {
     ssr: false,

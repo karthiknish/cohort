@@ -1,6 +1,6 @@
 'use client';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link } from '@/shared/ui/link';
+import { usePathname } from '@/shared/ui/navigation';
 import type { ReactNode } from 'react';
 import { accessDeniedContentForCapability, accessDeniedContentForPath, can, canAccessPath, normalizeAuthRole, type DashboardCapability, } from '@/lib/access-control/dashboard-access';
 import { useAuth } from '@/shared/contexts/auth-context';

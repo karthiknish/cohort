@@ -3,7 +3,7 @@ import { notifyFailure } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useEffectEvent, useMemo, useReducer } from 'react';
 import { useAction } from 'convex/react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/shared/ui/navigation';
 import { toast } from '@/shared/ui/use-toast';
 import { normalizeCurrencyCode } from '@/constants/currencies';
 import { useAuth } from '@/shared/contexts/auth-context';

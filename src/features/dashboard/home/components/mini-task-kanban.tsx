@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { TASK_STATUSES, type TaskRecord } from '@/types/tasks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';

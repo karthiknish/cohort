@@ -2,7 +2,7 @@
 import { notifyFailure } from '@/lib/notifications';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CheckCheck, LoaderCircle, Settings2, Trash2, MessageSquare, Filter, } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useConvex, useMutation } from 'convex/react';

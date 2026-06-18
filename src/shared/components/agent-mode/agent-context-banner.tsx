@@ -1,6 +1,6 @@
 'use client';
 import { useCallback } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { BarChart3, Briefcase, FileText, LayoutGrid, ListChecks, Megaphone, Users } from 'lucide-react';
 import type { AgentContextChip, AgentDashboardShortcut } from '@/lib/agent-context';
 import { cn } from '@/lib/utils';

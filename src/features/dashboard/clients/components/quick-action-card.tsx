@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Card, CardContent } from '@/shared/ui/card';
 interface QuickActionCardProps {
     href: string;

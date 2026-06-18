@@ -1,7 +1,7 @@
 import { LazyMotion, domAnimation, m } from '@/shared/ui/motion';
 import { fadeInDownVariants, transitions, } from '@/lib/motion';
 import { ArrowLeft, RefreshCw, Save, X, MoreHorizontal, Share, ExternalLink, TrendingUp, Trash2, ChevronRight, Sparkles, } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme';
 import { Button } from '@/shared/ui/button';
 import { TruncatedTextPreview } from '@/shared/ui/hover-preview';

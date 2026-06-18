@@ -2,7 +2,7 @@
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useState, useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useConvexAuth } from 'convex/react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { BarChart3, CheckSquare, FileText, MessageSquare, Home, Briefcase, Megaphone, Video, Users, Keyboard, ArrowRight, Sparkles, CircleHelp, } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';

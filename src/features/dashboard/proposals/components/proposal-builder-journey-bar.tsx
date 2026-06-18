@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { CheckCircle2, ExternalLink, LoaderCircle, Sparkles } from 'lucide-react';
 import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data';
 import { Button } from '@/shared/ui/button';

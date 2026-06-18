@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Lightbulb, CircleCheck, TriangleAlert, Info, Zap, ArrowRight, TrendingUp, } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';

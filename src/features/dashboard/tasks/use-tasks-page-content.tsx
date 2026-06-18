@@ -1,8 +1,8 @@
 'use client';
 import { useQuery } from 'convex/react';
 import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
-import dynamic from 'next/dynamic';
-import { usePathname, useRouter } from 'next/navigation';
+import { dynamic } from '@/shared/ui/dynamic';
+import { usePathname, useRouter } from '@/shared/ui/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { formatAssigneeList, formatDate, clientRosterAssigneeNames, mergeTaskParticipants, resolveAssigneeUserIds, ProjectFilterBanner, TaskBulkToolbar, TaskFilters, type TaskParticipant, TaskResultsCount, TasksHeader, TaskSummaryCards, TaskViewControls, useDebouncedValue, useTaskFilters, useTaskForm, useTasks, } from '@/features/dashboard/tasks';
 import { PageMotionShell } from '@/shared/components/page-motion-shell';

@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Activity, ArrowUpRight, BriefcaseBusiness, FileText, ListTodo, } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme';

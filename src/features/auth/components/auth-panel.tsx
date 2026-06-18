@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { FadeIn } from '@/shared/ui/animate-in';

@@ -1,7 +1,7 @@
 'use client';
 import { useCallback } from 'react';
 import { format } from 'date-fns';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { ArrowUpRight, Check, Pin, PinOff, Tag, } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';

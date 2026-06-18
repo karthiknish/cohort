@@ -1,7 +1,7 @@
 'use client';
-import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { Link } from '@/shared/ui/link';
+import Image from '@/shared/ui/image';
+import { usePathname } from '@/shared/ui/navigation';
 import type { CSSProperties } from 'react';
 const SITE_HEADER_TRANSITION_STYLE = { viewTransitionName: 'site-header' } satisfies CSSProperties;
 export function SiteHeader() {

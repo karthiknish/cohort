@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { BarChart3, Megaphone, FileText, MessageSquare, CheckSquare, Plus, Briefcase } from 'lucide-react';
 import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';

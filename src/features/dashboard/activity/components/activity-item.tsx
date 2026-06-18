@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import type { MouseEvent } from 'react';
 import { format } from 'date-fns';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Heart, MessageCircle, MoreHorizontal, Pin, PinOff, Check, ArrowUpRight, } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';

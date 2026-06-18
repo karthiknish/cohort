@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useState } from 'react';
-import NextImage from 'next/image';
+import NextImage from '@/shared/ui/image';
 import { ExternalLink, ImageIcon, Maximize2, X } from 'lucide-react';
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme';
 import { Button } from '@/shared/ui/button';

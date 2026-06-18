@@ -1,7 +1,7 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { useCallback, useMemo } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from '@/shared/ui/navigation';
 import { Clock, CircleCheck, MessageSquare, Briefcase, Filter, User, FileText } from 'lucide-react';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';

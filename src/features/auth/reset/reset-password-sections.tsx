@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Check, Eye, EyeOff, LoaderCircle, Shield, X, CircleCheck } from 'lucide-react';
 import { authLockIconLg, authLockIconSm } from '@/features/auth/auth-icons';
 import { AuthField, authInputClassName } from '@/features/auth/components/auth-field';

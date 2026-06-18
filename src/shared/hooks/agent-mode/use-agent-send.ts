@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/shared/ui/navigation';
 import { useAction } from 'convex/react';
 import { agentApi } from '@/lib/convex-api';
 import type { AgentContextIds } from '@/lib/agent-context';

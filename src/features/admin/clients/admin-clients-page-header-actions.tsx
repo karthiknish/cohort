@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { LoaderCircle } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 type AdminClientsPageHeaderActionsProps = {

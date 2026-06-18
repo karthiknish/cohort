@@ -1,5 +1,5 @@
 'use client';
-import dynamic from 'next/dynamic';
+import { dynamic } from '@/shared/ui/dynamic';
 import { useCallback } from 'react';
 import { BarChart3, CheckCircle2, Link2, LoaderCircle, RotateCw, Unlink } from 'lucide-react';
 import { DisconnectDialog } from '../../ads/components/connection-dialog';

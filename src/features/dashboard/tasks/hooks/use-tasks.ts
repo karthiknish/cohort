@@ -123,7 +123,7 @@ function resolveStateUpdate<T>(previous: T, updater: React.SetStateAction<T>): T
         ? (updater as (previousState: T) => T)(previous)
         : updater;
 }
-function useTasksReducer(state: UseTasksState, action: UseTasksAction): UseTasksState {
+function tasksReducer(state: UseTasksState, action: UseTasksAction): UseTasksState {
     switch (action.type) {
         case 'syncData':
             return {
@@ -182,7 +182,7 @@ function mapConvexTaskToTaskRecord(row: TaskQueryRow): TaskRecord {
 }
 export function useTasks({ userId, clientId, authLoading, isPreviewMode = false, workspaceId, listFilters, }: UseTasksOptions): UseTasksReturn {
     const { toast } = useToast();
-    const [{ tasks, error, pendingStatusUpdates }, dispatch] = useReducer(useTasksReducer, INITIAL_USE_TASKS_STATE);
+    const [{ tasks, error, pendingStatusUpdates }, dispatch] = useReducer(tasksReducer, INITIAL_USE_TASKS_STATE);
     const setTasks: UseTasksReturn['setTasks'] = (updater) => {
         dispatch({ type: 'setTasks', updater });
     };

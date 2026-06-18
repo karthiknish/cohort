@@ -3,7 +3,7 @@
  * @deprecated Use global notification settings at /settings?tab=notifications.
  * This entry opens the workspace notification preferences panel.
  */
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Bell } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from '@/shared/ui/dialog';

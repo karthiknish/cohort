@@ -1,8 +1,8 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { Track } from 'livekit-client';
 import { useVoiceInput } from '@/shared/hooks/use-voice-input';
-import { useTracks, type useCreateLayoutContext } from '@/shared/ui/livekit';
+import { useTracks, type useCreateLayoutContext } from '@livekit/components-react';
 import type { CaptureStatus } from './in-site-meeting-card.shared';
 import { MeetingRecordingPromptCard } from './meeting-recording-prompt-card';
 import { LiveRoomCanvasShell, LiveRoomCanvasViewport, } from './in-site-meeting-live-room-canvas-sections';
@@ -54,7 +54,7 @@ export function InSiteMeetingLiveRoomCanvas(props: LiveRoomCanvasProps) {
         onResult: onAppendTranscript,
     });
     const trimmedTranscript = transcript.trim();
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!onCaptureStatusChange) {
             return;
         }
@@ -64,7 +64,7 @@ export function InSiteMeetingLiveRoomCanvas(props: LiveRoomCanvasProps) {
             error,
         });
     }, [error, isListening, isSupported, onCaptureStatusChange]);
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!onInterimTranscriptChange) {
             return;
         }

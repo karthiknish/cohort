@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { useCallback, useMemo } from 'react';
 import { useConvexAuth, useQuery } from 'convex/react';
 import { ArrowUpRight, Briefcase, CheckSquare, Megaphone, Video, } from 'lucide-react';
@@ -131,7 +131,7 @@ function ClientSummaryCard({ client }: {
       </div>
     </div>);
 }
-const SKELETON_KEYS = ['sk-a', 'sk-b', 'sk-c', 'sk-d'] as const;
+const SKELETON_KEYS = ['skeleton-a', 'skeleton-b', 'skeleton-c', 'skeleton-d'] as const;
 function ClientCardSkeleton() {
     return (<div className="flex flex-col rounded-2xl border border-border/50 bg-background/80 p-4">
       <div className="flex items-start gap-3">

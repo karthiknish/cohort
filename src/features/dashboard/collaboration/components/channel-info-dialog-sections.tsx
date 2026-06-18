@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Bell, Camera, FileStack, Hash, Info, LoaderCircle, Lock, Settings2, Trash2, Users, } from 'lucide-react';
 import { ChatMediaGallery } from '@/shared/ui/chat-media-gallery';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';

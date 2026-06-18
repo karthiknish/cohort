@@ -1,5 +1,5 @@
 'use client';
-import Image from 'next/image';
+import Image from '@/shared/ui/image';
 import { useCallback } from 'react';
 import { AlertCircle, ChevronLeft, ChevronRight, Download, Loader2, Maximize2, Minimize2, RotateCcw, } from 'lucide-react';
 import { Button } from '@/shared/ui/button';

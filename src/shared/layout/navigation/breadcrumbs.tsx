@@ -1,6 +1,6 @@
 'use client';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link } from '@/shared/ui/link';
+import { usePathname } from '@/shared/ui/navigation';
 import { useQuery } from 'convex/react';
 import { ChevronRight, Home, Briefcase, ListChecks, MessageSquare, BarChart3, FileText, Megaphone, Activity, Users, Video, } from 'lucide-react';
 import { useState } from 'react';

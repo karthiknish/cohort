@@ -4,6 +4,7 @@ import { Printer } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import type { TaskRecord, TaskStatus } from '@/types/tasks';
 import { formatStatusLabel, formatDate, formatPriorityLabel } from './task-types';
+import DOMPurify from 'dompurify';
 import { escapeHtml } from '@/lib/escape-html';
 import { cn } from '@/lib/utils';
 import './tasks-print.css';
@@ -181,7 +182,7 @@ export function PrintTasksButton({ tasks, title }: {
         }).join('')}
       </div>
     `;
-        printContainer.innerHTML = printContent;
+        printContainer.innerHTML = DOMPurify.sanitize(printContent);
         // Print
         window.print();
         // Clean up

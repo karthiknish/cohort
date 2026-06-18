@@ -1,6 +1,6 @@
 'use client';
 import { notifyFailure } from '@/lib/notifications';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useConvex } from 'convex/react';
 import { useToast } from '@/shared/ui/use-toast';
@@ -159,7 +159,7 @@ export function useThreads({ workspaceId, currentUserId }: UseThreadsOptions) {
         };
     };
     // Keep state maps aligned with active thread set.
-    (() => {
+    useEffect(() => {
         const activeIds = new Set(activeThreadIds);
         setThreadMessagesByRootId((prev) => {
             const next: ThreadMessagesState = { ...prev };
@@ -185,8 +185,7 @@ export function useThreads({ workspaceId, currentUserId }: UseThreadsOptions) {
             }
             return next;
         });
-        return null;
-    })();
+    }, [activeThreadIds]);
     const loadThreadReplies = async (threadRootId: string) => {
         const trimmedId = threadRootId.trim();
         if (!trimmedId)

@@ -1,6 +1,6 @@
 'use client';
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
+import { Link } from '@/shared/ui/link';
+import { dynamic } from '@/shared/ui/dynamic';
 import { Suspense } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { ActivityWidget } from '@/features/dashboard/activity/activity-widget';

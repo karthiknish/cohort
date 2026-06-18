@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { useCallback, useMemo, useState } from 'react';
 import { useClientNowMs } from '@/lib/hooks/use-client-relative-time';
 import { formatDistanceToNow } from 'date-fns';

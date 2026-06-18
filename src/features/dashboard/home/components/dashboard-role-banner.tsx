@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { ArrowUpRight, Clock3, Shield, Trophy } from 'lucide-react';
 import { FadeIn } from '@/shared/ui/animate-in';
 import { Button } from '@/shared/ui/button';

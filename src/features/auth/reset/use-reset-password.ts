@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useReducer } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/shared/ui/navigation';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useToast } from '@/shared/ui/use-toast';
 import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils';

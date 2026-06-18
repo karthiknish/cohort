@@ -1,7 +1,7 @@
 'use client';
 import { useMemo } from 'react';
 import { Bell, Check, ExternalLink, LoaderCircle, Settings2 } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import type { WorkspaceNotification } from '@/types/notifications';
 import { Button } from '@/shared/ui/button';
 import { ScrollArea } from '@/shared/ui/scroll-area';

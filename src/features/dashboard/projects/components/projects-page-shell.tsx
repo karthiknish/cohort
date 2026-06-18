@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useMemo } from 'react';
 import { Briefcase, CircleX, ListChecks, LoaderCircle, Plus, RefreshCw, Users } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { CreateProjectSheet } from '@/features/dashboard/projects/create-project-dialog';
 import { EditProjectDialog } from '@/features/dashboard/projects/edit-project-dialog';
 import { ProjectsDocumentImportOverlay } from '@/features/dashboard/projects/projects-document-import-overlay';

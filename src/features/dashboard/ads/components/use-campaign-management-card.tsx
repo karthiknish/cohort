@@ -2,8 +2,8 @@
 import { notifyFailure } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useAction, useConvexAuth, useQuery } from 'convex/react';
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useEffectEvent, useReducer, useState } from 'react';
+import { useRouter } from '@/shared/ui/navigation';
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { api } from '/_generated/api';
 import { toast } from '@/shared/ui/use-toast';
 import { getCurrencyInfo, isSupportedCurrency, normalizeCurrencyCode } from '@/constants/currencies';
@@ -129,7 +129,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
     const openCampaignBiddingDialog = (campaign: Campaign) => {
         dispatch({ type: 'openCampaignBiddingDialog', campaign });
     };
-    const fetchCampaigns = useEffectEvent(async () => {
+    const fetchCampaigns = async () => {
         if (!isConnected || setupRequired || !canQueryConvex)
             return;
         dispatch({ type: 'setLoading', loading: true });
@@ -157,8 +157,8 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             .finally(() => {
             dispatch({ type: 'setLoading', loading: false });
         });
-    });
-    const fetchGroups = useEffectEvent(async () => {
+    };
+    const fetchGroups = async () => {
         if (!isConnected || setupRequired || adsProviderId !== 'linkedin' || !canQueryConvex)
             return;
         dispatch({ type: 'setGroupsLoading', groupsLoading: true });
@@ -185,7 +185,7 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             .finally(() => {
             dispatch({ type: 'setGroupsLoading', groupsLoading: false });
         });
-    });
+    };
     const handleRefresh = () => {
         if (view === 'groups') {
             void fetchGroups();
@@ -210,9 +210,9 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
     }, [
         adsProviderId,
         canQueryConvex,
-        historicalCampaigns,
+        fetchCampaigns,
+        fetchGroups,
         isConnected,
-        selectedClientId,
         setupRequired,
         workspaceId,
     ]);
@@ -413,14 +413,14 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
     const handleViewChange = (nextView: CampaignManagementView) => {
         dispatch({ type: 'setView', view: nextView });
     };
-    const actionContextValue = ({
+    const actionContextValue = useMemo(() => ({
         actionLoading,
         handleAction,
         openCampaignBiddingDialog,
         openCampaignBudgetDialog,
         handleGroupAction,
         openGroupBudgetDialog,
-    });
+    }), [actionLoading, handleAction, openCampaignBiddingDialog, openCampaignBudgetDialog, handleGroupAction, openGroupBudgetDialog]);
     const campaignColumns = buildCampaignColumns();
     const groupColumns = buildGroupColumns();
     if (!isConnected) {

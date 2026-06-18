@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { ArrowUpRight, CalendarDays, Check, Clock3, MessageSquare } from 'lucide-react';
 import { PlatformLogoStrip } from '@/features/marketing/home/components/platform-brand-logos';
 import { FadeIn } from '@/shared/ui/animate-in';

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useEffectEvent, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { RotateCw } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
@@ -37,7 +37,7 @@ export function AutoRefreshControls({ onRefresh, disabled = false, isRefreshing 
             timeoutRef.current = undefined;
         }
     };
-    const startAutoRefresh = useEffectEvent((intervalMs: number | null) => {
+    const startAutoRefresh = (intervalMs: number | null) => {
         clearAutoRefresh();
         if (!intervalMs) {
             return;
@@ -45,7 +45,7 @@ export function AutoRefreshControls({ onRefresh, disabled = false, isRefreshing 
         timeoutRef.current = setInterval(() => {
             void onRefreshRef.current();
         }, intervalMs);
-    });
+    };
     // Handle interval change
     const handleIntervalChange = (newInterval: RefreshInterval) => {
         setRefreshInterval(newInterval);
@@ -62,7 +62,7 @@ export function AutoRefreshControls({ onRefresh, disabled = false, isRefreshing 
                 intervalStore.current = undefined;
             }
         };
-    }, [defaultInterval]);
+    }, [defaultInterval, startAutoRefresh]);
     // Manual refresh handler
     const handleManualRefresh = () => {
         onRefresh();

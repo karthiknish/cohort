@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useState, type PropsWithChildren } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Building2, LoaderCircle, RefreshCcw } from 'lucide-react';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useAuth } from '@/shared/contexts/auth-context';

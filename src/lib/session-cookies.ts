@@ -1,4 +1,4 @@
-import type { NextResponse } from 'next/server';
+import type { NextResponse } from './http-server-types';
 /** Align with Better Auth session length (7 days) so cohorts_* cookies do not expire early. */
 export const SESSION_COOKIE_MAX_AGE_SEC = 7 * 24 * 60 * 60;
 export const CSRF_COOKIE = 'cohorts_csrf';

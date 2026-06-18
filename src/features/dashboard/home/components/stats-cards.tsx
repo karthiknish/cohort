@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { memo, startTransition, useCallback, useMemo, useState, ViewTransition } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardDescription } from '@/shared/ui/card';

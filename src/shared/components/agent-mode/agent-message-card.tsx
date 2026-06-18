@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import { domAnimation, LazyMotion, m } from '@/shared/ui/motion';
 import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, HelpCircle, Info, LoaderCircle, Navigation, RefreshCw, Sparkles, Zap, } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import type { AgentAttachmentContext } from '@/lib/agent-attachments';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';

@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { ArrowUpRight, DollarSign, Trophy, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';

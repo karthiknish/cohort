@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useReducer } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { CircleCheck, LoaderCircle } from 'lucide-react';
 import { authMailIconLg, authMailIconSm } from '@/features/auth/auth-icons';
 import { AuthField, authInputClassName } from '@/features/auth/components/auth-field';

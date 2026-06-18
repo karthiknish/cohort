@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useMemo } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from '@/shared/ui/navigation';
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';
 type UseUrlDrivenDialogOptions<TValue extends string> = {
     paramName: string;

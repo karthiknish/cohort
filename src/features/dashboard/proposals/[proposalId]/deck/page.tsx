@@ -1,6 +1,6 @@
 'use client';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { Link } from '@/shared/ui/link';
+import { useParams } from '@/shared/ui/navigation';
 import { Download, LoaderCircle, Presentation, Target, Layers, BarChart3, Rocket, Users, Lightbulb, Wallet, Calendar, Sparkles, Clock } from 'lucide-react';
 import { useMemo, ViewTransition } from 'react';
 import { Button } from '@/shared/ui/button';
@@ -18,10 +18,15 @@ import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { DirectionalPageTransition } from '@/shared/ui/page-transition';
 import { BackLink } from '@/shared/components/back-link';
 import { DeckPageViewerSection } from '@/features/dashboard/proposals/[proposalId]/deck/deck-page-viewer-section';
+const getSlideIcon = (index: number) => {
+    const icons = [Presentation, Target, Lightbulb, Users, Sparkles, Layers, BarChart3, Wallet, Calendar, Rocket];
+    const Icon = icons[index % icons.length] ?? Presentation;
+    return <Icon className="size-4"/>;
+};
 export default function ProposalDeckPage() {
-    const params = useParams<{
+    const params = useParams() as {
         proposalId: string;
-    }>();
+    };
     const proposalId = params?.proposalId;
     const { user } = useAuth();
     const { isPreviewMode } = usePreview();
@@ -92,11 +97,6 @@ export default function ProposalDeckPage() {
             };
         });
     })();
-    const getSlideIcon = (index: number) => {
-        const icons = [Presentation, Target, Lightbulb, Users, Sparkles, Layers, BarChart3, Wallet, Calendar, Rocket];
-        const Icon = icons[index % icons.length] ?? Presentation;
-        return <Icon className="size-4"/>;
-    };
     const proposalDisplayName = proposal?.clientName ?? 'Strategy Proposal';
     return (<DirectionalPageTransition>
       <PageSkeletonBoundary loading={isLoading} loadingContent={<div className="flex min-h-[60vh] items-center justify-center">

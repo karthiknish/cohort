@@ -1,7 +1,7 @@
 'use client';
 import { useCallback } from 'react';
 import type { ChangeEvent } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Filter, RefreshCw, Search, X } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';

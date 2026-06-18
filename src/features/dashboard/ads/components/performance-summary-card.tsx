@@ -1,6 +1,6 @@
 'use client';
 import { BarChart3, Download, RefreshCw } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';

@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useState, type MouseEvent } from 'react';
-import NextImage from 'next/image';
+import NextImage from '@/shared/ui/image';
 import { RefreshCw, Image as ImageIcon, Video, FileText, Filter, Search, Layers, Play, Grid3X3, List, ChevronRight, Smartphone, MapPin, Link2, ExternalLink, } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme';

@@ -1,5 +1,5 @@
 import type { CSSProperties, RefObject } from 'react';
-import NextImage from 'next/image';
+import NextImage from '@/shared/ui/image';
 import { m } from '@/shared/ui/motion';
 import { FileText, Image as ImageIcon, Maximize2, Pause, Play, Video } from 'lucide-react';
 import { scaleVariants } from '@/lib/motion';

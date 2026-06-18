@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/shared/ui/navigation';
 import { emptyStateEnterClass } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { Button } from './button';

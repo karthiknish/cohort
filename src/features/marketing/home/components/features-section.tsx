@@ -1,6 +1,6 @@
 'use client';
 import type { CSSProperties } from 'react';
-import Image from 'next/image';
+import Image from '@/shared/ui/image';
 import { Bot, FileText, Sparkles, Users } from 'lucide-react';
 import { motionDurationSeconds, motionEasing, motionLoopSeconds } from '@/lib/animation-system';
 import { cn } from '@/lib/utils';

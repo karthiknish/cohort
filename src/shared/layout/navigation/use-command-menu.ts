@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/shared/ui/navigation';
 import { useQuery } from 'convex/react';
 import { BarChart3, Briefcase, CheckSquare, FileText, Users, } from 'lucide-react';
 import { clientsApi, projectsApi, proposalsApi, tasksApi } from '@/lib/convex-api';

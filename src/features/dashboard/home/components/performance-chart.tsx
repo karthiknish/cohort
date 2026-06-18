@@ -1,6 +1,6 @@
 'use client';
 import { memo, useCallback, useMemo, type ComponentProps } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Info } from 'lucide-react';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Button } from '@/shared/ui/button';

@@ -1,7 +1,7 @@
 'use client';
 import React, { type ReactNode, useCallback } from 'react';
 import { Clock, Download, ExternalLink, FileText, Layout, LoaderCircle, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';

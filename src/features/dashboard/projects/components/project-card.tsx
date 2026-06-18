@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { memo, ViewTransition } from 'react';
 import { Calendar, LoaderCircle, MessageSquare } from 'lucide-react';
 import type { ProjectRecord, ProjectStatus } from '@/types/projects';

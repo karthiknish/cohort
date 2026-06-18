@@ -1,5 +1,5 @@
 'use client';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/shared/ui/navigation';
 import type { ReactNode } from 'react';
 import { agencyOnlyPrefixes } from '@/lib/access-control/dashboard-access';
 import { RoleAccessGate } from '@/shared/components/role-access-gate';

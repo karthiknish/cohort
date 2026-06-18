@@ -2,7 +2,7 @@
 import { notifyFailure } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useEffectEvent, useMemo, useReducer, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams } from '@/shared/ui/navigation';
 import { toast } from '@/shared/ui/use-toast';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useAuth } from '@/shared/contexts/auth-context';
@@ -30,11 +30,11 @@ export type CreativeDetailPageClientProps = {
 };
 export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps) {
     const { campaignName: initialCampaignName, currency, searchParamsString = '', } = props;
-    const params = useParams<{
+    const params = useParams() as {
         providerId: string;
         campaignId: string;
         creativeId: string;
-    }>();
+    };
     const { selectedClientId } = useClientContext();
     const { user } = useAuth();
     const { isPreviewMode } = usePreview();
@@ -62,7 +62,7 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
     const campaignName = initialCampaignName || 'Campaign';
     const displayCurrency = normalizeCurrencyCode(currency ?? undefined) ?? 'USD';
     const convexProviderId = resolveRouteProviderId(params.providerId);
-    const fetchCreative = useEffectEvent(async () => {
+    const fetchCreative = useCallback(async () => {
         dispatch({ type: 'setLoading', value: true });
         if (!convexProviderId) {
             dispatch({ type: 'setLoading', value: false });
@@ -114,7 +114,15 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
             .finally(() => {
             dispatch({ type: 'setLoading', value: false });
         });
-    });
+    }, [
+        dispatch,
+        convexProviderId,
+        isPreviewMode,
+        params,
+        campaignName,
+        workspaceId,
+        selectedClientId,
+    ]);
     const fetchMetrics = useEffectEvent(async () => {
         if (!convexProviderId) {
             dispatch({ type: 'setCreativeMetrics', value: null });

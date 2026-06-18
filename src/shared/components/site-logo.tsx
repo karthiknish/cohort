@@ -1,6 +1,6 @@
 'use client';
-import Image from 'next/image';
-import Link from 'next/link';
+import Image from '@/shared/ui/image';
+import { Link } from '@/shared/ui/link';
 import { cn } from '@/lib/utils';
 /** Wordmark SVG (~4:1). Use height + w-auto, not square boxes. */
 const LOGO_SIZES = {

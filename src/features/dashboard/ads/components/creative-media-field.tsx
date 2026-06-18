@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
-import NextImage from 'next/image';
+import NextImage from '@/shared/ui/image';
 import { CheckCircle2, Loader2, Trash2, Upload } from 'lucide-react';
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme';
 import { Button } from '@/shared/ui/button';

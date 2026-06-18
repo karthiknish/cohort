@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { useMemo } from 'react';
 import { AlertTriangle, ArrowRight, CheckCircle2, FileText, PlugZap, TriangleAlert } from 'lucide-react';
 import { Skeleton } from '@/shared/ui/skeleton';

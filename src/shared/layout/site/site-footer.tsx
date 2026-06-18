@@ -1,8 +1,8 @@
 'use client';
-import Link from 'next/link';
-import Image from 'next/image';
+import { Link } from '@/shared/ui/link';
+import Image from '@/shared/ui/image';
 import type { CSSProperties } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/shared/ui/navigation';
 import { Separator } from '@/shared/ui/separator';
 const SITE_FOOTER_TRANSITION_STYLE = { viewTransitionName: 'site-footer' } satisfies CSSProperties;
 export function SiteFooter() {

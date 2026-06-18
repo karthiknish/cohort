@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useMemo } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { CircleAlert, MoreHorizontal, RefreshCw, ShieldCheck, Trash2, UserPlus, Users as UsersIcon, } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';

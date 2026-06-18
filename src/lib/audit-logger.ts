@@ -25,7 +25,7 @@ function getConvexClient(): ConvexHttpClient | null {
     _convexClient = new ConvexHttpClient(url);
     return _convexClient;
 }
-import { after } from 'next/server';
+import { after } from './http-server-types';
 /**
  * Logs a sensitive action to the audit_logs collection in Convex
  */

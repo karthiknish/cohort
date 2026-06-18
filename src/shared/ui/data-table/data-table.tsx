@@ -1,7 +1,7 @@
 'use client';
 'use no memo';
 import * as React from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from '@/shared/ui/navigation';
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';
 import { type ColumnFiltersState, type SortingState, type PaginationState, type VisibilityState, type RowSelectionState, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable as createReactTable, } from '@tanstack/react-table';
 import { useVirtualizer as createVirtualizer } from '@tanstack/react-virtual';

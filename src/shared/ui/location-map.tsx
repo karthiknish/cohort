@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useMemo, useState, type ChangeEvent } from 'react';
-import dynamic from 'next/dynamic';
+import { dynamic } from '@/shared/ui/dynamic';
 import { MapPin, X, Search, Loader2 } from 'lucide-react';
 import { Input } from '@/shared/ui/input';
 import { Badge } from '@/shared/ui/badge';

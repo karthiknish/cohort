@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useEffectEvent, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { useAction } from 'convex/react';
-import { useParams } from 'next/navigation';
+import { useParams } from '@/shared/ui/navigation';
 import { type DateRange } from '@/features/dashboard/ads/components/date-range-picker';
 import { useFormulaEditor } from '@/features/dashboard/ads/hooks/use-formula-editor';
 import { normalizeCurrencyCode } from '@/constants/currencies';
@@ -15,10 +15,10 @@ import { useAuth } from '@/shared/contexts/auth-context';
 import { campaignInsightsPageReducer, createInitialCampaign, createCampaignLifetimeDateRange, createInitialDateRange, isProviderId, parseIsoDateOnly, parseIsoDateTime, toIsoDateOnly, } from './campaign-insights-page-state';
 import type { Campaign, CampaignInsightsResponse } from './campaign-insights-page-types';
 export function useCampaignInsightsPage() {
-    const params = useParams<{
+    const params = useParams() as {
         providerId: string;
         campaignId: string;
-    }>();
+    };
     const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     const { selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
@@ -63,7 +63,7 @@ export function useCampaignInsightsPage() {
             cancelAnimationFrame(frameId);
         };
     }, [campaign?.startTime, campaign?.stopTime]);
-    const loadCampaign = useEffectEvent(async () => {
+    const loadCampaign = useCallback(async () => {
         dispatch({ type: 'setCampaignLoading', value: true });
         dispatch({ type: 'setCampaignError', value: null });
         if (isPreviewMode) {
@@ -107,8 +107,15 @@ export function useCampaignInsightsPage() {
             .finally(() => {
             dispatch({ type: 'setCampaignLoading', value: false });
         });
-    });
-    const loadInsights = useEffectEvent(async () => {
+    }, [
+        campaignId,
+        isPreviewMode,
+        listCampaigns,
+        providerId,
+        selectedClientId,
+        workspaceId,
+    ]);
+    const loadInsights = useCallback(async () => {
         if (!isPreviewMode && providerId !== 'facebook') {
             dispatch({
                 type: 'setInsightsError',
@@ -167,7 +174,16 @@ export function useCampaignInsightsPage() {
             .finally(() => {
             dispatch({ type: 'setInsightsLoading', value: false });
         });
-    });
+    }, [
+        campaignId,
+        dateRange.end,
+        dateRange.start,
+        getCampaignInsights,
+        isPreviewMode,
+        providerId,
+        selectedClientId,
+        workspaceId,
+    ]);
     useEffect(() => {
         const frameId = requestAnimationFrame(() => {
             void loadCampaign();
@@ -175,7 +191,7 @@ export function useCampaignInsightsPage() {
         return () => {
             cancelAnimationFrame(frameId);
         };
-    }, [campaignId, isPreviewMode, providerId, selectedClientId, workspaceId]);
+    }, [loadCampaign]);
     useEffect(() => {
         const frameId = requestAnimationFrame(() => {
             void loadInsights();
@@ -183,7 +199,7 @@ export function useCampaignInsightsPage() {
         return () => {
             cancelAnimationFrame(frameId);
         };
-    }, [campaignId, dateRange.end, dateRange.start, isPreviewMode, providerId, selectedClientId, workspaceId]);
+    }, [loadInsights]);
     const chartMetrics = (() => {
         const series = insights?.series ?? [];
         return series.map((row) => ({

@@ -1,6 +1,6 @@
 'use client';
-import dynamic from 'next/dynamic';
-import Link from 'next/link';
+import { dynamic } from '@/shared/ui/dynamic';
+import { Link } from '@/shared/ui/link';
 import { useMemo } from 'react';
 import { ArrowLeft, Download, ExternalLink, FileText, Loader2, Presentation, } from 'lucide-react';
 import { documentKindLabel, getDocumentKind, getFileNameFromUrl, type DocumentKind, } from '@/lib/document-viewer';

@@ -1,7 +1,7 @@
 'use client';
 import { LazyMotion, domAnimation, m } from '@/shared/ui/motion';
 import { CircleCheck, Copy, Download, ExternalLink, FileText, Layout, LoaderCircle, Pencil, Presentation, RefreshCw, } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';

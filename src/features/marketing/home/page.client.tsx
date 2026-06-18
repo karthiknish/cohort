@@ -1,6 +1,6 @@
 "use client";
-import Link from 'next/link';
-import { redirect } from "next/navigation";
+import { Link } from '@/shared/ui/link';
+import { redirect } from '@/shared/ui/navigation';
 import { Suspense } from "react";
 import { FeaturesBento } from "@/features/marketing/home/components/features-bento";
 import { HeroBackground } from "@/features/marketing/home/components/hero-background";

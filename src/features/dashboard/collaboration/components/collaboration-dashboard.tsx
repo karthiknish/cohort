@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useMemo } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { X } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Card, CardContent } from '@/shared/ui/card';

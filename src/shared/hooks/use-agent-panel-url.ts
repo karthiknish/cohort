@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useEffectEvent, useRef } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from '@/shared/ui/navigation';
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';
 import { agentPanelHref, parseAgentPanelUrl, type AgentPanelUrlView, } from '@/lib/agent-panel-url';
 type UseAgentPanelUrlOptions = {

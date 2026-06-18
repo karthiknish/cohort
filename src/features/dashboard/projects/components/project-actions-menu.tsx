@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { useCallback, useMemo } from 'react';
 import { ListChecks, MessageSquare, MoreHorizontal, Pencil, Plus, Trash2, } from 'lucide-react';
 import { buildProjectTasksRoute } from '@/lib/project-routes';

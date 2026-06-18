@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/shared/ui/navigation';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useMentionData } from '@/shared/hooks/use-mention-data';
 import { getAgentSuggestions, trackAgentSuggestionClick, type AgentSuggestion } from '@/lib/agent-context';

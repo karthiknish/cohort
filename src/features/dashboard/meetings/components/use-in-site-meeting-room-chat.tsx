@@ -2,7 +2,7 @@
 import { notifyFailure } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useMemo, useReducer, useRef, type ChangeEvent, type KeyboardEvent, type MouseEvent } from 'react';
-import { useChat, useParticipants } from '@/shared/ui/livekit';
+import { useChat, useParticipants } from '@livekit/components-react';
 import { useConvex, useMutation } from 'convex/react';
 import { MAX_ATTACHMENTS } from '@/features/dashboard/collaboration/hooks/constants';
 import type { PendingAttachment } from '@/features/dashboard/collaboration/hooks/types';

@@ -1,7 +1,7 @@
 'use client';
 import { Suspense, startTransition, useCallback, useMemo } from 'react';
 import { Bell, LoaderCircle, Shield, User } from 'lucide-react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from '@/shared/ui/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { usePreview } from '@/shared/contexts/preview-context';

@@ -1,6 +1,6 @@
 'use client';
 import { useCallback } from 'react';
-import dynamic from 'next/dynamic';
+import { dynamic } from '@/shared/ui/dynamic';
 import { ProjectFilterBanner, TaskBulkToolbar, TaskFilters, type TaskParticipant, TaskResultsCount, TaskSummaryCards, TaskViewControls, } from '@/features/dashboard/tasks';
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
 import { cn } from '@/lib/utils';

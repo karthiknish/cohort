@@ -1,5 +1,5 @@
 'use client';
-import Image, { type ImageProps } from 'next/image';
+import Image, { type ImageProps } from '@/shared/ui/image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { interactiveTransitionClass } from '@/lib/motion';
 import { cn } from '@/lib/utils';

@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { useCallback } from 'react';
 import { Sparkles, ArrowRight, CircleCheck } from 'lucide-react';
 import { Button } from '@/shared/ui/button';

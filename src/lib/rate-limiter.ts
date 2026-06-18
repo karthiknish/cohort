@@ -1,4 +1,4 @@
-import type { NextRequest } from 'next/server';
+import type { NextRequest } from './http-server-types';
 /**
  * Simple in-memory rate limiter using token bucket algorithm.
  * Suitable for single-instance deployments. For distributed systems,

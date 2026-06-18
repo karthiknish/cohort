@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, type ChangeEvent, type KeyboardEvent, type RefObject } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Download, LoaderCircle, MessageSquare, Search, X } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';

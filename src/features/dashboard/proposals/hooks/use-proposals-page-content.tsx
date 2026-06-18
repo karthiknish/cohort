@@ -1,5 +1,5 @@
 'use client';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/shared/ui/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ProposalDraft } from '@/types/proposals';
 import type { ProposalFormData } from '@/lib/proposals';

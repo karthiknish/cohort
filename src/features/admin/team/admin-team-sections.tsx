@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { CircleAlert, LoaderCircle, RefreshCw, ShieldCheck, UserCheck, UserMinus, UserPlus, Users as UsersIcon, } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';

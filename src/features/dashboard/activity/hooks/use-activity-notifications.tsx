@@ -1,6 +1,6 @@
 'use client';
 import { Bell, CircleCheck, Folder, MessageSquare } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/shared/ui/navigation';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';

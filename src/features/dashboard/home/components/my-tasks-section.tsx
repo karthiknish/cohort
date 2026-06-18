@@ -1,6 +1,6 @@
 'use client';
 import { useClientNowMs } from '@/lib/hooks/use-client-relative-time';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { useConvexAuth, useQuery } from 'convex/react';
 import { ArrowUpRight, CheckSquare, Clock } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';

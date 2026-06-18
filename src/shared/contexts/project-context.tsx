@@ -1,6 +1,6 @@
 'use client';
 import { createContext, use, useCallback, useMemo, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from '@/shared/ui/navigation';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';

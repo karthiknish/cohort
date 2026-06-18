@@ -1,4 +1,4 @@
-import type { NextRequest } from 'next/server';
+import type { NextRequest } from './http-server-types';
 import { cache } from 'react';
 import { getToken as getBetterAuthToken } from '@convex-dev/better-auth/utils';
 export interface AuthResult {
@@ -11,7 +11,7 @@ export interface AuthResult {
 import { ApiError } from './api-errors';
 import { decodeJwtSubject } from './jwt-utils';
 import { ConvexHttpClient } from 'convex/browser';
-import { convexSiteUrl, getToken as getNextJsToken } from './auth-server';
+import { convexSiteUrl, getToken as getNextJsToken } from '@/lib/auth-server';
 import { api } from '/_generated/api';
 class AuthenticationError extends ApiError {
     constructor(message: string, status = 401) {

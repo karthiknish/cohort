@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import NextImage from 'next/image';
+import NextImage from '@/shared/ui/image';
 import { AnimatePresence, m } from '@/shared/ui/motion';
 import { slideInLeftVariants, transitions } from '@/lib/motion';
 import { Globe, Heart, MessageCircle, MoreHorizontal, Share2, Bookmark, ThumbsUp, } from 'lucide-react';

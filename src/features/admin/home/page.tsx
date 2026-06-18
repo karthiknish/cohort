@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { Activity, AlertCircle, ArrowUpRight, ChevronRight, Lightbulb, ShieldCheck, UserCheck, Users, } from 'lucide-react';
 import { useQuery, usePaginatedQuery } from 'convex/react';
 import { api } from '/_generated/api';

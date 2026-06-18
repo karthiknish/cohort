@@ -1,6 +1,6 @@
 'use client';
 import type { ReactNode } from 'react';
-import Link from 'next/link';
+import { Link } from '@/shared/ui/link';
 import { AlertTriangle, CheckCircle2, CircleAlert, Loader2, PlugZap } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Badge } from '@/shared/ui/badge';
