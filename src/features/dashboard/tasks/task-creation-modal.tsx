@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { useCallback, useRef, useState, useTransition } from 'react';
 import { ListTodo } from 'lucide-react';
 import { format } from 'date-fns';
@@ -10,7 +10,6 @@ import { TASKS_THEME } from './tasks-theme';
 import { useSmartDefaults } from '@/shared/hooks/use-smart-defaults';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
-import { useToast } from '@/shared/ui/use-toast';
 import type { TaskPriority, TaskRecord } from '@/types/tasks';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { emitDashboardRefresh } from '@/lib/refresh-bus';
@@ -33,7 +32,6 @@ interface TaskCreationModalProps {
 export function TaskCreationModal({ isOpen, onClose, initialData, onTaskCreated, }: TaskCreationModalProps) {
     const { user } = useAuth();
     const { selectedClientId, selectedClient } = useClientContext();
-    const { toast } = useToast();
     const { taskDefaults, contextInfo } = useSmartDefaults();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const convex = useConvex();
@@ -153,9 +151,9 @@ export function TaskCreationModal({ isOpen, onClose, initialData, onTaskCreated,
                     updatedAt: new Date().toISOString(),
                     deletedAt: null,
                 };
-                toast({
+                notifySuccess({
                     title: 'Task created!',
-                    description: `"${createdTask.title}" has been added and is ready to track.`,
+                    message: `"${createdTask.title}" has been added and is ready to track.`,
                 });
                 onTaskCreated?.(createdTask);
                 emitDashboardRefresh({ reason: 'task-mutated', clientId: createdTask.clientId ?? selectedClientId ?? null });

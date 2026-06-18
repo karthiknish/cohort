@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { useMutation } from 'convex/react';
 import { CircleAlert, LoaderCircle } from 'lucide-react';
@@ -8,7 +8,6 @@ import { projectsApi } from '@/lib/convex-api';
 import { emitDashboardRefresh } from '@/lib/refresh-bus';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
-import { useToast } from '@/shared/ui/use-toast';
 import type { ProjectRecord, ProjectStatus } from '@/types/projects';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
@@ -152,7 +151,6 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
     const workspaceId = user?.agencyId ?? null;
     const updateProject = useMutation(projectsApi.update);
     const { clients } = useClientContext();
-    const { toast } = useToast();
     const [state, dispatch] = useReducer(editProjectReducer, INITIAL_EDIT_PROJECT_STATE);
     const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
     const { loading, error, name, description, status, clientId, startDate, endDate, tags, tagInput, validationErrors, } = state;
@@ -280,9 +278,9 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
                 ...('tags' in payload ? { tags: payload.tags ?? [] } : {}),
                 updatedAt: new Date().toISOString(),
             };
-            toast({
+            notifySuccess({
                 title: 'Project updated!',
-                description: `"${updatedProject.name}" has been saved.`,
+                message: `"${updatedProject.name}" has been saved.`,
             });
             onProjectUpdated?.(updatedProject);
             emitDashboardRefresh({ reason: 'project-mutated', clientId: updatedProject.clientId ?? null });

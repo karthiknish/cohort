@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useReducer, useRef, useState } from 'react';
 import { useMutation } from 'convex/react';
@@ -12,7 +12,6 @@ import { getIconContainerClasses } from '@/lib/dashboard-theme';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
-import { useToast } from '@/shared/ui/use-toast';
 import { Button } from '@/shared/ui/button';
 import { FormSheetClose, ResponsiveFormSheet } from '@/shared/ui/responsive-form-sheet';
 import type { ProjectRecord, ProjectStatus } from '@/types/projects';
@@ -123,7 +122,6 @@ export function CreateProjectSheet({ onProjectCreated, trigger }: CreateProjectS
     const workspaceId = user?.agencyId ?? null;
     const createProject = useMutation(projectsApi.create);
     const { clients, selectedClientId } = useClientContext();
-    const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [nameError, setNameError] = useState<string | null>(null);
@@ -214,9 +212,9 @@ export function CreateProjectSheet({ onProjectCreated, trigger }: CreateProjectS
                 recentActivityAt: null,
                 deletedAt: null,
             };
-            toast({
+            notifySuccess({
                 title: 'Project created!',
-                description: `"${createdProject.name}" is ready. Start adding tasks and collaborating.`,
+                message: `"${createdProject.name}" is ready. Start adding tasks and collaborating.`,
             });
             onProjectCreated?.(createdProject);
             emitDashboardRefresh({ reason: 'project-mutated', clientId: createdProject.clientId ?? null });

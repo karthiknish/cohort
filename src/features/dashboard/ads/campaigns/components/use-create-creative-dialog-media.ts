@@ -3,7 +3,7 @@ import { useCallback, type ChangeEvent, type Dispatch, type RefObject } from 're
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { adsCreativesApi } from '@/lib/convex-api';
 import { useAction } from 'convex/react';
-import { toast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { parseImageHashFromCreativeSpec, revokeBlobPreview, type CreateCreativeDialogAction, } from './create-creative-dialog-state';
 type UseCreateCreativeDialogMediaArgs = {
     dispatch: Dispatch<CreateCreativeDialogAction>;
@@ -30,18 +30,16 @@ export function useCreateCreativeDialogMedia({ dispatch, workspaceId, clientId, 
         if (!file)
             return;
         if (!isMeta) {
-            toast({
+            notifySuccess({
                 title: 'Platform not supported',
-                description: 'Image upload is currently only supported for Meta (Facebook/Instagram) ads.',
-                variant: 'destructive',
+                message: 'Image upload is currently only supported for Meta (Facebook/Instagram) ads.',
             });
             return;
         }
         if (!workspaceId) {
-            toast({
+            notifySuccess({
                 title: 'Upload failed',
-                description: 'Sign in required',
-                variant: 'destructive',
+                message: 'Sign in required',
             });
             return;
         }
@@ -72,9 +70,9 @@ export function useCreateCreativeDialogMedia({ dispatch, workspaceId, clientId, 
             const hash = spec ? parseImageHashFromCreativeSpec(spec) : null;
             if (hash) {
                 dispatch({ type: 'setImageHash', value: hash });
-                toast({
+                notifySuccess({
                     title: 'Image uploaded',
-                    description: 'Your image has been uploaded successfully.',
+                    message: 'Your image has been uploaded successfully.',
                 });
             }
         }
@@ -83,10 +81,9 @@ export function useCreateCreativeDialogMedia({ dispatch, workspaceId, clientId, 
             revokeBlobPreview(imagePreviewRef.current);
             imagePreviewRef.current = null;
             dispatch({ type: 'clearImage' });
-            toast({
+            notifySuccess({
                 title: 'Upload failed',
-                description: asErrorMessage(error),
-                variant: 'destructive',
+                message: asErrorMessage(error),
             });
         }
         finally {
@@ -99,18 +96,16 @@ export function useCreateCreativeDialogMedia({ dispatch, workspaceId, clientId, 
         if (!file)
             return;
         if (!isMeta) {
-            toast({
+            notifySuccess({
                 title: 'Platform not supported',
-                description: 'Video upload is currently only supported for Meta (Facebook/Instagram) ads.',
-                variant: 'destructive',
+                message: 'Video upload is currently only supported for Meta (Facebook/Instagram) ads.',
             });
             return;
         }
         if (!workspaceId) {
-            toast({
+            notifySuccess({
                 title: 'Upload failed',
-                description: 'Sign in required',
-                variant: 'destructive',
+                message: 'Sign in required',
             });
             return;
         }
@@ -134,9 +129,9 @@ export function useCreateCreativeDialogMedia({ dispatch, workspaceId, clientId, 
             }
             if (result.videoId) {
                 dispatch({ type: 'setVideoId', value: result.videoId });
-                toast({
+                notifySuccess({
                     title: 'Video uploaded',
-                    description: 'Your video has been uploaded successfully.',
+                    message: 'Your video has been uploaded successfully.',
                 });
             }
         }
@@ -145,10 +140,9 @@ export function useCreateCreativeDialogMedia({ dispatch, workspaceId, clientId, 
             revokeBlobPreview(videoPreviewRef.current);
             videoPreviewRef.current = null;
             dispatch({ type: 'clearVideo' });
-            toast({
+            notifySuccess({
                 title: 'Upload failed',
-                description: asErrorMessage(error),
-                variant: 'destructive',
+                message: asErrorMessage(error),
             });
         }
         finally {

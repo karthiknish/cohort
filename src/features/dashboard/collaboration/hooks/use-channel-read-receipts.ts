@@ -3,7 +3,7 @@ import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { logError } from '@/lib/convex-errors';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useMutation } from 'convex/react';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { collaborationApi } from '@/lib/convex-api';
 import type { CollaborationMessage } from '@/types/collaboration';
 import type { Channel } from '../types';
@@ -16,7 +16,6 @@ type UseChannelReadReceiptsOptions = {
     mutateChannelMessages: (channelId: string, updater: (messages: CollaborationMessage[]) => CollaborationMessage[]) => void;
 };
 export function useChannelReadReceipts({ workspaceId, currentUserId, selectedChannel, channelMessages, isPreviewMode, mutateChannelMessages, }: UseChannelReadReceiptsOptions) {
-    const { toast } = useToast();
     const markChannelAsRead = useMutation(collaborationApi.markChannelAsRead);
     const markThreadAsReadMutation = useMutation(collaborationApi.markThreadAsRead);
     const [markChannelReadPending, setMarkChannelReadPending] = useState(false);
@@ -118,7 +117,7 @@ export function useChannelReadReceipts({ workspaceId, currentUserId, selectedCha
         try {
             const didMark = await handleMarkSelectedChannelAsRead({ force: true });
             if (didMark) {
-                toast({ title: 'Marked as read', description: 'Channel read state updated for you.' });
+                notifySuccess({ title: 'Marked as read', message: 'Channel read state updated for you.' });
             }
         }
         catch (error) {

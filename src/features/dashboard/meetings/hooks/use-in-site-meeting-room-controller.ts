@@ -1,16 +1,14 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCreateLayoutContext } from '@livekit/components-react';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
 import type { CaptureStatus, LiveKitJoinPayload, MeetingRoomPageProps, TranscriptActionResult, } from '../components/in-site-meeting-card.shared';
 import type { MeetingRecord } from '../types';
 import { buildFallbackRoomName, extractRoomNameFromMeetingLink, formatMeetingTitleFromRoomName, normalizeMeetingProcessingState, } from '../utils';
 import { useInSiteMeetingRoomPostCall } from './use-in-site-meeting-room-post-call';
 export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     const { meeting, onClose, canRecord = true, onMeetingUpdated, fallbackRoomName } = props;
-    const { toast } = useToast();
     const liveRoomLayoutContext = useCreateLayoutContext();
     const [transcriptDraft, setTranscriptDraft] = useState(meeting.transcriptText ?? '');
     const [interimTranscript, setInterimTranscript] = useState('');
@@ -238,9 +236,9 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     });
     const handleJoinRoom = () => {
         if (isPreviewMeeting) {
-            toast({
+            notifyInfo({
                 title: 'Preview room',
-                description: 'Live media is disabled in preview mode, but the workspace layout is available for review.',
+                message: 'Live media is disabled in preview mode, but the workspace layout is available for review.',
             });
             return;
         }
@@ -274,9 +272,9 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
                 syncMeetingState(payload.data.meeting, { syncTranscript: false, syncNotes: false });
             }
             if (payload.data.migration?.created) {
-                toast({
+                notifySuccess({
                     title: 'Native room prepared',
-                    description: payload.data.migration.calendarSyncWarning ??
+                    message: payload.data.migration.calendarSyncWarning ??
                         'This legacy meeting was upgraded to a Cohorts room automatically.',
                 });
             }
@@ -284,9 +282,9 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
             setOperationsOpen(true);
             const hasExistingTranscript = Boolean(payload.data.meeting?.transcriptText?.trim() || transcriptDraft.trim());
             if (!hasExistingTranscript) {
-                toast({
+                notifySuccess({
                     title: 'Room connected',
-                    description: 'Start transcript recording when you are ready. Cohorts will transcribe speech, then generate guarded AI notes.',
+                    message: 'Start transcript recording when you are ready. Cohorts will transcribe speech, then generate guarded AI notes.',
                 });
             }
             else {
@@ -311,9 +309,9 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
         }
         setTranscriptRecordingEnabled(true);
         setOperationsOpen(true);
-        toast({
+        notifySuccess({
             title: 'Transcript recording enabled',
-            description: 'Allow microphone access when prompted. Speak naturally and Cohorts will build the transcript in the background.',
+            message: 'Allow microphone access when prompted. Speak naturally and Cohorts will build the transcript in the background.',
         });
     };
     const togglePictureInPicture = async () => {

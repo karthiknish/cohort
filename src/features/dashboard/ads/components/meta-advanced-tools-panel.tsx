@@ -12,7 +12,7 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
 import { MotionTabsContent, Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
-import { toast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { hasMetaAdvancedTools, resolveMetaCampaignUiVisibility, } from '@/lib/meta-campaign-ui';
 import { MetaJsonResultBlock, MetaPixelPicker, MetaToolsActionBar, MetaToolsFormSection, MetaToolsPanelShell, type MetaPixelRow, } from './meta-tools-ui';
 function WebhookFieldCheckbox({ field, checked, onToggleField, }: {
@@ -201,9 +201,9 @@ export function MetaAdvancedToolsPanel({ workspaceId, clientId, campaignObjectiv
         })
             .then((rows) => {
             setAdLibraryRows(Array.isArray(rows) ? rows : []);
-            toast({
+            notifySuccess({
                 title: 'Ad Library search complete',
-                description: `Found ${Array.isArray(rows) ? rows.length : 0} ads.`,
+                message: `Found ${Array.isArray(rows) ? rows.length : 0} ads.`,
             });
         })
             .catch((error) => {
@@ -257,7 +257,7 @@ export function MetaAdvancedToolsPanel({ workspaceId, clientId, campaignObjectiv
             subscribedFields: [...webhookFields],
         })
             .then(() => {
-            toast({ title: 'Webhook subscriptions updated' });
+            notifySuccess({ message: 'Webhook subscriptions updated' });
         })
             .catch((error) => {
             reportConvexFailure({
@@ -274,7 +274,7 @@ export function MetaAdvancedToolsPanel({ workspaceId, clientId, campaignObjectiv
         void clearAdAccountWebhooks({ workspaceId, clientId: clientId ?? null })
             .then(() => {
             setWebhookFields(new Set());
-            toast({ title: 'Webhook subscriptions cleared' });
+            notifySuccess({ message: 'Webhook subscriptions cleared' });
         })
             .catch((error) => {
             reportConvexFailure({

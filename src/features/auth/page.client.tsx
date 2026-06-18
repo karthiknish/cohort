@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { LoaderCircle } from 'lucide-react';
 import { useRouter, redirect, usePathname, useSearchParams } from '@/shared/ui/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
@@ -14,7 +14,6 @@ import { getSafeRedirectPath } from '@/lib/utils';
 import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition';
-import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 const TAB_STORAGE_KEY = 'cohorts.auth.activeTab';
 const REMEMBER_ME_KEY = 'cohorts.auth.rememberMe';
@@ -162,7 +161,6 @@ function HomeAuthPageContent() {
     const { push, replace } = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const { toast } = useToast();
     const { signIn, signUp } = useAuth();
     useEffect(() => {
         dispatch({
@@ -260,9 +258,9 @@ function HomeAuthPageContent() {
                     password: signUpData.password,
                     displayName: signUpData.displayName.trim() || signUpData.email,
                 });
-                toast({
+                notifySuccess({
                     title: 'Welcome to Cohorts!',
-                    description: 'Your account has been created. Taking you to your workspace...',
+                    message: 'Your account has been created. Taking you to your workspace...',
                 });
                 if (signedUpUser.status === 'pending' || signedUpUser.status === 'invited') {
                     push('/pending-approval');
@@ -281,9 +279,9 @@ function HomeAuthPageContent() {
                 else if (typeof window !== 'undefined') {
                     window.localStorage.removeItem(REMEMBER_ME_KEY);
                 }
-                toast({
+                notifySuccess({
                     title: 'Welcome back!',
-                    description: 'Signed in successfully. Loading your workspace...',
+                    message: 'Signed in successfully. Loading your workspace...',
                 });
                 if (signedInUser.status === 'pending' || signedInUser.status === 'invited') {
                     push('/pending-approval');
@@ -309,9 +307,9 @@ function HomeAuthPageContent() {
             // Browser redirects to Google on success; do not clear loading state here.
         }
         catch (error) {
-            toast({
+            notifySuccess({
                 title: 'Google sign-in failed',
-                description: getFriendlyAuthErrorMessage(error),
+                message: getFriendlyAuthErrorMessage(error),
             });
             dispatch({ type: 'setIsSubmitting', value: false });
         }

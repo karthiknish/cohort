@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CheckCheck, LoaderCircle, Settings2, Trash2, MessageSquare, Filter, } from 'lucide-react';
 import { Link } from '@/shared/ui/link';
@@ -17,7 +17,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { LiveRegion } from '@/shared/ui/live-region';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { useToast } from '@/shared/ui/use-toast';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs';
 import { Badge } from '@/shared/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
@@ -33,10 +32,12 @@ import { useNotificationNavigation } from '@/features/notifications/hooks/use-no
 import { NOTIFICATIONS_PAGE_PAGE_SIZE } from '@/lib/notifications/pagination';
 import { FILTER_VALUES, FILTER_EMPTY_LABELS, type AckAction, type FilterType, type NotificationsCursor, MAX_NOTIFICATION_PAGES, VIRTUAL_NOTIFICATIONS_THRESHOLD } from './notifications-page-constants';
 export function useNotificationsPage() {
+    // TanStack useVirtualizer uses interior mutability and is on the React Compiler
+    // incompatible-library allowlist; opt this hook out of compilation.
+    'use no memo';
     const { user } = useAuth();
     const { selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const filterTabs = usePersistedTab<FilterType>({
         param: 'tab',
         defaultValue: 'all',
@@ -143,9 +144,9 @@ export function useNotificationsPage() {
                         : notification),
                 };
             });
-            toast({
+            notifySuccess({
                 title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
-                description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
+                message: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
             });
             setNotificationAnnouncement(action === 'dismiss'
                 ? `${announcementLabel} dismissed.`
@@ -168,9 +169,9 @@ export function useNotificationsPage() {
         })
             .then(() => refetchNotifications())
             .then(() => {
-            toast({
+            notifySuccess({
                 title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
-                description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
+                message: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
             });
             setNotificationAnnouncement(action === 'dismiss'
                 ? `${announcementLabel} dismissed.`
@@ -195,7 +196,7 @@ export function useNotificationsPage() {
                 sourceKey: previewSourceKey,
                 notifications: basePreviewNotifications,
             });
-            toast({ title: 'Preview data refreshed', description: 'Showing sample notifications.' });
+            notifyInfo({ title: 'Preview data refreshed', message: 'Showing sample notifications.' });
             return;
         }
         void refetchNotifications();
@@ -221,7 +222,7 @@ export function useNotificationsPage() {
     const handleMarkAllRead = () => {
         const unreadIds = notifications.flatMap((item) => (!item.read ? [item.id] : []));
         if (unreadIds.length === 0) {
-            toast({ title: 'All caught up!', description: 'You have no unread notifications.' });
+            notifySuccess({ title: 'All caught up!', message: 'You have no unread notifications.' });
             return;
         }
         void updateNotificationStatus(unreadIds, 'read', `${unreadIds.length} notifications`);
@@ -232,7 +233,7 @@ export function useNotificationsPage() {
     const handleClearAll = () => {
         const allIds = notifications.map((item) => item.id);
         if (allIds.length === 0) {
-            toast({ title: 'Inbox empty', description: 'There are no notifications to clear.' });
+            notifySuccess({ title: 'Inbox empty', message: 'There are no notifications to clear.' });
             return;
         }
         void updateNotificationStatus(allIds, 'dismiss', `${allIds.length} notifications`);

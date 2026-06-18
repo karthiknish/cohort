@@ -3,10 +3,9 @@ import { type ChangeEvent, type FormEvent, useCallback, useMemo, useReducer, use
 import { useMutation, useQuery } from 'convex/react';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
-import { useToast } from '@/shared/ui/use-toast';
 import { settingsApi } from '@/lib/convex-api';
 import { getPreviewSettingsProfile } from '@/lib/preview-data';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { getAvatarInitials } from './utils';
 import { ProfileAvatarEditor } from './profile-card-avatar-editor';
 import { ProfileContactFields } from './profile-card-contact-fields';
@@ -14,7 +13,6 @@ import { ProfileCardLoading } from './profile-card-loading';
 import { useProfileAvatarUpload } from './profile-card-hooks';
 import { createInitialProfileEditState, isPhoneValid, profileEditReducer, type ProfileUser, } from './profile-card-state';
 export function ProfileCard() {
-    const { toast } = useToast();
     const { isPreviewMode } = usePreview();
     const profile = useQuery(settingsApi.getMyProfile);
     const updateMyProfile = useMutation(settingsApi.updateMyProfile);
@@ -66,9 +64,9 @@ export function ProfileCard() {
             }));
             dispatch({ type: 'commitProfileDraft', name: nextName, phone: nextPhone });
             dispatch({ type: 'setSavingProfile', value: false });
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: 'Profile changes were applied locally for this session.',
+                message: 'Profile changes were applied locally for this session.',
             });
             return;
         }
@@ -78,7 +76,7 @@ export function ProfileCard() {
         })
             .then(() => {
             dispatch({ type: 'commitProfileDraft', name: nextName, phone: nextPhone });
-            toast({ title: 'Profile updated', description: 'Your changes were saved.' });
+            notifySuccess({ title: 'Profile updated', message: 'Your changes were saved.' });
         })
             .catch((submitError) => {
             const message = submitError instanceof Error ? submitError.message : 'Failed to update profile';

@@ -9,7 +9,7 @@ import { useClientContext } from '@/shared/contexts/client-context';
 import type { WorkspaceNotification } from '@/types/notifications';
 import { notificationsApi } from '@/lib/convex-api';
 import { parsePageSize } from '@/lib/pagination';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { groupNotificationsByDate } from '@/features/notifications/lib/group-notifications';
 import { useNotificationNavigation } from '@/features/notifications/hooks/use-notification-navigation';
 import { NOTIFICATIONS_INBOX_PAGE_SIZE } from '@/lib/notifications/pagination';
@@ -26,7 +26,6 @@ type AckOptions = {
 export function useNotificationInbox() {
     const { user } = useAuth();
     const { selectedClientId } = useClientContext();
-    const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [ackInFlight, setAckInFlight] = useState(false);
     const workspaceId = user?.agencyId;
@@ -104,7 +103,7 @@ export function useNotificationInbox() {
             .then(() => notificationsInfiniteQuery.refetch())
             .then(() => {
             if (!options.silent) {
-                toast({ title: action === 'dismiss' ? 'Dismissed' : 'Marked as read' });
+                notifySuccess({ message: action === 'dismiss' ? 'Dismissed' : 'Marked as read' });
             }
         })
             .catch((error) => {

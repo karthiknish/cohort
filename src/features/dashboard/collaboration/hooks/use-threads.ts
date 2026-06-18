@@ -3,7 +3,6 @@ import { notifyFailure } from '@/lib/notifications';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useConvex } from 'convex/react';
-import { useToast } from '@/shared/ui/use-toast';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { collaborationApi } from '@/lib/convex-api';
 import { getPreviewCollaborationThreadReplies } from '@/lib/preview-data';
@@ -105,7 +104,6 @@ interface UseThreadsOptions {
     currentUserId: string | null;
 }
 export function useThreads({ workspaceId, currentUserId }: UseThreadsOptions) {
-    const { toast } = useToast();
     const { isPreviewMode } = usePreview();
     const convex = useConvex();
     const queryClient = useQueryClient();

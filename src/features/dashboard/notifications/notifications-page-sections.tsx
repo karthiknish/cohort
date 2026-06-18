@@ -18,7 +18,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { LiveRegion } from '@/shared/ui/live-region';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { useToast } from '@/shared/ui/use-toast';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs';
 import { Badge } from '@/shared/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';

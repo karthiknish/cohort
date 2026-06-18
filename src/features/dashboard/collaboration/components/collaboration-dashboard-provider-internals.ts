@@ -1,5 +1,6 @@
 'use client';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { notifySuccess } from '@/lib/notifications';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from '@/shared/ui/navigation';
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';
@@ -21,11 +22,6 @@ type StartNewDMTarget = {
     name: string;
     role?: string | null;
 };
-type DashboardToast = (options: {
-    title: string;
-    description: string;
-    variant?: 'destructive';
-}) => void;
 type UseCollaborationDashboardUrlStateOptions = {
     channels: CollaborationChannelLike[];
     dmConversations: DirectConversation[];
@@ -327,7 +323,6 @@ type UseCollaborationDashboardActionsOptions = {
     selectChannel: (channelId: string | null) => void;
     selectConversation: (conversation: DirectConversation | null) => void;
     startNewDM: (targetUser: StartNewDMTarget) => Promise<void>;
-    toast: DashboardToast;
     updateChannelMembers: (args: {
         workspaceId: string;
         legacyId: string;
@@ -336,7 +331,7 @@ type UseCollaborationDashboardActionsOptions = {
     }) => Promise<unknown>;
     workspaceId: string | null;
 };
-export function useCollaborationDashboardActions({ clearCollaborationSelectionFromUrl, clearMessageFocus, clearPendingAttachments, syncChannelToUrl, syncDmToUrl, closeManageMembersDialog, closeNewDMDialog, createChannel, removeChannel, selectedChannel, selectedConversation, selectedCustomChannel, selectChannel, selectConversation, startNewDM, toast, updateChannelMembers, workspaceId, }: UseCollaborationDashboardActionsOptions) {
+export function useCollaborationDashboardActions({ clearCollaborationSelectionFromUrl, clearMessageFocus, clearPendingAttachments, syncChannelToUrl, syncDmToUrl, closeManageMembersDialog, closeNewDMDialog, createChannel, removeChannel, selectedChannel, selectedConversation, selectedCustomChannel, selectChannel, selectConversation, startNewDM, updateChannelMembers, workspaceId, }: UseCollaborationDashboardActionsOptions) {
     const handleStartNewDM = async (targetUser: StartNewDMTarget) => {
         await startNewDM(targetUser);
         closeNewDMDialog();
@@ -403,9 +398,9 @@ export function useCollaborationDashboardActions({ clearCollaborationSelectionFr
                 memberIds: payload.memberIds,
                 visibility: payload.visibility,
             });
-            toast({
+            notifySuccess({
                 title: 'Channel updated',
-                description: `Access for #${selectedCustomChannel.name} has been updated.`,
+                message: `Access for #${selectedCustomChannel.name} has been updated.`,
             });
         }
         catch (error) {
@@ -429,9 +424,9 @@ export function useCollaborationDashboardActions({ clearCollaborationSelectionFr
             });
             closeManageMembersDialog();
             selectChannel('team-agency');
-            toast({
+            notifySuccess({
                 title: 'Channel deleted',
-                description: `#${selectedCustomChannel.name} has been removed from collaboration.`,
+                message: `#${selectedCustomChannel.name} has been removed from collaboration.`,
             });
         }
         catch (error) {

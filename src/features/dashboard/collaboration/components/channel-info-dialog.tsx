@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useRef, useState } from 'react';
 import { useMutation } from 'convex/react';
@@ -7,7 +7,6 @@ import { collaborationApi, collaborationChannelAvatarsApi } from '@/lib/convex-a
 import { uploadStorageFile } from '@/lib/upload-storage-file';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
-import { useToast } from '@/shared/ui/use-toast';
 import type { ClientTeamMember } from '@/types/clients';
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration';
 import type { Channel } from '../types';
@@ -29,7 +28,6 @@ export type ChannelInfoDialogProps = {
     onManageMembers?: () => void;
 };
 export function ChannelInfoDialog({ open, onOpenChange, channel, channelMessages, channelParticipants, currentUserId, onPinnedMessageClick, sharedFiles, workspaceId, isAdmin, canManageMembers, onManageMembers, }: ChannelInfoDialogProps) {
-    const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
     const [removing, setRemoving] = useState(false);
@@ -73,9 +71,9 @@ export function ChannelInfoDialog({ open, onOpenChange, channel, channelMessages
                 channelKey: channel.id,
                 storageId,
             });
-            toast({
+            notifySuccess({
                 title: 'Channel photo updated',
-                description: `${displayName} now has a new photo.`,
+                message: `${displayName} now has a new photo.`,
             });
         }
         catch (error) {
@@ -98,9 +96,9 @@ export function ChannelInfoDialog({ open, onOpenChange, channel, channelMessages
                 channelKey: channel.id,
                 storageId: null,
             });
-            toast({
+            notifySuccess({
                 title: 'Channel photo removed',
-                description: `${displayName} is using the default icon again.`,
+                message: `${displayName} is using the default icon again.`,
             });
         }
         catch (error) {

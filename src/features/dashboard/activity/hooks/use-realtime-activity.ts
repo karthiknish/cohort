@@ -5,7 +5,6 @@ import { useMutation, useQuery } from 'convex/react';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
-import { useToast } from '@/shared/ui/use-toast';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { api, notificationsApi } from '@/lib/convex-api';
 import { getPreviewActivity } from '@/lib/preview-data';
@@ -14,7 +13,6 @@ export function useRealtimeActivity(limitCount = 20, preferPreviewData = false) 
     const { user } = useAuth();
     const { selectedClient } = useClientContext();
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const [currentLimit, setCurrentLimit] = useState(limitCount);
     const [error, setError] = useState<string | null>(null);
     const usePreviewData = isPreviewMode || preferPreviewData;

@@ -1,11 +1,11 @@
 'use client';
+import { notifyInfo, notifySuccess } from '@/lib/notifications';
 import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { useAdminActionError } from '../../hooks/use-admin-action-error';
 import { useCallback, useMemo, useReducer } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react';
 import { api } from '/_generated/api';
-import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { getPreviewAdminClients, getPreviewAdminUsers } from '@/lib/preview-data';
@@ -21,7 +21,6 @@ export function useAdminTeamPage() {
     const workspaceContext = useQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip');
     const workspaceId = workspaceContext?.workspaceId ?? null;
     const includeAllWorkspaces = workspaceContext?.role === 'admin';
-    const { toast } = useToast();
     const { results: usersPage, status, loadMore, isLoading } = usePaginatedQuery(api.adminUsers.listUsers, !isPreviewMode && workspaceId
         ? {
             workspaceId,
@@ -167,7 +166,7 @@ export function useAdminTeamPage() {
                 type: 'setPreviewUsers',
                 value: (current) => current.map((record) => (record.id === userId ? { ...record, role, updatedAt: new Date().toISOString() } : record)),
             });
-            toast({ title: 'Preview mode', description: `Member role updated to ${role} in the sample workspace.` });
+            notifyInfo({ title: 'Preview mode', message: `Member role updated to ${role} in the sample workspace.` });
             return;
         }
         dispatch({ type: 'setSavingId', value: userId });
@@ -181,7 +180,7 @@ export function useAdminTeamPage() {
                     return base.map((record) => (record.id === userId ? { ...record, role } : record));
                 },
             });
-            toast({ title: 'Role updated', description: `Member is now a ${role}.` });
+            notifySuccess({ title: 'Role updated', message: `Member is now a ${role}.` });
         })
             .catch((err: unknown) => {
             reportActionFailure({
@@ -211,9 +210,9 @@ export function useAdminTeamPage() {
                 type: 'setPreviewUsers',
                 value: (current) => current.map((record) => (record.id === userRecord.id ? { ...record, status: nextStatus, updatedAt: new Date().toISOString() } : record)),
             });
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: `Member is now ${nextStatus.replace(/_/g, ' ')} in the sample workspace.`,
+                message: `Member is now ${nextStatus.replace(/_/g, ' ')} in the sample workspace.`,
             });
             return;
         }
@@ -228,9 +227,9 @@ export function useAdminTeamPage() {
                     return base.map((record) => (record.id === userRecord.id ? { ...record, status: nextStatus } : record));
                 },
             });
-            toast({
+            notifySuccess({
                 title: 'Status updated',
-                description: `Member is now ${nextStatus.replace(/_/g, ' ')}.`,
+                message: `Member is now ${nextStatus.replace(/_/g, ' ')}.`,
             });
         })
             .catch((err: unknown) => {
@@ -268,9 +267,9 @@ export function useAdminTeamPage() {
                     ...current,
                 ],
             });
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: `Invitation created for ${email} in the sample workspace.`,
+                message: `Invitation created for ${email} in the sample workspace.`,
             });
             dispatch({ type: 'resetInviteForm' });
             return;
@@ -285,9 +284,9 @@ export function useAdminTeamPage() {
             invitedByName: user?.name ?? null,
         })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Invitation sent!',
-                description: `Invitation created for ${email} as ${inviteRole}. Email delivery depends on server integration settings.`,
+                message: `Invitation created for ${email} as ${inviteRole}. Email delivery depends on server integration settings.`,
             });
             dispatch({ type: 'resetInviteForm' });
         })

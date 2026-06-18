@@ -1,6 +1,5 @@
 import { notifyFailure } from '@/lib/notifications';
 import { useCallback, useMemo, useState } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
 import type { ProposalFormData } from '@/lib/proposals';
 import { collectStepValidationErrors, createInitialProposalFormState, hasCompletedAnyStepData, proposalSteps, validateProposalStep, stepErrorPaths, } from '../utils/form-steps';
 export interface UseProposalWizardOptions {
@@ -48,7 +47,6 @@ function formsEqual(left: ProposalFormData, right: ProposalFormData): boolean {
 }
 export function useProposalWizard(options: UseProposalWizardOptions = {}): UseProposalWizardReturn {
     const { onSubmit } = options;
-    const { toast } = useToast();
     const [currentStep, setCurrentStep] = useState(0);
     const [formState, setFormStateState] = useState<ProposalFormData>(() => createInitialProposalFormState());
     const [manualErrors, setManualErrors] = useState<Record<string, string>>({});

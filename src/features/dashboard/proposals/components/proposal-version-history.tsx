@@ -1,11 +1,10 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useMemo, useReducer } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { Dialog } from '@/shared/ui/dialog';
 import { DropdownMenu } from '@/shared/ui/dropdown-menu';
-import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { proposalVersionsApi } from '@/lib/convex-api';
@@ -78,7 +77,6 @@ function proposalVersionHistoryReducer(state: ProposalVersionHistoryState, actio
     }
 }
 export function ProposalVersionHistory({ proposalId, currentFormData, onVersionRestored, disabled = false, }: ProposalVersionHistoryProps) {
-    const { toast } = useToast();
     const { user } = useAuth();
     const workspaceId = user?.agencyId ?? null;
     const rows = useQuery(proposalVersionsApi.list, workspaceId && proposalId ? { workspaceId, proposalLegacyId: proposalId, limit: 50 } : 'skip');
@@ -125,9 +123,9 @@ export function ProposalVersionHistory({ proposalId, currentFormData, onVersionR
             return;
         }
         if (typeof window !== 'undefined' && isPreviewModeEnabled()) {
-            toast({
+            notifyInfo({
                 title: 'Not available in preview mode',
-                description: 'Version history is disabled for preview/demo proposals.',
+                message: 'Version history is disabled for preview/demo proposals.',
             });
             return;
         }
@@ -152,9 +150,9 @@ export function ProposalVersionHistory({ proposalId, currentFormData, onVersionR
             if (!created) {
                 throw new Error('Failed to create version');
             }
-            toast({
+            notifySuccess({
                 title: 'Version saved',
-                description: `Version ${created.versionNumber} has been saved.`,
+                message: `Version ${created.versionNumber} has been saved.`,
             });
         })
             .catch((error) => {
@@ -183,9 +181,9 @@ export function ProposalVersionHistory({ proposalId, currentFormData, onVersionR
         if (!proposalId || !restoreConfirmVersion)
             return;
         if (typeof window !== 'undefined' && isPreviewModeEnabled()) {
-            toast({
+            notifyInfo({
                 title: 'Not available in preview mode',
-                description: 'Restoring versions is disabled for preview/demo proposals.',
+                message: 'Restoring versions is disabled for preview/demo proposals.',
             });
             setRestoreConfirmVersion(null);
             return;
@@ -208,9 +206,9 @@ export function ProposalVersionHistory({ proposalId, currentFormData, onVersionR
         })
             .then((result) => {
             onVersionRestored(restoreConfirmVersion.formData);
-            toast({
+            notifySuccess({
                 title: 'Version restored',
-                description: `Restored to version ${result.restoredFromVersion}. Your previous state was saved as version ${result.newVersion - 1}.`,
+                message: `Restored to version ${result.restoredFromVersion}. Your previous state was saved as version ${result.newVersion - 1}.`,
             });
             setRestoreConfirmVersion(null);
         })

@@ -1,9 +1,8 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useMutation, useQuery } from 'convex/react';
 import { useCallback, useEffect, useMemo, useReducer, useState, type Dispatch, type SetStateAction, } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
 import { tasksApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { useAccumulatedCursorPages } from '@/lib/hooks/use-accumulated-cursor-pages';
@@ -181,7 +180,6 @@ function mapConvexTaskToTaskRecord(row: TaskQueryRow): TaskRecord {
     };
 }
 export function useTasks({ userId, clientId, authLoading, isPreviewMode = false, workspaceId, listFilters, }: UseTasksOptions): UseTasksReturn {
-    const { toast } = useToast();
     const [{ tasks, error, pendingStatusUpdates }, dispatch] = useReducer(tasksReducer, INITIAL_USE_TASKS_STATE);
     const setTasks: UseTasksReturn['setTasks'] = (updater) => {
         dispatch({ type: 'setTasks', updater });
@@ -278,14 +276,14 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
     };
     const handleRefresh = async () => {
         taskPagination.reset();
-        toast({ title: 'Up to date', description: 'Tasks update in real time.' });
+        notifySuccess({ title: 'Up to date', message: 'Tasks update in real time.' });
     };
     const handleQuickStatusChange = async (task: TaskRecord, newStatus: TaskStatus) => {
         if (isPreviewMode) {
             setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)));
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: `Status changed to "${formatStatusLabel(newStatus)}" (not saved).`,
+                message: `Status changed to "${formatStatusLabel(newStatus)}" (not saved).`,
             });
             return;
         }
@@ -302,9 +300,9 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
                 legacyId: task.id,
                 update: { status: newStatus },
             });
-            toast({
+            notifySuccess({
                 title: 'Status updated',
-                description: `Task moved to "${formatStatusLabel(newStatus)}".`,
+                message: `Task moved to "${formatStatusLabel(newStatus)}".`,
             });
         }
         catch (err) {
@@ -327,9 +325,9 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
     };
     const handleDeleteTask = async (task: TaskRecord): Promise<boolean> => {
         if (isPreviewMode) {
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: 'Changes are not saved in preview mode. Exit preview to make real changes.',
+                message: 'Changes are not saved in preview mode. Exit preview to make real changes.',
             });
             return true;
         }
@@ -337,7 +335,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
             return false;
         try {
             await softDeleteTask({ workspaceId, legacyId: task.id });
-            toast({ title: 'Task deleted', description: `"${task.title}" has been removed.` });
+            notifySuccess({ title: 'Task deleted', message: `"${task.title}" has been removed.` });
             return true;
         }
         catch (err) {
@@ -370,7 +368,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
                 deletedAt: null,
             };
             setTasks((prev) => [fakeTask, ...prev]);
-            toast({ title: 'Preview mode', description: 'Task created locally (not saved).' });
+            notifyInfo({ title: 'Preview mode', message: 'Task created locally (not saved).' });
             return fakeTask;
         }
         if (!workspaceId) {
@@ -399,7 +397,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
             if (!legacyId) {
                 throw new Error('Task creation failed to return a task id.');
             }
-            toast({ title: 'Task created', description: `"${payload.title}" added.` });
+            notifySuccess({ title: 'Task created', message: `"${payload.title}" added.` });
             return {
                 id: legacyId,
                 title: payload.title,
@@ -442,7 +440,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
                     updatedAt: new Date().toISOString(),
                 }
                 : t));
-            toast({ title: 'Preview mode', description: 'Task updated locally (not saved).' });
+            notifyInfo({ title: 'Preview mode', message: 'Task updated locally (not saved).' });
             return { id: taskId } as TaskRecord;
         }
         if (!workspaceId) {
@@ -466,7 +464,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
                     dueDateMs: msFromIsoDateString(payload.dueDate),
                 },
             });
-            toast({ title: 'Task updated', description: 'Changes saved.' });
+            notifySuccess({ title: 'Task updated', message: 'Changes saved.' });
             return { id: taskId } as TaskRecord;
         }
         catch (err) {
@@ -494,7 +492,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
                     updatedAt: new Date().toISOString(),
                 };
             }));
-            toast({ title: 'Preview mode', description: `${ids.length} task(s) updated locally (not saved).` });
+            notifyInfo({ title: 'Preview mode', message: `${ids.length} task(s) updated locally (not saved).` });
             return true;
         }
         if (!workspaceId)
@@ -510,7 +508,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
                     dueDateMs: update.dueDate !== undefined ? msFromIsoDateString(update.dueDate) : undefined,
                 },
             });
-            toast({ title: 'Bulk update complete' });
+            notifySuccess({ message: 'Bulk update complete' });
             return true;
         }
         catch (err) {
@@ -525,9 +523,9 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
     };
     const handleBulkDelete = async (ids: string[]): Promise<boolean> => {
         if (isPreviewMode) {
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: 'Changes are not saved in preview mode. Exit preview to make real changes.',
+                message: 'Changes are not saved in preview mode. Exit preview to make real changes.',
             });
             return true;
         }
@@ -535,7 +533,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
             return false;
         try {
             await bulkSoftDeleteTasks({ workspaceId, ids });
-            toast({ title: 'Bulk deletion complete' });
+            notifySuccess({ message: 'Bulk deletion complete' });
             return true;
         }
         catch (err) {

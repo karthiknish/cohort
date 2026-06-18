@@ -1,3 +1,4 @@
+import { Errors } from '../../../../../errors'
 import { adsOperationHandlers } from '../ads/index'
 import { reportOperationHandlers } from '../ads/reports'
 import { summarizeAnalyticsPerformanceHandler } from '../analyticsSummary'
@@ -100,19 +101,19 @@ async function runSourceOperation(
   switch (source) {
     case 'ads': {
       const handler = adsOperationHandlers.summarizeAdsPerformance
-      if (!handler) throw new Error('summarizeAdsPerformance handler missing')
+      if (!handler) throw Errors.base.internal('summarizeAdsPerformance handler missing')
       return handler(ctx, input)
     }
     case 'analytics':
       return summarizeAnalyticsPerformanceHandler(ctx, input)
     case 'social': {
       const handler = socialOperationHandlers.summarizeSocialPerformance
-      if (!handler) throw new Error('summarizeSocialPerformance handler missing')
+      if (!handler) throw Errors.base.internal('summarizeSocialPerformance handler missing')
       return handler(ctx, input)
     }
     case 'tasks': {
       const handler = taskOperationHandlers.summarizeMyTasks
-      if (!handler) throw new Error('summarizeMyTasks handler missing')
+      if (!handler) throw Errors.base.internal('summarizeMyTasks handler missing')
       return handler(ctx, {
         ...input,
         params: { ...input.params, mode: input.params.mode ?? 'list' },
@@ -120,7 +121,7 @@ async function runSourceOperation(
     }
     case 'clientTasks': {
       const handler = taskOperationHandlers.summarizeClientTasks
-      if (!handler) throw new Error('summarizeClientTasks handler missing')
+      if (!handler) throw Errors.base.internal('summarizeClientTasks handler missing')
       return handler(ctx, {
         ...input,
         params: { ...input.params, mode: input.params.mode ?? 'list' },
@@ -128,27 +129,27 @@ async function runSourceOperation(
     }
     case 'clients': {
       const handler = clientOperationHandlers.listWorkspaceClients
-      if (!handler) throw new Error('listWorkspaceClients handler missing')
+      if (!handler) throw Errors.base.internal('listWorkspaceClients handler missing')
       return handler(ctx, input)
     }
     case 'projects': {
       const handler = projectOperationHandlers.listActiveProjects
-      if (!handler) throw new Error('listActiveProjects handler missing')
+      if (!handler) throw Errors.base.internal('listActiveProjects handler missing')
       return handler(ctx, input)
     }
     case 'proposals': {
       const handler = proposalOperationHandlers.listProposals
-      if (!handler) throw new Error('listProposals handler missing')
+      if (!handler) throw Errors.base.internal('listProposals handler missing')
       return handler(ctx, input)
     }
     case 'meetings': {
       const handler = meetingOperationHandlers.summarizeMeetings
-      if (!handler) throw new Error('summarizeMeetings handler missing')
+      if (!handler) throw Errors.base.internal('summarizeMeetings handler missing')
       return handler(ctx, input)
     }
     case 'report': {
       const handler = reportOperationHandlers.generatePerformanceReport
-      if (!handler) throw new Error('generatePerformanceReport handler missing')
+      if (!handler) throw Errors.base.internal('generatePerformanceReport handler missing')
       return handler(ctx, input)
     }
   }

@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useMemo, useState } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { TaskCreationModal } from '@/features/dashboard/tasks/task-creation-modal';
 import type { CollaborationMessage } from '@/types/collaboration';
 import type { TaskRecord } from '@/types/tasks';
@@ -19,7 +19,6 @@ type UseCollaborationChannelExtrasOptions = {
     onSendPollMessage?: (content: string) => Promise<void>;
 };
 export function useCollaborationChannelExtras({ channel, channelMessages, channels, currentUserId, workspaceId, onSendPollMessage, }: UseCollaborationChannelExtrasOptions) {
-    const { toast } = useToast();
     const [taskModalOpen, setTaskModalOpen] = useState(false);
     const [taskSourceMessage, setTaskSourceMessage] = useState<CollaborationMessage | null>(null);
     const [forwardDialogOpen, setForwardDialogOpen] = useState(false);
@@ -74,9 +73,9 @@ export function useCollaborationChannelExtras({ channel, channelMessages, channe
         await onSendPollMessage(encodePollMessage(poll));
     };
     const handleTaskCreated = (task: TaskRecord) => {
-        toast({
+        notifySuccess({
             title: 'Task created',
-            description: task.title
+            message: task.title
                 ? `"${task.title}" was added from this message.`
                 : 'The task was added from this message.',
         });

@@ -6,7 +6,6 @@ import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTrigger, } from '@/shared/ui/dialog';
 import { Badge } from '@/shared/ui/badge';
-import { useToast } from '@/shared/ui/use-toast';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { useClientRelativeTime } from '@/lib/hooks/use-client-relative-time';
 import { cn } from '@/lib/utils';
@@ -129,7 +128,6 @@ function SearchResultRelativeTime({ createdAt }: {
  * Global search dialog with keyboard shortcut support
  */
 export function GlobalSearch({ trigger, searchFunctions = EMPTY_SEARCH_FUNCTIONS, onResultClick, shortcut = 'Cmd+K', }: GlobalSearchProps) {
-    const { toast } = useToast();
     const [{ open, query, isSearching, results, selectedType }, dispatch] = useReducer(globalSearchReducer, INITIAL_GLOBAL_SEARCH_STATE);
     const resetSearchState = () => {
         dispatch({ type: 'resetSearchState' });

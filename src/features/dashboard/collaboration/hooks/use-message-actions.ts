@@ -1,8 +1,7 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useState } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
 import { useMutation } from 'convex/react';
 import { collaborationApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
@@ -22,7 +21,6 @@ interface UseMessageActionsOptions {
     mutateThreadMessageById?: (messageId: string, updater: (message: CollaborationMessage) => CollaborationMessage) => void;
 }
 export function useMessageActions({ workspaceId, userId, isPreviewMode, channels, channelParticipants, mutateChannelMessages, mutateThreadMessageById, }: UseMessageActionsOptions) {
-    const { toast } = useToast();
     const updateMessage = useMutation(collaborationApi.updateMessage);
     const softDeleteMessage = useMutation(collaborationApi.softDeleteMessage);
     const toggleReaction = useMutation(collaborationApi.toggleReaction);
@@ -180,7 +178,7 @@ export function useMessageActions({ workspaceId, userId, isPreviewMode, channels
                     updatedAt: new Date().toISOString(),
                     isEdited: true,
                 }));
-                toast({ title: 'Preview message updated', description: 'Changes apply only in sample mode.' });
+                notifyInfo({ title: 'Preview message updated', message: 'Changes apply only in sample mode.' });
                 return;
             }
             if (!workspaceId) {
@@ -224,7 +222,7 @@ export function useMessageActions({ workspaceId, userId, isPreviewMode, channels
                 mentions: updatedMessage.mentions ?? mentionMetadata,
                 format: updatedMessage.format ?? 'markdown',
             }));
-            toast({ title: 'Message updated', description: 'Your edit is live for the team.' });
+            notifySuccess({ title: 'Message updated', message: 'Your edit is live for the team.' });
         }
         catch (error) {
             reportConvexFailure({
@@ -259,7 +257,7 @@ export function useMessageActions({ workspaceId, userId, isPreviewMode, channels
                     attachments: [],
                     reactions: [],
                 }));
-                toast({ title: 'Preview message removed', description: 'This only changes the sample conversation.' });
+                notifyInfo({ title: 'Preview message removed', message: 'This only changes the sample conversation.' });
                 return;
             }
             if (!workspaceId) {
@@ -301,7 +299,7 @@ export function useMessageActions({ workspaceId, userId, isPreviewMode, channels
                 attachments: [],
                 reactions: [],
             }));
-            toast({ title: 'Message removed', description: 'The message is no longer visible to teammates.' });
+            notifySuccess({ title: 'Message removed', message: 'The message is no longer visible to teammates.' });
         }
         catch (error) {
             reportConvexFailure({

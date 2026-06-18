@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { useRouter } from '@/shared/ui/navigation';
 import { Suspense, createElement, useCallback, useEffectEvent, useLayoutEffect, useMemo, useState } from 'react';
 import { Users as UsersIcon } from 'lucide-react';
@@ -9,7 +9,6 @@ import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { ClientsDashboardSkeleton } from './components/clients-dashboard-skeleton';
-import { useToast } from '@/shared/ui/use-toast';
 import { buildMetricSnapshotChart } from '@/lib/export/cohorts-spreadsheet-charts';
 import { exportToCsv } from '@/lib/export/export-to-spreadsheet';
 import { cn } from '@/lib/utils';
@@ -36,7 +35,6 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
     const { push } = useRouter();
     const { selectedClient, refreshClients, clients, selectClient, loading } = useClientContext();
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const [refreshing, setRefreshing] = useState(false);
     const [teamSearch, setTeamSearch] = useState('');
     const clientsData = useClientsData(selectedClient, isPreviewMode);
@@ -90,9 +88,9 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
         setRefreshing(true);
         void refreshClients()
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Refreshed',
-                description: 'Client data has been updated.',
+                message: 'Client data has been updated.',
             });
         })
             .catch(() => {
@@ -138,9 +136,9 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
             subtitle: 'Client workspace snapshot',
             charts: snapshotChart ? [snapshotChart] : [],
         });
-        toast({
+        notifySuccess({
             title: 'Export complete',
-            description: 'Client overview has been downloaded.',
+            message: 'Client overview has been downloaded.',
         });
     };
     const teamMembers = selectedClient?.teamMembers ?? [];

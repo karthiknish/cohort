@@ -13,7 +13,6 @@ import { useAuth } from '@/shared/contexts/auth-context';
 import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { onboardingApi } from '@/lib/convex-api';
-import { useToast } from '@/shared/ui/use-toast';
 import { useOnboardingTour } from '@/shared/hooks/use-onboarding-tour';
 import { canAccessPath } from '@/lib/access-control/dashboard-access';
 import { getShortcutsForRole } from './keyboard-shortcuts';
@@ -328,7 +327,6 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
 export function useHelpModal() {
     const [open, setOpen] = useState(false);
     const [showWelcome, setShowWelcome] = useState(false);
-    const { toast } = useToast();
     const { user } = useAuth();
     const userId = user?.id;
     const userCreatedAt = user?.createdAt;

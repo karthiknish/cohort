@@ -6,7 +6,7 @@ import { asErrorMessage } from '@/lib/convex-errors';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Label } from '@/shared/ui/label';
 import { usePreview } from '@/shared/contexts/preview-context';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifyInfo, notifySuccess } from '@/lib/notifications';
 import { usePreferences } from '@/shared/contexts/preferences-context';
 import { Button } from '@/shared/ui/button';
 import { CurrencySelect } from '@/shared/ui/currency-select';
@@ -15,24 +15,23 @@ import { getPreviewSettingsRegionalPreferences } from '@/lib/preview-data';
 export function RegionalPreferencesCard() {
     const { preferences, loading: preferencesLoading, error: preferencesError, clearError, updateCurrency } = usePreferences();
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const [savingCurrency, setSavingCurrency] = useState(false);
     const [previewCurrency, setPreviewCurrency] = useState<CurrencyCode>(() => getPreviewSettingsRegionalPreferences().currency);
     const handleCurrencyChange = (value: CurrencyCode) => {
         if (isPreviewMode) {
             setPreviewCurrency(value);
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: `Default currency changed to ${value} for this session only.`,
+                message: `Default currency changed to ${value} for this session only.`,
             });
             return;
         }
         setSavingCurrency(true);
         void updateCurrency(value)
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Currency updated',
-                description: `Your default currency has been changed to ${value}.`,
+                message: `Your default currency has been changed to ${value}.`,
             });
         })
             .catch((err: unknown) => {

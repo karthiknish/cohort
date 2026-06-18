@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { LiveRegion } from '@/shared/ui/live-region';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { DashboardWidgetRow } from './dashboard-widget-row';
 import { HiddenDashboardWidgetRow } from './hidden-dashboard-widget-row';
 import { DEFAULT_WIDGETS, type DashboardWidget } from './dashboard-customization-types';
@@ -29,7 +29,6 @@ interface DashboardCustomizationProps {
  * Widget customization panel for dashboard personalization
  */
 export function DashboardCustomization({ availableWidgets = DEFAULT_WIDGETS, activeWidgets, onLayoutChange, onWidgetToggle, onWidgetCollapse, onReset, isEditing = false, onEditToggle, }: DashboardCustomizationProps) {
-    const { toast } = useToast();
     const instructionsId = useId();
     const [layoutAnnouncement, setLayoutAnnouncement] = useState('');
     const visibleWidgets = activeWidgets.filter((w) => w.visible);
@@ -68,9 +67,9 @@ export function DashboardCustomization({ availableWidgets = DEFAULT_WIDGETS, act
                 ? `${widget.title} hidden from dashboard.`
                 : `${widget.title} added to dashboard.`);
         }
-        toast({
+        notifySuccess({
             title: currentlyVisible ? 'Widget hidden' : 'Widget shown',
-            description: currentlyVisible
+            message: currentlyVisible
                 ? 'The widget has been removed from your dashboard.'
                 : 'The widget has been added to your dashboard.',
         });
@@ -86,9 +85,9 @@ export function DashboardCustomization({ availableWidgets = DEFAULT_WIDGETS, act
     };
     const handleReset = () => {
         onReset?.();
-        toast({
+        notifySuccess({
             title: 'Dashboard reset',
-            description: 'Your dashboard layout has been reset to default.',
+            message: 'Your dashboard layout has been reset to default.',
         });
     };
     return (<Card className={cn('border-dashed transition-colors', isEditing && 'border-primary')}>

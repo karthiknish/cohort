@@ -2,7 +2,7 @@
 import { useQuery } from 'convex/react';
 import { useCallback, useMemo, useState } from 'react';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifyInfo } from '@/lib/notifications';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { proposalAnalyticsApi } from '@/lib/convex-api';
@@ -52,7 +52,6 @@ function formatPercentage(value: number): string {
 export function ProposalAnalyticsCard() {
     const { user } = useAuth();
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const workspaceId = user?.agencyId ?? null;
     const [timeRange, setTimeRange] = useState<TimeRange>('30d');
     const dateRange = getDateRange(timeRange);
@@ -153,9 +152,9 @@ export function ProposalAnalyticsCard() {
         } | undefined)?.byClient ?? [];
     const loading = isPreviewMode ? false : summaryRes === undefined || timeSeriesRes === undefined || byClientRes === undefined;
     const handleRefresh = () => {
-        toast({
+        notifyInfo({
             title: isPreviewMode ? 'Preview data refreshed' : 'Refreshing…',
-            description: isPreviewMode ? 'Showing sample proposal analytics.' : 'Analytics will update automatically.',
+            message: isPreviewMode ? 'Showing sample proposal analytics.' : 'Analytics will update automatically.',
         });
     };
     // Calculate simple chart data from time series

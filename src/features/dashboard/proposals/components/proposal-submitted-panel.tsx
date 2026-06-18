@@ -1,7 +1,7 @@
 'use client';
 import { useCallback } from 'react';
 import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import type { ProposalFormData } from '@/lib/proposals';
 import type { ProposalPresentationDeck } from '@/types/proposals';
 import { ProposalSubmittedPanelLayout, } from './proposal-submitted-panel-sections';
@@ -17,7 +17,6 @@ interface ProposalSubmittedPanelProps {
     isSubmitting: boolean;
 }
 export function ProposalSubmittedPanel({ summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, canResumeSubmission, onResumeSubmission, onRecheckDeck, isRecheckingDeck = false, isSubmitting, }: ProposalSubmittedPanelProps) {
-    const { toast } = useToast();
     const viewerHref = activeProposalIdForDeck
         ? withPreviewModeSearchParamIfEnabled(`/dashboard/proposals/${activeProposalIdForDeck}/deck`, isPreviewModeEnabled())
         : deckDownloadUrl
@@ -39,14 +38,14 @@ Scope: ${summary.scope.services.join(', ')}
 Timeline: ${summary.timelines.startTime}
     `.trim();
         navigator.clipboard.writeText(text);
-        toast({ title: "Summary copied to clipboard" });
+        notifySuccess({ message: "Summary copied to clipboard" });
     };
     const handleCopyShareLink = () => {
         if (activeProposalIdForDeck) {
             const sharePath = withPreviewModeSearchParamIfEnabled(`/dashboard/proposals/${activeProposalIdForDeck}/deck`, isPreviewModeEnabled());
             const shareLink = `${window.location.origin}${sharePath}`;
             navigator.clipboard.writeText(shareLink);
-            toast({ title: 'Share link copied!' });
+            notifySuccess({ message: 'Share link copied!' });
         }
     };
     return (<ProposalSubmittedPanelLayout activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} deckDownloadUrl={deckDownloadUrl} isRecheckingDeck={isRecheckingDeck} isSubmitting={isSubmitting} onCopyShareLink={handleCopyShareLink} onCopySummary={handleCopySummary} onRecheckDeck={onRecheckDeck} onResumeSubmission={onResumeSubmission} presentationDeck={presentationDeck} summary={summary} viewerHref={viewerHref}/>);

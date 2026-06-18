@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAction } from 'convex/react';
 import { adsIntegrationsApi } from '@/lib/convex-api';
 import { convexErrorMessage, reportConvexFailure } from '@/lib/handle-convex-error';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES, TOAST_TITLES, } from '../components/constants';
 import type { GoogleAdAccountOption, MetaAdAccountOption, } from './ads-connections-types';
 type UseAdsProviderSetupArgs = {
@@ -12,7 +12,6 @@ type UseAdsProviderSetupArgs = {
     triggerRefresh: () => void;
 };
 export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefresh, }: UseAdsProviderSetupArgs) {
-    const { toast } = useToast();
     const initializeAdAccount = useAction(adsIntegrationsApi.initializeAdAccount);
     const listGoogleAdAccounts = useAction(adsIntegrationsApi.listGoogleAdAccounts);
     const listMetaAdAccounts = useAction(adsIntegrationsApi.listMetaAdAccounts);
@@ -126,9 +125,9 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
             })) as {
                 accountName?: string;
             };
-            toast({
+            notifySuccess({
                 title: SUCCESS_MESSAGES.GOOGLE_CONNECTED,
-                description: payload?.accountName
+                message: payload?.accountName
                     ? `Syncing data from ${payload.accountName}.`
                     : 'Google Ads account linked successfully.',
             });
@@ -185,9 +184,9 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
             })) as {
                 accountName?: string;
             };
-            toast({
+            notifySuccess({
                 title: SUCCESS_MESSAGES.META_CONNECTED,
-                description: payload?.accountName
+                message: payload?.accountName
                     ? `Syncing data from ${payload.accountName}.`
                     : 'Meta ad account linked successfully.',
             });
@@ -222,9 +221,9 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
             })) as {
                 accountName?: string;
             };
-            toast({
+            notifySuccess({
                 title: SUCCESS_MESSAGES.TIKTOK_CONNECTED,
-                description: payload?.accountName
+                message: payload?.accountName
                     ? `Syncing data from ${payload.accountName}.`
                     : 'Default ad account linked successfully.',
             });

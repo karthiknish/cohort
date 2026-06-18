@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from '@/shared/ui/navigation';
@@ -10,7 +10,6 @@ import { usePreview } from '@/shared/contexts/preview-context';
 import { socialsIntegrationsApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { getPreviewSocialConnectionStatus } from '@/lib/preview-data';
-import { useToast } from '@/shared/ui/use-toast';
 export type SocialsConnectionStatus = {
     connected: boolean;
     accountId: string | null;
@@ -43,7 +42,6 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
     const { selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
     const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
-    const { toast } = useToast();
     const requestManualSync = useMutation(socialsIntegrationsApi.requestManualSync);
     const disconnectIntegration = useMutation(socialsIntegrationsApi.disconnectIntegration);
     const [oauthPending, setOauthPending] = useState(false);
@@ -104,9 +102,9 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
         const nextQuery = cleanedParams.toString();
         replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
         if (oauthSuccess) {
-            toast({
+            notifySuccess({
                 title: 'Meta connected',
-                description: 'Select a Facebook Page to finish organic social setup.',
+                message: 'Select a Facebook Page to finish organic social setup.',
             });
             setConnectionError(null);
         }
@@ -118,11 +116,11 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
                 message: errorMessage,
             });
         }
-    }, [isPreviewMode, pathname, replace, searchParams, toast]);
+    }, [isPreviewMode, pathname, replace, searchParams]);
     const showPreviewModeToast = (description: string) => {
-        toast({
+        notifyInfo({
             title: 'Preview mode',
-            description,
+            message: description,
         });
     };
     const handleConnectMeta = async () => {
@@ -172,7 +170,7 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
                 workspaceId,
                 clientId: selectedClientId ?? null,
             });
-            toast({ title: 'Disconnected', description: 'Organic Meta social connection removed (Ads unchanged).' });
+            notifySuccess({ title: 'Disconnected', message: 'Organic Meta social connection removed (Ads unchanged).' });
         }
         catch (error: unknown) {
             reportConvexFailure({
@@ -202,7 +200,7 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
                 clientId: selectedClientId ?? null,
                 timeframeDays: 30,
             });
-            toast({ title: 'Sync requested', description: 'Organic metrics will refresh shortly.' });
+            notifySuccess({ title: 'Sync requested', message: 'Organic metrics will refresh shortly.' });
         }
         catch (error: unknown) {
             setSyncPending(false);

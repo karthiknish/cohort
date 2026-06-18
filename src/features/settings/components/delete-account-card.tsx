@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { useState, useCallback, useEffect, type ChangeEvent } from 'react';
 import { useRouter } from '@/shared/ui/navigation';
 import { LoaderCircle, Trash2 } from 'lucide-react';
@@ -7,7 +7,6 @@ import { Button } from '@/shared/ui/button';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
-import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, } from '@/shared/ui/dialog';
 type DeleteAccountCardProps = {
@@ -60,7 +59,6 @@ interface DeleteAccountDialogProps {
 export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogProps) {
     const { user, deleteAccount } = useAuth();
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const { push } = useRouter();
     const [deleteDialogState, setDeleteDialogState] = useState({
         confirm: '',
@@ -88,9 +86,9 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
     }, [open]);
     const handleAccountDeletion = () => {
         if (isPreviewMode) {
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: 'Sample account deletion is disabled. No real data was changed.',
+                message: 'Sample account deletion is disabled. No real data was changed.',
             });
             onOpenChange(false);
             return;
@@ -110,7 +108,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
         keysToRemove.forEach((key) => localStorage.removeItem(key));
         void deleteAccount()
             .then(() => {
-            toast({ title: 'Account deleted', description: 'Your account and associated data have been removed.' });
+            notifySuccess({ title: 'Account deleted', message: 'Your account and associated data have been removed.' });
             onOpenChange(false);
             push('/');
         })

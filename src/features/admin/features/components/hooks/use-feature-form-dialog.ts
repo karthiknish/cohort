@@ -1,12 +1,11 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useReducer } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAction, useConvex, useMutation } from 'convex/react';
 import { api } from '/_generated/api';
 import { useAuth } from '@/shared/contexts/auth-context';
-import { useToast } from '@/shared/ui/use-toast';
 import { filesApi } from '@/lib/convex-api';
 import { uploadStorageFile } from '@/lib/upload-storage-file';
 import { usePreview } from '@/shared/contexts/preview-context';
@@ -15,7 +14,6 @@ import type { FeatureItem, FeaturePriority, FeatureStatus } from '@/types/featur
 import { FEATURE_PRIORITY_LABELS, FEATURE_STATUS_LABELS, } from '@/types/features';
 import { createEmptyFeatureFormState, featureFormReducer, type FeatureFormDialogProps, } from '../feature-form-dialog-types';
 export function useFeatureFormDialog({ open, onOpenChange, feature, defaultStatus = 'backlog', onSubmit, }: FeatureFormDialogProps) {
-    const { toast } = useToast();
     const { isPreviewMode } = usePreview();
     const { user } = useAuth();
     const convex = useConvex();
@@ -81,9 +79,9 @@ export function useFeatureFormDialog({ open, onOpenChange, feature, defaultStatu
             else {
                 dispatch({ type: 'setDescription', value: previewDescription });
             }
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: `Sample ${field} generated locally for this feature.`,
+                message: `Sample ${field} generated locally for this feature.`,
             });
             dispatch({ type: 'setGeneratingTitle', value: false });
             dispatch({ type: 'setGeneratingDescription', value: false });
@@ -101,11 +99,11 @@ export function useFeatureFormDialog({ open, onOpenChange, feature, defaultStatu
             .then((data) => {
             if (field === 'title' && data.title) {
                 dispatch({ type: 'setTitle', value: data.title });
-                toast({ title: 'Title generated', description: 'AI has suggested a title for your feature.' });
+                notifySuccess({ title: 'Title generated', message: 'AI has suggested a title for your feature.' });
             }
             else if (field === 'description' && data.description) {
                 dispatch({ type: 'setDescription', value: data.description });
-                toast({ title: 'Description generated', description: 'AI has suggested a description for your feature.' });
+                notifySuccess({ title: 'Description generated', message: 'AI has suggested a description for your feature.' });
             }
         })
             .catch((error) => {

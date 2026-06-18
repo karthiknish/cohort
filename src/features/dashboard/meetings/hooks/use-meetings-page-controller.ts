@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from '@/shared/ui/navigation';
 import { useMutation, useQuery } from 'convex/react';
-import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
@@ -10,7 +9,7 @@ import { apiFetch } from '@/lib/api-client';
 import { meetingIntegrationsApi, meetingsApi, usersApi } from '@/lib/convex-api';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { getWorkspaceId } from '@/lib/utils';
 import { useMeetingAttendees } from './use-meeting-attendees';
 import { describeNotificationSummary, pluralize, type MeetingNotificationSummary } from '../lib/notifications';
@@ -48,7 +47,6 @@ export function useMeetingsPageController() {
     const { user, startGoogleWorkspaceOauth } = useAuth();
     const { selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const { replace } = useRouter();
     const pathname = usePathname();
     const urlSearchParams = useSearchParams();
@@ -146,9 +144,9 @@ export function useMeetingsPageController() {
         }
         if (provider === 'google-workspace') {
             if (oauthSuccess) {
-                toast({
+                notifySuccess({
                     title: 'Google Workspace connected',
-                    description: 'You can now schedule calendar-backed Cohorts meeting rooms from this tab.',
+                    message: 'You can now schedule calendar-backed Cohorts meeting rooms from this tab.',
                 });
             }
             else {
@@ -163,7 +161,7 @@ export function useMeetingsPageController() {
         const nextQuery = cleanedParams.toString();
         replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
         oauthHandledRef.current = true;
-    }, [pathname, replace, toast, urlSearchParams]);
+    }, [pathname, replace, urlSearchParams]);
     const upcomingMeetings = (() => {
         const sourceMeetings = isPreviewMode ? previewMeetings : (meetings ?? []);
         const mergedMeetings = sourceMeetings.map((meeting) => meetingOverrides[meeting.legacyId] ?? meeting);
@@ -200,7 +198,7 @@ export function useMeetingsPageController() {
     };
     const handleConnectGoogleWorkspace = async () => {
         if (isPreviewMode) {
-            toast({ title: 'Preview mode', description: 'Google Workspace actions are disabled while sample meeting data is active.' });
+            notifyInfo({ title: 'Preview mode', message: 'Google Workspace actions are disabled while sample meeting data is active.' });
             return;
         }
         if (!canSchedule) {
@@ -225,7 +223,7 @@ export function useMeetingsPageController() {
     };
     const handleDisconnectGoogleWorkspace = async () => {
         if (isPreviewMode) {
-            toast({ title: 'Preview mode', description: 'Google Workspace actions are disabled while sample meeting data is active.' });
+            notifyInfo({ title: 'Preview mode', message: 'Google Workspace actions are disabled while sample meeting data is active.' });
             return;
         }
         if (!canSchedule) {
@@ -236,7 +234,7 @@ export function useMeetingsPageController() {
             return;
         try {
             await disconnectGoogleWorkspace({ workspaceId });
-            toast({ title: 'Google Workspace disconnected', description: 'Meeting scheduling is disabled until you reconnect.' });
+            notifySuccess({ title: 'Google Workspace disconnected', message: 'Meeting scheduling is disabled until you reconnect.' });
         }
         catch (error) {
             reportConvexFailure({
@@ -316,7 +314,7 @@ export function useMeetingsPageController() {
         timezone: string;
     }) => {
         if (isPreviewMode) {
-            toast({ title: 'Preview mode', description: 'Meeting launch is disabled while sample data is active.' });
+            notifyInfo({ title: 'Preview mode', message: 'Meeting launch is disabled while sample data is active.' });
             return;
         }
         if (!canSchedule) {
@@ -351,9 +349,9 @@ export function useMeetingsPageController() {
             setRoomUrlState(meeting.roomName ?? null);
             setQuickMeetDialogOpen(false);
             resetQuickMeetForm();
-            toast({
+            notifySuccess({
                 title: 'Meeting room started',
-                description: describeNotificationSummary(notificationSummary, {
+                message: describeNotificationSummary(notificationSummary, {
                     none: 'Your Cohorts room is ready. No invite emails were sent.',
                     allSent: (sent, skipped) => {
                         const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : '';
@@ -395,7 +393,7 @@ export function useMeetingsPageController() {
     };
     const handleCancelMeeting = (meeting: MeetingRecord) => {
         if (isPreviewMode) {
-            toast({ title: 'Preview mode', description: `"${meeting.title}" is sample data and cannot be updated.` });
+            notifyInfo({ title: 'Preview mode', message: `"${meeting.title}" is sample data and cannot be updated.` });
             return;
         }
         if (!canSchedule) {
@@ -420,9 +418,9 @@ export function useMeetingsPageController() {
                 resetScheduleForm();
             }
             setCancelDialogMeeting(null);
-            toast({
+            notifySuccess({
                 title: 'Meeting cancelled',
-                description: describeNotificationSummary(payload.data?.notificationSummary, {
+                message: describeNotificationSummary(payload.data?.notificationSummary, {
                     none: 'Meeting cancelled. No cancellation emails were sent.',
                     allSent: (sent, skipped) => {
                         const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : '';
@@ -457,7 +455,7 @@ export function useMeetingsPageController() {
         event.preventDefault();
         const { attendeeEmails, hasPendingInvalidInput, hasParticipants } = scheduleAttendeeDraft;
         if (isPreviewMode) {
-            toast({ title: 'Preview mode', description: 'Scheduling is disabled while sample meeting data is active.' });
+            notifyInfo({ title: 'Preview mode', message: 'Scheduling is disabled while sample meeting data is active.' });
             return;
         }
         if (!canSchedule) {
@@ -540,9 +538,9 @@ export function useMeetingsPageController() {
             const meetLink = payload.data?.meeting?.meetLink ?? payload.meeting?.meetLink;
             const notificationSummary = payload.data?.notificationSummary ?? payload.notificationSummary;
             if (isEditing) {
-                toast({
+                notifySuccess({
                     title: 'Meeting rescheduled',
-                    description: describeNotificationSummary(notificationSummary, {
+                    message: describeNotificationSummary(notificationSummary, {
                         none: 'Updated details were saved. No reschedule emails were sent.',
                         allSent: (sent, skipped) => {
                             const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : '';
@@ -560,9 +558,9 @@ export function useMeetingsPageController() {
                 });
             }
             else {
-                toast({
+                notifySuccess({
                     title: 'Meeting scheduled',
-                    description: describeNotificationSummary(notificationSummary, {
+                    message: describeNotificationSummary(notificationSummary, {
                         none: meetLink
                             ? 'Meeting saved and your room link is ready. No invite emails were sent.'
                             : 'Meeting saved successfully. No invite emails were sent.',
@@ -628,7 +626,7 @@ export function useMeetingsPageController() {
     };
     const handleMarkCompleted = async (legacyId: string) => {
         if (isPreviewMode) {
-            toast({ title: 'Preview mode', description: 'Sample meeting statuses cannot be updated.' });
+            notifyInfo({ title: 'Preview mode', message: 'Sample meeting statuses cannot be updated.' });
             return;
         }
         if (!workspaceId || !canSchedule)
@@ -642,7 +640,7 @@ export function useMeetingsPageController() {
                 return { ...current, [legacyId]: { ...existingMeeting, status: 'completed' } };
             });
             setActiveInSiteMeeting((current) => (current?.legacyId === legacyId ? { ...current, status: 'completed' } : current));
-            toast({ title: 'Meeting updated', description: 'Status marked as completed.' });
+            notifySuccess({ title: 'Meeting updated', message: 'Status marked as completed.' });
         }
         catch (error) {
             reportConvexFailure({

@@ -1,9 +1,8 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useMemo, useReducer } from 'react';
 import { ChevronDown, FileText } from 'lucide-react';
-import { useToast } from '@/shared/ui/use-toast';
 import { Button } from '@/shared/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
 import type { ProposalFormData } from '@/lib/proposals';
@@ -118,7 +117,6 @@ function proposalTemplateSelectorReducer(state: ProposalTemplateSelectorState, a
     }
 }
 export function ProposalTemplateSelector({ currentFormData, onApplyTemplate, disabled = false, }: ProposalTemplateSelectorProps) {
-    const { toast } = useToast();
     const { user } = useAuth();
     const workspaceId = user?.agencyId ?? null;
     const templatesRows = useQuery(proposalTemplatesApi.list, workspaceId ? { workspaceId, limit: 50 } : 'skip');
@@ -149,9 +147,9 @@ export function ProposalTemplateSelector({ currentFormData, onApplyTemplate, dis
     const handleApplyTemplate = (template: ProposalTemplate) => {
         onApplyTemplate(template.formData);
         dispatch({ type: 'applyTemplate' });
-        toast({
+        notifySuccess({
             title: 'Template applied',
-            description: `"${template.name}" has been applied to your proposal.`,
+            message: `"${template.name}" has been applied to your proposal.`,
         });
     };
     const handleSaveAsTemplate = async () => {
@@ -183,9 +181,9 @@ export function ProposalTemplateSelector({ currentFormData, onApplyTemplate, dis
         })
             .then(() => {
             dispatch({ type: 'resetSaveForm' });
-            toast({
+            notifySuccess({
                 title: 'Template saved',
-                description: `"${templateName.trim()}" has been saved.`,
+                message: `"${templateName.trim()}" has been saved.`,
             });
         })
             .catch((error) => {
@@ -212,9 +210,9 @@ export function ProposalTemplateSelector({ currentFormData, onApplyTemplate, dis
         }
         await deleteTemplate({ workspaceId, legacyId: templateId })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Template deleted',
-                description: `"${templateName}" has been deleted.`,
+                message: `"${templateName}" has been deleted.`,
             });
         })
             .catch((error) => {

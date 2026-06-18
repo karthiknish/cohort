@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '
 import { Checkbox } from '@/shared/ui/checkbox';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import type { ChartDataPoint } from './interactive-chart';
 export type ExportFormat = 'csv' | 'excel' | 'pdf' | 'json' | 'png';
 interface ExportOption {
@@ -109,7 +109,6 @@ export interface ExportOptions {
  * Export button with multiple format support
  */
 export function DashboardExport({ formats = EXPORT_OPTIONS, onExport, trigger, buttonVariant = 'outline', buttonSize = 'sm', className, }: DashboardExportProps) {
-    const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [includeHeaders, setIncludeHeaders] = useState(true);
@@ -124,9 +123,9 @@ export function DashboardExport({ formats = EXPORT_OPTIONS, onExport, trigger, b
             includeMetadata,
         }))
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Export successful',
-                description: `Your data has been exported as ${format.toUpperCase()}.`,
+                message: `Your data has been exported as ${format.toUpperCase()}.`,
             });
             setOpen(false);
         })
@@ -215,7 +214,6 @@ export function QuickExportButton({ format, data, filename, icon: Icon, disabled
     disabled?: boolean;
     onComplete?: () => void;
 }) {
-    const { toast } = useToast();
     const [isExporting, setIsExporting] = useState(false);
     const handleExport = async () => {
         setIsExporting(true);
@@ -228,9 +226,9 @@ export function QuickExportButton({ format, data, filename, icon: Icon, disabled
                     title: filename || 'Dashboard export',
                     charts: buildSpreadsheetChartsFromTableData(rows, filename || 'Dashboard export'),
                 });
-                toast({
+                notifySuccess({
                     title: 'Export complete',
-                    description: 'Your data has been exported as XLSX.',
+                    message: 'Your data has been exported as XLSX.',
                 });
                 onComplete?.();
                 return;
@@ -244,9 +242,9 @@ export function QuickExportButton({ format, data, filename, icon: Icon, disabled
                 link.download = `${filename || 'export'}.json`;
                 link.click();
                 URL.revokeObjectURL(url);
-                toast({
+                notifySuccess({
                     title: 'Export complete',
-                    description: 'Your data has been exported as JSON.',
+                    message: 'Your data has been exported as JSON.',
                 });
                 onComplete?.();
                 return;
@@ -286,7 +284,6 @@ export function ScheduledExportDialog({ trigger, onSchedule, }: {
         recipients: string[];
     }) => void;
 }) {
-    const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [format, setFormat] = useState<ExportFormat>('excel');
     const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
@@ -306,9 +303,9 @@ export function ScheduledExportDialog({ trigger, onSchedule, }: {
         void Promise.resolve()
             .then(() => {
             onSchedule?.({ format, frequency, recipients });
-            toast({
+            notifySuccess({
                 title: 'Scheduled export created',
-                description: `You'll receive ${format.toUpperCase()} exports ${frequency}.`,
+                message: `You'll receive ${format.toUpperCase()} exports ${frequency}.`,
             });
             setOpen(false);
         })

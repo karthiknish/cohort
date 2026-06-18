@@ -5,7 +5,7 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
-import { toast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import type { AggregatedTargetingData } from './audience-control-types';
 import { MetaTargetingSearchCombobox } from '@/features/dashboard/ads/components/meta-targeting-search-combobox';
 import { TargetingCollapsiblePanel } from './targeting-collapsible-panel';
@@ -47,9 +47,9 @@ export function AudienceEditorSection({ aggregatedData, expandedSections, toggle
             setNewInterest('');
             return;
         }
-        toast({
+        notifySuccess({
             title: 'Interest would be added',
-            description: `"${newInterest}" — editing is only available for Meta ad sets.`,
+            message: `"${newInterest}" — editing is only available for Meta ad sets.`,
         });
         setNewInterest('');
     };
@@ -58,9 +58,9 @@ export function AudienceEditorSection({ aggregatedData, expandedSections, toggle
             onRemoveInterest(interestName);
             return;
         }
-        toast({
+        notifySuccess({
             title: 'Interest would be removed',
-            description: `"${interestName}" removal requires API integration`,
+            message: `"${interestName}" removal requires API integration`,
         });
     };
     const handleMetaInterestSelect = (item: {

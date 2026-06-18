@@ -1,8 +1,7 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useRef, useState } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
 import { useConvex, useMutation } from 'convex/react';
 import { collaborationApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
@@ -25,7 +24,6 @@ interface UseSendMessageOptions {
     mutateChannelMessages: (channelId: string, updater: (messages: CollaborationMessage[]) => CollaborationMessage[]) => void;
 }
 export function useSendMessage({ workspaceId, currentUserId, channels, selectedChannelId, channelParticipants, uploadAttachments, clearAttachments, stopTyping, mutateChannelMessages, }: UseSendMessageOptions) {
-    const { toast } = useToast();
     const createMessage = useMutation(collaborationApi.createMessage);
     const [sendingMessage, setSendingMessage] = useState(false);
     const sendingMessageRef = useRef(false);
@@ -126,7 +124,7 @@ export function useSendMessage({ workspaceId, currentUserId, channels, selectedC
                 return [...messages, serverMessage];
             });
             clearAttachments();
-            toast({ title: 'Message sent', description: 'Your message is live for the team.' });
+            notifySuccess({ title: 'Message sent', message: 'Your message is live for the team.' });
         }
         catch (error) {
             reportConvexFailure({
@@ -153,7 +151,6 @@ interface UseFetchMessagesOptions {
     setMessagesByChannel: React.Dispatch<React.SetStateAction<MessagesByChannelState>>;
 }
 export function useFetchMessages({ workspaceId, channels, setMessagesByChannel, }: UseFetchMessagesOptions) {
-    const { toast } = useToast();
     const convex = useConvex();
     const [fetchingMessages, setFetchingMessages] = useState(false);
     const [channelCursors, setChannelCursors] = useState<Record<string, string | null>>({});

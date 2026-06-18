@@ -1,11 +1,10 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { useAdminActionError } from '../../hooks/use-admin-action-error';
 import { useCallback, useMemo, useReducer } from 'react';
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react';
 import { api } from '/_generated/api';
-import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { getPreviewAdminInvitations, getPreviewAdminUsers } from '@/lib/preview-data';
@@ -14,7 +13,6 @@ import { adminUsersPageReducer, createInitialAdminUsersPageState, normalizeAdmin
 export function useAdminUsersPage() {
     const { user } = useAuth();
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const [state, dispatch] = useReducer(adminUsersPageReducer, undefined, createInitialAdminUsersPageState);
     const { usersOverride, previewUsers, previewInvitations, loadingMore, statusFilter, roleFilter, searchTerm, invitationSearchTerm, invitationStatusFilter, savingId, invitationActionKey, inviteOpen, revokeOpen, detailsOpen, selectedUser, inviteEmail, inviteRole, inviteSending, } = state;
     const { actionError, clearActionError, reportActionFailure } = useAdminActionError();
@@ -161,7 +159,7 @@ export function useAdminUsersPage() {
                 type: 'setPreviewUsers',
                 value: (current) => current.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, role: nextRole, updatedAt: new Date().toISOString() } : userRecord)),
             });
-            toast({ title: 'Preview mode', description: `${record.name} is now ${nextRole} in the sample workspace.` });
+            notifyInfo({ title: 'Preview mode', message: `${record.name} is now ${nextRole} in the sample workspace.` });
             return;
         }
         dispatch({ type: 'setSavingId', value: record.id });
@@ -174,7 +172,7 @@ export function useAdminUsersPage() {
                     return base.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, role: nextRole } : userRecord));
                 },
             });
-            toast({ title: 'Role updated', description: `${record.name} is now ${nextRole}.` });
+            notifySuccess({ title: 'Role updated', message: `${record.name} is now ${nextRole}.` });
         })
             .catch((err: unknown) => {
             reportActionFailure({
@@ -204,9 +202,9 @@ export function useAdminUsersPage() {
                 type: 'setPreviewUsers',
                 value: (current) => current.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, status: nextStatus, updatedAt: new Date().toISOString() } : userRecord)),
             });
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: `${record.name} status set to ${nextStatus} in the sample workspace.`,
+                message: `${record.name} status set to ${nextStatus} in the sample workspace.`,
             });
             dispatch({ type: 'setRevokeOpen', value: false });
             return;
@@ -221,7 +219,7 @@ export function useAdminUsersPage() {
                     return base.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, status: nextStatus } : userRecord));
                 },
             });
-            toast({ title: approved ? 'Account approved' : 'Approval revoked', description: `${record.name} status set to ${nextStatus}.` });
+            notifySuccess({ title: approved ? 'Account approved' : 'Approval revoked', message: `${record.name} status set to ${nextStatus}.` });
             dispatch({ type: 'setRevokeOpen', value: false });
         })
             .catch((err: unknown) => {
@@ -260,9 +258,9 @@ export function useAdminUsersPage() {
                     ...current,
                 ],
             });
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: `Invitation queued for ${inviteEmail} in the sample workspace.`,
+                message: `Invitation queued for ${inviteEmail} in the sample workspace.`,
             });
             dispatch({ type: 'resetInviteForm' });
             return;
@@ -277,9 +275,9 @@ export function useAdminUsersPage() {
             invitedByName: user?.name ?? null,
         })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Invitation created',
-                description: `Invitation created for ${inviteEmail} as ${inviteRole}. Email delivery depends on server integration settings.`,
+                message: `Invitation created for ${inviteEmail} as ${inviteRole}. Email delivery depends on server integration settings.`,
             });
             dispatch({ type: 'resetInviteForm' });
         })
@@ -309,16 +307,16 @@ export function useAdminUsersPage() {
                     }
                     : record)),
             });
-            toast({ title: 'Preview mode', description: `Sample invitation resent to ${invitation.email}.` });
+            notifyInfo({ title: 'Preview mode', message: `Sample invitation resent to ${invitation.email}.` });
             return;
         }
         const actionKey = `resend:${invitation.id}`;
         dispatch({ type: 'setInvitationActionKey', value: actionKey });
         void resendInvitation({ id: invitation.id })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Invitation resent',
-                description: `A fresh invitation was created for ${invitation.email}. Email delivery depends on server integration settings.`,
+                message: `A fresh invitation was created for ${invitation.email}. Email delivery depends on server integration settings.`,
             });
         })
             .catch((err: unknown) => {
@@ -343,16 +341,16 @@ export function useAdminUsersPage() {
                     ? { ...record, status: 'revoked', effectiveStatus: 'revoked' }
                     : record)),
             });
-            toast({ title: 'Preview mode', description: `${invitation.email} was revoked in the sample workspace.` });
+            notifyInfo({ title: 'Preview mode', message: `${invitation.email} was revoked in the sample workspace.` });
             return;
         }
         const actionKey = `revoke:${invitation.id}`;
         dispatch({ type: 'setInvitationActionKey', value: actionKey });
         void revokeInvitation({ id: invitation.id })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Invitation revoked',
-                description: `${invitation.email} can no longer use this invitation token.`,
+                message: `${invitation.email} can no longer use this invitation token.`,
             });
         })
             .catch((err: unknown) => {

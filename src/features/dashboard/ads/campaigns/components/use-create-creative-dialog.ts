@@ -1,9 +1,8 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useMemo, useReducer, useRef, type FormEvent } from 'react';
 import { useAction } from 'convex/react';
-import { toast } from '@/shared/ui/use-toast';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { adsCreativesApi } from '@/lib/convex-api';
 import { getMetaCreativeObjectTypeOptions } from '@/lib/meta-campaign-ui';
@@ -160,58 +159,51 @@ export function useCreateCreativeDialog({ workspaceId, providerId, campaignId, c
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
         if (!workspaceId) {
-            toast({
+            notifySuccess({
                 title: 'Error',
-                description: 'Sign in required',
-                variant: 'destructive',
+                message: 'Sign in required',
             });
             return;
         }
         if (!name.trim()) {
-            toast({
+            notifySuccess({
                 title: 'Validation error',
-                description: 'Creative name is required',
-                variant: 'destructive',
+                message: 'Creative name is required',
             });
             return;
         }
         if (!isMeta) {
-            toast({
+            notifySuccess({
                 title: 'Platform not supported',
-                description: 'Creating creatives is currently only supported for Meta (Facebook/Instagram) ads.',
-                variant: 'destructive',
+                message: 'Creating creatives is currently only supported for Meta (Facebook/Instagram) ads.',
             });
             return;
         }
         if (!selectedAdSetId) {
-            toast({
+            notifySuccess({
                 title: 'Ad Set required',
-                description: 'Please select an ad set to create the ad.',
-                variant: 'destructive',
+                message: 'Please select an ad set to create the ad.',
             });
             return;
         }
         if (!pageId) {
-            toast({
+            notifySuccess({
                 title: 'Facebook Page required',
-                description: 'Select a Facebook Page before creating a Meta creative.',
-                variant: 'destructive',
+                message: 'Select a Facebook Page before creating a Meta creative.',
             });
             return;
         }
         if (!metaPageActors.some((actor) => actor.id === pageId)) {
-            toast({
+            notifySuccess({
                 title: 'Invalid Facebook Page',
-                description: 'The selected page is no longer available. Reload the page list and try again.',
-                variant: 'destructive',
+                message: 'The selected page is no longer available. Reload the page list and try again.',
             });
             return;
         }
         if (isLeadsCampaign && !leadFormId) {
-            toast({
+            notifySuccess({
                 title: 'Lead form required',
-                description: 'Select an instant lead form for this leads campaign creative.',
-                variant: 'destructive',
+                message: 'Select an instant lead form for this leads campaign creative.',
             });
             return;
         }
@@ -247,9 +239,9 @@ export function useCreateCreativeDialog({ workspaceId, providerId, campaignId, c
                 leadgenFormId: leadFormId || undefined,
                 status,
             });
-            toast({
+            notifySuccess({
                 title: 'Creative created',
-                description: `Your ad creative "${name}" has been created successfully.`,
+                message: `Your ad creative "${name}" has been created successfully.`,
             });
             dispatch({ type: 'setOpen', value: false });
             resetForm();
@@ -257,10 +249,9 @@ export function useCreateCreativeDialog({ workspaceId, providerId, campaignId, c
         }
         catch (error) {
             logError(error, 'CreateCreativeDialog:handleSubmit');
-            toast({
+            notifySuccess({
                 title: 'Creation failed',
-                description: asErrorMessage(error),
-                variant: 'destructive',
+                message: asErrorMessage(error),
             });
         }
         finally {

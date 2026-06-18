@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { Link } from '@/shared/ui/link';
 import { useCallback, useEffect, useRef, useReducer } from 'react';
 import { Bell, ExternalLink, LoaderCircle, Moon } from 'lucide-react';
@@ -15,7 +15,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { FormField } from '@/shared/ui/form-field';
 import { Switch } from '@/shared/ui/switch';
 import { Input } from '@/shared/ui/input';
-import { useToast } from '@/shared/ui/use-toast';
 import { NotificationCategoryMatrix } from './notification-category-matrix';
 const QUIET_HOURS_LABEL_PREFIX = (<Moon className="size-4 text-muted-foreground" aria-hidden/>);
 type NotificationPreferencesPanelState = {
@@ -92,7 +91,6 @@ function notificationPreferencesPanelReducer(state: NotificationPreferencesPanel
     }
 }
 export function NotificationPreferencesPanel() {
-    const { toast } = useToast();
     const { isPreviewMode } = usePreview();
     const serverPrefs = useQuery(settingsApi.getMyNotificationPreferences);
     const prefsQueryError = useConvexQueryError({
@@ -140,9 +138,9 @@ export function NotificationPreferencesPanel() {
             if (isPreviewMode) {
                 previewPrefsRef.current = next;
                 if (!options?.silent) {
-                    toast({
+                    notifyInfo({
                         title: 'Preview mode',
-                        description: 'Notification settings updated locally for this session.',
+                        message: 'Notification settings updated locally for this session.',
                     });
                 }
                 dispatch({ type: 'setSaving', value: false });
@@ -158,7 +156,7 @@ export function NotificationPreferencesPanel() {
                 dispatch({ type: 'persistSuccess', value: normalized });
             }
             if (!options?.silent) {
-                toast({ title: 'Notification preferences saved' });
+                notifySuccess({ message: 'Notification preferences saved' });
             }
             return normalized;
         }

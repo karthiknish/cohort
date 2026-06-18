@@ -1,11 +1,10 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useAction, useConvexAuth, useQuery } from 'convex/react';
 import { useRouter } from '@/shared/ui/navigation';
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { api } from '/_generated/api';
-import { toast } from '@/shared/ui/use-toast';
 import { getCurrencyInfo, isSupportedCurrency, normalizeCurrencyCode } from '@/constants/currencies';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
@@ -241,9 +240,9 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             action,
         })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Success',
-                description: `Campaign ${action}d successfully`,
+                message: `Campaign ${action}d successfully`,
             });
             void fetchCampaigns();
             onRefresh?.();
@@ -278,9 +277,9 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             action,
         })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Success',
-                description: `Campaign Group ${action}d successfully`,
+                message: `Campaign Group ${action}d successfully`,
             });
             void fetchGroups();
             onRefresh?.();
@@ -331,9 +330,9 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             });
         await updatePromise
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Success',
-                description: 'Budget updated successfully',
+                message: 'Budget updated successfully',
             });
             dispatch({ type: 'resetBudgetDialog' });
             if (isGroup) {
@@ -378,9 +377,9 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             biddingValue: parseFloat(newBidding.value || '0'),
         })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Success',
-                description: 'Bidding strategy updated successfully',
+                message: 'Bidding strategy updated successfully',
             });
             dispatch({ type: 'closeBiddingDialog' });
             void fetchCampaigns();

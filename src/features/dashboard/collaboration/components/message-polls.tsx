@@ -1,11 +1,10 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { createElement, useReducer, useState, useCallback, useMemo } from 'react';
 import { Dialog, DialogContent, } from '@/shared/ui/dialog';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/shared/ui/use-toast';
 import { CreatePollDialogFooter, CreatePollDialogHeader, CreatePollDialogTrigger, CreatePollFormFields, CreatePollSettings, PollCardFooterActions, PollCardHeader, PollOptionRow, QuickPollTrigger, } from './message-polls-sections';
 const CREATE_POLL_DEFAULT_TRIGGER = <CreatePollDialogTrigger />;
 export interface PollOption {
@@ -67,7 +66,6 @@ function PollOptionRowItem({ flags, handleToggleOption, index, option, selectedO
  * Display a poll with voting functionality
  */
 export function PollCard({ poll, userId, onVote, onEndPoll, canVote = true, canEnd = false, showResults: showResultsProp, className, }: PollCardProps) {
-    const { toast } = useToast();
     const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
     const [isVoting, setIsVoting] = useState(false);
     const [showResults, setShowResults] = useState(showResultsProp ?? false);
@@ -88,9 +86,9 @@ export function PollCard({ poll, userId, onVote, onEndPoll, canVote = true, canE
         setIsVoting(true);
         await onVote(poll.id, selectedOptions)
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Vote recorded',
-                description: 'Your response has been saved.',
+                message: 'Your response has been saved.',
             });
             setShowResults(true);
         })
@@ -124,9 +122,9 @@ export function PollCard({ poll, userId, onVote, onEndPoll, canVote = true, canE
             return;
         try {
             await onEndPoll(poll.id);
-            toast({
+            notifySuccess({
                 title: 'Poll ended',
-                description: 'The poll has been closed and results are final.',
+                message: 'The poll has been closed and results are final.',
             });
         }
         catch (error) {
@@ -237,7 +235,6 @@ function createPollFormReducer(state: CreatePollFormState, action: CreatePollFor
  * Dialog for creating a new poll
  */
 export function CreatePollDialog({ workspaceId, userId, onCreate, trigger, }: CreatePollDialogProps) {
-    const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [formState, dispatch] = useReducer(createPollFormReducer, undefined, createInitialPollFormState);
@@ -303,9 +300,9 @@ export function CreatePollDialog({ workspaceId, userId, onCreate, trigger, }: Cr
         };
         await Promise.resolve(onCreate?.(newPoll))
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Poll created',
-                description: 'Your poll has been posted to the channel.',
+                message: 'Your poll has been posted to the channel.',
             });
             // Reset form
             resetForm();

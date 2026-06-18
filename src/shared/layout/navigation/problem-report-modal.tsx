@@ -6,7 +6,7 @@ import { AlertCircle, LoaderCircle, MessageSquare } from 'lucide-react';
 import { asErrorMessage } from '@/lib/convex-errors';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { problemReportsApi } from '@/lib/convex-api';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
@@ -21,7 +21,6 @@ interface ProblemReportModalProps {
 export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalProps) {
     const { user } = useAuth();
     const { selectedClientId } = useClientContext();
-    const { toast } = useToast();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [severity, setSeverity] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
@@ -60,9 +59,9 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
             updatedAtMs: Date.now(),
         })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Report submitted',
-                description: "Thank you for your feedback. We'll look into it as soon as possible.",
+                message: "Thank you for your feedback. We'll look into it as soon as possible.",
             });
             onOpenChange(false);
             setTitle('');

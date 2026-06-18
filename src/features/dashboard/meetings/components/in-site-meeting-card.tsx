@@ -1,14 +1,12 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { useCallback, useMemo, useState } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
 import { useInSiteMeetingRoomController } from '../hooks/use-in-site-meeting-room-controller';
 import type { MeetingRoomPageProps } from './in-site-meeting-card.shared';
 import { MeetingRoomCanvasSection, MeetingRoomHeroSection, MeetingRoomLeaveDialog, MeetingRoomPageHeader, MeetingRoomToolsSection, } from './in-site-meeting-card-sections';
 import { InSiteMeetingOperationsSheet } from './in-site-meeting-operations-sheet';
 export function MeetingRoomPage(props: MeetingRoomPageProps) {
     const { meeting, onClose, canRecord = true } = props;
-    const { toast } = useToast();
     const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
     const controller = useInSiteMeetingRoomController(props);
     const { liveRoomLayoutContext, appendTranscriptSnippet, interimTranscript, setInterimTranscript, markCompleted, transcriptSavedAt, transcriptSource, transcriptProcessingState, transcriptProcessingError, notesUpdatedAt, notesModel, summaryPreview, notesProcessingState, notesProcessingError, notesReason, notesStorageId, transcriptStorageId, transcriptTruncatedForNotes, operationsOpen, setJoinError, generatingNotes, finalizingSession, retryingPostCallProcessing, joinConfig, setJoinConfig, joiningRoom, joinError, autoCaptureEnabled, transcriptRecordingEnabled, enableTranscriptRecording, captureStatus, setCaptureStatus, autoSyncing, lastAutoSyncAt, meetingStatus, meetingTimezone, meetingDescription, meetingLink, meetingRoomName, meetingTitle, meetingAttendeeEmails, isPreviewMeeting, hasJoinReference, inlineJoinError, roomActionLabel, normalizedTranscript, canPersist, canGenerateNotes, hasTranscriptPendingSync, roomPinnedToMobileTray, canMinimizeRoom, isMinimized, isMobileViewport, pipSupported, pipActive, setRoomViewportElement, togglePictureInPicture, toggleMinimizedRoom, handleJoinRoom, finalizeMeetingAfterRoomExit, handleGenerateNotes, handleRetryPostCallProcessing, handleOperationsOpenChange, } = controller;
@@ -45,9 +43,9 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
         }
         try {
             await navigator.clipboard.writeText(meetingLink);
-            toast({
+            notifySuccess({
                 title: 'Room link copied',
-                description: 'Share the Cohorts room URL with attendees who need direct access.',
+                message: 'Share the Cohorts room URL with attendees who need direct access.',
             });
         }
         catch {

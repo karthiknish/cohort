@@ -1,19 +1,17 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo } from '@/lib/notifications';
 import { useState, useCallback } from 'react';
 import { LoaderCircle, Download } from 'lucide-react';
 import { useAction } from 'convex/react';
 import { Button } from '@/shared/ui/button';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card';
-import { useToast } from '@/shared/ui/use-toast';
 import { authActionsApi } from '@/lib/convex-api';
 import { getPreviewSettingsExportData } from '@/lib/preview-data';
 import { useAuth } from '@/shared/contexts/auth-context';
 export function DataExportCard() {
     const { user } = useAuth();
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const [exportingData, setExportingData] = useState(false);
     const [exportError, setExportError] = useState<string | null>(null);
     const exportUserData = useAction(authActionsApi.exportUserData);
@@ -39,9 +37,9 @@ export function DataExportCard() {
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            toast({
+            notifyInfo({
                 title: isPreviewMode ? 'Preview export downloaded' : 'Data exported successfully',
-                description: isPreviewMode
+                message: isPreviewMode
                     ? 'Sample account data has been downloaded for this demo session.'
                     : 'Your personal data has been downloaded as a JSON file.',
             });

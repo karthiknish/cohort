@@ -6,7 +6,6 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useToast } from '@/shared/ui/use-toast';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { ClientRelativeTime } from '@/shared/components/client-relative-time';
 import { cn } from '@/lib/utils';
@@ -42,7 +41,6 @@ export interface CrossChannelSearchQuery {
     afterDate?: string;
 }
 function useCrossChannelSearchController({ onSearch, onResultClick, }: Pick<CrossChannelSearchProps, 'onSearch' | 'onResultClick'>) {
-    const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);

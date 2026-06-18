@@ -1,7 +1,6 @@
 'use client';
 import { createContext, type ReactNode, use, useEffect, useMemo } from 'react';
 import { useMutation, useQuery } from 'convex/react';
-import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { collaborationChannelsApi, usersApi } from '@/lib/convex-api';
 import { useCollaborationData } from '../hooks/use-collaboration-data';
@@ -66,7 +65,6 @@ const CollaborationDashboardContext = createContext<CollaborationDashboardContex
 export function CollaborationDashboardProvider({ children }: {
     children: ReactNode;
 }) {
-    const { toast } = useToast();
     const dialogs = useCollaborationDashboardDialogs();
     const { user } = useAuth();
     const workspaceId = user?.agencyId ? String(user.agencyId) : null;
@@ -141,7 +139,6 @@ export function CollaborationDashboardProvider({ children }: {
         selectChannel: selectCollabChannel,
         selectConversation: dm.selectConversation,
         startNewDM: dm.startNewDM,
-        toast,
         updateChannelMembers,
         workspaceId,
     });

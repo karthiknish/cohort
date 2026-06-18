@@ -3,8 +3,7 @@ import { useEffect, useEffectEvent, useRef, type Dispatch, type SetStateAction }
 import { usePathname, useRouter, useSearchParams } from '@/shared/ui/navigation';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { convexErrorMessage, reportConvexFailure } from '@/lib/handle-convex-error';
-import { notifyFailure } from '@/lib/notifications';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { formatProviderName } from '../components/utils';
 import { PROVIDER_IDS, SUCCESS_MESSAGES, TOAST_TITLES } from '../components/constants';
 type UseAdsOauthCallbackArgs = {
@@ -28,7 +27,6 @@ type UseAdsOauthCallbackArgs = {
     triggerRefresh: () => void;
 };
 export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAccountSelection, googleAccountOptionsLength, metaAccountOptionsLength, loadingGoogleAccountOptions, loadingMetaAccountOptions, loadGoogleAdAccounts, loadMetaAdAccounts, initializeLinkedInIntegration, initializeTikTokIntegration, setGoogleSetupUi, setGoogleSetupMessage, setMetaSetupMessage, setConnectionErrors, triggerRefresh, }: UseAdsOauthCallbackArgs) {
-    const { toast } = useToast();
     const { replace } = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -43,9 +41,9 @@ export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAcco
         if (oauthSuccess) {
             if (providerId === PROVIDER_IDS.FACEBOOK) {
                 setMetaSetupMessage(null);
-                toast({
+                notifySuccess({
                     title: SUCCESS_MESSAGES.META_CONNECTED,
-                    description: 'Meta connected. Select an ad account to finish setup.',
+                    message: 'Meta connected. Select an ad account to finish setup.',
                 });
                 void loadMetaAdAccounts(oauthClientId)
                     .then(() => {
@@ -68,9 +66,9 @@ export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAcco
             }
             if (providerId === PROVIDER_IDS.GOOGLE) {
                 setGoogleSetupUi({ message: null, dialogOpen: true });
-                toast({
+                notifySuccess({
                     title: SUCCESS_MESSAGES.GOOGLE_CONNECTED,
-                    description: 'Google connected. Select an ads account to finish setup.',
+                    message: 'Google connected. Select an ads account to finish setup.',
                 });
                 void loadGoogleAdAccounts(oauthClientId)
                     .then(() => {
@@ -90,7 +88,7 @@ export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAcco
             if (providerId === PROVIDER_IDS.LINKEDIN) {
                 void initializeLinkedInIntegration()
                     .then(async () => {
-                    toast({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, description: 'Syncing your ad data.' });
+                    notifySuccess({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, message: 'Syncing your ad data.' });
                     triggerRefresh();
                 })
                     .catch((err) => {
@@ -103,9 +101,9 @@ export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAcco
                 });
                 return;
             }
-            toast({
+            notifySuccess({
                 title: 'Connection successful',
-                description: `${formatProviderName(providerId)} has been linked.`,
+                message: `${formatProviderName(providerId)} has been linked.`,
             });
             triggerRefresh();
             return;

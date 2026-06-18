@@ -1,7 +1,6 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { type ChangeEvent, type ClipboardEvent, type DragEvent, useCallback, useEffect, useMemo, useRef, useState, } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
 import type { CollaborationMessage } from '@/types/collaboration';
 import type { PendingAttachment, SendMessageOptions } from '../hooks/types';
 import type { UnifiedMessage } from './message-list-types';
@@ -48,7 +47,6 @@ export function useUnifiedMessagePaneController({ channelMessages, focusMessageI
     const fileInputRef = useRef<HTMLInputElement>(null);
     const lastAutoOpenedThreadRef = useRef<string | null>(null);
     const lastConversationKeyRef = useRef<string | null>(null);
-    const { toast } = useToast();
     const activeDeletingMessageId = deletingMessageId ?? messageDeletingId;
     const conversationKey = header?.conversationKey ?? (header ? `${header.type}:${header.name}` : 'none');
     const hasPendingAttachments = pendingAttachments.length > 0;
@@ -192,9 +190,9 @@ export function useUnifiedMessagePaneController({ channelMessages, focusMessageI
         setSharingTo(`${message.id}-${platform}`);
         await onShareToPlatform(message, platform)
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Message shared',
-                description: `Sent to ${platform === 'email' ? 'Email' : platform}`,
+                message: `Sent to ${platform === 'email' ? 'Email' : platform}`,
             });
         })
             .catch(() => {

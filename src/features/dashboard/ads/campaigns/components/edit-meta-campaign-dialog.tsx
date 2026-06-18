@@ -12,7 +12,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from '@/shared/ui/dialog';
 import { FormField } from '@/shared/ui/form-field';
 import { Input } from '@/shared/ui/input';
-import { toast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 type Props = {
     campaignId: string;
     initialName: string;
@@ -50,7 +50,7 @@ function EditMetaCampaignFormBody({ campaignId, initialName, initialStartTime, i
                 startTime: metaDatetimeLocalToIso(startTime),
                 stopTime: metaDatetimeLocalToIso(stopTime),
             });
-            toast({ title: 'Campaign updated', description: 'Changes are live in Meta.' });
+            notifySuccess({ title: 'Campaign updated', message: 'Changes are live in Meta.' });
             onClose();
             onUpdated?.();
         }

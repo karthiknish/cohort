@@ -1,10 +1,9 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useEffectEvent, useMemo, useReducer } from 'react';
 import { useAction } from 'convex/react';
 import { useRouter } from '@/shared/ui/navigation';
-import { toast } from '@/shared/ui/use-toast';
 import { normalizeCurrencyCode } from '@/constants/currencies';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { logError } from '@/lib/convex-errors';
@@ -307,9 +306,9 @@ export function useCampaignAdsSection({ providerId, campaignId, clientId, isPrev
             status: newStatus as 'ACTIVE' | 'PAUSED' | 'ENABLED' | 'DISABLED' | 'ENABLE' | 'DISABLE',
         })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Status Updated',
-                description: `Ad is now ${newStatus.toLowerCase()}`,
+                message: `Ad is now ${newStatus.toLowerCase()}`,
             });
         })
             .catch((error) => {
@@ -370,9 +369,9 @@ export function useCampaignAdsSection({ providerId, campaignId, clientId, isPrev
             status: nextStatus,
         })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Ad set updated',
-                description: `${adSet.name} is now ${nextStatus.toLowerCase()}.`,
+                message: `${adSet.name} is now ${nextStatus.toLowerCase()}.`,
             });
         })
             .catch((error) => {

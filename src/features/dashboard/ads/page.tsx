@@ -11,7 +11,6 @@ import { QueryErrorAlert } from '@/shared/ui/query-error-alert';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { AdsSkeleton } from './components/ads-skeleton';
 import { usePreview } from '@/shared/contexts/preview-context';
-import { useToast } from '@/shared/ui/use-toast';
 import { AdsPageHeader } from './components/ads-page-header';
 import { AdsPageLayout } from './components/ads-page-shell-sections';
 import { GoogleSetupDialog } from './components/google-setup-dialog';
@@ -28,7 +27,6 @@ function isAuthError(error: unknown): boolean {
 }
 export default function AdsPage() {
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const shownErrorsRef = useRef<Set<string>>(null!);
     if (shownErrorsRef.current === null) shownErrorsRef.current = new Set();
     const connections = useAdsConnections();
@@ -136,7 +134,7 @@ export default function AdsPage() {
             });
             shownErrorsRef.current.add(error);
         });
-    }, [connections.connectionErrors, metrics.loadMoreError, metrics.metricError, suppressMetricsErrors, toast]);
+    }, [connections.connectionErrors, metrics.loadMoreError, metrics.metricError, suppressMetricsErrors]);
     const isInitialLoading = metrics.initialMetricsLoading && !connections.integrationStatuses;
     return (<PageMotionShell reveal={false}>
     <PageSkeletonBoundary loading={isInitialLoading} loadingContent={<AdsSkeleton />}>

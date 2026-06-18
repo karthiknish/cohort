@@ -11,7 +11,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
-import { toast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 type MetaAudienceRow = {
     id: string;
     name: string;
@@ -75,8 +75,13 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
         });
     }, [listAudiences, workspaceId, clientId]);
     useEffect(() => {
-        void loadAudiences();
-    }, [clientId, workspaceId]);
+        // Defer the loadAudiences call to a microtask so the cascading
+        // setState inside (loading → audiences) doesn't fire synchronously
+        // from the effect body per eslint-plugin-react-hooks/react-compiler.
+        queueMicrotask(() => {
+            void loadAudiences();
+        });
+    }, [clientId, workspaceId, loadAudiences]);
     const sourceAudiences = audiences.filter((row) => !isLookalikeSubtype(row.subtype));
     const handleRefresh = () => {
         void loadAudiences();
@@ -93,9 +98,9 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
                 audienceId: pendingDelete.id,
             });
             setAudiences((current) => current.filter((row) => row.id !== pendingDelete.id));
-            toast({
+            notifySuccess({
                 title: 'Audience deleted',
-                description: `"${pendingDelete.name}" was removed from Meta.`,
+                message: `"${pendingDelete.name}" was removed from Meta.`,
             });
         }
         catch (error) {
@@ -125,10 +130,9 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
     const handleCreateLookalike = () => {
         const name = lookalikeName.trim();
         if (!name || !originAudienceId) {
-            toast({
+            notifySuccess({
                 title: 'Missing fields',
-                description: 'Enter a name and select a source custom audience.',
-                variant: 'destructive',
+                message: 'Enter a name and select a source custom audience.',
             });
             return;
         }
@@ -144,9 +148,9 @@ export function MetaAudiencesPanel({ workspaceId, clientId }: MetaAudiencesPanel
             ratio,
         })
             .then((result) => {
-            toast({
+            notifySuccess({
                 title: 'Lookalike created',
-                description: `Meta is building "${name}". It may take a few hours before targeting is available.`,
+                message: `Meta is building "${name}". It may take a few hours before targeting is available.`,
             });
             setLookalikeName('');
             setOriginAudienceId('');

@@ -4,7 +4,7 @@ import { useCallback, useReducer, type ChangeEvent } from 'react';
 import { adsCampaignsApi } from '@/lib/convex-api';
 import { asErrorMessage } from '@/lib/convex-errors';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { Button } from '@/shared/ui/button';
@@ -16,7 +16,6 @@ import { metaDatetimeLocalToIso } from '@/lib/meta-datetime';
 import { META_SPECIAL_AD_CATEGORIES, normalizeMetaSpecialAdCategoriesForApi, type MetaSpecialAdCategory, } from '@/lib/meta-special-ad-categories';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { Label } from '@/shared/ui/label';
-import { toast } from '@/shared/ui/use-toast';
 const META_OBJECTIVES = [
     { value: 'OUTCOME_TRAFFIC', label: 'Traffic' },
     { value: 'OUTCOME_LEADS', label: 'Leads' },
@@ -141,7 +140,7 @@ export function CreateMetaCampaignDialog({ open, onOpenChange, onCreated }: Prop
                 stopTime: metaDatetimeLocalToIso(stopTime),
                 specialAdCategories: normalizeMetaSpecialAdCategoriesForApi(specialAdCategories),
             });
-            toast({ title: 'Campaign created', description: `"${name.trim()}" is paused in Meta — add ad sets next.` });
+            notifySuccess({ title: 'Campaign created', message: `"${name.trim()}" is paused in Meta — add ad sets next.` });
             dispatch({ type: 'resetAfterCreate' });
             onOpenChange(false);
             onCreated?.();

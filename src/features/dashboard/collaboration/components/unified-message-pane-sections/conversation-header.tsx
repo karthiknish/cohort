@@ -1,6 +1,6 @@
 'use client';
 import { ClientFormattedDate } from '@/shared/components/client-formatted-date';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { createElement, useCallback, useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type ReactNode, type RefObject, } from 'react';
 import { Archive, ArchiveRestore, Bell, BellOff, ArrowLeft, Check, CheckCheck, Hash, Info, Link2, Forward, ListTodo, Search, X, LoaderCircle, Mail, MoreVertical, Pencil, Plus, Reply, Send, Share2, Trash2, } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
@@ -8,7 +8,6 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
-import { useToast } from '@/shared/ui/use-toast';
 import { chromaticTransitionClass } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration';
@@ -45,7 +44,6 @@ type UnifiedConversationHeaderProps = {
     onToggleMessageSearch?: () => void;
 };
 export function UnifiedConversationHeader({ header, canSearchMessages = false, messageSearchOpen = false, onToggleMessageSearch, }: UnifiedConversationHeaderProps) {
-    const { toast } = useToast();
     const [linkCopied, setLinkCopied] = useState(false);
     const [channelInfoOpen, setChannelInfoOpen] = useState(false);
     const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -67,9 +65,9 @@ export function UnifiedConversationHeader({ header, canSearchMessages = false, m
                 clearTimeout(copyResetTimerRef.current);
             }
             setLinkCopied(true);
-            toast({
+            notifySuccess({
                 title: 'Link copied',
-                description: header.type === 'channel' ? 'Recipients can open this channel from the link.' : 'Page link copied to clipboard.',
+                message: header.type === 'channel' ? 'Recipients can open this channel from the link.' : 'Page link copied to clipboard.',
             });
             copyResetTimerRef.current = setTimeout(() => {
                 setLinkCopied(false);

@@ -1,7 +1,6 @@
 'use client';
 import { notifyFailure } from '@/lib/notifications';
 import { type KeyboardEvent, useCallback, useMemo, useState } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
 import { buildMeetingAttendeeDraft, buildMeetingAttendeeSuggestions, mergeMeetingParticipantEmails, normalizeEmail, parseAttendeeInput, sanitizeMeetingParticipantEmails, } from '@/lib/meetings/attendees';
 import type { WorkspaceMember } from '../types';
 type UseMeetingAttendeesOptions = {
@@ -11,7 +10,6 @@ type UseMeetingAttendeesOptions = {
     organizerEmail?: string | null;
 };
 function useAttendeeController(options: UseMeetingAttendeesOptions) {
-    const { toast } = useToast();
     const [input, setInput] = useState('');
     const [emails, setEmailsState] = useState<string[]>([]);
     const suggestions = buildMeetingAttendeeSuggestions({ ...options, queryValue: input, selectedEmails: emails });

@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useState, useCallback } from 'react';
 import { Forward, LoaderCircle } from 'lucide-react';
@@ -9,7 +9,6 @@ import { Textarea } from '@/shared/ui/textarea';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
 import { Checkbox } from '@/shared/ui/checkbox';
-import { useToast } from '@/shared/ui/use-toast';
 import { useMutation } from 'convex/react';
 import { collaborationApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
@@ -33,7 +32,6 @@ interface MessageForwardDialogProps {
  * Dialog for forwarding a message to another channel
  */
 export function MessageForwardDialog({ message, channels, workspaceId, userId, open, onOpenChange, onForward, }: MessageForwardDialogProps) {
-    const { toast } = useToast();
     const createMessage = useMutation(collaborationApi.createMessage);
     const [selectedChannelId, setSelectedChannelId] = useState<string>('');
     const [forwardMessage, setForwardMessage] = useState('');
@@ -76,9 +74,9 @@ export function MessageForwardDialog({ message, channels, workspaceId, userId, o
             isThreadRoot: true,
         })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Message forwarded',
-                description: `Message has been forwarded to ${selectedChannel.name}.`,
+                message: `Message has been forwarded to ${selectedChannel.name}.`,
             });
             onForward?.();
             onOpenChange(false);

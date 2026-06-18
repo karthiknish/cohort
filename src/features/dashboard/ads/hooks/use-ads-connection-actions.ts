@@ -6,8 +6,7 @@ import { useAuth } from '@/shared/contexts/auth-context';
 import { adsIntegrationsApi } from '@/lib/convex-api';
 import { asErrorMessage } from '@/lib/convex-errors';
 import { convexErrorMessage, reportConvexFailure } from '@/lib/handle-convex-error';
-import { notifyFailure } from '@/lib/notifications';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { formatProviderName } from '../components/utils';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES, TOAST_TITLES, PROVIDER_IDS, } from '../components/constants';
 import type { DisconnectOptions } from './ads-connections-types';
@@ -28,7 +27,6 @@ type UseAdsConnectionActionsArgs = {
 export function useAdsConnectionActions({ workspaceId, selectedClientId, convexAuthLoading, isAuthenticated, setConnectingProvider, setConnectionErrors, setConnectedProviderOverrides, setSyncingProviders, setGoogleSetupMessage, setMetaSetupMessage, setTiktokSetupMessage, triggerRefresh, }: UseAdsConnectionActionsArgs) {
     const { user, startGoogleOauth, startMetaOauth, startTikTokOauth, startLinkedInOauth } = useAuth();
     const router = useRouter();
-    const { toast } = useToast();
     const runManualSyncAction = useAction(adsIntegrationsApi.runManualSync);
     const deleteAdIntegrationMutation = useMutation(adsIntegrationsApi.deleteAdIntegration);
     const deleteSyncJobsMutation = useMutation(adsIntegrationsApi.deleteSyncJobs);
@@ -158,9 +156,9 @@ export function useAdsConnectionActions({ workspaceId, selectedClientId, convexA
             await deleteSyncJobsMutation({ workspaceId, providerId, clientId: selectedClientId ?? null });
             await deleteAdIntegrationMutation({ workspaceId, providerId, clientId: selectedClientId ?? null });
             setConnectedProviderOverrides((prev) => ({ ...prev, [providerId]: false }));
-            toast({
+            notifySuccess({
                 title: TOAST_TITLES.DISCONNECTED,
-                description: options?.clearHistoricalData
+                message: options?.clearHistoricalData
                     ? `${SUCCESS_MESSAGES.DISCONNECTED(providerName)} Cleared ${deletedMetrics} historical metric row(s).`
                     : SUCCESS_MESSAGES.DISCONNECTED(providerName),
             });
@@ -194,9 +192,9 @@ export function useAdsConnectionActions({ workspaceId, selectedClientId, convexA
                 providerId,
                 clientId: selectedClientId ?? null,
             });
-            toast({
+            notifySuccess({
                 title: 'Sync complete',
-                description: `${formatProviderName(providerId)} data has been refreshed.`,
+                message: `${formatProviderName(providerId)} data has been refreshed.`,
             });
             triggerRefresh();
         }

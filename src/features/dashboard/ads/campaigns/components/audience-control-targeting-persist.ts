@@ -1,9 +1,8 @@
 import type { Dispatch } from 'react';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { logError } from '@/lib/convex-errors';
 import { buildMetaTargetingFromNormalized } from '@/services/integrations/meta-ads/meta-targeting-serialize';
 type MetaTargetingPayload = Record<string, unknown>;
-import { toast } from '@/shared/ui/use-toast';
 import type { AggregatedAudienceData } from './audience-control-aggregate';
 import type { AudienceControlSectionAction } from './audience-control-section-state';
 export type AudienceControlDispatch = Dispatch<AudienceControlSectionAction>;
@@ -51,9 +50,9 @@ type PersistAdSetTargetingArgs = {
 };
 export async function persistAdSetTargeting({ canEditMetaTargeting, workspaceId, activeAdSetId, clientId, updateAdSetTargeting, fetchTargeting, dispatch, selectAdSetDescription, successDescription, logContext, targeting, clearDrafts, }: PersistAdSetTargetingArgs): Promise<boolean> {
     if (!canEditMetaTargeting || !workspaceId || !activeAdSetId) {
-        toast({
+        notifySuccess({
             title: 'Select an ad set',
-            description: selectAdSetDescription,
+            message: selectAdSetDescription,
         });
         return false;
     }
@@ -66,7 +65,7 @@ export async function persistAdSetTargeting({ canEditMetaTargeting, workspaceId,
             adSetId: activeAdSetId,
             targeting,
         });
-        toast({ title: 'Targeting saved', description: successDescription });
+        notifySuccess({ title: 'Targeting saved', message: successDescription });
         clearDrafts();
         dispatch({ type: 'setEditingSection', value: null });
         await fetchTargeting();

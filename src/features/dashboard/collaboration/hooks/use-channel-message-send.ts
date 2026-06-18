@@ -1,10 +1,9 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useConvex, useMutation } from 'convex/react';
 import { v4 as uuidv4 } from 'uuid';
-import { useToast } from '@/shared/ui/use-toast';
 import { collaborationApi } from '@/lib/convex-api';
 import { getPreviewCollaborationAutoReply } from '@/lib/preview-data';
 import type { ClientTeamMember } from '@/types/clients';
@@ -35,7 +34,6 @@ type UseChannelMessageSendOptions = {
     sendToExternalPlatforms: (message: CollaborationMessage, workspaceId: string) => void;
 };
 export function useChannelMessageSend({ workspaceId, currentUserId, selectedChannel, channels, channelMessages, channelParticipants, fallbackDisplayName, fallbackRole, messageInput, setMessageInput, pendingAttachments, uploading, clearAttachments, uploadAttachments, isPreviewMode, stopTyping, mutateChannelMessages, addThreadReplyToState, sendToExternalPlatforms, }: UseChannelMessageSendOptions) {
-    const { toast } = useToast();
     const convex = useConvex();
     const createMessage = useMutation(collaborationApi.createMessage);
     const [sending, setSending] = useState(false);
@@ -194,7 +192,7 @@ export function useChannelMessageSend({ workspaceId, currentUserId, selectedChan
                 });
                 clearAttachments();
                 setMessageInput('');
-                toast({ title: 'Preview message sent', description: 'This only updates the sample collaboration feed.' });
+                notifyInfo({ title: 'Preview message sent', message: 'This only updates the sample collaboration feed.' });
                 return;
             }
             const messageId = uuidv4();
@@ -273,7 +271,7 @@ export function useChannelMessageSend({ workspaceId, currentUserId, selectedChan
             if (workspaceId) {
                 void sendToExternalPlatforms(safeCreatedMessage, workspaceId);
             }
-            toast({ title: 'Message sent', description: 'Your message is live for the team.' });
+            notifySuccess({ title: 'Message sent', message: 'Your message is live for the team.' });
         }
         catch (error) {
             reportConvexFailure({

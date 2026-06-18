@@ -1,9 +1,8 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { type ChangeEvent, useCallback, useEffect, useRef, type Dispatch, type SetStateAction, } from 'react';
 import { useMutation, useConvex } from 'convex/react';
 import { useAuth } from '@/shared/contexts/auth-context';
-import { useToast } from '@/shared/ui/use-toast';
 import { settingsApi, filesApi } from '@/lib/convex-api';
 import { uploadStorageFile } from '@/lib/upload-storage-file';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
@@ -16,7 +15,6 @@ export function useProfileAvatarUpload({ isPreviewMode, user, avatarPreview, dis
     dispatch: Dispatch<ProfileEditAction>;
     setPreviewUser: Dispatch<SetStateAction<ProfileUser>>;
 }) {
-    const { toast } = useToast();
     const { user: authUser } = useAuth();
     const convex = useConvex();
     const generateUploadUrl = useMutation(filesApi.generateUploadUrl);
@@ -61,9 +59,9 @@ export function useProfileAvatarUpload({ isPreviewMode, user, avatarPreview, dis
             }
             dispatch({ type: 'setAvatarPreviewOverride', value: null });
             setPreviewUser((current) => ({ ...current, photoUrl: null }));
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: 'Sample profile photo removed locally for this session.',
+                message: 'Sample profile photo removed locally for this session.',
             });
             return;
         }
@@ -80,7 +78,7 @@ export function useProfileAvatarUpload({ isPreviewMode, user, avatarPreview, dis
         await updateMyProfile({ photoUrl: null })
             .then(() => {
             dispatch({ type: 'setAvatarPreviewOverride', value: null });
-            toast({ title: 'Profile photo removed', description: 'We removed your avatar.' });
+            notifySuccess({ title: 'Profile photo removed', message: 'We removed your avatar.' });
         })
             .catch((removeError) => {
             logError(removeError, 'ProfileCard:removeAvatar');
@@ -127,9 +125,9 @@ export function useProfileAvatarUpload({ isPreviewMode, user, avatarPreview, dis
             tempAvatarUrlRef.current = objectUrl;
             dispatch({ type: 'setAvatarPreviewOverride', value: objectUrl });
             setPreviewUser((current) => ({ ...current, photoUrl: objectUrl }));
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: 'Sample profile photo updated locally for this session.',
+                message: 'Sample profile photo updated locally for this session.',
             });
             event.target.value = '';
             return;
@@ -147,7 +145,7 @@ export function useProfileAvatarUpload({ isPreviewMode, user, avatarPreview, dis
             .then(async (photoUrl) => {
             await updateMyProfile({ photoUrl });
             dispatch({ type: 'setAvatarPreviewOverride', value: photoUrl });
-            toast({ title: 'Photo uploaded', description: 'Your profile photo has been updated.' });
+            notifySuccess({ title: 'Photo uploaded', message: 'Your profile photo has been updated.' });
         })
             .catch((uploadError) => {
             logError(uploadError, 'ProfileCard:uploadAvatar');

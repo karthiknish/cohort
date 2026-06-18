@@ -7,7 +7,6 @@ import { useConvex, useMutation } from 'convex/react';
 import { MAX_ATTACHMENTS } from '@/features/dashboard/collaboration/hooks/constants';
 import type { PendingAttachment } from '@/features/dashboard/collaboration/hooks/types';
 import { validateAttachments } from '@/features/dashboard/collaboration/hooks/utils';
-import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { filesApi } from '@/lib/convex-api';
 import { uploadStorageFileWithPublicUrl } from '@/lib/upload-storage-file';
@@ -17,7 +16,6 @@ import { createInitialMeetingChatState, meetingChatReducer, type InSiteMeetingRo
 export function useInSiteMeetingRoomChat(props: InSiteMeetingRoomChatProps) {
     const { compact = false } = props;
     const { user } = useAuth();
-    const { toast } = useToast();
     const convex = useConvex();
     const { chatMessages, send, isSending } = useChat();
     const participants = useParticipants();

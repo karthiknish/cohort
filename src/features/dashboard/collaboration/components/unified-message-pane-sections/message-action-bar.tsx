@@ -8,7 +8,6 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
-import { useToast } from '@/shared/ui/use-toast';
 import { chromaticTransitionClass } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration';

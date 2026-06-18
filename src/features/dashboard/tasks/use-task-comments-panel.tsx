@@ -1,8 +1,8 @@
 'use client';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
-import { useCallback, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useConvex, useMutation, useQuery } from 'convex/react';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { filesApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { isConvexRealtimeEnabled } from '@/lib/convex-realtime';
@@ -156,7 +156,6 @@ export function taskCommentsPanelReducer(state: TaskCommentsPanelState, action: 
 }
 export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
     const { taskId, workspaceId, userId, userName, userRole, participants, onCommentCountChange, } = props;
-    const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const convex = useConvex();
     const convexEnabled = isConvexRealtimeEnabled() && Boolean(workspaceId);
@@ -240,10 +239,12 @@ export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
     })();
     const loading = convexEnabled && convexRows === undefined;
     const previousCommentCountRef = useRef(comments.length);
-    if (onCommentCountChange && previousCommentCountRef.current !== comments.length) {
-        previousCommentCountRef.current = comments.length;
-        onCommentCountChange(comments.length);
-    }
+    useEffect(() => {
+        if (onCommentCountChange && previousCommentCountRef.current !== comments.length) {
+            previousCommentCountRef.current = comments.length;
+            onCommentCountChange(comments.length);
+        }
+    }, [comments.length, onCommentCountChange]);
     const activeReplyTo = (() => {
         if (!replyTo)
             return null;
@@ -297,7 +298,7 @@ export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
                 updatedBy: '',
             })
                 .then(() => {
-                toast({ title: 'Comment updated' });
+                notifySuccess({ message: 'Comment updated' });
                 resetComposer();
             })
                 .catch((error) => {
@@ -378,7 +379,7 @@ export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
             deletedBy: '',
         })
             .then(() => {
-            toast({ title: 'Comment deleted' });
+            notifySuccess({ message: 'Comment deleted' });
             if (editingCommentId === deleteTarget.id) {
                 resetComposer();
             }

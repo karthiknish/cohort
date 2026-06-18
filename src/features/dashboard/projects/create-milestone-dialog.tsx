@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { useMutation } from 'convex/react';
@@ -9,7 +9,6 @@ import { format } from 'date-fns';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { projectMilestonesApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
-import { useToast } from '@/shared/ui/use-toast';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
@@ -98,7 +97,6 @@ function milestoneFormReducer(state: MilestoneFormState, action: MilestoneFormAc
 export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onCreated }: CreateMilestoneDialogProps) {
     const { user } = useAuth();
     const createMilestone = useMutation(projectMilestonesApi.create);
-    const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [formState, dispatch] = useReducer(milestoneFormReducer, defaultProjectId ?? '', createInitialMilestoneFormState);
@@ -197,7 +195,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
                 updatedAt: new Date().toISOString(),
             };
             onCreated?.(milestone);
-            toast({ title: 'Milestone created', description: `“${milestone.title}” added to the timeline.` });
+            notifySuccess({ title: 'Milestone created', message: `“${milestone.title}” added to the timeline.` });
             setOpen(false);
         })
             .catch((error) => {

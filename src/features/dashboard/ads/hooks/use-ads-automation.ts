@@ -1,9 +1,8 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { useCallback, useMemo, useState } from 'react';
 import { useMutation } from 'convex/react';
 import { useAuth } from '@/shared/contexts/auth-context';
-import { useToast } from '@/shared/ui/use-toast';
 import { adsIntegrationsApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import type { IntegrationStatus, ProviderAutomationFormState } from '../components/types';
@@ -38,7 +37,6 @@ export interface UseAdsAutomationReturn {
 export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutomationReturn {
     const { automationStatuses, onRefresh } = options;
     const { user } = useAuth();
-    const { toast } = useToast();
     const updateAutomationSettings = useMutation(adsIntegrationsApi.updateAutomationSettings);
     const requestManualSync = useMutation(adsIntegrationsApi.requestManualSync);
     // State — only local edits; server values are derived below
@@ -131,9 +129,9 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
                 scheduledTimeframeDays: draft.scheduledTimeframeDays,
                 metaUseAsyncInsights: providerId === 'facebook' ? draft.metaUseAsyncInsights === true : undefined,
             });
-            toast({
+            notifySuccess({
                 title: TOAST_TITLES.AUTOMATION_UPDATED,
-                description: SUCCESS_MESSAGES.AUTOMATION_UPDATED(formatProviderName(providerId)),
+                message: SUCCESS_MESSAGES.AUTOMATION_UPDATED(formatProviderName(providerId)),
             });
             onRefresh?.();
         }
@@ -173,7 +171,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
             });
             const providerName = formatProviderName(providerId);
             const successMessage = SUCCESS_MESSAGES.SYNC_COMPLETE(providerName);
-            toast({ title: TOAST_TITLES.SYNC_COMPLETE, description: successMessage });
+            notifySuccess({ title: TOAST_TITLES.SYNC_COMPLETE, message: successMessage });
             onRefresh?.();
         }
         catch (error: unknown) {

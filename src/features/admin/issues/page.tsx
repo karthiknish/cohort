@@ -1,4 +1,5 @@
 'use client';
+import { notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { AdminQueryErrorAlert } from '../components/admin-query-error-alert';
@@ -16,7 +17,6 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { getPreviewAdminProblemReports } from '@/lib/preview-data';
-import { useToast } from '@/shared/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { filterProblemReports, formatProblemReportDate, getProblemReportSeverityDisplay, getProblemReportStatusDisplay, type ProblemReport, } from '../lib/problem-reports';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
@@ -151,7 +151,6 @@ function adminIssuesReducer(state: AdminIssuesState, action: AdminIssuesAction):
 }
 export default function AdminIssuesPage() {
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const [state, dispatch] = useReducer(adminIssuesReducer, {
         statusFilter: 'all',
         searchTerm: '',
@@ -185,13 +184,13 @@ export default function AdminIssuesPage() {
                     ? { ...report, status: newStatus, updatedAt: new Date().toISOString() }
                     : report)),
             });
-            toast({ title: 'Preview mode', description: `Sample issue marked as ${newStatus}.` });
+            notifyInfo({ title: 'Preview mode', message: `Sample issue marked as ${newStatus}.` });
             return;
         }
         dispatch({ type: 'setUpdatingId', value: id });
         void updateReport({ legacyId: id, status: newStatus })
             .then(() => {
-            toast({ title: 'Status updated', description: `Report marked as ${newStatus}` });
+            notifySuccess({ title: 'Status updated', message: `Report marked as ${newStatus}` });
         })
             .catch((error) => {
             reportConvexFailure({
@@ -214,13 +213,13 @@ export default function AdminIssuesPage() {
                 updater: (current) => current.filter((report) => report.id !== deleteTarget.id),
             });
             dispatch({ type: 'setDeleteTarget', value: null });
-            toast({ title: 'Preview mode', description: 'Sample issue removed locally for this session.' });
+            notifyInfo({ title: 'Preview mode', message: 'Sample issue removed locally for this session.' });
             return;
         }
         dispatch({ type: 'setDeletingId', value: deleteTarget.id });
         void removeReport({ legacyId: deleteTarget.id })
             .then(() => {
-            toast({ title: 'Report deleted', description: 'The report has been removed.' });
+            notifySuccess({ title: 'Report deleted', message: 'The report has been removed.' });
             dispatch({ type: 'setDeleteTarget', value: null });
         })
             .catch((error) => {
@@ -238,7 +237,7 @@ export default function AdminIssuesPage() {
     const handleRefresh = () => {
         if (isPreviewMode) {
             dispatch({ type: 'updatePreviewReports', updater: () => getPreviewAdminProblemReports() });
-            toast({ title: 'Preview data refreshed', description: 'Showing sample admin issue reports.' });
+            notifyInfo({ title: 'Preview data refreshed', message: 'Showing sample admin issue reports.' });
         }
     };
     const handleSearchTermChange = (event: React.ChangeEvent<HTMLInputElement>) => {

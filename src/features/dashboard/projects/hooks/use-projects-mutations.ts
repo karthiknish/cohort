@@ -2,7 +2,7 @@
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useMutation } from 'convex/react';
 import { useCallback, useState } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifyInfo, notifySuccess } from '@/lib/notifications';
 import { projectsApi } from '@/lib/convex-api';
 import { emitDashboardRefresh } from '@/lib/refresh-bus';
 import type { ProjectRecord, ProjectStatus } from '@/types/projects';
@@ -14,7 +14,6 @@ export type UseProjectsMutationsArgs = {
     setProjects: React.Dispatch<React.SetStateAction<ProjectRecord[]>>;
 };
 export function useProjectsMutations({ workspaceId, userId, isPreviewMode, setProjects, }: UseProjectsMutationsArgs) {
-    const { toast } = useToast();
     const softDeleteProject = useMutation(projectsApi.softDelete);
     const updateProject = useMutation(projectsApi.update);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -42,9 +41,9 @@ export function useProjectsMutations({ workspaceId, userId, isPreviewMode, setPr
             return;
         }
         if (isPreviewMode) {
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: 'Changes are not saved in preview mode. Exit preview to make real changes.',
+                message: 'Changes are not saved in preview mode. Exit preview to make real changes.',
             });
             setDeleteDialogOpen(false);
             setProjectToDelete(null);
@@ -62,9 +61,9 @@ export function useProjectsMutations({ workspaceId, userId, isPreviewMode, setPr
             });
             setProjects((previous) => previous.filter((project) => project.id !== projectToDelete.id));
             emitDashboardRefresh({ reason: 'project-mutated', clientId: projectToDelete.clientId ?? null });
-            toast({
+            notifySuccess({
                 title: 'Project deleted',
-                description: `"${projectToDelete.name}" has been permanently removed.`,
+                message: `"${projectToDelete.name}" has been permanently removed.`,
             });
         }
         catch (mutationError) {
@@ -84,9 +83,9 @@ export function useProjectsMutations({ workspaceId, userId, isPreviewMode, setPr
     const handleUpdateStatus = async (project: ProjectRecord, newStatus: ProjectStatus) => {
         if (isPreviewMode) {
             setProjects((previous) => previous.map((current) => (current.id === project.id ? { ...current, status: newStatus } : current)));
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: `Status changed to ${formatStatusLabel(newStatus)} (not saved).`,
+                message: `Status changed to ${formatStatusLabel(newStatus)} (not saved).`,
             });
             return;
         }
@@ -107,9 +106,9 @@ export function useProjectsMutations({ workspaceId, userId, isPreviewMode, setPr
                 updatedAtMs: Date.now(),
             });
             emitDashboardRefresh({ reason: 'project-mutated', clientId: project.clientId ?? null });
-            toast({
+            notifySuccess({
                 title: 'Status updated',
-                description: `"${project.name}" is now ${formatStatusLabel(newStatus)}.`,
+                message: `"${project.name}" is now ${formatStatusLabel(newStatus)}.`,
             });
         }
         catch (mutationError) {

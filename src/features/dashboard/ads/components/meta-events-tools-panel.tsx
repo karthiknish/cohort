@@ -13,7 +13,7 @@ import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
 import { MotionTabsContent, Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Textarea } from '@/shared/ui/textarea';
-import { toast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { MetaJsonResultBlock, MetaPixelPicker, MetaToolsActionBar, MetaToolsFormSection, MetaToolsPanelShell, type MetaPixelRow, } from './meta-tools-ui';
 type MetaEventsToolsPanelProps = {
     workspaceId: string;
@@ -72,10 +72,12 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
         : defaultEventsTab(eventTabs);
     const prevDefaultEventName = useRef(visibility.defaultCapiEventName);
     const [eventName, setEventName] = useState(visibility.defaultCapiEventName || 'Purchase');
-    if (prevDefaultEventName.current !== visibility.defaultCapiEventName) {
-        prevDefaultEventName.current = visibility.defaultCapiEventName;
-        setEventName(visibility.defaultCapiEventName);
-    }
+    useEffect(() => {
+        if (prevDefaultEventName.current !== visibility.defaultCapiEventName) {
+            prevDefaultEventName.current = visibility.defaultCapiEventName;
+            setEventName(visibility.defaultCapiEventName);
+        }
+    }, [visibility.defaultCapiEventName]);
     useEffect(() => {
         if (!needsPixelList) {
             dispatchPixels({ rows: [], loading: false });
@@ -123,7 +125,7 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
     };
     const handleSendCapi = () => {
         if (!pixelId.trim()) {
-            toast({ title: 'Select a pixel', variant: 'destructive' });
+            notifySuccess({ message: 'Select a pixel', });
             return;
         }
         setSendingCapi(true);
@@ -135,9 +137,9 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
             testEventCode: testEventCode.trim() || undefined,
         })
             .then((result) => {
-            toast({
+            notifySuccess({
                 title: 'CAPI events sent',
-                description: `Meta received ${result.eventsReceived ?? 1} event(s).`,
+                message: `Meta received ${result.eventsReceived ?? 1} event(s).`,
             });
         })
             .catch((error) => {
@@ -152,7 +154,7 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
     };
     const handleSendOffline = () => {
         if (!pixelId.trim()) {
-            toast({ title: 'Select a pixel', variant: 'destructive' });
+            notifySuccess({ message: 'Select a pixel', });
             return;
         }
         setSendingOffline(true);
@@ -164,9 +166,9 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
             testEventCode: testEventCode.trim() || undefined,
         })
             .then((result) => {
-            toast({
+            notifySuccess({
                 title: 'Offline events sent',
-                description: `Meta received ${result.eventsReceived ?? 1} store event(s).`,
+                message: `Meta received ${result.eventsReceived ?? 1} store event(s).`,
             });
         })
             .catch((error) => {
@@ -189,42 +191,38 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
         ], null, 2));
     };
     const handleRunBatch = () => {
-        let requests: Array<{
-            method: 'GET' | 'POST' | 'DELETE';
-            relativeUrl: string;
-            body?: string;
-            name?: string;
-        }>;
         let parsed: unknown;
         try {
             parsed = JSON.parse(batchJson);
         }
         catch {
-            toast({
+            notifySuccess({
                 title: 'Invalid batch JSON',
-                description: 'Provide an array of { method, relativeUrl, body?, name? }.',
-                variant: 'destructive',
+                message: 'Provide an array of { method, relativeUrl, body?, name? }.',
             });
             return;
         }
         if (!Array.isArray(parsed)) {
-            toast({
+            notifySuccess({
                 title: 'Invalid batch JSON',
-                description: 'Provide an array of { method, relativeUrl, body?, name? }.',
-                variant: 'destructive',
+                message: 'Provide an array of { method, relativeUrl, body?, name? }.',
             });
             return;
         }
-        requests = parsed as typeof requests;
+        const requests = parsed as Array<{
+            method: 'GET' | 'POST' | 'DELETE';
+            relativeUrl: string;
+            body?: string;
+            name?: string;
+        }>;
         setRunningBatch(true);
         setBatchResult('');
         void executeBatch({ workspaceId, clientId: clientId ?? null, requests })
             .then((result) => {
             setBatchResult(JSON.stringify(result, null, 2));
-            toast({
+            notifySuccess({
                 title: result.success ? 'Batch completed' : 'Batch finished with errors',
-                description: `${result.responses.length} response(s) returned.`,
-                variant: result.success ? 'default' : 'destructive',
+                message: `${result.responses.length} response(s) returned.`,
             });
         })
             .catch((error) => {

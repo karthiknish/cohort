@@ -1,9 +1,8 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { logError } from '@/lib/convex-errors';
-import { useToast } from '@/shared/ui/use-toast';
 import type { TranscriptActionResult, TranscriptMode } from '../components/in-site-meeting-card.shared';
 import { postMeetingTranscriptAction } from '../lib/in-site-meeting-transcript-client';
 import type { MeetingProcessingState, MeetingRecord } from '../types';
@@ -39,7 +38,6 @@ type UseInSiteMeetingRoomPostCallArgs = {
     finalizationInFlightRef: RefObject<boolean>;
 };
 export function useInSiteMeetingRoomPostCall({ meetingLegacyId, markCompleted, normalizedTranscript, transcriptDraft, transcriptSource, canPersist, canGenerateNotes, onClose, onMeetingUpdated, buildMeetingSnapshot, applyTranscriptActionResult, setMarkCompleted, setFinalizingSession, setTranscriptSource, setTranscriptProcessingState, setTranscriptProcessingError, setNotesProcessingState, setNotesProcessingError, setNotesReason, setGeneratingNotes, setRetryingPostCallProcessing, setOperationsOpen, setJoinConfig, setInterimTranscript, setAutoSyncing, setLastAutoSyncAt, setLastAutoSyncedTranscript, finalizationInFlightRef, }: UseInSiteMeetingRoomPostCallArgs) {
-    const { toast } = useToast();
     const submitTranscriptAction = async (mode: TranscriptMode, overrides?: {
         transcriptText?: string;
         notesSummary?: string;
@@ -156,9 +154,9 @@ export function useInSiteMeetingRoomPostCall({ meetingLegacyId, markCompleted, n
             setLastAutoSyncedTranscript(normalizedTranscript);
             applyTranscriptActionResult(result);
             if (result.notesGenerated) {
-                toast({
+                notifySuccess({
                     title: 'AI summary updated',
-                    description: 'The room sidebar now reflects the latest generated summary.',
+                    message: 'The room sidebar now reflects the latest generated summary.',
                 });
             }
             else if (result.notesReason === 'ai_not_configured') {
@@ -233,9 +231,9 @@ export function useInSiteMeetingRoomPostCall({ meetingLegacyId, markCompleted, n
             });
             setLastAutoSyncedTranscript(normalizedTranscript);
             applyTranscriptActionResult(result);
-            toast({
+            notifySuccess({
                 title: 'Post-call processing retried',
-                description: 'Transcript finalization and AI notes generation are running again.',
+                message: 'Transcript finalization and AI notes generation are running again.',
             });
         }
         catch (error) {

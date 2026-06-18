@@ -6,7 +6,6 @@ import { Button } from '@/shared/ui/button';
 import { LazyImage } from '@/shared/ui/lazy-image';
 import { asErrorMessage } from '@/lib/convex-errors';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/shared/ui/use-toast';
 interface ImageUploaderProps {
     value?: string | null;
     onChange: (url: string | null) => void;
@@ -17,7 +16,6 @@ interface ImageUploaderProps {
     placeholder?: string;
 }
 export function ImageUploader({ value, onChange, onUpload, className, disabled = false, maxSizeMB = 5, placeholder = 'Upload an image', }: ImageUploaderProps) {
-    const { toast } = useToast();
     const inputRef = useRef<HTMLInputElement>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);

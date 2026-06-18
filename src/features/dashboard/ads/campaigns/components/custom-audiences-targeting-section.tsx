@@ -9,7 +9,7 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
-import { toast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
 import type { AggregatedTargetingData } from './audience-control-types';
@@ -115,10 +115,9 @@ export function CustomAudiencesTargetingSection({ aggregatedData, expandedSectio
             return;
         const emails = parseEmailLines(uploadEmailsRaw);
         if (emails.length === 0) {
-            toast({
+            notifySuccess({
                 title: 'No valid emails',
-                description: 'Enter one email address per line.',
-                variant: 'destructive',
+                message: 'Enter one email address per line.',
             });
             return;
         }
@@ -131,9 +130,9 @@ export function CustomAudiencesTargetingSection({ aggregatedData, expandedSectio
             emails,
         })
             .then((result) => {
-            toast({
+            notifySuccess({
                 title: 'Audience updated',
-                description: `Meta received ${result.numReceived ?? emails.length} hashed email${emails.length === 1 ? '' : 's'}.`,
+                message: `Meta received ${result.numReceived ?? emails.length} hashed email${emails.length === 1 ? '' : 's'}.`,
             });
             setUploadEmailsRaw('');
         })

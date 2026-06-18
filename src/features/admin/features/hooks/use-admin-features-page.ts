@@ -1,17 +1,16 @@
 'use client';
+import { notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { useCallback, useMemo, useReducer } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '/_generated/api';
 import { usePreview } from '@/shared/contexts/preview-context';
-import { useToast } from '@/shared/ui/use-toast';
 import { getPreviewAdminFeatures } from '@/lib/preview-data';
 import type { FeatureItem, FeaturePriority, FeatureReference, FeatureStatus } from '@/types/features';
 import { adminFeaturesReducer, createInitialAdminFeaturesState, toFeatureDocId, type FeatureRow, type FeatureSubmitData, } from '../admin-features-types';
 export function useAdminFeaturesPage() {
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const [state, dispatch] = useReducer(adminFeaturesReducer, undefined, createInitialAdminFeaturesState);
     const { refreshing, previewFeatures, formDialogOpen, editingFeature, defaultStatus, deleteConfirmOpen, featureToDelete, isDeleting, } = state;
     const featuresResponse = useQuery(api.adminFeatures.listFeatures, isPreviewMode ? 'skip' : {});
@@ -81,9 +80,9 @@ export function useAdminFeaturesPage() {
                 type: 'updatePreviewFeatures',
                 updater: (current) => current.filter((feature) => feature.id !== featureToDelete.id),
             });
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: 'Sample feature removed locally for this session.',
+                message: 'Sample feature removed locally for this session.',
             });
             dispatch({ type: 'closeDeleteConfirm' });
             return;
@@ -91,9 +90,9 @@ export function useAdminFeaturesPage() {
         dispatch({ type: 'setIsDeleting', value: true });
         void deleteFeature({ id: toFeatureDocId(featureToDelete.id) })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Feature deleted',
-                description: 'The feature has been removed from the board.',
+                message: 'The feature has been removed from the board.',
             });
         })
             .catch((error) => {
@@ -117,17 +116,17 @@ export function useAdminFeaturesPage() {
                 type: 'updatePreviewFeatures',
                 updater: (current) => current.map((item) => (item.id === featureId ? { ...item, status: newStatus, updatedAt: new Date().toISOString() } : item)),
             });
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: `Sample feature moved to ${newStatus.replace('_', ' ')}.`,
+                message: `Sample feature moved to ${newStatus.replace('_', ' ')}.`,
             });
             return;
         }
         void updateFeature({ id: toFeatureDocId(featureId), status: newStatus })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Status updated',
-                description: `Feature moved to ${newStatus.replace('_', ' ')}.`,
+                message: `Feature moved to ${newStatus.replace('_', ' ')}.`,
             });
         })
             .catch((error) => {
@@ -178,9 +177,9 @@ export function useAdminFeaturesPage() {
                         ],
                     });
                 }
-                toast({
+                notifyInfo({
                     title: editingFeature ? 'Preview feature updated' : 'Preview feature added',
-                    description: 'Changes apply only to the sample board in this session.',
+                    message: 'Changes apply only to the sample board in this session.',
                 });
             });
         }
@@ -204,9 +203,9 @@ export function useAdminFeaturesPage() {
             });
         return operation
             .then(() => {
-            toast({
+            notifySuccess({
                 title: editingFeature ? 'Feature updated' : 'Feature added',
-                description: editingFeature
+                message: editingFeature
                     ? 'Your changes have been saved.'
                     : 'The new feature has been added to the board.',
             });

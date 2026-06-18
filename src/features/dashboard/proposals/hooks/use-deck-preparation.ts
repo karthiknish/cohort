@@ -1,6 +1,5 @@
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { useCallback, useRef, useState } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { trackDeckGenerationCompleted, trackDeckGenerationFailed, trackDeckGenerationStarted, } from '@/services/proposal-analytics';
@@ -23,7 +22,6 @@ export interface UseDeckPreparationReturn {
 }
 export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckPreparationReturn {
     const { refreshProposals, setProposals, } = options;
-    const { toast } = useToast();
     const { user, getIdToken } = useAuth();
     const workspaceId = user?.agencyId ?? null;
     const [downloadingDeckId, setDownloadingDeckId] = useState<string | null>(null);
@@ -61,9 +59,9 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
         }
         if (downloadingDeckId) {
             console.log('[ProposalDownload] Download already in progress for:', downloadingDeckId);
-            toast({
+            notifySuccess({
                 title: 'Deck already preparing',
-                description: 'Please wait for the current deck request to finish.',
+                message: 'Please wait for the current deck request to finish.',
             });
             return;
         }
@@ -135,9 +133,9 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
                                     : null,
                         }));
                     await refreshProposals();
-                    toast({
+                    notifySuccess({
                         title: 'Deck ready',
-                        description: 'We saved the PPT and opened it in a new tab.',
+                        message: 'We saved the PPT and opened it in a new tab.',
                     });
                     return;
                 }

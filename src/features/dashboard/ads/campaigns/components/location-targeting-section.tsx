@@ -8,7 +8,7 @@ import { Button } from '@/shared/ui/button';
 import { LocationMap, type LocationMarker } from '@/shared/ui/location-map';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
-import { toast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { MetaTargetingSearchCombobox } from '@/features/dashboard/ads/components/meta-targeting-search-combobox';
 import type { AggregatedTargetingData, TargetingData } from './audience-control-types';
@@ -40,9 +40,9 @@ export function LocationTargetingSection({ targeting, aggregatedData, locationMa
     };
     const handleGeoSelect = (item: MetaTargetingSearchResult) => {
         if (!onAddLocation) {
-            toast({
+            notifySuccess({
                 title: 'Geo target found',
-                description: `${item.name} (${item.id}) — enable editing to add locations.`,
+                message: `${item.name} (${item.id}) — enable editing to add locations.`,
             });
             return;
         }
@@ -64,9 +64,9 @@ export function LocationTargetingSection({ targeting, aggregatedData, locationMa
                 onRemoveLocation(loc.id);
                 return;
             }
-            toast({
+            notifySuccess({
                 title: 'Read-only geography',
-                description: 'Click Edit to remove locations from this ad set.',
+                message: 'Click Edit to remove locations from this ad set.',
             });
         },
     ])) as Record<string, (event: MouseEvent<HTMLButtonElement>) => void>;

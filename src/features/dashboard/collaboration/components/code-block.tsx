@@ -8,7 +8,6 @@ import { TrustedHtml } from '@/shared/ui/trusted-html';
 import { createTrustedHtml } from '@/shared/ui/trusted-html-types';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/shared/ui/use-toast';
 // Simple syntax highlighting (could be replaced with a library like Prism.js or Shiki)
 const LANGUAGES = [
     { value: 'javascript', label: 'JavaScript' },
@@ -44,7 +43,6 @@ interface CodeBlockProps {
  * Code block with syntax highlighting and copy functionality
  */
 export function CodeBlock({ code, language = 'javascript', filename, className, maxHeight = '400px', }: CodeBlockProps) {
-    const { toast } = useToast();
     const [copied, setCopied] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const handleCopy = async () => {

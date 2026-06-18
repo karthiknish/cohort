@@ -11,7 +11,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { FadeIn, FadeInItem, FadeInStagger } from '@/shared/ui/animate-in';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils';
 const primaryButtonClassName = 'h-11 w-full rounded-full text-sm font-semibold shadow-sm';
@@ -80,7 +80,6 @@ function forgotPasswordReducer(state: ForgotPasswordState, action: ForgotPasswor
 }
 export default function ForgotPasswordPage() {
     const { resetPassword } = useAuth();
-    const { toast } = useToast();
     const [state, dispatch] = useReducer(forgotPasswordReducer, initialForgotPasswordState);
     const { email, submitting, success, error, emailError } = state;
     const validateEmail = (email: string): boolean => {
@@ -99,9 +98,9 @@ export default function ForgotPasswordPage() {
         void resetPassword(email)
             .then(() => {
             dispatch({ type: 'submitSuccess' });
-            toast({
+            notifySuccess({
                 title: 'Check your inbox',
-                description: 'If an account exists for this email, we sent password reset instructions.',
+                message: 'If an account exists for this email, we sent password reset instructions.',
             });
         })
             .catch((err: unknown) => {

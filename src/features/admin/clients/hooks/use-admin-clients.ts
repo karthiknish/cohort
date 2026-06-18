@@ -1,10 +1,9 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@convex/_generated/api';
 import { useConvex, useQuery as useConvexQuery } from 'convex/react';
-import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { asErrorMessage } from '@/lib/convex-errors';
@@ -97,7 +96,6 @@ export interface UseAdminClientsReturn {
 export function useAdminClients(): UseAdminClientsReturn {
     const { user } = useAuth();
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const convex = useConvex();
     const queryClient = useQueryClient();
     const workspaceContext = useConvexQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip');
@@ -270,7 +268,7 @@ export function useAdminClients(): UseAdminClientsReturn {
     const loadClients = async () => {
         if (isPreviewMode) {
             setPreviewClients(getPreviewClients());
-            toast({ title: 'Preview data refreshed', description: 'Showing sample client workspaces.' });
+            notifyInfo({ title: 'Preview data refreshed', message: 'Showing sample client workspaces.' });
             return;
         }
         void clientsInfiniteQuery.refetch();
@@ -310,7 +308,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         if (isPreviewMode) {
             setDeletingClientId(clientPendingDelete.id);
             setPreviewClients((current) => current.filter((client) => client.id !== clientPendingDelete.id));
-            toast({ title: 'Preview mode', description: `${clientPendingDelete.name} was removed locally for this session.` });
+            notifyInfo({ title: 'Preview mode', message: `${clientPendingDelete.name} was removed locally for this session.` });
             setClientPendingDelete(null);
             setIsDeleteDialogOpen(false);
             setDeletingClientId(null);
@@ -328,7 +326,7 @@ export function useAdminClients(): UseAdminClientsReturn {
                 legacyId: clientPendingDelete.id,
                 deletedAtMs: Date.now(),
             });
-            toast({ title: 'Client deleted', description: `${clientPendingDelete.name} has been removed.` });
+            notifySuccess({ title: 'Client deleted', message: `${clientPendingDelete.name} has been removed.` });
             setClientPendingDelete(null);
             setIsDeleteDialogOpen(false);
         }
@@ -391,7 +389,7 @@ export function useAdminClients(): UseAdminClientsReturn {
                     updatedAt: new Date().toISOString(),
                 };
             }));
-            toast({ title: 'Preview mode', description: `${name} joined ${clientPendingMembers.name} in the sample workspace.` });
+            notifyInfo({ title: 'Preview mode', message: `${name} joined ${clientPendingMembers.name} in the sample workspace.` });
             setMemberName('');
             setMemberRole('');
             setIsTeamDialogOpen(false);
@@ -412,7 +410,7 @@ export function useAdminClients(): UseAdminClientsReturn {
                 name,
                 role: role || undefined,
             });
-            toast({ title: 'Teammate added', description: `${name} joined ${clientPendingMembers.name}.` });
+            notifySuccess({ title: 'Teammate added', message: `${name} joined ${clientPendingMembers.name}.` });
             setMemberName('');
             setMemberRole('');
             setIsTeamDialogOpen(false);
@@ -453,7 +451,7 @@ export function useAdminClients(): UseAdminClientsReturn {
                     updatedAt: new Date().toISOString(),
                 };
             }));
-            toast({ title: 'Preview mode', description: `${normalizedName} was removed from ${client.name} locally.` });
+            notifyInfo({ title: 'Preview mode', message: `${normalizedName} was removed from ${client.name} locally.` });
             setRemovingTeamMemberKey(null);
             return;
         }
@@ -470,9 +468,9 @@ export function useAdminClients(): UseAdminClientsReturn {
                 legacyId: client.id,
                 name: normalizedName,
             });
-            toast({
+            notifySuccess({
                 title: 'Teammate removed',
-                description: `${normalizedName} was removed from ${client.name}.`,
+                message: `${normalizedName} was removed from ${client.name}.`,
             });
         }
         catch (err: unknown) {
@@ -525,9 +523,9 @@ export function useAdminClients(): UseAdminClientsReturn {
                     updatedAt: new Date().toISOString(),
                 };
             }));
-            toast({
+            notifyInfo({
                 title: 'Preview mode',
-                description: `${normalizedName}'s role on ${client.name} was updated locally.`,
+                message: `${normalizedName}'s role on ${client.name} was updated locally.`,
             });
             setIsEditRoleDialogOpen(false);
             setClientPendingEditMember(null);
@@ -549,9 +547,9 @@ export function useAdminClients(): UseAdminClientsReturn {
                 name: normalizedName,
                 role,
             });
-            toast({
+            notifySuccess({
                 title: 'Role updated',
-                description: `${normalizedName} is now ${role} on ${client.name}.`,
+                message: `${normalizedName} is now ${role} on ${client.name}.`,
             });
             setIsEditRoleDialogOpen(false);
             setClientPendingEditMember(null);
@@ -619,7 +617,7 @@ export function useAdminClients(): UseAdminClientsReturn {
                 };
                 return [...current, nextClient].sort((left, right) => left.name.localeCompare(right.name));
             });
-            toast({ title: 'Preview mode', description: `${name} was created in the sample workspace.` });
+            notifyInfo({ title: 'Preview mode', message: `${name} was created in the sample workspace.` });
             resetClientForm();
             setClientSaving(false);
             return;
@@ -634,7 +632,7 @@ export function useAdminClients(): UseAdminClientsReturn {
                 teamMembers,
                 createdBy: user?.id ?? null,
             });
-            toast({ title: 'Client created', description: `${name} is ready to use.` });
+            notifySuccess({ title: 'Client created', message: `${name} is ready to use.` });
             resetClientForm();
         }
         catch (err: unknown) {

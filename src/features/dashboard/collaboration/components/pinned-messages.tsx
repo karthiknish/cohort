@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/sha
 import { useMutation } from 'convex/react';
 import { api as generatedApi } from '/_generated/api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import type { CollaborationMessage } from '@/types/collaboration';
 import { formatRelativeTime } from '../utils';
@@ -54,7 +54,6 @@ interface PinnedMessageItemProps {
     onClick?: (messageId: string) => void;
 }
 function PinnedMessageItem({ message, workspaceId, onClick }: PinnedMessageItemProps) {
-    const { toast } = useToast();
     const unpinMessage = useMutation(generatedApi.collaborationMessages.unpinMessage);
     const [isUnpinning, setIsUnpinning] = useState(false);
     const handleUnpin = async (e: React.MouseEvent) => {
@@ -67,9 +66,9 @@ function PinnedMessageItem({ message, workspaceId, onClick }: PinnedMessageItemP
             legacyId: message.id,
         })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Message unpinned',
-                description: 'The message has been removed from pinned messages.',
+                message: 'The message has been removed from pinned messages.',
             });
         })
             .catch((error) => {
@@ -129,7 +128,6 @@ export function PinMessageButton({ message, workspaceId, userId, onPinChange, va
     variant?: 'icon' | 'button';
     className?: string;
 }) {
-    const { toast } = useToast();
     const pinMessageMutation = useMutation(generatedApi.collaborationMessages.pinMessage);
     const unpinMessageMutation = useMutation(generatedApi.collaborationMessages.unpinMessage);
     const [isPending, startTransition] = useTransition();
@@ -144,9 +142,9 @@ export function PinMessageButton({ message, workspaceId, userId, onPinChange, va
                     workspaceId: String(workspaceId),
                     legacyId: message.id,
                 }).then(() => {
-                    toast({
+                    notifySuccess({
                         title: 'Message unpinned',
-                        description: 'The message has been removed from pinned messages.',
+                        message: 'The message has been removed from pinned messages.',
                     });
                     onPinChange?.(message.id, false);
                 })
@@ -155,9 +153,9 @@ export function PinMessageButton({ message, workspaceId, userId, onPinChange, va
                     legacyId: message.id,
                     userId: String(userId),
                 }).then(() => {
-                    toast({
+                    notifySuccess({
                         title: 'Message pinned',
-                        description: 'The message has been pinned to the channel.',
+                        message: 'The message has been pinned to the channel.',
                     });
                     onPinChange?.(message.id, true);
                 });

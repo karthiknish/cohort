@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { FormField } from '@/shared/ui/form-field';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { toast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 type Props = {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -65,7 +65,14 @@ export function CreateMetaAdSetDialog({ open, onOpenChange, campaignId, campaign
         if (!open || !workspaceId)
             return;
         let cancelled = false;
-        setLoadingPageActors(true);
+        // Defer the sync loading flag to a microtask so we don't setState
+        // synchronously inside the effect body (per eslint-plugin-react-hooks
+        // /react-compiler lints).
+        queueMicrotask(() => {
+            if (cancelled)
+                return;
+            setLoadingPageActors(true);
+        });
         void listMetaPageActors({
             workspaceId,
             providerId: 'facebook',
@@ -114,10 +121,9 @@ export function CreateMetaAdSetDialog({ open, onOpenChange, campaignId, campaign
             productSetId: objectiveForm.productSetId,
         });
         if (validationErrors.length > 0) {
-            toast({
+            notifySuccess({
                 title: 'Missing campaign settings',
-                description: validationErrors.join(' '),
-                variant: 'destructive',
+                message: validationErrors.join(' '),
             });
             return;
         }
@@ -143,7 +149,7 @@ export function CreateMetaAdSetDialog({ open, onOpenChange, campaignId, campaign
                 productCatalogId: objectiveForm.productCatalogId,
                 productSetId: objectiveForm.productSetId,
             });
-            toast({ title: 'Ad set created', description: `"${name.trim()}" is ready for ads.` });
+            notifySuccess({ title: 'Ad set created', message: `"${name.trim()}" is ready for ads.` });
             onOpenChange(false);
             onCreated?.();
         }

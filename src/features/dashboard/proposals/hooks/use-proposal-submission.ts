@@ -1,7 +1,6 @@
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess, notifyWarning } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { usePreview } from '@/shared/contexts/preview-context';
@@ -108,7 +107,6 @@ export interface UseProposalSubmissionReturn {
 }
 export function useProposalSubmission(options: UseProposalSubmissionOptions): UseProposalSubmissionReturn {
     const { draftId, formState, currentStep, ensureDraftId, refreshProposals, setDraftId, setFormState, setCurrentStep, setAutosaveStatus, clearErrors, steps, } = options;
-    const { toast } = useToast();
     const { user, getIdToken, isSyncing, authError } = useAuth();
     const { selectedClient, selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
@@ -174,9 +172,9 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 setCurrentStep(0);
                 setDraftId(null);
                 setAutosaveStatus('idle');
-                toast({
+                notifyInfo({
                     title: 'Preview proposal ready',
-                    description: 'Showing a simulated proposal result using sample deck output.',
+                    message: 'Showing a simulated proposal result using sample deck output.',
                 });
                 return;
             }
@@ -335,16 +333,15 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             }
             if (finalPptUrl) {
                 if (isPartialSuccess || hasPdfWarning) {
-                    toast({
+                    notifyWarning({
                         title: 'Presentation ready (PPTX only)',
-                        description: 'The PowerPoint presentation is ready for download. PDF generation encountered an issue, but you can still download the PPTX file.',
-                        variant: 'default',
+                        message: 'The PowerPoint presentation is ready for download. PDF generation encountered an issue, but you can still download the PPTX file.',
                     });
                 }
                 else {
-                    toast({
+                    notifySuccess({
                         title: 'Presentation ready',
-                        description: 'We saved the presentation for instant download.',
+                        message: 'We saved the presentation for instant download.',
                     });
                 }
             }
@@ -355,21 +352,21 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 });
             }
             else {
-                toast({
+                notifySuccess({
                     title: 'Presentation still generating',
-                    description: 'The presentation is taking longer than expected. You can download it from the proposal history once ready.',
+                    message: 'The presentation is taking longer than expected. You can download it from the proposal history once ready.',
                 });
             }
             if (!isReady && !isFailed) {
-                toast({
+                notifySuccess({
                     title: 'AI plan pending',
-                    description: 'We could not finish the AI proposal yet. Please try again in a few minutes.',
+                    message: 'We could not finish the AI proposal yet. Please try again in a few minutes.',
                 });
             }
             else if (!isFailed) {
-                toast({
+                notifySuccess({
                     title: 'Proposal ready',
-                    description: 'Your AI-generated recommendations are ready for review.',
+                    message: 'Your AI-generated recommendations are ready for review.',
                 });
             }
             await refreshProposals();
@@ -418,7 +415,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         setLastSubmissionSnapshot(null);
         setAutosaveStatus('idle');
         if (isPreviewMode) {
-            toast({ title: 'Editing restored', description: 'Your preview responses have been reloaded.' });
+            notifyInfo({ title: 'Editing restored', message: 'Your preview responses have been reloaded.' });
             return;
         }
         try {
@@ -436,7 +433,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 lastAutosaveAtMs: timestamp,
             });
             await refreshProposals();
-            toast({ title: 'Editing restored', description: 'Your previous responses have been reloaded.' });
+            notifySuccess({ title: 'Editing restored', message: 'Your previous responses have been reloaded.' });
         }
         catch (error: unknown) {
             logError(error, 'useProposalSubmission:handleContinueEditingFromSnapshot');
@@ -476,16 +473,15 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 await refreshProposals();
                 const deckWarnings = getDeckWarnings(activeProposal.presentationDeck);
                 if (deckWarnings?.length) {
-                    toast({
+                    notifyWarning({
                         title: 'Presentation ready with warnings',
-                        description: deckWarnings.join('. '),
-                        variant: 'default',
+                        message: deckWarnings.join('. '),
                     });
                 }
                 else {
-                    toast({
+                    notifySuccess({
                         title: 'Presentation ready!',
-                        description: 'Your slide deck has been generated and is ready for download.',
+                        message: 'Your slide deck has been generated and is ready for download.',
                     });
                 }
                 return;
@@ -520,16 +516,15 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                     await refreshProposals();
                     const deckWarnings = getDeckWarnings(currentProposal.presentationDeck);
                     if (deckWarnings?.length) {
-                        toast({
+                        notifyWarning({
                             title: 'Presentation ready with warnings',
-                            description: deckWarnings.join('. '),
-                            variant: 'default',
+                            message: deckWarnings.join('. '),
                         });
                     }
                     else {
-                        toast({
+                        notifySuccess({
                             title: 'Presentation ready!',
-                            description: 'Your slide deck has been generated and is ready for download.',
+                            message: 'Your slide deck has been generated and is ready for download.',
                         });
                     }
                     return;
@@ -546,9 +541,9 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                     await new Promise((resolve) => setTimeout(resolve, pollInterval));
                     return pollRecheckDeck(attempt + 1);
                 }
-                toast({
+                notifySuccess({
                     title: 'Still processing',
-                    description: 'The presentation is still being generated. Please try again in a few moments.',
+                    message: 'The presentation is still being generated. Please try again in a few moments.',
                 });
             };
             await pollRecheckDeck(0);

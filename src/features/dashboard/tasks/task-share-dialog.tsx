@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { useState, useCallback } from 'react';
 import { Link2, Check, Copy, Mail, Share2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -8,7 +8,6 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Badge } from '@/shared/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
-import { useToast } from '@/shared/ui/use-toast';
 import { cn } from '@/lib/utils';
 import type { TaskRecord } from '@/types/tasks';
 type TaskShareDialogProps = {
@@ -21,14 +20,13 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
     const [copied, setCopied] = useState(false);
     const [emailInput, setEmailInput] = useState('');
     const [sharedWith, setSharedWith] = useState<string[]>(task.sharedWith ?? []);
-    const { toast } = useToast();
     const taskUrl = typeof window !== 'undefined'
         ? `${window.location.origin}${window.location.pathname}?taskId=${task.id}`
         : '';
     const handleCopyLink = () => {
         navigator.clipboard.writeText(taskUrl);
         setCopied(true);
-        toast({ title: 'Link copied to clipboard' });
+        notifySuccess({ message: 'Link copied to clipboard' });
         setTimeout(() => setCopied(false), 2000);
     };
     const handleAddEmail = () => {
@@ -55,7 +53,7 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
         setSharedWith(newSharedWith);
         setEmailInput('');
         onShareUpdate?.(newSharedWith);
-        toast({ title: 'Shared with ' + email });
+        notifySuccess({ message: 'Shared with ' + email });
     };
     const handleRemoveEmail = (email: string) => {
         const newSharedWith = sharedWith.filter(e => e !== email);

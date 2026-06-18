@@ -3,7 +3,6 @@ import { useRouter } from '@/shared/ui/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ProposalDraft } from '@/types/proposals';
 import type { ProposalFormData } from '@/lib/proposals';
-import { useToast } from '@/shared/ui/use-toast';
 import { can } from '@/lib/access-control/dashboard-access';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
@@ -23,7 +22,6 @@ import { useProposalSubmission } from './use-proposal-submission';
 import { useProposalWizard } from './use-proposal-wizard';
 export function useProposalsPageContent() {
     const { push } = useRouter();
-    const { toast } = useToast();
     const { user } = useAuth();
     const { selectedClient, selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
@@ -174,7 +172,6 @@ export function useProposalsPageContent() {
         allowInInput: true,
     });
     const { handleSelectTemplate, handleVersionRestored, handleStartProposal, handleResumeProposalInModal, handleContinueEditingInModal, handlePreviewRefresh, handlePreviewRequestDelete, handlePreviewDownloadDeck, } = useProposalPageInteractions({
-        toast,
         routerPush: push,
         setIsWizardOpen,
         setFormState,

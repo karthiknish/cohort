@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useMemo, useReducer } from 'react';
 import { Hash, LoaderCircle, Lock, Plus, Users } from 'lucide-react';
@@ -11,7 +11,6 @@ import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
-import { useToast } from '@/shared/ui/use-toast';
 const CREATE_CHANNEL_DEFAULT_TRIGGER = (<DialogTrigger asChild>
     <Button className="gap-2">
       <Plus className="size-4"/>
@@ -129,7 +128,6 @@ function ChannelMemberOptionRow({ checked, disabled = false, member, onToggle, }
     </div>);
 }
 export function CreateChannelDialog({ workspaceId, userId, teamMembers = EMPTY_TEAM_MEMBERS, onCreate, trigger, }: CreateChannelDialogProps) {
-    const { toast } = useToast();
     const [{ open, channelName, description, visibility, selectedMemberIds, isCreating }, dispatch] = useReducer(createChannelDialogReducer, INITIAL_CREATE_CHANNEL_DIALOG_STATE);
     const sortedMembers = sortMembers(teamMembers);
     const resetForm = () => {
@@ -189,9 +187,9 @@ export function CreateChannelDialog({ workspaceId, userId, teamMembers = EMPTY_T
                 visibility,
                 memberIds: selectedMemberIds,
             });
-            toast({
+            notifySuccess({
                 title: 'Channel created',
-                description: `#${normalizedName} is ready for collaboration.`,
+                message: `#${normalizedName} is ready for collaboration.`,
             });
             resetForm();
             dispatch({ type: 'setOpen', open: false });
@@ -295,12 +293,12 @@ export function CreateChannelDialog({ workspaceId, userId, teamMembers = EMPTY_T
       </DialogContent>
     </Dialog>);
 }
+const QUICK_CREATE_TRIGGER = (<DialogTrigger asChild>
+    <Button size="sm" className="gap-2">
+      <Plus className="size-4"/>
+      Create channel
+    </Button>
+  </DialogTrigger>);
 export function QuickCreateChannelButton(props: Omit<CreateChannelDialogProps, 'trigger'>) {
-    const trigger = (<DialogTrigger asChild>
-        <Button size="sm" className="gap-2">
-          <Plus className="size-4"/>
-          Create channel
-        </Button>
-      </DialogTrigger>);
-    return (<CreateChannelDialog {...props} trigger={trigger}/>);
+    return (<CreateChannelDialog {...props} trigger={QUICK_CREATE_TRIGGER}/>);
 }

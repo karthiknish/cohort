@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { useCallback, useMemo, useReducer } from 'react';
 import { Filter, X, Save } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -10,7 +10,6 @@ import { ResponsiveOverlay } from '@/shared/ui/responsive-overlay';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { Badge } from '@/shared/ui/badge';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/shared/ui/use-toast';
 type FilterValue = string | number | null | string[];
 type FilterMap = Record<string, FilterValue>;
 function getStringFilterValue(value: FilterValue | undefined): string {
@@ -133,7 +132,6 @@ function advancedFilterReducer(state: AdvancedFilterState, action: AdvancedFilte
  * Advanced filtering panel with saved configurations
  */
 export function AdvancedFilter({ availableFilters = EMPTY_AVAILABLE_FILTERS, onFilterChange, onSortChange, activeFiltersCount = 0, savedFilters = EMPTY_SAVED_FILTERS, onSaveFilter, onDeleteFilter, className, }: AdvancedFilterProps) {
-    const { toast } = useToast();
     const [state, dispatch] = useReducer(advancedFilterReducer, undefined, createInitialAdvancedFilterState);
     const { open, currentFilters, filterName, sortBy, sortOrder } = state;
     const activeFilterCount = Object.keys(currentFilters).length + activeFiltersCount;
@@ -204,9 +202,9 @@ export function AdvancedFilter({ availableFilters = EMPTY_AVAILABLE_FILTERS, onF
         };
         onSaveFilter?.(config);
         dispatch({ type: 'resetFilterName' });
-        toast({
+        notifySuccess({
             title: 'Filter saved',
-            description: `Your filter "${filterName}" has been saved.`,
+            message: `Your filter "${filterName}" has been saved.`,
         });
     };
     const handleOpenFilters = () => {

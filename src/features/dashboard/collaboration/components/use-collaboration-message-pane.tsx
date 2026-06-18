@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import type { ChangeEvent, ClipboardEvent, DragEvent } from 'react';
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { TaskCreationModal } from '@/features/dashboard/tasks/task-creation-modal';
 import type { CollaborationMessage } from '@/types/collaboration';
 import type { TaskRecord } from '@/types/tasks';
@@ -17,7 +17,6 @@ import { INITIAL_MESSAGE_PANE_STATE, MESSAGE_PANE_MAX_PREVIEW_LENGTH, messagePan
 import type { CollaborationMessagePaneProps } from './message-pane-types';
 export function useCollaborationMessagePane({ channel, channelMessages, visibleMessages, channelParticipants, messagesError, onRetryMessages, messagesRetrying, isLoading, onLoadMore, canLoadMore = false, loadingMore = false, messageInput, onMessageInputChange, messageSearchQuery, onMessageSearchChange, onSendMessage, sending, isSendDisabled, pendingAttachments, onAddAttachments, onRemoveAttachment, uploading, typingParticipants, onComposerFocus, onComposerBlur, onEditMessage, onDeleteMessage, onToggleReaction, messageUpdatingId, messageDeletingId, messagesEndRef, currentUserId, currentUserRole, threadMessagesByRootId, threadNextCursorByRootId, threadLoadingByRootId, threadErrorsByRootId, onLoadThreadReplies, onLoadMoreThreadReplies, onClearThreadReplies, reactionPendingByMessage, }: CollaborationMessagePaneProps) {
     'use no memo';
-    const { toast } = useToast();
     const [paneState, dispatch] = useReducer(messagePaneReducer, INITIAL_MESSAGE_PANE_STATE);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const { editingMessageId, editingValue, replyingToMessage, expandedThreadIds, confirmingDeleteMessageId, taskCreationModalOpen, selectedMessageForTask, } = paneState;
@@ -164,9 +163,9 @@ export function useCollaborationMessagePane({ channel, channelMessages, visibleM
         dispatch({ type: 'open-task-modal', message });
     };
     const handleTaskCreated = (task: TaskRecord) => {
-        toast({
+        notifySuccess({
             title: 'Task created',
-            description: task.title ? `"${task.title}" was added from this message.` : 'The task was added from this message.',
+            message: task.title ? `"${task.title}" was added from this message.` : 'The task was added from this message.',
         });
     };
     const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {

@@ -1,10 +1,9 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { useCallback, useMemo, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
-import { useToast } from '@/shared/ui/use-toast';
 import { customFormulasApi } from '@/lib/convex-api';
 import { extractFormulaVariables, safeEvaluateFormula } from '@/lib/metrics';
 // =============================================================================
@@ -124,7 +123,6 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
     const { isPreviewMode = false } = options;
     const { user } = useAuth();
     const { selectedClientId } = useClientContext();
-    const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const formulasResult = useQuery(customFormulasApi.listByWorkspace, !isPreviewMode && selectedClientId ? { workspaceId: selectedClientId } : 'skip');
@@ -181,7 +179,7 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
                 outputMetric: input.outputMetric,
                 createdBy: user.id,
             });
-            toast({ title: 'Formula Created', description: `"${input.name}" saved successfully` });
+            notifySuccess({ title: 'Formula Created', message: `"${input.name}" saved successfully` });
             const created = formulasFromQuery.find((f) => f.formulaId === legacyId) ?? null;
             return created;
         }
@@ -220,7 +218,7 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
                 outputMetric: input.outputMetric,
                 isActive: input.isActive,
             });
-            toast({ title: 'Formula Updated' });
+            notifySuccess({ message: 'Formula Updated' });
         }
         catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to update formula';
@@ -236,7 +234,7 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
             return;
         try {
             await removeFormulaMutation({ workspaceId: selectedClientId, legacyId: formulaId });
-            toast({ title: 'Formula Deleted' });
+            notifySuccess({ message: 'Formula Deleted' });
         }
         catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to delete formula';

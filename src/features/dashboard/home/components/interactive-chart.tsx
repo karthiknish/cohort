@@ -7,7 +7,7 @@ import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Card, CardContent } from '@/shared/ui/card';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { CHART_COLORS, GRAYS } from '@/lib/colors';
 import { InteractiveChartHeader, InteractiveChartRenderer, } from './interactive-chart-sections';
 export type ChartType = 'line' | 'bar' | 'area' | 'pie';
@@ -77,7 +77,6 @@ function MetricTooltipContent({ active, payload, metrics, }: {
  * Interactive chart component with multiple chart types and export
  */
 export function InteractiveChart({ data, title = 'Performance Chart', description, dataKey = 'value', xAxisKey = 'date', valueFormatter = DEFAULT_VALUE_FORMATTER, className, height = 350, onExport, showExport = true, showRefresh = false, onRefresh, isRefreshing = false, }: InteractiveChartProps) {
-    const { toast } = useToast();
     const [chartType, setChartType] = useState<ChartType>('line');
     const [timeRange, setTimeRange] = useState<TimeRange>('30d');
     // Filter data by time range
@@ -143,7 +142,7 @@ export function InteractiveChart({ data, title = 'Performance Chart', descriptio
                     ]),
                     charts: chartSpec ? [chartSpec] : [],
                 });
-                toast({ title: 'Exported as Excel', description: 'Your data has been downloaded.' });
+                notifySuccess({ title: 'Exported as Excel', message: 'Your data has been downloaded.' });
             }
             else if (format === 'json') {
                 // Export as JSON
@@ -155,16 +154,16 @@ export function InteractiveChart({ data, title = 'Performance Chart', descriptio
                 link.download = `${title.replace(/\s+/g, '-').toLowerCase()}-${timeRange}.json`;
                 link.click();
                 URL.revokeObjectURL(url);
-                toast({ title: 'Exported as JSON', description: 'Your data has been downloaded.' });
+                notifySuccess({ title: 'Exported as JSON', message: 'Your data has been downloaded.' });
             }
             else if (format === 'png') {
                 // Export chart as PNG using html2canvas
                 const container = document.querySelector('.chart-container');
                 if (container) {
                     // This would require html2canvas library
-                    toast({
+                    notifySuccess({
                         title: 'PNG export',
-                        description: 'Chart image download requires html2canvas library.',
+                        message: 'Chart image download requires html2canvas library.',
                     });
                 }
             }

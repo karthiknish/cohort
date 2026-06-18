@@ -1,7 +1,6 @@
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useState, useCallback, useRef, useEffect, useEffectEvent, useReducer } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useQuery, useMutation } from 'convex/react';
@@ -116,7 +115,6 @@ type ProposalRow = {
 };
 export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposalDraftsReturn {
     const { isPreviewMode, formState, currentStep, hasPersistableData, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange, steps, } = options;
-    const { toast } = useToast();
     const { user, isSyncing, authError } = useAuth();
     const { selectedClient, selectedClientId } = useClientContext();
     const workspaceId = user?.agencyId ?? null;
@@ -174,7 +172,6 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     const lastBootstrapKeyRef = useRef<string | null>(null);
     const lastSavedSnapshotRef = useRef<string | null>(null);
     const [lastSavedSnapshotKey, setLastSavedSnapshotKey] = useState<string | null>(null);
-    const toastRef = useRef(toast);
     const onFormStateChangeRef = useRef(onFormStateChange);
     const onStepChangeRef = useRef(onStepChange);
     const onSubmittedChangeRef = useRef(onSubmittedChange);
@@ -185,7 +182,6 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         draftIdRef.current = draftId;
     }, [draftId]);
     useEffect(() => {
-        toastRef.current = toast;
         onFormStateChangeRef.current = onFormStateChange;
         onStepChangeRef.current = onStepChange;
         onSubmittedChangeRef.current = onSubmittedChange;
@@ -199,7 +195,6 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         onPresentationDeckChange,
         onStepChange,
         onSubmittedChange,
-        toast,
     ]);
     const markSnapshotSaved = (snapshotKey: string) => {
         lastSavedSnapshotRef.current = snapshotKey;
@@ -227,9 +222,9 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             return null;
         }
         if (isCreatingDraft) {
-            toast({
+            notifySuccess({
                 title: 'Preparing proposal',
-                description: 'Please wait while we prepare your proposal for generation.',
+                message: 'Please wait while we prepare your proposal for generation.',
             });
             return null;
         }
@@ -302,9 +297,9 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             markSnapshotSaved(currentSnapshotKey);
             setAutosaveStatus('saved');
             if (saveOptions?.showToast) {
-                toast({
+                notifySuccess({
                     title: 'Draft saved',
-                    description: 'Your proposal changes are saved.',
+                    message: 'Your proposal changes are saved.',
                 });
             }
         }
@@ -329,9 +324,9 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             return;
         }
         if (isCreatingDraft) {
-            toast({
+            notifySuccess({
                 title: 'Preparing proposal',
-                description: 'Please wait for the current draft to finish initializing.',
+                message: 'Please wait for the current draft to finish initializing.',
             });
             return;
         }
@@ -369,9 +364,9 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             if (workspaceId) {
                 trackDraftCreated(workspaceId, newDraftId, selectedClientId, selectedClient?.name).catch(console.error);
             }
-            toast({
+            notifySuccess({
                 title: 'New proposal started',
-                description: selectedClient?.name
+                message: selectedClient?.name
                     ? `Working on a fresh plan for ${selectedClient.name}.`
                     : 'You can begin filling out the proposal steps.',
             });
@@ -442,7 +437,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                     clientId: selectedClientId,
                 }));
             }
-            toast({ title: 'Proposal deleted', description: 'The proposal has been removed.' });
+            notifySuccess({ title: 'Proposal deleted', message: 'The proposal has been removed.' });
         }
         catch (err: unknown) {
             logError(err, 'useProposalDrafts:handleDeleteProposal');

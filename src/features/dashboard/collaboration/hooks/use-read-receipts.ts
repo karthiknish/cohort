@@ -4,7 +4,6 @@ import { useRef, useEffect, useEffectEvent } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { collaborationApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
-import { useToast } from '@/shared/ui/use-toast';
 import type { CollaborationMessage } from '@/types/collaboration';
 interface UseReadReceiptsOptions {
     workspaceId: string | null;
@@ -17,7 +16,6 @@ interface UseReadReceiptsOptions {
     enabled?: boolean;
 }
 export function useReadReceipts({ workspaceId, userId, channelId, channelType, clientId, projectId, messages, enabled = true, }: UseReadReceiptsOptions) {
-    const { toast } = useToast();
     const markAsRead = useMutation(collaborationApi.markAsRead);
     const markMultipleAsRead = useMutation(collaborationApi.markMultipleAsRead);
     const markChannelAsRead = useMutation(collaborationApi.markChannelAsRead);

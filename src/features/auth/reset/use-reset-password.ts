@@ -2,12 +2,11 @@
 import { useCallback, useEffect, useReducer } from 'react';
 import { useRouter } from '@/shared/ui/navigation';
 import { useAuth } from '@/shared/contexts/auth-context';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils';
 import { calculatePasswordStrength, initialResetPasswordFormState, initialVerificationState, resetPasswordFormReducer, verificationReducer, type ResetPasswordPageClientProps, } from './reset-password-types';
 export function useResetPassword({ oobCode }: ResetPasswordPageClientProps) {
     const { push } = useRouter();
-    const { toast } = useToast();
     const { verifyPasswordResetCode, confirmPasswordReset } = useAuth();
     const [verificationState, dispatchVerification] = useReducer(verificationReducer, initialVerificationState);
     const [formState, dispatchForm] = useReducer(resetPasswordFormReducer, initialResetPasswordFormState);
@@ -70,9 +69,9 @@ export function useResetPassword({ oobCode }: ResetPasswordPageClientProps) {
         void confirmPasswordReset(oobCode, newPassword)
             .then(() => {
             dispatchVerification({ type: 'success' });
-            toast({
+            notifySuccess({
                 title: 'Password updated',
-                description: 'You can now sign in with your new password.',
+                message: 'You can now sign in with your new password.',
             });
         })
             .catch((error: unknown) => {

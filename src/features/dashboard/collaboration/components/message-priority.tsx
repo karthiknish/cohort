@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
 import { Badge } from '@/shared/ui/badge';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 export type MessagePriority = 'none' | 'low' | 'medium' | 'high' | 'urgent';
 interface PriorityConfig {
     value: MessagePriority;
@@ -60,14 +60,13 @@ interface MessagePrioritySelectorProps {
  * Component for selecting/changing message priority
  */
 export function MessagePrioritySelector({ priority, onPriorityChange, disabled = false, size = 'md', variant = 'dropdown', className, }: MessagePrioritySelectorProps) {
-    const { toast } = useToast();
     const config = PRIORITY_CONFIGS[priority];
     const handlePriorityChange = (newPriority: MessagePriority) => {
         onPriorityChange(newPriority);
         const newConfig = PRIORITY_CONFIGS[newPriority];
-        toast({
+        notifySuccess({
             title: `Priority changed to ${newConfig.label}`,
-            description: newPriority !== 'none' ? 'This message will appear more prominently.' : undefined,
+            message: newPriority !== 'none' ? 'This message will appear more prominently.' : 'Priority removed.',
         });
     };
     const sizeClasses = {

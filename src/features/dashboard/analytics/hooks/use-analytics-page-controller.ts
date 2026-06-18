@@ -3,7 +3,6 @@ import { useAction, useMutation, useQuery } from 'convex/react';
 import { differenceInDays, endOfDay, format, startOfDay } from 'date-fns';
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from '@/shared/ui/navigation';
-import { useToast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useCurrency } from '@/shared/contexts/preferences-context';
@@ -12,7 +11,7 @@ import { ApiClientError, apiFetch } from '@/lib/api-client';
 import { analyticsIntegrationsApi } from '@/lib/convex-api';
 import { asErrorMessage, isIntegrationScopeAppError, logError, mapGoogleAnalyticsIntegrationError } from '@/lib/convex-errors';
 import { getPreviewAnalyticsMetrics } from '@/lib/preview-data';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import type { AnalyticsDateRange } from '../components/analytics-date-range-picker';
 import { buildAnalyticsMoneyDisplay } from '../lib/analytics-currency';
 import { buildGoogleAnalyticsStory } from '../lib/google-analytics-story';
@@ -94,7 +93,6 @@ function mapOauthErrorToMessage(code: string | null, fallback: string | null): s
 }
 export function useAnalyticsPageController() {
     const { selectedClientId } = useClientContext();
-    const { toast } = useToast();
     const { isPreviewMode } = usePreview();
     const { user } = useAuth();
     const { replace } = useRouter();
@@ -252,7 +250,7 @@ export function useAnalyticsPageController() {
             }));
         });
         if (oauthSuccess) {
-            toast({ title: 'Google Analytics connected', description: 'Select a property to finish setup.' });
+            notifySuccess({ title: 'Google Analytics connected', message: 'Select a property to finish setup.' });
             void loadGoogleAnalyticsPropertyOptions().catch((error) => {
                 const mappedMessage = mapGoogleAnalyticsIntegrationError(error);
                 requestAnimationFrame(() => {
@@ -267,7 +265,7 @@ export function useAnalyticsPageController() {
                 message: mapOauthErrorToMessage(oauthError, message),
             });
         }
-    }, [loadGoogleAnalyticsPropertyOptions, pathname, replace, toast, urlSearchParams]);
+    }, [loadGoogleAnalyticsPropertyOptions, pathname, replace, urlSearchParams]);
     const gaPropertyAutoLoadRef = useRef(false);
     const autoLoadGoogleAnalyticsProperties = useEffectEvent(() => {
         if (!gaNeedsPropertySelection || isPreviewMode) {
@@ -318,7 +316,7 @@ export function useAnalyticsPageController() {
     const selectedRangeDays = Math.max(differenceInDays(dateRange.end, dateRange.start) + 1, 1);
     const handleConnectGoogleAnalytics = async () => {
         if (isPreviewMode) {
-            toast({ title: 'Preview mode', description: 'Google Analytics connection is disabled in preview mode.' });
+            notifyInfo({ title: 'Preview mode', message: 'Google Analytics connection is disabled in preview mode.' });
             return;
         }
         if (typeof window === 'undefined')
@@ -362,7 +360,7 @@ export function useAnalyticsPageController() {
     };
     const handleSyncGoogleAnalytics = () => {
         if (isPreviewMode) {
-            toast({ title: 'Preview mode', description: 'Google Analytics sync is disabled in preview mode.' });
+            notifyInfo({ title: 'Preview mode', message: 'Google Analytics sync is disabled in preview mode.' });
             return;
         }
         if (!gaConnected) {
@@ -378,9 +376,9 @@ export function useAnalyticsPageController() {
             .then((result) => {
             const propertyName = result?.propertyName;
             const writtenDays = result?.written ?? 0;
-            toast({
+            notifySuccess({
                 title: 'Google Analytics synced',
-                description: propertyName ? `Imported ${writtenDays} day(s) from ${propertyName}.` : `Imported ${writtenDays} day(s).`,
+                message: propertyName ? `Imported ${writtenDays} day(s) from ${propertyName}.` : `Imported ${writtenDays} day(s).`,
             });
             return refreshGoogleAnalyticsStatus();
         })
@@ -430,7 +428,7 @@ export function useAnalyticsPageController() {
             const description = typeof payload.accountName === 'string' && payload.accountName.length > 0
                 ? `Using property ${payload.accountName}.`
                 : 'Property linked successfully.';
-            toast({ title: 'Google Analytics setup complete', description });
+            notifySuccess({ title: 'Google Analytics setup complete', message: description });
             setGaSetupDialogOpen(false);
             return refreshGoogleAnalyticsStatus().then(() => mutateMetrics());
         })
@@ -477,9 +475,9 @@ export function useAnalyticsPageController() {
             return refreshGoogleAnalyticsStatus().then(() => deletedMetrics);
         })
             .then((deletedMetrics) => {
-            toast({
+            notifySuccess({
                 title: 'Google Analytics disconnected',
-                description: options.clearHistoricalData
+                message: options.clearHistoricalData
                     ? `Disconnected and removed ${deletedMetrics} historical metric row(s).`
                     : 'Disconnected. Historical metrics were kept.',
             });

@@ -3,7 +3,7 @@ import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useReducer } from 'react';
 import { useAction } from 'convex/react';
 import { Card } from '@/shared/ui/card';
-import { toast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { adsCreativesApi } from '@/lib/convex-api';
@@ -96,9 +96,9 @@ export function CreativesCard({ providerId, providerName, isConnected, maxMetaCr
         dispatch({ type: 'setCompareOpen', value: open });
     };
     const handlePromoteCreative = () => {
-        toast({
+        notifySuccess({
             title: 'A/B Test Action',
-            description: 'Creative promoted to primary. Syncing with platform...',
+            message: 'Creative promoted to primary. Syncing with platform...',
         });
     };
     const fetchCreatives = async () => {

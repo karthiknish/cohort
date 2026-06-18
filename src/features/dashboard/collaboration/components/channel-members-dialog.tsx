@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import type { Channel } from '../types';
 type WorkspaceMemberOption = {
     id: string;
@@ -90,7 +90,6 @@ function ChannelMembersDialogForm({ channel, teamMembers, onOpenChange, onSave, 
     }) => Promise<void> | void;
     onDelete?: () => Promise<void> | void;
 }) {
-    const { toast } = useToast();
     const [state, dispatch] = useReducer(channelMembersDialogFormReducer, channel, createInitialChannelMembersDialogFormState);
     const { selectedMemberIds, visibility, saving, deleting, confirmDeleteOpen } = state;
     const sortedMembers = teamMembers.toSorted((a, b) => a.name.localeCompare(b.name));
@@ -116,7 +115,7 @@ function ChannelMembersDialogForm({ channel, teamMembers, onOpenChange, onSave, 
             visibility,
         }))
             .then(() => {
-            toast({ title: 'Channel updated', description: 'Access settings were saved.' });
+            notifySuccess({ title: 'Channel updated', message: 'Access settings were saved.' });
             onOpenChange(false);
         })
             .catch((error) => {

@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
-import { toast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import type { ObjectiveComponentProps } from './types';
 type LeadFormRow = {
     id: string;
@@ -147,10 +147,9 @@ export function LeadsObjectiveSection({ formData, onChange, disabled, providerId
         if (!canUseMetaApi || !metaContext?.workspaceId || !metaContext.pageId)
             return;
         if (!newFormName.trim() || !privacyPolicyUrl.trim()) {
-            toast({
+            notifySuccess({
                 title: 'Missing fields',
-                description: 'Form name and privacy policy URL are required.',
-                variant: 'destructive',
+                message: 'Form name and privacy policy URL are required.',
             });
             return;
         }
@@ -169,7 +168,7 @@ export function LeadsObjectiveSection({ formData, onChange, disabled, providerId
                     type: 'prependForm',
                     value: { id: result.formId, name: newFormName.trim(), status: 'ACTIVE' },
                 });
-                toast({ title: 'Lead form created', description: `"${newFormName.trim()}" is ready to use.` });
+                notifySuccess({ title: 'Lead form created', message: `"${newFormName.trim()}" is ready to use.` });
             }
             dispatch({ type: 'resetCreateForm' });
         }

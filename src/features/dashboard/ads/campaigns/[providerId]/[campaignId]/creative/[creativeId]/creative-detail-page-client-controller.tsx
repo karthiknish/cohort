@@ -1,10 +1,9 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useEffect, useEffectEvent, useMemo, useReducer, useRef } from 'react';
 import { useBlocker } from '@tanstack/react-router';
 import { useParams } from '@/shared/ui/navigation';
-import { toast } from '@/shared/ui/use-toast';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { usePreview } from '@/shared/contexts/preview-context';
@@ -223,9 +222,9 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
         void copyPromise
             .then(() => {
             dispatch({ type: 'setCopiedField', value: field });
-            toast({
+            notifySuccess({
                 title: 'Copied to clipboard',
-                description: 'Text has been copied successfully.',
+                message: 'Text has been copied successfully.',
             });
             setTimeout(() => dispatch({ type: 'setCopiedField', value: null }), 2000);
         })
@@ -303,9 +302,9 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
                     },
                 });
             }
-            toast({
+            notifyInfo({
                 title: kind === 'headlines' ? 'Sample headlines added' : 'Sample captions added',
-                description: 'Preview mode generated local-only sample variants for this session.',
+                message: 'Preview mode generated local-only sample variants for this session.',
             });
             setGenerating(false);
             return;
@@ -351,7 +350,7 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
             const captions = result.captions;
             if (kind === 'headlines') {
                 if (headlines.length === 0) {
-                    toast({ title: 'No new headlines', description: 'Try again with different inputs.' });
+                    notifySuccess({ title: 'No new headlines', message: 'Try again with different inputs.' });
                     return;
                 }
                 dispatch({
@@ -371,11 +370,11 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
                         return [...base, ...additions];
                     },
                 });
-                toast({ title: 'Generated headlines', description: `Added ${headlines.length} new variant(s).` });
+                notifySuccess({ title: 'Generated headlines', message: `Added ${headlines.length} new variant(s).` });
                 return;
             }
             if (captions.length === 0) {
-                toast({ title: 'No new captions', description: 'Try again with different inputs.' });
+                notifySuccess({ title: 'No new captions', message: 'Try again with different inputs.' });
                 return;
             }
             dispatch({
@@ -395,7 +394,7 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
                     return [...base, ...additions];
                 },
             });
-            toast({ title: 'Generated captions', description: `Added ${captions.length} new variant(s).` });
+            notifySuccess({ title: 'Generated captions', message: `Added ${captions.length} new variant(s).` });
         })
             .catch((error) => {
             reportConvexFailure({
@@ -434,9 +433,9 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
                 },
             });
             dispatch({ type: 'setIsEditing', value: false });
-            toast({
+            notifyInfo({
                 title: 'Sample creative updated',
-                description: 'Preview mode applied your edits locally for this session only.',
+                message: 'Preview mode applied your edits locally for this session only.',
             });
             return;
         }
@@ -513,9 +512,9 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
                 });
             }
             void fetchCreative();
-            toast({
+            notifySuccess({
                 title: 'Changes saved',
-                description: 'Your creative has been updated successfully.',
+                message: 'Your creative has been updated successfully.',
             });
             dispatch({ type: 'setIsEditing', value: false });
         })

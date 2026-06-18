@@ -1,7 +1,7 @@
 'use client';
 import { usePathname, useRouter } from '@/shared/ui/navigation';
 import { useCallback, useMemo, useState } from 'react';
-import { useToast } from '@/shared/ui/use-toast';
+import { notifySuccess } from '@/lib/notifications';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
@@ -21,7 +21,6 @@ export function useProjectsPageController() {
     const { user } = useAuth();
     const { selectedClient, selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
-    const { toast } = useToast();
     const workspaceId = user?.agencyId ?? null;
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [searchInput, setSearchInput] = useState('');
@@ -171,9 +170,9 @@ export function useProjectsPageController() {
     })();
     const handleRefreshProjects = () => {
         resetProjectsPagination();
-        toast({
+        notifySuccess({
             title: 'Projects refreshed',
-            description: 'Fetching the latest project list.',
+            message: 'Fetching the latest project list.',
         });
     };
     return {

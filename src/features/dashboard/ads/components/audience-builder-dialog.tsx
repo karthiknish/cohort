@@ -1,12 +1,11 @@
 'use client';
 import { useMemo, useCallback, useReducer } from 'react';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useAction } from 'convex/react';
 import { Dialog, DialogContent, } from '@/shared/ui/dialog';
 import type { LocationMarker } from '@/shared/ui/location-map';
 import { asErrorMessage } from '@/lib/convex-errors';
-import { toast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { adsAudiencesApi } from '@/lib/convex-api';
@@ -223,9 +222,9 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
                 },
         })
             .then((result) => {
-            toast({
+            notifySuccess({
                 title: 'Success',
-                description: isMetaAudience
+                message: isMetaAudience
                     ? `Empty custom audience "${formData.name}" created. Upload customer lists in Meta Events Manager, then attach to ad set targeting.`
                     : result.message || `Audience "${formData.name}" created successfully.`,
             });

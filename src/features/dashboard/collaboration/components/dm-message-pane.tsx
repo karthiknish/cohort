@@ -2,7 +2,6 @@
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useMemo, useState } from 'react';
 import { asErrorMessage } from '@/lib/convex-errors';
-import { useToast } from '@/shared/ui/use-toast';
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages';
 import type { UnifiedMessage } from './message-list-types';
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types';
@@ -55,7 +54,6 @@ export function DMMessagePane({ conversation, messages, listState, onLoadMore, o
         pendingAttachments: false,
         uploadingAttachments: false,
     });
-    const { toast } = useToast();
     const [inputValue, setInputValue] = useState('');
     const header: MessagePaneHeaderInfo | null = (() => {
         if (!conversation) {

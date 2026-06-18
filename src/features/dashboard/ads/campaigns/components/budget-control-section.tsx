@@ -1,5 +1,5 @@
 'use client';
-import { notifyFailure } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useMemo, useState } from 'react';
 import { useAction } from 'convex/react';
@@ -10,7 +10,6 @@ import { CardContent } from '@/shared/ui/card';
 import { MotionCard } from '@/shared/ui/motion-primitives';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { toast } from '@/shared/ui/use-toast';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { adsCampaignsApi } from '@/lib/convex-api';
 import { logError } from '@/lib/convex-errors';
@@ -152,9 +151,9 @@ export function BudgetControlSection({ providerId, campaignId, clientId, isPrevi
             budgetMode: apiMode,
         })
             .then(() => {
-            toast({
+            notifySuccess({
                 title: 'Budget updated',
-                description: 'Changes will reflect after refresh.',
+                message: 'Changes will reflect after refresh.',
             });
             return onReloadCampaign?.();
         })
