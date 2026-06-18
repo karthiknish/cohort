@@ -138,6 +138,28 @@ function applySecurityHeaders(response: Response): Response {
   return response
 }
 
+/** TanStack request middleware `next()` returns ctx with `.response`, not a bare Response. */
+function resolveMiddlewareResponse(result: { response: Response } | Response): Response {
+  if (result instanceof Response) return result
+  return result.response
+}
+
+function finalizeMiddlewareResult<T extends { response: Response }>(
+  result: T | Response,
+  pathname: string,
+  extraHeaders?: Record<string, string>,
+): T | Response {
+  const response = resolveMiddlewareResponse(result)
+  response.headers.set('x-pathname', pathname)
+  if (extraHeaders) {
+    for (const [key, value] of Object.entries(extraHeaders)) {
+      response.headers.set(key, value)
+    }
+  }
+  applySecurityHeaders(response)
+  return result
+}
+
 /** Legacy redirect rules ported from next.config.ts `redirects()`. */
 function legacyRedirect(pathname: string): string | null {
   if (pathname === '/dashboard/activity') return '/for-you'
@@ -182,12 +204,10 @@ const securityMiddleware = createMiddleware().server(async ({ next, request }) =
 
   // Preview-mode header (was proxy.ts isPreviewRouteRequest).
   if (isPreviewRouteRequest(pathname, url.searchParams)) {
-    const previewResponse = await next()
-    const resolved =
-      previewResponse instanceof Response ? previewResponse : new Response(null, { status: 200 })
-    resolved.headers.set(PREVIEW_ROUTE_REQUEST_HEADER, '1')
-    resolved.headers.set('x-pathname', pathname)
-    return applySecurityHeaders(resolved)
+    const response = await next()
+    return finalizeMiddlewareResult(response, pathname, {
+      [PREVIEW_ROUTE_REQUEST_HEADER]: '1',
+    })
   }
 
   // API routes: block bad user-agents + Convex-backed rate limiting.
@@ -218,18 +238,17 @@ const securityMiddleware = createMiddleware().server(async ({ next, request }) =
 
     // Rate-limit passed — attach headers to the actual response.
     const response = await next()
-    const resolved =
-      response instanceof Response ? response : new Response(null, { status: 200 })
-    resolved.headers.set('x-pathname', pathname)
-    rateLimitHeaders.forEach((value, key) => resolved.headers.set(key, value))
-    return applySecurityHeaders(resolved)
+    const finalized = finalizeMiddlewareResult(response, pathname)
+    if (!(finalized instanceof Response)) {
+      rateLimitHeaders.forEach((value, key) => {
+        finalized.response.headers.set(key, value)
+      })
+    }
+    return finalized
   }
 
   const response = await next()
-  const resolved =
-    response instanceof Response ? response : new Response(null, { status: 200 })
-  resolved.headers.set('x-pathname', pathname)
-  return applySecurityHeaders(resolved)
+  return finalizeMiddlewareResult(response, pathname)
 })
 
 export const startInstance = createStart(() => ({
