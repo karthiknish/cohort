@@ -1,7 +1,7 @@
 'use client';
 import type { CellContext, ColumnDef, HeaderContext } from '@tanstack/react-table';
 import { CircleAlert, DollarSign, Pause, Play, RefreshCw, Trash2, TrendingUp } from 'lucide-react';
-import { createContext, use, useCallback, useMemo, ViewTransition, type ReactNode } from 'react';
+import { createContext, use, useCallback, useMemo, type ReactNode } from 'react';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { DataTableColumnHeader, VirtualizedDataTable } from '@/shared/ui/data-table';

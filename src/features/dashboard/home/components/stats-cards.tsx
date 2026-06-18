@@ -1,5 +1,6 @@
 import { Link } from '@/shared/ui/link';
-import { memo, startTransition, useCallback, useMemo, useState, ViewTransition } from 'react';
+import { memo, startTransition, useCallback, useMemo, useState } from 'react';
+import { ViewTransition } from '@/shared/ui/view-transition';
 import { ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardDescription } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';

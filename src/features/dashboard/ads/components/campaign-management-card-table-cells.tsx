@@ -1,6 +1,6 @@
 'use client';
 import type { CellContext, HeaderContext } from '@tanstack/react-table';
-import { ViewTransition } from 'react';
+import { ViewTransition } from '@/shared/ui/view-transition';
 import { formatMoney } from '@/constants/currencies';
 import { DataTableColumnHeader } from '@/shared/ui/data-table';
 import { toAdsProviderId } from '@/features/dashboard/ads/components/utils';

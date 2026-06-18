@@ -1,7 +1,7 @@
 'use client';
 import type { ReactNode } from 'react';
 import { usePathname } from '@/shared/ui/navigation';
-import { ViewTransition } from 'react';
+import { ViewTransition } from '@/shared/ui/view-transition';
 const DIRECTIONAL_TRANSITIONS = {
     'nav-forward': 'nav-forward',
     'nav-back': 'nav-back',

@@ -1,35 +1,14 @@
 'use client';
-import React, { type ReactNode, useCallback } from 'react';
+import { type ReactNode, useCallback } from 'react';
 import { Clock, Download, ExternalLink, FileText, Layout, LoaderCircle, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, } from 'lucide-react';
 import { Link } from '@/shared/ui/link';
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
+import { ViewTransition } from '@/shared/ui/view-transition';
 import { cn, formatRelativeTime } from '@/lib/utils';
 import type { ProposalDraft } from '@/types/proposals';
-type ViewTransitionComponent = React.ComponentType<{
-    children: ReactNode;
-    name: string;
-    share: string;
-    default?: 'none' | 'auto';
-}>;
-function MaybeViewTransition({ children, defaultType, name, share, }: {
-    children: ReactNode;
-    defaultType: 'none' | 'auto';
-    name: string;
-    share: string;
-}) {
-    const ViewTransition = (React as unknown as {
-        ViewTransition?: ViewTransitionComponent;
-    }).ViewTransition;
-    if (typeof ViewTransition !== 'function') {
-        return children;
-    }
-    return (<ViewTransition name={name} share={share} default={defaultType}>
-      {children}
-    </ViewTransition>);
-}
 function proposalStatusBadgeClass(status: ProposalDraft['status']): string {
     if (status === 'ready') {
         return cn(DASHBOARD_THEME.badges.base, DASHBOARD_THEME.badges.success);
@@ -134,12 +113,12 @@ export function ProposalHistoryRow({ canManage = true, deletingProposalId, onDow
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
         <div className="min-w-0 space-y-2 pl-0.5">
           <div className="flex flex-wrap items-center gap-2">
-            <MaybeViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" defaultType="none">
+            <ViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" default="none">
               <h4 className="truncate text-base font-semibold tracking-tight text-foreground">{displayName}</h4>
-            </MaybeViewTransition>
-            <MaybeViewTransition name={`proposal-status-${proposal.id}`} share="morph" defaultType="none">
+            </ViewTransition>
+            <ViewTransition name={`proposal-status-${proposal.id}`} share="morph" default="none">
               <span className={proposalStatusBadgeClass(proposal.status)}>{proposal.status}</span>
-            </MaybeViewTransition>
+            </ViewTransition>
             {isActiveDraft && proposal.status !== 'ready' ? (<Badge variant="outline" className="rounded-full border-warning/30 bg-warning/10 text-[10px] font-semibold uppercase tracking-wide text-warning">
                 Active draft
               </Badge>) : null}

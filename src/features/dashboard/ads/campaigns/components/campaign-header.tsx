@@ -1,5 +1,5 @@
 'use client';
-import { ViewTransition } from 'react';
+import { ViewTransition } from '@/shared/ui/view-transition';
 import { Megaphone, RefreshCw } from 'lucide-react';
 import { SvglBrandLogo, type SvglBrandSlug } from '@/shared/components/svgl-brand-logo';
 import { Badge } from '@/shared/ui/badge';

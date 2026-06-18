@@ -1,7 +1,8 @@
 'use client';
 import { Link } from '@/shared/ui/link';
 import { FileText, ArrowRight, Clock } from 'lucide-react';
-import React, { memo, ViewTransition } from 'react';
+import React, { memo } from 'react';
+import { ViewTransition } from '@/shared/ui/view-transition';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';

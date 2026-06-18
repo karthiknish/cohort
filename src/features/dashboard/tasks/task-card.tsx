@@ -1,5 +1,6 @@
 'use client';
-import { memo, useMemo, ViewTransition } from 'react';
+import { memo, useMemo } from 'react';
+import { ViewTransition } from '@/shared/ui/view-transition';
 import type { TaskRecord, TaskStatus } from '@/types/tasks';
 import { clickableCardClass, listItemEnterClass } from '@/lib/motion';
 import { cn } from '@/lib/utils';

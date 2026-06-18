@@ -2,7 +2,8 @@
 import { Link } from '@/shared/ui/link';
 import { useParams } from '@/shared/ui/navigation';
 import { Download, LoaderCircle, Presentation, Target, Layers, BarChart3, Rocket, Users, Lightbulb, Wallet, Calendar, Sparkles, Clock } from 'lucide-react';
-import { useMemo, ViewTransition } from 'react';
+import { useMemo } from 'react';
+import { ViewTransition } from '@/shared/ui/view-transition';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';

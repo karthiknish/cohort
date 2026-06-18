@@ -1,6 +1,7 @@
 'use client';
 import { Link } from '@/shared/ui/link';
-import { memo, useCallback, useMemo, ViewTransition } from 'react';
+import { memo, useCallback, useMemo } from 'react';
+import { ViewTransition } from '@/shared/ui/view-transition';
 import { Calendar, LoaderCircle, MessageSquare, Pencil, Tag, } from 'lucide-react';
 import type { ProjectRecord, ProjectStatus } from '@/types/projects';
 import { PROJECT_STATUSES } from '@/types/projects';

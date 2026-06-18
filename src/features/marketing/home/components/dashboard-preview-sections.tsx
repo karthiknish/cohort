@@ -1,7 +1,8 @@
 'use client';
 import { ArrowUpRight, Bot, BriefcaseBusiness, CalendarClock, Sparkles, TrendingUp, } from 'lucide-react';
 import { Link } from '@/shared/ui/link';
-import { ViewTransition, type MouseEvent } from 'react';
+import { type MouseEvent } from 'react';
+import { ViewTransition } from '@/shared/ui/view-transition';
 import { cn } from '@/lib/utils';
 import { DASHBOARD_VIEWS, EMPHASIZED_BAR_CLASSES, TONE_BADGE_CLASSES, TONE_DOT_CLASSES, type PreviewMetric, type PreviewView, } from './dashboard-preview-data';
 export function DashboardPreviewChrome() {
