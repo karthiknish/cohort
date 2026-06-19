@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, type ChangeEvent, type KeyboardEvent, type RefObject } from 'react';
 import { Link } from '@/shared/ui/link';
-import { Download, LoaderCircle, MessageSquare, Search, X } from 'lucide-react';
+import { Download, LoaderCircle, MessageCircle, MessageSquare, Search, X } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -94,13 +94,25 @@ export function EmptyChannelState() {
     </div>);
 }
 export function EmptyMessagesState() {
-    return (<div className="rounded-md border border-dashed border-muted/50 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
-      Start the conversation by posting the first update for this workspace.
+    return (<div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/50 bg-muted/10 p-8 text-center" role="status">
+      <div className="mb-3 rounded-full bg-muted/30 p-3">
+        <MessageCircle className="size-6 text-muted-foreground/50"/>
+      </div>
+      <h4 className="mb-1 text-sm font-semibold text-foreground">No messages yet</h4>
+      <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
+        Start the conversation by sending the first message.
+      </p>
     </div>);
 }
 export function NoSearchResultsState() {
-    return (<div className="rounded-md border border-dashed border-muted/50 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
-      No messages match your search.
+    return (<div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/50 bg-muted/10 p-8 text-center" role="status">
+      <div className="mb-3 rounded-full bg-muted/30 p-3">
+        <Search className="size-6 text-muted-foreground/50"/>
+      </div>
+      <h4 className="mb-1 text-sm font-semibold text-foreground">No results found</h4>
+      <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
+        No messages match your search. Try different keywords or clear the search.
+      </p>
     </div>);
 }
 export interface MessagesErrorStateProps {

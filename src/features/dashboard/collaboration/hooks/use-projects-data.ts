@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { useQuery } from 'convex/react';
 import { projectsApi } from '@/lib/convex-api';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { getPreviewProjects } from '@/lib/preview-data';
 import type { ProjectRecord } from '@/types/projects';
 import { PROJECT_STATUSES } from '@/types/projects';
@@ -37,6 +38,11 @@ export function useProjectsData({ workspaceId, userId, selectedClientId, isPrevi
             clientId: selectedClientId ?? undefined,
             limit: 100,
         }) as ProjectRow[] | undefined;
+    const projectsQueryError = useConvexQueryError({
+        data: projectsRealtime,
+        skipped: isPreviewMode || !workspaceId || !userId,
+        fallbackMessage: 'Unable to load projects.',
+    });
     const { projects, projectsLoading } = (() => {
         if (isPreviewMode) {
             return {
@@ -71,5 +77,5 @@ export function useProjectsData({ workspaceId, userId, selectedClientId, isPrevi
         }));
         return { projects: mapped, projectsLoading: false };
     })();
-    return { projects, projectsLoading };
+    return { projects, projectsLoading, projectsQueryError };
 }

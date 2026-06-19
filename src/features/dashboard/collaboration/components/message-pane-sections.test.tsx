@@ -69,6 +69,6 @@ describe('message pane sections', () => {
         expect(loadedMarkup).toContain('Load older messages');
         expect(loadedMarkup).toContain('Today');
         expect(loadedMarkup).toContain('Alex Kim');
-        expect(emptyMarkup).toContain('Start the conversation by posting the first update for this workspace.');
+        expect(emptyMarkup).toContain('Start the conversation by sending the first message.');
     });
 });

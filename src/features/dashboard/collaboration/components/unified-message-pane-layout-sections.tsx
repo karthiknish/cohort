@@ -1,6 +1,6 @@
 'use client';
 import { createElement, useCallback, useEffect, useEffectEvent, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type ReactNode, type RefObject, } from 'react';
-import { Send } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import type { ClientTeamMember } from '@/types/clients';
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
 import type { PendingAttachment } from '../hooks/types';
@@ -14,13 +14,13 @@ import { MessageSearchBar, NoSearchResultsState } from './message-pane-parts';
 import { UnifiedComposerSection, UnifiedConversationHeader } from './unified-message-pane-sections';
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types';
 export function UnifiedMessagePaneEmptyState() {
-    return (<div className="flex-1 flex items-center justify-center border-muted/40 h-full bg-background/50">
-      <div className="text-center p-8">
-        <div className="size-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-          <Send className="size-8 text-muted-foreground"/>
+    return (<div className="flex min-h-0 flex-1 items-center justify-center bg-background/50" role="status">
+      <div className="p-8 text-center">
+        <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-muted/50">
+          <MessageCircle className="size-8 text-muted-foreground"/>
         </div>
         <h3 className="text-lg font-medium text-foreground">Select a conversation</h3>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="mt-1 text-sm text-muted-foreground">
           Choose a conversation from the sidebar to start messaging
         </p>
       </div>

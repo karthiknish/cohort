@@ -2,6 +2,7 @@
 import { useCallback } from 'react';
 import { useConvex } from 'convex/react';
 import { collaborationApi } from '@/lib/convex-api';
+import { logError } from '@/lib/convex-errors';
 import type { CollaborationMessage } from '@/types/collaboration';
 import type { Channel } from '../types';
 import type { CrossChannelSearchQuery } from '../components/cross-channel-search';
@@ -71,7 +72,8 @@ export function useCrossChannelCollaborationSearch(workspaceId: string | null, c
                     });
                 }
             }
-            catch {
+            catch (error) {
+                logError(error, 'useCrossChannelCollaborationSearch:searchChannel');
                 // Skip channels the user cannot access.
             }
         }));

@@ -153,7 +153,6 @@ export function useAgentSend({ workspaceId, activeContext, messages, setMessages
     }) => {
         const now = Date.now();
         if (now - lastSubmitTimeRef.current < DEBOUNCE_MS) {
-            console.log('[useAgentMode] Debounced rapid submission');
             return;
         }
         lastSubmitTimeRef.current = now;

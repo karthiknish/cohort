@@ -151,10 +151,13 @@ export function ConversationListPane({ channelCount, dmCount, filteredItems, isL
               </div>))}
           </output>) : filteredItems.length === 0 ? (<div className="p-8 text-center">
             <Inbox className="mx-auto mb-3 size-12 text-muted-foreground/40"/>
-            <p className="text-sm text-muted-foreground">{searchQuery ? 'No conversations match your search.' : 'No conversations yet.'}</p>
+            <p className="text-sm text-muted-foreground">{searchQuery ? 'No conversations match your search.' : sourceFilter === 'channel' ? 'No channels yet.' : sourceFilter === 'direct_message' ? 'No direct messages yet.' : 'No conversations yet.'}</p>
             {sourceFilter === 'all' ? (<Button variant="outline" size="sm" className="mt-3" onClick={onNewDM}>
                 <Plus className="mr-1 size-4"/>
                 Start a conversation
+              </Button>) : sourceFilter === 'direct_message' ? (<Button variant="outline" size="sm" className="mt-3" onClick={onNewDM}>
+                <Plus className="mr-1 size-4"/>
+                Start a direct message
               </Button>) : null}
           </div>) : (<div className="space-y-1 p-2">
             {showRecentLabel ? (<div className="px-2 pb-1 pt-1">

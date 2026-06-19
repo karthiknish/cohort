@@ -1,5 +1,6 @@
 'use client';
 import { notifyFailure, notifySuccess } from '@/lib/notifications';
+import { logError } from '@/lib/convex-errors';
 import { type ChangeEvent, type ClipboardEvent, type DragEvent, useCallback, useEffect, useMemo, useRef, useState, } from 'react';
 import type { CollaborationMessage } from '@/types/collaboration';
 import type { PendingAttachment, SendMessageOptions } from '../hooks/types';
@@ -136,7 +137,8 @@ export function useUnifiedMessagePaneController({ channelMessages, focusMessageI
             await handleDelete(confirmingDeleteMessageId);
             setPaneUi((prev) => ({ ...prev, confirmingDeleteMessageId: null }));
         }
-        catch {
+        catch (error) {
+            logError(error, 'useUnifiedMessagePaneController:handleConfirmDelete');
             // Error toast comes from message actions; leave dialog open for retry.
         }
     };
@@ -180,7 +182,8 @@ export function useUnifiedMessagePaneController({ channelMessages, focusMessageI
                 editingPreview: '',
             }));
         }
-        catch {
+        catch (error) {
+            logError(error, 'useUnifiedMessagePaneController:handleSaveEdit');
             // Error toast comes from message actions; keep editor open.
         }
     };

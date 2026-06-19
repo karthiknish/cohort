@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Hash, Search } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { Badge } from '@/shared/ui/badge';
 import { Input } from '@/shared/ui/input';
@@ -29,12 +29,22 @@ export function CollaborationChannelList({ channels, filteredChannels, selectedC
       <div className="p-4">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/>
-          <Input value={searchQuery} onChange={handleSearchChange} placeholder="Search channels…" className="pl-9"/>
+          <Input value={searchQuery} onChange={handleSearchChange} placeholder="Search channels…" className="pl-9" aria-label="Search channels"/>
         </div>
       </div>
       <Separator className="lg:hidden"/>
       <div className="flex-1 overflow-y-auto">
-        {channels.length === 0 ? (<p className="px-4 py-6 text-sm text-muted-foreground">Add a client to create your first collaboration channel.</p>) : filteredChannels.length === 0 ? (<p className="px-4 py-6 text-sm text-muted-foreground">No channels match your search.</p>) : (<div className="space-y-2 p-3">
+        {channels.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 text-center">
+            <div className="mb-3 rounded-full bg-muted/30 p-3">
+              <Hash className="size-6 text-muted-foreground/50"/>
+            </div>
+            <p className="max-w-xs text-sm text-muted-foreground">Add a client to create your first collaboration channel.</p>
+          </div>) : filteredChannels.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 text-center">
+            <div className="mb-3 rounded-full bg-muted/30 p-3">
+              <Search className="size-6 text-muted-foreground/50"/>
+            </div>
+            <p className="max-w-xs text-sm text-muted-foreground">No channels match your search.</p>
+          </div>) : (<div className="space-y-2 p-3">
             {filteredChannels.map((channel) => {
                 const summary = channelSummaries.get(channel.id);
                 const isSelected = selectedChannel?.id === channel.id;

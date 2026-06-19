@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
 import { useConvexAuth, useQuery } from 'convex/react';
 import { useAuth } from '@/shared/contexts/auth-context';
@@ -7,6 +7,7 @@ import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { socialMetricsApi } from '@/lib/convex-api';
 import { getPreviewSocialOverview } from '@/lib/preview-data';
+import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import type { DateRange } from '@/features/dashboard/ads/components/date-range-picker';
 export type SocialOverview = {
     surface: string;
@@ -27,6 +28,7 @@ export type UseSocialsMetricsReturn = {
     facebookOverview: SocialOverview | null;
     instagramOverview: SocialOverview | null;
     overviewLoading: boolean;
+    overviewError: string | null;
 };
 function defaultDateRange(): DateRange {
     const now = new Date();
@@ -50,6 +52,17 @@ export function useSocialsMetrics(): UseSocialsMetricsReturn {
         : 'skip' as const;
     const facebookRaw = useQuery(socialMetricsApi.listOverview, baseArgs === 'skip' ? 'skip' : { ...baseArgs, surface: 'facebook' as const });
     const instagramRaw = useQuery(socialMetricsApi.listOverview, baseArgs === 'skip' ? 'skip' : { ...baseArgs, surface: 'instagram' as const });
+    const facebookQueryError = useConvexQueryError({
+        data: facebookRaw,
+        skipped: !canQuery,
+        fallbackMessage: 'Unable to load Facebook metrics.',
+    });
+    const instagramQueryError = useConvexQueryError({
+        data: instagramRaw,
+        skipped: !canQuery,
+        fallbackMessage: 'Unable to load Instagram metrics.',
+    });
+    const overviewError = mergeQueryErrors(facebookQueryError, instagramQueryError);
     const overviewLoading = canQuery && (facebookRaw === undefined || instagramRaw === undefined);
     const facebookOverview = (isPreviewMode ? getPreviewSocialOverview('facebook') : facebookRaw ? { ...facebookRaw } : null);
     const instagramOverview = (isPreviewMode ? getPreviewSocialOverview('instagram') : instagramRaw ? { ...instagramRaw } : null);
@@ -59,5 +72,6 @@ export function useSocialsMetrics(): UseSocialsMetricsReturn {
         facebookOverview,
         instagramOverview,
         overviewLoading,
+        overviewError,
     };
 }

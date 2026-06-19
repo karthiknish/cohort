@@ -1,5 +1,6 @@
 'use client';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { useRef, useEffect, useEffectEvent } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { collaborationApi } from '@/lib/convex-api';
@@ -32,6 +33,11 @@ export function useReadReceipts({ workspaceId, userId, channelId, channelType, c
             userId: String(userId),
         }
         : 'skip');
+    const unreadQueryError = useConvexQueryError({
+        data: unreadResult,
+        skipped: !enabled || !workspaceId || !userId || !channelId,
+        fallbackMessage: 'Unable to load unread count.',
+    });
     const unreadCount = (unreadResult as {
         count?: number;
     } | null)?.count ?? 0;
@@ -178,6 +184,7 @@ export function useReadReceipts({ workspaceId, userId, channelId, channelType, c
     };
     return {
         unreadCount,
+        unreadQueryError,
         markAsRead: handleMarkAsRead,
         markMultipleAsRead: handleMarkMultipleAsRead,
         markChannelAsRead: handleMarkChannelAsRead,

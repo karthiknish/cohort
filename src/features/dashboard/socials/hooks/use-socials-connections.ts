@@ -1,6 +1,7 @@
 'use client';
 import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from '@/shared/ui/navigation';
 import { useConvexAuth, useMutation, useQuery } from 'convex/react';
@@ -26,6 +27,7 @@ export type SocialsConnectionStatus = {
 export type UseSocialsConnectionsReturn = {
     status: SocialsConnectionStatus | null;
     statusLoading: boolean;
+    statusQueryError: string | null;
     oauthPending: boolean;
     syncPending: boolean;
     connectionError: string | null;
@@ -52,6 +54,11 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
     const rawStatus = useQuery(socialsIntegrationsApi.getStatus, canQuery && workspaceId
         ? { workspaceId, clientId: selectedClientId ?? null }
         : 'skip');
+    const statusQueryError = useConvexQueryError({
+        data: rawStatus,
+        skipped: !canQuery,
+        fallbackMessage: 'Unable to load social connection status.',
+    });
     const statusLoading = canQuery && rawStatus === undefined;
     const status: SocialsConnectionStatus | null = isPreviewMode
         ? {
@@ -176,6 +183,8 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
             reportConvexFailure({
                 error: error,
                 context: 'useSocialsConnections:handleDisconnect',
+                title: 'Disconnect failed',
+                fallbackMessage: 'Unable to disconnect Meta social integration.',
             });
         }
     };
@@ -215,6 +224,7 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
     return {
         status,
         statusLoading,
+        statusQueryError,
         oauthPending,
         syncPending,
         connectionError,

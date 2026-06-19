@@ -1,6 +1,7 @@
 'use client';
 import { notifyFailure } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { useConvex, useQuery } from 'convex/react';
 import { usePreview } from '@/shared/contexts/preview-context';
@@ -204,6 +205,17 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
             userId: String(currentUserId),
         }
         : 'skip');
+    const threadUnreadCountsQueryError = useConvexQueryError({
+        data: threadUnreadCountsResult,
+        skipped: isPreviewMode || !workspaceId || !currentUserId || !selectedChannel || threadRootIdsForUnread.length === 0,
+        fallbackMessage: 'Unable to load thread unread counts.',
+    });
+    const unreadCountsQueryError = useConvexQueryError({
+        data: unreadCountsResult,
+        skipped: isPreviewMode || !workspaceId || !currentUserId,
+        fallbackMessage: 'Unable to load unread counts.',
+    });
+    const collaborationQueryError = mergeQueryErrors(unreadCountsQueryError, threadUnreadCountsQueryError);
     useEffect(() => {
         const replyTimersRef = previewReplyTimersRef;
         return () => {
@@ -329,7 +341,7 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
         lastRealtimeErrorToastKeyRef.current = toastKey;
         notifyFailure({
             title: 'Unable to load messages',
-            message: '${channel.name}: ${errorMessage}',
+            message: `${channel.name}: ${errorMessage}`,
         });
     };
     const realtimeChannelSnapshot = useRealtimeChannelSnapshot({
@@ -490,5 +502,6 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
         channelUnreadCounts,
         markChannelRead,
         markChannelReadPending,
+        collaborationQueryError,
     };
 }

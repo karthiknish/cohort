@@ -4,6 +4,7 @@ import { useConvex, useQuery } from 'convex/react';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { api, directMessagesApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
+import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { getPreviewDirectConversations, getPreviewDirectMessages } from '@/lib/preview-data';
 import type { DirectConversation, DirectMessage } from '@/types/collaboration';
 import { formatConversationSnippet } from '../lib/chat-text';
@@ -111,6 +112,16 @@ export function useDirectConversationsQuery({ workspaceId, currentUserId, curren
     const previewReplyTimersRef = useRef<number[]>([]);
     const conversationsQuery = useQuery(api.directMessages.listConversations, !isPreviewMode && workspaceId ? { workspaceId, includeArchived: false } : 'skip');
     const unreadCountQuery = useQuery(api.directMessages.getUnreadCount, !isPreviewMode && workspaceId ? { workspaceId } : 'skip');
+    const conversationsQueryError = useConvexQueryError({
+        data: conversationsQuery,
+        skipped: isPreviewMode || !workspaceId,
+        fallbackMessage: 'Unable to load conversations.',
+    });
+    const unreadCountQueryError = useConvexQueryError({
+        data: unreadCountQuery,
+        skipped: isPreviewMode || !workspaceId,
+        fallbackMessage: 'Unable to load unread counts.',
+    });
     const messagesQueryArgs = !isPreviewMode && selectedConversation && workspaceId
         ? {
             workspaceId,
@@ -141,6 +152,12 @@ export function useDirectConversationsQuery({ workspaceId, currentUserId, curren
         messagesQueryArgsRef.current = messagesQueryArgs;
     }
     const messagesQuery = useQuery(api.directMessages.listMessages, messagesQueryArgs ?? 'skip');
+    const messagesQueryError = useConvexQueryError({
+        data: messagesQuery,
+        skipped: isPreviewMode || !messagesQueryArgs,
+        fallbackMessage: 'Unable to load messages.',
+    });
+    const dmQueryError = mergeQueryErrors(conversationsQueryError, unreadCountQueryError, messagesQueryError);
     const typedMessagesQuery = messagesQueryArgsChanged
         ? undefined
         : (messagesQuery as DirectMessagesQueryResult | undefined);
@@ -585,6 +602,6 @@ export function useDirectConversationsQuery({ workspaceId, currentUserId, curren
             : messagesQueryArgsChanged ||
                 (typedMessagesQuery === undefined && messageCursor === null),
         hasMoreMessages: isPreviewMode ? false : hasMore,
-        messagesError: normalizedMessageSearch ? searchError : null,
+        messagesError: normalizedMessageSearch ? searchError : dmQueryError,
     };
 }

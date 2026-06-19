@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useAction, useConvexAuth, useMutation } from 'convex/react';
 import { socialsIntegrationsApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
@@ -42,11 +43,13 @@ export function useSocialsSetup(status: SocialsConnectionStatus | null): UseSoci
     const [pagesError, setPagesError] = useState<string | null>(null);
     const [selectedPageId, setSelectedPageId] = useState('');
     const [confirmingPage, setConfirmingPage] = useState(false);
+    const loadPagesRequestIdRef = useRef(0);
     const workspaceId = user?.agencyId ? String(user.agencyId) : null;
     const canAct = !isPreviewMode && isAuthenticated && !convexAuthLoading && Boolean(workspaceId);
     const loadPages = useEffectEvent(async () => {
         if (!canAct || !workspaceId)
             return;
+        const requestId = ++loadPagesRequestIdRef.current;
         setPagesLoading(true);
         setPagesError(null);
         try {
@@ -54,6 +57,8 @@ export function useSocialsSetup(status: SocialsConnectionStatus | null): UseSoci
                 workspaceId,
                 clientId: selectedClientId ?? null,
             });
+            if (requestId !== loadPagesRequestIdRef.current)
+                return;
             const options = (result ?? []) as MetaSocialPageOption[];
             setPages(options);
             if (status?.facebookPageId) {
@@ -66,12 +71,16 @@ export function useSocialsSetup(status: SocialsConnectionStatus | null): UseSoci
             }
         }
         catch (error: unknown) {
+            if (requestId !== loadPagesRequestIdRef.current)
+                return;
             logError(error, 'useSocialsSetup:loadPages');
             setPagesError(asErrorMessage(error));
             setPages([]);
         }
         finally {
-            setPagesLoading(false);
+            if (requestId === loadPagesRequestIdRef.current) {
+                setPagesLoading(false);
+            }
         }
     });
     const isConnected = Boolean(status?.connected);
@@ -109,7 +118,12 @@ export function useSocialsSetup(status: SocialsConnectionStatus | null): UseSoci
         catch (error: unknown) {
             logError(error, 'useSocialsSetup:confirmSelectedPage');
             setPagesError(asErrorMessage(error));
-            throw error;
+            reportConvexFailure({
+                error: error,
+                context: 'useSocialsSetup:confirmSelectedPage',
+                title: 'Page confirmation failed',
+                fallbackMessage: 'Unable to confirm the selected Facebook Page.',
+            });
         }
         finally {
             setConfirmingPage(false);
