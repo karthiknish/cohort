@@ -1,8 +1,8 @@
-import { useEffect } from 'react'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 import { Link } from '@/shared/ui/link'
 import { Lock, RefreshCw, Copy, Code2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { RouteErrorLogger } from '@/shared/ui/log-route-error'
 import {
   Card,
   CardContent,
@@ -12,9 +12,6 @@ import {
 } from '@/shared/ui/card'
 
 export function AuthError({ error, reset }: ErrorComponentProps) {
-  useEffect(() => {
-    console.error('[AuthErrorBoundary]', error)
-  }, [error])
   const isDev = process.env.NODE_ENV === 'development'
   const errorDigest = 'digest' in error ? String(error.digest) : undefined
   const componentName = 'AuthError'
@@ -36,6 +33,7 @@ export function AuthError({ error, reset }: ErrorComponentProps) {
   }
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+      <RouteErrorLogger error={error} segment="auth" />
       <Card className="max-w-md border-muted/60">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">

@@ -327,12 +327,13 @@ export function CampaignManagementSetupState({ onSetupAction, providerName, setu
       </CardContent>
     </Card>);
 }
-export function CampaignManagementConnectedView({ actionLoading, biddingDialogOpen, budgetDialogOpen, campaignColumns, campaigns, groupColumns, groups, groupsLoading, loading, newBidding, newBudget, onBiddingChange, onBiddingOpenChange, onBudgetChange, onBudgetOpenChange, onCreateCampaign, onRefresh, onRowClick, onSubmitBidding, onSubmitBudget, onViewChange, providerId, providerName, selectedCampaignName, selectedCurrencyCode, selectedCurrencyLabel, selectedTargetName, view, }: {
+export function CampaignManagementConnectedView({ actionLoading, biddingDialogOpen, budgetDialogOpen, campaignColumns, campaigns, error, groupColumns, groups, groupsLoading, loading, newBidding, newBudget, onBiddingChange, onBiddingOpenChange, onBudgetChange, onBudgetOpenChange, onCreateCampaign, onRefresh, onRowClick, onSubmitBidding, onSubmitBudget, onViewChange, providerId, providerName, selectedCampaignName, selectedCurrencyCode, selectedCurrencyLabel, selectedTargetName, view, }: {
     actionLoading: string | null;
     biddingDialogOpen: boolean;
     budgetDialogOpen: boolean;
     campaignColumns: ColumnDef<Campaign>[];
     campaigns: Campaign[];
+    error?: string | null;
     groupColumns: ColumnDef<CampaignGroup>[];
     groups: CampaignGroup[];
     groupsLoading: boolean;
@@ -358,6 +359,10 @@ export function CampaignManagementConnectedView({ actionLoading, biddingDialogOp
     view: CampaignManagementView;
 }) {
     return (<>
+      {error ? (<div className="mb-3 flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+        <CircleAlert className="size-4 shrink-0"/>
+        {error}
+      </div>) : null}
       <Card className="w-full">
         <CampaignManagementHeader isRefreshing={loading || groupsLoading} onCreateCampaign={onCreateCampaign} onRefresh={onRefresh} onViewChange={onViewChange} providerId={providerId} providerName={providerName} view={view}/>
         <CardContent>

@@ -59,18 +59,21 @@ function getNextAdStatus(providerId: string, checked: boolean) {
 function stopNestedClickPropagation(event: MouseEvent) {
     event.stopPropagation();
 }
-function CreativeStatusToggle({ providerId, status, onChange, showLabel = false, className, }: {
+function CreativeStatusToggle({ providerId, status, onChange, showLabel = false, className, disabled, }: {
     providerId: string;
     status: string;
     onChange: (nextStatus: string) => void;
     showLabel?: boolean;
     className?: string;
+    disabled?: boolean;
 }) {
     const handleCheckedChange = (checked: boolean) => {
+        if (disabled)
+            return;
         onChange(getNextAdStatus(providerId, checked));
     };
     return (<div className={className}>
-      <Switch checked={isAdEnabled(status)} onCheckedChange={handleCheckedChange} className={showLabel ? undefined : 'h-3.5 w-7'}/>
+      <Switch checked={isAdEnabled(status)} onCheckedChange={handleCheckedChange} disabled={disabled} className={showLabel ? undefined : 'h-3.5 w-7'}/>
       {showLabel ? (<span className="w-14 text-xs font-medium capitalize">{status.toLowerCase()}</span>) : (<span className="text-[10px] font-medium uppercase tracking-wider text-viewer-chrome">{status.toLowerCase()}</span>)}
     </div>);
 }
@@ -185,7 +188,7 @@ export function CampaignAdsFilters({ searchQuery, setSearchQuery, statusFilter, 
       </Select>
     </div>);
 }
-function AdGridItem({ ad, adMetrics, currency, insightKind, maxSpend, onCreativeClick, onToggleStatus, providerId, }: {
+function AdGridItem({ ad, adMetrics, currency, insightKind, maxSpend, onCreativeClick, onToggleStatus, providerId, togglingAdId, }: {
     ad: CampaignAd;
     adMetrics: Record<string, CreativePerformanceMetrics | undefined>;
     currency: string;
@@ -194,6 +197,7 @@ function AdGridItem({ ad, adMetrics, currency, insightKind, maxSpend, onCreative
     onCreativeClick: (creative: CampaignAd) => void;
     onToggleStatus: (ad: CampaignAd, nextStatus: string) => void;
     providerId: string;
+    togglingAdId: string | null;
 }) {
     const onOpenCreative = () => onCreativeClick(ad);
     const handleToggleStatus = (nextStatus: string) => onToggleStatus(ad, nextStatus);
@@ -264,12 +268,12 @@ function AdGridItem({ ad, adMetrics, currency, insightKind, maxSpend, onCreative
 
       <div className="absolute right-2 top-2">
         <div className="flex items-center gap-1.5 rounded-full border border-viewer-chrome/20 bg-black/40 px-2 py-1 backdrop-blur-sm">
-          <CreativeStatusToggle providerId={providerId} status={ad.status} onChange={handleToggleStatus}/>
+          <CreativeStatusToggle providerId={providerId} status={ad.status} onChange={handleToggleStatus} disabled={togglingAdId === ad.creativeId}/>
         </div>
       </div>
     </div>);
 }
-export function CampaignAdsGrid({ adMetrics, ads, creativeInsights, currency, maxSpend, onCreativeClick, onToggleStatus, providerId, }: {
+export function CampaignAdsGrid({ adMetrics, ads, creativeInsights, currency, maxSpend, onCreativeClick, onToggleStatus, providerId, togglingAdId, }: {
     adMetrics: Record<string, CreativePerformanceMetrics | undefined>;
     ads: CampaignAd[];
     creativeInsights: Map<string, CreativeInsightKind>;
@@ -278,15 +282,16 @@ export function CampaignAdsGrid({ adMetrics, ads, creativeInsights, currency, ma
     onCreativeClick: (creative: CampaignAd) => void;
     onToggleStatus: (ad: CampaignAd, nextStatus: string) => void;
     providerId: string;
+    togglingAdId: string | null;
 }) {
     return (<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-      {ads.map((ad) => (<AdGridItem key={ad.creativeId} ad={ad} adMetrics={adMetrics} currency={currency} insightKind={creativeInsights.get(ad.creativeId)} maxSpend={maxSpend} onCreativeClick={onCreativeClick} onToggleStatus={onToggleStatus} providerId={providerId}/>))}
+      {ads.map((ad) => (<AdGridItem key={ad.creativeId} ad={ad} adMetrics={adMetrics} currency={currency} insightKind={creativeInsights.get(ad.creativeId)} maxSpend={maxSpend} onCreativeClick={onCreativeClick} onToggleStatus={onToggleStatus} providerId={providerId} togglingAdId={togglingAdId}/>))}
     </div>);
 }
 function formatPercent(value: number): string {
     return `${value.toFixed(2)}%`;
 }
-function AdListRow({ ad, adMetrics, currency, insightKind, onCreativeClick, onToggleStatus, providerId, }: {
+function AdListRow({ ad, adMetrics, currency, insightKind, onCreativeClick, onToggleStatus, providerId, togglingAdId, }: {
     ad: CampaignAd;
     adMetrics: Record<string, CreativePerformanceMetrics | undefined>;
     currency: string;
@@ -294,6 +299,7 @@ function AdListRow({ ad, adMetrics, currency, insightKind, onCreativeClick, onTo
     onCreativeClick: (creative: CampaignAd) => void;
     onToggleStatus: (ad: CampaignAd, nextStatus: string) => void;
     providerId: string;
+    togglingAdId: string | null;
 }) {
     const [listImageFailed, setListImageFailed] = useState(false);
     const onOpenCreative = () => onCreativeClick(ad);
@@ -331,7 +337,7 @@ function AdListRow({ ad, adMetrics, currency, insightKind, onCreativeClick, onTo
       </TableCell>
       <TableCell onClick={stopNestedClickPropagation}>
         <div className="flex items-center gap-2">
-          <CreativeStatusToggle providerId={providerId} status={ad.status} showLabel onChange={handleToggleStatus}/>
+          <CreativeStatusToggle providerId={providerId} status={ad.status} showLabel onChange={handleToggleStatus} disabled={togglingAdId === ad.creativeId}/>
         </div>
       </TableCell>
       <TableCell className="text-right font-mono text-xs tabular-nums">
@@ -367,7 +373,7 @@ function AdListRow({ ad, adMetrics, currency, insightKind, onCreativeClick, onTo
       </TableCell>
     </TableRow>);
 }
-export function CampaignAdsList({ adMetrics, ads, creativeInsights, currency, onCreativeClick, onToggleStatus, providerId, }: {
+export function CampaignAdsList({ adMetrics, ads, creativeInsights, currency, onCreativeClick, onToggleStatus, providerId, togglingAdId, }: {
     adMetrics: Record<string, CreativePerformanceMetrics | undefined>;
     ads: CampaignAd[];
     creativeInsights: Map<string, CreativeInsightKind>;
@@ -375,6 +381,7 @@ export function CampaignAdsList({ adMetrics, ads, creativeInsights, currency, on
     onCreativeClick: (creative: CampaignAd) => void;
     onToggleStatus: (ad: CampaignAd, nextStatus: string) => void;
     providerId: string;
+    togglingAdId: string | null;
 }) {
     return (<div className="overflow-hidden rounded-xl border border-border/60">
       <Table>
@@ -395,7 +402,7 @@ export function CampaignAdsList({ adMetrics, ads, creativeInsights, currency, on
           </TableRow>
         </TableHeader>
         <TableBody>
-          {ads.map((ad) => (<AdListRow key={ad.creativeId} ad={ad} adMetrics={adMetrics} currency={currency} insightKind={creativeInsights.get(ad.creativeId)} onCreativeClick={onCreativeClick} onToggleStatus={onToggleStatus} providerId={providerId}/>))}
+          {ads.map((ad) => (<AdListRow key={ad.creativeId} ad={ad} adMetrics={adMetrics} currency={currency} insightKind={creativeInsights.get(ad.creativeId)} onCreativeClick={onCreativeClick} onToggleStatus={onToggleStatus} providerId={providerId} togglingAdId={togglingAdId}/>))}
         </TableBody>
       </Table>
     </div>);

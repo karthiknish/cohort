@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { ChevronDown, CircleAlert, Clock, Eye, History, LoaderCircle, RotateCcw, Save, User } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
+import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/shared/ui/alert-dialog';
 import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
@@ -69,11 +70,12 @@ function ProposalVersionHistoryRow({ onPreview, onRestore, restoring, version, }
       </div>
     </DropdownMenuItem>);
 }
-export function ProposalVersionHistoryMenuContent({ handleSaveVersion, latestVersion, loading, proposalId, restoring, saving, setPreviewVersion, setRestoreConfirmVersion, versions, }: {
+export function ProposalVersionHistoryMenuContent({ handleSaveVersion, latestVersion, loading, proposalId, queryError, restoring, saving, setPreviewVersion, setRestoreConfirmVersion, versions, }: {
     handleSaveVersion: () => void;
     latestVersion: ProposalVersion | undefined;
     loading: boolean;
     proposalId: string | null;
+    queryError: string | null;
     restoring: boolean;
     saving: boolean;
     setPreviewVersion: (version: ProposalVersion) => void;
@@ -90,7 +92,12 @@ export function ProposalVersionHistoryMenuContent({ handleSaveVersion, latestVer
       </div>
       <DropdownMenuSeparator />
 
-      {loading ? (<div className="flex items-center justify-center py-6">
+      {queryError ? (<div className="px-2 py-3">
+          <Alert variant="destructive">
+            <CircleAlert className="size-4"/>
+            <AlertDescription>{queryError}</AlertDescription>
+          </Alert>
+        </div>) : loading ? (<div className="flex items-center justify-center py-6">
           <LoaderCircle className="size-5 animate-spin text-muted-foreground"/>
         </div>) : versions.length === 0 ? (<div className="px-2 py-6 text-center text-sm text-muted-foreground">
           No versions yet. Click &quot;Save Point&quot; to create one.

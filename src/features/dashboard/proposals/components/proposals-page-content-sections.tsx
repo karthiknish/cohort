@@ -47,7 +47,7 @@ export function ProposalsPageHeroSection({ clientName, workflow, formState, draf
       <ProposalPageActions canManage={canManageProposals} currentFormData={formState} draftId={draftId} isSubmitting={isSubmitting} selectedClientId={selectedClientId} isCreatingDraft={isCreatingDraft} onApplyTemplate={onApplyTemplate} onVersionRestored={onVersionRestored} onStartProposal={onStartProposal}/>
     </DashboardPageHero>);
 }
-export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clientName, workflow, viewState, formState, draftId, selectedClientId, onApplyTemplate, onVersionRestored, onStartProposal, displayedProposals, displayedDraftId, proposalHistoryWorkflow, proposalHistoryCapabilities, deletingProposalId, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, proposalPendingDelete, onDeleteDialogChange, onConfirmDelete, activeDeckStage, onCloseWizard, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, onResumeSubmission, onRecheckDeck, steps, currentStep, autosaveStatus, stepContent, onBack, onNext, onGoToStep, validationMessages, }: {
+export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clientName, workflow, viewState, formState, draftId, selectedClientId, onApplyTemplate, onVersionRestored, onStartProposal, displayedProposals, displayedDraftId, proposalHistoryWorkflow, proposalHistoryCapabilities, proposalsQueryError, deletingProposalId, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, proposalPendingDelete, onDeleteDialogChange, onConfirmDelete, activeDeckStage, onCloseWizard, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, onResumeSubmission, onRecheckDeck, steps, currentStep, autosaveStatus, stepContent, onBack, onNext, onGoToStep, validationMessages, }: {
     wizardRef: React.RefObject<HTMLDivElement | null>;
     submissionAnnouncement: string;
     clientName: string | null;
@@ -70,6 +70,7 @@ export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clien
         canManage: boolean;
         canCreate: boolean;
     };
+    proposalsQueryError: string | null;
     deletingProposalId: string | null;
     onRefresh: () => void;
     onResume: (proposal: ProposalDraft, forceEdit?: boolean) => void;
@@ -115,7 +116,7 @@ export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clien
                 : 'Pick a client from the workspace switcher in the header. Proposals are always created for the active client.'}/>
         </FadeIn>) : null}
 
-      <ProposalHistory proposals={displayedProposals} draftId={displayedDraftId} workflow={proposalHistoryWorkflow} capabilities={proposalHistoryCapabilities} deletingProposalId={deletingProposalId} onRefresh={onRefresh} onResume={onResume} onRequestDelete={onRequestDelete} downloadingDeckId={downloadingDeckId} onDownloadDeck={onDownloadDeck} onCreateNew={onCreateNew}/>
+      <ProposalHistory proposals={displayedProposals} draftId={displayedDraftId} workflow={proposalHistoryWorkflow} capabilities={proposalHistoryCapabilities} queryError={isPreviewMode ? null : proposalsQueryError} deletingProposalId={deletingProposalId} onRefresh={onRefresh} onResume={onResume} onRequestDelete={onRequestDelete} downloadingDeckId={downloadingDeckId} onDownloadDeck={onDownloadDeck} onCreateNew={onCreateNew}/>
       <ProposalDeleteDialog open={isDeleteDialogOpen} isDeleting={Boolean(deletingProposalId)} proposalName={proposalPendingDelete?.clientName ?? proposalPendingDelete?.id ?? null} onOpenChange={onDeleteDialogChange} onConfirm={onConfirmDelete}/>
       <ProposalGenerationOverlay isSubmitting={isSubmitting && !isWizardOpen} isPresentationReady={isPresentationReady && !isWizardOpen}/>
       <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)}/>

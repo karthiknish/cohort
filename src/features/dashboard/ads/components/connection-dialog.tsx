@@ -1,6 +1,7 @@
 'use client';
 import { memo, useCallback, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { logError } from '@/lib/convex-errors';
 import { Dialog, DialogContent, } from '@/shared/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/shared/ui/alert-dialog';
 import { Checkbox } from '@/shared/ui/checkbox';
@@ -77,8 +78,8 @@ export const ConnectionDialog = function ConnectionDialog({ open, onOpenChange, 
         try {
             await onConnect();
         }
-        catch {
-            // Error handled by parent
+        catch (error) {
+            logError(error, 'ConnectionDialog:handleConnect');
         }
     };
     const handleClose = () => {

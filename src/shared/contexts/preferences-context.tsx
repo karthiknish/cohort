@@ -1,7 +1,7 @@
 'use client';
 import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery } from 'convex/react';
-import { asErrorMessage } from '@/lib/convex-errors';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { DEFAULT_CURRENCY, type CurrencyCode } from '@/constants/currencies';
 import { settingsApi } from '@/lib/convex-api';
@@ -91,7 +91,7 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
             });
         }
         catch (err) {
-            console.error('Failed to update preferences:', err);
+            logError(err, 'preferences-context:updatePreferences');
             setOptimisticPreferences(null);
             setError(asErrorMessage(err));
             throw err;

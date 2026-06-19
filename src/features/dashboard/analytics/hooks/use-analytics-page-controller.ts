@@ -9,6 +9,7 @@ import { useCurrency } from '@/shared/contexts/preferences-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { ApiClientError, apiFetch } from '@/lib/api-client';
 import { analyticsIntegrationsApi } from '@/lib/convex-api';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { asErrorMessage, isIntegrationScopeAppError, logError, mapGoogleAnalyticsIntegrationError } from '@/lib/convex-errors';
 import { getPreviewAnalyticsMetrics } from '@/lib/preview-data';
 import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
@@ -150,6 +151,12 @@ export function useAnalyticsPageController() {
             workspaceId,
             clientId: selectedClientId ?? null,
         }) as GoogleAnalyticsStatusRow | null | undefined;
+    const gaStatusQueryError = useConvexQueryError({
+        data: googleAnalyticsStatus,
+        skipped: isPreviewMode || !workspaceId || !user?.id,
+        loading: false,
+        fallbackMessage: 'Unable to load Google Analytics connection status.',
+    });
     const handleDateRangeChange = (range: AnalyticsDateRange, days?: number) => {
         setDateRange(range);
         setPeriodDays(days ?? differenceInDays(range.end, range.start) + 1);
@@ -295,7 +302,7 @@ export function useAnalyticsPageController() {
     ]);
     const analyticsStartDate = format(dateRange.start, 'yyyy-MM-dd');
     const analyticsEndDate = format(dateRange.end, 'yyyy-MM-dd');
-    const { metricsData, breakdowns, metricsNextCursor, metricsLoadingMore, metricsError, metricsLoading, metricsRefreshing, loadMoreMetrics, resetMetricsPagination, mutateMetrics, insights, algorithmic, insightsError, insightsLoading, insightsRefreshing, mutateInsights, } = useAnalyticsData(null, periodDays, selectedClientId ?? null, isPreviewMode, user?.agencyId, {
+    const { metricsData, breakdowns, breakdownsError, metricsNextCursor, metricsLoadingMore, metricsError, metricsLoading, metricsRefreshing, loadMoreMetrics, resetMetricsPagination, mutateMetrics, insights, algorithmic, insightsError, insightsLoading, insightsRefreshing, mutateInsights, } = useAnalyticsData(null, periodDays, selectedClientId ?? null, isPreviewMode, user?.agencyId, {
         providerIds: ['google-analytics'],
         includeInsights: true,
         startDate: analyticsStartDate,
@@ -483,6 +490,7 @@ export function useAnalyticsPageController() {
             });
         })
             .catch((error) => {
+            logError(error, 'AnalyticsPage:handleDisconnectGoogleAnalytics');
             notifyFailure({ title: 'Disconnect failed', error });
         })
             .finally(() => {
@@ -652,6 +660,8 @@ export function useAnalyticsPageController() {
         gaSetupDialogOpen,
         gaSetupMessage,
         gaStatusLabel,
+        breakdownsError,
+        gaStatusError: gaStatusQueryError ? new Error(gaStatusQueryError) : undefined,
         handleConnectGoogleAnalytics,
         handleDateRangeChange,
         handleDisconnectGoogleAnalytics,

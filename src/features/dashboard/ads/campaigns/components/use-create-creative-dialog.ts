@@ -159,49 +159,49 @@ export function useCreateCreativeDialog({ workspaceId, providerId, campaignId, c
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
         if (!workspaceId) {
-            notifySuccess({
+            notifyFailure({
                 title: 'Error',
                 message: 'Sign in required',
             });
             return;
         }
         if (!name.trim()) {
-            notifySuccess({
+            notifyFailure({
                 title: 'Validation error',
                 message: 'Creative name is required',
             });
             return;
         }
         if (!isMeta) {
-            notifySuccess({
+            notifyFailure({
                 title: 'Platform not supported',
                 message: 'Creating creatives is currently only supported for Meta (Facebook/Instagram) ads.',
             });
             return;
         }
         if (!selectedAdSetId) {
-            notifySuccess({
+            notifyFailure({
                 title: 'Ad Set required',
                 message: 'Please select an ad set to create the ad.',
             });
             return;
         }
         if (!pageId) {
-            notifySuccess({
+            notifyFailure({
                 title: 'Facebook Page required',
                 message: 'Select a Facebook Page before creating a Meta creative.',
             });
             return;
         }
         if (!metaPageActors.some((actor) => actor.id === pageId)) {
-            notifySuccess({
+            notifyFailure({
                 title: 'Invalid Facebook Page',
                 message: 'The selected page is no longer available. Reload the page list and try again.',
             });
             return;
         }
         if (isLeadsCampaign && !leadFormId) {
-            notifySuccess({
+            notifyFailure({
                 title: 'Lead form required',
                 message: 'Select an instant lead form for this leads campaign creative.',
             });
@@ -249,9 +249,10 @@ export function useCreateCreativeDialog({ workspaceId, providerId, campaignId, c
         }
         catch (error) {
             logError(error, 'CreateCreativeDialog:handleSubmit');
-            notifySuccess({
+            notifyFailure({
                 title: 'Creation failed',
-                message: asErrorMessage(error),
+                error,
+                fallbackMessage: asErrorMessage(error),
             });
         }
         finally {

@@ -71,6 +71,11 @@ export function useProjectsData({ workspaceId, userId, isPreviewMode, selectedCl
             projectIds: loadedProjectIds,
         }
         : 'skip');
+    const taskCountsQueryError = useConvexQueryError({
+        data: taskCountsRealtime,
+        skipped: !queryEnabled || loadedProjectIds.length === 0,
+        fallbackMessage: 'Unable to load task counts.',
+    });
     const projectsWithTaskCounts = (() => {
         if (isPreviewMode) {
             let previewProjects = getPreviewProjects(selectedClientId ?? null);
@@ -98,7 +103,7 @@ export function useProjectsData({ workspaceId, userId, isPreviewMode, selectedCl
     }, [projectsWithTaskCounts]);
     const loading = queryEnabled && projectsInitialLoading;
     const loadingMore = projectsLoadingMore;
-    const error = projectsQueryError ?? null;
+    const error = projectsQueryError ?? taskCountsQueryError ?? null;
     const handleRefresh = () => {
         resetProjectPagination();
     };

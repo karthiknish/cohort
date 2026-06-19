@@ -206,7 +206,9 @@ export function MentionDropdown({ ref, listboxId = "agent-mention-listbox", isOp
         }
     };
     const handleListKeyDownRef = useRef(handleListKeyDown);
-    handleListKeyDownRef.current = handleListKeyDown;
+    useEffect(() => {
+        handleListKeyDownRef.current = handleListKeyDown;
+    }, [handleListKeyDown]);
     useImperativeHandle(ref, () => ({
         handleKeyDown: (event) => handleListKeyDownRef.current(event),
     }), []);

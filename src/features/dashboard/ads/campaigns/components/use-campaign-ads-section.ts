@@ -47,6 +47,8 @@ function campaignAdsSectionReducer(state: CampaignAdsSectionState, action: Campa
             return { ...state, searchQuery: '', typeFilter: 'all', statusFilter: 'all' };
         case 'setTogglingAdSetId':
             return { ...state, togglingAdSetId: action.value };
+        case 'setTogglingAdId':
+            return { ...state, togglingAdId: action.value };
         default:
             return state;
     }
@@ -68,6 +70,7 @@ export function createInitialCampaignAdsSectionState(): CampaignAdsSectionState 
         periodDays: '30',
         sortKey: 'spend',
         togglingAdSetId: null,
+        togglingAdId: null,
     };
 }
 export function useCampaignAdsSection({ providerId, campaignId, clientId, isPreviewMode, currency, }: CampaignAdsSectionProps) {
@@ -83,7 +86,7 @@ export function useCampaignAdsSection({ providerId, campaignId, clientId, isPrev
     const updateCreativeStatus = useAction(adsCreativesApi.updateCreativeStatus);
     const listAdMetrics = useAction(adsAdMetricsApi.listAdMetrics);
     const [state, dispatch] = useReducer(campaignAdsSectionReducer, undefined, createInitialCampaignAdsSectionState);
-    const { adSets, adSetDialogOpen, ads, loading, summary, searchQuery, typeFilter, statusFilter, hasLoaded, viewMode, adMetrics, metricsLoading, periodDays, sortKey, togglingAdSetId, } = state;
+    const { adSets, adSetDialogOpen, ads, loading, summary, searchQuery, typeFilter, statusFilter, hasLoaded, viewMode, adMetrics, metricsLoading, periodDays, sortKey, togglingAdSetId, togglingAdId, } = state;
     const setViewMode = (value: ViewMode) => {
         dispatch({ type: 'setViewMode', value });
     };
@@ -111,6 +114,8 @@ export function useCampaignAdsSection({ providerId, campaignId, clientId, isPrev
             dispatch({ type: 'setLoading', value: false });
             return;
         }
+        dispatch({ type: 'setAds', value: [] });
+        dispatch({ type: 'setHasLoaded', value: false });
         dispatch({ type: 'setLoading', value: true });
         if (!workspaceId) {
             dispatch({ type: 'setLoading', value: false });
@@ -164,7 +169,12 @@ export function useCampaignAdsSection({ providerId, campaignId, clientId, isPrev
             });
         })
             .catch((error) => {
-            logError(error, 'CampaignAdsSection:fetchAdSets');
+            reportConvexFailure({
+                error: error,
+                context: 'CampaignAdsSection:fetchAdSets',
+                title: 'Failed to load ad sets',
+                fallbackMessage: 'Could not load ad sets for this campaign.',
+            });
         });
     });
     const fetchMetrics = useEffectEvent(async () => {
@@ -215,7 +225,12 @@ export function useCampaignAdsSection({ providerId, campaignId, clientId, isPrev
             dispatch({ type: 'setAdMetrics', value: aggregated });
         })
             .catch((error) => {
-            logError(error, 'CampaignAdsSection:fetchMetrics');
+            reportConvexFailure({
+                error: error,
+                context: 'CampaignAdsSection:fetchMetrics',
+                title: 'Failed to load ad metrics',
+                fallbackMessage: 'Could not load performance metrics for this campaign.',
+            });
         })
             .finally(() => {
             dispatch({ type: 'setMetricsLoading', value: false });
@@ -283,6 +298,8 @@ export function useCampaignAdsSection({ providerId, campaignId, clientId, isPrev
         push(withPreviewModeSearchParamIfEnabled(`/dashboard/ads/campaigns/${providerId}/${campaignId}/creative/${creative.creativeId}?${params.toString()}`, isPreviewModeEnabled()));
     };
     const toggleAdStatus = (ad: CampaignAd, newStatus: string) => {
+        if (togglingAdId)
+            return;
         // Optimistic update
         const previousAds = [...ads];
         dispatch({
@@ -297,6 +314,7 @@ export function useCampaignAdsSection({ providerId, campaignId, clientId, isPrev
             });
             return;
         }
+        dispatch({ type: 'setTogglingAdId', value: ad.creativeId });
         void updateCreativeStatus({
             workspaceId,
             providerId: convexProviderId as SupportedProviderId,
@@ -320,6 +338,9 @@ export function useCampaignAdsSection({ providerId, campaignId, clientId, isPrev
                 title: 'Error',
                 fallbackMessage: 'Error',
             });
+        })
+            .finally(() => {
+            dispatch({ type: 'setTogglingAdId', value: null });
         });
     };
     const handleToggleAdStatus = (ad: CampaignAd, nextStatus: string) => {
@@ -430,6 +451,7 @@ export function useCampaignAdsSection({ providerId, campaignId, clientId, isPrev
         typeFilter,
         adSetDialogOpen,
         togglingAdSetId,
+        togglingAdId,
         handleToggleAdSetStatus,
     };
 }

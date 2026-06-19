@@ -49,7 +49,10 @@ export const Route = createRootRoute({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { name: 'theme-color', content: '#2563eb' },
+      // Reference the design-token primary color so we don't hardcode a hex.
+      // The fallback preserves the historical value when CSS hasn't loaded yet
+      // (PDF viewers, RSS readers, OS-level theme-color consumers).
+      { name: 'theme-color', content: 'var(--color-primary, #2563eb)' },
       { title: 'Cohorts - Marketing Agency Dashboard' },
       {
         name: 'description',

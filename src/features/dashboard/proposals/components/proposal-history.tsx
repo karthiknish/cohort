@@ -1,11 +1,12 @@
 'use client';
 import { memo, useMemo } from 'react';
-import { History } from 'lucide-react';
+import { CircleAlert, History } from 'lucide-react';
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
 import { cn } from '@/lib/utils';
 import { FadeIn, FadeInStagger } from '@/shared/ui/animate-in';
 import { FadeInItem } from '@/shared/ui/fade-in-item';
 import { MotionCard } from '@/shared/ui/motion-primitives';
+import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import type { ProposalDraft } from '@/types/proposals';
 import { ProposalHistoryEmptyState, ProposalHistoryHeader, ProposalHistoryRow, } from './proposal-history-sections';
@@ -63,6 +64,7 @@ interface ProposalHistoryProps {
     workflow: ProposalHistoryWorkflowState;
     capabilities: ProposalHistoryCapabilities;
     deletingProposalId: string | null;
+    queryError?: string | null;
     onRefresh: () => void;
     onResume: (proposal: ProposalDraft, forceEdit?: boolean) => void;
     onRequestDelete: (proposal: ProposalDraft) => void;
@@ -70,7 +72,7 @@ interface ProposalHistoryProps {
     onDownloadDeck: (proposal: ProposalDraft) => void;
     onCreateNew: () => void;
 }
-function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, deletingProposalId, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, }: ProposalHistoryProps) {
+function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, deletingProposalId, queryError, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, }: ProposalHistoryProps) {
     const { loading: isLoading, generating: isGenerating, creating: isCreating } = workflow;
     const { canCreate, canManage = true } = capabilities;
     const emptyStateActions = ({
@@ -120,6 +122,10 @@ function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, 
       </CardHeader>
         <CardContent className="space-y-4">
         <ProposalHistoryHeader isLoading={isLoading} onRefresh={onRefresh} proposalCount={proposals.length}/>
+        {queryError ? (<Alert variant="destructive">
+            <CircleAlert className="size-4"/>
+            <AlertDescription>{queryError}</AlertDescription>
+          </Alert>) : null}
         <FadeInStagger className="space-y-3">
           {proposals.length === 0 && !isLoading ? (<ProposalHistoryEmptyState actions={emptyStateActions} onCreateNew={onCreateNew}/>) : (rows.map((row) => (<FadeInItem key={row.proposal.id} y={14}>
                 <ProposalHistoryRow canManage={canManage} deletingProposalId={deletingProposalId} onDownloadDeck={onDownloadDeck} onRequestDelete={onRequestDelete} onResume={onResume} row={row}/>

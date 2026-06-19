@@ -8,6 +8,7 @@ import { serializeAgentAttachmentsForStorage, toAgentRequestAttachmentContext, t
 import type { AgentError } from '@/lib/agent-errors';
 import { AgentValidationError, parseAgentError, ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors';
 import { getPreviewAgentModeResponse, isPreviewModeEnabled } from '@/lib/preview-data';
+import { logError } from '@/lib/convex-errors';
 import { notifyError, notifyFailure } from '@/lib/notifications';
 import { buildCompletedStepsFromResponse, buildProcessingSteps, filterMessagesForAgentContext, operationProcessingLabel, type AgentExecutionStep, type AgentMessageLifecycle, type AgentMessageMetadata, type AgentPendingConfirmation, type AgentSendResponse, } from '@/lib/agent-message-lifecycle';
 import { mergeAgentMentions, parseAgentMentionsFromText, type AgentMentionEntity, } from '@/lib/agent-mentions';
@@ -263,7 +264,7 @@ export function useAgentSend({ workspaceId, activeContext, messages, setMessages
             }, trimmedText, attachmentsForTurn);
         }
         catch (err) {
-            console.error('[useAgentMode] Unexpected error:', err);
+            logError(err, 'useAgentMode:sendUnexpectedError');
             const agentError = parseAgentError(err, null);
             upsertMessage({
                 id: userClientId,

@@ -61,6 +61,7 @@ function ChartCardHeader({ title, description, tip, }: {
       </div>
     </CardHeader>);
 }
+const LEGEND_CONTENT = <ChartLegendContent className="pt-3 text-xs text-muted-foreground"/>;
 export function AnalyticsCharts({ chartData, formatRevenue, isMetricsLoading, initialMetricsLoading, }: AnalyticsChartsProps) {
     const showChartSkeleton = initialMetricsLoading || (isMetricsLoading && chartData.length === 0);
     const formatCurrencyTick = (value: number | string) => formatRevenue(Number(value));
@@ -68,7 +69,6 @@ export function AnalyticsCharts({ chartData, formatRevenue, isMetricsLoading, in
     const revenueTooltipContent = <AnalyticsRevenueTooltip chartData={chartData} formatRevenue={formatRevenue}/>;
     const conversionsTooltipContent = <AnalyticsConversionsTooltip chartData={chartData} formatRevenue={formatRevenue}/>;
     const conversionRateTooltipContent = <AnalyticsConversionRateTooltip chartData={chartData}/>;
-    const chartLegendContent = <ChartLegendContent className="pt-3 text-xs text-muted-foreground"/>;
     return (<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <Card className={CHART_CARD_CLASS}>
         <ChartCardHeader title="Users vs sessions" description="Daily audience and visit volume" tip="Hover the chart to see users, sessions, day-over-day change, and visit patterns."/>
@@ -89,7 +89,7 @@ export function AnalyticsCharts({ chartData, formatRevenue, isMetricsLoading, in
                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={10} style={AXIS_TICK_STYLE} tickFormatter={formatDateTick}/>
                 <YAxis tickLine={false} axisLine={false} tickMargin={10} style={AXIS_TICK_STYLE} tickFormatter={formatNumberTick}/>
                 <RechartsTooltip {...ANALYTICS_CHART_TOOLTIP_PROPS} cursor={CHART_TOOLTIP_CURSOR} content={usersSessionsTooltipContent}/>
-                <ChartLegend content={chartLegendContent}/>
+                <ChartLegend content={LEGEND_CONTENT}/>
                 <Area type="monotone" dataKey="users" stroke="var(--color-users)" strokeWidth={2} fill="url(#fillUsersAnalytics)" dot={false} activeDot={CHART_ACTIVE_DOT}/>
                 <Area type="monotone" dataKey="sessions" stroke="var(--color-sessions)" strokeWidth={2} strokeDasharray="5 4" fill="url(#fillSessionsAnalytics)" dot={false} activeDot={CHART_ACTIVE_DOT}/>
               </AreaChart>
@@ -112,7 +112,7 @@ export function AnalyticsCharts({ chartData, formatRevenue, isMetricsLoading, in
                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={10} style={AXIS_TICK_STYLE} tickFormatter={formatDateTick}/>
                 <YAxis tickLine={false} axisLine={false} tickMargin={10} style={AXIS_TICK_STYLE} tickFormatter={formatCurrencyTick}/>
                 <RechartsTooltip {...ANALYTICS_CHART_TOOLTIP_PROPS} cursor={CHART_TOOLTIP_CURSOR} content={revenueTooltipContent}/>
-                <ChartLegend content={chartLegendContent}/>
+                <ChartLegend content={LEGEND_CONTENT}/>
                 <Area type="monotone" dataKey="revenue" stroke="var(--color-revenue)" strokeWidth={2} fill="url(#fillRevenueAnalytics)" dot={false} activeDot={CHART_ACTIVE_DOT}/>
               </AreaChart>
             </ChartContainer>)}
@@ -134,7 +134,7 @@ export function AnalyticsCharts({ chartData, formatRevenue, isMetricsLoading, in
                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={10} style={AXIS_TICK_STYLE} tickFormatter={formatDateTick}/>
                 <YAxis tickLine={false} axisLine={false} tickMargin={10} style={AXIS_TICK_STYLE} tickFormatter={formatNumberTick}/>
                 <RechartsTooltip {...ANALYTICS_CHART_TOOLTIP_PROPS} cursor={CONVERSIONS_BAR_CURSOR} content={conversionsTooltipContent}/>
-                <ChartLegend content={chartLegendContent}/>
+                <ChartLegend content={LEGEND_CONTENT}/>
                 <Bar dataKey="conversions" fill="url(#fillConversionsAnalytics)" radius={[4, 4, 0, 0]} barSize={20}/>
               </BarChart>
             </ChartContainer>)}
@@ -156,7 +156,7 @@ export function AnalyticsCharts({ chartData, formatRevenue, isMetricsLoading, in
                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={10} style={AXIS_TICK_STYLE} tickFormatter={formatDateTick}/>
                 <YAxis tickLine={false} axisLine={false} tickMargin={10} style={AXIS_TICK_STYLE} tickFormatter={formatPercentTick}/>
                 <RechartsTooltip {...ANALYTICS_CHART_TOOLTIP_PROPS} cursor={CHART_TOOLTIP_CURSOR} content={conversionRateTooltipContent}/>
-                <ChartLegend content={chartLegendContent}/>
+                <ChartLegend content={LEGEND_CONTENT}/>
                 <Area type="monotone" dataKey="conversionRate" stroke="var(--color-conversionRate)" strokeWidth={2} fill="url(#fillConversionRateAnalytics)" dot={false} activeDot={CHART_ACTIVE_DOT}/>
               </AreaChart>
             </ChartContainer>)}

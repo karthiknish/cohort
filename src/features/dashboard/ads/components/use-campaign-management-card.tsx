@@ -9,6 +9,7 @@ import { getCurrencyInfo, isSupportedCurrency, normalizeCurrencyCode } from '@/c
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { asErrorMessage } from '@/lib/convex-errors';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { adsCampaignGroupsApi, adsCampaignsApi } from '@/lib/convex-api';
 import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data';
 import { CampaignManagementConnectedView, CampaignManagementDisconnectedState, CampaignManagementSetupState, } from './campaign-management-card-sections';
@@ -112,6 +113,11 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             endDate,
             limit: 2000,
         }) as HistoricalMetricRow[] | undefined;
+    const historicalMetricsQueryError = useConvexQueryError({
+        data: historicalMetrics,
+        skipped: !isConnected || setupRequired || !workspaceId || !canQueryConvex,
+        fallbackMessage: 'Unable to load historical campaign metrics.',
+    });
     const historicalCampaigns = useMemo(() => buildHistoricalCampaigns(historicalMetrics, adsProviderId), [historicalMetrics, adsProviderId]);
     const selectedBudgetTarget = selectedGroup ?? selectedCampaign;
     const selectedCurrencyCode = normalizeCurrencyCode(selectedBudgetTarget?.currency);
@@ -303,6 +309,14 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
             return;
         dispatch({ type: 'setActionLoading', actionLoading: targetId });
         const parsedBudget = parseFloat(newBudget);
+        if (!Number.isFinite(parsedBudget) || parsedBudget <= 0) {
+            notifyFailure({
+                title: 'Invalid budget',
+                message: 'Enter a valid budget amount greater than 0.',
+            });
+            dispatch({ type: 'setActionLoading', actionLoading: null });
+            return;
+        }
         if (!workspaceId) {
             notifyFailure({
                 title: 'Error',
@@ -430,6 +444,6 @@ export function useCampaignManagementCard(props: CampaignManagementCardProps) {
     }
     return (<CampaignManagementActionContext.Provider value={actionContextValue}>
       {isMetaProvider ? (<CreateMetaCampaignDialog open={metaCreateOpen} onOpenChange={setMetaCreateOpen} onCreated={handleMetaCampaignCreated}/>) : null}
-      <CampaignManagementConnectedView actionLoading={actionLoading} biddingDialogOpen={biddingDialogOpen} budgetDialogOpen={budgetDialogOpen} campaignColumns={campaignColumns} campaigns={campaigns} groupColumns={groupColumns} groups={groups} groupsLoading={groupsLoading} loading={loading} newBidding={newBidding} newBudget={newBudget} onBiddingChange={handleBiddingChange} onBiddingOpenChange={handleBiddingOpenChange} onBudgetChange={handleBudgetChange} onBudgetOpenChange={handleBudgetOpenChange} onCreateCampaign={isMetaProvider ? handleOpenMetaCreateDialog : undefined} onRefresh={handleRefresh} onRowClick={openInsightsPage} onSubmitBidding={handleBiddingUpdate} onSubmitBudget={handleBudgetUpdate} onViewChange={handleViewChange} providerId={providerId} providerName={providerName} selectedCampaignName={selectedCampaign?.name} selectedCurrencyCode={selectedCurrencyCode} selectedCurrencyLabel={selectedCurrencyLabel} selectedTargetName={selectedBudgetTarget?.name} view={view}/>
+      <CampaignManagementConnectedView actionLoading={actionLoading} biddingDialogOpen={biddingDialogOpen} budgetDialogOpen={budgetDialogOpen} campaignColumns={campaignColumns} campaigns={campaigns} error={historicalMetricsQueryError} groupColumns={groupColumns} groups={groups} groupsLoading={groupsLoading} loading={loading} newBidding={newBidding} newBudget={newBudget} onBiddingChange={handleBiddingChange} onBiddingOpenChange={handleBiddingOpenChange} onBudgetChange={handleBudgetChange} onBudgetOpenChange={handleBudgetOpenChange} onCreateCampaign={isMetaProvider ? handleOpenMetaCreateDialog : undefined} onRefresh={handleRefresh} onRowClick={openInsightsPage} onSubmitBidding={handleBiddingUpdate} onSubmitBudget={handleBudgetUpdate} onViewChange={handleViewChange} providerId={providerId} providerName={providerName} selectedCampaignName={selectedCampaign?.name} selectedCurrencyCode={selectedCurrencyCode} selectedCurrencyLabel={selectedCurrencyLabel} selectedTargetName={selectedBudgetTarget?.name} view={view}/>
     </CampaignManagementActionContext.Provider>);
 }

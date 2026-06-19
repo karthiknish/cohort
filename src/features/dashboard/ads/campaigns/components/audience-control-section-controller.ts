@@ -5,7 +5,6 @@ import { useAction } from 'convex/react';
 import { adsAdSetsApi, adsTargetingApi } from '@/lib/convex-api';
 import { logError } from '@/lib/convex-errors';
 import { useAuth } from '@/shared/contexts/auth-context';
-import { toast } from '@/shared/ui/use-toast';
 import type { LocationMarker } from '@/shared/ui/location-map';
 import { useGeocodeResolveBatch } from '@/shared/hooks/use-geocode';
 import { aggregateAudienceTargetingData } from './audience-control-aggregate';

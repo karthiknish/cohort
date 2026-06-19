@@ -24,10 +24,10 @@ function TasksPageFallback() {
 function TasksPageContent(props: TasksPageClientProps) {
     return useTasksPageContent(props);
 }
+const TASKS_PAGE_FALLBACK = <TasksPageFallback />;
 export default function TasksPageClient(props: TasksPageClientProps) {
-    const suspenseFallback = <TasksPageFallback />;
     return (<PageMotionShell reveal={false}>
-      <Suspense fallback={suspenseFallback}>
+      <Suspense fallback={TASKS_PAGE_FALLBACK}>
         <TasksPageContent {...props}/>
       </Suspense>
     </PageMotionShell>);

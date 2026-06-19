@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { FormField } from '@/shared/ui/form-field';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { notifySuccess } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 type Props = {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -121,7 +121,7 @@ export function CreateMetaAdSetDialog({ open, onOpenChange, campaignId, campaign
             productSetId: objectiveForm.productSetId,
         });
         if (validationErrors.length > 0) {
-            notifySuccess({
+            notifyFailure({
                 title: 'Missing campaign settings',
                 message: validationErrors.join(' '),
             });
@@ -137,7 +137,7 @@ export function CreateMetaAdSetDialog({ open, onOpenChange, campaignId, campaign
                 campaignObjective: campaignObjective ?? null,
                 name: name.trim(),
                 status: 'PAUSED',
-                dailyBudget: dailyBudget ? Number(dailyBudget) : undefined,
+                dailyBudget: dailyBudget ? (Number.isFinite(Number(dailyBudget)) ? Number(dailyBudget) : undefined) : undefined,
                 pageId: pageId || undefined,
                 engagementType: objectiveForm.engagementType,
                 postId: objectiveForm.postId,

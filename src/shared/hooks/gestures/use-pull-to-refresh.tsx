@@ -78,7 +78,9 @@ export function usePullToRefresh(ref: React.RefObject<HTMLElement | null>, optio
     const disabled = options.disabled ?? false;
     const [state, dispatch] = useReducer(pullToRefreshReducer, INITIAL_PULL_TO_REFRESH_STATE);
     const stateRef = useRef(state);
-    stateRef.current = state;
+    useEffect(() => {
+        stateRef.current = state;
+    });
     const startYRef = useRef<number>(0);
     const pullingRef = useRef<boolean>(false);
     const handleRefresh = useEffectEvent(() => {

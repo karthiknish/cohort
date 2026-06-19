@@ -156,12 +156,12 @@ type CollaborationSearchMessageListProps = {
     threadNextCursorByRootId: Record<string, string | null>;
     visibleMessages: CollaborationMessage[];
 };
+const SEARCH_EMPTY_STATE = <NoSearchResultsState />;
+const HANDLE_NOOP_LOAD_MORE = () => { };
 export function CollaborationSearchMessageList({ currentUserId, currentUserRole, editingMessageId, editingPreview, editingValue, expandedThreadIds, messageDeletingId, messageUpdatingId, onCancelEdit, onConfirmDelete, onConfirmEdit, onCreateTask, onEditingValueChange, onLoadMoreThread, onReply, onRetryThreadLoad, onStartEdit, onThreadToggle, onToggleReaction, reactionPendingByMessage, threadErrorsByRootId, threadLoadingByRootId, threadMessagesByRootId, threadNextCursorByRootId, visibleMessages, }: CollaborationSearchMessageListProps) {
     const handleToggleReaction = async (messageId: string, emoji: string) => {
         await onToggleReaction(messageId, emoji);
     };
-    const emptyState = <NoSearchResultsState />;
-    const handleNoopLoadMore = () => { };
     const renderMessageContent = (message: {
         id: string;
     }) => {
@@ -219,5 +219,5 @@ export function CollaborationSearchMessageList({ currentUserId, currentUserRole,
         renderEditForm,
         renderDeletedInfo,
     });
-    return (<MessageList messages={visibleMessages.map(collaborationToUnifiedMessage)} currentUserId={currentUserId ?? null} currentUserRole={currentUserRole} isLoading={false} hasMore={false} onLoadMore={handleNoopLoadMore} onToggleReaction={handleToggleReaction} reactionPendingByMessage={reactionPendingByMessage} variant="channel" showAvatars={true} renderers={messageListRenderers} editingMessageId={editingMessageId} deletingMessageId={messageDeletingId} updatingMessageId={messageUpdatingId} emptyState={emptyState}/>);
+    return (<MessageList messages={visibleMessages.map(collaborationToUnifiedMessage)} currentUserId={currentUserId ?? null} currentUserRole={currentUserRole} isLoading={false} hasMore={false} onLoadMore={HANDLE_NOOP_LOAD_MORE} onToggleReaction={handleToggleReaction} reactionPendingByMessage={reactionPendingByMessage} variant="channel" showAvatars={true} renderers={messageListRenderers} editingMessageId={editingMessageId} deletingMessageId={messageDeletingId} updatingMessageId={messageUpdatingId} emptyState={SEARCH_EMPTY_STATE}/>);
 }

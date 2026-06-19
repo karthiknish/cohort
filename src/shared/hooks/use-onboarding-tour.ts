@@ -5,6 +5,7 @@ import { driver, type DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useMutation } from 'convex/react';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { logError } from '@/lib/convex-errors';
 import { onboardingApi } from '@/lib/convex-api';
 import { DASHBOARD_TOUR_ROUTE, isDashboardPath, materializeTourSteps, resolveCommandMenuElement, resolveNavigationElement, TOUR_IDS, waitForTourTargets, type TourStepDefinition, } from '@/shared/lib/onboarding-tour';
 import { useAuth } from '@/shared/contexts/auth-context';
@@ -112,7 +113,7 @@ export function useOnboardingTour() {
             });
         }
         catch (error: unknown) {
-            console.error('Failed to save onboarding tour state:', error);
+            logError(error, 'useOnboardingTour:persistTourCompleted');
             reportConvexFailure({
                 error,
                 context: 'use-onboarding-tour.ts:persistTourCompleted',

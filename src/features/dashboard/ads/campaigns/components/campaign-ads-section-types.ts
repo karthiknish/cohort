@@ -36,6 +36,7 @@ export type CampaignAdsSectionState = {
     periodDays: string;
     sortKey: CreativeSortKey;
     togglingAdSetId: string | null;
+    togglingAdId: string | null;
 };
 export type CampaignAdsSectionAction = {
     type: 'setAdSets';
@@ -82,6 +83,9 @@ export type CampaignAdsSectionAction = {
 } | {
     type: 'setSortKey';
     value: CreativeSortKey;
+} | {
+    type: 'setTogglingAdId';
+    value: string | null;
 } | {
     type: 'clearFilters';
 };

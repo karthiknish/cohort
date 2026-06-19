@@ -4,7 +4,7 @@ import { useCallback, useRef, useState, type ChangeEvent, type DragEvent } from 
 import { ImagePlus, LoaderCircle, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { LazyImage } from '@/shared/ui/lazy-image';
-import { asErrorMessage } from '@/lib/convex-errors';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { cn } from '@/lib/utils';
 interface ImageUploaderProps {
     value?: string | null;
@@ -54,7 +54,7 @@ export function ImageUploader({ value, onChange, onUpload, className, disabled =
             onChange(uploadedUrl);
         })
             .catch((err) => {
-            console.error('Image upload failed:', err);
+            logError(err, 'image-uploader:upload');
             const message = asErrorMessage(err);
             setError('Upload failed. Please try again.');
             notifyFailure({

@@ -13,7 +13,7 @@ import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
 import { MotionTabsContent, Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Textarea } from '@/shared/ui/textarea';
-import { notifySuccess } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { MetaJsonResultBlock, MetaPixelPicker, MetaToolsActionBar, MetaToolsFormSection, MetaToolsPanelShell, type MetaPixelRow, } from './meta-tools-ui';
 type MetaEventsToolsPanelProps = {
     workspaceId: string;
@@ -125,7 +125,7 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
     };
     const handleSendCapi = () => {
         if (!pixelId.trim()) {
-            notifySuccess({ message: 'Select a pixel', });
+            notifyFailure({ message: 'Select a pixel', });
             return;
         }
         setSendingCapi(true);
@@ -154,7 +154,7 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
     };
     const handleSendOffline = () => {
         if (!pixelId.trim()) {
-            notifySuccess({ message: 'Select a pixel', });
+            notifyFailure({ message: 'Select a pixel', });
             return;
         }
         setSendingOffline(true);
@@ -196,14 +196,14 @@ export function MetaEventsToolsPanel({ workspaceId, clientId, adAccountId, campa
             parsed = JSON.parse(batchJson);
         }
         catch {
-            notifySuccess({
+            notifyFailure({
                 title: 'Invalid batch JSON',
                 message: 'Provide an array of { method, relativeUrl, body?, name? }.',
             });
             return;
         }
         if (!Array.isArray(parsed)) {
-            notifySuccess({
+            notifyFailure({
                 title: 'Invalid batch JSON',
                 message: 'Provide an array of { method, relativeUrl, body?, name? }.',
             });

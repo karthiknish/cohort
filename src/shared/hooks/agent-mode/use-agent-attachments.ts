@@ -5,6 +5,7 @@ import { agentApi, filesApi } from '@/lib/convex-api';
 import { buildAgentAttachmentContext, createPendingAttachmentPlaceholder, getPdfUploadSizeError, readFileAsBase64, type AgentAttachmentContext, type ServerPdfExtractionResult, } from '@/lib/agent-attachments';
 import { isPreviewModeEnabled } from '@/lib/preview-data';
 import { uploadStorageFileWithPublicUrl } from '@/lib/upload-storage-file';
+import { logError } from '@/lib/convex-errors';
 export function useAgentAttachments(workspaceId: string | null) {
     const convex = useConvex();
     const extractPdfTextAction = useAction(agentApi.extractPdfText);
@@ -40,7 +41,7 @@ export function useAgentAttachments(workspaceId: string | null) {
             return result;
         }
         catch (err) {
-            console.error('[useAgentMode] Server PDF extraction failed:', err);
+            logError(err, 'useAgentMode:serverPdfExtraction');
             return null;
         }
     };
@@ -59,7 +60,7 @@ export function useAgentAttachments(workspaceId: string | null) {
             return { ...attachment, storageId, url };
         }
         catch (err) {
-            console.error('[useAgentMode] Attachment upload failed:', err, file.name);
+            logError(err, 'useAgentMode:attachmentUpload');
             return {
                 ...attachment,
                 errorMessage: attachment.errorMessage ?? 'File was read but could not be saved to storage.',
@@ -84,7 +85,7 @@ export function useAgentAttachments(workspaceId: string | null) {
                     setPendingAttachments((prev) => prev.map((attachment) => (attachment.id === placeholderId ? withStorage : attachment)));
                 }
                 catch (err) {
-                    console.error('[useAgentMode] Attachment processing failed:', err, file.name);
+                    logError(err, 'useAgentMode:attachmentProcessing');
                     setPendingAttachments((prev) => prev.map((attachment) => attachment.id === placeholderId
                         ? {
                             ...attachment,

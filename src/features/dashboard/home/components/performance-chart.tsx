@@ -143,7 +143,6 @@ export const PerformanceChart = function PerformanceChart({ metrics, loading, cu
       </div>);
     };
     const tooltipContent = (<ChartTooltipContent formatter={tooltipFormatter as NonNullable<ComponentProps<typeof ChartTooltipContent>['formatter']>}/>);
-    const legendContent = <ChartLegendContent />;
     const yTickFormatter = (value: number) => formatCurrencyValue(value, currency);
     if (loading) {
         return (<div className="flex h-full flex-col gap-3">
@@ -208,7 +207,7 @@ export const PerformanceChart = function PerformanceChart({ metrics, loading, cu
             <XAxis dataKey="dateFormatted" axisLine={false} tickLine={false} tickMargin={12} height={40} tick={chartTickStyle}/>
             <YAxis axisLine={false} tickLine={false} tickMargin={8} tickFormatter={yTickFormatter} tick={chartTickStyle}/>
             <RechartsTooltip cursor={tooltipCursor} content={tooltipContent}/>
-            <ChartLegend content={legendContent}/>
+            <ChartLegend content={<ChartLegendContent />}/>
             <Area type="monotone" dataKey="revenue" stroke="var(--color-revenue)" strokeWidth={2} fill="url(#fillRevenue)" dot={false} activeDot={activeDot}/>
             <Area type="monotone" dataKey="spend" stroke="var(--color-spend)" strokeWidth={2} fill="url(#fillSpend)" dot={false} activeDot={activeDot}/>
           </AreaChart>

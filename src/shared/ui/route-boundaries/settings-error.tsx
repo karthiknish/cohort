@@ -1,8 +1,8 @@
-import { useEffect } from 'react'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 import { Link } from '@/shared/ui/link'
 import { AlertTriangle, Home, RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { RouteErrorLogger } from '@/shared/ui/log-route-error'
 import {
   Card,
   CardContent,
@@ -12,9 +12,6 @@ import {
 } from '@/shared/ui/card'
 
 export function SettingsError({ error, reset }: ErrorComponentProps) {
-  useEffect(() => {
-    console.error('[SettingsErrorBoundary]', error)
-  }, [error])
   const handleRetry = () => {
     if (typeof reset === 'function') {
       reset()
@@ -22,6 +19,7 @@ export function SettingsError({ error, reset }: ErrorComponentProps) {
   }
   return (
     <div className="flex min-h-[60vh] items-center justify-center bg-muted/20 p-4">
+      <RouteErrorLogger error={error} segment="settings" />
       <Card className="max-w-lg border-muted/60">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">

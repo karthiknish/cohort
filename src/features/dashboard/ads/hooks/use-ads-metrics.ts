@@ -7,6 +7,7 @@ import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { getPreviewAdsMetrics } from '@/lib/preview-data';
 import { DEFAULT_DATE_RANGE_DAYS, ERROR_MESSAGES } from '../components/constants';
 import type { DateRange } from '../components/date-range-picker';
@@ -101,6 +102,18 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
             limit: 1000,
             aggregate: true,
         });
+    const metricsQueryError = useConvexQueryError({
+        data: metricsRealtime,
+        skipped: isPreviewMode || !workspaceId || !canQueryConvex,
+        loading: convexAuthLoading,
+        fallbackMessage: 'Unable to load ad metrics.',
+    });
+    const metricsV2QueryError = useConvexQueryError({
+        data: metricsRealtimeV2,
+        skipped: isPreviewMode || !workspaceId || !canQueryConvex,
+        loading: convexAuthLoading,
+        fallbackMessage: 'Unable to load ad metrics.',
+    });
     // Compute the full metric list from Convex (or preview)
     const metricsSource = (() => {
         if (isPreviewMode)
@@ -157,7 +170,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
         if (!isPreviewMode && workspaceId && !canQueryConvex && persistedMetricError) {
             return ERROR_MESSAGES.SIGN_IN_REQUIRED;
         }
-        return persistedMetricError;
+        return persistedMetricError ?? metricsQueryError ?? metricsV2QueryError ?? null;
     })();
     const hasMetricData = hasAdsMetricActivity(processedMetrics, effectiveServerSummary, adsInsightsSummary);
     const resolvedServerSummary = serverSideSummary ?? effectiveServerSummary;

@@ -5,6 +5,7 @@ import { useAuth } from '@/shared/contexts/auth-context';
 import type { ClientRecord, ClientTeamMember } from '@/types/clients';
 import { clientsApi } from '@/lib/convex-api';
 import { isNotFoundAppError } from '@/lib/convex-errors';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { getPreviewClients, isPreviewModeEnabled, PREVIEW_MODE_EVENT, PREVIEW_MODE_STORAGE_KEY } from '@/lib/preview-data';
 import { getWorkspaceId } from '@/lib/utils';
 import { STORAGE_KEY_SELECTED, clientProviderReducer, createInitialClientProviderState, extractRows, mapClients, resolveSelectedClientId, type ClientContextValue, } from './client-context-types';
@@ -206,24 +207,35 @@ export function useClientProvider(): ClientContextValue {
         if (!teamMembers.some((member) => member.name.toLowerCase() === accountManager.toLowerCase())) {
             teamMembers.unshift({ name: accountManager, role: 'Account Manager' });
         }
-        const res = await convexCreateClient({
-            workspaceId,
-            name,
-            accountManager,
-            teamMembers,
-            createdBy: user?.id ?? null,
-        });
-        const created: ClientRecord = {
-            id: res.legacyId,
-            workspaceId,
-            name,
-            accountManager,
-            teamMembers,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
-        dispatch({ type: 'setSelectedClientId', selectedClientId: created.id });
-        return created;
+        try {
+            const res = await convexCreateClient({
+                workspaceId,
+                name,
+                accountManager,
+                teamMembers,
+                createdBy: user?.id ?? null,
+            });
+            const created: ClientRecord = {
+                id: res.legacyId,
+                workspaceId,
+                name,
+                accountManager,
+                teamMembers,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            dispatch({ type: 'setSelectedClientId', selectedClientId: created.id });
+            return created;
+        }
+        catch (err) {
+            reportConvexFailure({
+                error: err,
+                context: 'useClientProvider:createClient',
+                title: 'Could not create client',
+                fallbackMessage: 'Unable to create the client. Please try again.',
+            });
+            throw err;
+        }
     };
     const removeClient = async (clientId: string) => {
         if (!workspaceId) {

@@ -1,5 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+// TanStack virtualizer uses interior mutability and breaks React Compiler
+// memoization (incompatible-library allowlist).
+// eslint-disable-next-line react-compiler/react-compiler -- TanStack table virtualizer
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { format, isToday, isYesterday } from 'date-fns';
 import { Calendar, RefreshCw, Search, X } from 'lucide-react';
@@ -31,6 +34,9 @@ export type ActivityListDataProps = {
     sortBy: SortOption;
 };
 export function useActivityListData({ activities, typeFilter, searchQuery, statusFilter, sortBy, }: ActivityListDataProps) {
+    // TanStack useVirtualizer uses interior mutability and is on the React Compiler
+    // incompatible-library allowlist; opt this hook out of compilation.
+    'use no memo';
     const filteredActivities = activities.filter((activity) => {
         const matchesType = typeFilter === 'all' || activity.type === typeFilter;
         const matchesSearch = searchQuery === '' ||

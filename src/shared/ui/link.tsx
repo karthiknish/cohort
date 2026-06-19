@@ -45,6 +45,7 @@ type LinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> & {
   transitionTypes?: string[]
 }
 
+// eslint-disable-next-line react-dom/no-missing-button-type -- <a> + preventDefault is intentional client-side routing
 export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
   {
     href,

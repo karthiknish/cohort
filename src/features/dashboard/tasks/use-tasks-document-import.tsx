@@ -2,7 +2,7 @@
 import { useAction, useConvex, useMutation } from 'convex/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { readFileAsBase64, getPdfUploadSizeError } from '@/lib/agent-attachments';
-import { asErrorMessage } from '@/lib/convex-errors';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { agentApi, filesApi, tasksDocumentImportApi } from '@/lib/convex-api';
 import { notifyFailure, notifySuccess, notifyWarning } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
@@ -105,7 +105,8 @@ export function useTasksDocumentImport({ workspaceId, userId, participants, clie
                 dataBase64,
             });
         }
-        catch {
+        catch (error) {
+            logError(error, 'use-tasks-document-import:extractPdfOnServer');
             return null;
         }
     };
@@ -128,7 +129,8 @@ export function useTasksDocumentImport({ workspaceId, userId, participants, clie
                 getPublicUrl,
             });
         }
-        catch {
+        catch (error) {
+            logError(error, 'use-tasks-document-import:uploadSourceAttachment');
             return null;
         }
     };

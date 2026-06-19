@@ -6,6 +6,8 @@ import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { customFormulasApi } from '@/lib/convex-api';
 import { extractFormulaVariables, safeEvaluateFormula } from '@/lib/metrics';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -126,6 +128,11 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const formulasResult = useQuery(customFormulasApi.listByWorkspace, !isPreviewMode && selectedClientId ? { workspaceId: selectedClientId } : 'skip');
+    const formulasQueryError = useConvexQueryError({
+        data: formulasResult,
+        skipped: isPreviewMode || !selectedClientId,
+        fallbackMessage: 'Unable to load custom formulas.',
+    });
     const createFormulaMutation = useMutation(customFormulasApi.create);
     const updateFormulaMutation = useMutation(customFormulasApi.update);
     const removeFormulaMutation = useMutation(customFormulasApi.remove);
@@ -184,10 +191,11 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
             return created;
         }
         catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to create formula';
-            notifyFailure({
-                title: 'Error',
-                message: message,
+            reportConvexFailure({
+                error: err,
+                context: 'useFormulaEditor:createFormula',
+                title: 'Failed to create formula',
+                fallbackMessage: 'Failed to create formula',
             });
             return null;
         }
@@ -221,10 +229,11 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
             notifySuccess({ message: 'Formula Updated' });
         }
         catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to update formula';
-            notifyFailure({
-                title: 'Error',
-                message: message,
+            reportConvexFailure({
+                error: err,
+                context: 'useFormulaEditor:updateFormula',
+                title: 'Failed to update formula',
+                fallbackMessage: 'Failed to update formula',
             });
         }
     };
@@ -237,10 +246,11 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
             notifySuccess({ message: 'Formula Deleted' });
         }
         catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to delete formula';
-            notifyFailure({
-                title: 'Error',
-                message: message,
+            reportConvexFailure({
+                error: err,
+                context: 'useFormulaEditor:deleteFormula',
+                title: 'Failed to delete formula',
+                fallbackMessage: 'Failed to delete formula',
             });
         }
     };
@@ -255,7 +265,7 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
     return {
         formulas: formulasFromQuery,
         loading,
-        error,
+        error: error ?? formulasQueryError,
         loadFormulas,
         createFormula: handleCreateFormula,
         updateFormula: handleUpdateFormula,

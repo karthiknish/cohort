@@ -1,6 +1,7 @@
 'use client';
 import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { useCallback, useMemo, useReducer } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { Dialog } from '@/shared/ui/dialog';
@@ -80,6 +81,11 @@ export function ProposalVersionHistory({ proposalId, currentFormData, onVersionR
     const { user } = useAuth();
     const workspaceId = user?.agencyId ?? null;
     const rows = useQuery(proposalVersionsApi.list, workspaceId && proposalId ? { workspaceId, proposalLegacyId: proposalId, limit: 50 } : 'skip');
+    const versionsQueryError = useConvexQueryError({
+        data: rows,
+        skipped: !workspaceId || !proposalId,
+        fallbackMessage: 'Unable to load version history.',
+    });
     const createSnapshot = useMutation(proposalVersionsApi.createSnapshot);
     const restoreToVersion = useMutation(proposalVersionsApi.restoreToVersion);
     const versions: ProposalVersion[] = (() => {
@@ -233,7 +239,7 @@ export function ProposalVersionHistory({ proposalId, currentFormData, onVersionR
     return (<>
       <DropdownMenu open={open} onOpenChange={handleOpenChange}>
         <ProposalVersionHistoryTrigger disabled={disabled} open={open} proposalId={proposalId} versionCount={versions.length} versionSummary={versionSummary}/>
-        <ProposalVersionHistoryMenuContent handleSaveVersion={handleSaveVersion} latestVersion={latestVersion} loading={loading} proposalId={proposalId} restoring={restoring} saving={saving} setPreviewVersion={setPreviewVersion} setRestoreConfirmVersion={setRestoreConfirmVersion} versions={versions}/>
+        <ProposalVersionHistoryMenuContent handleSaveVersion={handleSaveVersion} latestVersion={latestVersion} loading={loading} proposalId={proposalId} queryError={versionsQueryError} restoring={restoring} saving={saving} setPreviewVersion={setPreviewVersion} setRestoreConfirmVersion={setRestoreConfirmVersion} versions={versions}/>
       </DropdownMenu>
 
       <Dialog open={Boolean(previewVersion)} onOpenChange={handlePreviewOpenChange}>

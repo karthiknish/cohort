@@ -8,6 +8,7 @@ import type { AgentError } from '@/lib/agent-errors';
 import { parseAgentError } from '@/lib/agent-errors';
 import { isPreviewModeEnabled } from '@/lib/preview-data';
 import { convexErrorMessage, reportConvexFailure } from '@/lib/handle-convex-error';
+import { logError } from '@/lib/convex-errors';
 import { mapStoredMessagesToAgentMessages } from './map-stored-messages';
 import { PREVIEW_AGENT_CONVERSATION_ID, type StoredAgentMessage } from './stored-message-utils';
 import type { AgentConversationSummary, AgentMessage } from './types';
@@ -77,7 +78,7 @@ export function useAgentConversationHistory({ workspaceId, userId, conversationI
             setHistoryCursor(result.nextCursor);
         }
         catch (err) {
-            console.error('[useAgentMode] Failed to fetch history:', err);
+            logError(err, 'useAgentMode:fetchHistory');
             setHistoryError(convexErrorMessage(err, 'Failed to load conversation history.'));
         }
         finally {
@@ -92,32 +93,52 @@ export function useAgentConversationHistory({ workspaceId, userId, conversationI
     const setConversationPinned = async (targetConversationId: string, pinned: boolean) => {
         if (!workspaceId || !userId)
             return;
-        await setConversationFlags({
-            workspaceId,
-            legacyId: targetConversationId,
-            userId: String(userId),
-            pinned,
-        });
-        setHistory((prev) => prev.map((entry) => entry.id === targetConversationId
-            ? { ...entry, pinnedAt: pinned ? new Date().toISOString() : null }
-            : entry));
+        try {
+            await setConversationFlags({
+                workspaceId,
+                legacyId: targetConversationId,
+                userId: String(userId),
+                pinned,
+            });
+            setHistory((prev) => prev.map((entry) => entry.id === targetConversationId
+                ? { ...entry, pinnedAt: pinned ? new Date().toISOString() : null }
+                : entry));
+        }
+        catch (err) {
+            reportConvexFailure({
+                error: err,
+                context: 'useAgentConversationHistory:setConversationPinned',
+                title: pinned ? 'Could not pin chat' : 'Could not unpin chat',
+                fallbackMessage: 'Sorry — we could not update that chat. Please try again.',
+            });
+        }
     };
     const setConversationArchived = async (targetConversationId: string, archived: boolean) => {
         if (!workspaceId || !userId)
             return;
-        await setConversationFlags({
-            workspaceId,
-            legacyId: targetConversationId,
-            userId: String(userId),
-            archived,
-        });
-        setHistory((prev) => prev.map((entry) => entry.id === targetConversationId
-            ? {
-                ...entry,
-                archivedAt: archived ? new Date().toISOString() : null,
-                pinnedAt: archived ? null : entry.pinnedAt,
-            }
-            : entry));
+        try {
+            await setConversationFlags({
+                workspaceId,
+                legacyId: targetConversationId,
+                userId: String(userId),
+                archived,
+            });
+            setHistory((prev) => prev.map((entry) => entry.id === targetConversationId
+                ? {
+                    ...entry,
+                    archivedAt: archived ? new Date().toISOString() : null,
+                    pinnedAt: archived ? null : entry.pinnedAt,
+                }
+                : entry));
+        }
+        catch (err) {
+            reportConvexFailure({
+                error: err,
+                context: 'useAgentConversationHistory:setConversationArchived',
+                title: archived ? 'Could not archive chat' : 'Could not unarchive chat',
+                fallbackMessage: 'Sorry — we could not update that chat. Please try again.',
+            });
+        }
     };
     const loadConversation = async (targetConversationId: string) => {
         if (!targetConversationId)
@@ -161,7 +182,7 @@ export function useAgentConversationHistory({ workspaceId, userId, conversationI
             setConversationId(targetConversationId);
         }
         catch (err) {
-            console.error('[useAgentMode] Failed to load conversation:', err);
+            logError(err, 'useAgentMode:loadConversation');
             const agentError = parseAgentError(err, null);
             handleError(agentError);
         }

@@ -150,7 +150,9 @@ function GoogleAnalyticsConnectionSection() {
 function AnalyticsDialogs() {
     const { gaDisconnectDialogOpen, gaDisconnecting, gaInitializingProperty, gaLoadingProperties, gaProperties, gaSelectedPropertyId, gaSetupDialogOpen, gaSetupMessage, handleDisconnectGoogleAnalytics, handleFinalizeGoogleAnalyticsSetup, loadGoogleAnalyticsPropertyOptions, setGaDisconnectDialogOpen, setGaSelectedPropertyId, setGaSetupDialogOpen, } = useAnalyticsPageContext();
     const handleReloadProperties = () => {
-        void loadGoogleAnalyticsPropertyOptions();
+        void loadGoogleAnalyticsPropertyOptions().catch(() => {
+            // Error already handled by loadGoogleAnalyticsPropertyOptions catch block
+        });
     };
     const handleInitialize = () => {
         void handleFinalizeGoogleAnalyticsSetup();
@@ -162,13 +164,16 @@ function AnalyticsDialogs() {
     </>);
 }
 function AnalyticsErrorAlert() {
-    const { metricsError } = useAnalyticsPageContext();
-    if (!metricsError)
+    const { metricsError, breakdownsError, gaStatusError } = useAnalyticsPageContext();
+    const errors = [metricsError, breakdownsError, gaStatusError].filter(Boolean) as Error[];
+    if (errors.length === 0)
         return null;
-    return (<Alert variant="destructive">
-      <AlertTitle>Unable to load analytics</AlertTitle>
-      <AlertDescription>{asErrorMessage(metricsError)}</AlertDescription>
-    </Alert>);
+    return (<div className="space-y-2">
+      {errors.map((error) => (<Alert key={error.message} variant="destructive">
+          <AlertTitle>Unable to load analytics</AlertTitle>
+          <AlertDescription>{asErrorMessage(error)}</AlertDescription>
+        </Alert>))}
+    </div>);
 }
 function AnalyticsBodySection() {
     const { gaConnected, isGaSelectedWithoutData, isSyncPending } = useAnalyticsPageContext();

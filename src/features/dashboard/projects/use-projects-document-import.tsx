@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { readFileAsBase64, getPdfUploadSizeError } from '@/lib/agent-attachments';
-import { asErrorMessage } from '@/lib/convex-errors';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { agentApi, filesApi, projectsApi, projectsDocumentImportApi } from '@/lib/convex-api';
 import { notifyFailure, notifySuccess, notifyWarning } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
@@ -94,7 +94,8 @@ export function useProjectsDocumentImport({ workspaceId, ownerId, clients, prefe
                 dataBase64,
             });
         }
-        catch {
+        catch (error) {
+            logError(error, 'use-projects-document-import:extractPdfOnServer');
             return null;
         }
     };

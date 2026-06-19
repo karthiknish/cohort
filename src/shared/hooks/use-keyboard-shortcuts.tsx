@@ -109,6 +109,7 @@ export function useKeyboardShortcut(shortcut: KeyboardShortcut, options: UseKeyb
     const { enabled = true, targetRef, allowInInput = false } = options;
     const callbackRef = useRef(shortcut.callback);
     const sequenceStatesRef = useRef<Map<string, SequenceState>>(null!);
+    // eslint-disable-next-line react-compiler/react-compiler -- lazy-init ref pattern
     if (sequenceStatesRef.current === null) sequenceStatesRef.current = new Map<string, SequenceState>();
     // Keep callback ref up to date
     useEffect(() => {
@@ -156,9 +157,12 @@ export function useKeyboardShortcut(shortcut: KeyboardShortcut, options: UseKeyb
 export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[], options: UseKeyboardShortcutOptions = {}) {
     const { enabled = true, targetRef, allowInInput = false } = options;
     const sequenceStatesRef = useRef<Map<string, SequenceState>>(null!);
+    // eslint-disable-next-line react-compiler/react-compiler -- lazy-init ref pattern
     if (sequenceStatesRef.current === null) sequenceStatesRef.current = new Map<string, SequenceState>();
     const shortcutsRef = useRef(shortcuts);
-    shortcutsRef.current = shortcuts;
+    useEffect(() => {
+        shortcutsRef.current = shortcuts;
+    }, [shortcuts]);
     const handleKeyDown = useEffectEvent((event: KeyboardEvent) => {
         if (!enabled)
             return;

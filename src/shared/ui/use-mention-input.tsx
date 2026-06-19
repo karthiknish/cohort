@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useId, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type SyntheticEvent } from 'react';
+import { useId, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type SyntheticEvent } from 'react';
 import { User, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { HoverPreview } from '@/shared/ui/hover-preview';
@@ -193,14 +193,18 @@ export function useMentionInput({ value, onChange, users, placeholder = 'Type @ 
     const handleUserSelect = (user: MentionableUser) => {
         insertMention(user);
     };
-    const callbackRef = useCallback((node: HTMLInputElement | null) => {
+    // Plain ref-callback: React invokes this during the commit phase, so
+    // ref.current writes happen inside React's own frame and are exempt from
+    // the render-time immutability / refs checks.
+    const callbackRef = (node: HTMLInputElement | null) => {
         inputRef.current = node;
         if (typeof ref === 'function') {
             ref(node);
-        } else if (ref) {
-            ref.current = node; // eslint-disable-line react-compiler/react-compiler -- legitimate ref-forwarding pattern
         }
-    }, [ref]);
+        else if (ref) {
+            ref.current = node; // eslint-disable-line react-compiler/react-compiler -- ref-forwarding via callback
+        }
+    };
     const removeMentionHandlers = Object.fromEntries(selectedMentions.map((mention) => [mention.id, () => removeMention(mention)])) as Record<string, () => void>;
     const mentionOptionHandlers = Object.fromEntries(mentionResults.map((user, index) => [user.id, {
             onClick: () => handleUserSelect(user),

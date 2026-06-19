@@ -1,5 +1,6 @@
 'use client';
 import { notifyFailure, notifySuccess } from '@/lib/notifications';
+import { logError } from '@/lib/convex-errors';
 import { useCallback, useState, useRef } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { SvglExcelIcon } from '@/shared/components/svgl-brand-logo';
@@ -39,11 +40,13 @@ export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButt
                 setIsExporting(false);
             }, 1000);
         }
-        catch {
+        catch (error) {
+            logError(error, 'analytics-export-button:handleExport');
             setIsExporting(false);
             notifyFailure({
                 title: 'Export failed',
-                message: 'There was a problem exporting your data. Please try again.',
+                error,
+                fallbackMessage: 'There was a problem exporting your data. Please try again.',
             });
         }
     };

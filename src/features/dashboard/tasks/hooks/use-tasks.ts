@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useReducer, useState, type Dispatch, t
 import { tasksApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { useAccumulatedCursorPages } from '@/lib/hooks/use-accumulated-cursor-pages';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { getPreviewTasks } from '@/lib/preview-data';
 import type { TaskAttachment, TaskRecord, TaskStatus } from '@/types/tasks';
 import { formatStatusLabel } from '../task-types';
@@ -207,6 +208,11 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
         }
         : 'skip');
     const convexTasksQuery = clientId === undefined ? convexAllTasksQuery : convexClientTasksQuery;
+    const tasksQueryError = useConvexQueryError({
+        data: convexTasksQuery,
+        skipped: !tasksQueryEnabled,
+        fallbackMessage: 'Unable to load tasks.',
+    });
     const taskPagination = useAccumulatedCursorPages<TaskRecord, TaskPageCursor>({
         scopeKey: paginationScopeKey,
         queryData: convexTasksQuery,
@@ -258,7 +264,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
         dispatch({
             type: 'syncData',
             tasks: taskPagination.mergedItems,
-            error: null,
+            error: tasksQueryError ?? null,
         });
     }, [
         clientId,
@@ -267,6 +273,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false,
         taskPagination.mergedItems,
         userId,
         workspaceId,
+        tasksQueryError,
     ]);
     const handleLoadMore = () => {
         if (isPreviewMode) {

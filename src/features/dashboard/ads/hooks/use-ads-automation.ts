@@ -140,6 +140,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
             const message = asErrorMessage(error);
             setSettingsErrors((prev) => ({ ...prev, [providerId]: message }));
             notifyFailure({
+                title: TOAST_TITLES.AUTOMATION_UPDATED,
                 message: message,
             });
         }
@@ -178,6 +179,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
             logError(error, 'useAdsAutomation:runManualSync');
             const message = asErrorMessage(error);
             notifyFailure({
+                title: TOAST_TITLES.UNABLE_TO_SYNC,
                 message: message,
             });
         }

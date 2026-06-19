@@ -110,19 +110,19 @@ function MilestoneStatusIndicator({ status }: {
     const indicatorStyle = ({ backgroundColor: milestoneStatusColor(status) });
     return <span className="size-2 rounded-full" style={indicatorStyle}/>;
 }
+const ADD_MILESTONE_TRIGGER = (<Button variant="ghost" size="icon" className="size-8" aria-label="Add milestone">
+    <Plus className="size-4"/>
+  </Button>);
 function ProjectTimelineRow({ project, onMilestoneCreated, }: {
     project: ProjectRecord;
     onMilestoneCreated: (milestone: MilestoneRecord) => void;
 }) {
-    const trigger = (<Button variant="ghost" size="icon" className="size-8" aria-label="Add milestone">
-        <Plus className="size-4"/>
-      </Button>);
     return (<div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm">
       <div className="flex items-center gap-2 truncate">
         <StatusPill status={project.status}/>
         <span className="truncate" title={project.name}>{project.name}</span>
       </div>
-      <CreateMilestoneDialog projects={[project]} defaultProjectId={project.id} onCreated={onMilestoneCreated} trigger={trigger}/>
+      <CreateMilestoneDialog projects={[project]} defaultProjectId={project.id} onCreated={onMilestoneCreated} trigger={ADD_MILESTONE_TRIGGER}/>
     </div>);
 }
 function MilestoneBar({ milestone, start, dayWidth, totalDays, }: {

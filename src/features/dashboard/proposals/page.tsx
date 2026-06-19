@@ -15,10 +15,10 @@ function ProposalsPageContent() {
     }, [clientIdParam, selectClient]);
     return useProposalsPageContent();
 }
+const PROPOSALS_PAGE_SKELETON = <DashboardSkeleton />;
 export default function ProposalsPage() {
-    const dashboardSkeleton = <DashboardSkeleton />;
     return (<PageMotionShell reveal={false}>
-      <Suspense fallback={dashboardSkeleton}>
+      <Suspense fallback={PROPOSALS_PAGE_SKELETON}>
         <ProposalsPageContent />
       </Suspense>
     </PageMotionShell>);

@@ -27,6 +27,7 @@ export interface UseAnalyticsDataReturn {
     metricsNextCursor: AnalyticsMetricsPageCursor | null;
     metricsLoadingMore: boolean;
     metricsError: Error | undefined;
+    breakdownsError: Error | undefined;
     metricsLoading: boolean;
     metricsRefreshing: boolean;
     loadMoreMetrics: () => void;
@@ -104,6 +105,12 @@ export function useAnalyticsData(_token: string | null, periodDays: number, clie
         skipped: isPreviewMode || !gaOnly || !workspaceId || !canQueryConvex,
         loading: isConvexLoading,
         fallbackMessage: 'Unable to load analytics metrics.',
+    });
+    const gaBreakdownsQueryError = useConvexQueryError({
+        data: gaBreakdownsRealtime,
+        skipped: isPreviewMode || !gaOnly || !workspaceId || !canQueryConvex,
+        loading: isConvexLoading,
+        fallbackMessage: 'Unable to load analytics breakdowns.',
     });
     const generateInsights = useAction(analyticsInsightsApi.generateInsights);
     const fetchInsights = useEffectEvent(async () => {
@@ -227,6 +234,7 @@ export function useAnalyticsData(_token: string | null, periodDays: number, clie
             metricsLoadingMore: false,
             resetMetricsPagination: async () => undefined,
             metricsError: undefined,
+            breakdownsError: undefined,
             metricsLoading: false,
             metricsRefreshing: false,
             loadMoreMetrics: () => undefined,
@@ -240,12 +248,14 @@ export function useAnalyticsData(_token: string | null, periodDays: number, clie
         };
     }
     const metricsError = gaMetricsQueryError ? new Error(gaMetricsQueryError) : undefined;
+    const breakdownsError = gaBreakdownsQueryError ? new Error(gaBreakdownsQueryError) : undefined;
     return {
         metricsData: mappedMetrics,
         breakdowns,
         metricsNextCursor: metricsPagination.nextCursor,
         metricsLoadingMore: metricsPagination.isLoadingMore,
         metricsError,
+        breakdownsError,
         metricsLoading,
         metricsRefreshing: false,
         loadMoreMetrics,

@@ -1,5 +1,6 @@
 import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { useState, useCallback, useRef, useEffect, useEffectEvent, useReducer } from 'react';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useAuth } from '@/shared/contexts/auth-context';
@@ -51,6 +52,7 @@ export interface UseProposalDraftsReturn {
     isLoadingProposals: boolean;
     isCreatingDraft: boolean;
     isBootstrapping: boolean;
+    proposalsQueryError: string | null;
     autosaveStatus: 'idle' | 'saving' | 'saved' | 'error';
     deletingProposalId: string | null;
     proposalPendingDelete: ProposalDraft | null;
@@ -126,6 +128,11 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             clientId: selectedClientId ?? undefined,
             limit: 100,
         });
+    const proposalsQueryError = useConvexQueryError({
+        data: convexProposals,
+        skipped: isPreviewMode || !canQuery,
+        fallbackMessage: 'Unable to load proposals.',
+    });
     const convexCreateProposal = useMutation(proposalsApi.create);
     const convexUpdateProposal = useMutation(proposalsApi.update);
     const convexRemoveProposal = useMutation(proposalsApi.remove);
@@ -584,6 +591,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         isLoadingProposals,
         isCreatingDraft,
         isBootstrapping,
+        proposalsQueryError,
         autosaveStatus: resolvedAutosaveStatus,
         deletingProposalId,
         proposalPendingDelete,
