@@ -174,7 +174,7 @@ export function useAuthSync() {
             }));
         }
     }
-    else if (!awaitingSession &&
+    else if (!sessionPending && !awaitingSession &&
         (sessionUser !== null ||
             syncState !== 'idle' ||
             authError !== null ||
