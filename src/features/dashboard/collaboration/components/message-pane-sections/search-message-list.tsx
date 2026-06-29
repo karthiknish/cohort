@@ -99,7 +99,7 @@ function SearchThreadSection({ currentUserId, currentUserRole, editingMessageId,
         isLoading: threadLoading,
         hasNextCursor: !!threadNextCursor,
     });
-    const searchThreadReplyContext = ({
+    const searchThreadReplyContext = useMemo(() => ({
         currentUserId,
         currentUserRole,
         editingMessageId,
@@ -124,7 +124,32 @@ function SearchThreadSection({ currentUserId, currentUserRole, editingMessageId,
         threadLoadingByRootId,
         threadMessagesByRootId,
         threadNextCursorByRootId,
-    });
+    }), [
+        currentUserId,
+        currentUserRole,
+        editingMessageId,
+        editingPreview,
+        editingValue,
+        expandedThreadIds,
+        messageDeletingId,
+        messageUpdatingId,
+        onCancelEdit,
+        onConfirmDelete,
+        onConfirmEdit,
+        onCreateTask,
+        onEditingValueChange,
+        onLoadMoreThread,
+        onReply,
+        onRetryThreadLoad,
+        onStartEdit,
+        onThreadToggle,
+        onToggleReaction,
+        reactionPendingByMessage,
+        threadErrorsByRootId,
+        threadLoadingByRootId,
+        threadMessagesByRootId,
+        threadNextCursorByRootId,
+    ]);
     return (<SearchThreadReplyContext.Provider value={searchThreadReplyContext}>
     <ThreadSection threadRootId={threadRootId} replyCount={replyCount} lastReplyIso={lastReplyIso} panel={searchThreadPanel} error={threadError} replies={threadReplies} onToggle={handleToggle} onRetry={handleRetry} onLoadMore={handleLoadMore} onReply={handleReply} ReplyRenderer={SearchThreadReplyRenderer}/>
     </SearchThreadReplyContext.Provider>);

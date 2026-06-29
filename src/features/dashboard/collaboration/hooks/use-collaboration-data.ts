@@ -134,13 +134,13 @@ export function useCollaborationData(): UseCollaborationDataReturn {
         uploadAttachments,
     });
     const isBootstrapping = (clientsLoading || projectsLoading) && channels.length === 0;
-    const sharedFiles = (() => {
+    const sharedFiles = useMemo(() => {
         const attachmentGroups = messages.channelMessages.flatMap((message) => !message.isDeleted && Array.isArray(message.attachments) && message.attachments.length > 0
             ? [message.attachments ?? []]
             : []);
         return collectSharedFiles(attachmentGroups);
-    })();
-    return {
+    }, [messages.channelMessages]);
+    return useMemo(() => ({
         channels,
         filteredChannels,
         searchQuery,
@@ -200,5 +200,26 @@ export function useCollaborationData(): UseCollaborationDataReturn {
         markChannelRead: messages.markChannelRead,
         markChannelReadPending: messages.markChannelReadPending,
         reactionPendingByMessage: messages.reactionPendingByMessage,
-    };
+    }), [
+        channels,
+        filteredChannels,
+        searchQuery,
+        selectedChannel,
+        selectChannel,
+        messages,
+        isBootstrapping,
+        channelsQueryError,
+        totalChannels,
+        totalParticipants,
+        channelParticipants,
+        sharedFiles,
+        pendingAttachments,
+        handleAddAttachments,
+        handleRemoveAttachment,
+        clearAttachments,
+        uploadAttachments,
+        uploading,
+        currentUserId,
+        currentUserRole,
+    ]);
 }

@@ -1,5 +1,5 @@
 'use client';
-import { createContext, use, type ReactNode } from 'react';
+import { createContext, use, useMemo, type ReactNode } from 'react';
 import type { TaskParticipant } from './task-types';
 import { formatAssigneeList, resolveAssigneeLabel } from './task-types';
 const EMPTY_PARTICIPANTS: TaskParticipant[] = [];
@@ -8,7 +8,8 @@ export function TaskParticipantsProvider({ participants, children, }: {
     participants: TaskParticipant[];
     children: ReactNode;
 }) {
-    return (<TaskParticipantsContext.Provider value={participants}>
+    const value = useMemo(() => participants, [participants]);
+    return (<TaskParticipantsContext.Provider value={value}>
       {children}
     </TaskParticipantsContext.Provider>);
 }

@@ -68,18 +68,18 @@ export function CollaborationMessageItem({ currentUserId, currentUserRole, editi
     const handleThreadToggle = () => onThreadToggle(threadRootId);
     const handleRetryThreadLoad = () => onRetryThreadLoad(threadRootId);
     const handleLoadMoreThread = () => onLoadMoreThread(threadRootId);
-    const permissions = ({ canReact, canManage: canManageMessage });
-    const pending = ({
+    const permissions = useMemo(() => ({ canReact, canManage: canManageMessage }), [canReact, canManageMessage]);
+    const pending = useMemo(() => ({
         updating: isUpdating,
         deleting: isDeleting,
         disableReactions: disableReactionActions,
-    });
-    const threadPanel = ({
+    }), [isUpdating, isDeleting, disableReactionActions]);
+    const threadPanel = useMemo(() => ({
         isOpen: isThreadOpen,
         isLoading: threadLoading,
         hasNextCursor: !!threadNextCursor,
-    });
-    const threadReplyContext = ({
+    }), [isThreadOpen, threadLoading, threadNextCursor]);
+    const threadReplyContext = useMemo(() => ({
         currentUserId,
         currentUserRole,
         editingMessageId,
@@ -104,7 +104,32 @@ export function CollaborationMessageItem({ currentUserId, currentUserRole, editi
         threadLoadingByRootId,
         threadMessagesByRootId,
         threadNextCursorByRootId,
-    });
+    }), [
+        currentUserId,
+        currentUserRole,
+        editingMessageId,
+        editingPreview,
+        editingValue,
+        expandedThreadIds,
+        messageDeletingId,
+        messageUpdatingId,
+        onCancelEdit,
+        onConfirmDelete,
+        onConfirmEdit,
+        onCreateTask,
+        onEditingValueChange,
+        onLoadMoreThread,
+        onReply,
+        onRetryThreadLoad,
+        onStartEdit,
+        onThreadToggle,
+        onToggleReaction,
+        reactionPendingByMessage,
+        threadErrorsByRootId,
+        threadLoadingByRootId,
+        threadMessagesByRootId,
+        threadNextCursorByRootId,
+    ]);
     const containerClass = cn('relative group flex items-start gap-3 px-6 py-2.5 motion-chromatic', isSearchResult && 'bg-accent/5 ring-1 ring-primary/20', !showAvatar && !isReply && 'py-1', isReply && 'ml-14 mt-2');
     const bubbleClass = cn('relative min-w-0 max-w-full flex-1 overflow-hidden flex flex-col space-y-1.5 rounded-2xl p-4 motion-chromatic', isReply ? 'border border-muted/30 bg-muted/10' : 'border border-transparent bg-muted/5 group-hover:border-muted/20 group-hover:bg-muted/10', (isSearchResult || isReply) && 'shadow-sm');
     return (<div className={containerClass}>

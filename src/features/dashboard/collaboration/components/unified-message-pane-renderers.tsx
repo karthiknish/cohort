@@ -160,7 +160,7 @@ export function UnifiedThreadSectionRenderer({ activeDeletingMessageId, expanded
     const handleReplyClick = () => {
         handleReply(message);
     };
-    const threadReplyContext = ({
+    const threadReplyContext = useMemo(() => ({
         activeDeletingMessageId,
         currentUserId,
         editingMessageId,
@@ -171,12 +171,23 @@ export function UnifiedThreadSectionRenderer({ activeDeletingMessageId, expanded
         onDeleteMessage,
         onEditMessage,
         reactionPendingByMessage,
-    });
-    const threadPanel = ({
+    }), [
+        activeDeletingMessageId,
+        currentUserId,
+        editingMessageId,
+        handleReaction,
+        handleRequestDelete,
+        handleStartEdit,
+        messageUpdatingId,
+        onDeleteMessage,
+        onEditMessage,
+        reactionPendingByMessage,
+    ]);
+    const threadPanel = useMemo(() => ({
         isOpen: Boolean(expanded[threadRootId]),
         isLoading: threadLoading,
         hasNextCursor: Boolean(threadNextCursor),
-    });
+    }), [expanded, threadRootId, threadLoading, threadNextCursor]);
     if (headerType !== 'channel' || message.deleted) {
         return null;
     }

@@ -1,4 +1,5 @@
 'use client';
+import { useMemo } from 'react';
 import type { DirectConversation, DirectMessage } from '@/types/collaboration';
 import { useDirectConversationsQuery } from './use-direct-conversations-query';
 import { useDirectMessageActions } from './use-direct-message-actions';
@@ -63,7 +64,7 @@ export function useDirectMessages(options: UseDirectMessagesOptions): UseDirectM
         currentUserRole: options.currentUserRole,
         conversationLegacyId: query.selectedConversation?.legacyId ?? null,
     });
-    return {
+    return useMemo(() => ({
         conversations: query.conversations,
         selectedConversation: query.selectedConversation,
         selectConversation: query.selectConversation,
@@ -95,5 +96,5 @@ export function useDirectMessages(options: UseDirectMessagesOptions): UseDirectM
         handleComposerFocus: dmTyping.handleComposerFocus,
         handleComposerBlur: dmTyping.handleComposerBlur,
         notifyDmTyping: dmTyping.notifyTyping,
-    };
+    }), [query, actions, dmTyping]);
 }

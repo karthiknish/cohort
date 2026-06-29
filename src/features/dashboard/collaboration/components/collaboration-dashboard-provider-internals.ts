@@ -35,20 +35,20 @@ type UseCollaborationDashboardUrlStateOptions = {
 export function useCollaborationDashboardDialogs() {
     const [isNewDMDialogOpen, setIsNewDMDialogOpen] = useState(false);
     const [isManageMembersDialogOpen, setIsManageMembersDialogOpen] = useState(false);
-    const openManageMembersDialog = () => {
+    const openManageMembersDialog = useCallback(() => {
         setIsManageMembersDialogOpen(true);
-    };
-    const openNewDMDialog = () => {
+    }, []);
+    const openNewDMDialog = useCallback(() => {
         setIsNewDMDialogOpen(true);
-    };
-    return {
+    }, []);
+    return useMemo(() => ({
         isManageMembersDialogOpen,
         isNewDMDialogOpen,
         openManageMembersDialog,
         openNewDMDialog,
         setIsManageMembersDialogOpen,
         setIsNewDMDialogOpen,
-    };
+    }), [isManageMembersDialogOpen, isNewDMDialogOpen, openManageMembersDialog, openNewDMDialog, setIsManageMembersDialogOpen, setIsNewDMDialogOpen]);
 }
 function clearChannelUrlParams(params: URLSearchParams) {
     params.delete('projectId');
@@ -275,7 +275,7 @@ export function useCollaborationDashboardUrlState({ channels, dmConversations, s
             params.delete('threadId');
         });
     };
-    return {
+    return useMemo(() => ({
         clearCollaborationSelectionFromUrl,
         clearMessageFocus,
         clearProjectFilter,
@@ -292,7 +292,24 @@ export function useCollaborationDashboardUrlState({ channels, dmConversations, s
         requestedThreadId,
         unresolvedChannelUrl,
         unresolvedConversationUrl,
-    };
+    }), [
+        clearCollaborationSelectionFromUrl,
+        clearMessageFocus,
+        clearProjectFilter,
+        dismissUnresolvedChannelUrl,
+        dismissUnresolvedConversationUrl,
+        handleOpenChannelMessage,
+        handleOpenDmMessage,
+        syncChannelToUrl,
+        syncDmToUrl,
+        requestedConversationId,
+        requestedMessageId,
+        requestedProjectId,
+        requestedProjectName,
+        requestedThreadId,
+        unresolvedChannelUrl,
+        unresolvedConversationUrl,
+    ]);
 }
 type UseCollaborationDashboardActionsOptions = {
     clearCollaborationSelectionFromUrl?: () => void;
@@ -439,12 +456,12 @@ export function useCollaborationDashboardActions({ clearCollaborationSelectionFr
             throw error;
         }
     };
-    return {
+    return useMemo(() => ({
         handleCreateChannel,
         handleDeleteChannel,
         handleSaveChannelMembers,
         handleSelectChannel,
         handleSelectDM,
         handleStartNewDM,
-    };
+    }), [handleCreateChannel, handleDeleteChannel, handleSaveChannelMembers, handleSelectChannel, handleSelectDM, handleStartNewDM]);
 }

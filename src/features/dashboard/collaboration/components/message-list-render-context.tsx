@@ -1,5 +1,5 @@
 'use client';
-import { type ReactNode, createContext, use } from 'react';
+import { type ReactNode, createContext, use, useMemo } from 'react';
 import type { UnifiedMessage } from './message-list-types';
 export type MessageListRenderers = {
     renderMessageExtras?: (message: UnifiedMessage) => ReactNode;
@@ -19,7 +19,8 @@ export function MessageListRenderProvider({ children, value, }: {
     children: ReactNode;
     value: MessageListRenderers;
 }) {
-    return (<MessageListRenderContext.Provider value={value}>
+    const memoizedValue = useMemo(() => value, [value]);
+    return (<MessageListRenderContext.Provider value={memoizedValue}>
       {children}
     </MessageListRenderContext.Provider>);
 }
