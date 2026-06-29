@@ -222,22 +222,23 @@ Finance routes under `/api/finance/*` (categories, vendors, expenses, reporting)
 
 ### Monitoring & Observability (Sentry)
 
-Sentry is wired into both the client (`sentry.client.config.ts`) and every server runtime (`sentry.server.config.ts`, `sentry.edge.config.ts`, `instrumentation.ts`).
+Sentry is wired into this TanStack Start app via `src/instrument.client.ts`, `instrument.server.mjs`, `src/client.tsx`, `src/server.ts`, and the `sentryTanstackStart(...)` Vite plugin in `vite.config.mts`.
 
-1. Add these variables to `.env.local` (and production secrets):
-	- `SENTRY_DSN` (or `NEXT_PUBLIC_SENTRY_DSN` for client usage)
-	- `SENTRY_EDGE_DSN` (optional edge-only DSN)
-	- `SENTRY_TRACES_SAMPLE_RATE` (defaults to `0.1`)
-	- `SENTRY_PROFILES_SAMPLE_RATE` (defaults to `0.1`, Node runtime only)
-	- `SENTRY_ENVIRONMENT` (falls back to `NODE_ENV`)
-	- `SENTRY_DEBUG` (`true` to enable verbose logging)
-2. Rebuild the app so instrumentation is bundled:
+1. Add these variables to local env files and production secrets:
+	- `NEXT_PUBLIC_SENTRY_DSN` for browser events
+	- `SENTRY_DSN` for server events (falls back to `NEXT_PUBLIC_SENTRY_DSN` if unset)
+	- `SENTRY_AUTH_TOKEN` to enable production source map uploads during builds
+	- `SENTRY_ORG` / `SENTRY_PROJECT` if you want to override the default build-plugin target
+	- `SENTRY_TRACES_SAMPLE_RATE` (optional server trace sampling override; defaults to `0.1` in production)
+	- `SENTRY_ENVIRONMENT` / `SENTRY_RELEASE` (optional server metadata overrides)
+	- `NEXT_PUBLIC_SENTRY_RELEASE` (optional client release tag)
+2. Rebuild the app so instrumentation and source maps are bundled:
 	```bash
-	bun run build
+	bun run build:start
 	```
-3. Deploy as normal. `withSentryConfig` in `next.config.ts` enables automatic error and trace capture for API routes, server components, and edge handlers.
+3. Deploy as normal. The Vite Sentry plugin uploads source maps when `SENTRY_AUTH_TOKEN` is set.
 
-Tune sample rates per environment—e.g., heavier sampling in staging, lighter in production—simply by adjusting the env vars before releasing.
+Note: this repo does **not** use Next.js `withSentryConfig`, `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, or `instrumentation.ts`.
 
 ## License
 

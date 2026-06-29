@@ -1,5 +1,5 @@
 // Notification configuration and utility functions
-import { calculateBackoffDelay as calculateBackoffDelayLib, parseRetryAfterMs, sleep } from '@/lib/retry-utils';
+import { calculateBackoffDelay as calculateBackoffDelayLib, fetchWithTimeout as fetchWithTimeoutLib, parseRetryAfterMs, sleep } from '@/lib/retry-utils';
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
@@ -39,16 +39,8 @@ export function parseRetryAfter(header: string | null): number | null {
  * Execute a fetch request with timeout
  */
 export async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number = RETRY_CONFIG.requestTimeoutMs): Promise<Response> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-        const response = await fetch(url, {
-            ...options,
-            signal: controller.signal,
-        });
-        return response;
-    }
-    finally {
-        clearTimeout(timeoutId);
-    }
+    return await fetchWithTimeoutLib(url, {
+        ...options,
+        timeoutMs,
+    });
 }

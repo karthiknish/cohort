@@ -10,6 +10,7 @@ export interface AuthResult {
 }
 import { ApiError } from './api-errors';
 import { decodeJwtSubject } from './jwt-utils';
+import { fetchWithTimeout } from './retry-utils';
 import { ConvexHttpClient } from 'convex/browser';
 import { getToken as getNextJsToken } from '@/lib/auth-token.server';
 import { getConvexSiteUrl } from '@/lib/convex-env';
@@ -19,6 +20,7 @@ class AuthenticationError extends ApiError {
         super(message, status, 'UNAUTHORIZED');
     }
 }
+const BETTER_AUTH_REQUEST_TIMEOUT_MS = 8000;
 const fetchCurrentUser = cache(async (convex: ConvexHttpClient) => {
     return (await convex.query(api.auth.getCurrentUser, {})) as {
         id?: string;
@@ -73,10 +75,12 @@ async function fetchBetterAuthSession(request: NextRequest): Promise<BetterAuthS
         if (typeof userAgent === 'string' && userAgent.length > 0) {
             headers.set('user-agent', userAgent);
         }
-        const response = await fetch(new URL('/api/auth/get-session?disableCookieCache=true', origin), {
+        const response = await fetchWithTimeout(new URL('/api/auth/get-session?disableCookieCache=true', origin), {
             method: 'GET',
             headers,
             cache: 'no-store',
+            timeoutMs: BETTER_AUTH_REQUEST_TIMEOUT_MS,
+            timeoutMessage: 'Timed out while loading the Better Auth session.',
         });
         if (!response.ok) {
             return null;
@@ -113,10 +117,12 @@ async function fetchConvexTokenFromBetterAuthRoute(request: NextRequest): Promis
         if (typeof userAgent === 'string' && userAgent.length > 0) {
             headers.set('user-agent', userAgent);
         }
-        const response = await fetch(new URL('/api/auth/convex/token', origin), {
+        const response = await fetchWithTimeout(new URL('/api/auth/convex/token', origin), {
             method: 'GET',
             headers,
             cache: 'no-store',
+            timeoutMs: BETTER_AUTH_REQUEST_TIMEOUT_MS,
+            timeoutMessage: 'Timed out while loading the Convex auth token.',
         });
         if (!response.ok) {
             return null;

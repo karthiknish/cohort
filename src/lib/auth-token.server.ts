@@ -14,6 +14,9 @@
  */
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { getConvexSiteUrl } from '@/lib/convex-env'
+import { fetchWithTimeout } from '@/lib/retry-utils'
+
+const CONVEX_AUTH_TOKEN_TIMEOUT_MS = 8000
 
 export async function getToken(): Promise<string | null> {
   const convexSiteUrl = getConvexSiteUrl()
@@ -30,10 +33,12 @@ export async function getToken(): Promise<string | null> {
   headers.set('host', new URL(convexSiteUrl).host)
 
   try {
-    const response = await fetch(tokenUrl, {
+    const response = await fetchWithTimeout(tokenUrl, {
       method: 'GET',
       headers,
       cache: 'no-store',
+      timeoutMs: CONVEX_AUTH_TOKEN_TIMEOUT_MS,
+      timeoutMessage: 'Timed out while checking the Convex auth token.',
     })
     if (!response.ok) {
       return null

@@ -13,6 +13,7 @@ import {
   isPreviewRouteRequest,
   PREVIEW_ROUTE_REQUEST_HEADER,
 } from '@/lib/preview-data'
+import { fetchWithTimeout, isTimeoutError } from '@/lib/retry-utils'
 
 /**
  * Global TanStack Start instance — replaces `proxy.ts` (Next.js middleware).
@@ -164,6 +165,8 @@ function finalizeMiddlewareResult<T extends { response: Response }>(
   return result
 }
 
+const POSTHOG_PROXY_TIMEOUT_MS = 10000
+
 /** Legacy redirect rules ported from next.config.ts `redirects()`. */
 function legacyRedirect(pathname: string): string | null {
   if (pathname === '/dashboard/activity') return '/for-you'
@@ -177,26 +180,35 @@ async function proxyPostHog(request: Request): Promise<Response> {
   const target = new URL(`https://us.i.posthog.com${url.pathname.replace('/ingest', '')}${url.search}`)
   const headers = new Headers(request.headers)
   headers.set('host', target.host)
-  const upstream = await fetch(target, {
-    method: request.method,
-    headers,
-    body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
-    // @ts-expect-error duplex is required for streaming request bodies in undici
-    duplex: 'half',
-  })
-  // undici's fetch transparently decompresses the upstream body but leaves
-  // the original `content-encoding`/`content-length` headers in place. If we
-  // forward those verbatim the browser tries to decode already-decoded bytes
-  // and fails with ERR_CONTENT_DECODING_FAILED, so strip them.
-  const responseHeaders = new Headers(upstream.headers)
-  responseHeaders.delete('content-encoding')
-  responseHeaders.delete('content-length')
-  responseHeaders.delete('transfer-encoding')
-  return new Response(upstream.body, {
-    status: upstream.status,
-    statusText: upstream.statusText,
-    headers: responseHeaders,
-  })
+  try {
+    const upstream = await fetchWithTimeout(target, {
+      method: request.method,
+      headers,
+      body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+      timeoutMs: POSTHOG_PROXY_TIMEOUT_MS,
+      timeoutMessage: 'PostHog ingest proxy timed out.',
+      // @ts-expect-error duplex is required for streaming request bodies in undici
+      duplex: 'half',
+    })
+    // undici's fetch transparently decompresses the upstream body but leaves
+    // the original `content-encoding`/`content-length` headers in place. If we
+    // forward those verbatim the browser tries to decode already-decoded bytes
+    // and fails with ERR_CONTENT_DECODING_FAILED, so strip them.
+    const responseHeaders = new Headers(upstream.headers)
+    responseHeaders.delete('content-encoding')
+    responseHeaders.delete('content-length')
+    responseHeaders.delete('transfer-encoding')
+    return new Response(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: responseHeaders,
+    })
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      return new Response('PostHog upstream timed out', { status: 504 })
+    }
+    throw error
+  }
 }
 
 const securityMiddleware = createMiddleware().server(async ({ next, request }) => {

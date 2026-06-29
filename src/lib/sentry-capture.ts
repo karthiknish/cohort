@@ -13,7 +13,9 @@ try {
   // Sentry.init is called in instrument.client.ts / instrument.server.mjs.
   // If the DSN is unset the SDK is effectively disabled, but the import
   // itself is safe to call.
-  sdkActive = Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN)
+  const publicDsn = process.env.NEXT_PUBLIC_SENTRY_DSN
+  const serverDsn = typeof window === 'undefined' ? process.env.SENTRY_DSN : undefined
+  sdkActive = Boolean(publicDsn || serverDsn)
 } catch {
   sdkActive = false
 }
@@ -70,12 +72,11 @@ export function setSentryUser(user: {
   if (user) {
     Sentry.setUser({
       id: user.id,
-      email: user.email,
-      // Sentry supports arbitrary key/value on the user object
-      role: user.role,
     })
+    Sentry.setTag('user_role', user.role ?? 'unknown')
   } else {
     Sentry.setUser(null)
+    Sentry.setTag('user_role', 'anonymous')
   }
 }
 

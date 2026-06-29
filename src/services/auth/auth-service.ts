@@ -651,13 +651,18 @@ export class AuthService {
         if (clientId)
             params.set('clientId', clientId);
         const search = params.toString() ? `?${params.toString()}` : '';
-        const response = await fetchWithTimeout(`/api/integrations/tiktok/oauth/url${search}`, {
+        const fetchTikTokOauthUrl = async () => await fetchWithTimeout(`/api/integrations/tiktok/oauth/url${search}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             credentials: 'same-origin',
         });
+        let response = await fetchTikTokOauthUrl();
+        if (response.status === 401) {
+            await this.ensureFreshSession().catch(() => null);
+            response = await fetchTikTokOauthUrl();
+        }
         const payload = await parseOauthStartPayload(response, 'TikTok OAuth start', 'Failed to start TikTok OAuth');
         if (payload && typeof payload === 'object' && 'success' in payload) {
             const record = payload as {
@@ -667,6 +672,9 @@ export class AuthService {
             };
             if (!record.success) {
                 const message = typeof record.error === 'string' ? record.error : 'Failed to start TikTok OAuth';
+                if (response.status === 401) {
+                    throw new SessionExpiredError(message);
+                }
                 throw new BadRequestError(message);
             }
             const data = record.data as {
@@ -682,6 +690,9 @@ export class AuthService {
                 error?: unknown;
             };
             const message = typeof record?.error === 'string' ? record.error : 'Failed to start TikTok OAuth';
+            if (response.status === 401) {
+                throw new SessionExpiredError(message);
+            }
             throw new BadRequestError(message);
         }
         const legacy = payload as {

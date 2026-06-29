@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { adaptApiHandler } from '@/lib/api-handler-start'
 import { z } from 'zod'
 import { ForbiddenError, ServiceUnavailableError } from '@/lib/api-errors'
+import { fetchWithTimeout, isTimeoutError } from '@/lib/retry-utils'
 
 const ALLOWED_DOMAINS = [
   'storage.googleapis.com',
@@ -22,6 +23,8 @@ const querySchema = z.object({
   url: z.string().url('Invalid URL format'),
 })
 
+const FILE_PROXY_TIMEOUT_MS = 20000
+
 const HEAD = adaptApiHandler(
   { auth: 'required', querySchema },
   async (req, { query }) => {
@@ -30,14 +33,24 @@ const HEAD = adaptApiHandler(
     if (!validateProxiedHost(parsedUrl.hostname)) {
       throw new ForbiddenError('URL domain not allowed')
     }
-    const response = await fetch(url, {
-      method: 'HEAD',
-      cache: 'no-store',
-      headers: {
-        Accept:
-          'application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation,*/*',
-      },
-    })
+    let response: Response
+    try {
+      response = await fetchWithTimeout(url, {
+        method: 'HEAD',
+        cache: 'no-store',
+        headers: {
+          Accept:
+            'application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation,*/*',
+        },
+        timeoutMs: FILE_PROXY_TIMEOUT_MS,
+        timeoutMessage: 'Timed out while fetching remote file metadata.',
+      })
+    } catch (error) {
+      if (isTimeoutError(error)) {
+        throw new ServiceUnavailableError('Timed out while fetching file metadata')
+      }
+      throw error
+    }
     if (!response.ok) {
       throw new ServiceUnavailableError(`Failed to fetch file: ${response.status}`)
     }
@@ -64,13 +77,23 @@ const GET = adaptApiHandler(
     if (!validateProxiedHost(parsedUrl.hostname)) {
       throw new ForbiddenError('URL domain not allowed')
     }
-    const response = await fetch(url, {
-      cache: 'no-store',
-      headers: {
-        Accept:
-          'application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation,*/*',
-      },
-    })
+    let response: Response
+    try {
+      response = await fetchWithTimeout(url, {
+        cache: 'no-store',
+        headers: {
+          Accept:
+            'application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation,*/*',
+        },
+        timeoutMs: FILE_PROXY_TIMEOUT_MS,
+        timeoutMessage: 'Timed out while fetching the remote file.',
+      })
+    } catch (error) {
+      if (isTimeoutError(error)) {
+        throw new ServiceUnavailableError('Timed out while fetching file')
+      }
+      throw error
+    }
     if (!response.ok) {
       throw new ServiceUnavailableError(`Failed to fetch file: ${response.status}`)
     }

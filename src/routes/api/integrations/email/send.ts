@@ -3,6 +3,7 @@ import { adaptApiHandler } from '@/lib/api-handler-start'
 import { z } from 'zod'
 import { ForbiddenError, ServiceUnavailableError } from '@/lib/api-errors'
 import { isCollaborationEmailEnabledForRecipient } from '@/lib/notifications/collaboration-email-server'
+import { fetchWithTimeout, isTimeoutError } from '@/lib/retry-utils'
 
 const sendMessageSchema = z.object({
   messageType: z.enum(['task', 'collaboration', 'custom']).default('custom'),
@@ -18,6 +19,8 @@ const sendMessageSchema = z.object({
     })
     .optional(),
 })
+
+const EMAIL_WEBHOOK_TIMEOUT_MS = 10000
 
 const handlers = adaptApiHandler(
   { auth: 'required', bodySchema: sendMessageSchema, rateLimit: 'sensitive', skipIdempotency: true },
@@ -64,15 +67,25 @@ const handlers = adaptApiHandler(
         emailBody = `<p>${validated.text}</p>`
     }
 
-    const response = await fetch(emailWebhookUrl, {
-      method: 'POST',
-      cache: 'no-store',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'email.notification',
-        payload: { subject: emailSubject, body: emailBody, text: validated.text },
-      }),
-    })
+    let response: Response
+    try {
+      response = await fetchWithTimeout(emailWebhookUrl, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'email.notification',
+          payload: { subject: emailSubject, body: emailBody, text: validated.text },
+        }),
+        timeoutMs: EMAIL_WEBHOOK_TIMEOUT_MS,
+        timeoutMessage: 'Timed out while calling the email webhook.',
+      })
+    } catch (error) {
+      if (isTimeoutError(error)) {
+        throw new ServiceUnavailableError('Email webhook timed out')
+      }
+      throw error
+    }
     if (!response.ok) {
       const errorText = await response.text()
       throw new ServiceUnavailableError(`Email webhook failed: ${errorText}`)

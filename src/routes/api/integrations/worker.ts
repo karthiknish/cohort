@@ -3,12 +3,15 @@ import { adaptApiHandler } from '@/lib/api-handler-start'
 import { z } from 'zod'
 import { recordSchedulerEvent } from '@/lib/scheduler-monitor'
 import { getSchedulerAlertPreference } from '@/lib/scheduler-alert-preferences'
-import { UnauthorizedError } from '@/lib/api-errors'
+import { ServiceUnavailableError, UnauthorizedError } from '@/lib/api-errors'
+import { fetchWithTimeout, isTimeoutError } from '@/lib/retry-utils'
 
 const workerSchema = z.object({
   maxJobs: z.number().optional(),
   maxWorkspaces: z.number().optional(),
 })
+
+const CONVEX_WORKER_TIMEOUT_MS = 20000
 
 function resolveConvexHttpUrl(): string {
   const url = process.env.NEXT_PUBLIC_CONVEX_HTTP_URL ?? process.env.NEXT_PUBLIC_CONVEX_SITE_URL
@@ -25,12 +28,22 @@ const handlers = adaptApiHandler(
     if (!cronSecret) throw new Error('INTEGRATIONS_CRON_SECRET is not configured')
     const convexHttpUrl = resolveConvexHttpUrl()
 
-    const processResponse = await fetch(`${convexHttpUrl}/cron/ad-sync-worker`, {
-      method: 'POST',
-      cache: 'no-store',
-      headers: { 'Content-Type': 'application/json', 'x-cron-key': cronSecret },
-      body: JSON.stringify({ mode: 'all', maxJobs: body.maxJobs }),
-    })
+    let processResponse: Response
+    try {
+      processResponse = await fetchWithTimeout(`${convexHttpUrl}/cron/ad-sync-worker`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'x-cron-key': cronSecret },
+        body: JSON.stringify({ mode: 'all', maxJobs: body.maxJobs }),
+        timeoutMs: CONVEX_WORKER_TIMEOUT_MS,
+        timeoutMessage: 'Timed out while delegating work to the Convex ad sync worker.',
+      })
+    } catch (error) {
+      if (isTimeoutError(error)) {
+        throw new ServiceUnavailableError('Convex ad sync worker timed out')
+      }
+      throw error
+    }
     const result = (await processResponse.json().catch(() => ({ error: 'Invalid response from Convex ad sync worker' }))) as {
       mode?: string; processedJobs?: number; successfulJobs?: number; failedJobs?: number; error?: string
     }

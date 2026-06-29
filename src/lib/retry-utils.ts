@@ -5,10 +5,11 @@ export type RetryConfig = {
     jitterFactor: number;
 };
 export type AbortSignalOptions = {
-    signal?: AbortSignal;
+    signal?: AbortSignal | null;
     timeoutMs?: number;
     timeoutMessage?: string;
 };
+export type FetchWithTimeoutOptions = RequestInit & AbortSignalOptions;
 export const DEFAULT_RETRY_CONFIG: RetryConfig = {
     maxRetries: 3,
     baseDelayMs: 1000,
@@ -98,6 +99,23 @@ export function composeAbortSignal(options: AbortSignalOptions = {}): {
             }
         },
     };
+}
+export async function fetchWithTimeout(input: RequestInfo | URL, init: FetchWithTimeoutOptions = {}): Promise<Response> {
+    const { signal: callerSignal, timeoutMs, timeoutMessage, ...requestInit } = init;
+    const { signal, cleanup } = composeAbortSignal({
+        signal: callerSignal,
+        timeoutMs,
+        timeoutMessage,
+    });
+    try {
+        return await fetch(input, {
+            ...requestInit,
+            signal,
+        });
+    }
+    finally {
+        cleanup();
+    }
 }
 export function sleepWithSignal(ms: number, signal?: AbortSignal): Promise<void> {
     if (!signal) {

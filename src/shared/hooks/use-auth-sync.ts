@@ -259,6 +259,29 @@ export function useAuthSync() {
         }
         void runSessionSync(syncGeneration);
     }, [awaitingSession, bootstrapProfile, convexLegacyId, hasSession, syncGeneration, syncState]);
+    // Safety timeout: if sync succeeded but Convex auth never activates (isAuthenticated stays
+    // false), surface a retryable error instead of hanging forever in syncing phase.
+    useEffect(() => {
+        if (syncState !== 'success' || isAuthenticated || convexAuthLoading) {
+            return;
+        }
+        // At this point: sync is done but Convex hasn't applied the auth token yet.
+        // This should resolve within milliseconds in normal conditions (ConvexBetterAuthProvider
+        // reads the cached token). If it doesn't, something is broken — surface an error.
+        const timerId = setTimeout(() => {
+            setSessionSync((prev) => ({
+                ...prev,
+                syncState: 'failed',
+                authError: createAuthError(
+                    'SESSION_SYNC_FAILED',
+                    'Your session was validated but the secure data connection could not be established. Please try again.',
+                    undefined,
+                    true,
+                ),
+            }));
+        }, 5000);
+        return () => clearTimeout(timerId);
+    }, [syncState, isAuthenticated, convexAuthLoading]);
     const phase = deriveAuthPhase({
         sessionPending: awaitingSession,
         hasSession,

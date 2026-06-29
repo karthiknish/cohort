@@ -25,9 +25,8 @@ describe('preview route access helpers', () => {
         expect(isScreenRecordingModeEnabled()).toBe(true);
         expect(isPreviewModeEnabled()).toBe(true);
     });
-    it('disables auth bypass in production unless explicitly allowed', () => {
+    it('requires explicit opt-in before enabling auth bypass', () => {
         vi.stubEnv('NEXT_PUBLIC_SCREEN_RECORDING_ENABLED', 'true');
-        vi.stubEnv('NODE_ENV', 'production');
         expect(isScreenRecordingModeEnabled()).toBe(true);
         expect(isScreenRecordingAuthBypassEnabled()).toBe(false);
         vi.stubEnv('SCREEN_RECORDING_ALLOW_AUTH_BYPASS', 'true');

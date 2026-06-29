@@ -29,14 +29,15 @@ export function isScreenRecordingAuthBypassEnabled(): boolean {
     if (!isScreenRecordingModeEnabled()) {
         return false;
     }
-    if (process.env.NODE_ENV !== 'production') {
-        return true;
+    // Session bypass is always explicit, even in local/staging environments.
+    if (!isEnabledPreviewValue(process.env.SCREEN_RECORDING_ALLOW_AUTH_BYPASS ?? null)) {
+        return false;
     }
-    // Production Vercel project: session bypass is never allowed, even with SCREEN_RECORDING_ALLOW_AUTH_BYPASS.
+    // Production Vercel project: session bypass is never allowed, even when explicitly requested.
     if (process.env.VERCEL_ENV === 'production') {
         return false;
     }
-    return isEnabledPreviewValue(process.env.SCREEN_RECORDING_ALLOW_AUTH_BYPASS ?? null);
+    return true;
 }
 export function isPreviewModeQueryEnabled(searchParams: SearchParamsLike): boolean {
     return isEnabledPreviewValue(searchParams.get(PREVIEW_MODE_QUERY_PARAM));

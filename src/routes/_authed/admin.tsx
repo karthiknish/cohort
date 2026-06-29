@@ -14,10 +14,7 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react'
-import {
-  isScreenRecordingAuthBypassEnabled,
-  PREVIEW_ROUTE_REQUEST_HEADER,
-} from '@/lib/preview-data'
+import { PREVIEW_ROUTE_REQUEST_HEADER } from '@/lib/preview-data'
 import { ProtectedRoute } from '@/shared/components/protected-route'
 import { NavigationProvider } from '@/shared/contexts/navigation-context'
 import { AgentModeDynamic } from '@/shared/components/agent-mode/agent-mode-dynamic'
@@ -46,9 +43,7 @@ const adminNavItems = [
 const loadAdminShell = createServerFn({ method: 'GET' }).handler(async () => {
   const { getRequestHeader } = await import('@tanstack/react-start/server')
   return {
-    allowPreviewAccess:
-      isScreenRecordingAuthBypassEnabled() ||
-      getRequestHeader(PREVIEW_ROUTE_REQUEST_HEADER) === '1',
+    allowPreviewAccess: getRequestHeader(PREVIEW_ROUTE_REQUEST_HEADER) === '1',
   }
 })
 
