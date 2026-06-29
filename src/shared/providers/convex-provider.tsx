@@ -119,13 +119,20 @@ function OneTimeTokenHandler({ authClient }: { authClient: typeof import('@/lib/
             const url = new URL(window.location.href);
             const token = url.searchParams.get('ott');
             if (token) {
-                const authClientWithCrossDomain = authClient as any;
+                const authClientWithCrossDomain = authClient as typeof authClient & {
+                    crossDomain?: {
+                        oneTimeToken?: {
+                            verify: (args: { token: string }) => Promise<{ data?: { session?: { token: string } } }>;
+                        };
+                    };
+                    updateSession?: () => void;
+                };
                 url.searchParams.delete('ott');
                 window.history.replaceState({}, '', url);
                 const result = await authClientWithCrossDomain.crossDomain?.oneTimeToken?.verify({
                     token,
                 });
-                const session = result.data?.session;
+                const session = result?.data?.session;
                 if (session) {
                     await authClient.getSession({
                         fetchOptions: {
@@ -150,6 +157,9 @@ export function ConvexClientProvider({ children, initialToken }: ConvexClientPro
             return null;
         return new ConvexReactClient(convexUrl, { expectAuth: true });
     });
+
+    // Use custom useAuth hook with ConvexProviderWithAuth instead of ConvexBetterAuthProvider
+    const useAuth = useMemo(() => () => useAuthFromBetterAuth(initialToken), [initialToken]);
 
     if (!client) {
         if (process.env.NODE_ENV !== 'production') {
@@ -183,9 +193,6 @@ export function ConvexClientProvider({ children, initialToken }: ConvexClientPro
         catch (error) {
             console.error('[convex] auth/data deployment misconfiguration:', error instanceof Error ? error.message : error);
         }
-
-        // Use custom useAuth hook with ConvexProviderWithAuth instead of ConvexBetterAuthProvider
-        const useAuth = useMemo(() => () => useAuthFromBetterAuth(initialToken), [initialToken]);
 
         return (
             <ConvexProviderWithAuth client={client} useAuth={useAuth}>
