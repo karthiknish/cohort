@@ -210,17 +210,20 @@ export function NavigationProvider({ children }: {
             }
         }
     };
-    const restoreNavigationState = () => {
+    const restoreNavigationState = useCallback(() => {
         loadNavigationState();
-    };
-    const value = ({
+    }, [loadNavigationState]);
+    const value = useMemo(() => ({
         navigationState,
         setProjectContext,
         setLastViewedTask,
         setLastViewedChannel,
         clearNavigationState,
         restoreNavigationState,
-    });
+    }), [
+        navigationState, setProjectContext, setLastViewedTask,
+        setLastViewedChannel, clearNavigationState, restoreNavigationState,
+    ]);
     return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
 }
 export function useNavigationContext() {

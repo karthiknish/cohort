@@ -1,5 +1,5 @@
 'use client';
-import { createContext, use, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import type { AuthPhase } from '@/lib/auth-phase';
 import type { AuthUser, SignUpData } from '@/services/auth';
 import { useAuthSync, type AuthError, type AuthErrorCode, } from '@/shared/hooks/use-auth-sync';
@@ -360,7 +360,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return fetchConvexToken();
     }, []);
 
-    const value: AuthContextType = {
+    const value = useMemo<AuthContextType>(() => ({
         user,
         authPhase,
         loading,
@@ -389,7 +389,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         updateProfile,
         changePassword,
         deleteAccount,
-    };
+    }), [
+        user, authPhase, loading, isSyncing, authError,
+        clearAuthError, retrySync,
+        signIn, signInWithGoogle, signUp, signOut,
+        connectGoogleAdsAccount, connectGoogleAnalyticsAccount,
+        connectFacebookAdsAccount, connectLinkedInAdsAccount,
+        startGoogleOauth, startGoogleWorkspaceOauth,
+        startMetaOauth, startTikTokOauth, startLinkedInOauth,
+        disconnectProvider, getIdToken,
+        resetPassword, verifyPasswordResetCode,
+        confirmPasswordReset, updateProfile,
+        changePassword, deleteAccount,
+    ]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

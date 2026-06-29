@@ -103,10 +103,10 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
     const refreshPreferences = async () => {
         await fetchPreferences();
     };
-    const clearError = () => {
+    const clearError = useCallback(() => {
         setError(null);
-    };
-    const contextValue = ({
+    }, []);
+    const contextValue = useMemo(() => ({
         preferences,
         loading,
         error,
@@ -114,7 +114,7 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
         updateCurrency,
         updatePreferences,
         refreshPreferences,
-    });
+    }), [preferences, loading, error, clearError, updateCurrency, updatePreferences, refreshPreferences]);
     return (<PreferencesContext.Provider value={contextValue}>
       {children}
     </PreferencesContext.Provider>);

@@ -68,13 +68,13 @@ export function ProjectProvider({ children }: {
         newParams.delete('projectName');
         push(`${pathname}?${newParams.toString()}`);
     };
-    const value = ({
+    const value = useMemo(() => ({
         selectedProjectId,
         selectedProject,
         selectProject,
         clearProject,
         isFromUrl,
-    });
+    }), [selectedProjectId, selectedProject, selectProject, clearProject, isFromUrl]);
     return (<ProjectContext.Provider value={value}>
       {children}
     </ProjectContext.Provider>);

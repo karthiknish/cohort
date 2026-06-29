@@ -7,7 +7,7 @@ function UrlSearchParamsReader({ children }: {
     children: ReactNode;
 }) {
     const searchParams = useSearchParams();
-    const value = new URLSearchParams(searchParams.toString());
+    const value = useMemo(() => new URLSearchParams(searchParams.toString()), [searchParams]);
     return (<UrlSearchParamsContext.Provider value={value}>{children}</UrlSearchParamsContext.Provider>);
 }
 export function UrlSearchParamsProvider({ children }: {

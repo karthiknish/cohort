@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useEffectEvent, useReducer, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useEffectEvent, useMemo, useReducer, useRef, useSyncExternalStore } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@/shared/contexts/auth-context';
 import type { ClientRecord, ClientTeamMember } from '@/types/clients';
@@ -172,18 +172,18 @@ export function useClientProvider(): ClientContextValue {
     useEffect(() => {
         clientsRef.current = resolvedClients;
     }, [resolvedClients]);
-    const refreshClients = async () => {
+    const refreshClients = useCallback(async () => {
         return clientsRef.current;
-    };
-    const retryClients = () => {
+    }, []);
+    const retryClients = useCallback(() => {
         dispatch({ type: 'setError', error: null });
         requestAnimationFrame(() => {
             applyClientSelectionSync();
         });
-    };
-    const selectClient = (clientId: string | null) => {
+    }, [applyClientSelectionSync]);
+    const selectClient = useCallback((clientId: string | null) => {
         dispatch({ type: 'setSelectedClientId', selectedClientId: clientId });
-    };
+    }, []);
     const createClient = async (input: {
         name: string;
         accountManager: string;
@@ -277,7 +277,7 @@ export function useClientProvider(): ClientContextValue {
             return null;
         return resolvedClients.find((client) => client.id === selectedClientId) ?? null;
     })();
-    return ({
+    return useMemo<ClientContextValue>(() => ({
         workspaceId,
         clients: resolvedClients,
         selectedClientId,
@@ -289,5 +289,9 @@ export function useClientProvider(): ClientContextValue {
         selectClient,
         createClient,
         removeClient,
-    });
+    }), [
+        workspaceId, resolvedClients, selectedClientId, selectedClient,
+        loading, error, refreshClients, retryClients, selectClient,
+        createClient, removeClient,
+    ]);
 }

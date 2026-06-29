@@ -1,5 +1,5 @@
 'use client';
-import { createContext, use, useEffect, useState, type PropsWithChildren } from 'react';
+import { createContext, use, useEffect, useState, useCallback, useMemo, type PropsWithChildren } from 'react';
 import { isPreviewModeEnabled, isScreenRecordingModeEnabled, setPreviewModeEnabled, PREVIEW_MODE_EVENT, PREVIEW_MODE_STORAGE_KEY, } from '@/lib/preview-data';
 interface PreviewContextValue {
     isPreviewMode: boolean;
@@ -41,18 +41,18 @@ export function PreviewProvider({ children }: PropsWithChildren) {
         setStoredPreviewMode(enabled);
         setPreviewModeEnabled(enabled);
     };
-    const togglePreviewMode = () => {
+    const togglePreviewMode = useCallback(() => {
         const nextValue = !isPreviewMode;
         updatePreviewMode(nextValue);
-    };
-    const setPreviewMode = (enabled: boolean) => {
+    }, [isPreviewMode]);
+    const setPreviewMode = useCallback((enabled: boolean) => {
         updatePreviewMode(enabled);
-    };
-    const value = ({
+    }, []);
+    const value = useMemo<PreviewContextValue>(() => ({
         isPreviewMode,
         togglePreviewMode,
         setPreviewMode,
-    });
+    }), [isPreviewMode, togglePreviewMode, setPreviewMode]);
     return (<PreviewContext.Provider value={value}>
       {children}
     </PreviewContext.Provider>);
