@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { isValidRedirectUrl } from '@/lib/utils'
 import { upsertGoogleWorkspaceTokens } from '@/lib/meetings-admin'
 import { exchangeGoogleWorkspaceCodeForTokens, parseGoogleScopeList, resolveGoogleWorkspaceOAuthCredentials, resolveGoogleWorkspaceOAuthRedirectUri, validateGoogleWorkspaceOAuthState } from '@/services/google-workspace'
+import { NextResponse } from '@/lib/http-server-types'
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -52,7 +53,6 @@ const handlers = adaptApiHandler(
     const fallbackSuccess = `${appUrl}/dashboard/meetings?oauth_success=true&provider=google-workspace`
     try {
       if (query.error) {
-        const { NextResponse } = await import('next/server')
         const errorUrl = new URL('/dashboard/meetings', appUrl)
         errorUrl.searchParams.set('oauth_error', 'google_workspace_error')
         errorUrl.searchParams.set('provider', 'google-workspace')
@@ -60,13 +60,11 @@ const handlers = adaptApiHandler(
         return NextResponse.redirect(errorUrl.toString())
       }
       if (!query.code) {
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(`${appUrl}/dashboard/meetings?oauth_error=missing_code&provider=google-workspace`)
       }
       const redirectUri = resolveGoogleWorkspaceOAuthRedirectUri(appUrl)
       const { clientId: googleClientId, clientSecret: googleClientSecret } = resolveGoogleWorkspaceOAuthCredentials()
       if (!redirectUri || !googleClientId || !googleClientSecret) {
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(`${appUrl}/dashboard/meetings?oauth_error=config_error&provider=google-workspace`)
       }
       const context = validateGoogleWorkspaceOAuthState(query.state ?? '')
@@ -94,10 +92,8 @@ const handlers = adaptApiHandler(
       successUrl.searchParams.set('oauth_success', 'true')
       successUrl.searchParams.set('provider', 'google-workspace')
       if (!isValidRedirectUrl(successUrl.toString())) {
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(fallbackSuccess)
       }
-      const { NextResponse } = await import('next/server')
       return NextResponse.redirect(successUrl.toString())
     } catch (error: unknown) {
       const rawMessage = error instanceof Error ? error.message : 'OAuth callback failed'
@@ -111,7 +107,6 @@ const handlers = adaptApiHandler(
           return 'Login session expired. Please try connecting again.'
         return rawMessage
       })()
-      const { NextResponse } = await import('next/server')
       const errorUrl = new URL('/dashboard/meetings', appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'google-workspace')

@@ -3,6 +3,7 @@ import { adaptApiHandler } from '@/lib/api-handler-start'
 import { z } from 'zod'
 import { completeGoogleOAuthFlow, resolveGoogleAdsOAuthRedirectUri, validateGoogleOAuthState } from '@/services/google-oauth'
 import { isValidRedirectUrl } from '@/lib/utils'
+import { NextResponse } from '@/lib/http-server-types'
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -22,7 +23,6 @@ const handlers = adaptApiHandler(
       const { error, error_description: errorDescription, code, state } = query
       if (error) {
         console.error('[google.oauth.callback] OAuth error from Google:', { error, errorDescription })
-        const { NextResponse } = await import('next/server')
         const errorUrl = new URL('/dashboard/ads', appUrl)
         errorUrl.searchParams.set('oauth_error', 'google_error')
         errorUrl.searchParams.set('provider', 'google')
@@ -30,12 +30,10 @@ const handlers = adaptApiHandler(
         return NextResponse.redirect(errorUrl.toString())
       }
       if (!code) {
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=missing_code&provider=google`)
       }
       const redirectUri = resolveGoogleAdsOAuthRedirectUri(appUrl)
       if (!redirectUri) {
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=config_error&provider=google`)
       }
       let context
@@ -43,11 +41,9 @@ const handlers = adaptApiHandler(
         context = validateGoogleOAuthState(state ?? '')
       } catch (stateError) {
         console.error('[google.oauth.callback] State validation failed:', stateError)
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=invalid_state&provider=google`)
       }
       if (!context.state) {
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=invalid_state&provider=google`)
       }
       await completeGoogleOAuthFlow({ code, userId: context.state, redirectUri, clientId: context.clientId ?? null })
@@ -58,10 +54,8 @@ const handlers = adaptApiHandler(
       if (context.clientId) url.searchParams.set('clientId', context.clientId)
       redirectTarget = url.toString()
       if (!isValidRedirectUrl(redirectTarget)) {
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(new URL('/dashboard/ads?oauth_success=true&provider=google', req.url))
       }
-      const { NextResponse } = await import('next/server')
       return NextResponse.redirect(new URL(redirectTarget, req.url))
     } catch (error: unknown) {
       const rawMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -79,7 +73,6 @@ const handlers = adaptApiHandler(
         error: rawMessage,
         stack: error instanceof Error ? error.stack : undefined,
       })
-      const { NextResponse } = await import('next/server')
       const errorUrl = new URL('/dashboard/ads', appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'google')

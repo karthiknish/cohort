@@ -3,6 +3,7 @@ import { adaptApiHandler } from '@/lib/api-handler-start'
 import { z } from 'zod'
 import { completeLinkedInOAuthFlow, validateLinkedInOAuthState } from '@/services/linkedin-oauth'
 import { isValidRedirectUrl } from '@/lib/utils'
+import { NextResponse } from '@/lib/http-server-types'
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -22,7 +23,6 @@ const handlers = adaptApiHandler(
       const { error, error_description: errorDescription, code, state } = query
       if (error) {
         console.error('[linkedin.oauth.callback] OAuth error from LinkedIn:', { error, errorDescription })
-        const { NextResponse } = await import('next/server')
         const errorUrl = new URL('/dashboard/ads', appUrl)
         errorUrl.searchParams.set('oauth_error', 'linkedin_error')
         errorUrl.searchParams.set('provider', 'linkedin')
@@ -30,12 +30,10 @@ const handlers = adaptApiHandler(
         return NextResponse.redirect(errorUrl.toString())
       }
       if (!code) {
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=missing_code&provider=linkedin`)
       }
       const redirectUri = process.env.LINKEDIN_OAUTH_REDIRECT_URI
       if (!redirectUri) {
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=config_error&provider=linkedin`)
       }
       let context
@@ -43,11 +41,9 @@ const handlers = adaptApiHandler(
         context = validateLinkedInOAuthState(state ?? '')
       } catch (stateError) {
         console.error('[linkedin.oauth.callback] State validation failed:', stateError)
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(`${appUrl}/dashboard/ads?error=invalid_state`)
       }
       if (!context.state) {
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(`${appUrl}/dashboard/ads?error=invalid_state`)
       }
       await completeLinkedInOAuthFlow({ code, userId: context.state, redirectUri, clientId: context.clientId ?? null })
@@ -58,15 +54,12 @@ const handlers = adaptApiHandler(
       if (context.clientId) url.searchParams.set('clientId', context.clientId)
       redirectTarget = url.toString()
       if (!isValidRedirectUrl(redirectTarget)) {
-        const { NextResponse } = await import('next/server')
         return NextResponse.redirect(new URL('/dashboard/ads?oauth_success=true&provider=linkedin', req.url))
       }
-      const { NextResponse } = await import('next/server')
       return NextResponse.redirect(new URL(redirectTarget, req.url))
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       console.error('[linkedin.oauth.callback] Error completing OAuth flow:', { error: errorMessage, stack: error instanceof Error ? error.stack : undefined })
-      const { NextResponse } = await import('next/server')
       const errorUrl = new URL('/dashboard/ads', appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'linkedin')

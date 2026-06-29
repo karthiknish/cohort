@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { adaptApiHandler } from '@/lib/api-handler-start'
 import { ForbiddenError } from '@/lib/api-errors'
+import { NextResponse } from '@/lib/http-server-types'
 import {
   buildConfiguredServiceChecks,
   probeGoogleAdsLiveHealth,
@@ -98,7 +99,6 @@ const handlers = adaptApiHandler(
     }
 
     const statusCode = overallStatus === 'unhealthy' ? 503 : 200
-    const { NextResponse } = await import('next/server')
     const payload =
       overallStatus === 'healthy'
         ? { success: true, data: response }
