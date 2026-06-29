@@ -2,6 +2,7 @@ import { headers } from './server-headers';
 import { getToken as getBetterAuthUtilsToken } from '@convex-dev/better-auth/utils';
 import { getToken as getNextJsToken } from '@/lib/auth-token.server';
 import { getConvexSiteUrl } from '@/lib/convex-env';
+import { fetchBetterAuthSession } from './server-auth';
 /**
  * Resolves a Convex JWT for API route handlers.
  * Prefers the app proxy so session cookies on the app origin stay valid.
@@ -17,6 +18,12 @@ export async function resolveConvexTokenFromRequest(req: Request): Promise<strin
         // Fall through.
     }
     try {
+        // Short-circuit: check if there's a valid session before fetching token
+        const session = await fetchBetterAuthSession(req);
+        if (!session?.session) {
+            return null;
+        }
+
         const origin = new URL(req.url).origin;
         const response = await fetch(`${origin}/api/auth/convex/token`, {
             method: 'GET',

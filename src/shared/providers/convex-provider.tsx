@@ -69,9 +69,11 @@ function useAuthFromBetterAuth(initialToken?: string | null) {
 
             return pendingTokenRef.current;
         },
-        // No deps - use refs for all dynamic values to keep callback completely stable
+        // Depend on sessionId to recreate when session changes, but NOT on cachedToken
+        // to avoid re-render loops. The closure will have the correct cachedToken value
+        // because we only change fetchAccessToken when sessionId changes.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        []
+        [sessionId]
     );
 
     return useMemo(
@@ -80,6 +82,7 @@ function useAuthFromBetterAuth(initialToken?: string | null) {
             isAuthenticated: Boolean(session?.session) || cachedToken !== null,
             fetchAccessToken,
         }),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         [isSessionPending, sessionId, cachedToken]
     );
 }

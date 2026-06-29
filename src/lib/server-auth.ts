@@ -57,7 +57,7 @@ type BetterAuthSessionPayload = {
         activeOrganizationId?: string | null;
     } | null;
 };
-async function fetchBetterAuthSession(request: Request): Promise<BetterAuthSessionPayload | null> {
+export async function fetchBetterAuthSession(request: Request): Promise<BetterAuthSessionPayload | null> {
     const cookieHeader = request.headers.get('cookie');
     if (!cookieHeader) {
         return null;
@@ -104,6 +104,13 @@ async function fetchConvexTokenFromBetterAuthRoute(request: Request): Promise<st
     if (!cookieHeader) {
         return null;
     }
+    
+    // Short-circuit: check if there's a valid session before fetching token
+    const session = await fetchBetterAuthSession(request);
+    if (!session?.session) {
+        return null;
+    }
+
     const origin = new URL(request.url).origin
         || process.env.NEXT_PUBLIC_SITE_URL
         || process.env.NEXT_PUBLIC_APP_URL
