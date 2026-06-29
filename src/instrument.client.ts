@@ -1,5 +1,9 @@
 import * as Sentry from '@sentry/tanstackstart-react'
 
+if (typeof window !== 'undefined') {
+  console.log('[Sentry] instrument.client.ts executing, dsn:', process.env.NEXT_PUBLIC_SENTRY_DSN ? 'set' : 'unset')
+}
+
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   environment: process.env.NODE_ENV ?? 'development',

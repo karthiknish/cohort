@@ -1,4 +1,6 @@
 import { Suspense, type ReactNode } from 'react'
+// Sentry init must run before any client-side code to capture pre-hydration errors
+import '@/instrument.client'
 import {
   HeadContent,
   Outlet,
