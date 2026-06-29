@@ -16,7 +16,3 @@ export const authClient = createAuthClient({
     },
     plugins: [convexClient()],
 });
-
-if (typeof window !== 'undefined') {
-    console.warn('[auth-client] baseURL', (authClient as { baseURL?: string }).baseURL);
-}
