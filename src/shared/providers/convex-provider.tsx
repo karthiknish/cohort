@@ -26,13 +26,7 @@ export function ConvexClientProvider({ children, initialToken }: ConvexClientPro
     const [client] = useState(() => {
         if (!convexUrl)
             return null;
-        const c = new ConvexReactClient(convexUrl, { expectAuth: true });
-        const internal = c as unknown as { sync: { webSocketManager: { serverInactivityThreshold: number } } };
-        const wsm = internal.sync?.webSocketManager;
-        if (wsm && wsm.serverInactivityThreshold === 60000) {
-            wsm.serverInactivityThreshold = Infinity;
-        }
-        return c;
+        return new ConvexReactClient(convexUrl, { expectAuth: true });
     });
     if (!client) {
         if (process.env.NODE_ENV !== 'production') {

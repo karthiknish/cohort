@@ -70,7 +70,7 @@ export function useAuthSync() {
     // the current legacyId so we don't loop on a persistently-missing row.
     const bootstrappedLegacyIdRef = useRef<string | null>(null);
 
-    const { data: betterAuthSession, isPending: sessionPending } = authClient.useSession();
+    const { data: betterAuthSession, isPending: sessionPending, refetch: refetchSession } = authClient.useSession();
     const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
 
     // The authoritative legacyId IS the Better Auth user id. The
@@ -151,6 +151,7 @@ export function useAuthSync() {
     const retrySync = async () => {
         bootstrappedLegacyIdRef.current = null;
         setAuthError(null);
+        await refetchSession().catch(() => null);
     };
     const clearAuthError = () => setAuthError(null);
 
