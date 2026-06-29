@@ -92,6 +92,21 @@ export async function proxyAuthToConvex(request: Request): Promise<Response> {
     duplex: 'half',
   })
   const upstream = await getAuthUtilities().handler(forwardedRequest)
+
+  // DEBUG: log upstream headers to see what Convex returns
+  if (process.env.NODE_ENV === 'production') {
+    const upstreamHeaders: Record<string, string> = {}
+    upstream.headers.forEach((v, k) => { upstreamHeaders[k] = v.substring(0, 200) })
+    const setCookies = upstream.headers.getSetCookie?.() ?? []
+    console.log('[auth-proxy] upstream', {
+      status: upstream.status,
+      setCookieCount: setCookies.length,
+      setCookies: setCookies.map(c => c.substring(0, 150)),
+      betterAuthCookie: upstream.headers.get('set-better-auth-cookie'),
+      allHeaders: upstreamHeaders,
+    })
+  }
+
   return rewriteConvexAuthResponse(upstream)
 }
 
