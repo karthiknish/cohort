@@ -278,11 +278,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, []);
 
     const verifyPasswordResetCode = useCallback(async (oobCode: string): Promise<string> => {
-        // Better Auth issues a signed token (not an opaque oob). Validate it by
-        // attempting a reset with the current token; if it fails, surface the
-        // normalized message. We return an empty email — the caller only needs
-        // to know the token is usable.
-        void oobCode;
+        // Better Auth issues a signed JWT for password reset. Reject empty or
+        // obviously-invalid tokens immediately so the caller shows the error form
+        // early instead of only discovering the problem on password submission.
+        if (!oobCode || oobCode.length < 10) {
+            throw new BadRequestError('Invalid or expired reset link. Please request a new one.');
+        }
+        // The token is well-formed — return an empty email since Better Auth's
+        // resetPassword call validates the signature server-side. The caller
+        // proceeds to show the password form and only gets an error on submit
+        // if the token has expired or been consumed.
         return '';
     }, []);
 

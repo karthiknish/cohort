@@ -2,7 +2,7 @@
 import { LoaderCircle } from 'lucide-react';
 import { Link } from '@/shared/ui/link';
 import { usePathname, useRouter } from '@/shared/ui/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isLoadingPhase } from '@/lib/auth-phase';
 import { Button } from '@/shared/ui/button';
 import { SiteLogo } from '@/shared/components/site-logo';
@@ -75,6 +75,19 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
     const { user, authPhase, authError, retrySync, signOut } = useAuth();
     const { replace } = useRouter();
     const pathname = usePathname();
+
+    // If auth stays in a loading phase for too long, surface retry/sign-out
+    // options instead of spinning forever (e.g. deploy propagation, network
+    // issues, or stuck Convex auth).
+    const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+    useEffect(() => {
+        if (!isLoadingPhase(authPhase)) {
+            setLoadingTimedOut(false);
+            return;
+        }
+        const timer = window.setTimeout(() => setLoadingTimedOut(true), 20000);
+        return () => window.clearTimeout(timer);
+    }, [authPhase]);
     const hasPreviewAccess = allowPreviewAccess;
 
     const redirectToAuth = () => {
@@ -117,6 +130,9 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
 
     if (hasPreviewAccess) {
         return <>{children}</>;
+    }
+    if (loadingTimedOut) {
+        return (<AccessOverlay title="Loading is taking longer than expected" message="Your session could not be verified. Try again or sign in once more." actionLabel="Retry" actionOnClick={handleRetrySync} secondaryActionLabel="Sign out" secondaryActionOnClick={handleSignOutAfterSyncFailure}/>);
     }
     if (isLoadingPhase(authPhase)) {
         return (<AccessOverlay title="Loading your workspace" message="Just a moment while we secure your account and verify your permissions." showLogo showSpinner/>);

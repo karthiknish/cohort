@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { authClient } from '@/lib/auth-client';
-import { decodeJwtSubject } from '@/lib/jwt-utils';
 import { deriveAuthPhase, isLoadingPhase, mergeConvexProfile, type AuthPhase } from '@/lib/auth-phase';
 import type { AuthUser } from '@/services/auth';
 import { api } from '@convex/_generated/api';
@@ -25,22 +24,6 @@ function normalizeStatus(value: unknown): AuthUser['status'] {
     return value === 'active' || value === 'pending' || value === 'invited' || value === 'disabled' || value === 'suspended'
         ? value
         : 'pending';
-}
-
-/**
- * Extracts the Convex JWT token string from a `convex.token()` result envelope.
- */
-function extractConvexToken(result: unknown): string | null {
-    if (typeof result !== 'object' || result === null) return null;
-    let payload: unknown = result;
-    if ('data' in result) {
-        payload = (result as { data?: unknown }).data;
-    }
-    if (typeof payload !== 'object' || payload === null || !('token' in payload)) {
-        return null;
-    }
-    const token = (payload as { token?: unknown }).token;
-    return typeof token === 'string' && token.trim().length > 0 ? token.trim() : null;
 }
 
 /**
@@ -83,9 +66,6 @@ function mapSessionUser(raw: Record<string, unknown>): AuthUser {
  */
 export function useAuthSync() {
     const [authError, setAuthError] = useState<AuthError | null>(null);
-    // The authoritative legacyId (Convex JWT subject). Resolved once Convex auth
-    // is active so `getByLegacyIdSafe`'s identity guard always matches.
-    const [legacyId, setLegacyId] = useState<string | null>(null);
     // Track whether we've already attempted the first-touch profile creation for
     // the current legacyId so we don't loop on a persistently-missing row.
     const bootstrappedLegacyIdRef = useRef<string | null>(null);
@@ -93,33 +73,13 @@ export function useAuthSync() {
     const { data: betterAuthSession, isPending: sessionPending } = authClient.useSession();
     const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
 
-    // Resolve legacyId from the Convex token's `sub` whenever auth activates or
-    // the session user changes. This mirrors what the server sees as
-    // `identity.subject`, guaranteeing the `getByLegacyIdSafe` identity check passes.
-    useEffect(() => {
-        if (!isAuthenticated) {
-            return;
-        }
-        let active = true;
-        void authClient.convex
-            .token({ fetchOptions: { throw: false } })
-            .then((result: unknown) => {
-                if (!active) return;
-                const token = extractConvexToken(result);
-                const subject = token ? decodeJwtSubject(token) : null;
-                const fallback = betterAuthSession?.user?.id ?? null;
-                const resolved = subject ?? fallback;
-                setLegacyId((prev) => (prev !== resolved ? resolved : prev));
-            })
-            .catch(() => {
-                if (!active) return;
-                const fallback = betterAuthSession?.user?.id ?? null;
-                setLegacyId((prev) => (prev !== fallback ? fallback : prev));
-            });
-        return () => {
-            active = false;
-        };
-    }, [isAuthenticated, betterAuthSession?.user?.id]);
+    // The authoritative legacyId IS the Better Auth user id. The
+    // @convex-dev/better-auth plugin sets `user._id` as the Convex JWT `sub`,
+    // so this value always matches what `getByLegacyIdSafe`'s identity guard
+    // sees on the server. No async token fetch needed — the session object is
+    // available synchronously on the first render, which eliminates the race
+    // where the domain profile query waits for a deferred JWT decode.
+    const legacyId = betterAuthSession?.user?.id ?? null;
 
     // Domain profile: role/status/agencyId. Only queried once Convex auth is
     // ready and we have a legacyId (the query is identity-gated server-side).
@@ -131,7 +91,7 @@ export function useAuthSync() {
     const ensureProfile = useMutation(api.users.ensureProfileOnSignIn);
 
     const hasSession = Boolean(betterAuthSession?.user);
-    const profileLoading = isAuthenticated && legacyId !== null && convexUser === undefined;
+    const profileLoading = isAuthenticated && (legacyId === null || convexUser === undefined);
     const profileMissing = Boolean(legacyId)
         && isAuthenticated
         && !convexAuthLoading
@@ -184,7 +144,7 @@ export function useAuthSync() {
         convexAuthLoading,
         isAuthenticated,
         profileLoading,
-        profileMissing: profileMissing && authError !== null,
+        profileMissing,
         user,
     });
 

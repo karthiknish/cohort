@@ -251,7 +251,7 @@ function HomeAuthPageContent() {
                     });
                     return;
                 }
-                const signedUpUser = await signUp({
+                await signUp({
                     email: signUpData.email,
                     password: signUpData.password,
                     displayName: signUpData.displayName.trim() || signUpData.email,
@@ -260,17 +260,13 @@ function HomeAuthPageContent() {
                     title: 'Welcome to Cohorts!',
                     message: 'Your account has been created. Taking you to your workspace...',
                 });
-                if (signedUpUser.status === 'pending' || signedUpUser.status === 'invited') {
-                    push('/pending-approval');
-                    return;
-                }
             }
             else {
                 if (!validateEmail(signInData.email)) {
                     dispatch({ type: 'setEmailError', value: 'Please enter a valid email address' });
                     return;
                 }
-                const signedInUser = await signIn(signInData.email, signInData.password);
+                await signIn(signInData.email, signInData.password);
                 if (rememberMe && typeof window !== 'undefined') {
                     window.localStorage.setItem(REMEMBER_ME_KEY, signInData.email);
                 }
@@ -281,10 +277,6 @@ function HomeAuthPageContent() {
                     title: 'Welcome back!',
                     message: 'Signed in successfully. Loading your workspace...',
                 });
-                if (signedInUser.status === 'pending' || signedInUser.status === 'invited') {
-                    push('/pending-approval');
-                    return;
-                }
             }
             push(resolvePostAuthDestination());
         })
