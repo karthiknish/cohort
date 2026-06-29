@@ -229,7 +229,10 @@ export function useDirectConversationsQuery({ workspaceId, currentUserId, curren
         };
     })();
     const previewFeedSnapshotRef = useRef<string | null>(null);
-    if (previewFeedSnapshot && previewFeedSnapshotRef.current !== previewFeedSnapshot.key) {
+    useEffect(() => {
+        if (!previewFeedSnapshot || previewFeedSnapshotRef.current === previewFeedSnapshot.key) {
+            return;
+        }
         previewFeedSnapshotRef.current = previewFeedSnapshot.key;
         setFeed((prev) => ({
             ...prev,
@@ -244,7 +247,7 @@ export function useDirectConversationsQuery({ workspaceId, currentUserId, curren
                 isLoadingMore: false,
             },
         }));
-    }
+    }, [previewFeedSnapshot]);
     const liveMessagesFromQuery = (() => {
         if (isPreviewMode || !typedMessagesQuery) {
             return null;
@@ -263,10 +266,13 @@ export function useDirectConversationsQuery({ workspaceId, currentUserId, curren
     const conversationPaginationKey = `${isPreviewMode}|${selectedConversationLegacyId ?? ''}`;
     const conversationPaginationKeyRef = useRef<string | null>(null);
     const liveMessagesSnapshotRef = useRef<string | null>(null);
-    const conversationChanged = conversationPaginationKeyRef.current !== conversationPaginationKey;
-    const liveMessagesChanged = Boolean(liveMessagesFromQuery) &&
-        liveMessagesSnapshotRef.current !== liveMessagesFromQuery?.key;
-    if (conversationChanged || liveMessagesChanged) {
+    useEffect(() => {
+        const conversationChanged = conversationPaginationKeyRef.current !== conversationPaginationKey;
+        const liveMessagesChanged = Boolean(liveMessagesFromQuery) &&
+            liveMessagesSnapshotRef.current !== liveMessagesFromQuery?.key;
+        if (!conversationChanged && !liveMessagesChanged) {
+            return;
+        }
         if (conversationChanged) {
             conversationPaginationKeyRef.current = conversationPaginationKey;
         }
@@ -314,7 +320,7 @@ export function useDirectConversationsQuery({ workspaceId, currentUserId, curren
                 },
             };
         });
-    }
+    }, [conversationPaginationKey, liveMessagesFromQuery, isPreviewMode]);
     const resolvedSelectedConversation = (() => {
         if (!selectedConversation) {
             return null;
@@ -339,17 +345,20 @@ export function useDirectConversationsQuery({ workspaceId, currentUserId, curren
             }));
         return pool.find((conversation) => conversation.legacyId === selectedConversation.legacyId) ?? null;
     })();
-    if (selectedConversation &&
-        resolvedSelectedConversation &&
-        resolvedSelectedConversation.updatedAtMs !== selectedConversation.updatedAtMs) {
-        setSelectedConversation(resolvedSelectedConversation);
-    }
-    else if (selectedConversation &&
-        !resolvedSelectedConversation &&
-        !isPreviewMode &&
-        conversationsQuery !== undefined) {
-        setSelectedConversation(null);
-    }
+    useEffect(() => {
+        if (selectedConversation &&
+            resolvedSelectedConversation &&
+            resolvedSelectedConversation.updatedAtMs !== selectedConversation.updatedAtMs) {
+            setSelectedConversation(resolvedSelectedConversation);
+            return;
+        }
+        if (selectedConversation &&
+            !resolvedSelectedConversation &&
+            !isPreviewMode &&
+            conversationsQuery !== undefined) {
+            setSelectedConversation(null);
+        }
+    }, [selectedConversation, resolvedSelectedConversation, isPreviewMode, conversationsQuery]);
     const liveConversations: DirectConversation[] = conversationRows
         .map((c) => ({
         id: c._id,
@@ -401,13 +410,17 @@ export function useDirectConversationsQuery({ workspaceId, currentUserId, curren
         return null;
     })();
     const syncSearchSnapshotRef = useRef<string | null>(null);
-    if (resolvedSyncSearch !== null) {
-        const syncSearchKey = `${selectedConversation?.legacyId ?? ''}|${normalizedMessageSearch}|${resolvedSyncSearch.results.length}|${resolvedSyncSearch.searching ? 'loading' : 'ready'}`;
-        if (syncSearchSnapshotRef.current !== syncSearchKey) {
-            syncSearchSnapshotRef.current = syncSearchKey;
-            setFeed((prev) => ({ ...prev, search: resolvedSyncSearch }));
+    useEffect(() => {
+        if (resolvedSyncSearch === null) {
+            return;
         }
-    }
+        const syncSearchKey = `${selectedConversation?.legacyId ?? ''}|${normalizedMessageSearch}|${resolvedSyncSearch.results.length}|${resolvedSyncSearch.searching ? 'loading' : 'ready'}`;
+        if (syncSearchSnapshotRef.current === syncSearchKey) {
+            return;
+        }
+        syncSearchSnapshotRef.current = syncSearchKey;
+        setFeed((prev) => ({ ...prev, search: resolvedSyncSearch }));
+    }, [resolvedSyncSearch, selectedConversation?.legacyId, normalizedMessageSearch]);
     const fetchDirectMessageSearch = useEffectEvent(async (isCancelled: () => boolean) => {
         if (!selectedConversation || !normalizedMessageSearch || !workspaceId)
             return;
