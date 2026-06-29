@@ -1,10 +1,11 @@
 'use client';
-import { createContext, use, useCallback, useMemo, type ReactNode } from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import type { AuthPhase } from '@/lib/auth-phase';
 import { authService } from '@/services/auth';
 import type { AuthUser, SignUpData } from '@/services/auth';
 import { useAuthSync, type AuthError, type AuthErrorCode, } from '@/shared/hooks/use-auth-sync';
 import { authClient } from '@/lib/auth-client';
+import { setSentryUser } from '@/lib/sentry-capture';
 export type { AuthError, AuthErrorCode };
 interface AuthContextType {
     user: AuthUser | null;
@@ -59,6 +60,18 @@ interface AuthProviderProps {
 }
 export function AuthProvider({ children }: AuthProviderProps) {
     const { phase: authPhase, user, authError, clearAuthError, retrySync, resetSession, applySessionUser, loading, isSyncing, } = useAuthSync();
+    // Sync authenticated user to Sentry so errors are attributed correctly.
+    useEffect(() => {
+        if (user) {
+            setSentryUser({
+                id: user.id,
+                email: user.email,
+                role: user.role,
+            });
+        } else {
+            setSentryUser(null);
+        }
+    }, [user]);
     const signIn = (email: string, password: string): Promise<AuthUser> => {
         return authService
             .signIn(email, password)

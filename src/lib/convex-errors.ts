@@ -1,4 +1,5 @@
 import { ConvexError } from 'convex/values';
+import { captureError } from '@/lib/sentry-capture';
 /**
  * Standardized error data passed to ConvexError.
  * Must match the definition in convex/errors.ts
@@ -25,6 +26,11 @@ export function logError(error: unknown, context?: string): void {
         console.error('Details:', details);
     console.error('Raw Error:', error);
     console.groupEnd();
+    // Forward to Sentry (no-op if SDK is not initialized)
+    captureError(error, {
+        tags: code ? { error_code: code } : undefined,
+        extra: { context, details },
+    });
 }
 /**
  * Extract a user-friendly error message from unknown error values,

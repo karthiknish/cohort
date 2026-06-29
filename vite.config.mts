@@ -5,6 +5,7 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import { nitro } from 'nitro/vite'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { sentryTanstackStart } from '@sentry/tanstackstart-react/vite'
 
 const root = path.dirname(fileURLToPath(import.meta.url))
 const isProduction = process.env.NODE_ENV === 'production'
@@ -62,13 +63,24 @@ export default defineConfig(({ mode }) => ({
     nitro(),
     viteReact(),
     tailwindcss(),
+    // Sentry plugin must be last — manages source map uploads + Nitro tracing
+    sentryTanstackStart({
+      org: 'karthik-lq7',
+      project: 'cohorts',
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      // Only upload source maps in production builds with an auth token
+      disable: !isProduction || !process.env.SENTRY_AUTH_TOKEN,
+    }),
   ],
   server: {
     port: 3000,
   },
   build: {
     target: 'esnext',
-    sourcemap: !isProduction,
+    // Enable sourcemaps in production so the Sentry Vite plugin can upload
+    // them. The plugin deletes the .map files from the build output after
+    // upload, so they are not shipped to clients.
+    sourcemap: true,
   },
   optimizeDeps: {
     exclude: ['@tanstack/react-start'],

@@ -1,5 +1,9 @@
 import { createStart, createMiddleware } from '@tanstack/react-start'
 import {
+  sentryGlobalFunctionMiddleware,
+  sentryGlobalRequestMiddleware,
+} from '@sentry/tanstackstart-react'
+import {
   buildRateLimitHeaders,
   createRateLimitConfig,
   RATE_LIMITS,
@@ -260,5 +264,7 @@ const securityMiddleware = createMiddleware().server(async ({ next, request }) =
 })
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [securityMiddleware],
+  // Sentry middleware must run first to capture errors from downstream middleware
+  requestMiddleware: [sentryGlobalRequestMiddleware, securityMiddleware],
+  functionMiddleware: [sentryGlobalFunctionMiddleware],
 }))
