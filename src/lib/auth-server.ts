@@ -40,21 +40,9 @@ async function rewriteConvexAuthResponse(response: Response): Promise<Response> 
     headers.set('location', rewriteConvexAuthUrls(location))
   }
 
-  // Rewrite Set-Cookie domain from Convex origin to app origin so the browser
-  // accepts the cookies. Without this, auth cookies set by Convex are rejected
-  // because they're scoped to *.convex.site.
-  const appHost = new URL(getSiteUrl()).host
-  const setCookies = headers.getSetCookie?.() ?? []
-  if (setCookies.length > 0) {
-    headers.delete('set-cookie')
-    for (const cookie of setCookies) {
-      const rewritten = cookie
-        .replace(/Domain=[^;]+;?/gi, `Domain=${appHost}; `)
-        .replace(/SameSite=[^;]+;?/gi, 'SameSite=lax; ')
-      headers.append('set-cookie', rewritten)
-    }
-  }
-
+  // Pass Set-Cookie headers through. The cookies are set without a Domain
+  // attribute, so the browser scopes them to the app origin (Vercel domain).
+  // No rewriting needed — the proxy response origin is the app origin.
   const contentType = headers.get('content-type') ?? ''
   if (!contentType.includes('application/json')) {
     return new Response(response.body, {
@@ -77,8 +65,6 @@ export async function proxyAuthToConvex(request: Request): Promise<Response> {
   const appUrl = new URL(siteUrl)
   // Forward the app origin so Better Auth (with trustedProxyHeaders) sees the
   // correct base URL instead of the Convex site URL from the host header.
-  // Without this, Better Auth treats the request as cross-domain and moves
-  // Set-Cookie to Set-Better-Auth-Cookie, which the client doesn't read.
   const forwardedHeaders = new Headers(request.headers)
   forwardedHeaders.set('x-forwarded-host', appUrl.host)
   forwardedHeaders.set('x-forwarded-proto', appUrl.protocol.replace(':', ''))
@@ -92,27 +78,7 @@ export async function proxyAuthToConvex(request: Request): Promise<Response> {
     duplex: 'half',
   })
   const upstream = await getAuthUtilities().handler(forwardedRequest)
-
-  // DEBUG: expose upstream headers via x-debug-* response headers
-  const debugHeaders: Record<string, string> = {}
-  upstream.headers.forEach((v, k) => { debugHeaders[k] = v.substring(0, 200) })
-  const debugSetCookies = upstream.headers.getSetCookie?.() ?? []
-
-  const rewritten = await rewriteConvexAuthResponse(upstream)
-
-  // Add debug headers to the final response
-  const finalHeaders = new Headers(rewritten.headers)
-  finalHeaders.set('x-debug-upstream-status', String(upstream.status))
-  finalHeaders.set('x-debug-set-cookie-count', String(debugSetCookies.length))
-  finalHeaders.set('x-debug-set-cookies', JSON.stringify(debugSetCookies.map(c => c.substring(0, 150))))
-  finalHeaders.set('x-debug-better-auth-cookie', upstream.headers.get('set-better-auth-cookie') ?? 'null')
-  finalHeaders.set('x-debug-all-upstream-headers', JSON.stringify(debugHeaders))
-
-  return new Response(rewritten.body, {
-    status: rewritten.status,
-    statusText: rewritten.statusText,
-    headers: finalHeaders,
-  })
+  return rewriteConvexAuthResponse(upstream)
 }
 
 /**
@@ -124,8 +90,43 @@ export const handler = {
   POST: proxyAuthToConvex,
 }
 
-export function getToken(
-  ...args: Parameters<AuthUtilities['getToken']>
-): ReturnType<AuthUtilities['getToken']> {
-  return getAuthUtilities().getToken(...args)
+/**
+ * Server-side token fetch.
+ *
+ * The default getToken from convexBetterAuthReactStart calls the Convex site
+ * URL directly (https://*.convex.site/api/auth/convex/token). But session
+ * cookies are scoped to the app origin (Vercel domain), so the Convex backend
+ * never sees them and returns 401.
+ *
+ * Instead, we call the token endpoint through our own proxy (/api/auth/convex/token)
+ * which forwards the browser's cookies to Convex via the handler.
+ *
+ * Returns the token string directly (or null) for compatibility with all callers.
+ */
+export async function getToken(): Promise<string | null> {
+  const { getRequestHeaders } = await import('@tanstack/react-start/server')
+  const headers = new Headers(getRequestHeaders())
+  headers.delete('content-length')
+  headers.delete('transfer-encoding')
+  headers.set('accept-encoding', 'identity')
+
+  const siteUrl = getSiteUrl()
+  const appUrl = new URL(siteUrl)
+  headers.set('x-forwarded-host', appUrl.host)
+  headers.set('x-forwarded-proto', appUrl.protocol.replace(':', ''))
+  headers.set('x-forwarded-origin', siteUrl)
+
+  const tokenRequest = new Request(`${siteUrl}/api/auth/convex/token`, {
+    method: 'GET',
+    headers,
+  })
+  const response = await proxyAuthToConvex(tokenRequest)
+  if (!response.ok) {
+    return null
+  }
+  const data = await response.json().catch(() => null) as
+    | { token?: unknown }
+    | null
+  const token = data?.token
+  return typeof token === 'string' && token.length > 0 ? token : null
 }

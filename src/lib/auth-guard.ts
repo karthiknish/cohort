@@ -1,8 +1,7 @@
 /**
  * Auth gating ported from `proxy.ts` for TanStack Router `beforeLoad`.
  */
-import { getToken } from '@convex-dev/better-auth/utils'
-import { getConvexSiteUrl } from '@/lib/convex-env'
+import { getToken } from '@/lib/auth-server'
 import {
   isPreviewRouteRequest,
   isScreenRecordingAuthBypassEnabled,
@@ -28,8 +27,8 @@ export function isProtectedPath(pathname: string): boolean {
 
 export async function hasValidSession(request: Request): Promise<boolean> {
   try {
-    const tokenResult = await getToken(getConvexSiteUrl(), request.headers)
-    return !!tokenResult?.token
+    const token = await getToken()
+    return !!token
   } catch (err) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('[auth-guard] session check error:', err)
