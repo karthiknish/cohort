@@ -4,7 +4,7 @@ import {
   accountStatusRedirect,
   shouldBypassAuthForDemo,
 } from '@/lib/auth-guard'
-import { hasValidSession } from '@/lib/auth-session.server'
+import { hasValidSession, resolveUserStatus } from '@/lib/auth-session.server'
 import { getServerRequest } from '@/lib/server-request.server'
 import { Button } from '@/shared/ui/button'
 import { DashboardLoading } from '@/shared/ui/route-boundaries/dashboard-loading'
@@ -34,7 +34,11 @@ export const Route = createFileRoute('/_authed')({
       })
     }
 
-    const statusTarget = accountStatusRedirect(request, pathname)
+    // Resolve the domain status server-side (replaces the cohorts_status cookie).
+    // On any failure, fall through — the client-side ProtectedRoute gate still
+    // enforces status redirects reactively once Convex auth settles.
+    const status = await resolveUserStatus()
+    const statusTarget = accountStatusRedirect(status, pathname)
     if (statusTarget) {
       throw redirect(statusTarget)
     }

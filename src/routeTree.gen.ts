@@ -41,8 +41,6 @@ import { Route as ApiHealthReadyRouteImport } from './routes/api/health/ready'
 import { Route as ApiFilesProxyRouteImport } from './routes/api/files/proxy'
 import { Route as ApiDebugClientsRouteImport } from './routes/api/debug/clients'
 import { Route as ApiDashboardClientSummaryRouteImport } from './routes/api/dashboard/client-summary'
-import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
-import { Route as ApiAuthBootstrapRouteImport } from './routes/api/auth/bootstrap'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedDashboardTasksRouteImport } from './routes/_authed/dashboard/tasks'
 import { Route as AuthedDashboardSocialsRouteImport } from './routes/_authed/dashboard/socials'
@@ -243,16 +241,6 @@ const ApiDashboardClientSummaryRoute =
     path: '/api/dashboard/client-summary',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
-  id: '/api/auth/session',
-  path: '/api/auth/session',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthBootstrapRoute = ApiAuthBootstrapRouteImport.update({
-  id: '/api/auth/bootstrap',
-  path: '/api/auth/bootstrap',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -501,8 +489,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/socials': typeof AuthedDashboardSocialsRoute
   '/dashboard/tasks': typeof AuthedDashboardTasksRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/auth/bootstrap': typeof ApiAuthBootstrapRoute
-  '/api/auth/session': typeof ApiAuthSessionRoute
   '/api/dashboard/client-summary': typeof ApiDashboardClientSummaryRoute
   '/api/debug/clients': typeof ApiDebugClientsRoute
   '/api/files/proxy': typeof ApiFilesProxyRoute
@@ -571,8 +557,6 @@ export interface FileRoutesByTo {
   '/dashboard/socials': typeof AuthedDashboardSocialsRoute
   '/dashboard/tasks': typeof AuthedDashboardTasksRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/auth/bootstrap': typeof ApiAuthBootstrapRoute
-  '/api/auth/session': typeof ApiAuthSessionRoute
   '/api/dashboard/client-summary': typeof ApiDashboardClientSummaryRoute
   '/api/debug/clients': typeof ApiDebugClientsRoute
   '/api/files/proxy': typeof ApiFilesProxyRoute
@@ -646,8 +630,6 @@ export interface FileRoutesById {
   '/_authed/dashboard/socials': typeof AuthedDashboardSocialsRoute
   '/_authed/dashboard/tasks': typeof AuthedDashboardTasksRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/auth/bootstrap': typeof ApiAuthBootstrapRoute
-  '/api/auth/session': typeof ApiAuthSessionRoute
   '/api/dashboard/client-summary': typeof ApiDashboardClientSummaryRoute
   '/api/debug/clients': typeof ApiDebugClientsRoute
   '/api/files/proxy': typeof ApiFilesProxyRoute
@@ -721,8 +703,6 @@ export interface FileRouteTypes {
     | '/dashboard/socials'
     | '/dashboard/tasks'
     | '/api/auth/$'
-    | '/api/auth/bootstrap'
-    | '/api/auth/session'
     | '/api/dashboard/client-summary'
     | '/api/debug/clients'
     | '/api/files/proxy'
@@ -791,8 +771,6 @@ export interface FileRouteTypes {
     | '/dashboard/socials'
     | '/dashboard/tasks'
     | '/api/auth/$'
-    | '/api/auth/bootstrap'
-    | '/api/auth/session'
     | '/api/dashboard/client-summary'
     | '/api/debug/clients'
     | '/api/files/proxy'
@@ -865,8 +843,6 @@ export interface FileRouteTypes {
     | '/_authed/dashboard/socials'
     | '/_authed/dashboard/tasks'
     | '/api/auth/$'
-    | '/api/auth/bootstrap'
-    | '/api/auth/session'
     | '/api/dashboard/client-summary'
     | '/api/debug/clients'
     | '/api/files/proxy'
@@ -919,8 +895,6 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRouteWithChildren
   ManifestWebmanifestRoute: typeof ManifestWebmanifestRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  ApiAuthBootstrapRoute: typeof ApiAuthBootstrapRoute
-  ApiAuthSessionRoute: typeof ApiAuthSessionRoute
   ApiDashboardClientSummaryRoute: typeof ApiDashboardClientSummaryRoute
   ApiDebugClientsRoute: typeof ApiDebugClientsRoute
   ApiFilesProxyRoute: typeof ApiFilesProxyRoute
@@ -1177,20 +1151,6 @@ declare module '@tanstack/react-router' {
       path: '/api/dashboard/client-summary'
       fullPath: '/api/dashboard/client-summary'
       preLoaderRoute: typeof ApiDashboardClientSummaryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/session': {
-      id: '/api/auth/session'
-      path: '/api/auth/session'
-      fullPath: '/api/auth/session'
-      preLoaderRoute: typeof ApiAuthSessionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/bootstrap': {
-      id: '/api/auth/bootstrap'
-      path: '/api/auth/bootstrap'
-      fullPath: '/api/auth/bootstrap'
-      preLoaderRoute: typeof ApiAuthBootstrapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -1597,8 +1557,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRouteWithChildren,
   ManifestWebmanifestRoute: ManifestWebmanifestRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  ApiAuthBootstrapRoute: ApiAuthBootstrapRoute,
-  ApiAuthSessionRoute: ApiAuthSessionRoute,
   ApiDashboardClientSummaryRoute: ApiDashboardClientSummaryRoute,
   ApiDebugClientsRoute: ApiDebugClientsRoute,
   ApiFilesProxyRoute: ApiFilesProxyRoute,

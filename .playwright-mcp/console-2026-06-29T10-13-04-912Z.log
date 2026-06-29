@@ -45,3 +45,30 @@ Do not enter or paste code that you do not understand. @ https://www.gstatic.com
     at Cd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:123518)
     at vd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:122072)
     at nd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:120156)
+[ 2559849ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://cohort-omega-five.vercel.app/api/auth/session:0
+[ 2560146ms] [ERROR] ConvexError: [CONVEX Q(users:listAllUsers)] [Request ID: e3be06cc6d2c8fe3] Server Error
+  Called by client
+    at SC.queryResult (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:70:11681)
+    at vw.localQueryResult (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:70:43705)
+    at Object.localQueryResult (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:72:1913)
+    at Hw.getLocalResults (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:72:6053)
+    at getCurrentValue (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:72:7638)
+    at https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:70:52197
+    at Wo (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:9:49863)
+    at Ko (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:9:50736)
+    at Go (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:9:49892)
+    at Object.useState (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:9:61949) @ https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:8
+[ 2560149ms] [ERROR] Message: Admin access required @ https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:23
+[ 2560149ms] [ERROR] Code: ADMIN_REQUIRED @ https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:23
+[ 2560149ms] [ERROR] Raw Error: ConvexError: [CONVEX Q(users:listAllUsers)] [Request ID: e3be06cc6d2c8fe3] Server Error
+  Called by client
+    at SC.queryResult (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:70:11681)
+    at vw.localQueryResult (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:70:43705)
+    at Object.localQueryResult (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:72:1913)
+    at Hw.getLocalResults (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:72:6053)
+    at getCurrentValue (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:72:7638)
+    at https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:70:52197
+    at Wo (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:9:49863)
+    at Ko (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:9:50736)
+    at Go (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:9:49892)
+    at Object.useState (https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:9:61949) @ https://cohort-omega-five.vercel.app/assets/index-ClNcvJTN.js:23

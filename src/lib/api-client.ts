@@ -1,4 +1,3 @@
-import { authService } from '@/services/auth';
 import { ResponseBodyParseError, parseJsonBody } from './response-json';
 import { composeAbortSignal, isAbortError, isTimeoutError, sleepWithSignal } from './retry-utils';
 import { UnifiedError } from './errors/unified-error';
@@ -139,13 +138,8 @@ export async function apiFetch<T = unknown>(input: RequestInfo | URL, init: ApiF
             return url;
         }
     })();
-    const isAuthSessionRequest = requestPath.startsWith('/api/auth/bootstrap')
-        || requestPath.startsWith('/api/auth/session');
     const executeRequest = async (attempt = 0): Promise<T> => {
         try {
-            if (typeof window !== 'undefined' && !isAuthSessionRequest) {
-                await authService.waitForInitialAuth().catch(() => { });
-            }
             const headers = new Headers(requestInit.headers);
             if (!headers.has('Content-Type') && method.toUpperCase() !== 'GET') {
                 headers.set('Content-Type', 'application/json');

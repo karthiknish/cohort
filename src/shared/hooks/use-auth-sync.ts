@@ -1,13 +1,11 @@
 'use client';
-import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
-import { useConvexAuth, useQuery } from 'convex/react';
-import { bootstrapAndSyncSessionOnce, resetBootstrapSessionCache, type BootstrapProfile, } from '@/features/auth/auth-utils';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { authClient } from '@/lib/auth-client';
-import { decodeJwtSubject } from '@/lib/jwt-utils';
-import { deriveAuthPhase, isLoadingPhase, mergeConvexProfile, type AuthPhase, type AuthSyncState, } from '@/lib/auth-phase';
-import { authService } from '@/services/auth';
+import { deriveAuthPhase, isLoadingPhase, mergeConvexProfile, type AuthPhase } from '@/lib/auth-phase';
 import type { AuthUser } from '@/services/auth';
 import { api } from '@convex/_generated/api';
+
 export type AuthErrorCode = 'SESSION_SYNC_FAILED' | 'NETWORK_ERROR' | 'UNAUTHORIZED' | 'RATE_LIMITED' | 'SERVER_ERROR' | 'UNKNOWN';
 export interface AuthError {
     code: AuthErrorCode;
@@ -18,329 +16,147 @@ export interface AuthError {
 function createAuthError(code: AuthErrorCode, message: string, details?: Record<string, unknown>, retryable = false): AuthError {
     return { code, message, details, retryable };
 }
-class StaleSyncError extends Error {
-    constructor() {
-        super('Auth sync superseded by a newer run');
-        this.name = 'StaleSyncError';
-    }
+
+function normalizeRole(value: unknown): AuthUser['role'] {
+    return value === 'admin' || value === 'team' || value === 'client' ? value : 'client';
 }
-const SYNC_TIMEOUT_MS = 8000;
-const TOKEN_RETRY_DELAYS_MS = [0, 400, 900, 1800];
-function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms);
-    });
+function normalizeStatus(value: unknown): AuthUser['status'] {
+    return value === 'active' || value === 'pending' || value === 'invited' || value === 'disabled' || value === 'suspended'
+        ? value
+        : 'pending';
 }
-function extractConvexToken(result: unknown): string | null {
-    if (typeof result === 'string') {
-        const trimmed = result.trim();
-        return trimmed.length > 0 ? trimmed : null;
-    }
-    if (typeof result !== 'object' || result === null) {
-        return null;
-    }
-    if ('token' in result) {
-        const direct = (result as {
-            token?: unknown;
-        }).token;
-        if (typeof direct === 'string' && direct.trim().length > 0) {
-            return direct.trim();
-        }
-    }
-    if ('data' in result) {
-        return extractConvexToken((result as {
-            data?: unknown;
-        }).data);
-    }
-    return null;
-}
-async function fetchConvexTokenOnce(): Promise<string | null> {
-    const result = await authClient.convex.token({ fetchOptions: { throw: false } }).catch(() => null);
-    return extractConvexToken(result);
-}
-async function fetchConvexTokenWithRetry(assertActive: () => void): Promise<string | null> {
-    const token = await fetchConvexTokenOnce();
-    if (token) {
-        return token;
-    }
-    const retryWithDelays = async (delayIndex: number): Promise<string | null> => {
-        const delay = TOKEN_RETRY_DELAYS_MS[delayIndex];
-        if (delay === undefined)
-            return null;
-        if (delay > 0) {
-            await sleep(delay);
-        }
-        assertActive();
-        const nextToken = await fetchConvexTokenOnce();
-        if (nextToken) {
-            return nextToken;
-        }
-        return retryWithDelays(delayIndex + 1);
-    };
-    return retryWithDelays(0);
-}
-async function runAuthSyncPipeline(assertActive: () => void): Promise<{
-    subject: string;
-    profile: BootstrapProfile;
-}> {
-    assertActive();
-    const profile = await Promise.race([
-        bootstrapAndSyncSessionOnce(),
-        sleep(SYNC_TIMEOUT_MS).then(() => {
-            throw new Error('Timed out while setting up your workspace. Please retry.');
-        }),
-    ]);
-    assertActive();
-    let resolvedToken = await fetchConvexTokenWithRetry(assertActive);
-    if (!resolvedToken) {
-        resolvedToken = await fetchConvexTokenOnce();
-    }
-    const subject = (resolvedToken ? decodeJwtSubject(resolvedToken) : null)
-        ?? profile.legacyId;
-    if (!subject) {
-        throw new Error('We could not finish securing your session. Try again or sign in once more.');
-    }
-    return { subject, profile };
-}
-function applyBootstrapProfile(baseUser: AuthUser, profile: BootstrapProfile | null): AuthUser {
-    if (!profile) {
-        return baseUser;
-    }
+
+/**
+ * Maps a Better Auth session user onto the app's `AuthUser`. role/status/agencyId
+ * default until the Convex domain profile query overlays the real values.
+ */
+function mapSessionUser(raw: Record<string, unknown>): AuthUser {
+    const id = typeof raw.id === 'string' ? raw.id : '';
+    const email = typeof raw.email === 'string' ? raw.email : '';
+    const name = typeof raw.name === 'string' ? raw.name : email;
     return {
-        ...baseUser,
-        role: profile.role,
-        status: profile.status,
-        agencyId: profile.agencyId,
+        id,
+        email,
+        name,
+        phoneNumber: null,
+        photoURL: typeof raw.image === 'string' ? raw.image : null,
+        role: normalizeRole((raw as { role?: unknown }).role),
+        status: normalizeStatus((raw as { status?: unknown }).status),
+        agencyId: typeof (raw as { agencyId?: unknown }).agencyId === 'string'
+            ? String((raw as { agencyId?: unknown }).agencyId)
+            : id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
     };
 }
+
+/**
+ * Official Convex + Better Auth session sync.
+ *
+ * Composes the standard signals (`authClient.useSession()` + `useConvexAuth()`)
+ * with a single Convex query for the domain profile (`api.users.getByLegacyIdSafe`).
+ * First-touch profile creation runs through the identity-gated
+ * `api.users.ensureProfileOnSignIn` mutation — no custom bootstrap endpoint,
+ * no CSRF, no session-cookie polling.
+ */
 export function useAuthSync() {
-    const [syncGeneration, setSyncGeneration] = useState(0);
-    const syncGenerationRef = useRef(syncGeneration);
-    useEffect(() => {
-        syncGenerationRef.current = syncGeneration;
-    }, [syncGeneration]);
-    const [sessionSync, setSessionSync] = useState({
-        syncState: 'idle' as AuthSyncState,
-        authError: null as AuthError | null,
-        sessionUser: null as AuthUser | null,
-        convexLegacyId: null as string | null,
-        bootstrapProfile: null as BootstrapProfile | null,
-    });
-    const { syncState, authError, sessionUser, convexLegacyId, bootstrapProfile } = sessionSync;
+    const [authError, setAuthError] = useState<AuthError | null>(null);
+    // Track whether we've already attempted the first-touch profile creation for
+    // the current legacyId so we don't loop on a persistently-missing row.
+    const bootstrappedLegacyIdRef = useRef<string | null>(null);
+
     const { data: betterAuthSession, isPending: sessionPending } = authClient.useSession();
     const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
-    const profileLegacyId = convexLegacyId ?? sessionUser?.id ?? null;
-    const convexUser = useQuery(api.users.getByLegacyIdSafe, profileLegacyId && isAuthenticated ? { legacyId: profileLegacyId } : 'skip');
-    const profilePending = false;
-    const profileMissing = Boolean(profileLegacyId)
+
+    // The legacyId IS the Better Auth user id (= JWT subject). The Convex
+    // plugin mints a JWT whose `sub` is the better-auth `user._id`, which is
+    // what the domain `users` table joins on.
+    const legacyId = betterAuthSession?.user?.id ?? null;
+
+    // Domain profile: role/status/agencyId. Only queried once Convex auth is
+    // ready (the query is identity-gated server-side).
+    const convexUser = useQuery(
+        api.users.getByLegacyIdSafe,
+        legacyId && isAuthenticated ? { legacyId } : 'skip',
+    );
+
+    const ensureProfile = useMutation(api.users.ensureProfileOnSignIn);
+
+    const hasSession = Boolean(betterAuthSession?.user);
+    const profileLoading = isAuthenticated && convexUser === undefined;
+    const profileMissing = Boolean(legacyId)
         && isAuthenticated
         && !convexAuthLoading
-        && convexUser === null
-        && syncState === 'success'
-        && !bootstrapProfile;
-    const user = (() => {
-        if (!sessionUser) {
-            return null;
+        && convexUser === null;
+
+    // First-touch profile creation: when authenticated but the domain row is
+    // missing, run the identity-gated upsert exactly once per legacyId.
+    useEffect(() => {
+        if (!isAuthenticated || !legacyId) {
+            return;
         }
-        let merged = applyBootstrapProfile(sessionUser, bootstrapProfile);
-        if (convexUser) {
-            merged = mergeConvexProfile(merged, convexUser);
+        if (convexUser !== null) {
+            // Row exists (or query still loading === undefined); reset so a future
+            // sign-in with a different account can bootstrap again.
+            if (convexUser !== undefined) {
+                bootstrappedLegacyIdRef.current = legacyId;
+            }
+            return;
         }
-        if (convexLegacyId && merged.id !== convexLegacyId) {
-            merged = { ...merged, id: convexLegacyId };
+        if (bootstrappedLegacyIdRef.current === legacyId) {
+            // Already attempted for this account and still missing — surface error.
+            setAuthError(createAuthError(
+                'SESSION_SYNC_FAILED',
+                'Your workspace profile could not be loaded. Please try again or contact support.',
+                undefined,
+                true,
+            ));
+            return;
         }
-        return merged;
-    })();
-    const hasSession = Boolean(betterAuthSession?.user ?? sessionUser);
-    const awaitingSession = sessionPending && !betterAuthSession?.user && !sessionUser;
-    if (profileMissing && syncState === 'success') {
-        setSessionSync((prev) => ({
-            ...prev,
-            syncState: 'failed',
-            authError: createAuthError('SESSION_SYNC_FAILED', 'Workspace profile not found. Your sign-in succeeded but the profile could not be loaded.', undefined, true),
-        }));
-    }
-    const mappedBetterAuthUser = (() => {
+        bootstrappedLegacyIdRef.current = legacyId;
+        void ensureProfile({ legacyId }).catch((error: unknown) => {
+            setAuthError(createAuthError(
+                'SESSION_SYNC_FAILED',
+                error instanceof Error ? error.message : 'Failed to set up your workspace.',
+                undefined,
+                true,
+            ));
+        });
+    }, [isAuthenticated, legacyId, convexUser, ensureProfile]);
+
+    const user = useMemo<AuthUser | null>(() => {
         const rawUser = betterAuthSession?.user;
-        if (!rawUser)
-            return null;
-        return authService.mapBetterAuthUser(rawUser as Record<string, unknown>);
-    })();
-    if (mappedBetterAuthUser) {
-        if (sessionUser?.id !== mappedBetterAuthUser.id) {
-            setSessionSync((prev) => ({
-                ...prev,
-                sessionUser: mappedBetterAuthUser,
-            }));
+        if (!rawUser) return null;
+        const base = mapSessionUser(rawUser as Record<string, unknown>);
+        if (convexUser) {
+            return mergeConvexProfile(base, convexUser);
         }
-    }
-    else if (!sessionPending && !awaitingSession &&
-        (sessionUser !== null ||
-            syncState !== 'idle' ||
-            authError !== null ||
-            convexLegacyId !== null ||
-            bootstrapProfile !== null)) {
-        setSessionSync({
-            syncState: 'idle',
-            authError: null,
-            sessionUser: null,
-            convexLegacyId: null,
-            bootstrapProfile: null,
-        });
-    }
-    const initialAuthHydratedRef = useRef(false);
-    useEffect(() => {
-        if (!hasSession || initialAuthHydratedRef.current) {
-            return;
-        }
-        initialAuthHydratedRef.current = true;
-        void authService.waitForInitialAuth().then(() => {
-            const cachedUser = authService.getCurrentUser();
-            if (cachedUser) {
-                setSessionSync((prev) => ({
-                    ...prev,
-                    sessionUser: prev.sessionUser ?? cachedUser,
-                }));
-            }
-        });
-    }, [hasSession]);
-    const runSessionSync = useEffectEvent(async (runId: number) => {
-        setSessionSync((prev) => ({ ...prev, syncState: 'running', authError: null }));
-        const assertActive = () => {
-            if (syncGenerationRef.current !== runId) {
-                throw new StaleSyncError();
-            }
-        };
-        try {
-            if (syncGenerationRef.current !== runId) {
-                return;
-            }
-            const resultPromise = runAuthSyncPipeline(assertActive);
-            if (syncGenerationRef.current !== runId) {
-                return;
-            }
-            const result = await resultPromise;
-            if (syncGenerationRef.current === runId) {
-                setSessionSync((prev) => ({
-                    ...prev,
-                    convexLegacyId: result.subject,
-                    bootstrapProfile: result.profile,
-                    syncState: 'success',
-                }));
-            }
-        }
-        catch (error) {
-            if (error instanceof StaleSyncError) {
-                return;
-            }
-            if (syncGenerationRef.current !== runId) {
-                return;
-            }
-            const message = error instanceof Error ? error.message : 'Failed to sync your session';
-            setSessionSync((prev) => ({
-                ...prev,
-                syncState: 'failed',
-                authError: createAuthError('SESSION_SYNC_FAILED', message, undefined, true),
-            }));
-        }
-    });
-    useEffect(() => {
-        if (awaitingSession || !hasSession) {
-            return;
-        }
-        if (syncState === 'failed') {
-            return;
-        }
-        if (syncState === 'running') {
-            return;
-        }
-        if (syncState === 'success' && bootstrapProfile && convexLegacyId) {
-            return;
-        }
-        void runSessionSync(syncGeneration);
-    }, [awaitingSession, bootstrapProfile, convexLegacyId, hasSession, syncGeneration, syncState]);
-    // Safety timeout: if sync succeeded but Convex auth never activates (isAuthenticated stays
-    // false), surface a retryable error instead of hanging forever in syncing phase.
-    useEffect(() => {
-        if (syncState !== 'success' || isAuthenticated || convexAuthLoading) {
-            return;
-        }
-        // At this point: sync is done but Convex hasn't applied the auth token yet.
-        // This should resolve within milliseconds in normal conditions (ConvexBetterAuthProvider
-        // reads the cached token). If it doesn't, something is broken — surface an error.
-        const timerId = setTimeout(() => {
-            setSessionSync((prev) => ({
-                ...prev,
-                syncState: 'failed',
-                authError: createAuthError(
-                    'SESSION_SYNC_FAILED',
-                    'Your session was validated but the secure data connection could not be established. Please try again.',
-                    undefined,
-                    true,
-                ),
-            }));
-        }, 5000);
-        return () => clearTimeout(timerId);
-    }, [syncState, isAuthenticated, convexAuthLoading]);
-    const phase = deriveAuthPhase({
-        sessionPending: awaitingSession,
+        return base;
+    }, [betterAuthSession?.user, convexUser]);
+
+    const phase: AuthPhase = deriveAuthPhase({
+        sessionPending,
         hasSession,
-        syncState,
         convexAuthLoading,
         isAuthenticated,
-        profilePending,
+        profileLoading,
+        profileMissing: profileMissing && authError !== null,
         user,
     });
+
     const retrySync = async () => {
-        setSessionSync((prev) => ({ ...prev, authError: null, syncState: 'idle' }));
-        setSyncGeneration((value) => value + 1);
+        bootstrappedLegacyIdRef.current = null;
+        setAuthError(null);
     };
-    const clearAuthError = () => {
-        setSessionSync((prev) => ({ ...prev, authError: null }));
-    };
-    const resetSession = () => {
-        resetBootstrapSessionCache();
-        setSessionSync({
-            syncState: 'idle',
-            authError: null,
-            sessionUser: null,
-            convexLegacyId: null,
-            bootstrapProfile: null,
-        });
-    };
-    const applySessionUser = (nextUser: AuthUser | null) => {
-        if (nextUser) {
-            if (nextUser.agencyId && nextUser.role && nextUser.status) {
-                setSessionSync({
-                    syncState: 'success',
-                    authError: null,
-                    sessionUser: nextUser,
-                    convexLegacyId: nextUser.id,
-                    bootstrapProfile: {
-                        legacyId: nextUser.id,
-                        role: nextUser.role,
-                        status: nextUser.status,
-                        agencyId: nextUser.agencyId,
-                    },
-                });
-                return;
-            }
-            setSessionSync((prev) => ({ ...prev, sessionUser: nextUser }));
-            setSyncGeneration((value) => value + 1);
-        }
-        else {
-            resetSession();
-        }
-    };
+    const clearAuthError = () => setAuthError(null);
+
     return {
         phase,
         user,
         authError,
         clearAuthError,
         retrySync,
-        resetSession,
-        applySessionUser,
         loading: isLoadingPhase(phase),
-        isSyncing: syncState === 'running',
+        isSyncing: phase === 'syncing' || phase === 'profile_loading',
     };
 }

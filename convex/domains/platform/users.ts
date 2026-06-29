@@ -621,6 +621,23 @@ export const ensureProfileOnSignIn = zRateLimitedIdentityMutation({
 })
 
 /**
+ * Server-side status lookup for the SSR auth guard (`_authed` beforeLoad).
+ * Called via the system admin client with a Convex token's `sub` (legacyId)
+ * to replace the old `cohorts_status` cookie. Returns only what routing needs.
+ */
+export const getStatusByLegacyId = internalQuery({
+  args: { legacyId: v.string() },
+  handler: async (ctx, args): Promise<{ status: string | null; role: string | null } | null> => {
+    const row = await ctx.db
+      .query('users')
+      .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
+      .unique()
+    if (!row) return null
+    return { status: row.status, role: row.role }
+  },
+})
+
+/**
  * Trusted bootstrap from POST /api/auth/bootstrap after Better Auth session is verified.
  * Does not require a Convex JWT (avoids token timing issues right after sign-in).
  */

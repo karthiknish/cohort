@@ -253,7 +253,7 @@ async function buildAuthResultFromConvexToken(token: string): Promise<AuthResult
         if (!resolvedUid) {
             const legacyId = decodeJwtSubject(token) ?? betterAuthUserId;
             if (legacyId) {
-                // Profile creation runs in POST /api/auth/bootstrap after sign-in — avoid duplicate writes here.
+                // Profile creation runs in the client auth hook (api.users.ensureProfileOnSignIn) after sign-in — avoid duplicate writes here.
                 resolvedUid = legacyId;
             }
         }

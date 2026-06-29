@@ -11,27 +11,25 @@ import {
 
 const PROTECTED_ROUTE_PREFIXES = ['/dashboard', '/for-you', '/admin', '/settings'] as const
 
-function parseCookieValue(cookieHeader: string, name: string): string | undefined {
-  for (const part of cookieHeader.split(';')) {
-    const idx = part.indexOf('=')
-    if (idx === -1) continue
-    const key = part.slice(0, idx).trim()
-    if (key === name) return part.slice(idx + 1).trim()
-  }
-  return undefined
-}
-
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_ROUTE_PREFIXES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   )
 }
 
+/**
+ * Resolves the SSR redirect target for a non-active account.
+ *
+ * Previously this read the `cohorts_status` cookie; with the official Convex
+ * + Better Auth structure there are no custom session cookies, so the caller
+ * resolves the status server-side (via the Convex domain `users` table) and
+ * passes it in. `null` (unknown / not yet resolved) means "no redirect" — the
+ * client-side `ProtectedRoute` gate handles the remaining cases.
+ */
 export function accountStatusRedirect(
-  request: Request,
+  status: string | null,
   pathname: string,
 ): { to: string; search?: Record<string, string> } | null {
-  const status = parseCookieValue(request.headers.get('cookie') ?? '', 'cohorts_status')
   if (!status) return null
 
   if (status === 'pending' || status === 'invited') {
