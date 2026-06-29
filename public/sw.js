@@ -1,8 +1,7 @@
-const CACHE_NAME = 'cohorts-pwa-v2'
+const CACHE_NAME = 'cohorts-pwa-v3'
 const OFFLINE_URL = '/offline.html'
 const PRECACHE_URLS = [
   OFFLINE_URL,
-  '/manifest.webmanifest',
 ]
 
 // Paths that should never be cached (dynamic content)
@@ -44,11 +43,20 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
+      // Cache entries individually so one missing asset (e.g. a 404) does not
+      // abort the whole install the way the atomic `cache.addAll` does.
+      .then((cache) =>
+        Promise.all(
+          PRECACHE_URLS.map((url) =>
+            cache
+              .add(url)
+              .catch((error) => logSwError('precache skipped', error, { url })),
+          ),
+        ),
+      )
       .then(() => self.skipWaiting())
       .catch((error) => {
         logSwError('install failed', error)
-        throw error
       })
   )
 })

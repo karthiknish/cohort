@@ -180,10 +180,18 @@ async function proxyPostHog(request: Request): Promise<Response> {
     // @ts-expect-error duplex is required for streaming request bodies in undici
     duplex: 'half',
   })
+  // undici's fetch transparently decompresses the upstream body but leaves
+  // the original `content-encoding`/`content-length` headers in place. If we
+  // forward those verbatim the browser tries to decode already-decoded bytes
+  // and fails with ERR_CONTENT_DECODING_FAILED, so strip them.
+  const responseHeaders = new Headers(upstream.headers)
+  responseHeaders.delete('content-encoding')
+  responseHeaders.delete('content-length')
+  responseHeaders.delete('transfer-encoding')
   return new Response(upstream.body, {
     status: upstream.status,
     statusText: upstream.statusText,
-    headers: upstream.headers,
+    headers: responseHeaders,
   })
 }
 

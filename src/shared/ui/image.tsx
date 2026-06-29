@@ -64,8 +64,7 @@ export function Image({
       height={fill ? undefined : height}
       sizes={sizes}
       loading={priority ? 'eager' : (loading ?? 'lazy')}
-      // @ts-expect-error fetchPriority is valid on HTMLImageElement but not in React's TS types
-      fetchpriority={priority ? 'high' : undefined}
+      fetchPriority={priority ? 'high' : undefined}
       style={computedStyle}
       {...rest}
     />
