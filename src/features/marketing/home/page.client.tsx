@@ -10,7 +10,7 @@ import { HERO_HEADLINE, HERO_SUBHEAD } from "@/features/marketing/home/component
 import { MinifiedSoftwarePreview } from "@/features/marketing/home/components/minified-software-preview";
 import { OperationsExpansionSection } from "@/features/marketing/home/components/operations-expansion-section";
 import { SupportProofSection } from "@/features/marketing/home/components/support-proof-section";
-import { authClient } from "@/lib/auth-client";
+import { useAuth } from '@/shared/contexts/auth-context';
 import { FadeIn } from "@/shared/ui/animate-in";
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition';
@@ -31,12 +31,11 @@ function resolveDashboardDestination(): string {
     return '/for-you';
 }
 function HomePageContent() {
-    const { data: session, isPending: sessionPending } = authClient.useSession();
-    const user = session?.user ?? null;
+    const { user, loading } = useAuth();
     // Server-side beforeLoad on / handles redirecting authenticated users.
     // Client-side redirect is intentionally omitted to avoid cookie-cache loops.
     return (<RevealTransition>
-      <PageSkeletonBoundary loading={sessionPending && !user} loadingContent={<MarketingHomePageSkeleton />}>
+      <PageSkeletonBoundary loading={loading && !user} loadingContent={<MarketingHomePageSkeleton />}>
       <div className="w-full bg-background">
       {/* ── Hero section ── */}
       <section className="relative overflow-hidden border-b border-primary/10 px-6 pb-16 pt-24 text-center">

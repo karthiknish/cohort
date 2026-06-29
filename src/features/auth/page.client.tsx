@@ -8,7 +8,6 @@ import { AuthCard } from '@/features/auth/components/auth-card';
 import { AuthPageSkeleton } from '@/features/auth/components/auth-page-skeleton';
 import { AuthShell } from '@/features/auth/components/auth-shell';
 import { calculatePasswordStrength, startGoogleOAuthSignIn } from '@/features/auth/auth-utils';
-import { authClient } from '@/lib/auth-client';
 import { logError } from '@/lib/convex-errors';
 import { getSafeRedirectPath } from '@/lib/utils';
 import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils';
@@ -152,16 +151,30 @@ function resolveDashboardDestination(): string {
     }
     return '/for-you';
 }
+function getRedirectParam(): string | null {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+    return getSafeRedirectPath(new URLSearchParams(window.location.search).get('redirect'));
+}
+function resolvePostAuthDestination(): string {
+    const redirectParam = getRedirectParam();
+    if (redirectParam) {
+        return redirectParam;
+    }
+    return resolveDashboardDestination();
+}
+function validateEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
 function HomeAuthPageContent() {
     const [state, dispatch] = useReducer(authPageReducer, initialAuthPageState);
     const { activeTab, showPassword, showConfirmPassword, rememberMe, isSubmitting, emailError, signInData, signUpData, } = state;
-    const { data: session, isPending: sessionPending } = authClient.useSession();
-    const user = session?.user ?? null;
-    const loading = sessionPending;
+    const { user, loading, signIn, signUp } = useAuth();
     const { push, replace } = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const { signIn, signUp } = useAuth();
     useEffect(() => {
         dispatch({
             type: 'hydrate',
@@ -187,26 +200,9 @@ function HomeAuthPageContent() {
         const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
         replace(nextUrl, { scroll: false });
     }, [pathname, replace, searchParams]);
-    const getRedirectParam = () => {
-        if (typeof window === 'undefined') {
-            return null;
-        }
-        return getSafeRedirectPath(new URLSearchParams(window.location.search).get('redirect'));
-    };
-    const resolvePostAuthDestination = () => {
-        const redirectParam = getRedirectParam();
-        if (redirectParam) {
-            return redirectParam;
-        }
-        return resolveDashboardDestination();
-    };
     const isAuthLoading = loading;
     const passwordStrength = calculatePasswordStrength(signUpData.password);
     const passwordsMatch = signUpData.password === signUpData.confirmPassword;
-    const validateEmail = (email: string): boolean => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    };
     const handleTabChange = (value: string) => {
         const nextTab = value === 'signup' ? 'signup' : 'signin';
         dispatch({ type: 'setActiveTab', value: nextTab });

@@ -1,6 +1,6 @@
 'use client';
 import type { ReactNode } from 'react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { ConvexProvider, ConvexReactClient, useConvexAuth } from 'convex/react';
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react';
 import { AlertTriangle } from 'lucide-react';
@@ -23,17 +23,17 @@ interface ConvexClientProviderProps {
 export function ConvexClientProvider({ children, initialToken }: ConvexClientProviderProps) {
     const convexUrl = getPublicEnv('NEXT_PUBLIC_CONVEX_URL');
     const useBetterAuth = getPublicEnv('NEXT_PUBLIC_USE_BETTER_AUTH') !== 'false';
-    const client = useMemo(() => {
+    const [client] = useState(() => {
         if (!convexUrl)
             return null;
-        const c = new ConvexReactClient(convexUrl);
+        const c = new ConvexReactClient(convexUrl, { expectAuth: true });
         const internal = c as unknown as { sync: { webSocketManager: { serverInactivityThreshold: number } } };
         const wsm = internal.sync?.webSocketManager;
         if (wsm && wsm.serverInactivityThreshold === 60000) {
             wsm.serverInactivityThreshold = Infinity;
         }
         return c;
-    }, [convexUrl]);
+    });
     if (!client) {
         if (process.env.NODE_ENV !== 'production') {
             console.warn('[convex] NEXT_PUBLIC_CONVEX_URL is not set; Convex client is disabled.');

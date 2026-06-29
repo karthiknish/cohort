@@ -43,6 +43,9 @@ export default defineConfig(({ mode }) => ({
       '/_generated': path.resolve(root, 'convex/_generated'),
     },
   },
+  ssr: {
+    noExternal: ['@convex-dev/better-auth'],
+  },
   plugins: [
     tanstackStart({
       react: {
