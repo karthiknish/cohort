@@ -117,10 +117,6 @@ export function CollaborationDashboardProvider({ children }: {
         selectConversation: dm.selectConversation,
     });
     useEffect(() => {
-        if (selectedChannelId === null) {
-            clearThreadReplies();
-            return;
-        }
         clearThreadReplies();
     }, [clearThreadReplies, selectedChannelId]);
     const actions = useCollaborationDashboardActions({
@@ -142,7 +138,7 @@ export function CollaborationDashboardProvider({ children }: {
         updateChannelMembers,
         workspaceId,
     });
-    const value = ({
+    const value = useMemo(() => ({
         collab,
         dm,
         currentUserId,
@@ -176,7 +172,19 @@ export function CollaborationDashboardProvider({ children }: {
         openNewDMDialog: dialogs.openNewDMDialog,
         setIsManageMembersDialogOpen: dialogs.setIsManageMembersDialogOpen,
         setIsNewDMDialogOpen: dialogs.setIsNewDMDialogOpen,
-    });
+    }), [
+        collab,
+        dm,
+        currentUserId,
+        currentUserRole,
+        isAdmin,
+        dialogs,
+        urlState,
+        selectedCustomChannel,
+        workspaceId,
+        workspaceMembers,
+        actions,
+    ]);
     return (<CollaborationDashboardContext.Provider value={value}>
       {children}
     </CollaborationDashboardContext.Provider>);
