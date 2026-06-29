@@ -9,7 +9,12 @@
  * at bundle evaluation time (only server handlers call into Convex auth).
  */
 import { convexBetterAuthReactStart } from '@convex-dev/better-auth/react-start'
-import { getConvexSiteUrl, getConvexUrl, getSiteUrl } from '@/lib/convex-env'
+import {
+  assertConvexDeploymentsAligned,
+  getConvexSiteUrl,
+  getConvexUrl,
+  getSiteUrl,
+} from '@/lib/convex-env'
 
 type AuthUtilities = ReturnType<typeof convexBetterAuthReactStart>
 
@@ -17,6 +22,10 @@ let authUtilities: AuthUtilities | null = null
 
 function getAuthUtilities(): AuthUtilities {
   if (!authUtilities) {
+    // Guard against the split-brain deployment misconfiguration before any auth
+    // proxying happens: a mismatch here means every minted JWT is rejected by
+    // the data deployment, surfacing as inscrutable 401s + infinite loading.
+    assertConvexDeploymentsAligned()
     authUtilities = convexBetterAuthReactStart({
       convexUrl: getConvexUrl(),
       convexSiteUrl: getConvexSiteUrl(),

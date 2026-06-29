@@ -1,11 +1,12 @@
 'use client';
 import type { ReactNode } from 'react';
-import { useMemo, useEffect } from 'react';
+import { useEffect } from 'react';
 import { ConvexProvider, ConvexReactClient, useConvexAuth } from 'convex/react';
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react';
 import { AlertTriangle } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { getPublicEnv } from '@/lib/public-env';
+import { assertConvexDeploymentsAligned } from '@/lib/convex-env';
 function AuthDebug() {
     const { isLoading, isAuthenticated } = useConvexAuth();
     useEffect(() => {
@@ -49,6 +50,15 @@ export function ConvexClientProvider({ children, initialToken }: ConvexClientPro
       </div>);
     }
     if (useBetterAuth) {
+        // Non-fatal client-side mirror of the server guard: a deployment
+        // split-brain (auth vs data on different Convex deployments) yields
+        // silent 401s + infinite loading, so make it visible in the console.
+        try {
+            assertConvexDeploymentsAligned();
+        }
+        catch (error) {
+            console.error('[convex] auth/data deployment misconfiguration:', error instanceof Error ? error.message : error);
+        }
         return (<ConvexBetterAuthProvider client={client} authClient={authClient} initialToken={initialToken ?? undefined}>
         <AuthDebug />
         {children}
