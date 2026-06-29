@@ -14,6 +14,7 @@ import { FadeIn, FadeInItem, FadeInStagger } from '@/shared/ui/animate-in';
 import { notifySuccess } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils';
+import { getEmailProviderLink } from '@/features/auth/auth-utils';
 const primaryButtonClassName = 'h-11 w-full rounded-full text-sm font-semibold shadow-sm';
 type ForgotPasswordState = {
     email: string;
@@ -82,6 +83,7 @@ export default function ForgotPasswordPage() {
     const { resetPassword } = useAuth();
     const [state, dispatch] = useReducer(forgotPasswordReducer, initialForgotPasswordState);
     const { email, submitting, success, error, emailError } = state;
+    const providerLink = getEmailProviderLink(email);
     const validateEmail = (email: string): boolean => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
@@ -114,7 +116,10 @@ export default function ForgotPasswordPage() {
         dispatch({ type: 'resetSuccess' });
     };
     const handleOpenEmailApp = () => {
-        window.open('https://mail.google.com', '_blank');
+        const link = getEmailProviderLink(email);
+        if (link) {
+            window.open(link.url, '_blank', 'noopener,noreferrer');
+        }
     };
     return (<AuthShell>
         <AuthPanel title="Forgot password?" description="Enter the email on your account and we'll send reset instructions." icon={authMailIconLg} footer={<>
@@ -159,9 +164,11 @@ export default function ForgotPasswordPage() {
                 </p>
               </div>
 
-              <Button variant="outline" className="h-11 w-full rounded-full border-border/70" onClick={handleOpenEmailApp}>
-                Open email app
-              </Button>
+              {providerLink ? (<Button variant="outline" className="h-11 w-full rounded-full border-border/70" onClick={handleOpenEmailApp}>
+                {providerLink.label}
+              </Button>) : (<p className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-center text-xs text-muted-foreground">
+                Open your inbox to find the reset link. If it doesn&apos;t arrive in a few minutes, check your spam folder.
+              </p>)}
             </FadeIn>)}
 
           {error ? (<Alert variant="destructive">

@@ -1,1 +1,0 @@
-import{t as e}from"./dashboard-error-DlT6K4uK.js";var t=e;export{t as errorComponent};

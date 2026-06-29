@@ -2,14 +2,13 @@
 import { useCallback } from 'react';
 import { dynamic } from '@/shared/ui/dynamic';
 import { ProjectFilterBanner, TaskBulkToolbar, TaskFilters, type TaskParticipant, TaskResultsCount, TaskSummaryCards, TaskViewControls, } from '@/features/dashboard/tasks';
-import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
 import { cn } from '@/lib/utils';
 import type { SortField } from './task-types';
 import type { TaskRecord, TaskStatus } from '@/types/tasks';
-import { Card, CardContent } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { TASKS_THEME } from './tasks-theme';
+import { TasksPageSkeleton } from './tasks-page-skeleton';
 const TaskList = dynamic(() => import('@/features/dashboard/tasks/task-list').then((mod) => mod.TaskList), {
     loading: () => <div className="p-6 text-sm text-muted-foreground">Loading tasks…</div>,
 });
@@ -18,13 +17,7 @@ const TaskKanban = dynamic(() => import('@/features/dashboard/tasks/task-kanban'
     ssr: false,
 });
 export function TasksPageFallback() {
-    return (<div className={DASHBOARD_THEME.layout.container}>
-      <Card className={DASHBOARD_THEME.cards.base}>
-        <CardContent className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-          Loading tasks…
-        </CardContent>
-      </Card>
-    </div>);
+    return <TasksPageSkeleton />;
 }
 export function TasksPageWorkspace({ filters, rawSearchQuery, onSearchChange, projectFilter, onClearProjectFilter, visibleTasks, selectedTasks, selectedTaskIds, hasSelection, bulkState, onSelectAllVisible, onClearSelection, onSelectHighPriority, onSelectDueSoon, onBulkStatusChange, onBulkAssign, onBulkDueDate, onBulkDelete, initialLoading, loading, displayError, pendingStatusUpdates, onEdit, onDelete, onQuickStatusChange, onRefresh, loadingMore, hasMore, onLoadMore, emptyStateMessage, showFilteredEmpty, onClearListFilters, onNewTaskClick, tasksCount, workspaceId, userId, userName, userRole, participants, onSummaryStatusClick, onExport, onToggleTaskSelection, }: {
     filters: {

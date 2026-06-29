@@ -1,1 +1,0 @@
-import{t as e}from"./jsx-runtime-sLPvdpSW.js";import{wr as t}from"./index-of4th8je.js";var n=e(),r=()=>(0,n.jsx)(t,{});export{r as component};

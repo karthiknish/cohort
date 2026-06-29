@@ -1,4 +1,3 @@
-import { apiFetch, ApiClientError } from '@/lib/api-client';
 import { authClient } from '@/lib/auth-client';
 /**
  * Starts Better Auth Google OAuth (proxied to Convex via /api/auth).
@@ -10,100 +9,20 @@ export async function startGoogleOAuthSignIn(callbackURL: string): Promise<void>
         callbackURL,
     });
 }
+/**
+ * Domain profile shape resolved after sign-in. role/status/agencyId live in
+ * the Convex `users` table (joined by `legacyId` = better-auth user id).
+ * The domain profile is loaded reactively in the auth hook via
+ * `api.users.getByLegacyIdSafe`; first-touch profile creation runs through
+ * `api.users.ensureProfileOnSignIn` (an identity-gated Convex mutation), so
+ * there is no longer a custom `/api/auth/bootstrap` round-trip.
+ */
 export type BootstrapProfile = {
     legacyId: string;
     role: 'admin' | 'team' | 'client';
     status: 'active' | 'pending' | 'invited' | 'disabled' | 'suspended';
     agencyId: string;
 };
-function normalizeBootstrapRole(value: unknown): BootstrapProfile['role'] {
-    if (value === 'admin' || value === 'team' || value === 'client') {
-        return value;
-    }
-    return 'client';
-}
-function normalizeBootstrapStatus(value: unknown): BootstrapProfile['status'] {
-    if (value === 'active'
-        || value === 'pending'
-        || value === 'invited'
-        || value === 'disabled'
-        || value === 'suspended') {
-        return value;
-    }
-    return 'pending';
-}
-function unwrapBootstrapPayload(payload: unknown): Record<string, unknown> {
-    if (!payload || typeof payload !== 'object') {
-        return {};
-    }
-    const record = payload as Record<string, unknown>;
-    if (record.data && typeof record.data === 'object') {
-        return record.data as Record<string, unknown>;
-    }
-    return record;
-}
-/**
- * Single sign-in bootstrap: Convex profile upsert + cohorts_* session cookies (7-day TTL).
- * No follow-up /api/auth/session round-trip — cookies are set on the bootstrap response.
- */
-export async function bootstrapAndSyncSession(): Promise<BootstrapProfile> {
-    let bootstrapPayload: unknown;
-    try {
-        bootstrapPayload = await apiFetch('/api/auth/bootstrap', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({}),
-            credentials: 'include',
-        });
-    }
-    catch (error) {
-        const message = error instanceof ApiClientError ? error.message : 'Failed to bootstrap user';
-        throw new Error(message);
-    }
-    const record = unwrapBootstrapPayload(bootstrapPayload);
-    const legacyId = typeof record.legacyId === 'string' && record.legacyId.length > 0
-        ? record.legacyId
-        : null;
-    const agencyId = typeof record.agencyId === 'string' && record.agencyId.length > 0
-        ? record.agencyId
-        : null;
-    if (!legacyId) {
-        throw new Error('Bootstrap response missing user id');
-    }
-    return {
-        legacyId,
-        role: normalizeBootstrapRole(record.role),
-        status: normalizeBootstrapStatus(record.status),
-        agencyId: agencyId ?? legacyId,
-    };
-}
-let bootstrapCache: BootstrapProfile | null = null;
-let bootstrapPromise: Promise<BootstrapProfile> | null = null;
-/** Runs bootstrap once per page session (dedupes AuthService + useAuthSync). */
-export async function bootstrapAndSyncSessionOnce(): Promise<BootstrapProfile> {
-    if (bootstrapCache) {
-        return bootstrapCache;
-    }
-    if (!bootstrapPromise) {
-        bootstrapPromise = bootstrapAndSyncSession()
-            .then((profile) => {
-            bootstrapCache = profile;
-            return profile;
-        })
-            .catch((error) => {
-            bootstrapCache = null;
-            throw error;
-        })
-            .finally(() => {
-            bootstrapPromise = null;
-        });
-    }
-    return bootstrapPromise;
-}
-export function resetBootstrapSessionCache(): void {
-    bootstrapCache = null;
-    bootstrapPromise = null;
-}
 export type PasswordStrength = {
     score: number;
     label: string;
@@ -116,6 +35,42 @@ export type PasswordStrength = {
         special: boolean;
     };
 };
+export type EmailProviderLink = {
+    url: string;
+    label: string;
+};
+const EMAIL_PROVIDER_DOMAINS: Record<string, EmailProviderLink> = {
+    'gmail.com': { url: 'https://mail.google.com', label: 'Open Gmail' },
+    'googlemail.com': { url: 'https://mail.google.com', label: 'Open Gmail' },
+    'outlook.com': { url: 'https://outlook.live.com/mail/', label: 'Open Outlook' },
+    'hotmail.com': { url: 'https://outlook.live.com/mail/', label: 'Open Outlook' },
+    'live.com': { url: 'https://outlook.live.com/mail/', label: 'Open Outlook' },
+    'msn.com': { url: 'https://outlook.live.com/mail/', label: 'Open Outlook' },
+    'yahoo.com': { url: 'https://mail.yahoo.com', label: 'Open Yahoo Mail' },
+    'yahoo.co.uk': { url: 'https://mail.yahoo.com', label: 'Open Yahoo Mail' },
+    'icloud.com': { url: 'https://www.icloud.com/mail', label: 'Open iCloud Mail' },
+    'me.com': { url: 'https://www.icloud.com/mail', label: 'Open iCloud Mail' },
+    'mac.com': { url: 'https://www.icloud.com/mail', label: 'Open iCloud Mail' },
+    'aol.com': { url: 'https://mail.aol.com', label: 'Open AOL Mail' },
+    'proton.me': { url: 'https://proton.me/mail', label: 'Open Proton Mail' },
+    'protonmail.com': { url: 'https://proton.me/mail', label: 'Open Proton Mail' },
+    'pm.me': { url: 'https://proton.me/mail', label: 'Open Proton Mail' },
+    'zoho.com': { url: 'https://mail.zoho.com', label: 'Open Zoho Mail' },
+    'yandex.com': { url: 'https://mail.yandex.com', label: 'Open Yandex Mail' },
+    'yandex.ru': { url: 'https://mail.yandex.com', label: 'Open Yandex Mail' },
+};
+/**
+ * Resolves a webmail deep link from the domain of an email address.
+ * Returns `null` for custom/unknown domains so callers can render an
+ * honest fallback instead of guessing the wrong provider.
+ */
+export function getEmailProviderLink(email: string): EmailProviderLink | null {
+    const domain = email.trim().toLowerCase().split('@')[1];
+    if (!domain) {
+        return null;
+    }
+    return EMAIL_PROVIDER_DOMAINS[domain] ?? null;
+}
 export function calculatePasswordStrength(password: string): PasswordStrength {
     const checks = {
         length: password.length >= 8,

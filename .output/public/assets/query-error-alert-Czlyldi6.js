@@ -1,1 +1,0 @@
-import{t as e}from"./jsx-runtime-sLPvdpSW.js";import{t}from"./circle-alert-Cyvql-f2.js";import{n,r,t as i}from"./alert-BDs6YWkz.js";var a=e();function o({error:e,title:o=`Unable to load data`}){return e?(0,a.jsxs)(i,{variant:`destructive`,children:[(0,a.jsx)(t,{className:`size-4`}),(0,a.jsx)(r,{children:o}),(0,a.jsx)(n,{children:e})]}):null}export{o as t};

@@ -7,17 +7,14 @@
  */
 import * as Sentry from '@sentry/tanstackstart-react'
 
-let sdkActive = false
-
-try {
-  // Sentry.init is called in instrument.client.ts / instrument.server.mjs.
-  // If the DSN is unset the SDK is effectively disabled, but the import
-  // itself is safe to call.
-  const publicDsn = process.env.NEXT_PUBLIC_SENTRY_DSN
-  const serverDsn = typeof window === 'undefined' ? process.env.SENTRY_DSN : undefined
-  sdkActive = Boolean(publicDsn || serverDsn)
-} catch {
-  sdkActive = false
+/**
+ * Returns true only when the Sentry SDK has actually been initialized via
+ * `Sentry.init()`. This is more reliable than checking for the DSN env var
+ * at module load time -- if init failed, was skipped, or hasn't run yet,
+ * `getClient()` returns `undefined` and we correctly skip capture calls.
+ */
+function isSdkActive(): boolean {
+  return Boolean(Sentry.getClient())
 }
 
 /**
@@ -32,7 +29,7 @@ export function captureError(
     level?: 'error' | 'warning' | 'info'
   },
 ): void {
-  if (!sdkActive) return
+  if (!isSdkActive()) return
   Sentry.captureException(error, {
     tags: context?.tags,
     extra: context?.extra,
@@ -51,7 +48,7 @@ export function captureMessage(
     extra?: Record<string, unknown>
   },
 ): void {
-  if (!sdkActive) return
+  if (!isSdkActive()) return
   Sentry.captureMessage(message, {
     level,
     tags: context?.tags,
@@ -68,8 +65,10 @@ export function setSentryUser(user: {
   email?: string
   role?: string
 } | null): void {
-  if (!sdkActive) return
+  if (!isSdkActive()) return
   if (user) {
+    // Only set the id -- email/role are intentionally omitted from the user
+    // object to avoid PII, but role is attached as a tag for filtering.
     Sentry.setUser({
       id: user.id,
     })
@@ -84,6 +83,6 @@ export function setSentryUser(user: {
  * Set a tag on the Sentry scope (applies to all subsequent events).
  */
 export function setSentryTag(key: string, value: string | number | boolean): void {
-  if (!sdkActive) return
+  if (!isSdkActive()) return
   Sentry.setTag(key, value)
 }
