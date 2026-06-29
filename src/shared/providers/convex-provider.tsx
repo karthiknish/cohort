@@ -24,16 +24,6 @@ function useAuthFromBetterAuth(initialToken?: string | null) {
         sessionRef.current = session;
     }, [cachedToken, session]);
 
-    // Debug logging
-    useEffect(() => {
-        console.log('[useAuthFromBetterAuth] Session state:', {
-            hasSession: !!session?.session,
-            sessionId,
-            isPending: isSessionPending,
-            cachedToken: cachedToken ? 'exists' : 'null',
-        });
-    }, [session, isSessionPending, cachedToken, sessionId]);
-
     // Clear cached token when session is invalidated
     useEffect(() => {
         if (!session && !isSessionPending && cachedToken) {
@@ -43,35 +33,24 @@ function useAuthFromBetterAuth(initialToken?: string | null) {
 
     const fetchAccessToken = useCallback(
         async ({ forceRefreshToken = false }: { forceRefreshToken?: boolean } = {}) => {
-            console.log('[useAuthFromBetterAuth] fetchAccessToken called', {
-                forceRefreshToken,
-                hasSession: !!sessionRef.current?.session,
-                hasCachedToken: !!cachedTokenRef.current,
-                hasPendingToken: !!pendingTokenRef.current,
-            });
-
             // SHORT-CIRCUIT: If there's no session, don't make any network calls.
             // This is the key fix that prevents 401s for unauthenticated users.
             // Use ref to ensure we always have the current session value.
             if (!sessionRef.current?.session) {
-                console.log('[useAuthFromBetterAuth] Short-circuit: no session, returning null');
                 return null;
             }
 
             // Return cached token if available and not forcing refresh
             // Use ref to avoid stale closure while keeping deps stable
             if (cachedTokenRef.current && !forceRefreshToken) {
-                console.log('[useAuthFromBetterAuth] Returning cached token');
                 return cachedTokenRef.current;
             }
 
             // Deduplicate concurrent requests
             if (!forceRefreshToken && pendingTokenRef.current) {
-                console.log('[useAuthFromBetterAuth] Returning pending token');
                 return pendingTokenRef.current;
             }
 
-            console.log('[useAuthFromBetterAuth] Fetching new token from Convex');
             // Fetch new token from Convex endpoint
             pendingTokenRef.current = authClient.convex
                 .token({ fetchOptions: { throw: false } })

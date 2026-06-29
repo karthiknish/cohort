@@ -38,7 +38,6 @@ async function getConvexToken(): Promise<string | null> {
         // Short-circuit: don't fetch token if there's no session
         const session = await authClient.getSession({ fetchOptions: { throw: false } });
         if (!session?.session) {
-            console.log('[getConvexToken] Short-circuit: no session, returning null');
             return null;
         }
 
