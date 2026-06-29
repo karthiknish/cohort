@@ -1,12 +1,88 @@
 'use client';
 import type { ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
-import { ConvexProvider, ConvexReactClient, useConvexAuth } from 'convex/react';
-import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ConvexProvider, ConvexProviderWithAuth, ConvexReactClient, useConvexAuth } from 'convex/react';
 import { AlertTriangle } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { getPublicEnv } from '@/lib/public-env';
 import { assertConvexDeploymentsAligned } from '@/lib/convex-env';
+
+// Custom useAuth hook that short-circuits before making network calls for unauthenticated users.
+// This prevents the 401 cycle caused by stale JWT tokens being passed to Convex.
+function useAuthFromBetterAuth(initialToken?: string | null) {
+    const [cachedToken, setCachedToken] = useState<string | null>(initialToken ?? null);
+    const cachedTokenRef = useRef(cachedToken);
+    const sessionRef = useRef<typeof session>(null);
+    const pendingTokenRef = useRef<Promise<string | null> | null>(null);
+
+    const { data: session, isPending: isSessionPending } = authClient.useSession();
+    const sessionId = session?.session?.id;
+
+    // Keep refs in sync with state
+    useEffect(() => {
+        cachedTokenRef.current = cachedToken;
+        sessionRef.current = session;
+    }, [cachedToken, session]);
+
+    // Clear cached token when session is invalidated
+    useEffect(() => {
+        if (!session && !isSessionPending && cachedToken) {
+            setCachedToken(null);
+        }
+    }, [session, isSessionPending, cachedToken]);
+
+    const fetchAccessToken = useCallback(
+        async ({ forceRefreshToken = false }: { forceRefreshToken?: boolean } = {}) => {
+            // SHORT-CIRCUIT: If there's no session, don't make any network calls.
+            // This is the key fix that prevents 401s for unauthenticated users.
+            if (!sessionRef.current?.session) {
+                return null;
+            }
+
+            // Return cached token if available and not forcing refresh
+            // Use ref to avoid stale closure while keeping deps stable
+            if (cachedTokenRef.current && !forceRefreshToken) {
+                return cachedTokenRef.current;
+            }
+
+            // Deduplicate concurrent requests
+            if (!forceRefreshToken && pendingTokenRef.current) {
+                return pendingTokenRef.current;
+            }
+
+            // Fetch new token from Convex endpoint
+            pendingTokenRef.current = authClient.convex
+                .token({ fetchOptions: { throw: false } })
+                .then(({ data }) => {
+                    const token = data?.token || null;
+                    setCachedToken(token);
+                    return token;
+                })
+                .catch(() => {
+                    setCachedToken(null);
+                    return null;
+                })
+                .finally(() => {
+                    pendingTokenRef.current = null;
+                });
+
+            return pendingTokenRef.current;
+        },
+        // No deps - use refs for all dynamic values to keep callback completely stable
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        []
+    );
+
+    return useMemo(
+        () => ({
+            isLoading: isSessionPending && !cachedToken,
+            isAuthenticated: Boolean(session?.session) || cachedToken !== null,
+            fetchAccessToken,
+        }),
+        [isSessionPending, sessionId, cachedToken]
+    );
+}
+
 function AuthDebug() {
     const { isLoading, isAuthenticated } = useConvexAuth();
     const prevRef = useRef<{ isLoading: boolean; isAuthenticated: boolean } | null>(null);
@@ -23,6 +99,40 @@ interface ConvexClientProviderProps {
     children: ReactNode;
     initialToken?: string | null;
 }
+
+// Handle one-time token verification for cross-domain auth
+function OneTimeTokenHandler({ authClient }: { authClient: typeof import('@/lib/auth-client').authClient }) {
+    useEffect(() => {
+        (async () => {
+            if (typeof window === 'undefined' || !window.location?.href) {
+                return;
+            }
+            const url = new URL(window.location.href);
+            const token = url.searchParams.get('ott');
+            if (token) {
+                const authClientWithCrossDomain = authClient as any;
+                url.searchParams.delete('ott');
+                window.history.replaceState({}, '', url);
+                const result = await authClientWithCrossDomain.crossDomain?.oneTimeToken?.verify({
+                    token,
+                });
+                const session = result.data?.session;
+                if (session) {
+                    await authClient.getSession({
+                        fetchOptions: {
+                            headers: {
+                                Authorization: `Bearer ${session.token}`,
+                            },
+                        },
+                    });
+                    authClientWithCrossDomain.updateSession?.();
+                }
+            }
+        })();
+    }, [authClient]);
+    return null;
+}
+
 export function ConvexClientProvider({ children, initialToken }: ConvexClientProviderProps) {
     const convexUrl = getPublicEnv('NEXT_PUBLIC_CONVEX_URL');
     const useBetterAuth = getPublicEnv('NEXT_PUBLIC_USE_BETTER_AUTH') !== 'false';
@@ -31,6 +141,7 @@ export function ConvexClientProvider({ children, initialToken }: ConvexClientPro
             return null;
         return new ConvexReactClient(convexUrl, { expectAuth: true });
     });
+
     if (!client) {
         if (process.env.NODE_ENV !== 'production') {
             console.warn('[convex] NEXT_PUBLIC_CONVEX_URL is not set; Convex client is disabled.');
@@ -52,6 +163,7 @@ export function ConvexClientProvider({ children, initialToken }: ConvexClientPro
         </div>
       </div>);
     }
+
     if (useBetterAuth) {
         // Non-fatal client-side mirror of the server guard: a deployment
         // split-brain (auth vs data on different Convex deployments) yields
@@ -62,10 +174,18 @@ export function ConvexClientProvider({ children, initialToken }: ConvexClientPro
         catch (error) {
             console.error('[convex] auth/data deployment misconfiguration:', error instanceof Error ? error.message : error);
         }
-        return (<ConvexBetterAuthProvider client={client} authClient={authClient} initialToken={initialToken ?? undefined}>
-        <AuthDebug />
-        {children}
-      </ConvexBetterAuthProvider>);
+
+        // Use custom useAuth hook with ConvexProviderWithAuth instead of ConvexBetterAuthProvider
+        const useAuth = useMemo(() => () => useAuthFromBetterAuth(initialToken), [initialToken]);
+
+        return (
+            <ConvexProviderWithAuth client={client} useAuth={useAuth}>
+                <OneTimeTokenHandler authClient={authClient} />
+                <AuthDebug />
+                {children}
+            </ConvexProviderWithAuth>
+        );
     }
+
     return <ConvexProvider client={client}>{children}</ConvexProvider>;
 }

@@ -11,7 +11,7 @@ export const authClient = createAuthClient({
     baseURL: typeof window !== 'undefined' ? `${window.location.origin}/api/auth` : undefined,
     sessionOptions: {
         refetchInterval: 0,
-        refetchOnWindowFocus: true,
+        refetchOnWindowFocus: false,
         refetchWhenOffline: false,
     },
     plugins: [convexClient()],
