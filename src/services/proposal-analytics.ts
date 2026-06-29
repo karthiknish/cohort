@@ -35,6 +35,13 @@ async function getConvexToken(): Promise<string | null> {
     if (typeof window === 'undefined')
         return null;
     try {
+        // Short-circuit: don't fetch token if there's no session
+        const session = await authClient.getSession({ fetchOptions: { throw: false } });
+        if (!session?.session) {
+            console.log('[getConvexToken] Short-circuit: no session, returning null');
+            return null;
+        }
+
         const result = await authClient.convex.token();
         const payload: unknown = result && typeof result === 'object' && 'data' in result
             ? (result as {

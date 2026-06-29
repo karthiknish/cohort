@@ -43,6 +43,13 @@ function useAuthFromBetterAuth(initialToken?: string | null) {
 
     const fetchAccessToken = useCallback(
         async ({ forceRefreshToken = false }: { forceRefreshToken?: boolean } = {}) => {
+            console.log('[useAuthFromBetterAuth] fetchAccessToken called', {
+                forceRefreshToken,
+                hasSession: !!sessionRef.current?.session,
+                hasCachedToken: !!cachedTokenRef.current,
+                hasPendingToken: !!pendingTokenRef.current,
+            });
+
             // SHORT-CIRCUIT: If there's no session, don't make any network calls.
             // This is the key fix that prevents 401s for unauthenticated users.
             // Use ref to ensure we always have the current session value.
