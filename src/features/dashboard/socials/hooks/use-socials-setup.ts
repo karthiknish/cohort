@@ -85,13 +85,15 @@ export function useSocialsSetup(status: SocialsConnectionStatus | null): UseSoci
     });
     const isConnected = Boolean(status?.connected);
     const [prevConnected, setPrevConnected] = useState(isConnected);
-    if (isConnected !== prevConnected) {
-        setPrevConnected(isConnected);
-        if (!isConnected) {
-            setPages([]);
-            setSelectedPageId('');
+    useEffect(() => {
+        if (isConnected !== prevConnected) {
+            setPrevConnected(isConnected);
+            if (!isConnected) {
+                setPages([]);
+                setSelectedPageId('');
+            }
         }
-    }
+    }, [isConnected, prevConnected]);
     useEffect(() => {
         if (!isConnected) {
             return;

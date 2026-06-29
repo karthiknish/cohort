@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/sh
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { tasksApi } from '@/lib/convex-api';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
+import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
 import { cn, getWorkspaceId } from '@/lib/utils';
 import type { TaskRecord } from '@/types/tasks';
@@ -184,6 +186,7 @@ export function MyTasksSection() {
     const workspaceId = getWorkspaceId(user);
     const canQuery = isAuthenticated && !isConvexLoading && !!workspaceId && !!user?.id;
     const rawTasks = useQuery(tasksApi.listForUser, canQuery ? { workspaceId, userId: user?.id ?? '' } : 'skip') as unknown[] | undefined;
+    const tasksError = useConvexQueryError({ data: rawTasks, skipped: !canQuery, fallbackMessage: 'Unable to load your tasks.' });
     const tasks: TaskRecord[] = rawTasks
         ? rawTasks.flatMap((r) => {
             const t = mapConvexTask(r);
@@ -214,7 +217,7 @@ export function MyTasksSection() {
       </CardHeader>
 
       <CardContent>
-        {isLoading ? (<div className="space-y-2">
+        {tasksError ? (<Alert variant="destructive"><AlertDescription>{tasksError}</AlertDescription></Alert>) : isLoading ? (<div className="space-y-2">
             {TASK_SKELETON_KEYS.map((k) => (<TaskSkeleton key={k}/>))}
           </div>) : tasks.length === 0 ? (<div className="rounded-xl border border-dashed p-5 text-center text-sm text-muted-foreground">
             <CheckSquare className="mx-auto mb-2 size-6 opacity-30"/>

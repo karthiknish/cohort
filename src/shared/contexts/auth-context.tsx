@@ -1,5 +1,5 @@
 'use client';
-import { createContext, use, useCallback, useMemo, type ReactNode } from 'react';
+import { createContext, use, useCallback, useEffect, type ReactNode } from 'react';
 import type { AuthPhase } from '@/lib/auth-phase';
 import type { AuthUser, SignUpData } from '@/services/auth';
 import { useAuthSync, type AuthError, type AuthErrorCode, } from '@/shared/hooks/use-auth-sync';
@@ -191,8 +191,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             setSentryUser(null);
         }
     }, []);
-    // Drive Sentry sync off the resolved user (no separate effect needed beyond re-render).
-    useMemo(() => sentrySync(user), [user, sentrySync]);
+    useEffect(() => { sentrySync(user); }, [user, sentrySync]);
 
     const signIn = useCallback(async (email: string, password: string): Promise<AuthUser> => {
         const result = await authClient.signIn.email({ email: email.trim(), password });

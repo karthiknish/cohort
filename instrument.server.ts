@@ -7,7 +7,7 @@ const serverDsn = process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN
  * application flow (404s, rate limits, auth failures from API routes) so
  * they don't create noise in Sentry.
  */
-function beforeSend(event) {
+function beforeSend(event: Sentry.ErrorEvent): Sentry.ErrorEvent | null {
   // Drop 404 / NOT_FOUND errors -- these are almost always a bad URL, not a bug
   for (const exc of event.exception?.values ?? []) {
     const msg = exc.value ?? ''

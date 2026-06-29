@@ -1,6 +1,8 @@
 'use client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
+import { logError } from '@/lib/convex-errors';
+import { notifyFailure } from '@/lib/notifications';
 type SyncGoogleAnalyticsParams = {
     periodDays: number;
     clientId?: string | null;
@@ -37,6 +39,13 @@ export function useGoogleAnalyticsSync() {
             // Invalidate analytics-related queries to refresh data
             void queryClient.invalidateQueries({ queryKey: ['analytics'] });
             void queryClient.invalidateQueries({ queryKey: ['metrics'] });
+        },
+        onError: (error) => {
+            logError(error, 'useGoogleAnalyticsSync');
+            notifyFailure({
+                title: 'Sync failed',
+                message: 'Unable to sync Google Analytics data. Please try again.',
+            });
         },
     });
 }

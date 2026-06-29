@@ -92,10 +92,14 @@ export function useAuthSync() {
 
     const hasSession = Boolean(betterAuthSession?.user);
     const profileLoading = isAuthenticated && (legacyId === null || convexUser === undefined);
+    // Only treat as missing after a bootstrap attempt has been made for this
+    // legacyId. Otherwise the phase flips to sync_failed before the upsert
+    // has a chance to run, causing a flash of the error screen on first login.
     const profileMissing = Boolean(legacyId)
         && isAuthenticated
         && !convexAuthLoading
-        && convexUser === null;
+        && convexUser === null
+        && bootstrappedLegacyIdRef.current === legacyId;
 
     // First-touch profile creation: when authenticated but the domain row is
     // missing, run the identity-gated upsert exactly once per legacyId.
@@ -108,8 +112,10 @@ export function useAuthSync() {
             return;
         }
         if (bootstrappedLegacyIdRef.current === legacyId) {
-            // Already attempted for this account and still missing — surface error.
-            setAuthError(createAuthError(
+            // Already attempted for this account and still missing — surface
+            // error only once. Setting a new error object on every render
+            // would cause an infinite re-render loop (#301).
+            setAuthError((prev) => prev ?? createAuthError(
                 'SESSION_SYNC_FAILED',
                 'Your workspace profile could not be loaded. Please try again or contact support.',
                 undefined,

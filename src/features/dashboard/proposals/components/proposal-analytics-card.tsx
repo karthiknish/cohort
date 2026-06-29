@@ -7,6 +7,8 @@ import { useAuth } from '@/shared/contexts/auth-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { proposalAnalyticsApi } from '@/lib/convex-api';
 import { getPreviewProposals } from '@/lib/preview-data';
+import { useConvexQueryError, mergeQueryErrors } from '@/lib/hooks/use-convex-query-error';
+import { Alert, AlertDescription } from '@/shared/ui/alert';
 import type { ProposalAnalyticsByClient, ProposalAnalyticsSummary, ProposalAnalyticsTimeSeriesPoint, } from '@/types/proposal-analytics';
 import { ProposalAnalyticsActivityChart, ProposalAnalyticsByClientCard, ProposalAnalyticsEmptyState, ProposalAnalyticsHeader, ProposalAnalyticsLoadingCard, ProposalAnalyticsSuccessRates, ProposalAnalyticsSummaryGrid, } from './proposal-analytics-card-sections';
 type TimeRange = '7d' | '30d' | '90d' | '365d' | 'all';
@@ -73,6 +75,10 @@ export function ProposalAnalyticsCard() {
     const summaryRes = useQuery(proposalAnalyticsApi.summarize, !isPreviewMode && workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip');
     const timeSeriesRes = useQuery(proposalAnalyticsApi.timeSeries, !isPreviewMode && workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip');
     const byClientRes = useQuery(proposalAnalyticsApi.byClient, !isPreviewMode && workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip');
+    const summaryError = useConvexQueryError({ data: summaryRes, skipped: isPreviewMode || !workspaceId, fallbackMessage: 'Unable to load proposal summary.' });
+    const timeSeriesError = useConvexQueryError({ data: timeSeriesRes, skipped: isPreviewMode || !workspaceId, fallbackMessage: 'Unable to load time series data.' });
+    const byClientError = useConvexQueryError({ data: byClientRes, skipped: isPreviewMode || !workspaceId, fallbackMessage: 'Unable to load client comparison data.' });
+    const analyticsQueryError = mergeQueryErrors(summaryError, timeSeriesError, byClientError);
     const previewProposals = getPreviewProposals(null);
     const previewSummary = ({
         totalDrafts: previewProposals.length,
@@ -174,6 +180,8 @@ export function ProposalAnalyticsCard() {
     return (<PageSkeletonBoundary loading={loading} loadingContent={<ProposalAnalyticsLoadingCard />}>
     <div className="space-y-6">
       <ProposalAnalyticsHeader loading={loading} onRefresh={handleRefresh} onTimeRangeChange={setTimeRange} timeRange={timeRange}/>
+
+      {analyticsQueryError ? (<Alert variant="destructive"><AlertDescription>{analyticsQueryError}</AlertDescription></Alert>) : null}
 
       {summary ? <ProposalAnalyticsSummaryGrid summary={summary} formatDuration={formatDuration}/> : null}
 

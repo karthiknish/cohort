@@ -1,4 +1,4 @@
-import '../instrument.server.mjs'
+import '../instrument.server'
 import { wrapFetchWithSentry } from '@sentry/tanstackstart-react'
 import handler, {
   createServerEntry,

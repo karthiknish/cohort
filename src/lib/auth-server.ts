@@ -72,6 +72,14 @@ async function rewriteConvexAuthResponse(response: Response): Promise<Response> 
 export async function proxyAuthToConvex(request: Request): Promise<Response> {
   const siteUrl = getSiteUrl()
   const appUrl = new URL(siteUrl)
+  const requestUrl = new URL(request.url)
+  const authPath = requestUrl.pathname.replace(/^\/api\/auth/, '')
+  const hasCookie = Boolean(request.headers.get('cookie'))
+  // Better Auth default cookie prefix is "better-auth" — session cookie is
+  // "better-auth.session_token" and JWT cookie is "convex_jwt".
+  const hasSessionCookie = Boolean(
+    request.headers.get('cookie')?.includes('better-auth.session_token')
+  )
   // Forward the app origin so Better Auth (with trustedProxyHeaders) sees the
   // correct base URL instead of the Convex site URL from the host header.
   const forwardedHeaders = new Headers(request.headers)
@@ -87,6 +95,17 @@ export async function proxyAuthToConvex(request: Request): Promise<Response> {
     duplex: 'half',
   })
   const upstream = await getAuthUtilities().handler(forwardedRequest)
+  // Log 401s with enough context to diagnose cookie/proxy issues without
+  // leaking secret values. This is the primary signal for auth polling loops.
+  if (upstream.status === 401) {
+    console.warn('[auth-proxy] 401', {
+      path: authPath,
+      method: request.method,
+      hasCookie,
+      hasSessionCookie,
+      origin: request.headers.get('origin'),
+    })
+  }
   return rewriteConvexAuthResponse(upstream)
 }
 

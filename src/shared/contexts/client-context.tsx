@@ -1,5 +1,5 @@
 'use client';
-import { createContext, use } from 'react';
+import { createContext, use, useMemo } from 'react';
 import type { ClientContextValue } from './client-context-types';
 import { useClientProvider } from './use-client-provider';
 const ClientContext = createContext<ClientContextValue | undefined>(undefined);

@@ -222,7 +222,7 @@ Finance routes under `/api/finance/*` (categories, vendors, expenses, reporting)
 
 ### Monitoring & Observability (Sentry)
 
-Sentry is wired into this TanStack Start app via `src/instrument.client.ts`, `instrument.server.mjs`, `src/client.tsx`, `src/server.ts`, and the `sentryTanstackStart(...)` Vite plugin in `vite.config.mts`.
+Sentry is wired into this TanStack Start app via `src/instrument.client.ts`, `instrument.server.ts`, `src/client.tsx`, `src/server.ts`, and the `sentryTanstackStart(...)` Vite plugin in `vite.config.mts`. The server instrument file uses a `.ts` extension (not `.mjs`) so Vite's SSR pipeline processes it correctly and inlines environment variables.
 
 1. Add these variables to local env files and production secrets:
 	- `NEXT_PUBLIC_SENTRY_DSN` for browser events

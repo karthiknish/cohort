@@ -10,6 +10,8 @@ import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { clientsApi } from '@/lib/convex-api';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
+import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
 import { getPreviewClientSummaries } from '@/lib/preview-data';
 import { cn, getWorkspaceId } from '@/lib/utils';
@@ -155,6 +157,7 @@ export function ClientsSummarySection() {
     const canQuery = isAuthenticated && !isConvexLoading && !!workspaceId;
     const shouldUsePreviewData = isPreviewMode || !canQuery;
     const summaries = useQuery(clientsApi.getClientSummaries, shouldUsePreviewData ? 'skip' : { workspaceId }) as ClientSummary[] | undefined;
+    const summariesError = useConvexQueryError({ data: summaries, skipped: shouldUsePreviewData, fallbackMessage: 'Unable to load client summaries.' });
     const resolvedSummaries = shouldUsePreviewData
         ? getPreviewClientSummaries()
         : summaries ?? [];
@@ -175,7 +178,7 @@ export function ClientsSummarySection() {
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {summariesError ? (<Alert variant="destructive"><AlertDescription>{summariesError}</AlertDescription></Alert>) : isLoading ? (<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {SKELETON_KEYS.map((k) => (<ClientCardSkeleton key={k}/>))}
           </div>) : resolvedSummaries.length === 0 ? (<div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
             {showEmptySummaries && clients.length > 0

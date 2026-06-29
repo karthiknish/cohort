@@ -1,6 +1,6 @@
 'use client';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ConvexProvider, ConvexReactClient, useConvexAuth } from 'convex/react';
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react';
 import { AlertTriangle } from 'lucide-react';
@@ -9,10 +9,13 @@ import { getPublicEnv } from '@/lib/public-env';
 import { assertConvexDeploymentsAligned } from '@/lib/convex-env';
 function AuthDebug() {
     const { isLoading, isAuthenticated } = useConvexAuth();
+    const prevRef = useRef<{ isLoading: boolean; isAuthenticated: boolean } | null>(null);
     useEffect(() => {
-        if (process.env.NODE_ENV !== 'production') {
-            console.log('[ConvexAuth] State:', { isLoading, isAuthenticated });
+        const prev = prevRef.current;
+        if (prev && (prev.isLoading !== isLoading || prev.isAuthenticated !== isAuthenticated)) {
+            console.warn('[ConvexAuth] transition', { from: prev, to: { isLoading, isAuthenticated } });
         }
+        prevRef.current = { isLoading, isAuthenticated };
     }, [isLoading, isAuthenticated]);
     return null;
 }
