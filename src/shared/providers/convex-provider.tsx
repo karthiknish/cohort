@@ -11,10 +11,18 @@ import { assertConvexDeploymentsAligned } from '@/lib/convex-env';
 // This prevents the 401 cycle caused by stale JWT tokens being passed to Convex.
 function useAuthFromBetterAuth(initialToken?: string | null) {
     const [cachedToken, setCachedToken] = useState<string | null>(initialToken ?? null);
+    const cachedTokenRef = useRef(cachedToken);
+    const sessionRef = useRef<typeof session>(null);
     const pendingTokenRef = useRef<Promise<string | null> | null>(null);
 
     const { data: session, isPending: isSessionPending } = authClient.useSession();
     const sessionId = session?.session?.id;
+
+    // Keep refs in sync with state
+    useEffect(() => {
+        cachedTokenRef.current = cachedToken;
+        sessionRef.current = session;
+    }, [cachedToken, session]);
 
     // Debug logging
     useEffect(() => {
@@ -37,16 +45,17 @@ function useAuthFromBetterAuth(initialToken?: string | null) {
         async ({ forceRefreshToken = false }: { forceRefreshToken?: boolean } = {}) => {
             // SHORT-CIRCUIT: If there's no session, don't make any network calls.
             // This is the key fix that prevents 401s for unauthenticated users.
-            // Check both session existence and validity.
-            if (!session?.session) {
+            // Use ref to ensure we always have the current session value.
+            if (!sessionRef.current?.session) {
                 console.log('[useAuthFromBetterAuth] Short-circuit: no session, returning null');
                 return null;
             }
 
             // Return cached token if available and not forcing refresh
-            if (cachedToken && !forceRefreshToken) {
+            // Use ref to avoid stale closure while keeping deps stable
+            if (cachedTokenRef.current && !forceRefreshToken) {
                 console.log('[useAuthFromBetterAuth] Returning cached token');
-                return cachedToken;
+                return cachedTokenRef.current;
             }
 
             // Deduplicate concurrent requests
@@ -74,11 +83,9 @@ function useAuthFromBetterAuth(initialToken?: string | null) {
 
             return pendingTokenRef.current;
         },
-        // Depend on sessionId to recreate when session changes, but NOT on cachedToken
-        // to avoid re-render loops. The closure will have the correct cachedToken value
-        // because we only change fetchAccessToken when sessionId changes.
+        // No deps - use refs for all dynamic values to keep callback completely stable
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [sessionId]
+        []
     );
 
     return useMemo(
@@ -87,7 +94,6 @@ function useAuthFromBetterAuth(initialToken?: string | null) {
             isAuthenticated: Boolean(session?.session) || cachedToken !== null,
             fetchAccessToken,
         }),
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         [isSessionPending, sessionId, cachedToken]
     );
 }
