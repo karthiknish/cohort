@@ -1,0 +1,1 @@
+import{o as e}from"./chunk-CMxvf4Kt.js";import{t}from"./react-DAHyUmas.js";import{t as n}from"./jsx-runtime-sLPvdpSW.js";var r=e(t(),1),i=n(),a=r.ViewTransition;function o({children:e,...t}){return typeof a==`function`?(0,i.jsx)(a,{...t,children:e}):(0,i.jsx)(i.Fragment,{children:e})}export{o as t};

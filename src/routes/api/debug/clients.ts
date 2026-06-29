@@ -28,7 +28,7 @@ const handlers = adaptApiHandler(
       return { success: false, error: 'Convex not configured', code: 'CONFIG_ERROR' }
     }
 
-    const { getToken } = await import('@/lib/auth-token-server')
+    const { getToken } = await import('@/lib/auth-token.server')
     const convexToken = await getToken()
     if (!convexToken) {
       return { success: false, error: 'No Convex token available', code: 'AUTH_ERROR' }

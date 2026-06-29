@@ -1,0 +1,1 @@
+function e(e){let t=e.trim();if(!t)return;let n=new Date(t);if(!Number.isNaN(n.getTime()))return n.toISOString()}function t(e){if(!e?.trim())return``;let t=new Date(e);if(Number.isNaN(t.getTime()))return``;let n=e=>String(e).padStart(2,`0`);return`${t.getFullYear()}-${n(t.getMonth()+1)}-${n(t.getDate())}T${n(t.getHours())}:${n(t.getMinutes())}`}export{t as n,e as t};

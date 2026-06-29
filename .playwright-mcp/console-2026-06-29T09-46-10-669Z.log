@@ -1,0 +1,20 @@
+[    2204ms] Error: Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at Wi (https://cohort-omega-five.vercel.app/assets/index-Hpu0SRIm.js:9:31200)
+    at Ac (https://cohort-omega-five.vercel.app/assets/index-Hpu0SRIm.js:9:74980)
+    at Bc (https://cohort-omega-five.vercel.app/assets/index-Hpu0SRIm.js:9:82346)
+    at Gu (https://cohort-omega-five.vercel.app/assets/index-Hpu0SRIm.js:9:116039)
+    at Hu (https://cohort-omega-five.vercel.app/assets/index-Hpu0SRIm.js:9:115087)
+    at Vu (https://cohort-omega-five.vercel.app/assets/index-Hpu0SRIm.js:9:114920)
+    at ku (https://cohort-omega-five.vercel.app/assets/index-Hpu0SRIm.js:9:111402)
+    at Cd (https://cohort-omega-five.vercel.app/assets/index-Hpu0SRIm.js:9:123518)
+    at vd (https://cohort-omega-five.vercel.app/assets/index-Hpu0SRIm.js:9:122072)
+    at nd (https://cohort-omega-five.vercel.app/assets/index-Hpu0SRIm.js:9:120156)
+[    2477ms] [ERROR] Failed to load resource: net::ERR_CONTENT_DECODING_FAILED @ https://cohort-omega-five.vercel.app/ingest/array/phc_Bfc54JpHYkzbyCpvNzxFIwawD6qLgrKsaCrqZD2MDTz/config.js:0
+[    2843ms] [ERROR] Failed to load resource: net::ERR_CONTENT_DECODING_FAILED @ https://cohort-omega-five.vercel.app/ingest/array/phc_Bfc54JpHYkzbyCpvNzxFIwawD6qLgrKsaCrqZD2MDTz/config?ip=0&_=1782726373146&ver=1.359.1:0
+[    3149ms] [ERROR] Failed to load resource: net::ERR_CONTENT_DECODING_FAILED @ https://cohort-omega-five.vercel.app/ingest/flags/?v=2&ip=0&_=1782726373519&ver=1.359.1&compression=base64:0
+[   18263ms] [ERROR] Failed to load resource: net::ERR_CONTENT_DECODING_FAILED @ https://cohort-omega-five.vercel.app/ingest/flags/?v=2&ip=0&_=1782726388658&ver=1.359.1&compression=base64:0
+[   71620ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://deafening-impala-890.convex.site/api/auth/convex/token:0
+[   71997ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://deafening-impala-890.convex.site/api/auth/convex/token:0
+[   98708ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://deafening-impala-890.convex.site/api/auth/convex/token:0
+[   99073ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://deafening-impala-890.convex.site/api/auth/convex/token:0
+[  303126ms] [ERROR] Failed to load resource: net::ERR_CONTENT_DECODING_FAILED @ https://cohort-omega-five.vercel.app/ingest/flags/?v=2&ip=0&_=1782726673522&ver=1.359.1&compression=base64:0

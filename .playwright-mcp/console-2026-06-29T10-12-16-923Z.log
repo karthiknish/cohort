@@ -1,0 +1,11 @@
+[    2011ms] Error: Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at Wi (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:31200)
+    at Ac (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:74980)
+    at Bc (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:82346)
+    at Gu (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:116039)
+    at Hu (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:115087)
+    at Vu (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:114920)
+    at ku (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:111402)
+    at Cd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:123518)
+    at vd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:122072)
+    at nd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:120156)

@@ -1,0 +1,1 @@
+import{$ as e,J as t,et as n,q as r}from"./utils-H1bCjDNZ.js";function i(t,r,i){let a=e(t,i?.in);return isNaN(r)?n(i?.in||t,NaN):(r&&a.setDate(a.getDate()+r),a)}function a(e,n,i){let[a,o]=t(i?.in,e,n);return+r(a)==+r(o)}export{i as n,a as t};

@@ -1,0 +1,18 @@
+[     805ms] Error: Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at Wi (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:31200)
+    at Ac (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:74980)
+    at Bc (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:82346)
+    at Gu (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:116039)
+    at Hu (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:115087)
+    at Vu (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:114920)
+    at ku (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:111402)
+    at Cd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:123518)
+    at vd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:122072)
+    at nd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:120156)
+[  606988ms] [LOG] WebSocket closed with code 1006 @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61
+[  606989ms] [LOG] Attempting reconnect in 512ms @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61
+[  608368ms] [LOG] WebSocket reconnected at t=608.4s after disconnect due to closed with code 1006 @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61
+[ 1569600ms] [LOG] WebSocket closed with code 1006 @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61
+[ 1569600ms] [LOG] Attempting reconnect in 510ms @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61
+[ 1570904ms] [LOG] WebSocket reconnected at t=670.5s after disconnect due to closed with code 1006 @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61
+[ 1572857ms] [LOG] WebSocket reconnected at t=672.5s @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61

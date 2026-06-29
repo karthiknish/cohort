@@ -1,7 +1,7 @@
 /**
  * Auth gating ported from `proxy.ts` for TanStack Router `beforeLoad`.
  */
-import { getToken } from '@/lib/auth-token-server'
+import { getToken } from '@/lib/auth-token.server'
 import {
   isPreviewRouteRequest,
   isScreenRecordingAuthBypassEnabled,

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cohorts – Offline</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #0b1220;
+      color: #e5e7eb;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+    }
+    .card {
+      max-width: 420px;
+      padding: 24px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    }
+    h1 { margin: 0 0 12px; font-size: 1.4rem; }
+    p { margin: 0 0 16px; line-height: 1.5; color: #cbd5e1; }
+    .badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; background: rgba(14, 165, 233, 0.12); color: #7dd3fc; font-size: 0.85rem; }
+    .small { font-size: 0.9rem; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="badge">Offline</div>
+    <h1>No connection</h1>
+    <p>You are currently offline. Keep this tab open and your changes will sync once you are back online.</p>
+    <p class="small">If you expected fresh data, refresh when connected.</p>
+  </main>
+</body>
+</html>

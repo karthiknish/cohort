@@ -1,0 +1,62 @@
+- generic [active] [ref=e1]:
+  - link "Skip to main content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - main [ref=e4]:
+    - generic [ref=e208]:
+      - link "Cohorts home" [ref=e209] [cursor=pointer]:
+        - /url: /
+        - img "Cohorts" [ref=e210]
+      - generic [ref=e212]:
+        - generic [ref=e213]:
+          - generic [ref=e214]:
+            - heading "Welcome back" [level=1] [ref=e215]
+            - paragraph [ref=e216]: Sign in to pick up proposals, campaigns, and client work where you left off.
+          - tablist "Authentication mode" [ref=e217]:
+            - tab "Sign in" [selected] [ref=e218]
+            - tab "Create account" [ref=e219]
+        - generic [ref=e220]:
+          - generic [ref=e221]:
+            - generic [ref=e223]:
+              - generic [ref=e225]: Email address
+              - generic [ref=e226]:
+                - generic:
+                  - img
+                - textbox "Email address" [disabled]:
+                  - /placeholder: name@company.com
+                  - text: testadmin@cohorts.team
+            - generic [ref=e229]:
+              - generic [ref=e230]:
+                - generic [ref=e231]: Password
+                - link "Forgot password?" [ref=e232] [cursor=pointer]:
+                  - /url: /auth/forgot
+              - generic [ref=e233]:
+                - generic:
+                  - img
+                - textbox "Password" [disabled]:
+                  - /placeholder: ••••••••
+                  - text: TestPass123!@#
+                - button "Show password" [disabled]:
+                  - img
+            - generic [ref=e236]:
+              - checkbox "Remember me on this device" [disabled] [ref=e237]
+              - generic [ref=e238] [cursor=pointer]: Remember me on this device
+            - generic [ref=e239]:
+              - button "Signing in…" [disabled]:
+                - img
+                - text: Signing in…
+          - generic [ref=e245]: Or continue with
+          - button "Continue with Google" [disabled]:
+            - img
+            - text: Continue with Google
+          - generic [ref=e247]:
+            - img [ref=e248]
+            - generic [ref=e250]: Encrypted in transit · SOC-ready infrastructure
+        - paragraph [ref=e251]:
+          - text: By continuing, you agree to our
+          - link "Terms" [ref=e252] [cursor=pointer]:
+            - /url: /terms
+          - text: and
+          - link "Privacy Policy" [ref=e253] [cursor=pointer]:
+            - /url: /privacy
+          - text: .
+  - region "Notifications alt+T"

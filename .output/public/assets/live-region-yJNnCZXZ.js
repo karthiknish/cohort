@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-sLPvdpSW.js";import{t}from"./utils-H1bCjDNZ.js";var n=e();function r({message:e,id:r,politeness:i=`polite`,atomic:a=!0,className:o}){return(0,n.jsx)(`p`,{id:r,className:t(`sr-only`,o),role:i===`assertive`?`alert`:`status`,"aria-live":i,"aria-atomic":a,children:e??``})}export{r as t};

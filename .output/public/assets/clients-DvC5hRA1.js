@@ -1,0 +1,1 @@
+import{o as e}from"./chunk-CMxvf4Kt.js";import{t}from"./react-DAHyUmas.js";import{t as n}from"./useNavigate-oWO4UMKw.js";var r=e(t());function i(){let e=n();return(0,r.useEffect)(()=>{e({to:`/admin/clients`,replace:!0})},[e]),null}export{i as component};

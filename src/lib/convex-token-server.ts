@@ -1,6 +1,6 @@
 import { headers } from './server-headers';
 import { getToken as getBetterAuthUtilsToken } from '@convex-dev/better-auth/utils';
-import { getToken as getNextJsToken } from '@/lib/auth-token-server';
+import { getToken as getNextJsToken } from '@/lib/auth-token.server';
 import { getConvexSiteUrl } from '@/lib/convex-env';
 /**
  * Resolves a Convex JWT for API route handlers.
