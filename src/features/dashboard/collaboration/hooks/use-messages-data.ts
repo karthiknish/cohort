@@ -465,7 +465,7 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
         if (value.trim().length > 0)
             notifyTyping();
     };
-    return {
+    return useMemo(() => ({
         channelMessages,
         visibleMessages,
         searchingMessages,
@@ -507,5 +507,46 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
         markChannelRead,
         markChannelReadPending,
         collaborationQueryError,
-    };
+    }), [
+        channelMessages,
+        visibleMessages,
+        searchingMessages,
+        searchHighlights,
+        messageSearchQuery,
+        setMessageSearchQuery,
+        isCurrentChannelLoading,
+        activeMessagesError,
+        retryMessagesError,
+        channelSummaries,
+        messageInput,
+        setMessageInput,
+        typingParticipants,
+        handleComposerFocus,
+        handleComposerBlur,
+        handleSendMessage,
+        sending,
+        isSendDisabled,
+        handleEditMessage,
+        handleDeleteMessage,
+        handleToggleReaction,
+        messageUpdatingId,
+        messageDeletingId,
+        handleLoadMore,
+        canLoadMore,
+        loadingMore,
+        threadMessagesByRootId,
+        threadNextCursorByRootId,
+        threadLoadingByRootId,
+        threadErrorsByRootId,
+        threadUnreadCountsByRootId,
+        loadThreadReplies,
+        loadMoreThreadReplies,
+        markThreadAsRead,
+        clearThreadReplies,
+        reactionUpdatingByMessage,
+        channelUnreadCounts,
+        markChannelRead,
+        markChannelReadPending,
+        collaborationQueryError,
+    ]);
 }

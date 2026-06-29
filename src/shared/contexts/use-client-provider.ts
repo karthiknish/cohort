@@ -159,7 +159,7 @@ export function useClientProvider(): ClientContextValue {
             hasConvexResult: convexClients !== undefined,
         });
     }, [authLoading, isSyncing, workspaceId, canQuery, convexClients]);
-    const resolvedClients = (() => {
+    const resolvedClients = useMemo(() => {
         if (previewEnabled) {
             return getPreviewClients();
         }
@@ -167,7 +167,7 @@ export function useClientProvider(): ClientContextValue {
             return [];
         }
         return mapClients(extractRows(convexClients));
-    })();
+    }, [previewEnabled, workspaceId, convexClients]);
     const clientsRef = useRef(resolvedClients);
     useEffect(() => {
         clientsRef.current = resolvedClients;

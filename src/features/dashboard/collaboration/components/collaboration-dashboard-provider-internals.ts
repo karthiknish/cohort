@@ -211,17 +211,17 @@ export function useCollaborationDashboardUrlState({ channels, dmConversations, s
         selectedConversationLegacyId,
         targetConversation,
     ]);
-    const dismissUnresolvedChannelUrl = () => {
+    const dismissUnresolvedChannelUrl = useCallback(() => {
         replaceSearchParams((params) => {
             clearChannelUrlParams(params);
         });
-    };
-    const dismissUnresolvedConversationUrl = () => {
+    }, [replaceSearchParams]);
+    const dismissUnresolvedConversationUrl = useCallback(() => {
         replaceSearchParams((params) => {
             clearDmUrlParams(params);
         });
-    };
-    const handleOpenChannelMessage = (messageId: string, options?: {
+    }, [replaceSearchParams]);
+    const handleOpenChannelMessage = useCallback((messageId: string, options?: {
         threadId?: string | null;
     }) => {
         const normalizedMessageId = typeof messageId === 'string' ? messageId.trim() : '';
@@ -240,8 +240,8 @@ export function useCollaborationDashboardUrlState({ channels, dmConversations, s
             }
             clearDmUrlParams(params);
         });
-    };
-    const handleOpenDmMessage = (messageId: string) => {
+    }, [replaceSearchParams]);
+    const handleOpenDmMessage = useCallback((messageId: string) => {
         const normalizedMessageId = typeof messageId === 'string' ? messageId.trim() : '';
         if (!normalizedMessageId)
             return;
@@ -250,31 +250,31 @@ export function useCollaborationDashboardUrlState({ channels, dmConversations, s
             params.delete('threadId');
             clearChannelUrlParams(params);
         });
-    };
-    const syncChannelToUrl = (channelId: string) => {
+    }, [replaceSearchParams]);
+    const syncChannelToUrl = useCallback((channelId: string) => {
         replaceSearchParams((params) => {
             params.set('channelId', channelId);
             clearDmUrlParams(params);
             params.delete('messageId');
             params.delete('threadId');
         });
-    };
-    const syncDmToUrl = (conversationLegacyId: string) => {
+    }, [replaceSearchParams]);
+    const syncDmToUrl = useCallback((conversationLegacyId: string) => {
         replaceSearchParams((params) => {
             params.set('conversationId', conversationLegacyId);
             clearChannelUrlParams(params);
             params.delete('messageId');
             params.delete('threadId');
         });
-    };
-    const clearCollaborationSelectionFromUrl = () => {
+    }, [replaceSearchParams]);
+    const clearCollaborationSelectionFromUrl = useCallback(() => {
         replaceSearchParams((params) => {
             clearChannelUrlParams(params);
             clearDmUrlParams(params);
             params.delete('messageId');
             params.delete('threadId');
         });
-    };
+    }, [replaceSearchParams]);
     return useMemo(() => ({
         clearCollaborationSelectionFromUrl,
         clearMessageFocus,
@@ -349,11 +349,11 @@ type UseCollaborationDashboardActionsOptions = {
     workspaceId: string | null;
 };
 export function useCollaborationDashboardActions({ clearCollaborationSelectionFromUrl, clearMessageFocus, clearPendingAttachments, syncChannelToUrl, syncDmToUrl, closeManageMembersDialog, closeNewDMDialog, createChannel, removeChannel, selectedChannel, selectedConversation, selectedCustomChannel, selectChannel, selectConversation, startNewDM, updateChannelMembers, workspaceId, }: UseCollaborationDashboardActionsOptions) {
-    const handleStartNewDM = async (targetUser: StartNewDMTarget) => {
+    const handleStartNewDM = useCallback(async (targetUser: StartNewDMTarget) => {
         await startNewDM(targetUser);
         closeNewDMDialog();
-    };
-    const handleSelectDM = (conversation: DirectConversation | null) => {
+    }, [startNewDM, closeNewDMDialog]);
+    const handleSelectDM = useCallback((conversation: DirectConversation | null) => {
         clearMessageFocus();
         clearPendingAttachments?.();
         if (conversation) {
@@ -364,8 +364,8 @@ export function useCollaborationDashboardActions({ clearCollaborationSelectionFr
             clearCollaborationSelectionFromUrl?.();
         }
         selectConversation(conversation);
-    };
-    const handleSelectChannel = (channelId: string | null) => {
+    }, [clearMessageFocus, clearPendingAttachments, selectChannel, syncDmToUrl, clearCollaborationSelectionFromUrl, selectConversation]);
+    const handleSelectChannel = useCallback((channelId: string | null) => {
         clearMessageFocus();
         clearPendingAttachments?.();
         if (channelId) {
@@ -378,8 +378,8 @@ export function useCollaborationDashboardActions({ clearCollaborationSelectionFr
             clearCollaborationSelectionFromUrl?.();
         }
         selectChannel(channelId);
-    };
-    const handleCreateChannel = async (channel: {
+    }, [clearMessageFocus, clearPendingAttachments, syncChannelToUrl, selectedConversation, clearCollaborationSelectionFromUrl, selectChannel, selectConversation]);
+    const handleCreateChannel = useCallback(async (channel: {
         name: string;
         description?: string;
         visibility: 'public' | 'private';
@@ -400,8 +400,8 @@ export function useCollaborationDashboardActions({ clearCollaborationSelectionFr
         if (typeof created?.legacyId === 'string') {
             selectChannel(created.legacyId);
         }
-    };
-    const handleSaveChannelMembers = async (payload: {
+    }, [workspaceId, createChannel, selectChannel]);
+    const handleSaveChannelMembers = useCallback(async (payload: {
         memberIds: string[];
         visibility: 'public' | 'private';
     }) => {
@@ -429,8 +429,8 @@ export function useCollaborationDashboardActions({ clearCollaborationSelectionFr
             });
             throw error;
         }
-    };
-    const handleDeleteChannel = async () => {
+    }, [workspaceId, selectedCustomChannel, updateChannelMembers]);
+    const handleDeleteChannel = useCallback(async () => {
         if (!workspaceId || !selectedCustomChannel) {
             return;
         }
@@ -455,7 +455,7 @@ export function useCollaborationDashboardActions({ clearCollaborationSelectionFr
             });
             throw error;
         }
-    };
+    }, [workspaceId, selectedCustomChannel, removeChannel, closeManageMembersDialog, selectChannel]);
     return useMemo(() => ({
         handleCreateChannel,
         handleDeleteChannel,

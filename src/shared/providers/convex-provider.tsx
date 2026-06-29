@@ -9,39 +9,46 @@ import { assertConvexDeploymentsAligned } from '@/lib/convex-env';
 
 // Custom useAuth hook that short-circuits before making network calls for unauthenticated users.
 // This prevents the 401 cycle caused by stale JWT tokens being passed to Convex.
+//
+// CRITICAL: The useMemo that returns the auth state object MUST depend on primitive values
+// (sessionId: string, isSessionPending: boolean, cachedToken: string|null) — NOT on the
+// `session` object itself. Better Auth's useSession() can return a new object reference on
+// every render even when the session data hasn't changed. If the session object is in the
+// deps, the useMemo recomputes every render, Convex sees a "new" auth state every render,
+// re-evaluates auth, destabilizes all queries, and hooks that setState during render
+// (like useDirectConversationsQuery) enter an infinite loop → React error #301.
 function useAuthFromBetterAuth(initialToken?: string | null) {
     const [cachedToken, setCachedToken] = useState<string | null>(initialToken ?? null);
     const cachedTokenRef = useRef(cachedToken);
-    const sessionRef = useRef<typeof session>(null);
+    const sessionRef = useRef<unknown>(null);
     const pendingTokenRef = useRef<Promise<string | null> | null>(null);
 
     const { data: session, isPending: isSessionPending } = authClient.useSession();
-    const sessionId = session?.session?.id;
+    // Use the session ID (a primitive string) for all dependency comparisons.
+    // This is stable across re-renders when the session hasn't actually changed.
+    const sessionId = (session?.session?.id ?? null) as string | null;
+    const hasSession = sessionId !== null;
 
-    // Keep refs in sync with state
-    useEffect(() => {
-        cachedTokenRef.current = cachedToken;
-        sessionRef.current = session;
-    }, [cachedToken, session]);
+    // Keep refs in sync with state — runs every render but only writes to refs (no loop risk)
+    cachedTokenRef.current = cachedToken;
+    sessionRef.current = session;
 
-    // Clear cached token when session is invalidated
+    // Clear cached token when session is invalidated — depend on sessionId (primitive), not session
     useEffect(() => {
-        if (!session && !isSessionPending && cachedToken) {
+        if (!hasSession && !isSessionPending && cachedToken) {
             setCachedToken(null);
         }
-    }, [session, isSessionPending, cachedToken]);
+    }, [hasSession, isSessionPending, cachedToken]);
 
     const fetchAccessToken = useCallback(
         async ({ forceRefreshToken = false }: { forceRefreshToken?: boolean } = {}) => {
             // SHORT-CIRCUIT: If there's no session, don't make any network calls.
-            // This is the key fix that prevents 401s for unauthenticated users.
             // Use ref to ensure we always have the current session value.
             if (!sessionRef.current) {
                 return null;
             }
 
             // Return cached token if available and not forcing refresh
-            // Use ref to avoid stale closure while keeping deps stable
             if (cachedTokenRef.current && !forceRefreshToken) {
                 return cachedTokenRef.current;
             }
@@ -69,22 +76,21 @@ function useAuthFromBetterAuth(initialToken?: string | null) {
 
             return pendingTokenRef.current;
         },
-        // Depend on sessionId to recreate when session changes, but NOT on cachedToken
-        // to avoid re-render loops. The closure will have the correct cachedToken value
-        // because we only change fetchAccessToken when sessionId changes.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // Only depend on sessionId (primitive). When the session ID changes (login/logout),
+        // we recreate the callback so it picks up the new sessionRef value.
         [sessionId]
     );
 
     return useMemo(
         () => ({
             isLoading: isSessionPending && !cachedToken,
-            isAuthenticated: Boolean(session) || cachedToken !== null,
+            isAuthenticated: hasSession || cachedToken !== null,
             fetchAccessToken,
         }),
-        // fetchAccessToken is stable (only depends on sessionId), so exclude it to prevent re-render loops
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [isSessionPending, session, cachedToken]
+        // CRITICAL: Use primitives only (hasSession, isSessionPending, cachedToken).
+        // Do NOT include the `session` object — it can be a new reference every render
+        // even when unchanged, which would cause Convex to re-evaluate auth every render.
+        [isSessionPending, hasSession, cachedToken, fetchAccessToken]
     );
 }
 
