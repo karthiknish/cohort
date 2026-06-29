@@ -85,7 +85,7 @@ function RootDocument({
   initialToken,
 }: Readonly<{ children: ReactNode; initialToken: string | null }>) {
   return (
-    <html lang="en" style={fontVariables as React.CSSProperties}>
+    <html lang="en" suppressHydrationWarning style={fontVariables as React.CSSProperties}>
       <head>
         <HeadContent />
       </head>
