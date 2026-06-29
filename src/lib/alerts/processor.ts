@@ -5,7 +5,7 @@ import { cache } from 'react';
 import { ConvexHttpClient } from 'convex/browser';
 import { api, internal } from '/_generated/api';
 import { evaluateAlerts, formatAlertsForEmail } from './evaluator';
-import { sendTransactionalEmail } from '../notifications';
+import { sendTransactionalEmail } from '../notifications/brevo';
 import { isEmailPrefEnabled } from '../notifications/preferences';
 import type { AlertRule, AlertEvaluationInput, DailyMetricData } from './types';
 // -----------------------------------------------------------------------------

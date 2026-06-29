@@ -294,10 +294,11 @@ export { toast } from '@/shared/ui/sonner-toast';
 // =============================================================================
 // EMAIL NOTIFICATIONS (Brevo)
 // =============================================================================
-export { sendTransactionalEmail, notifyProjectCreatedEmail, notifyTaskAssignedEmail, notifyMentionEmail, notifyProposalReadyEmail, notifyIntegrationAlertEmail, notifyWorkspaceInviteEmail, notifyPerformanceDigestEmail, notifyTaskActivityEmail, notifyMeetingScheduledEmail, notifyMeetingRescheduledEmail, notifyMeetingCancelledEmail, checkBrevoHealth, } from './brevo';
-export type { BrevoEmailResult, BrevoSendOptions } from './brevo';
-// Re-export email templates
-export * from './email-templates';
+// Server-only email functions live in ./brevo and email-templates.
+// Do NOT re-export them here — this barrel is imported by client components
+// (notifyFailure/notifySuccess/etc.) and pulling @getbrevo/brevo into the
+// client bundle causes "Class extends value undefined" errors at runtime.
+// Server code should import directly from '@/lib/notifications/brevo'.
 // =============================================================================
 // CONVENIENCE FUNCTIONS FOR COMMON PATTERNS
 // =============================================================================
