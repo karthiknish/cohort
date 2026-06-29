@@ -16,13 +16,18 @@ import { getRequestHeaders } from '@tanstack/react-start/server'
 import { getConvexSiteUrl } from '@/lib/convex-env'
 
 export async function getToken(): Promise<string | null> {
+  const convexSiteUrl = getConvexSiteUrl()
+  const tokenUrl = `${convexSiteUrl}/api/auth/convex/token`
+
   const headers = new Headers(getRequestHeaders())
   headers.delete('content-length')
   headers.delete('transfer-encoding')
   headers.set('accept-encoding', 'identity')
-
-  const convexSiteUrl = getConvexSiteUrl()
-  const tokenUrl = `${convexSiteUrl}/api/auth/convex/token`
+  // Better Auth on *.convex.site validates the session against the Host header.
+  // The incoming request carries the app host (e.g. *.vercel.app); forwarding it
+  // verbatim makes Convex reject a valid session (403/401). Rewrite Host to the
+  // Convex site host — mirroring convexBetterAuthReactStart's own proxy handler.
+  headers.set('host', new URL(convexSiteUrl).host)
 
   try {
     const response = await fetch(tokenUrl, {
