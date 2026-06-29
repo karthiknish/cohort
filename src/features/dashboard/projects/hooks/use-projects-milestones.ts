@@ -46,7 +46,7 @@ function reconcileMilestonePatches(patches: Record<string, MilestoneRecord[]>, s
 export function useProjectsMilestones({ workspaceId, userId, isPreviewMode, selectedClientId, viewMode, projects, }: UseProjectsMilestonesArgs) {
     const [milestonePatches, setMilestonePatches] = useState<Record<string, MilestoneRecord[]>>({});
     const [milestonesRefreshKey, setMilestonesRefreshKey] = useState(0);
-    const projectIds = projects.map((project) => project.id);
+    const projectIds = useMemo(() => projects.map((project) => project.id), [projects]);
     const milestonesQueryEnabled = !isPreviewMode && viewMode === 'gantt' && Boolean(workspaceId && userId);
     const patchScopeKey = `${viewMode}:${selectedClientId ?? ''}:${projectIds.join(',')}`;
     const milestonesRealtime = useQuery(projectMilestonesApi.listByProjectIds, milestonesQueryEnabled && projectIds.length > 0
@@ -61,7 +61,7 @@ export function useProjectsMilestones({ workspaceId, userId, isPreviewMode, sele
         skipped: !milestonesQueryEnabled,
         fallbackMessage: 'Unable to load milestones.',
     });
-    const syncedMilestones = (() => {
+    const syncedMilestones = useMemo(() => {
         if (viewMode !== 'gantt') {
             return {} as Record<string, MilestoneRecord[]>;
         }
@@ -80,14 +80,14 @@ export function useProjectsMilestones({ workspaceId, userId, isPreviewMode, sele
             mapped[projectId] = (Array.isArray(rows) ? rows : []).map(mapMilestoneRecord);
         }
         return mapped;
-    })();
+    }, [viewMode, isPreviewMode, selectedClientId, projectIds, milestonesRealtime]);
     useEffect(() => {
         setMilestonePatches({});
     }, [patchScopeKey]);
     useEffect(() => {
         setMilestonePatches((previous) => reconcileMilestonePatches(previous, syncedMilestones, projectIds));
     }, [projectIds, syncedMilestones]);
-    const milestonesByProject = (() => {
+    const milestonesByProject = useMemo(() => {
         if (viewMode !== 'gantt') {
             return {};
         }
@@ -100,7 +100,7 @@ export function useProjectsMilestones({ workspaceId, userId, isPreviewMode, sele
             }
         }
         return merged;
-    })();
+    }, [viewMode, syncedMilestones, milestonePatches]);
     const milestonesLoading = viewMode === 'gantt' && milestonesQueryEnabled && milestonesRealtime === undefined;
     const milestonesError = viewMode === 'gantt' ? milestonesQueryError : null;
     const loadMilestones = async (_targetProjectIds: string[]) => {

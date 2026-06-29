@@ -164,8 +164,9 @@ export function useChannelReadReceipts({ workspaceId, currentUserId, selectedCha
             });
         }
     };
+    const selectedChannelId = selectedChannel?.id ?? null;
     useEffect(() => {
-        if (!selectedChannel) {
+        if (!selectedChannelId) {
             return;
         }
         const timer = window.setTimeout(() => {
@@ -174,7 +175,11 @@ export function useChannelReadReceipts({ workspaceId, currentUserId, selectedCha
         return () => {
             window.clearTimeout(timer);
         };
-    }, [channelMessages, selectedChannel]);
+        // handleMarkSelectedChannelAsRead is a useEffectEvent that reads the latest
+        // channelMessages and selectedChannel. Only depend on stable primitives so
+        // the 250ms timeout isn't reset on every render (both channelMessages and
+        // selectedChannel are new object references each render).
+    }, [selectedChannelId, channelMessages.length]);
     return {
         markChannelRead,
         markChannelReadPending,

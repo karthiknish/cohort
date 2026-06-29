@@ -1,6 +1,6 @@
 import { LoaderCircle } from 'lucide-react';
 import { useRouter } from '@/shared/ui/navigation';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isLoadingPhase } from '@/lib/auth-phase';
 import { PageMotionShell } from '@/shared/components/page-motion-shell';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
@@ -44,15 +44,25 @@ export function PendingApprovalContent() {
     const { replace } = useRouter();
     const searchParams = useUrlSearchParams();
     const requestedStatus = searchParams.get('status') ?? '';
+    // Track the last phase we acted on so we don't re-trigger navigation on
+    // every render (replace is a new function reference each render from
+    // useRouter(), which would otherwise cause a navigation loop).
+    const lastActedPhaseRef = useRef<string | null>(null);
     useEffect(() => {
         if (isLoadingPhase(authPhase)) {
+            lastActedPhaseRef.current = null;
+            return;
+        }
+        if (lastActedPhaseRef.current === authPhase) {
             return;
         }
         if (authPhase === 'unauthenticated') {
+            lastActedPhaseRef.current = authPhase;
             replace('/auth');
             return;
         }
         if (authPhase === 'ready_active') {
+            lastActedPhaseRef.current = authPhase;
             replace('/for-you');
         }
     }, [authPhase, replace]);
@@ -66,12 +76,26 @@ export function PendingApprovalContent() {
         });
     };
     const authLoading = isLoadingPhase(authPhase);
-    if (authPhase === 'sync_failed') {
+    // If auth stays in a loading phase for too long, surface retry/sign-out
+    // options instead of spinning forever (e.g. deploy propagation, network
+    // issues, or stuck Convex auth).
+    const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+    useEffect(() => {
+        if (!authLoading) {
+            setLoadingTimedOut(false);
+            return;
+        }
+        const timer = window.setTimeout(() => setLoadingTimedOut(true), 15000);
+        return () => window.clearTimeout(timer);
+    }, [authLoading]);
+    if (authPhase === 'sync_failed' || loadingTimedOut) {
         return (<div className="flex min-h-dvh items-center justify-center bg-muted/30 px-4 py-16">
         <div className="w-full max-w-lg rounded-2xl border border-border bg-background p-8 shadow-sm text-center">
           <h1 className="text-2xl font-semibold text-foreground">Could not verify your account</h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            {authError?.message ?? 'We could not finish loading your workspace profile. Try again or sign in once more.'}
+            {loadingTimedOut
+              ? 'Loading is taking longer than expected. Try again or sign in once more.'
+              : (authError?.message ?? 'We could not finish loading your workspace profile. Try again or sign in once more.')}
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
             <Button onClick={handleRefreshStatus}>Retry</Button>

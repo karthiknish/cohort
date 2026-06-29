@@ -231,11 +231,10 @@ export function SystemHealthView() {
             return null;
         }
     })();
-    const okCount = resolvedData ? Object.values(resolvedData.checks).filter((c) => c.status === 'ok').length : 0;
-    const warningCount = resolvedData
-        ? Object.values(resolvedData.checks).filter((c) => c.status === 'warning').length
-        : 0;
-    const totalCount = resolvedData ? Object.keys(resolvedData.checks).length : 0;
+    const checks = resolvedData?.checks ?? {};
+    const okCount = Object.values(checks).filter((c) => c.status === 'ok').length;
+    const warningCount = Object.values(checks).filter((c) => c.status === 'warning').length;
+    const totalCount = Object.keys(checks).length;
     const healthLoadingContent = (<div className="space-y-8">
       <div className="space-y-4 border-b border-border/60 pb-8">
         <Skeleton className="h-3 w-28"/>
@@ -365,7 +364,7 @@ export function SystemHealthView() {
         <SectionLabel>Integrations</SectionLabel>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {resolvedData
-            ? Object.entries(resolvedData.checks).map(([name, check]) => (<ServiceHealthCard key={name} name={name} check={check} isExpanded={expandedServices.has(name)} onToggleExpand={toggleExpand}/>))
+            ? Object.entries(checks).map(([name, check]) => (<ServiceHealthCard key={name} name={name} check={check} isExpanded={expandedServices.has(name)} onToggleExpand={toggleExpand}/>))
             : null}
         </div>
       </div>

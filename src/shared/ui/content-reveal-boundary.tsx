@@ -1,6 +1,7 @@
 'use client';
 import type { ReactNode } from 'react';
 import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from '@/shared/ui/motion';
+import { useMounted } from '@/shared/hooks/use-mounted';
 import { fadeVariants } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 type ContentRevealBoundaryProps = {
@@ -9,8 +10,9 @@ type ContentRevealBoundaryProps = {
     children: ReactNode;
 };
 export function ContentRevealBoundary({ ready, className, children }: ContentRevealBoundaryProps) {
+    const mounted = useMounted();
     const prefersReducedMotion = useReducedMotion();
-    if (prefersReducedMotion) {
+    if (mounted && prefersReducedMotion) {
         return ready ? <div className={className}>{children}</div> : null;
     }
     return (<AnimatePresence mode="wait">

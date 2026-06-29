@@ -395,7 +395,11 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
     });
     useEffect(() => {
         applyRealtimeSnapshot();
-    }, [realtimeSnapshotApplyKey, realtimeChannelSnapshot, selectedChannel]);
+        // applyRealtimeSnapshot is a useEffectEvent that always reads the latest
+        // realtimeChannelSnapshot and selectedChannel, so they must NOT be in the
+        // dependency array — they are new object references on every render which
+        // would cause an infinite re-render loop. Only the stable string key matters.
+    }, [realtimeSnapshotApplyKey]);
     const { typingParticipants } = useRealtimeTyping({
         userId: currentUserId,
         workspaceId,
