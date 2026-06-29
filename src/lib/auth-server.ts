@@ -73,7 +73,25 @@ async function rewriteConvexAuthResponse(response: Response): Promise<Response> 
 
 /** Proxy /api/auth/* to Convex with app-origin URL rewriting for OAuth. */
 export async function proxyAuthToConvex(request: Request): Promise<Response> {
-  const upstream = await getAuthUtilities().handler(request)
+  const siteUrl = getSiteUrl()
+  const appUrl = new URL(siteUrl)
+  // Forward the app origin so Better Auth (with trustedProxyHeaders) sees the
+  // correct base URL instead of the Convex site URL from the host header.
+  // Without this, Better Auth treats the request as cross-domain and moves
+  // Set-Cookie to Set-Better-Auth-Cookie, which the client doesn't read.
+  const forwardedHeaders = new Headers(request.headers)
+  forwardedHeaders.set('x-forwarded-host', appUrl.host)
+  forwardedHeaders.set('x-forwarded-proto', appUrl.protocol.replace(':', ''))
+  forwardedHeaders.set('x-forwarded-origin', siteUrl)
+  const forwardedRequest = new Request(request.url, {
+    method: request.method,
+    headers: forwardedHeaders,
+    body: request.body,
+    redirect: 'manual',
+    // @ts-expect-error - duplex is required for streaming request bodies
+    duplex: 'half',
+  })
+  const upstream = await getAuthUtilities().handler(forwardedRequest)
   return rewriteConvexAuthResponse(upstream)
 }
 
