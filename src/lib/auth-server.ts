@@ -39,6 +39,22 @@ async function rewriteConvexAuthResponse(response: Response): Promise<Response> 
   if (location) {
     headers.set('location', rewriteConvexAuthUrls(location))
   }
+
+  // Rewrite Set-Cookie domain from Convex origin to app origin so the browser
+  // accepts the cookies. Without this, auth cookies set by Convex are rejected
+  // because they're scoped to *.convex.site.
+  const appHost = new URL(getSiteUrl()).host
+  const setCookies = headers.getSetCookie?.() ?? []
+  if (setCookies.length > 0) {
+    headers.delete('set-cookie')
+    for (const cookie of setCookies) {
+      const rewritten = cookie
+        .replace(/Domain=[^;]+;?/gi, `Domain=${appHost}; `)
+        .replace(/SameSite=[^;]+;?/gi, 'SameSite=lax; ')
+      headers.append('set-cookie', rewritten)
+    }
+  }
+
   const contentType = headers.get('content-type') ?? ''
   if (!contentType.includes('application/json')) {
     return new Response(response.body, {
