@@ -1,7 +1,7 @@
 'use client';
 import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { LoaderCircle } from 'lucide-react';
-import { useRouter, redirect, usePathname, useSearchParams } from '@/shared/ui/navigation';
+import { useRouter, usePathname, useSearchParams } from '@/shared/ui/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { AuthCard } from '@/features/auth/components/auth-card';
@@ -224,12 +224,8 @@ function HomeAuthPageContent() {
             logError(error, 'AuthPage:persistTab');
         }
     };
-    const authenticatedDestination = !loading && user ? resolvePostAuthDestination() : null;
-    useEffect(() => {
-        if (authenticatedDestination) {
-            push(authenticatedDestination);
-        }
-    }, [authenticatedDestination, push]);
+    // Server-side beforeLoad on /auth handles redirecting authenticated users.
+    // Client-side redirect is intentionally omitted to avoid cookie-cache loops.
     const handleSubmit = (mode: 'signin' | 'signup') => async (event: FormEvent) => {
         event.preventDefault();
         dispatch({ type: 'setIsSubmitting', value: true });

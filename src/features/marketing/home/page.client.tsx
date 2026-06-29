@@ -1,7 +1,6 @@
 "use client";
 import { Link } from '@/shared/ui/link';
-import { useRouter } from '@/shared/ui/navigation';
-import { Suspense, useEffect } from "react";
+import { Suspense } from "react";
 import { FeaturesBento } from "@/features/marketing/home/components/features-bento";
 import { HeroBackground } from "@/features/marketing/home/components/hero-background";
 import { SectionGlow } from "@/features/marketing/home/components/section-glow";
@@ -33,14 +32,9 @@ function resolveDashboardDestination(): string {
 }
 function HomePageContent() {
     const { data: session, isPending: sessionPending } = authClient.useSession();
-    const { push } = useRouter();
     const user = session?.user ?? null;
-    const authenticatedDestination = !sessionPending && user ? resolveDashboardDestination() : null;
-    useEffect(() => {
-        if (authenticatedDestination) {
-            push(authenticatedDestination);
-        }
-    }, [authenticatedDestination, push]);
+    // Server-side beforeLoad on / handles redirecting authenticated users.
+    // Client-side redirect is intentionally omitted to avoid cookie-cache loops.
     return (<RevealTransition>
       <PageSkeletonBoundary loading={sessionPending && !user} loadingContent={<MarketingHomePageSkeleton />}>
       <div className="w-full bg-background">
