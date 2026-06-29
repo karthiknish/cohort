@@ -10,27 +10,24 @@ import {
   clearSessionCookies,
   generateCsrfToken,
 } from '@/lib/session-cookies'
+import type { NextRequest } from '@/lib/http-server-types'
+import { NextResponse } from '@/lib/http-server-types'
 
-async function validateCsrfToken(request: Request): Promise<boolean> {
-  const { cookies } = await import('next/headers')
-  const cookieStore = await cookies()
+function validateCsrfToken(request: Request, req: NextRequest): boolean {
   const headerToken = request.headers.get(CSRF_HEADER)
-  const cookieToken = cookieStore.get(CSRF_COOKIE)?.value
+  const cookieToken = req.cookies.get(CSRF_COOKIE)?.value
   return Boolean(headerToken && cookieToken && headerToken === cookieToken)
 }
 
 const GET = adaptApiHandler(
   { auth: 'optional', rateLimit: 'standard', skipIdempotency: true },
-  async () => {
-    const { cookies } = await import('next/headers')
-    const cookieStore = await cookies()
-    const role = cookieStore.get('cohorts_role')?.value ?? null
-    const status = cookieStore.get('cohorts_status')?.value ?? null
-    const agencyId = cookieStore.get('cohorts_agency_id')?.value ?? null
-    const expiresAt = cookieStore.get('cohorts_session_expires')?.value ?? null
+  async (req) => {
+    const role = req.cookies.get('cohorts_role')?.value ?? null
+    const status = req.cookies.get('cohorts_status')?.value ?? null
+    const agencyId = req.cookies.get('cohorts_agency_id')?.value ?? null
+    const expiresAt = req.cookies.get('cohorts_session_expires')?.value ?? null
     const csrfToken = generateCsrfToken()
     const hasSession = Boolean(expiresAt && parseInt(expiresAt, 10) > Date.now())
-    const { NextResponse } = await import('next/server')
     const response = NextResponse.json(
       {
         success: true,
@@ -59,10 +56,9 @@ const postBodySchema = z.strictObject({})
 const POST = adaptApiHandler(
   { auth: 'optional', bodySchema: postBodySchema, rateLimit: 'standard', skipIdempotency: true },
   async (req, { auth }) => {
-    if (!(await validateCsrfToken(req))) {
+    if (!validateCsrfToken(req, req)) {
       throw new ForbiddenError('Security validation failed. Please refresh and try again.')
     }
-    const { NextResponse } = await import('next/server')
     const response = NextResponse.json(
       { success: true },
       { headers: { 'Cache-Control': 'no-store, max-age=0' } },
@@ -90,10 +86,9 @@ const POST = adaptApiHandler(
 const DELETE = adaptApiHandler(
   { auth: 'optional', rateLimit: 'standard', skipIdempotency: true },
   async (req) => {
-    if (!(await validateCsrfToken(req))) {
+    if (!validateCsrfToken(req, req)) {
       throw new ForbiddenError('Security validation failed. Please refresh and try again.')
     }
-    const { NextResponse } = await import('next/server')
     const response = NextResponse.json(
       { success: true },
       { headers: { 'Cache-Control': 'no-store, max-age=0' } },
