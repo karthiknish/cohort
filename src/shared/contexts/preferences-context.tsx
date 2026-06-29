@@ -58,13 +58,13 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
             ...optimisticPreferences,
         };
     })();
-    const fetchPreferences = async () => {
+    const fetchPreferences = useCallback(async () => {
         // Backwards-compat shim: keep signature used by callers.
         // Convex `useQuery` already keeps this data fresh.
         return;
-    };
+    }, []);
     // Convex query drives preferences; no manual fetch needed.
-    const updatePreferences = async (updates: Partial<Omit<UserPreferences, 'updatedAt'>>) => {
+    const updatePreferences = useCallback(async (updates: Partial<Omit<UserPreferences, 'updatedAt'>>) => {
         if (!user) {
             throw new Error('Must be logged in to update preferences');
         }
@@ -96,13 +96,13 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
             setError(asErrorMessage(err));
             throw err;
         }
-    };
-    const updateCurrency = async (currency: CurrencyCode) => {
+    }, [user, updateRegional]);
+    const updateCurrency = useCallback(async (currency: CurrencyCode) => {
         await updatePreferences({ currency });
-    };
-    const refreshPreferences = async () => {
+    }, [updatePreferences]);
+    const refreshPreferences = useCallback(async () => {
         await fetchPreferences();
-    };
+    }, [fetchPreferences]);
     const clearError = useCallback(() => {
         setError(null);
     }, []);

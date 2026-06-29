@@ -14,7 +14,7 @@ import { MessageSearchBar, NoSearchResultsState } from './message-pane-parts';
 import { UnifiedComposerSection, UnifiedConversationHeader } from './unified-message-pane-sections';
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types';
 export function UnifiedMessagePaneEmptyState() {
-    return (<div className="flex min-h-0 flex-1 items-center justify-center bg-background/50" role="status">
+    return (<output className="flex min-h-0 flex-1 items-center justify-center bg-background/50">
       <div className="p-8 text-center">
         <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-muted/50">
           <MessageCircle className="size-8 text-muted-foreground"/>
@@ -24,7 +24,7 @@ export function UnifiedMessagePaneEmptyState() {
           Choose a conversation from the sidebar to start messaging
         </p>
       </div>
-    </div>);
+    </output>);
 }
 export function UnifiedMessagePaneShimmerBackdrop() {
     return (<div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">

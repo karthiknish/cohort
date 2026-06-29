@@ -94,7 +94,7 @@ export function EmptyChannelState() {
     </div>);
 }
 export function EmptyMessagesState() {
-    return (<div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/50 bg-muted/10 p-8 text-center" role="status">
+    return (<output className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/50 bg-muted/10 p-8 text-center">
       <div className="mb-3 rounded-full bg-muted/30 p-3">
         <MessageCircle className="size-6 text-muted-foreground/50"/>
       </div>
@@ -102,10 +102,10 @@ export function EmptyMessagesState() {
       <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
         Start the conversation by sending the first message.
       </p>
-    </div>);
+    </output>);
 }
 export function NoSearchResultsState() {
-    return (<div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/50 bg-muted/10 p-8 text-center" role="status">
+    return (<output className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/50 bg-muted/10 p-8 text-center">
       <div className="mb-3 rounded-full bg-muted/30 p-3">
         <Search className="size-6 text-muted-foreground/50"/>
       </div>
@@ -113,7 +113,7 @@ export function NoSearchResultsState() {
       <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
         No messages match your search. Try different keywords or clear the search.
       </p>
-    </div>);
+    </output>);
 }
 export interface MessagesErrorStateProps {
     error: string;

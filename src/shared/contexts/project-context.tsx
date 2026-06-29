@@ -51,7 +51,7 @@ export function ProjectProvider({ children }: {
             recentActivityAt: now,
         } as ProjectRecord;
     })();
-    const selectProject = (projectId: string | null) => {
+    const selectProject = useCallback((projectId: string | null) => {
         setManualProjectId(projectId);
         // Update URL if not already set by URL
         if (projectId && !searchParams.get('projectId')) {
@@ -59,15 +59,15 @@ export function ProjectProvider({ children }: {
             newParams.set('projectId', projectId);
             push(`${pathname}?${newParams.toString()}`);
         }
-    };
-    const clearProject = () => {
+    }, [searchParams, push, pathname]);
+    const clearProject = useCallback(() => {
         setManualProjectId(null);
         // Remove projectId from URL
         const newParams = new URLSearchParams(searchParams.toString());
         newParams.delete('projectId');
         newParams.delete('projectName');
         push(`${pathname}?${newParams.toString()}`);
-    };
+    }, [searchParams, push, pathname]);
     const value = useMemo(() => ({
         selectedProjectId,
         selectedProject,

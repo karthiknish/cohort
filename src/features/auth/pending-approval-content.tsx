@@ -68,6 +68,7 @@ export function PendingApprovalContent() {
     }, [authPhase, replace]);
     const statusCopy = getStatusCopy(user?.status ?? requestedStatus);
     const handleRefreshStatus = () => {
+        setLoadingTimedOut(false);
         void retrySync();
     };
     const handleSignOut = () => {
@@ -82,7 +83,6 @@ export function PendingApprovalContent() {
     const [loadingTimedOut, setLoadingTimedOut] = useState(false);
     useEffect(() => {
         if (!authLoading) {
-            setLoadingTimedOut(false);
             return;
         }
         const timer = window.setTimeout(() => setLoadingTimedOut(true), 15000);

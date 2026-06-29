@@ -91,7 +91,7 @@ export function NavigationProvider({ children }: {
             console.warn('[NavigationProvider] Failed to load navigation state:', error);
         }
     }, [selectedClientId, cleanupOldData]);
-    const saveNavigationState = (state: NavigationState) => {
+    const saveNavigationState = useCallback((state: NavigationState) => {
         if (!isFeatureEnabled('NAVIGATION_PERSISTENCE') || typeof window === 'undefined') {
             return;
         }
@@ -108,7 +108,7 @@ export function NavigationProvider({ children }: {
         catch (error) {
             console.warn('[NavigationProvider] Failed to save navigation state:', error);
         }
-    };
+    }, [selectedClientId]);
     // Load navigation state from localStorage on mount and client change
     useEffect(() => {
         if (!isFeatureEnabled('NAVIGATION_PERSISTENCE')) {
@@ -165,32 +165,28 @@ export function NavigationProvider({ children }: {
         }
         return undefined;
     }, [searchParams]);
-    const setProjectContext = (projectId: string | null, projectName: string | null) => {
-        const newState = {
-            ...navigationState,
-            projectId,
-            projectName,
-        };
-        setNavigationState(newState);
-        saveNavigationState(newState);
-    };
-    const setLastViewedTask = (taskId: string | null) => {
-        const newState = {
-            ...navigationState,
-            lastViewedTask: taskId,
-        };
-        setNavigationState(newState);
-        saveNavigationState(newState);
-    };
-    const setLastViewedChannel = (channelId: string | null) => {
-        const newState = {
-            ...navigationState,
-            lastViewedChannel: channelId,
-        };
-        setNavigationState(newState);
-        saveNavigationState(newState);
-    };
-    const clearNavigationState = () => {
+    const setProjectContext = useCallback((projectId: string | null, projectName: string | null) => {
+        setNavigationState(prev => {
+            const newState = { ...prev, projectId, projectName };
+            saveNavigationState(newState);
+            return newState;
+        });
+    }, [saveNavigationState]);
+    const setLastViewedTask = useCallback((taskId: string | null) => {
+        setNavigationState(prev => {
+            const newState = { ...prev, lastViewedTask: taskId };
+            saveNavigationState(newState);
+            return newState;
+        });
+    }, [saveNavigationState]);
+    const setLastViewedChannel = useCallback((channelId: string | null) => {
+        setNavigationState(prev => {
+            const newState = { ...prev, lastViewedChannel: channelId };
+            saveNavigationState(newState);
+            return newState;
+        });
+    }, [saveNavigationState]);
+    const clearNavigationState = useCallback(() => {
         const newState = {
             projectId: null,
             projectName: null,
@@ -209,7 +205,7 @@ export function NavigationProvider({ children }: {
                 console.warn('[NavigationProvider] Failed to clear navigation state:', error);
             }
         }
-    };
+    }, [selectedClientId]);
     const restoreNavigationState = useCallback(() => {
         loadNavigationState();
     }, [loadNavigationState]);

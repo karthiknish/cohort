@@ -82,7 +82,6 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
     const [loadingTimedOut, setLoadingTimedOut] = useState(false);
     useEffect(() => {
         if (!isLoadingPhase(authPhase)) {
-            setLoadingTimedOut(false);
             return;
         }
         const timer = window.setTimeout(() => setLoadingTimedOut(true), 20000);
@@ -95,6 +94,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
         replace(`/auth${redirectParam}`);
     };
     const handleRetrySync = () => {
+        setLoadingTimedOut(false);
         void retrySync();
     };
     const handleSignOutAfterSyncFailure = () => {
