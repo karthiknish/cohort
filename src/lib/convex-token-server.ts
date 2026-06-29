@@ -20,7 +20,7 @@ export async function resolveConvexTokenFromRequest(req: Request): Promise<strin
     try {
         // Short-circuit: check if there's a valid session before fetching token
         const session = await fetchBetterAuthSession(req);
-        if (!session?.session) {
+        if (!session) {
             return null;
         }
 

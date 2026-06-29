@@ -36,7 +36,7 @@ function useAuthFromBetterAuth(initialToken?: string | null) {
             // SHORT-CIRCUIT: If there's no session, don't make any network calls.
             // This is the key fix that prevents 401s for unauthenticated users.
             // Use ref to ensure we always have the current session value.
-            if (!sessionRef.current?.session) {
+            if (!sessionRef.current) {
                 return null;
             }
 
@@ -79,11 +79,12 @@ function useAuthFromBetterAuth(initialToken?: string | null) {
     return useMemo(
         () => ({
             isLoading: isSessionPending && !cachedToken,
-            isAuthenticated: Boolean(session?.session) || cachedToken !== null,
+            isAuthenticated: Boolean(session) || cachedToken !== null,
             fetchAccessToken,
         }),
+        // fetchAccessToken is stable (only depends on sessionId), so exclude it to prevent re-render loops
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [isSessionPending, sessionId, cachedToken]
+        [isSessionPending, session, cachedToken]
     );
 }
 

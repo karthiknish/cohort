@@ -107,7 +107,7 @@ async function fetchConvexTokenFromBetterAuthRoute(request: Request): Promise<st
     
     // Short-circuit: check if there's a valid session before fetching token
     const session = await fetchBetterAuthSession(request);
-    if (!session?.session) {
+    if (!session) {
         return null;
     }
 

@@ -76,7 +76,7 @@ interface AuthProviderProps {
 async function fetchConvexToken(): Promise<string | null> {
     // Short-circuit: don't fetch token if there's no session
     const session = await authClient.getSession({ fetchOptions: { throw: false } });
-    if (!session?.session) {
+    if (!session) {
         return null;
     }
 
