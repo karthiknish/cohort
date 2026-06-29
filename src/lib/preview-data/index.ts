@@ -5,7 +5,7 @@ export { PREVIEW_MODE_STORAGE_KEY, PREVIEW_MODE_EVENT, PREVIEW_MODE_QUERY_PARAM,
 // Clients and metrics
 export { getPreviewClients, getPreviewMetrics, getPreviewClientSummaries } from './clients';
 // Analytics
-export { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from './analytics';
+export { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights, getPreviewAnalyticsBreakdowns } from './analytics';
 // Projects, tasks, proposals
 export { getPreviewProjects, getPreviewProjectMilestones, getPreviewTasks, getPreviewProposals } from './projects';
 // Activity

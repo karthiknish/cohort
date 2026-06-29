@@ -245,19 +245,16 @@ export function buildMultiMetricTimeSeriesCharts(rows: Record<string, unknown>[]
 }
 export function buildAnalyticsExportCharts(rows: Array<Record<string, unknown>>): SpreadsheetChartSpec[] {
     const charts: SpreadsheetChartSpec[] = [];
-    const spendRevenue = buildMultiMetricTimeSeriesChart(rows, 'date', ['spend', 'revenue'], 'Spend vs revenue over time', 'line', 'Daily totals from export rows');
-    if (spendRevenue)
-        charts.push(spendRevenue);
-    const delivery = buildMultiMetricTimeSeriesChart(rows, 'date', ['impressions', 'clicks'], 'Delivery volume over time', 'area', 'Impressions and clicks by day');
-    if (delivery)
-        charts.push(delivery);
-    const spendTrend = buildTimeSeriesChart(rows, 'date', 'spend', 'Daily spend', 'area');
-    if (spendTrend && !spendRevenue)
-        charts.push(spendTrend);
+    const usersSessions = buildMultiMetricTimeSeriesChart(rows, 'date', ['users', 'sessions'], 'Users and sessions over time', 'area', 'Daily users and sessions from export rows');
+    if (usersSessions)
+        charts.push(usersSessions);
     const conversionsTrend = buildTimeSeriesChart(rows, 'date', 'conversions', 'Daily conversions', 'line', 'Conversion volume by day');
     if (conversionsTrend)
         charts.push(conversionsTrend);
-    const platformChart = buildCategoryBreakdownChart(rows, 'platform', 'spend', 'Spend by platform', 'pie', 'Share of spend in this export window');
+    const revenueTrend = buildTimeSeriesChart(rows, 'date', 'revenue', 'Daily revenue', 'area', 'Revenue by day');
+    if (revenueTrend)
+        charts.push(revenueTrend);
+    const platformChart = buildCategoryBreakdownChart(rows, 'platform', 'sessions', 'Sessions by platform', 'pie', 'Share of sessions in this export window');
     if (platformChart)
         charts.push(platformChart);
     return filterMeaningfulCharts(charts).slice(0, MAX_EXPORT_CHARTS);

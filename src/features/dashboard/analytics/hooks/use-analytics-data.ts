@@ -6,7 +6,7 @@ import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { notifyFailure } from '@/lib/notifications';
 import { useAccumulatedCursorPages } from '@/lib/hooks/use-accumulated-cursor-pages';
 import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
-import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data';
+import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights, getPreviewAnalyticsBreakdowns } from '@/lib/preview-data';
 import { buildProviderIdsKey, normalizeProviderIds } from '../lib/insight-utils';
 import type { AlgorithmicInsight, MetricRecord, ProviderInsight } from './types';
 import { ANALYTICS_METRICS_PAGE_SIZE, mergeAnalyticsMetricPages, parsePaginatedAnalyticsMetrics, type AnalyticsMetricsPageCursor, } from './use-analytics-metrics-pagination';
@@ -193,8 +193,9 @@ export function useAnalyticsData(_token: string | null, periodDays: number, clie
     });
     const mappedMetrics = isPreviewMode ? previewMappedMetrics : metricsPagination.mergedItems;
     const breakdowns = ((): AnalyticsBreakdownRow[] => {
-        if (isPreviewMode)
-            return [];
+        if (isPreviewMode) {
+            return getPreviewAnalyticsBreakdowns() as AnalyticsBreakdownRow[];
+        }
         if (!gaBreakdownsRealtime || typeof gaBreakdownsRealtime !== 'object')
             return [];
         const rows = (gaBreakdownsRealtime as {
@@ -229,7 +230,7 @@ export function useAnalyticsData(_token: string | null, periodDays: number, clie
     if (isPreviewMode && previewMetrics && previewInsights) {
         return {
             metricsData: mappedMetrics,
-            breakdowns: [],
+            breakdowns,
             metricsNextCursor: null,
             metricsLoadingMore: false,
             resetMetricsPagination: async () => undefined,

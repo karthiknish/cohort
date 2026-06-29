@@ -243,14 +243,14 @@ function AnalyticsPerformanceSection() {
             <RotateCw className={cn('mr-2 size-3.5', metricsRefreshing && 'animate-spin')}/>
             Refresh
           </Button>
-          <AnalyticsExportButton metrics={filteredMetrics} disabled={isPreviewMode}/>
+          <AnalyticsExportButton metrics={filteredMetrics} breakdowns={breakdowns}/>
         </div>
       </div>
 
       <AnalyticsSummaryCards totals={totals} deltas={story.deltas} formatRevenue={formatRevenue} isLoading={initialMetricsLoading}/>
       <AnalyticsMetricCards avgUsersPerDay={avgUsersPerDay} avgSessionsPerDay={avgSessionsPerDay} revenuePerSession={revenuePerSession} sessionsPerUser={sessionsPerUser} formatRevenue={formatRevenue} isLoading={initialMetricsLoading}/>
       <AnalyticsDeepDiveSection story={story} formatRevenue={formatRevenue}/>
-      <AnalyticsBreakdownSection breakdowns={breakdowns}/>
+      <AnalyticsBreakdownSection breakdowns={breakdowns} formatRevenue={formatRevenue}/>
       <AnalyticsCharts chartData={chartData} formatRevenue={formatRevenue} isMetricsLoading={metricsLoading} initialMetricsLoading={initialMetricsLoading}/>
       <AnalyticsInsightsSection insights={insights} algorithmic={algorithmic} insightsError={insightsError} insightsLoading={insightsLoading} insightsRefreshing={insightsRefreshing} initialInsightsLoading={initialInsightsLoading} onRefreshInsights={handleRefreshInsights}/>
     </div>);

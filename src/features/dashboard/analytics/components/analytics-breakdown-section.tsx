@@ -32,24 +32,43 @@ function aggregateBreakdown(rows: AnalyticsBreakdownRow[], dimension: BreakdownD
         sessions: number;
         users: number;
         conversions: number;
+        revenue: number;
     }>();
     for (const row of rows) {
         if (row.dimension !== dimension)
             continue;
         const key = row.dimensionValue;
-        const existing = totals.get(key) ?? { label: key, sessions: 0, users: 0, conversions: 0 };
+        const existing = totals.get(key) ?? { label: key, sessions: 0, users: 0, conversions: 0, revenue: 0 };
         existing.sessions += row.sessions;
         existing.users += row.users;
         existing.conversions += row.conversions;
+        existing.revenue += row.revenue ?? 0;
         totals.set(key, existing);
     }
     const totalSessions = Array.from(totals.values()).reduce((sum, entry) => sum + entry.sessions, 0);
-    return Array.from(totals.values())
-        .sort((a, b) => b.sessions - a.sessions)
-        .slice(0, 6)
-        .map((entry) => ({
+    const sorted = Array.from(totals.values()).sort((a, b) => b.sessions - a.sessions);
+    // Top 6 entries, with remaining rolled into "Other" bucket
+    const TOP_N = 6;
+    if (sorted.length <= TOP_N) {
+        return sorted.map((entry) => ({
+            ...entry,
+            share: totalSessions > 0 ? (entry.sessions / totalSessions) * 100 : 0,
+            conversionRate: entry.sessions > 0 ? (entry.conversions / entry.sessions) * 100 : 0,
+        }));
+    }
+    const top = sorted.slice(0, TOP_N);
+    const otherEntries = sorted.slice(TOP_N);
+    const otherAggregated = otherEntries.reduce((acc, entry) => {
+        acc.sessions += entry.sessions;
+        acc.users += entry.users;
+        acc.conversions += entry.conversions;
+        acc.revenue += entry.revenue;
+        return acc;
+    }, { label: 'Other', sessions: 0, users: 0, conversions: 0, revenue: 0 });
+    return [...top, otherAggregated].map((entry) => ({
         ...entry,
         share: totalSessions > 0 ? (entry.sessions / totalSessions) * 100 : 0,
+        conversionRate: entry.sessions > 0 ? (entry.conversions / entry.sessions) * 100 : 0,
     }));
 }
 function BreakdownShareBar({ share }: {
@@ -60,9 +79,10 @@ function BreakdownShareBar({ share }: {
       <div className="h-full rounded-full bg-primary/80" style={widthStyle}/>
     </div>);
 }
-function BreakdownCard({ dimension, rows, }: {
+function BreakdownCard({ dimension, rows, formatRevenue, }: {
     dimension: BreakdownDimension;
     rows: AnalyticsBreakdownRow[];
+    formatRevenue?: (amount: number | null | undefined) => string;
 }) {
     const meta = DIMENSION_META[dimension];
     const entries = aggregateBreakdown(rows, dimension);
@@ -84,14 +104,16 @@ function BreakdownCard({ dimension, rows, }: {
               </div>
               <BreakdownShareBar share={entry.share}/>
               <p className="text-xs text-muted-foreground">
-                {entry.sessions.toLocaleString()} sessions · {entry.users.toLocaleString()} users
+                {entry.sessions.toLocaleString()} sessions · {entry.users.toLocaleString()} users · {entry.conversionRate.toFixed(1)}% conv
+                {entry.revenue > 0 && formatRevenue ? ` · ${formatRevenue(entry.revenue)}` : ''}
               </p>
             </div>)))}
       </CardContent>
     </Card>);
 }
-export function AnalyticsBreakdownSection({ breakdowns }: {
+export function AnalyticsBreakdownSection({ breakdowns, formatRevenue }: {
     breakdowns?: AnalyticsBreakdownRow[];
+    formatRevenue?: (amount: number | null | undefined) => string;
 }) {
     if (!breakdowns?.length)
         return null;
@@ -103,9 +125,9 @@ export function AnalyticsBreakdownSection({ breakdowns }: {
         </p>
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <BreakdownCard dimension="channel" rows={breakdowns}/>
-        <BreakdownCard dimension="source" rows={breakdowns}/>
-        <BreakdownCard dimension="device" rows={breakdowns}/>
+        <BreakdownCard dimension="channel" rows={breakdowns} formatRevenue={formatRevenue}/>
+        <BreakdownCard dimension="source" rows={breakdowns} formatRevenue={formatRevenue}/>
+        <BreakdownCard dimension="device" rows={breakdowns} formatRevenue={formatRevenue}/>
       </div>
     </section>);
 }

@@ -48,6 +48,16 @@ export interface PreviewAlgorithmicInsight {
     providerId: string;
     suggestions: PreviewAlgorithmicSuggestion[];
 }
+export interface PreviewAnalyticsBreakdownRow {
+    propertyId: string;
+    date: string;
+    dimension: 'channel' | 'source' | 'device';
+    dimensionValue: string;
+    users: number;
+    sessions: number;
+    conversions: number;
+    revenue: number | null;
+}
 export type PreviewProposalDraft = {
     id: string;
     clientId: string | null;

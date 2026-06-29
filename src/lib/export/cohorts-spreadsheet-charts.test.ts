@@ -24,36 +24,34 @@ describe('cohorts spreadsheet chart builders', () => {
         const charts = buildAnalyticsExportCharts([
             {
                 date: '2026-05-01',
-                platform: 'google',
-                spend: 10,
+                platform: 'google-analytics',
+                users: 100,
+                sessions: 120,
                 revenue: 20,
-                impressions: 100,
-                clicks: 10,
                 conversions: 2,
             },
             {
                 date: '2026-05-02',
-                platform: 'google',
-                spend: 15,
+                platform: 'google-analytics',
+                users: 110,
+                sessions: 140,
                 revenue: 25,
-                impressions: 120,
-                clicks: 12,
                 conversions: 3,
             },
             {
                 date: '2026-05-03',
-                platform: 'meta',
-                spend: 5,
-                revenue: 8,
-                impressions: 80,
-                clicks: 6,
+                platform: 'google',
+                users: 90,
+                sessions: 100,
+                revenue: 18,
                 conversions: 1,
             },
         ]);
         expect(charts.map((chart) => chart.title)).toEqual(expect.arrayContaining([
-            'Spend vs revenue over time',
-            'Delivery volume over time',
-            'Spend by platform',
+            'Users and sessions over time',
+            'Daily conversions',
+            'Daily revenue',
+            'Sessions by platform',
         ]));
         expect(charts.length).toBeGreaterThanOrEqual(2);
     });

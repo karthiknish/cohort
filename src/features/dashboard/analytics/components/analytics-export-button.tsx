@@ -7,13 +7,15 @@ import { SvglExcelIcon } from '@/shared/components/svgl-brand-logo';
 import { Button } from '@/shared/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
 import { useAnalyticsExport } from '../hooks/use-analytics-export';
+import type { AnalyticsBreakdownRow } from '../hooks/use-analytics-data';
 import type { MetricRecord } from '../hooks/types';
 interface AnalyticsExportButtonProps {
     metrics: MetricRecord[];
+    breakdowns?: AnalyticsBreakdownRow[];
     disabled?: boolean;
 }
-export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButtonProps) {
-    const { exportToSpreadsheet, exportToJSON, canExport } = useAnalyticsExport(metrics);
+export function AnalyticsExportButton({ metrics, breakdowns, disabled }: AnalyticsExportButtonProps) {
+    const { exportToSpreadsheet, exportToJSON, canExport } = useAnalyticsExport(metrics, breakdowns);
     const [isExporting, setIsExporting] = useState(false);
     const exportTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
     const handleExport = async (format: 'excel' | 'json') => {

@@ -302,10 +302,18 @@ export function useAnalyticsPageController() {
     ]);
     const analyticsStartDate = format(dateRange.start, 'yyyy-MM-dd');
     const analyticsEndDate = format(dateRange.end, 'yyyy-MM-dd');
+    const selectedRangeDays = Math.max(differenceInDays(dateRange.end, dateRange.start) + 1, 1);
+    // Widen the fetch window to include the previous period so comparison
+    // deltas (previousPeriodMetrics) have data to work with. Without this,
+    // the query only returns the selected range and previous-period filtering
+    // always yields an empty set, making "vs previous period" comparisons
+    // silently broken.
+    const previousPeriodStart = startOfDay(new Date(dateRange.start.getTime() - selectedRangeDays * 24 * 60 * 60 * 1000));
+    const fetchStartDate = format(previousPeriodStart, 'yyyy-MM-dd');
     const { metricsData, breakdowns, breakdownsError, metricsNextCursor, metricsLoadingMore, metricsError, metricsLoading, metricsRefreshing, loadMoreMetrics, resetMetricsPagination, mutateMetrics, insights, algorithmic, insightsError, insightsLoading, insightsRefreshing, mutateInsights, } = useAnalyticsData(null, periodDays, selectedClientId ?? null, isPreviewMode, user?.agencyId, {
         providerIds: ['google-analytics'],
         includeInsights: true,
-        startDate: analyticsStartDate,
+        startDate: fetchStartDate,
         endDate: analyticsEndDate,
     });
     const handleLoadMoreMetrics = () => {
@@ -320,7 +328,6 @@ export function useAnalyticsPageController() {
         }
     };
     const metrics = metricsData;
-    const selectedRangeDays = Math.max(differenceInDays(dateRange.end, dateRange.start) + 1, 1);
     const handleConnectGoogleAnalytics = async () => {
         if (isPreviewMode) {
             notifyInfo({ title: 'Preview mode', message: 'Google Analytics connection is disabled in preview mode.' });
@@ -499,27 +506,27 @@ export function useAnalyticsPageController() {
     };
     const initialMetricsLoading = metricsLoading && metrics.length === 0;
     const initialInsightsLoading = insightsLoading && insights.length === 0 && algorithmic.length === 0;
+    // Use string comparison for yyyy-MM-dd dates to avoid timezone off-by-one
+    // issues. new Date('2024-01-15') parses as UTC midnight, but dateRange.start
+    // is local midnight — in non-UTC timezones metrics on boundary days get
+    // dropped. String comparison of yyyy-MM-dd is chronologically correct.
+    const rangeStartDateStr = analyticsStartDate;
+    const rangeEndDateStr = analyticsEndDate;
+    const previousEndDateStr = format(new Date(dateRange.start.getTime() - 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+    const previousStartDateStr = fetchStartDate;
     const filteredMetrics = (() => {
         if (!metrics.length)
             return [];
-        const startMs = dateRange.start.getTime();
-        const endMs = dateRange.end.getTime();
         return metrics.filter((metric) => {
             if (metric.providerId !== 'google-analytics')
                 return false;
-            const metricDate = new Date(metric.date).getTime();
-            return metricDate >= startMs && metricDate <= endMs;
+            return metric.date >= rangeStartDateStr && metric.date <= rangeEndDateStr;
         });
     })();
     const filteredBreakdowns = (() => {
         if (!breakdowns.length)
             return [];
-        const startMs = dateRange.start.getTime();
-        const endMs = dateRange.end.getTime();
-        return breakdowns.filter((row) => {
-            const rowDate = new Date(row.date).getTime();
-            return rowDate >= startMs && rowDate <= endMs;
-        });
+        return breakdowns.filter((row) => row.date >= rangeStartDateStr && row.date <= rangeEndDateStr);
     })();
     const aggregatedByDate = (() => {
         const map = new Map<string, {
@@ -542,7 +549,7 @@ export function useAnalyticsPageController() {
             entry.conversions += metric.conversions;
             entry.revenue += metric.revenue ?? 0;
         });
-        return Array.from(map.values()).toSorted((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return Array.from(map.values()).toSorted((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
     })();
     const deliveryTotals = filteredMetrics.reduce((acc, metric) => {
         acc.users += metric.impressions;
@@ -557,13 +564,10 @@ export function useAnalyticsPageController() {
     const previousPeriodMetrics = (() => {
         if (!metrics.length)
             return [];
-        const previousEndMs = dateRange.start.getTime() - 1;
-        const previousStartMs = previousEndMs - selectedRangeDays * 24 * 60 * 60 * 1000 + 1;
         return metrics.filter((metric) => {
             if (metric.providerId !== 'google-analytics')
                 return false;
-            const metricDate = new Date(metric.date).getTime();
-            return metricDate >= previousStartMs && metricDate <= previousEndMs;
+            return metric.date >= previousStartDateStr && metric.date <= previousEndDateStr;
         });
     })();
     const previousDeliveryTotals = previousPeriodMetrics.reduce((acc, metric) => {

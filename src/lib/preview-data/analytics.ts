@@ -1,6 +1,7 @@
-import type { PreviewAlgorithmicInsight, PreviewAnalyticsMetric, PreviewProviderInsight, } from './types';
+import type { PreviewAlgorithmicInsight, PreviewAnalyticsBreakdownRow, PreviewAnalyticsMetric, PreviewProviderInsight, } from './types';
 import { isoDaysAgo } from './utils';
 const PREVIEW_ANALYTICS_CURRENCY = 'GBP';
+const PREVIEW_GA_PROPERTY_ID = 'preview-google-analytics-property';
 export function getPreviewAnalyticsMetrics(): PreviewAnalyticsMetric[] {
     const providers = ['google-analytics', 'google', 'facebook', 'linkedin'];
     const baseData: Record<string, Array<{
@@ -104,6 +105,49 @@ export function getPreviewAnalyticsMetrics(): PreviewAnalyticsMetric[] {
         });
     });
     return records;
+}
+export function getPreviewAnalyticsBreakdowns(): PreviewAnalyticsBreakdownRow[] {
+    const rows: PreviewAnalyticsBreakdownRow[] = [];
+    const channelData = [
+        { dimensionValue: 'Organic Search', users: 18500, sessions: 24200, conversions: 580, revenue: 28400 },
+        { dimensionValue: 'Direct', users: 8200, sessions: 9800, conversions: 310, revenue: 15200 },
+        { dimensionValue: 'Social', users: 6400, sessions: 7100, conversions: 145, revenue: 6800 },
+        { dimensionValue: 'Referral', users: 3800, sessions: 4200, conversions: 92, revenue: 4600 },
+        { dimensionValue: 'Email', users: 2400, sessions: 2900, conversions: 78, revenue: 5200 },
+        { dimensionValue: 'Paid Search', users: 1600, sessions: 1850, conversions: 54, revenue: 3100 },
+    ];
+    const sourceData = [
+        { dimensionValue: 'google', users: 16500, sessions: 21500, conversions: 510, revenue: 24800 },
+        { dimensionValue: '(direct)', users: 8200, sessions: 9800, conversions: 310, revenue: 15200 },
+        { dimensionValue: 'facebook.com', users: 4200, sessions: 4800, conversions: 98, revenue: 4600 },
+        { dimensionValue: 'linkedin.com', users: 2800, sessions: 3100, conversions: 72, revenue: 3800 },
+        { dimensionValue: 'newsletter', users: 2400, sessions: 2900, conversions: 78, revenue: 5200 },
+        { dimensionValue: 'bing', users: 1200, sessions: 1400, conversions: 32, revenue: 1600 },
+    ];
+    const deviceData = [
+        { dimensionValue: 'mobile', users: 22400, sessions: 28100, conversions: 620, revenue: 29800 },
+        { dimensionValue: 'desktop', users: 14800, sessions: 17600, conversions: 480, revenue: 26200 },
+        { dimensionValue: 'tablet', users: 3700, sessions: 4350, conversions: 96, revenue: 4800 },
+    ];
+    const buildRows = (dimension: PreviewAnalyticsBreakdownRow['dimension'], data: Array<{ dimensionValue: string; users: number; sessions: number; conversions: number; revenue: number }>) => {
+        data.forEach((entry, idx) => {
+            const [date = isoDaysAgo(6 - (idx % 7))] = isoDaysAgo(6 - (idx % 7)).split('T');
+            rows.push({
+                propertyId: PREVIEW_GA_PROPERTY_ID,
+                date,
+                dimension,
+                dimensionValue: entry.dimensionValue,
+                users: entry.users,
+                sessions: entry.sessions,
+                conversions: entry.conversions,
+                revenue: entry.revenue,
+            });
+        });
+    };
+    buildRows('channel', channelData);
+    buildRows('source', sourceData);
+    buildRows('device', deviceData);
+    return rows;
 }
 export function getPreviewAnalyticsInsights(): {
     insights: PreviewProviderInsight[];
