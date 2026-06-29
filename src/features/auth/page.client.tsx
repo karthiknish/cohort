@@ -307,7 +307,7 @@ function HomeAuthPageContent() {
             // Browser redirects to Google on success; do not clear loading state here.
         }
         catch (error) {
-            notifySuccess({
+            notifyFailure({
                 title: 'Google sign-in failed',
                 message: getFriendlyAuthErrorMessage(error),
             });
