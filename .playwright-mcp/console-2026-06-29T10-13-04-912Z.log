@@ -16,3 +16,32 @@
 [ 1569600ms] [LOG] Attempting reconnect in 510ms @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61
 [ 1570904ms] [LOG] WebSocket reconnected at t=670.5s after disconnect due to closed with code 1006 @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61
 [ 1572857ms] [LOG] WebSocket reconnected at t=672.5s @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61
+[ 2171866ms] [LOG] WebSocket closed with code 1006 @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61
+[ 2171872ms] [LOG] Attempting reconnect in 869ms @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61
+[ 2173931ms] [LOG] WebSocket reconnected at t=816.5s after disconnect due to closed with code 1006 @ https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:61
+[ 2283663ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ https://accounts.google.com/v3/signin/identifier?opparams=%253F&dsh=S-1607335065%3A1782730267946801&client_id=535339091424-9ajhk5nv16tf2j8304b6d3tv3ocgrap1.apps.googleusercontent.com&code_challenge=BQzpVWjiUNEK7877huUWxkPBhLrF9qWdyYPihGhTr-8&code_challenge_method=S256&include_granted_scopes=true&o2v=2&prompt=select_account&redirect_uri=https%3A%2F%2Fcohort-omega-five.vercel.app%2Fapi%2Fauth%2Fcallback%2Fgoogle&response_type=code&scope=email+profile+openid&service=lso&state=_LifmII1fyzbmBn8xR_-9RP1MRZ-rcDb&flowName=GeneralOAuthFlow&continue=https%3A%2F%2Faccounts.google.com%2Fsignin%2Foauth%2Fconsent%3Fauthuser%3Dunknown%26part%3DAJi8hAMpN8ZnbEs3qsH8FsDAD1C7jcjoL-ndQE4Z4nlyqTYoNgUYI4hQ_uh_jgqYXPVcJghPWimbmAqGhMykyRKj1Xx2aQXzO4-yHnicU0hsHnTrbe3-vtJrWdmSeTxougcyoOB-eQv6n0yK8e_tyPm6bnMxnCRKQbaNk-kBiiLVDJz8lA1Bsu7sMtg11wOnJx9YoK_eNzhuVrCZM7QTbG-mhLsY8Jf7AuWIJwfjnsn45QGwRnwE91-_c9YF6iXaTxKnBRTb1zT9mm13BCbCAvRZQ8yszwztB8mXDJqmNE2ETix-eNuUfHpztfYIXeQewGuqH3IehOPJ_T3PkvqlMgsQDCx4sz2-NiuTf-e5r_VpSxdCH7t7NJ39C5AKWm4EmvC9QwDqW79oo13sIgpccClP51vuYIi-R0MFkYhl2PHqYdxNX-RWIJgHgiZJqRiPoMqtk93-2H3-sv7dwP0DfK8W01BH3HeB1Av_SkW9hxYlmTZt0aAo-jQ%26flowName%3DGeneralOAuthFlow%26as%3DS-1607335065%253A1782730267946801%26client_id%3D535339091424-9ajhk5nv16tf2j8304b6d3tv3ocgrap1.apps.googleusercontent.com%26requestPath%3D%252Fsignin%252Foauth%252Fconsent%23&app_domain=https%3A%2F%2Fcohort-omega-five.vercel.app&rart=ANgoxcdVsg9y56xxFsx7ZSce5h-yRo6SWHwFpO3_4DSIF7b-uFVuXJd4ef8nU8CGgmPkMwkeLHwTPukNubd4ieR7rU_fV5_6VR2Oy_RO_bOLZ1CEkyVXOLo:0
+[ 2283669ms] [LOG] %c%s color: red; background: yellow; font-size: 24px; WARNING! @ https://www.gstatic.com/_/mss/boq-identity/_/js/k=boq-identity.AccountsSignInUi.en_US.1dwkazA86mY.es5.O/am=EQ0AAAAwULyQAcD-_28AAAIIsh3wPQugCRAyAAAAAAAAAABgAQAAGgE/d=1/excm=_b,_tp,identifierview/ed=1/dg=0/wt=2/ujg=1/rs=AOaEmlGEBklL208WT59JvLy1mmuy8W09pQ/dti=1/m=_b,_tp:551
+[ 2283669ms] [LOG] %c%s font-size: 18px; Using this console may allow attackers to impersonate you and steal your information using an attack called Self-XSS.
+Do not enter or paste code that you do not understand. @ https://www.gstatic.com/_/mss/boq-identity/_/js/k=boq-identity.AccountsSignInUi.en_US.1dwkazA86mY.es5.O/am=EQ0AAAAwULyQAcD-_28AAAIIsh3wPQugCRAyAAAAAAAAAABgAQAAGgE/d=1/excm=_b,_tp,identifierview/ed=1/dg=0/wt=2/ujg=1/rs=AOaEmlGEBklL208WT59JvLy1mmuy8W09pQ/dti=1/m=_b,_tp:551
+[ 2285635ms] Error: Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at Wi (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:31200)
+    at Ac (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:74980)
+    at Bc (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:82346)
+    at Gu (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:116039)
+    at Hu (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:115087)
+    at Vu (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:114920)
+    at ku (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:111402)
+    at Cd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:123518)
+    at vd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:122072)
+    at nd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:120156)
+[ 2301418ms] Error: Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at Wi (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:31200)
+    at Ac (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:74980)
+    at Bc (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:82346)
+    at Gu (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:116039)
+    at Hu (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:115087)
+    at Vu (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:114920)
+    at ku (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:111402)
+    at Cd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:123518)
+    at vd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:122072)
+    at nd (https://cohort-omega-five.vercel.app/assets/index-CKciO-cN.js:9:120156)

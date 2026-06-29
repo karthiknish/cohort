@@ -2,9 +2,9 @@ import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 import {
   accountStatusRedirect,
-  hasValidSession,
   shouldBypassAuthForDemo,
 } from '@/lib/auth-guard'
+import { hasValidSession } from '@/lib/auth-session.server'
 import { getServerRequest } from '@/lib/server-request.server'
 import { Button } from '@/shared/ui/button'
 import { DashboardLoading } from '@/shared/ui/route-boundaries/dashboard-loading'

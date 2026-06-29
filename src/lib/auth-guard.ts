@@ -1,7 +1,9 @@
 /**
  * Auth gating ported from `proxy.ts` for TanStack Router `beforeLoad`.
+ *
+ * Pure utility functions only — no server-only imports. hasValidSession lives
+ * in auth-session.server.ts to keep this file client-bundle-safe.
  */
-import { getToken } from '@/lib/auth-token.server'
 import {
   isPreviewRouteRequest,
   isScreenRecordingAuthBypassEnabled,
@@ -23,18 +25,6 @@ export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_ROUTE_PREFIXES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   )
-}
-
-export async function hasValidSession(request: Request): Promise<boolean> {
-  try {
-    const token = await getToken()
-    return !!token
-  } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('[auth-guard] session check error:', err)
-    }
-    return false
-  }
 }
 
 export function accountStatusRedirect(

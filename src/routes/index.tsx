@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { marketingHomeMetadata } from '@/features/marketing/lib/marketing-home-metadata'
 import HomePageClient from '@/features/marketing/home/page.client'
 import { getServerRequest } from '@/lib/server-request.server'
-import { hasValidSession } from '@/lib/auth-guard'
+import { hasValidSession } from '@/lib/auth-session.server'
 
 export const Route = createFileRoute('/')({
   beforeLoad: async () => {
