@@ -93,21 +93,26 @@ export async function proxyAuthToConvex(request: Request): Promise<Response> {
   })
   const upstream = await getAuthUtilities().handler(forwardedRequest)
 
-  // DEBUG: log upstream headers to see what Convex returns
-  if (process.env.NODE_ENV === 'production') {
-    const upstreamHeaders: Record<string, string> = {}
-    upstream.headers.forEach((v, k) => { upstreamHeaders[k] = v.substring(0, 200) })
-    const setCookies = upstream.headers.getSetCookie?.() ?? []
-    console.log('[auth-proxy] upstream', {
-      status: upstream.status,
-      setCookieCount: setCookies.length,
-      setCookies: setCookies.map(c => c.substring(0, 150)),
-      betterAuthCookie: upstream.headers.get('set-better-auth-cookie'),
-      allHeaders: upstreamHeaders,
-    })
-  }
+  // DEBUG: expose upstream headers via x-debug-* response headers
+  const debugHeaders: Record<string, string> = {}
+  upstream.headers.forEach((v, k) => { debugHeaders[k] = v.substring(0, 200) })
+  const debugSetCookies = upstream.headers.getSetCookie?.() ?? []
 
-  return rewriteConvexAuthResponse(upstream)
+  const rewritten = await rewriteConvexAuthResponse(upstream)
+
+  // Add debug headers to the final response
+  const finalHeaders = new Headers(rewritten.headers)
+  finalHeaders.set('x-debug-upstream-status', String(upstream.status))
+  finalHeaders.set('x-debug-set-cookie-count', String(debugSetCookies.length))
+  finalHeaders.set('x-debug-set-cookies', JSON.stringify(debugSetCookies.map(c => c.substring(0, 150))))
+  finalHeaders.set('x-debug-better-auth-cookie', upstream.headers.get('set-better-auth-cookie') ?? 'null')
+  finalHeaders.set('x-debug-all-upstream-headers', JSON.stringify(debugHeaders))
+
+  return new Response(rewritten.body, {
+    status: rewritten.status,
+    statusText: rewritten.statusText,
+    headers: finalHeaders,
+  })
 }
 
 /**
