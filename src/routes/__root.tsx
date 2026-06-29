@@ -39,7 +39,7 @@ const resolveInitialToken = createServerFn({ method: 'GET' }).handler(async () =
     pathname.startsWith('/admin') ||
     pathname.startsWith('/settings')
   if (!needsConvexToken) return null
-  const { getToken } = await import('@/lib/auth-server')
+  const { getToken } = await import('@/lib/auth-token-server')
   return (await getToken()) ?? null
 })
 
