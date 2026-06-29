@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { isValidRedirectUrl } from '@/lib/utils'
 import { upsertGoogleWorkspaceTokens } from '@/lib/meetings-admin'
 import { exchangeGoogleWorkspaceCodeForTokens, parseGoogleScopeList, resolveGoogleWorkspaceOAuthCredentials, resolveGoogleWorkspaceOAuthRedirectUri, validateGoogleWorkspaceOAuthState } from '@/services/google-workspace'
-import { NextResponse } from '@/lib/http-server-types'
+import { jsonResponse, redirectResponse } from '@/lib/server-response'
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -57,15 +57,15 @@ const handlers = adaptApiHandler(
         errorUrl.searchParams.set('oauth_error', 'google_workspace_error')
         errorUrl.searchParams.set('provider', 'google-workspace')
         errorUrl.searchParams.set('message', query.error_description || query.error)
-        return NextResponse.redirect(errorUrl.toString())
+        return redirectResponse(errorUrl.toString())
       }
       if (!query.code) {
-        return NextResponse.redirect(`${appUrl}/dashboard/meetings?oauth_error=missing_code&provider=google-workspace`)
+        return redirectResponse(`${appUrl}/dashboard/meetings?oauth_error=missing_code&provider=google-workspace`)
       }
       const redirectUri = resolveGoogleWorkspaceOAuthRedirectUri(appUrl)
       const { clientId: googleClientId, clientSecret: googleClientSecret } = resolveGoogleWorkspaceOAuthCredentials()
       if (!redirectUri || !googleClientId || !googleClientSecret) {
-        return NextResponse.redirect(`${appUrl}/dashboard/meetings?oauth_error=config_error&provider=google-workspace`)
+        return redirectResponse(`${appUrl}/dashboard/meetings?oauth_error=config_error&provider=google-workspace`)
       }
       const context = validateGoogleWorkspaceOAuthState(query.state ?? '')
       const tokenResponse = await exchangeGoogleWorkspaceCodeForTokens({
@@ -92,9 +92,9 @@ const handlers = adaptApiHandler(
       successUrl.searchParams.set('oauth_success', 'true')
       successUrl.searchParams.set('provider', 'google-workspace')
       if (!isValidRedirectUrl(successUrl.toString())) {
-        return NextResponse.redirect(fallbackSuccess)
+        return redirectResponse(fallbackSuccess)
       }
-      return NextResponse.redirect(successUrl.toString())
+      return redirectResponse(successUrl.toString())
     } catch (error: unknown) {
       const rawMessage = error instanceof Error ? error.message : 'OAuth callback failed'
       const messageLower = rawMessage.toLowerCase()
@@ -111,7 +111,7 @@ const handlers = adaptApiHandler(
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'google-workspace')
       errorUrl.searchParams.set('message', message)
-      return NextResponse.redirect(errorUrl.toString())
+      return redirectResponse(errorUrl.toString())
     }
   },
 )

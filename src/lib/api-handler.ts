@@ -1,5 +1,4 @@
-import { NextResponse, after } from './http-server-types';
-import type { NextRequest } from './http-server-types';
+import { jsonResponse, redirectResponse, after } from './server-response';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
@@ -203,8 +202,8 @@ function sanitizeBody<T>(data: T): T {
  * Creates a standardized API handler with built-in authentication,
  * workspace resolution, and validation.
  */
-export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQuery extends z.ZodTypeAny = z.ZodTypeAny>(options: ApiHandlerOptions<TBody, TQuery>, handler: (req: NextRequest, context: ApiHandlerContext<z.infer<TBody>, z.infer<TQuery>>) => Promise<ApiResponse | Response | unknown>) {
-    return async (req: NextRequest, context: {
+export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQuery extends z.ZodTypeAny = z.ZodTypeAny>(options: ApiHandlerOptions<TBody, TQuery>, handler: (req: Request, context: ApiHandlerContext<z.infer<TBody>, z.infer<TQuery>>) => Promise<ApiResponse | Response | unknown>) {
+    return async (req: Request, context: {
         params: Promise<Record<string, string | string[]>>;
     }) => {
         const requestId = req.headers.get('x-request-id') || uuidv4();
@@ -212,15 +211,16 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
         let idempotencyKey: string | null = null;
         let auth: AuthResult = { uid: null, email: null, name: null, claims: {}, isCron: false };
         let workspace: WorkspaceContext | undefined;
+        const requestUrl = new URL(req.url);
         try {
             const params = await (context?.params || Promise.resolve({}));
             const authOption = options.auth ?? 'required';
             const workspaceOption = options.workspace ?? 'none';
-            logger.info(`API Request: ${req.method} ${req.nextUrl.pathname}`, {
+            logger.info(`API Request: ${req.method} ${requestUrl.pathname}`, {
                 type: 'request_start',
                 requestId,
                 method: req.method,
-                path: req.nextUrl.pathname,
+                path: requestUrl.pathname,
             });
             // 0. Rate Limiting (before auth to prevent brute force)
             if (options.rateLimit) {
@@ -228,11 +228,11 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                     ? RATE_LIMITS[options.rateLimit]
                     : options.rateLimit;
                 const identifier = getClientIdentifier(req);
-                const rateLimitKey = createRateLimitKey(req.nextUrl.pathname, identifier);
+                const rateLimitKey = createRateLimitKey(requestUrl.pathname, identifier);
                 // Prefer Convex-backed rate limiting (falls back to in-memory if Convex unavailable)
                 const result = await checkConvexRateLimit(rateLimitKey, config);
                 if (!result.allowed) {
-                    return NextResponse.json({
+                    return jsonResponse({
                         success: false,
                         error: 'Too many requests. Please try again later.',
                         code: 'RATE_LIMIT_EXCEEDED',
@@ -283,14 +283,14 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                     rawBody = JSON.stringify(json);
                 }
                 catch {
-                    return NextResponse.json({
+                    return jsonResponse({
                         success: false,
                         error: 'Invalid JSON body'
                     }, { status: 400 });
                 }
                 const result = options.bodySchema.safeParse(json);
                 if (!result.success) {
-                    return NextResponse.json({
+                    return jsonResponse({
                         success: false,
                         error: 'Validation failed',
                         details: result.error.flatten().fieldErrors
@@ -303,7 +303,7 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
             if (isWriteMethod && !options.skipIdempotency) {
                 const headerIdempotencyKey = req.headers.get('x-idempotency-key');
                 if (options.requireIdempotency && !headerIdempotencyKey) {
-                    return NextResponse.json({
+                    return jsonResponse({
                         success: false,
                         error: 'Idempotency key required for this operation',
                         code: 'IDEMPOTENCY_KEY_REQUIRED',
@@ -318,7 +318,7 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                 }
                 else if (rawBody) {
                     const bodyHash = createHash('sha256').update(rawBody).digest('hex');
-                    const safePath = req.nextUrl.pathname.replace(/[^a-zA-Z0-9_-]/g, '_');
+                    const safePath = requestUrl.pathname.replace(/[^a-zA-Z0-9_-]/g, '_');
                     // Use path + method + body hash for automatic deduplication
                     effectiveKey = `auto_${auth.uid || 'anon'}_${req.method}_${safePath}_${bodyHash}`;
                 }
@@ -332,13 +332,13 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                                 key: effectiveKey,
                                 requestId,
                                 method: req.method,
-                                path: req.nextUrl.pathname,
+                                path: requestUrl.pathname,
                             });
                             if (result.type === 'completed') {
                                 const statusCode = typeof result.httpStatus === 'number' && Number.isFinite(result.httpStatus)
                                     ? result.httpStatus
                                     : 200;
-                                return NextResponse.json(result.response, {
+                                return jsonResponse(result.response, {
                                     status: statusCode,
                                     headers: {
                                         'X-Idempotency-Hit': 'true',
@@ -348,7 +348,7 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                                 });
                             }
                             if (result.type === 'pending') {
-                                return NextResponse.json({
+                                return jsonResponse({
                                     success: false,
                                     error: 'Request already in progress',
                                     code: 'IDEMPOTENCY_CONFLICT',
@@ -377,10 +377,10 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
             // 4. Query Validation
             let query: z.infer<TQuery> = {} as z.infer<TQuery>;
             if (options.querySchema) {
-                const searchParams = Object.fromEntries(req.nextUrl.searchParams.entries());
+                const searchParams = Object.fromEntries(requestUrl.searchParams.entries());
                 const result = options.querySchema.safeParse(searchParams);
                 if (!result.success) {
-                    return NextResponse.json({
+                    return jsonResponse({
                         success: false,
                         error: 'Invalid query parameters',
                         details: result.error.flatten().fieldErrors
@@ -410,7 +410,7 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                 const status = payload.success ? 200 : 400;
                 const duration = Date.now() - startTime;
                 after(async () => {
-                    logger.info(`API ${payload.success ? 'Success' : 'Handled Error'}: ${req.method} ${req.nextUrl.pathname}`, {
+                    logger.info(`API ${payload.success ? 'Success' : 'Handled Error'}: ${req.method} ${requestUrl.pathname}`, {
                         type: 'request_end',
                         requestId,
                         duration,
@@ -423,7 +423,7 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                             operation: 'release',
                             key: idempotencyKey,
                             requestId,
-                            path: req.nextUrl.pathname,
+                            path: requestUrl.pathname,
                         });
                     }
                     if (payload.success && idempotencyKey) {
@@ -433,11 +433,11 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                             response: toIdempotencyLayer2(payload),
                             httpStatus: status,
                             requestId,
-                            path: req.nextUrl.pathname,
+                            path: requestUrl.pathname,
                         });
                     }
                 });
-                return NextResponse.json(payload, {
+                return jsonResponse(payload, {
                     status,
                     headers: { 'X-Request-ID': requestId },
                 });
@@ -449,7 +449,7 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
             };
             const duration = Date.now() - startTime;
             after(async () => {
-                logger.info(`API Success: ${req.method} ${req.nextUrl.pathname}`, {
+                logger.info(`API Success: ${req.method} ${requestUrl.pathname}`, {
                     type: 'request_end',
                     requestId,
                     duration,
@@ -464,11 +464,11 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                         response: toIdempotencyLayer2(successResponse),
                         httpStatus: 200,
                         requestId,
-                        path: req.nextUrl.pathname,
+                        path: requestUrl.pathname,
                     });
                 }
             });
-            return NextResponse.json(successResponse, {
+            return jsonResponse(successResponse, {
                 headers: { 'X-Request-ID': requestId }
             });
         }
@@ -479,6 +479,7 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                 duration,
                 userId: auth.uid,
                 workspaceId: workspace?.workspaceId,
+                path: requestUrl.pathname,
             };
             // Handle known API errors
             if (error instanceof UnifiedError) {
@@ -489,7 +490,7 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                             operation: 'release',
                             key: idempotencyKey,
                             requestId,
-                            path: req.nextUrl.pathname,
+                            path: requestUrl.pathname,
                         });
                     }
                 });
@@ -499,7 +500,7 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                     ...(error.toJSON() as Record<string, unknown>),
                     requestId,
                 };
-                return NextResponse.json(payload, {
+                return jsonResponse(payload, {
                     status,
                     headers: { 'X-Request-ID': requestId },
                 });
@@ -512,11 +513,11 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                             operation: 'release',
                             key: idempotencyKey,
                             requestId,
-                            path: req.nextUrl.pathname,
+                            path: requestUrl.pathname,
                         });
                     }
                 });
-                return NextResponse.json({
+                return jsonResponse({
                     success: false,
                     error: error.message,
                     code: error.code,
@@ -535,11 +536,11 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                             operation: 'release',
                             key: idempotencyKey,
                             requestId,
-                            path: req.nextUrl.pathname,
+                            path: requestUrl.pathname,
                         });
                     }
                 });
-                return NextResponse.json({
+                return jsonResponse({
                     success: false,
                     error: 'Validation failed',
                     details: error.flatten().fieldErrors,
@@ -559,11 +560,11 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                             operation: 'release',
                             key: idempotencyKey,
                             requestId,
-                            path: req.nextUrl.pathname,
+                            path: requestUrl.pathname,
                         });
                     }
                 });
-                return NextResponse.json({
+                return jsonResponse({
                     success: false,
                     error: convexApiError.message,
                     code: convexApiError.code,
@@ -578,7 +579,7 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
             const exposeInternalErrors = isDev && process.env.COHORTS_EXPOSE_INTERNAL_ERRORS === '1';
             after(async () => {
                 if (isDev) {
-                    console.error(`[API Error] ${req.method} ${req.nextUrl.pathname}:`, error);
+                    console.error(`[API Error] ${req.method} ${requestUrl.pathname}:`, error);
                 }
                 logApiError(error, req, { ...logContext, includeStack: isDev });
                 if (idempotencyKey) {
@@ -586,11 +587,11 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
                         operation: 'release',
                         key: idempotencyKey,
                         requestId,
-                        path: req.nextUrl.pathname,
+                        path: requestUrl.pathname,
                     });
                 }
             });
-            return NextResponse.json({
+            return jsonResponse({
                 success: false,
                 error: options.errorMessage || (exposeInternalErrors && error instanceof Error ? error.message : 'Internal server error'),
                 code: 'INTERNAL_ERROR',
@@ -622,19 +623,20 @@ export function apiError(message: string, code?: string, details?: Record<string
         details
     };
 }
-function logApiError(error: unknown, req: NextRequest, opts?: {
+function logApiError(error: unknown, req: Request, opts?: {
     includeStack?: boolean;
     requestId?: string;
     duration?: number;
     userId?: string | null;
     workspaceId?: string;
+    path?: string;
 }) {
     try {
         const requestId = opts?.requestId || req.headers.get('x-request-id') || undefined;
         const asApiError = error instanceof ApiError ? error : undefined;
         const context = {
             type: 'api_error',
-            path: req.nextUrl.pathname,
+            path: opts?.path ?? new URL(req.url).pathname,
             method: req.method,
             status: asApiError?.status || (error instanceof z.ZodError ? 400 : 500),
             code: asApiError?.code || (error instanceof z.ZodError ? 'VALIDATION_ERROR' : 'INTERNAL_ERROR'),

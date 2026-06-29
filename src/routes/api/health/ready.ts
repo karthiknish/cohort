@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { adaptApiHandler } from '@/lib/api-handler-start'
 import { ForbiddenError } from '@/lib/api-errors'
-import { NextResponse } from '@/lib/http-server-types'
+import { jsonResponse, redirectResponse } from '@/lib/server-response'
 import {
   buildConfiguredServiceChecks,
   probeGoogleAdsLiveHealth,
@@ -111,7 +111,7 @@ const handlers = adaptApiHandler(
             code: 'SERVICE_UNAVAILABLE',
             data: response,
           }
-    return NextResponse.json(payload, { status: statusCode })
+    return jsonResponse(payload, { status: statusCode })
   },
 )
 

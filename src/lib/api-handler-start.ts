@@ -1,6 +1,6 @@
 /**
- * Adapter: `createApiHandler` (Next.js route handlers) → TanStack Start
- * `server.handlers` on file routes under `src/routes/api/**`.
+ * Adapter: `createApiHandler` → TanStack Start `server.handlers` on file
+ * routes under `src/routes/api/**`.
  */
 import type { z } from 'zod'
 import {
@@ -8,7 +8,6 @@ import {
   type ApiHandlerContext,
   type ApiHandlerOptions,
 } from '@/lib/api-handler'
-import { toNextRequest, type NextRequest } from '@/lib/http-server-types'
 
 type RouteHandlerCtx = {
   request: Request
@@ -21,8 +20,7 @@ async function runHandler(
   handler: ReturnType<typeof createApiHandler>,
   ctx: RouteHandlerCtx,
 ): Promise<Response> {
-  const req = toNextRequest(ctx.request)
-  const response = await handler(req, { params: Promise.resolve(ctx.params) })
+  const response = await handler(ctx.request, { params: Promise.resolve(ctx.params) })
   return response instanceof Response ? response : Response.json(response)
 }
 
@@ -47,7 +45,7 @@ export function adaptApiHandler<
 >(
   options: ApiHandlerOptions<TBody, TQuery>,
   handler: (
-    req: NextRequest,
+    req: Request,
     context: ApiHandlerContext<z.infer<TBody>, z.infer<TQuery>>,
   ) => Promise<unknown>,
 ): Partial<Record<HttpMethod, (ctx: RouteHandlerCtx) => Promise<Response>>> {

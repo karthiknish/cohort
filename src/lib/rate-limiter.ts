@@ -1,4 +1,4 @@
-import type { NextRequest } from './http-server-types';
+
 /**
  * Simple in-memory rate limiter using token bucket algorithm.
  * Suitable for single-instance deployments. For distributed systems,
@@ -108,7 +108,7 @@ export function createRateLimitKey(endpoint: string, identifier: string | null):
 /**
  * Get client identifier from request
  */
-export function getClientIdentifier(request: NextRequest): string {
+export function getClientIdentifier(request: Request): string {
     const forwarded = request.headers.get('x-forwarded-for');
     if (forwarded) {
         const [first] = forwarded.split(',');

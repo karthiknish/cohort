@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { completeTikTokOAuthFlow, validateTikTokOAuthState } from '@/services/tiktok-business'
 import { ServiceUnavailableError, ValidationError } from '@/lib/api-errors'
 import { isValidRedirectUrl } from '@/lib/utils'
-import { NextResponse } from '@/lib/http-server-types'
+import { jsonResponse, redirectResponse } from '@/lib/server-response'
 
 const querySchema = z.object({
   code: z.string().optional(),
@@ -33,9 +33,9 @@ const handlers = adaptApiHandler(
       if (context.clientId) url.searchParams.set('clientId', context.clientId)
       redirectTarget = url.toString()
       if (!isValidRedirectUrl(redirectTarget)) {
-        return NextResponse.redirect(new URL('/dashboard?oauth_success=true&provider=tiktok', req.url))
+        return redirectResponse(new URL('/dashboard?oauth_success=true&provider=tiktok', req.url))
       }
-      return NextResponse.redirect(new URL(redirectTarget, req.url))
+      return redirectResponse(new URL(redirectTarget, req.url))
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       console.error('[tiktok.oauth.callback] Error completing OAuth flow:', errorMessage)
@@ -43,7 +43,7 @@ const handlers = adaptApiHandler(
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'tiktok')
       errorUrl.searchParams.set('message', errorMessage)
-      return NextResponse.redirect(errorUrl.toString())
+      return redirectResponse(errorUrl.toString())
     }
   },
 )

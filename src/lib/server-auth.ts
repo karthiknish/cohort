@@ -1,4 +1,4 @@
-import type { NextRequest } from './http-server-types';
+
 import { cache } from 'react';
 import { getToken as getBetterAuthToken } from '@convex-dev/better-auth/utils';
 export interface AuthResult {
@@ -57,12 +57,12 @@ type BetterAuthSessionPayload = {
         activeOrganizationId?: string | null;
     } | null;
 };
-async function fetchBetterAuthSession(request: NextRequest): Promise<BetterAuthSessionPayload | null> {
+async function fetchBetterAuthSession(request: Request): Promise<BetterAuthSessionPayload | null> {
     const cookieHeader = request.headers.get('cookie');
     if (!cookieHeader) {
         return null;
     }
-    const origin = request.nextUrl.origin
+    const origin = new URL(request.url).origin
         || process.env.NEXT_PUBLIC_SITE_URL
         || process.env.NEXT_PUBLIC_APP_URL
         || 'http://localhost:3000';
@@ -99,12 +99,12 @@ async function fetchBetterAuthSession(request: NextRequest): Promise<BetterAuthS
         return null;
     }
 }
-async function fetchConvexTokenFromBetterAuthRoute(request: NextRequest): Promise<string | null> {
+async function fetchConvexTokenFromBetterAuthRoute(request: Request): Promise<string | null> {
     const cookieHeader = request.headers.get('cookie');
     if (!cookieHeader) {
         return null;
     }
-    const origin = request.nextUrl.origin
+    const origin = new URL(request.url).origin
         || process.env.NEXT_PUBLIC_SITE_URL
         || process.env.NEXT_PUBLIC_APP_URL
         || 'http://localhost:3000';
@@ -172,7 +172,7 @@ function buildAuthResultFromBetterAuthSession(sessionPayload: BetterAuthSessionP
         isCron: false,
     };
 }
-async function resolveBetterAuthToken(request: NextRequest): Promise<string | null> {
+async function resolveBetterAuthToken(request: Request): Promise<string | null> {
     try {
         const nextJsToken = await getNextJsToken();
         if (typeof nextJsToken === 'string' && nextJsToken.length > 0) {
@@ -194,7 +194,7 @@ async function resolveBetterAuthToken(request: NextRequest): Promise<string | nu
     }
     return await fetchConvexTokenFromBetterAuthRoute(request);
 }
-function readBearerToken(request: NextRequest): string | null {
+function readBearerToken(request: Request): string | null {
     const authorization = request.headers.get('authorization');
     if (!authorization)
         return null;
@@ -285,7 +285,7 @@ async function buildAuthResultFromConvexToken(token: string): Promise<AuthResult
         return null;
     }
 }
-async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthResult | null> {
+async function tryVerifyBetterAuthSession(request: Request): Promise<AuthResult | null> {
     const token = await resolveBetterAuthToken(request);
     if (token) {
         const authFromToken = await buildAuthResultFromConvexToken(token);
@@ -305,7 +305,7 @@ async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthRes
   * 1. System Cron Key (header)
   * 2. Better Auth session (cookies)
   */
-export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
+export async function authenticateRequest(request: Request): Promise<AuthResult> {
     // 1. Check for Cron Key
     const cronSecret = process.env.INTEGRATIONS_CRON_SECRET;
     const cronKey = request.headers.get('x-cron-key');

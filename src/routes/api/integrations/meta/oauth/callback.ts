@@ -3,7 +3,7 @@ import { adaptApiHandler } from '@/lib/api-handler-start'
 import { z } from 'zod'
 import { completeMetaOAuthFlow, validateMetaOAuthState } from '@/services/meta-business'
 import { isValidRedirectUrl } from '@/lib/utils'
-import { NextResponse } from '@/lib/http-server-types'
+import { jsonResponse, redirectResponse } from '@/lib/server-response'
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -35,16 +35,16 @@ const handlers = adaptApiHandler(
         errorUrl.searchParams.set('oauth_error', 'meta_error')
         errorUrl.searchParams.set('provider', 'facebook')
         errorUrl.searchParams.set('message', errorDescription || error)
-        return NextResponse.redirect(errorUrl.toString())
+        return redirectResponse(errorUrl.toString())
       }
 
       if (!code) {
-        return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=missing_code&provider=facebook`)
+        return redirectResponse(`${appUrl}/dashboard/ads?oauth_error=missing_code&provider=facebook`)
       }
 
       const redirectUri = process.env.META_OAUTH_REDIRECT_URI
       if (!redirectUri) {
-        return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=config_error&provider=facebook`)
+        return redirectResponse(`${appUrl}/dashboard/ads?oauth_error=config_error&provider=facebook`)
       }
 
       let context
@@ -52,10 +52,10 @@ const handlers = adaptApiHandler(
         context = validateMetaOAuthState(state ?? '')
       } catch (stateError) {
         console.error('[meta.oauth.callback] State validation failed:', stateError)
-        return NextResponse.redirect(`${appUrl}/dashboard/ads?error=invalid_state`)
+        return redirectResponse(`${appUrl}/dashboard/ads?error=invalid_state`)
       }
       if (!context.state) {
-        return NextResponse.redirect(`${appUrl}/dashboard/ads?error=invalid_state`)
+        return redirectResponse(`${appUrl}/dashboard/ads?error=invalid_state`)
       }
 
       await completeMetaOAuthFlow({
@@ -77,9 +77,9 @@ const handlers = adaptApiHandler(
 
       if (!isValidRedirectUrl(redirectTarget)) {
         const fallbackPath = context.entryPoint === 'socials' ? '/dashboard/socials' : '/dashboard/ads'
-        return NextResponse.redirect(new URL(`${fallbackPath}?oauth_success=true&provider=facebook`, req.url))
+        return redirectResponse(new URL(`${fallbackPath}?oauth_success=true&provider=facebook`, req.url))
       }
-      return NextResponse.redirect(new URL(redirectTarget, req.url))
+      return redirectResponse(new URL(redirectTarget, req.url))
     } catch (error: unknown) {
       const rawMessage = error instanceof Error ? error.message : 'Unknown error'
       const messageLower = rawMessage.toLowerCase()
@@ -105,7 +105,7 @@ const handlers = adaptApiHandler(
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'facebook')
       errorUrl.searchParams.set('message', userFacingMessage)
-      return NextResponse.redirect(errorUrl.toString())
+      return redirectResponse(errorUrl.toString())
     }
   },
 )
