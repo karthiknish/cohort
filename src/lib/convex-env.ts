@@ -1,7 +1,7 @@
 import { getPublicEnv } from '@/lib/public-env'
 
 function requireEnv(name: string, value: string | undefined): string {
-  if (typeof value === 'string' && value.length > 0) return value
+  if (typeof value === 'string' && value.length > 0) return value.trim()
   throw new Error(`[convex-env] Missing required env var: ${name}`)
 }
 

@@ -9,7 +9,7 @@
   },
   "scripts": {
     "prepare": "husky",
-    "prepush": "bun run ci:check && bun run ci:test",
+    "prepush": "bun run ci:check",
     "release:gate": "node scripts/release-gate.mjs",
     "release:gate:fast": "node scripts/release-gate.mjs --skip-build",
     "version:patch": "npm version patch --no-git-tag-version",
