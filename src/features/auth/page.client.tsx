@@ -225,9 +225,11 @@ function HomeAuthPageContent() {
         }
     };
     const authenticatedDestination = !loading && user ? resolvePostAuthDestination() : null;
-    if (authenticatedDestination) {
-        redirect(authenticatedDestination);
-    }
+    useEffect(() => {
+        if (authenticatedDestination) {
+            push(authenticatedDestination);
+        }
+    }, [authenticatedDestination, push]);
     const handleSubmit = (mode: 'signin' | 'signup') => async (event: FormEvent) => {
         event.preventDefault();
         dispatch({ type: 'setIsSubmitting', value: true });
