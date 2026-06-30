@@ -78,7 +78,7 @@ const SelectContent = ({ className, children, position = 'popper', align, sideOf
         )}
         {...props}
       >
-        <SelectPrimitive.List className="p-1">{children}</SelectPrimitive.List>
+        <SelectPrimitive.List className="max-h-[min(24rem,60vh)] overflow-y-auto p-1">{children}</SelectPrimitive.List>
       </SelectPrimitive.Popup>
     </SelectPrimitive.Positioner>
   </SelectPrimitive.Portal>

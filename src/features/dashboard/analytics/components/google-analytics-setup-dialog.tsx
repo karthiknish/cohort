@@ -65,7 +65,7 @@ export function GoogleAnalyticsSetupDialog({ open, onOpenChange, setupMessage, p
                   }}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="max-h-[24rem]">
+              <SelectContent>
                 {properties.map((property) => (<SelectItem key={property.id} value={property.id} className="py-2.5">
                     <span className="flex flex-col gap-0.5">
                       <span className="font-medium text-foreground">{property.name}</span>
