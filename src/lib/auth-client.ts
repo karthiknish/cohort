@@ -1,5 +1,8 @@
 import { createAuthClient } from "better-auth/react";
-import { convexClient } from "@convex-dev/better-auth/client/plugins";
+import {
+    convexClient,
+    crossDomainClient,
+} from "@convex-dev/better-auth/client/plugins";
 
 export const authClient = createAuthClient({
     // Force same-origin auth calls via the TanStack Start proxy at /api/auth/*.
@@ -14,5 +17,5 @@ export const authClient = createAuthClient({
         refetchOnWindowFocus: false,
         refetchWhenOffline: false,
     },
-    plugins: [convexClient()],
+    plugins: [convexClient(), crossDomainClient()],
 });

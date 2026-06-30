@@ -11,6 +11,7 @@
 import type * as adapter from "../adapter.js";
 import type * as auth from "../auth.js";
 import type * as origins from "../origins.js";
+import type * as triggers from "../triggers.js";
 
 import type {
   ApiFromModules,
@@ -23,6 +24,7 @@ const fullApi: ApiFromModules<{
   adapter: typeof adapter;
   auth: typeof auth;
   origins: typeof origins;
+  triggers: typeof triggers;
 }> = anyApi as any;
 
 /**

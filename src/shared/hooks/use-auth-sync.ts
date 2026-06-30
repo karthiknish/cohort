@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useConvexAuth, useMutation, useQuery } from 'convex/react';
+import { useMemo, useState } from 'react';
+import { useConvexAuth, useQuery } from 'convex/react';
 import { authClient } from '@/lib/auth-client';
 import { deriveAuthPhase, isLoadingPhase, mergeConvexProfile, type AuthPhase } from '@/lib/auth-phase';
 import type { AuthUser } from '@/services/auth';
@@ -53,32 +53,25 @@ function mapSessionUser(raw: Record<string, unknown>): AuthUser {
 /**
  * Official Convex + Better Auth session sync.
  *
- * Composes the standard signals (`authClient.useSession()` + `useConvexAuth()`)
- * with a single Convex query for the domain profile (`api.users.getByLegacyIdSafe`).
- * First-touch profile creation runs through the identity-gated
- * `api.users.ensureProfileOnSignIn` mutation — no custom bootstrap endpoint,
- * no CSRF, no session-cookie polling.
+ * Uses the official `@convex-dev/better-auth` pattern:
+ * - `useConvexAuth()` for authentication state (isLoading, isAuthenticated)
+ * - `authClient.useSession()` for the Better Auth user payload
+ * - `api.users.getByLegacyIdSafe` for the domain profile (role/status/agencyId)
  *
- * `legacyId` is derived from the Convex JWT subject (the authoritative value
- * that the Convex server sees as `identity.subject`), so it always matches the
- * `getByLegacyIdSafe` identity guard. It falls back to the Better Auth user id,
- * which the convex plugin sets as the JWT `sub`.
+ * The `legacyId` is the Better Auth user `id`, which is also the JWT `sub` and
+ * the `legacyId` in the app `users` table (synced via `createAuthFunctions`
+ * triggers in `convex/betterAuth/auth.ts`).
  */
 export function useAuthSync() {
     const [authError, setAuthError] = useState<AuthError | null>(null);
-    // Track whether we've already attempted the first-touch profile creation for
-    // the current legacyId so we don't loop on a persistently-missing row.
-    const bootstrappedLegacyIdRef = useRef<string | null>(null);
 
     const { data: betterAuthSession, isPending: sessionPending, refetch: refetchSession } = authClient.useSession();
     const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
 
     // The authoritative legacyId IS the Better Auth user id. The
     // @convex-dev/better-auth plugin sets `user._id` as the Convex JWT `sub`,
-    // so this value always matches what `getByLegacyIdSafe`'s identity guard
-    // sees on the server. No async token fetch needed — the session object is
-    // available synchronously on the first render, which eliminates the race
-    // where the domain profile query waits for a deferred JWT decode.
+    // and the triggers in `convex/betterAuth/auth.ts` sync it to the app
+    // `users` table as `legacyId`.
     const legacyId = betterAuthSession?.user?.id ?? null;
 
     // Domain profile: role/status/agencyId. Only queried once Convex auth is
@@ -88,51 +81,14 @@ export function useAuthSync() {
         legacyId && isAuthenticated ? { legacyId } : 'skip',
     );
 
-    const ensureProfile = useMutation(api.users.ensureProfileOnSignIn);
-
     const hasSession = Boolean(betterAuthSession?.user);
     const profileLoading = isAuthenticated && (legacyId === null || convexUser === undefined);
-    // Only treat as missing after a bootstrap attempt has been made for this
-    // legacyId. Otherwise the phase flips to sync_failed before the upsert
-    // has a chance to run, causing a flash of the error screen on first login.
+    // Profile is only "missing" if Convex auth is ready, the query returned
+    // null (not undefined), and we've waited long enough for triggers to run.
     const profileMissing = Boolean(legacyId)
         && isAuthenticated
         && !convexAuthLoading
-        && convexUser === null
-        && bootstrappedLegacyIdRef.current === legacyId;
-
-    // First-touch profile creation: when authenticated but the domain row is
-    // missing, run the identity-gated upsert exactly once per legacyId.
-    useEffect(() => {
-        if (!isAuthenticated || !legacyId || convexUser !== null) {
-            return;
-        }
-        // Query still loading (undefined) — wait for it to resolve.
-        if (convexUser === undefined) {
-            return;
-        }
-        if (bootstrappedLegacyIdRef.current === legacyId) {
-            // Already attempted for this account and still missing — surface
-            // error only once. Setting a new error object on every render
-            // would cause an infinite re-render loop (#301).
-            setAuthError((prev) => prev ?? createAuthError(
-                'SESSION_SYNC_FAILED',
-                'Your workspace profile could not be loaded. Please try again or contact support.',
-                undefined,
-                true,
-            ));
-            return;
-        }
-        bootstrappedLegacyIdRef.current = legacyId;
-        void ensureProfile({ legacyId }).catch((error: unknown) => {
-            setAuthError(createAuthError(
-                'SESSION_SYNC_FAILED',
-                error instanceof Error ? error.message : 'Failed to set up your workspace.',
-                undefined,
-                true,
-            ));
-        });
-    }, [isAuthenticated, legacyId, convexUser, ensureProfile]);
+        && convexUser === null;
 
     const user = useMemo<AuthUser | null>(() => {
         const rawUser = betterAuthSession?.user;
@@ -155,7 +111,6 @@ export function useAuthSync() {
     });
 
     const retrySync = async () => {
-        bootstrappedLegacyIdRef.current = null;
         setAuthError(null);
         await refetchSession().catch(() => null);
     };

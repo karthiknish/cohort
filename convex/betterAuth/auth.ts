@@ -1,6 +1,7 @@
 import { createClient } from "@convex-dev/better-auth";
-import { convex } from "@convex-dev/better-auth/plugins";
+import { convex, crossDomain } from "@convex-dev/better-auth/plugins";
 import type { GenericCtx } from "@convex-dev/better-auth/utils";
+import type { FunctionReference } from "convex/server";
 import { betterAuth, type BetterAuthOptions } from "better-auth/minimal";
 
 import { components } from '/_generated/api';
@@ -8,6 +9,7 @@ import type { DataModel } from '/_generated/dataModel';
 import authConfig from "../auth.config";
 import { buildTrustedOrigins, isConvexDevDeployment, isLocalDevUrl, normalizeOrigin } from "./origins";
 import schema from "./schema";
+import { onCreate, onUpdate, onDelete, onUserCreate, onUserUpdate, onUserDelete } from "./triggers";
 
 export { buildTrustedOrigins } from "./origins";
 
@@ -83,12 +85,34 @@ function resolveGoogleOAuthCredentials(): { clientId: string; clientSecret: stri
 }
 
 // Better Auth Component
+// Triggers sync the Better Auth `user` table → the app's `users` table.
+// This eliminates the need for the client-side `ensureProfileOnSignIn` mutation
+// and the fragile legacyId-matching pattern. The Better Auth user `_id` becomes
+// the `legacyId` in the app `users` table, so `getByLegacyIdSafe` always matches.
 export const authComponent = createClient<DataModel, typeof schema>(
   components.betterAuth,
   {
     local: { schema },
     // Logs options.baseURL on each auth request — disable after OAuth is verified.
     verbose: process.env.BETTER_AUTH_DEBUG === "true",
+    triggers: {
+      user: {
+        onCreate: onUserCreate,
+        onUpdate: onUserUpdate,
+        onDelete: onUserDelete,
+      },
+    },
+    authFunctions: {
+      // RegisteredMutation → FunctionReference cast: the runtime shape is
+      // compatible (the adapter only needs a function handle), but TypeScript
+      // tracks them as distinct nominal types.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onCreate: onCreate as unknown as FunctionReference<"mutation", "internal", Record<string, any>>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onUpdate: onUpdate as unknown as FunctionReference<"mutation", "internal", Record<string, any>>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onDelete: onDelete as unknown as FunctionReference<"mutation", "internal", Record<string, any>>,
+    },
   },
 );
 
@@ -195,7 +219,10 @@ export const createAuthOptions = (
       // Send OAuth errors to the Next.js app, not *.convex.site (which has no routes).
       errorURL: `${appOrigin}/auth`,
     },
-    plugins: [convex({ authConfig })],
+    plugins: [
+      crossDomain({ siteUrl: appOrigin }),
+      convex({ authConfig }),
+    ],
   };
 };
 
