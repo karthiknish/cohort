@@ -8,7 +8,7 @@
  * quality and file size for 13.333" wide slides.
  */
 
-const PEXELS_API_KEY = '563492ad6f917000010000014693fcc8e1ce4d7e99bb3737eeb445e7';
+const PEXELS_API_KEY = process.env.PEXELS_API_KEY ?? '';
 const PEXELS_SEARCH_URL = 'https://api.pexels.com/v1/search';
 
 export interface PexelsImage {
@@ -86,6 +86,10 @@ const searchCache = new Map<string, PexelsImage[]>();
  * Requests landscape orientation and sorts by relevance for best results.
  */
 export async function searchImages(query: string, perPage = 8): Promise<PexelsImage[]> {
+    if (!PEXELS_API_KEY) {
+        console.warn('[Pexels] No PEXELS_API_KEY set — skipping Pexels search');
+        return [];
+    }
     if (searchCache.has(query)) {
         return searchCache.get(query)!;
     }
@@ -146,6 +150,11 @@ export async function searchImages(query: string, perPage = 8): Promise<PexelsIm
 /** Fetch a single image for a slide topic, trying multiple query variations. */
 export async function getImageForTopic(topic: string): Promise<PexelsImage | null> {
     const queries = getQueriesForTopic(topic);
+    // Try Unsplash first (larger library, more illustration variety)
+    const { getUnsplashImageForTopic } = await import('./unsplash-images');
+    const unsplashResult = await getUnsplashImageForTopic(queries);
+    if (unsplashResult) return unsplashResult;
+    // Fall back to Pexels
     for (const query of queries) {
         const images = await searchImages(query, 3);
         if (images.length > 0) return images[0] ?? null;
