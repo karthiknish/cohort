@@ -1,6 +1,6 @@
 'use client';
 
-import { ChartGantt, Columns3, LayoutGrid, List } from 'lucide-react';
+import { CalendarDays, ChartGantt, Columns3, LayoutGrid, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { PROJECTS_THEME } from './projects-theme';
@@ -11,6 +11,7 @@ const VIEW_OPTIONS: { mode: ViewMode; label: string; icon: typeof List }[] = [
   { mode: 'grid', label: 'Grid', icon: LayoutGrid },
   { mode: 'board', label: 'Board', icon: Columns3 },
   { mode: 'gantt', label: 'Timeline', icon: ChartGantt },
+  { mode: 'calendar', label: 'Calendar', icon: CalendarDays },
 ];
 
 interface ViewModeSelectorProps {

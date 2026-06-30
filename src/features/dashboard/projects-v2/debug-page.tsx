@@ -269,6 +269,9 @@ function Step15GanttView() {
       error={null}
       onRefresh={noop}
       onMilestoneCreated={noop}
+      onMilestoneUpdated={noop}
+      onMoveMilestone={noop}
+      onUpdateMilestone={async () => {}}
     />
   );
 }
@@ -326,6 +329,9 @@ function Step17ListState() {
       milestonesError={ctx.milestonesError}
       onMilestoneRefresh={() => ctx.loadMilestones(ctx.projects.map((p) => p.id))}
       onMilestoneCreated={ctx.handleMilestoneCreated}
+      onMilestoneUpdated={ctx.handleMilestoneCreated}
+      onMoveMilestone={() => {}}
+      onUpdateMilestone={async () => {}}
     />
   );
 }

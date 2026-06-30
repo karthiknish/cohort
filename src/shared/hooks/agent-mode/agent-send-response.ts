@@ -34,7 +34,7 @@ export function applyAgentResponse({ response, trimmedText, sentAttachments, con
     const attachmentNames = sentAttachments.map((attachment) => attachment.name);
     const usedContext = attachmentNames.length > 0 ? { attachmentNames } : undefined;
     if (response.action === 'navigate' && response.route) {
-        addMessage('agent', response.message || 'Navigating...', response.route, derived.status, { ...derived, usedContext }, { persistedId: response.agentMessageId, steps });
+        addMessage('agent', response.message || 'Navigating...', response.route, derived.status, { ...derived.metadata, usedContext }, { persistedId: response.agentMessageId, steps });
         setTimeout(() => {
             router.push(response.route!);
             if (!shouldKeepAgentOpenOnNavigate(readAgentPanelLayout())) {
@@ -48,13 +48,13 @@ export function applyAgentResponse({ response, trimmedText, sentAttachments, con
             : typeof response.executeResult.data?.route === 'string' && response.executeResult.data.route.length > 0
                 ? response.executeResult.data.route
                 : null;
-        addMessage('agent', response.message || 'Action completed', executeRoute, derived.status, { ...derived, usedContext }, { persistedId: response.agentMessageId, steps });
+        addMessage('agent', response.message || 'Action completed', executeRoute, derived.status, { ...derived.metadata, usedContext }, { persistedId: response.agentMessageId, steps });
         if (response.executeResult.success) {
             setPendingAttachments([]);
         }
     }
     else {
-        addMessage('agent', response.message || "I didn't quite understand that.", response.route ?? null, derived.status, { ...derived, usedContext }, { persistedId: response.agentMessageId, steps });
+        addMessage('agent', response.message || "I didn't quite understand that.", response.route ?? null, derived.status, { ...derived.metadata, usedContext }, { persistedId: response.agentMessageId, steps });
         if (!hasUsableAttachmentContext(sentAttachments)) {
             setPendingAttachments([]);
         }

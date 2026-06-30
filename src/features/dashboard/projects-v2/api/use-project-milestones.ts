@@ -57,7 +57,8 @@ export function useProjectMilestones({
   const [milestonesRefreshKey, setMilestonesRefreshKey] = useState(0);
 
   const projectIds = useMemo(() => projects.map((project) => project.id), [projects]);
-  const milestonesQueryEnabled = !isPreviewMode && viewMode === 'gantt' && Boolean(workspaceId && userId);
+  const milestonesQueryEnabled =
+    !isPreviewMode && (viewMode === 'gantt' || viewMode === 'calendar') && Boolean(workspaceId && userId);
   const patchScopeKey = `${viewMode}:${selectedClientId ?? ''}:${projectIds.join(',')}`;
 
   const milestonesRealtime = useQuery(
@@ -74,7 +75,7 @@ export function useProjectMilestones({
   });
 
   const syncedMilestones = useMemo(() => {
-    if (viewMode !== 'gantt') return {} as Record<string, MilestoneRecord[]>;
+    if (viewMode !== 'gantt' && viewMode !== 'calendar') return {} as Record<string, MilestoneRecord[]>;
     if (isPreviewMode) return getPreviewProjectMilestones(selectedClientId ?? null, projectIds);
     if (!milestonesRealtime || typeof milestonesRealtime !== 'object') {
       return {} as Record<string, MilestoneRecord[]>;
@@ -97,7 +98,7 @@ export function useProjectMilestones({
   }, [projectIds, syncedMilestones]);
 
   const milestonesByProject = useMemo(() => {
-    if (viewMode !== 'gantt') return {};
+    if (viewMode !== 'gantt' && viewMode !== 'calendar') return {};
     const merged = { ...syncedMilestones };
     for (const [projectId, extras] of Object.entries(milestonePatches)) {
       const syncedIds = new Set((merged[projectId] ?? []).map((milestone) => milestone.id));
@@ -107,12 +108,12 @@ export function useProjectMilestones({
     return merged;
   }, [viewMode, syncedMilestones, milestonePatches]);
 
-  const milestonesLoading = viewMode === 'gantt' && milestonesQueryEnabled && milestonesRealtime === undefined;
-  const milestonesError = viewMode === 'gantt' ? milestonesQueryError : null;
+  const milestonesLoading = (viewMode === 'gantt' || viewMode === 'calendar') && milestonesQueryEnabled && milestonesRealtime === undefined;
+  const milestonesError = (viewMode === 'gantt' || viewMode === 'calendar') ? milestonesQueryError : null;
 
   const loadMilestones = useCallback(
     async (_targetProjectIds: string[]) => {
-      if (viewMode !== 'gantt') return;
+      if (viewMode !== 'gantt' && viewMode !== 'calendar') return;
       setMilestonePatches({});
       if (!isPreviewMode) setMilestonesRefreshKey((previous) => previous + 1);
     },

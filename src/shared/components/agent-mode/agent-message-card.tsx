@@ -430,7 +430,7 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
     if (type === 'user') {
         return (<LazyMotion features={domAnimation}>
         <m.div initial={AGENT_MESSAGE_INITIAL} animate={AGENT_MESSAGE_ANIMATE} className="flex flex-col items-end gap-1">
-          <div className={cn('max-w-[min(85%,28rem)] rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed text-primary-foreground shadow-sm', message.lifecycle === 'failed'
+          <div className={cn('max-w-[90%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed text-primary-foreground shadow-sm', message.lifecycle === 'failed'
                 ? 'bg-destructive/90 ring-1 ring-destructive/30'
                 : 'bg-gradient-to-br from-primary to-primary/90 ring-1 ring-primary/20', message.lifecycle === 'sending' && 'opacity-75')}>
             <AgentMentionText text={content} mentionLabels={mentionLabels} mentionClassName="bg-primary-foreground/15 text-primary-foreground ring-primary-foreground/20"/>
@@ -470,7 +470,7 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
         return (<LazyMotion features={domAnimation}>
         <m.div initial={AGENT_MESSAGE_ENHANCED_INITIAL} animate={AGENT_MESSAGE_ENHANCED_ANIMATE} transition={AGENT_MESSAGE_TRANSITION} className="flex items-start gap-3">
           <AgentAvatar />
-          <output aria-live={liveRegion} className={cn('min-w-0 max-w-[min(90%,32rem)] flex-1 overflow-hidden rounded-2xl rounded-tl-md border shadow-sm', surfaces.shell)}>
+          <output aria-live={liveRegion} className={cn('min-w-0 max-w-[44rem] flex-1 overflow-hidden rounded-2xl rounded-tl-md border shadow-sm', surfaces.shell)}>
             <div className={cn('flex items-center gap-2 border-b px-4 py-2.5', surfaces.header)}>
               <StatusGlyph tone={tone}/>
               <span className={cn('min-w-0 flex-1 text-sm font-medium', accents.title)}>{heading}</span>
@@ -547,7 +547,7 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
     return (<LazyMotion features={domAnimation}>
       <m.div initial={AGENT_MESSAGE_INITIAL} animate={AGENT_MESSAGE_ANIMATE} className="flex items-start gap-3">
         <AgentAvatar />
-        <div className="max-w-[min(90%,32rem)] rounded-2xl rounded-tl-md border border-border/50 bg-card px-4 py-3 text-sm leading-relaxed text-foreground shadow-sm">
+        <div className="max-w-[44rem] flex-1 rounded-2xl rounded-tl-md border border-border/50 bg-card px-4 py-3 text-sm leading-relaxed text-foreground shadow-sm">
           <AgentPlainText text={content} mentionLabels={mentionLabels} mentionClassName="bg-primary/10 text-primary ring-primary/15"/>
         </div>
       </m.div>

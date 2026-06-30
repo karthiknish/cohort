@@ -11,6 +11,7 @@ import { ListView } from './views/list-view';
 import { GridView } from './views/grid-view';
 import { BoardView } from './views/board-view';
 import { GanttView } from './views/gantt-view';
+import { CalendarView } from './views/calendar-view';
 import type { MilestoneRecord } from '@/types/milestones';
 import type { ViewMode } from '../types';
 
@@ -42,6 +43,18 @@ export type ProjectsListStateProps = {
   milestonesError: string | null;
   onMilestoneRefresh: () => void;
   onMilestoneCreated: (milestone: MilestoneRecord) => void;
+  onMilestoneUpdated: (milestone: MilestoneRecord) => void;
+  onMoveMilestone: (milestone: MilestoneRecord, startDate: Date, endDate: Date | null) => void;
+  onUpdateMilestone: (
+    milestone: MilestoneRecord,
+    patch: {
+      title?: string;
+      status?: string;
+      description?: string | null;
+      startDateMs?: number | null;
+      endDateMs?: number | null;
+    },
+  ) => Promise<void>;
 };
 
 export function ProjectsListState({
@@ -71,6 +84,9 @@ export function ProjectsListState({
   milestonesError,
   onMilestoneRefresh,
   onMilestoneCreated,
+  onMilestoneUpdated,
+  onMoveMilestone,
+  onUpdateMilestone,
 }: ProjectsListStateProps) {
   const openCreateProject = () => {
     document.getElementById('create-project-trigger')?.click();
@@ -192,6 +208,28 @@ export function ProjectsListState({
           error={milestonesError}
           onRefresh={onMilestoneRefresh}
           onMilestoneCreated={onMilestoneCreated}
+          onMilestoneUpdated={onMilestoneUpdated}
+          onMoveMilestone={onMoveMilestone}
+          onUpdateMilestone={onUpdateMilestone}
+        />
+        {loadMoreFooter}
+      </div>
+    );
+  }
+
+  if (viewMode === 'calendar') {
+    return (
+      <div className="space-y-3">
+        <CalendarView
+          projects={sortedProjects}
+          milestones={milestonesByProject}
+          loading={milestonesLoading}
+          error={milestonesError}
+          onRefresh={onMilestoneRefresh}
+          onMilestoneCreated={onMilestoneCreated}
+          onMilestoneUpdated={onMilestoneUpdated}
+          onMoveMilestone={onMoveMilestone}
+          onUpdateMilestone={onUpdateMilestone}
         />
         {loadMoreFooter}
       </div>

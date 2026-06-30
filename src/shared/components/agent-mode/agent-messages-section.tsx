@@ -51,7 +51,7 @@ export function AgentMessagesSection({ isConversationLoading, isProcessing, ment
               <Loader2 className="size-6 animate-spin text-primary" aria-hidden/>
               <p className="text-sm text-muted-foreground">Loading conversation…</p>
             </div>
-          </div>) : (<div className="mx-auto w-full max-w-3xl space-y-4 pb-2">
+          </div>) : (<div className="w-full space-y-4 pb-2">
             {messages.map((message, index) => {
                 const timestamp = toMessageTimestamp(message.timestamp);
                 const dayKey = Number.isNaN(timestamp.getTime()) ? null : messageDayKey(timestamp);

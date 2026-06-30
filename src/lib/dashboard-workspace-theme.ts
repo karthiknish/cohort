@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 /** Shared layout tokens for dashboard feature pages (tasks, projects, collaboration inbox). */
 export const DASHBOARD_WORKSPACE_THEME = {
-    page: 'mx-auto max-w-7xl space-y-6 pb-12',
+    page: 'w-full space-y-6 pb-12',
     summaryStrip: 'rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-muted/20 p-4 shadow-sm sm:px-5',
     workspace: 'overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm ring-1 ring-border/40',
     workspaceRail: 'flex flex-col gap-3 border-b border-border/60 bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between',

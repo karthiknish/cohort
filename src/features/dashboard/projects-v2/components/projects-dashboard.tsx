@@ -42,6 +42,7 @@ import { ViewModeSelector } from './view-mode-selector';
 import { PROJECTS_THEME } from './projects-theme';
 import type { StatusFilter } from '../types';
 import { useProjectsPageContext } from './projects-page-provider';
+import { useMilestoneMutations } from '../hooks/use-milestone-mutations';
 
 export function ProjectsDashboard() {
   const {
@@ -367,6 +368,14 @@ function ProjectsBacklogSection() {
     viewMode,
   } = useProjectsPageContext();
 
+  const { user } = useAuth();
+  const { isPreviewMode } = usePreview();
+  const { moveMilestone, updateMilestoneDetails } = useMilestoneMutations({
+    workspaceId: user?.agencyId ?? null,
+    isPreviewMode,
+    onMilestoneUpdated: handleMilestoneCreated,
+  });
+
   const handleMilestoneRefresh = () => {
     void loadMilestones(projects.map((project) => project.id));
   };
@@ -473,6 +482,9 @@ function ProjectsBacklogSection() {
           milestonesError={milestonesError}
           onMilestoneRefresh={handleMilestoneRefresh}
           onMilestoneCreated={handleMilestoneCreated}
+          onMilestoneUpdated={handleMilestoneCreated}
+          onMoveMilestone={moveMilestone}
+          onUpdateMilestone={updateMilestoneDetails}
         />
       </CardContent>
     </Card>

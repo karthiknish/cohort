@@ -27,12 +27,19 @@ export function useClientRelativeTime(value: string | number | Date | null | und
     }
     return formatClientRelativeTime(value);
 }
+let cachedNowMs = 0;
 function subscribeNow(onStoreChange: () => void) {
-    const intervalId = window.setInterval(onStoreChange, 60000);
+    if (cachedNowMs === 0) {
+        cachedNowMs = Date.now();
+    }
+    const intervalId = window.setInterval(() => {
+        cachedNowMs = Date.now();
+        onStoreChange();
+    }, 60000);
     return () => window.clearInterval(intervalId);
 }
 function getNowMsSnapshot() {
-    return Date.now();
+    return cachedNowMs;
 }
 /** Milliseconds since epoch on the client; `0` during SSR. */
 export function useClientNowMs(): number {

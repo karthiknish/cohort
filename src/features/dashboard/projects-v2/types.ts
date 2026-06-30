@@ -8,7 +8,7 @@ export type { MilestoneRecord };
 export type StatusFilter = 'all' | ProjectStatus;
 export type SortField = 'updatedAt' | 'createdAt' | 'name' | 'status' | 'taskCount';
 export type SortDirection = 'asc' | 'desc';
-export type ViewMode = 'list' | 'grid' | 'board' | 'gantt';
+export type ViewMode = 'list' | 'grid' | 'board' | 'gantt' | 'calendar';
 
 export type ProjectPageCursor = {
   fieldValue: number;
