@@ -386,13 +386,14 @@ export function useAnalyticsPageController() {
             notifyFailure({ title: 'Property required', message: 'Select a Google Analytics property before syncing.' });
             return;
         }
-        void googleAnalyticsSyncMutation.mutateAsync({ periodDays, clientId: selectedClientId })
+        void googleAnalyticsSyncMutation.mutateAsync({ periodDays, clientId: selectedClientId, workspaceId: workspaceId ?? '' })
             .then((result) => {
-            const propertyName = result?.propertyName;
-            const writtenDays = result?.written ?? 0;
+            const synced = result?.synced ?? false;
             notifySuccess({
-                title: 'Google Analytics synced',
-                message: propertyName ? `Imported ${writtenDays} day(s) from ${propertyName}.` : `Imported ${writtenDays} day(s).`,
+                title: synced ? 'Google Analytics synced' : 'Sync queued',
+                message: synced
+                    ? `Imported the latest ${periodDays} day(s) from your Google Analytics property.`
+                    : 'Sync has been queued. Metrics will refresh shortly.',
             });
             return refreshGoogleAnalyticsStatus();
         })

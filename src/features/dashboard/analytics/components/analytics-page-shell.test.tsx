@@ -87,6 +87,8 @@ describe('AnalyticsPageShell', () => {
             metricsNextCursor: null,
             metricsRefreshing: false,
             revenuePerSession: 26.6,
+            revenueComparable: true,
+            formatRevenue: (amount: number | null | undefined) => `$${amount ?? 0}`,
             sessionsPerUser: 1.3,
             setGaDisconnectDialogOpen: () => { },
             setGaSelectedPropertyId: () => { },

@@ -26,6 +26,7 @@ export type GoogleAnalyticsStory = {
     topSessionsDay: DailyAnalyticsPoint | null;
     topConversionDay: DailyAnalyticsPoint | null;
     topRevenueDay: DailyAnalyticsPoint | null;
+    topUsersDay: DailyAnalyticsPoint | null;
 };
 function buildDelta(current: number | null, previous: number | null): MetricDelta {
     const currentValue = current ?? 0;
@@ -52,7 +53,7 @@ function buildDelta(current: number | null, previous: number | null): MetricDelt
         direction: deltaPercent > 0 ? 'up' : 'down',
     };
 }
-function pickTopDay(chartData: DailyAnalyticsPoint[], key: 'sessions' | 'conversions' | 'revenue') {
+function pickTopDay(chartData: DailyAnalyticsPoint[], key: 'users' | 'sessions' | 'conversions' | 'revenue') {
     if (chartData.length === 0)
         return null;
     return chartData.reduce<DailyAnalyticsPoint | null>((best, point) => {
@@ -84,5 +85,6 @@ export function buildGoogleAnalyticsStory(params: {
         topSessionsDay: pickTopDay(chartData, 'sessions'),
         topConversionDay: pickTopDay(chartData, 'conversions'),
         topRevenueDay: pickTopDay(chartData, 'revenue'),
+        topUsersDay: pickTopDay(chartData, 'users'),
     };
 }

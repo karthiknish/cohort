@@ -225,7 +225,8 @@ function AnalyticsSyncingBanner() {
     </Alert>);
 }
 function AnalyticsPerformanceSection() {
-    const { algorithmic, avgSessionsPerDay, avgUsersPerDay, breakdowns, chartData, conversionRate, filteredMetrics, handleLoadMoreMetrics, handleRefreshInsights, handleRefreshMetrics, initialInsightsLoading, initialMetricsLoading, insights, insightsError, insightsLoading, insightsRefreshing, isPreviewMode, metricsLoading, metricsLoadingMore, metricsNextCursor, metricsRefreshing, formatRevenue, revenuePerSession, sessionsPerUser, story, totals, } = useAnalyticsPageContext();
+    const { algorithmic, avgSessionsPerDay, avgUsersPerDay, breakdowns, chartData, conversionRate, filteredMetrics, handleLoadMoreMetrics, handleRefreshInsights, handleRefreshMetrics, initialInsightsLoading, initialMetricsLoading, insights, insightsError, insightsLoading, insightsRefreshing, isPreviewMode, metricsLoading, metricsLoadingMore, metricsNextCursor, metricsRefreshing, formatRevenue, revenueComparable, revenuePerSession, sessionsPerUser, story, totals, } = useAnalyticsPageContext();
+    const hasRevenue = revenueComparable && (totals.revenue ?? 0) > 0;
     return (<div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4">
         <h2 className="text-sm font-semibold text-foreground">Property performance</h2>
@@ -247,16 +248,17 @@ function AnalyticsPerformanceSection() {
         </div>
       </div>
 
-      <AnalyticsSummaryCards totals={totals} deltas={story.deltas} formatRevenue={formatRevenue} isLoading={initialMetricsLoading} sparklineData={chartData.length >= 2 ? {
+      <AnalyticsSummaryCards totals={totals} deltas={story.deltas} formatRevenue={formatRevenue} isLoading={initialMetricsLoading} hasRevenue={hasRevenue} conversionRate={conversionRate} sparklineData={chartData.length >= 2 ? {
         users: chartData.map((d) => d.users),
         sessions: chartData.map((d) => d.sessions),
         conversions: chartData.map((d) => d.conversions),
         revenue: chartData.map((d) => d.revenue),
+        conversionRate: chartData.map((d) => d.conversionRate),
       } : undefined}/>
-      <AnalyticsMetricCards avgUsersPerDay={avgUsersPerDay} avgSessionsPerDay={avgSessionsPerDay} revenuePerSession={revenuePerSession} sessionsPerUser={sessionsPerUser} formatRevenue={formatRevenue} isLoading={initialMetricsLoading}/>
-      <AnalyticsDeepDiveSection story={story} formatRevenue={formatRevenue}/>
-      <AnalyticsBreakdownSection breakdowns={breakdowns} formatRevenue={formatRevenue}/>
-      <AnalyticsCharts chartData={chartData} formatRevenue={formatRevenue} isMetricsLoading={metricsLoading} initialMetricsLoading={initialMetricsLoading}/>
+      <AnalyticsMetricCards avgUsersPerDay={avgUsersPerDay} avgSessionsPerDay={avgSessionsPerDay} revenuePerSession={revenuePerSession} sessionsPerUser={sessionsPerUser} conversionRate={conversionRate} hasRevenue={hasRevenue} formatRevenue={formatRevenue} isLoading={initialMetricsLoading}/>
+      <AnalyticsDeepDiveSection story={story} formatRevenue={formatRevenue} hasRevenue={hasRevenue}/>
+      <AnalyticsBreakdownSection breakdowns={breakdowns} formatRevenue={hasRevenue ? formatRevenue : undefined}/>
+      <AnalyticsCharts chartData={chartData} formatRevenue={formatRevenue} isMetricsLoading={metricsLoading} initialMetricsLoading={initialMetricsLoading} hasRevenue={hasRevenue}/>
       <AnalyticsInsightsSection insights={insights} algorithmic={algorithmic} insightsError={insightsError} insightsLoading={insightsLoading} insightsRefreshing={insightsRefreshing} initialInsightsLoading={initialInsightsLoading} onRefreshInsights={handleRefreshInsights}/>
     </div>);
 }

@@ -1,51 +1,65 @@
 'use client';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api-client';
+import { useAction } from 'convex/react';
+import { useCallback, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { logError } from '@/lib/convex-errors';
 import { notifyFailure } from '@/lib/notifications';
+import { adsIntegrationsApi } from '@/lib/convex-api';
 type SyncGoogleAnalyticsParams = {
     periodDays: number;
     clientId?: string | null;
+    workspaceId: string;
 };
 type SyncGoogleAnalyticsResponse = {
     written: number;
     propertyName?: string;
     error?: string;
+    synced?: boolean;
 };
-/** GA import can be slow; still cap client wait so UI never spins forever. */
-export const GOOGLE_ANALYTICS_SYNC_CLIENT_TIMEOUT_MS = 180000;
-export async function syncGoogleAnalytics(params: SyncGoogleAnalyticsParams): Promise<SyncGoogleAnalyticsResponse> {
-    const searchParams = new URLSearchParams({ days: String(params.periodDays) });
-    if (params.clientId) {
-        searchParams.set('clientId', params.clientId);
-    }
-    const url = `/api/analytics/google-analytics/sync?${searchParams.toString()}`;
-    return await apiFetch<SyncGoogleAnalyticsResponse>(url, {
-        method: 'POST',
-        credentials: 'same-origin',
-        body: JSON.stringify({}),
-        timeoutMs: GOOGLE_ANALYTICS_SYNC_CLIENT_TIMEOUT_MS,
-    });
-}
 /**
- * Hook for syncing Google Analytics data using TanStack Query mutation
- * Automatically invalidates analytics queries on success
+ * Hook for syncing Google Analytics data via the Convex `runManualSync` action.
+ * This bypasses the HTTP route which relied on CONVEX_DEPLOY_KEY (unavailable
+ * in the TanStack Start server runtime) and caused 500 errors.
  */
 export function useGoogleAnalyticsSync() {
     const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: syncGoogleAnalytics,
-        onSuccess: () => {
-            // Invalidate analytics-related queries to refresh data
+    const runManualSync = useAction(adsIntegrationsApi.runManualSync);
+    const [isPending, setIsPending] = useState(false);
+    const pendingRef = useRef(false);
+    const mutateAsync = useCallback(async (params: SyncGoogleAnalyticsParams): Promise<SyncGoogleAnalyticsResponse> => {
+        if (pendingRef.current) {
+            return { written: 0, synced: false };
+        }
+        pendingRef.current = true;
+        setIsPending(true);
+        try {
+            const result = await runManualSync({
+                workspaceId: params.workspaceId,
+                providerId: 'google-analytics',
+                clientId: params.clientId ?? undefined,
+            });
             void queryClient.invalidateQueries({ queryKey: ['analytics'] });
             void queryClient.invalidateQueries({ queryKey: ['metrics'] });
-        },
-        onError: (error) => {
+            return {
+                written: 0,
+                synced: result?.synced ?? false,
+            };
+        }
+        catch (error) {
             logError(error, 'useGoogleAnalyticsSync');
             notifyFailure({
                 title: 'Sync failed',
                 message: 'Unable to sync Google Analytics data. Please try again.',
             });
-        },
-    });
+            throw error;
+        }
+        finally {
+            pendingRef.current = false;
+            setIsPending(false);
+        }
+    }, [queryClient, runManualSync]);
+    return {
+        isPending,
+        mutateAsync,
+    };
 }

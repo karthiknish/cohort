@@ -35,6 +35,7 @@ interface AnalyticsChartsProps {
     formatRevenue: (amount: number | null | undefined) => string;
     isMetricsLoading: boolean;
     initialMetricsLoading: boolean;
+    hasRevenue: boolean;
 }
 function ChartCardHeader({ title, description, tip, }: {
     title: string;
@@ -62,7 +63,7 @@ function ChartCardHeader({ title, description, tip, }: {
     </CardHeader>);
 }
 const LEGEND_CONTENT = <ChartLegendContent className="pt-3 text-xs text-muted-foreground"/>;
-export function AnalyticsCharts({ chartData, formatRevenue, isMetricsLoading, initialMetricsLoading, }: AnalyticsChartsProps) {
+export function AnalyticsCharts({ chartData, formatRevenue, isMetricsLoading, initialMetricsLoading, hasRevenue, }: AnalyticsChartsProps) {
     const showChartSkeleton = initialMetricsLoading || (isMetricsLoading && chartData.length === 0);
     const formatCurrencyTick = (value: number | string) => formatRevenue(Number(value));
     const usersSessionsTooltipContent = <AnalyticsUsersSessionsTooltip chartData={chartData}/>;
@@ -97,7 +98,7 @@ export function AnalyticsCharts({ chartData, formatRevenue, isMetricsLoading, in
         </CardContent>
       </Card>
 
-      <Card className={CHART_CARD_CLASS}>
+      {hasRevenue ? (<Card className={CHART_CARD_CLASS}>
         <ChartCardHeader title="Revenue trend" description="Daily revenue from Google Analytics" tip="Hover to compare revenue, conversions, and revenue per session for each day."/>
         <CardContent className="pt-6">
           {showChartSkeleton ? (<Skeleton className="h-[280px] w-full rounded-lg"/>) : chartData.length === 0 ? (<AnalyticsEmptyState variant="no-filters" title="No performance data" description="There is no performance data for the selected date range." className="h-[280px] py-6"/>) : (<ChartContainer config={revenueChartConfig} className={ANALYTICS_CHART_CONTAINER_CLASS}>
@@ -117,7 +118,7 @@ export function AnalyticsCharts({ chartData, formatRevenue, isMetricsLoading, in
               </AreaChart>
             </ChartContainer>)}
         </CardContent>
-      </Card>
+      </Card>) : null}
 
       <Card className={CHART_CARD_CLASS}>
         <ChartCardHeader title="Conversions" description="Daily conversion volume" tip="Hover bars to see conversions with session context and day-over-day change."/>

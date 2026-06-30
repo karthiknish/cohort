@@ -1,5 +1,5 @@
 'use client';
-import { Activity, DollarSign, Info, Minus, TrendingDown, TrendingUp, Users, type LucideIcon } from 'lucide-react';
+import { Activity, DollarSign, Info, Minus, Percent, TrendingDown, TrendingUp, Users, type LucideIcon } from 'lucide-react';
 import { DASHBOARD_THEME, KPI_ACCENTS, kpiAccentStyle, type KpiAccentKey } from '@/lib/dashboard-theme';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -22,11 +22,14 @@ interface AnalyticsSummaryCardsProps {
     };
     formatRevenue: (amount: number | null | undefined) => string;
     isLoading: boolean;
+    hasRevenue: boolean;
+    conversionRate: number;
     sparklineData?: {
         users: number[];
         sessions: number[];
         conversions: number[];
         revenue: number[];
+        conversionRate?: number[];
     };
 }
 function formatDeltaLabel(delta: MetricDelta): string | null {
@@ -96,11 +99,11 @@ function SummaryStatCard({ label, tooltip, value, delta, icon: Icon, isLoading, 
       </CardContent>
     </Card>);
 }
-export function AnalyticsSummaryCards({ totals, deltas, formatRevenue, isLoading, sparklineData }: AnalyticsSummaryCardsProps) {
+export function AnalyticsSummaryCards({ totals, deltas, formatRevenue, isLoading, hasRevenue, conversionRate, sparklineData }: AnalyticsSummaryCardsProps) {
     return (<div className={DASHBOARD_THEME.stats.container}>
       <SummaryStatCard label="Total users" tooltip="Unique users in Google Analytics for the selected period, compared with the prior period of equal length." value={totals.users.toLocaleString()} delta={deltas.users} icon={Users} isLoading={isLoading} accentKey="users" sparklineData={sparklineData?.users}/>
       <SummaryStatCard label="Sessions" tooltip="Total sessions in the selected range. Sessions can exceed users when people return multiple times." value={totals.sessions.toLocaleString()} delta={deltas.sessions} icon={Activity} isLoading={isLoading} accentKey="sessions" sparklineData={sparklineData?.sessions}/>
       <SummaryStatCard label="Conversions" tooltip="Completed conversion events imported from your connected Google Analytics property." value={totals.conversions.toLocaleString()} delta={deltas.conversions} icon={TrendingUp} isLoading={isLoading} accentKey="conversions" sparklineData={sparklineData?.conversions}/>
-      <SummaryStatCard label="Revenue" tooltip="Revenue attributed in Google Analytics for the selected period." value={formatRevenue(totals.revenue)} delta={deltas.revenue} icon={DollarSign} isLoading={isLoading} accentKey="revenue" sparklineData={sparklineData?.revenue}/>
+      {hasRevenue ? (<SummaryStatCard label="Revenue" tooltip="Revenue attributed in Google Analytics for the selected period." value={formatRevenue(totals.revenue)} delta={deltas.revenue} icon={DollarSign} isLoading={isLoading} accentKey="revenue" sparklineData={sparklineData?.revenue}/>) : (<SummaryStatCard label="Conversion rate" tooltip="Conversions divided by sessions for the selected period. Values above 2-3% are typical for content sites." value={`${conversionRate.toFixed(1)}%`} delta={deltas.conversions} icon={Percent} isLoading={isLoading} accentKey="conversions" sparklineData={sparklineData?.conversionRate}/>)}
     </div>);
 }

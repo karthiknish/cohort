@@ -18,11 +18,18 @@ function formatDayLabel(value: string | null | undefined) {
 }
 const HIGHLIGHT_CARD = 'rounded-lg border border-border/60 bg-muted/30 p-4';
 const HIGHLIGHT_LABEL = 'mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground';
-export function AnalyticsDeepDiveSection({ story, formatRevenue, }: {
+export function AnalyticsDeepDiveSection({ story, formatRevenue, hasRevenue, }: {
     story: GoogleAnalyticsStory;
     formatRevenue: (amount: number | null | undefined) => string;
+    hasRevenue: boolean;
 }) {
     const momentumVariant = story.momentum === 'up' ? 'success' : story.momentum === 'down' ? 'warning' : 'secondary';
+    const deltaItems = [
+        { key: 'users', label: 'Users', icon: Users, delta: story.deltas.users },
+        { key: 'sessions', label: 'Sessions', icon: Activity, delta: story.deltas.sessions },
+        { key: 'conversions', label: 'Conversions', icon: TrendingUp, delta: story.deltas.conversions },
+        ...(hasRevenue ? [{ key: 'revenue' as const, label: 'Revenue', icon: DollarSign, delta: story.deltas.revenue }] : []),
+    ];
     return (<div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
       <Card className={DASHBOARD_THEME.cards.base}>
         <CardHeader className={DASHBOARD_THEME.cards.header}>
@@ -39,12 +46,7 @@ export function AnalyticsDeepDiveSection({ story, formatRevenue, }: {
           </div>
         </CardHeader>
         <CardContent className="grid gap-4 pt-2 md:grid-cols-2">
-          {[
-            { key: 'users', label: 'Users', icon: Users, delta: story.deltas.users },
-            { key: 'sessions', label: 'Sessions', icon: Activity, delta: story.deltas.sessions },
-            { key: 'conversions', label: 'Conversions', icon: TrendingUp, delta: story.deltas.conversions },
-            { key: 'revenue', label: 'Revenue', icon: DollarSign, delta: story.deltas.revenue },
-        ].map((item) => (<div key={item.key} className={HIGHLIGHT_CARD}>
+          {deltaItems.map((item) => (<div key={item.key} className={HIGHLIGHT_CARD}>
               <div className={HIGHLIGHT_LABEL}>
                 <item.icon className="size-3.5"/>
                 {item.label}
@@ -87,7 +89,7 @@ export function AnalyticsDeepDiveSection({ story, formatRevenue, }: {
               </p>
               <p className="text-xs text-muted-foreground">{formatDayLabel(story.topSessionsDay?.date)}</p>
             </div>
-            <div className={HIGHLIGHT_CARD}>
+            {hasRevenue ? (<div className={HIGHLIGHT_CARD}>
               <div className={HIGHLIGHT_LABEL}>
                 <Sparkles className="size-3.5"/>
                 Peak revenue
@@ -96,7 +98,16 @@ export function AnalyticsDeepDiveSection({ story, formatRevenue, }: {
                 {story.topRevenueDay ? formatRevenue(story.topRevenueDay.revenue) : '—'}
               </p>
               <p className="text-xs text-muted-foreground">{formatDayLabel(story.topRevenueDay?.date)}</p>
-            </div>
+            </div>) : (<div className={HIGHLIGHT_CARD}>
+              <div className={HIGHLIGHT_LABEL}>
+                <Users className="size-3.5"/>
+                Peak users
+              </div>
+              <p className="text-lg font-semibold text-foreground">
+                {story.topUsersDay?.users.toLocaleString() ?? '—'}
+              </p>
+              <p className="text-xs text-muted-foreground">{formatDayLabel(story.topUsersDay?.date)}</p>
+            </div>)}
           </div>
           <div className={HIGHLIGHT_CARD}>
             <div className={HIGHLIGHT_LABEL}>Top conversion day</div>

@@ -8,6 +8,8 @@ interface AnalyticsMetricCardsProps {
     avgSessionsPerDay: number;
     revenuePerSession: number | null;
     sessionsPerUser: number;
+    conversionRate: number;
+    hasRevenue: boolean;
     formatRevenue: (amount: number | null | undefined) => string;
     isLoading: boolean;
 }
@@ -25,12 +27,12 @@ function SecondaryMetric({ label, tooltip, value, isLoading, }: {
       {isLoading ? (<Skeleton className="h-6 w-16 rounded-md"/>) : (<p className="text-lg font-semibold tracking-tight text-foreground">{value}</p>)}
     </div>);
 }
-export function AnalyticsMetricCards({ avgUsersPerDay, avgSessionsPerDay, revenuePerSession, sessionsPerUser, formatRevenue, isLoading, }: AnalyticsMetricCardsProps) {
+export function AnalyticsMetricCards({ avgUsersPerDay, avgSessionsPerDay, revenuePerSession, sessionsPerUser, conversionRate, hasRevenue, formatRevenue, isLoading, }: AnalyticsMetricCardsProps) {
     return (<Card className="card-depth border border-border/60 bg-muted/20">
       <CardContent className="grid grid-cols-2 gap-6 py-5 sm:grid-cols-4">
         <SecondaryMetric label="Avg users / day" tooltip="Total users divided by the number of days in your selected range." value={avgUsersPerDay.toFixed(1)} isLoading={isLoading}/>
         <SecondaryMetric label="Avg sessions / day" tooltip="Total sessions divided by days in range — useful for spotting steady traffic vs spikes." value={avgSessionsPerDay.toFixed(1)} isLoading={isLoading}/>
-        <SecondaryMetric label="Revenue / session" tooltip="Average revenue earned per session across the selected period." value={revenuePerSession === null ? '—' : formatRevenue(revenuePerSession)} isLoading={isLoading}/>
+        {hasRevenue ? (<SecondaryMetric label="Revenue / session" tooltip="Average revenue earned per session across the selected period." value={revenuePerSession === null ? '—' : formatRevenue(revenuePerSession)} isLoading={isLoading}/>) : (<SecondaryMetric label="Conversion rate" tooltip="Conversions divided by sessions across the selected period." value={`${conversionRate.toFixed(1)}%`} isLoading={isLoading}/>)}
         <SecondaryMetric label="Sessions / user" tooltip="How often each user returned on average. Values above 1 indicate repeat visits." value={`${sessionsPerUser.toFixed(2)}×`} isLoading={isLoading}/>
       </CardContent>
     </Card>);

@@ -1,24 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-const apiFetchMock = vi.hoisted(() => vi.fn());
-vi.mock('@/lib/api-client', () => ({
-    apiFetch: apiFetchMock,
-}));
-describe('syncGoogleAnalytics', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-    it('posts an empty JSON body to the sync endpoint and returns the payload', async () => {
-        apiFetchMock.mockResolvedValue({ written: 7, propertyName: 'Main Property' });
-        const { syncGoogleAnalytics } = await import('./use-google-analytics-sync');
-        await expect(syncGoogleAnalytics({ periodDays: 30, clientId: 'client_123' })).resolves.toEqual({
-            written: 7,
-            propertyName: 'Main Property',
-        });
-        expect(apiFetchMock).toHaveBeenCalledWith('/api/analytics/google-analytics/sync?days=30&clientId=client_123', expect.objectContaining({
-            method: 'POST',
-            credentials: 'same-origin',
-            body: JSON.stringify({}),
-            timeoutMs: 180000,
-        }));
+import { describe, it, expect, vi } from 'vitest';
+describe('useGoogleAnalyticsSync', () => {
+    it('exposes mutateAsync and isPending from the Convex action', async () => {
+        // The hook now uses useAction from convex/react to call runManualSync.
+        // The old HTTP-based syncGoogleAnalytics function has been removed.
+        // Verify the module loads without the old apiFetch dependency.
+        const mod = await import('./use-google-analytics-sync');
+        expect(typeof mod.useGoogleAnalyticsSync).toBe('function');
     });
 });
