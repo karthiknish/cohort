@@ -98,7 +98,7 @@ export function UnifiedConversationHeader({ header, canSearchMessages = false, m
     if (header.type === 'channel' && header.messageCount !== undefined) {
         subtitleParts.push(`${header.messageCount} message${header.messageCount === 1 ? '' : 's'}`);
     }
-    return (<div className="shrink-0 border-b border-muted/40 bg-background/80 p-3 backdrop-blur-md supports-backdrop-filter:bg-background/70 sm:p-4">
+    return (<div className="shrink-0 border-b border-muted/40 bg-background/80 p-3 shadow-sm backdrop-blur-md supports-backdrop-filter:bg-background/70 sm:p-4">
       <div className="flex items-start justify-between gap-2 sm:gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-2 sm:gap-3">
           {header.onBack ? (<Button type="button" variant="ghost" size="icon" className="mt-0.5 size-9 shrink-0 lg:hidden" onClick={header.onBack} aria-label="Back to inbox">

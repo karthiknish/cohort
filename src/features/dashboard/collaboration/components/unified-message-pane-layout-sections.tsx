@@ -14,9 +14,9 @@ import { MessageSearchBar, NoSearchResultsState } from './message-pane-parts';
 import { UnifiedComposerSection, UnifiedConversationHeader } from './unified-message-pane-sections';
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types';
 export function UnifiedMessagePaneEmptyState() {
-    return (<output className="flex min-h-0 flex-1 items-center justify-center bg-background/50">
+    return (<output className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-muted/50 bg-muted/10">
       <div className="p-8 text-center">
-        <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-muted/50">
+        <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-muted/40 ring-1 ring-border/50">
           <MessageCircle className="size-8 text-muted-foreground"/>
         </div>
         <h3 className="text-lg font-medium text-foreground">Select a conversation</h3>

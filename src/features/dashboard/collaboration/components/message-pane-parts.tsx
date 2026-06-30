@@ -29,7 +29,7 @@ export function MessagePaneHeader({ channel, channelParticipants, messageCount, 
                 {channel.type}
               </Badge>
               {channel.clientId && (<Link href={`/dashboard/clients?clientId=${channel.clientId}`}>
-                  <Badge variant="secondary" className="h-5 cursor-pointer border-none bg-muted/50 px-1.5 py-0 text-[10px] font-bold uppercase tracking-wider hover:bg-muted transition-colors shadow-none">
+                  <Badge variant="secondary" className="h-5 cursor-pointer bg-muted/50 px-1.5 py-0 text-[10px] font-bold uppercase tracking-wider hover:bg-muted transition-colors">
                     Client
                   </Badge>
                 </Link>)}
@@ -82,8 +82,8 @@ export function MessageSearchBar({ value, onChange, resultCount, isActive, place
     </div>);
 }
 export function EmptyChannelState() {
-    return (<div className="flex flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground">
-      <div className="mb-4 rounded-full bg-muted/30 p-4">
+    return (<div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-muted/50 bg-muted/10 p-8 text-center text-muted-foreground">
+      <div className="mb-4 rounded-full bg-muted/30 p-4 ring-1 ring-border/40">
         <MessageSquare className="size-8 text-muted-foreground/50"/>
       </div>
       <h3 className="mb-2 text-lg font-semibold text-foreground">No channel selected</h3>
@@ -95,7 +95,7 @@ export function EmptyChannelState() {
 }
 export function EmptyMessagesState() {
     return (<output className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/50 bg-muted/10 p-8 text-center">
-      <div className="mb-3 rounded-full bg-muted/30 p-3">
+      <div className="mb-3 rounded-full bg-muted/30 p-3 ring-1 ring-border/40">
         <MessageCircle className="size-6 text-muted-foreground/50"/>
       </div>
       <h4 className="mb-1 text-sm font-semibold text-foreground">No messages yet</h4>
@@ -106,7 +106,7 @@ export function EmptyMessagesState() {
 }
 export function NoSearchResultsState() {
     return (<output className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/50 bg-muted/10 p-8 text-center">
-      <div className="mb-3 rounded-full bg-muted/30 p-3">
+      <div className="mb-3 rounded-full bg-muted/30 p-3 ring-1 ring-border/40">
         <Search className="size-6 text-muted-foreground/50"/>
       </div>
       <h4 className="mb-1 text-sm font-semibold text-foreground">No results found</h4>

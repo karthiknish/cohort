@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Hash, Inbox, MessageCircle, Plus, Search } from 'lucide-react';
 import { CreateChannelDialog } from '@/features/dashboard/collaboration/components/create-channel-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -11,18 +10,10 @@ import { LiveRegion } from '@/shared/ui/live-region';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
-import { ClientRelativeTime } from '@/shared/components/client-relative-time';
-import { chromaticTransitionClass } from '@/lib/motion';
 import { cn } from '@/lib/utils';
-import {
-  CHANNEL_TYPE_COLORS,
-  CHAT_CONVERSATION_ROW_CLASS,
-  CHAT_LIST_PREVIEW_CLASS,
-  formatConversationSnippet,
-  getInitials,
-} from '@/features/dashboard/collaboration/utils';
 import type { Channel } from '../types';
-import type { DirectConversation } from '@/types/collaboration';
+import { ConversationListItem } from './conversation-list-item';
+import { buildInboxItems, filterInboxItems, useInboxItems } from './conversation-list-utils';
 
 export type SourceFilter = 'all' | 'channel' | 'direct_message';
 
@@ -129,7 +120,7 @@ export function ConversationListPane({
       <div className="space-y-3 border-b border-muted/30 p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary ring-1 ring-primary/15">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary shadow-sm ring-1 ring-primary/15">
               <Inbox className="size-4" />
             </div>
             <div className="min-w-0">
@@ -188,14 +179,14 @@ export function ConversationListPane({
 
         <Tabs value={sourceFilter} onValueChange={(value) => onSourceFilterChange(value as SourceFilter)}>
           <TabsList className="flex h-auto w-full flex-wrap gap-0.5 bg-muted/50 p-1">
-            <TabsTrigger value="all" className="flex-1 text-xs data-[state=active]:shadow-sm">
-              All <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{channelCount + dmCount}</Badge>
+            <TabsTrigger value="all" className="flex-1 text-xs data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:shadow-sm">
+              All <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px] data-[active]:bg-primary-foreground/20 data-[active]:text-primary-foreground">{channelCount + dmCount}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="channel" className="flex-1 text-xs data-[state=active]:shadow-sm">
+            <TabsTrigger value="channel" className="flex-1 text-xs data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:shadow-sm">
               <Hash className="mr-0.5 size-3" />
               {channelCount}
             </TabsTrigger>
-            <TabsTrigger value="direct_message" className="flex-1 text-xs data-[state=active]:shadow-sm">
+            <TabsTrigger value="direct_message" className="flex-1 text-xs data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:shadow-sm">
               <MessageCircle className="mr-0.5 size-3" />
               {dmCount}
             </TabsTrigger>
@@ -251,98 +242,14 @@ export function ConversationListPane({
                 </p>
               </div>
             ) : null}
-            {filteredItems.map((item) => {
-              const hasUnread = !item.isRead || item.unreadCount > 0;
-              const selected = item.key === selectedKey;
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  aria-current={selected ? 'true' : undefined}
-                  onClick={() => onSelectItem(item)}
-                  className={cn(
-                    CHAT_CONVERSATION_ROW_CLASS,
-                    'cv-scroll-item-compact',
-                    chromaticTransitionClass,
-                    'hover:bg-muted/60',
-                    selected && 'border border-accent/25 bg-accent/8 shadow-sm ring-1 ring-primary/10',
-                    hasUnread && !selected && 'bg-muted/25',
-                  )}
-                >
-                  <Avatar className="size-10 shrink-0">
-                    {item.type === 'channel' && item.avatarUrl ? (
-                      <AvatarImage src={item.avatarUrl} alt={item.name} className="object-cover" />
-                    ) : null}
-                    <AvatarFallback
-                      className={cn(
-                        'text-xs font-medium',
-                        hasUnread && 'bg-accent/10 text-primary',
-                        item.type === 'channel' && 'bg-muted',
-                      )}
-                    >
-                      {item.type === 'channel' ? <Hash className="size-4" /> : getInitials(item.name)}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span
-                        className={cn(
-                          'truncate text-sm',
-                          hasUnread ? 'font-semibold' : 'font-medium',
-                          selected && 'text-primary',
-                        )}
-                      >
-                        {item.name}
-                      </span>
-                      {item.lastMessageAtMs ? (
-                        <ClientRelativeTime
-                          value={item.lastMessageAtMs}
-                          className="shrink-0 text-[10px] text-muted-foreground"
-                        />
-                      ) : null}
-                    </div>
-
-                    <div className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden">
-                      {item.type === 'channel' ? (
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            'h-4 shrink-0 px-1 py-0 text-[10px]',
-                            CHANNEL_TYPE_COLORS[item.channelType ?? 'team'],
-                          )}
-                        >
-                          {item.channelType ?? 'channel'}
-                        </Badge>
-                      ) : item.otherParticipantRole ? (
-                        <Badge variant="outline" className="h-4 shrink-0 px-1 py-0 text-[10px]">
-                          {item.otherParticipantRole}
-                        </Badge>
-                      ) : null}
-                      <p
-                        className={CHAT_LIST_PREVIEW_CLASS}
-                        title={item.lastMessageSnippet ?? undefined}
-                      >
-                        {item.lastMessageSnippet
-                          ? formatConversationSnippet(item.lastMessageSnippet)
-                          : 'No messages yet'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {hasUnread ? (
-                    <div className="flex shrink-0 items-center gap-1">
-                      {item.unreadCount > 0 ? (
-                        <Badge variant="default" className="h-5 px-1.5 text-xs">
-                          {item.unreadCount}
-                        </Badge>
-                      ) : null}
-                      <div className="size-2 rounded-full bg-primary" />
-                    </div>
-                  ) : null}
-                </button>
-              );
-            })}
+            {filteredItems.map((item) => (
+              <ConversationListItem
+                key={item.key}
+                item={item}
+                selected={item.key === selectedKey}
+                onSelect={onSelectItem}
+              />
+            ))}
           </div>
         )}
       </ScrollArea>
@@ -350,72 +257,5 @@ export function ConversationListPane({
   );
 }
 
-/** Build the list of inbox items from channels and DM conversations. */
-export function buildInboxItems(
-  channels: Channel[],
-  channelUnreadCounts: Record<string, number>,
-  channelLastMessages: Record<string, { content: string; createdAtMs: number } | undefined>,
-  conversations: DirectConversation[],
-): InboxItem[] {
-  const channelItems: InboxItem[] = channels.map((channel) => {
-    const lastMessage = channelLastMessages[channel.id];
-    return {
-      key: `channel:${channel.id}`,
-      type: 'channel',
-      legacyId: channel.id,
-      name: channel.name,
-      lastMessageSnippet: lastMessage?.content ?? null,
-      lastMessageAtMs: lastMessage?.createdAtMs ?? null,
-      isRead: (channelUnreadCounts[channel.id] ?? 0) === 0,
-      unreadCount: channelUnreadCounts[channel.id] ?? 0,
-      avatarUrl: channel.avatarUrl ?? null,
-      channelType: channel.type,
-    };
-  });
-
-  const dmItems: InboxItem[] = conversations.map((conversation) => ({
-    key: `dm:${conversation.legacyId}`,
-    type: 'direct_message',
-    legacyId: conversation.legacyId,
-    name: conversation.otherParticipantName,
-    lastMessageSnippet: conversation.lastMessageSnippet ?? null,
-    lastMessageAtMs: conversation.lastMessageAtMs ?? null,
-    isRead: conversation.isRead,
-    unreadCount: conversation.unreadCount ?? 0,
-    otherParticipantRole: conversation.otherParticipantRole ?? null,
-  }));
-
-  return [...channelItems, ...dmItems];
-}
-
-/** Filter and sort inbox items based on the current filter and search query. */
-export function filterInboxItems(
-  items: InboxItem[],
-  sourceFilter: SourceFilter,
-  searchQuery: string,
-): InboxItem[] {
-  const trimmed = searchQuery.trim().toLowerCase();
-  return items
-    .filter((item) => {
-      if (sourceFilter === 'channel' && item.type !== 'channel') return false;
-      if (sourceFilter === 'direct_message' && item.type !== 'direct_message') return false;
-      if (trimmed && !item.name.toLowerCase().includes(trimmed)) return false;
-      return true;
-    })
-    .sort((a, b) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0));
-}
-
-/** Memoized helper combining buildInboxItems + filterInboxItems. */
-export function useInboxItems(
-  channels: Channel[],
-  channelUnreadCounts: Record<string, number>,
-  channelLastMessages: Record<string, { content: string; createdAtMs: number } | undefined>,
-  conversations: DirectConversation[],
-  sourceFilter: SourceFilter,
-  searchQuery: string,
-) {
-  return useMemo(() => {
-    const all = buildInboxItems(channels, channelUnreadCounts, channelLastMessages, conversations);
-    return filterInboxItems(all, sourceFilter, searchQuery);
-  }, [channels, channelUnreadCounts, channelLastMessages, conversations, sourceFilter, searchQuery]);
-}
+// Re-export utilities for backward compatibility
+export { buildInboxItems, filterInboxItems, useInboxItems } from './conversation-list-utils';

@@ -5,21 +5,15 @@ import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { collaborationToUnifiedMessage } from '@/features/dashboard/collaboration/components/message-list-utils';
-import { UnifiedMessagePane } from '@/features/dashboard/collaboration/components/unified-message-pane';
-import type { MessagePaneHeaderInfo } from '@/features/dashboard/collaboration/components/unified-message-pane-types';
 import type { MessagePaneListState } from '@/features/dashboard/collaboration/components/unified-message-pane-layout';
-import { EmptyChannelState } from '@/features/dashboard/collaboration/components/message-pane-parts';
 import { useProjectsData } from '@/features/dashboard/collaboration/hooks/use-projects-data';
 import { useThreads } from '@/features/dashboard/collaboration/hooks/use-threads';
 import { useAttachments } from '@/features/dashboard/collaboration/hooks/use-attachments';
 import { directMessageToCollaborationMessage } from '@/features/dashboard/collaboration/lib/direct-message-collaboration';
-import type { SendMessageOptions, PendingAttachment } from '@/features/dashboard/collaboration/hooks/types';
+import type { SendMessageOptions } from '@/features/dashboard/collaboration/hooks/types';
 import type { UnifiedMessage } from '@/features/dashboard/collaboration/components/message-list-types';
-import { NewDMDialog } from '@/features/dashboard/collaboration/components/new-dm-dialog';
-import { MessageForwardDialog } from '@/features/dashboard/collaboration/components/message-forward-dialog';
 import { useQuery, useMutation } from 'convex/react';
-import { usersApi } from '@/lib/convex-api';
-import { collaborationChannelsApi } from '@/lib/convex-api';
+import { usersApi, collaborationChannelsApi } from '@/lib/convex-api';
 import { useCollaborationChannels } from '../hooks/use-collaboration-channels';
 import {
   useChannelMessages,
@@ -58,6 +52,9 @@ import {
   type InboxItem,
 } from './conversation-list-pane';
 import { useCollaborationUrlState } from '../hooks/use-collaboration-url-state';
+import { useCollaborationHeaderInfo } from './use-collaboration-header-info';
+import { CollaborationDashboardDialogs } from './collaboration-dashboard-dialogs';
+import { CollaborationMessagePane } from './collaboration-message-pane';
 import type { CollaborationMessage, CollaborationAttachment } from '@/types/collaboration';
 
 export function CollaborationDashboardV2() {
@@ -99,10 +96,6 @@ export function CollaborationDashboardV2() {
       : [],
   );
 
-  // ─── Dialog state ─────────────────────────────────────────────────────────
-  const [isNewDMDialogOpen, setIsNewDMDialogOpen] = useState(false);
-  const [forwardingMessage, setForwardingMessage] = useState<CollaborationMessage | null>(null);
-
   // ─── Channel mutations (create/remove) ────────────────────────────────────
   const createChannelMutation = useMutation(collaborationChannelsApi.create);
 
@@ -112,11 +105,9 @@ export function CollaborationDashboardV2() {
   // ─── Channels ─────────────────────────────────────────────────────────────
   const {
     channels,
-    selectedChannel,
     selectedChannelId,
     selectChannel,
     channelParticipants,
-    aggregatedTeamMembers,
   } = useCollaborationChannels({
     workspaceId,
     clients,
@@ -189,7 +180,7 @@ export function CollaborationDashboardV2() {
 
   // ─── In-channel message search ────────────────────────────────────────────
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
-  const { highlights: searchHighlights, isSearching: searchingMessages } = useSearchChannelMessages(
+  const { highlights: searchHighlights } = useSearchChannelMessages(
     workspaceId,
     effectiveSelectedChannel,
     messageSearchQuery,
@@ -294,14 +285,13 @@ export function CollaborationDashboardV2() {
     loadMoreThreadReplies,
     clearThreadReplies,
     addThreadReplyToState,
-    mutateThreadMessageById,
   } = useThreads({ workspaceId, currentUserId });
 
-  // ─── Reply state (for thread replies via composer) ───────────────────────
+  // ─── Reply & sending state ────────────────────────────────────────────────
   const [replyingToMessage, setReplyingToMessage] = useState<CollaborationMessage | null>(null);
-
-  // ─── Sending state ────────────────────────────────────────────────────────
   const [sending, setSending] = useState(false);
+  const [forwardingMessage, setForwardingMessage] = useState<CollaborationMessage | null>(null);
+  const [isNewDMDialogOpen, setIsNewDMDialogOpen] = useState(false);
 
   // ─── Unified messages for the pane ────────────────────────────────────────
   const unifiedMessages = useMemo(() => {
@@ -395,7 +385,6 @@ export function CollaborationDashboardV2() {
     const hasAttachments = pendingAttachments.length > 0;
     if ((!content && !hasAttachments) || sending || !workspaceId || !currentUserId) return;
 
-    // When the controller calls onSendMessage() with no args, check replyingToMessage
     const replyTarget = options?.threadRootId
       ? { threadRootId: options.threadRootId, parentMessageId: options.parentMessageId ?? null }
       : replyingToMessage
@@ -411,7 +400,6 @@ export function CollaborationDashboardV2() {
 
     setSending(true);
     try {
-      // Upload attachments first (if any)
       let uploadedAttachments: CollaborationAttachment[] = [];
       if (hasAttachments) {
         uploadedAttachments = await uploadAttachments(pendingAttachments);
@@ -436,12 +424,11 @@ export function CollaborationDashboardV2() {
           senderRole: options?.senderRole ?? currentUserRole,
           content,
           format: 'markdown',
-          parentMessageId: parentMessageId,
-          threadRootId: threadRootId,
+          parentMessageId,
+          threadRootId,
           attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
         });
 
-        // Optimistically add thread reply to local state
         if (isThreadReply && threadRootId) {
           const replyMessage: CollaborationMessage = {
             id: legacyId,
@@ -459,8 +446,8 @@ export function CollaborationDashboardV2() {
             deletedBy: null,
             isDeleted: false,
             format: 'markdown',
-            parentMessageId: parentMessageId,
-            threadRootId: threadRootId,
+            parentMessageId,
+            threadRootId,
             readBy: [String(currentUserId)],
             deliveredTo: [],
             isPinned: false,
@@ -641,10 +628,9 @@ export function CollaborationDashboardV2() {
     [workspaceId, currentUserId, effectiveSelectedChannel, markThreadAsRead],
   );
 
-  // ─── Reply handler (sets replyingToMessage for the composer) ──────────────
+  // ─── Reply handler ────────────────────────────────────────────────────────
   const handleReply = useCallback(
     (message: UnifiedMessage) => {
-      // Find the original CollaborationMessage from channel messages
       const original = effectiveSelectedChannel
         ? channelMessages.find((m) => m.id === message.id)
         : null;
@@ -775,63 +761,20 @@ export function CollaborationDashboardV2() {
     setMessageSearchQuery('');
   }, [conversationKey, clearThreadReplies]);
 
-  // ─── Header info ──────────────────────────────────────────────────────────
-  const headerInfo = useMemo<MessagePaneHeaderInfo | null>(() => {
-    if (effectiveSelectedChannel) {
-      const channel = effectiveSelectedChannel;
-      return {
-        conversationKey: `channel:${channel.id}`,
-        name: channel.name,
-        type: 'channel',
-        channelKind: channel.type,
-        participantCount: channelParticipants.length,
-        messageCount: channelMessages.length,
-        channelUnreadCount: channelUnreadCounts[channel.id] ?? 0,
-        onMarkChannelRead: handleMarkChannelRead,
-        onExport: handleExportChannel,
-        onBack: () => urlState.setChannelId(null),
-      };
-    }
-    if (selectedDM) {
-      return {
-        conversationKey: `dm:${selectedDM.legacyId}`,
-        name: selectedDM.otherParticipantName,
-        type: 'dm',
-        role: selectedDM.otherParticipantRole,
-        isArchived: selectedDM.isArchived,
-        isMuted: selectedDM.isMuted,
-        onArchive: async (archived: boolean) => {
-          if (!workspaceId) return;
-          await archiveConversation({
-            workspaceId: String(workspaceId),
-            conversationLegacyId: selectedDM.legacyId,
-            archived,
-          });
-        },
-        onMute: async (muted: boolean) => {
-          if (!workspaceId) return;
-          await muteConversation({
-            workspaceId: String(workspaceId),
-            conversationLegacyId: selectedDM.legacyId,
-            muted,
-          });
-        },
-        onBack: () => urlState.setConversationLegacyId(null),
-      };
-    }
-    return null;
-  }, [
+  // ─── Header info (extracted hook) ─────────────────────────────────────────
+  const headerInfo = useCollaborationHeaderInfo({
     effectiveSelectedChannel,
     channelParticipants,
     channelMessages,
     channelUnreadCounts,
     handleMarkChannelRead,
+    handleExportChannel,
     urlState,
     selectedDM,
     workspaceId,
     archiveConversation,
     muteConversation,
-  ]);
+  });
 
   // ─── List state ───────────────────────────────────────────────────────────
   const listState: MessagePaneListState = {
@@ -841,14 +784,6 @@ export function CollaborationDashboardV2() {
       : dmMessagesLoadingMore,
     hasMore: effectiveSelectedChannel ? channelMessagesHasMore : dmMessagesHasMore,
   };
-
-  const handleLoadMore = useCallback(() => {
-    if (effectiveSelectedChannel) {
-      void loadMoreChannelMessages();
-    } else {
-      void loadMoreDmMessages();
-    }
-  }, [effectiveSelectedChannel, loadMoreChannelMessages, loadMoreDmMessages]);
 
   // ─── Loading state ────────────────────────────────────────────────────────
   const isLoading = clientsLoading || projectsLoading || dmsLoading;
@@ -889,91 +824,66 @@ export function CollaborationDashboardV2() {
         }
       />
 
-      <div className="flex min-h-0 flex-1 flex-col">
-        {headerInfo ? (
-          <UnifiedMessagePane
-            header={headerInfo}
-            messages={unifiedMessages}
-            currentUserId={currentUserId}
-            currentUserRole={currentUserRole}
-            listState={listState}
-            composerState={{
-              sending,
-              uploadingAttachments,
-              pendingAttachments: pendingAttachments.length > 0,
-            }}
-            onLoadMore={handleLoadMore}
-            messageSearchQuery={messageSearchQuery}
-            onMessageSearchChange={setMessageSearchQuery}
-            messageSearchHighlights={searchHighlights}
-            messageInput={messageInput}
-            onMessageInputChange={handleMessageInputChange}
-            onSendMessage={handleSendMessage}
-            pendingAttachments={pendingAttachments}
-            onAddAttachments={handleAddAttachments}
-            onRemoveAttachment={handleRemoveAttachment}
-            onToggleReaction={handleToggleReaction}
-            onEditMessage={handleEditMessage}
-            onDeleteMessage={handleDeleteMessage}
-            onReply={handleReply}
-            replyingToMessage={replyingToMessage}
-            onCancelReply={handleCancelReply}
-            onForwardMessage={handleForwardMessage}
-            onShareToPlatform={handleShareToPlatform}
-            onCreateTask={handleCreateTask}
-            onCreatePoll={handleCreatePoll}
-            onComposerFocus={handleComposerFocus}
-            onComposerBlur={handleComposerBlur}
-            workspaceId={workspaceId}
-            typingIndicator={typingIndicator}
-            channelMessages={effectiveSelectedChannel ? channelMessages : undefined}
-            threadMessagesByRootId={threadMessagesByRootId}
-            threadNextCursorByRootId={threadNextCursorByRootId}
-            threadLoadingByRootId={threadLoadingByRootId}
-            threadErrorsByRootId={threadErrorsByRootId}
-            threadUnreadCountsByRootId={{}}
-            focusMessageId={urlState.deepLinkMessageId ?? null}
-            focusThreadId={urlState.deepLinkThreadId ?? null}
-            onLoadThreadReplies={loadThreadReplies}
-            onLoadMoreThreadReplies={loadMoreThreadReplies}
-            onMarkThreadAsRead={handleMarkThreadAsRead}
-            participants={channelParticipants}
-            emptyState={<EmptyChannelState />}
-          />
-        ) : (
-          <EmptyChannelState />
-        )}
-      </div>
+      <CollaborationMessagePane
+        headerInfo={headerInfo}
+        unifiedMessages={unifiedMessages}
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        listState={listState}
+        sending={sending}
+        uploadingAttachments={uploadingAttachments}
+        pendingAttachments={pendingAttachments}
+        messageSearchQuery={messageSearchQuery}
+        onMessageSearchChange={setMessageSearchQuery}
+        searchHighlights={searchHighlights}
+        messageInput={messageInput}
+        onMessageInputChange={handleMessageInputChange}
+        onSendMessage={handleSendMessage}
+        onAddAttachments={handleAddAttachments}
+        onRemoveAttachment={handleRemoveAttachment}
+        onToggleReaction={handleToggleReaction}
+        onEditMessage={handleEditMessage}
+        onDeleteMessage={handleDeleteMessage}
+        onReply={handleReply}
+        replyingToMessage={replyingToMessage}
+        onCancelReply={handleCancelReply}
+        onForwardMessage={handleForwardMessage}
+        onShareToPlatform={handleShareToPlatform}
+        onCreateTask={handleCreateTask}
+        onCreatePoll={handleCreatePoll}
+        onComposerFocus={handleComposerFocus}
+        onComposerBlur={handleComposerBlur}
+        workspaceId={workspaceId}
+        typingIndicator={typingIndicator}
+        channelMessages={effectiveSelectedChannel ? channelMessages : undefined}
+        threadMessagesByRootId={threadMessagesByRootId}
+        threadNextCursorByRootId={threadNextCursorByRootId}
+        threadLoadingByRootId={threadLoadingByRootId}
+        threadErrorsByRootId={threadErrorsByRootId}
+        focusMessageId={urlState.deepLinkMessageId ?? null}
+        focusThreadId={urlState.deepLinkThreadId ?? null}
+        onLoadThreadReplies={loadThreadReplies}
+        onLoadMoreThreadReplies={loadMoreThreadReplies}
+        onMarkThreadAsRead={handleMarkThreadAsRead}
+        participants={channelParticipants}
+        effectiveSelectedChannel={effectiveSelectedChannel}
+        loadMoreChannelMessages={loadMoreChannelMessages}
+        loadMoreDmMessages={loadMoreDmMessages}
+      />
 
-      {/* ─── Dialogs ─────────────────────────────────────────────────────────── */}
-
-      <NewDMDialog
-        open={isNewDMDialogOpen}
-        onOpenChange={setIsNewDMDialogOpen}
+      <CollaborationDashboardDialogs
+        isNewDMDialogOpen={isNewDMDialogOpen}
+        setIsNewDMDialogOpen={setIsNewDMDialogOpen}
         onUserSelect={handleStartNewDM}
         workspaceId={workspaceId}
         currentUserId={currentUserId}
         currentUserRole={currentUserRole}
+        forwardingMessage={forwardingMessage}
+        setForwardingMessage={setForwardingMessage}
+        channels={channels}
+        taskModal={taskModal}
+        channelExtrasForwardDialog={channelExtrasForwardDialog}
       />
-
-      <MessageForwardDialog
-        message={forwardingMessage}
-        channels={channels.map((c) => ({
-          id: c.id,
-          name: c.name,
-          type: c.type,
-        }))}
-        workspaceId={workspaceId}
-        userId={currentUserId}
-        open={forwardingMessage !== null}
-        onOpenChange={(open) => {
-          if (!open) setForwardingMessage(null);
-        }}
-      />
-
-      {/* Task creation modal + extras forward dialog from useCollaborationChannelExtras */}
-      {taskModal}
-      {channelExtrasForwardDialog}
     </div>
   );
 }

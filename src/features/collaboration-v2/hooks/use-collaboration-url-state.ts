@@ -22,7 +22,7 @@ export type CollaborationUrlActions = {
 };
 
 const CHANNEL_PARAM = 'channelId';
-const CONVERSATION_PARAM = 'conversation';
+const CONVERSATION_PARAM = 'conversationId';
 const PROJECT_PARAM = 'projectId';
 const PROJECT_NAME_PARAM = 'projectName';
 const DEEP_LINK_MESSAGE_PARAM = 'messageId';

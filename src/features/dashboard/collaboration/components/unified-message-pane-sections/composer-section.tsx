@@ -69,7 +69,7 @@ export function UnifiedComposerSection({ pendingAttachments, uploadingAttachment
     const handleSend = () => {
         onSend();
     };
-    return (<div className="shrink-0 border-t border-muted/40 bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:p-4">
+    return (<div className="shrink-0 border-t border-muted/40 bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-sm backdrop-blur-sm sm:p-4">
       <PendingAttachmentsList attachments={pendingAttachments} uploading={uploadingAttachments} disabled={isSending} onRemove={handleRemoveAttachment}/>
       <div className={cn('w-full rounded-lg border border-muted/40 bg-background shadow-sm focus-within:border-accent/40 focus-within:ring-1 focus-within:ring-primary/20', chromaticTransitionClass, (isComposerFocused || hasPendingAttachments) && 'border-accent/30 shadow-md shadow-primary/5')}>
         {replyingToMessage && onCancelReply ? (<ReplyIndicator message={replyingToMessage} onCancel={onCancelReply}/>) : null}

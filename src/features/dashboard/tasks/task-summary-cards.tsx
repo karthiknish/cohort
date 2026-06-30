@@ -1,6 +1,7 @@
 'use client';
 import { memo, useCallback, type KeyboardEvent } from 'react';
 import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/shared/ui/card';
 import type { TaskStatus } from '@/types/tasks';
 import { formatStatusLabel, STATUS_ICONS } from './task-types';
 import { TASKS_THEME } from './tasks-theme';
@@ -49,8 +50,8 @@ const stripStyles: Record<TaskStatus, {
 };
 export const TaskSummaryCards = function TaskSummaryCards({ taskCounts, selectedStatus = 'all', onStatusCardClick, }: TaskSummaryCardsProps) {
     const total = stripStatuses.reduce((sum, status) => sum + (taskCounts[status] ?? 0), 0);
-    return (<section className={TASKS_THEME.summaryCard} aria-label="Task counts by status">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    return (<Card className={cn(TASKS_THEME.summaryCard, 'rounded-2xl border-border/60 bg-gradient-to-br from-card via-card to-muted/20')} aria-label="Task counts by status" role="region">
+      <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="flex items-end gap-3">
           <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">{total}</p>
           <div className="pb-1">
@@ -64,8 +65,8 @@ export const TaskSummaryCards = function TaskSummaryCards({ taskCounts, selected
         <fieldset className="m-0 grid min-w-0 grid-cols-2 gap-2 border-0 p-0 sm:flex sm:flex-wrap sm:justify-end" aria-label="Filter by status">
           {stripStatuses.map((status) => (<StatusChip key={status} status={status} count={taskCounts[status] ?? 0} isSelected={selectedStatus === status} onSelect={onStatusCardClick}/>))}
         </fieldset>
-      </div>
-    </section>);
+      </CardContent>
+    </Card>);
 };
 function StatusChip({ status, count, isSelected, onSelect, }: {
     status: TaskStatus;

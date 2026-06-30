@@ -71,7 +71,7 @@ function CopyButton({ code }: {
     };
     return (<>
       <LiveRegion message={copied ? 'Code block copied to clipboard.' : ''}/>
-      <Button variant="ghost" size="icon" className="absolute right-2 top-2 size-7 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background" onClick={handleCopy} title={copied ? "Copied!" : "Copy code"} aria-label={copied ? "Code copied" : "Copy code block to clipboard"}>
+      <Button variant="ghost" size="icon" className="absolute right-2 top-2 size-7 opacity-0 group-hover:opacity-100 transition-opacity border border-muted/40 bg-background/80 shadow-sm hover:bg-background" onClick={handleCopy} title={copied ? "Copied!" : "Copy code"} aria-label={copied ? "Code copied" : "Copy code block to clipboard"}>
         {copied ? (<Check className="size-3.5 text-success" aria-hidden/>) : (<Copy className="size-3.5" aria-hidden/>)}
       </Button>
     </>);
@@ -109,7 +109,7 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
             const normalizedLang = normalizeLanguage(language);
             const codeString = String(children).replace(/\n$/, "");
             if (inline || !codeString.includes('\n')) {
-                return (<code className={cn("rounded bg-muted px-1.5 py-0.5 text-[13px] font-mono text-primary/90", className)}>
+                return (<code className={cn("rounded border border-muted/60 bg-muted px-1.5 py-0.5 text-[13px] font-mono text-primary/90", className)}>
             {children}
           </code>);
             }
@@ -128,7 +128,7 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
             if (!href)
                 return <span>{children}</span>;
             if (href.startsWith(MENTION_PROTOCOL)) {
-                return (<span className="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium leading-none text-primary">
+                return (<span className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-xs font-medium leading-none text-primary">
             {children}
           </span>);
             }
@@ -185,7 +185,7 @@ function RawMessageContent({ content, mentions, highlightTerms }: MessageContent
       </ReactMarkdown>
       {mentionBadges.length > 0 && (<div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">Mentions:</span>
-          {mentionBadges.map((mention) => (<span key={mention.key} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+          {mentionBadges.map((mention) => (<span key={mention.key} className="inline-flex items-center gap-1 rounded-full border border-muted/60 bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
               @{mention.name}
               {mention.role ? <span className="text-[10px] uppercase text-muted-foreground">{mention.role}</span> : null}
             </span>))}

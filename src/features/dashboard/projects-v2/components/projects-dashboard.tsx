@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog';
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { DashboardPageHero } from '@/shared/components/dashboard-page-hero';
 import { Button } from '@/shared/ui/button';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
@@ -273,8 +274,8 @@ function ProjectsSummarySection() {
   const filterByStatus = (value: StatusFilter) => setStatusFilterAndReset(value);
   return (
     <section className="space-y-4" aria-label="Portfolio summary">
-      <div className={PROJECTS_THEME.summaryStrip}>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Card className={cn(PROJECTS_THEME.summaryStrip, 'border-border/60 bg-gradient-to-br from-card via-card to-muted/20')}>
+        <CardContent className="grid gap-3 p-4 sm:grid-cols-2 sm:px-5 lg:grid-cols-4">
           <SummaryCard
             label="Total projects"
             icon={Briefcase}
@@ -297,8 +298,8 @@ function ProjectsSummarySection() {
             value={openTaskTotal}
             description={taskTotal > 0 ? `${taskTotal - openTaskTotal} closed` : 'Waiting for tasks'}
           />
-          <div className="flex min-w-0 items-center gap-4 rounded-xl border border-border/60 bg-background/80 p-4 shadow-sm">
-            <div className="min-w-0 flex-1">
+          <Card className="flex min-w-0 items-center gap-4 rounded-xl border-border/60 bg-background/80 p-4 shadow-sm">
+            <CardContent className="min-w-0 flex-1 p-0">
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Portfolio health
@@ -312,10 +313,10 @@ function ProjectsSummarySection() {
                 />
               </div>
               <p className="mt-2 text-[11px] text-muted-foreground">Share of projects marked completed</p>
-            </div>
-          </div>
-        </div>
-      </div>
+            </CardContent>
+          </Card>
+        </CardContent>
+      </Card>
 
       <ProjectStatusPills
         statusFilter={statusFilter}
@@ -377,11 +378,11 @@ function ProjectsBacklogSection() {
   };
 
   return (
-    <section className={PROJECTS_THEME.workspace} aria-label="Project backlog">
-      <div className={PROJECTS_THEME.workspaceRail}>
+    <Card className={cn(PROJECTS_THEME.workspace, 'rounded-2xl ring-1 ring-border/40')} aria-label="Project backlog" role="region">
+      <CardHeader className={cn(PROJECTS_THEME.workspaceRail, 'space-y-0')}>
         <div className="min-w-0 space-y-0.5">
-          <h2 className="text-sm font-semibold tracking-tight text-foreground">Backlog</h2>
-          <p className="text-xs text-muted-foreground">
+          <CardTitle className="text-sm font-semibold tracking-tight text-foreground">Backlog</CardTitle>
+          <CardDescription className="text-xs text-muted-foreground">
             Search and sort update after you pause typing.
             {projects.length > 0 ? (
               <span className="tabular-nums" aria-live="polite">
@@ -397,9 +398,9 @@ function ProjectsBacklogSection() {
                   )}
               </span>
             ) : null}
-          </p>
+          </CardDescription>
         </div>
-        <div className={cn(PROJECTS_THEME.toolbar, 'w-full lg:max-w-2xl lg:justify-end')}>
+        <CardAction className={cn(PROJECTS_THEME.toolbar, 'w-full lg:max-w-2xl lg:justify-end')}>
           <ProjectSearch value={searchInput} onChange={setSearchInput} />
           <ProjectFilters
             sortField={sortField}
@@ -407,8 +408,8 @@ function ProjectsBacklogSection() {
             onSortFieldChange={setSortField}
             onToggleSortDirection={toggleSortDirection}
           />
-        </div>
-      </div>
+        </CardAction>
+      </CardHeader>
 
       <div className="space-y-3 border-b border-border/50 bg-background/90 px-4 py-3">
         <ProjectActiveFilters labels={activeFilterLabels} onClearAll={clearAllFilters} />
@@ -444,7 +445,7 @@ function ProjectsBacklogSection() {
         ) : null}
       </div>
 
-      <div className={cn(PROJECTS_THEME.content, viewMode === 'list' && 'bg-muted/[0.15]')}>
+      <CardContent className={cn(PROJECTS_THEME.content, 'p-0', viewMode === 'list' && 'bg-muted/[0.15]')}>
         <ProjectsListState
           error={error}
           hasActiveFilters={hasActiveFilters}
@@ -473,8 +474,8 @@ function ProjectsBacklogSection() {
           onMilestoneRefresh={handleMilestoneRefresh}
           onMilestoneCreated={handleMilestoneCreated}
         />
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }
 
