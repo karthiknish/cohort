@@ -14,7 +14,7 @@ export interface AnalyticsDateRange {
     start: Date;
     end: Date;
 }
-type PeriodValue = '7d' | '14d' | '30d' | '90d' | 'custom';
+type PeriodValue = '7d' | '14d' | '30d' | '90d' | 'max' | 'custom';
 const PERIOD_OPTIONS: Array<{
     value: PeriodValue;
     label: string;
@@ -24,6 +24,7 @@ const PERIOD_OPTIONS: Array<{
     { value: '14d', label: 'Last 14 days', days: 14 },
     { value: '30d', label: 'Last 30 days', days: 30 },
     { value: '90d', label: 'Last 90 days', days: 90 },
+    { value: 'max', label: 'Max (365 days)', days: 365 },
     { value: 'custom', label: 'Custom range', days: 0 },
 ];
 function getPresetRange(days: number): AnalyticsDateRange {
@@ -55,6 +56,8 @@ export function AnalyticsDateRangePicker({ value, onChange, className, }: Analyt
             return '30d';
         if (currentDays === 90)
             return '90d';
+        if (currentDays === 365)
+            return 'max';
         return 'custom';
     })();
     const currentPresetLabel = PERIOD_OPTIONS.find((opt) => opt.value === currentPreset)?.label ?? 'Custom range';
