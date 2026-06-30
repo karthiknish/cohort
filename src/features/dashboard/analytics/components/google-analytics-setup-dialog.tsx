@@ -55,15 +55,17 @@ export function GoogleAnalyticsSetupDialog({ open, onOpenChange, setupMessage, p
               <SelectTrigger className="h-auto min-h-10 items-start py-3 text-left">
                 <SelectValue placeholder={loadingProperties ? 'Loading properties...' : 'Select Google Analytics property'}/>
               </SelectTrigger>
-              <SelectContent className="max-h-[min(24rem,var(--radix-select-content-available-height))] w-[var(--radix-select-trigger-width)]">
-                {properties.map((property) => (<SelectItem key={property.id} value={property.id} className="items-start py-2.5">
-                    <div className="flex min-w-0 flex-col gap-0.5">
-                      <span className="truncate font-medium">{property.name}</span>
-                      <span className="truncate text-xs text-muted-foreground">{property.resourceName}</span>
-                    </div>
+              <SelectContent className="max-h-[24rem]">
+                {properties.map((property) => (<SelectItem key={property.id} value={property.id} className="py-2.5">
+                    {property.name}
                   </SelectItem>))}
               </SelectContent>
             </Select>
+
+            {selectedPropertyId ? (() => {
+              const selected = properties.find((p) => p.id === selectedPropertyId);
+              return selected ? (<p className="text-xs text-muted-foreground">{selected.resourceName}</p>) : null;
+            })() : null}
 
             {noProperties ? (<p className="text-xs text-warning">
                 No properties were found for this Google account. Verify Analytics access, then reload.

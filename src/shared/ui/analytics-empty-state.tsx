@@ -63,7 +63,7 @@ function createRetryAction(onRetry?: () => void): AnalyticsAction | undefined {
 export function AnalyticsEmptyState({ variant = 'no-data', title, description, icon, action, className, }: Props) {
     const config = variantConfig[variant];
     return (<div className={cn('flex flex-col items-center justify-center py-12 px-4 text-center', className)}>
-      <div className="flex size-16 items-center justify-center rounded-full bg-muted mb-4 text-muted-foreground">
+      <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/[0.08] ring-1 ring-primary/15 mb-4 shadow-sm text-primary">
         {icon || config.defaultIcon}
       </div>
       <h3 className="text-lg font-semibold mb-2">{title || config.defaultTitle}</h3>

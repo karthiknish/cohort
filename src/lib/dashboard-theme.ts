@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 import { SEMANTIC_COLORS, CHART_COLORS } from '@/lib/colors';
 export const DASHBOARD_THEME = {
@@ -13,7 +14,7 @@ export const DASHBOARD_THEME = {
     sectionEyebrow: 'text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80',
     sectionDescription: 'max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-[15px]',
     cards: {
-        base: 'border-muted/60 bg-background shadow-sm',
+        base: 'card-depth border-muted/60 bg-background',
         header: 'border-b border-muted/40 pb-4',
         content: 'p-6',
     },
@@ -42,9 +43,9 @@ export const DASHBOARD_THEME = {
     },
     stats: {
         container: 'grid gap-4 sm:grid-cols-2 lg:grid-cols-4',
-        card: 'overflow-hidden border-muted/50 bg-background shadow-sm transition-[box-shadow,background-color,border-color] hover:shadow-md',
+        card: 'card-depth card-depth-hover overflow-hidden border-muted/50 bg-background',
         label: 'text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80',
-        value: 'text-2xl font-bold text-foreground',
+        value: 'text-2xl font-bold tracking-tight text-foreground',
         description: 'text-xs text-muted-foreground',
     },
     tables: {
@@ -177,4 +178,30 @@ export function getChannelTypeBadgeClasses(type: 'team' | 'client' | 'project' |
         direct: 'bg-muted/50 text-muted-foreground border-muted/40',
     };
     return cn(DASHBOARD_THEME.badges.base, colors[type]);
+}
+/**
+ * KPI accent color mapping — each metric type gets a distinct color
+ * used for the top accent strip and subtle background glow.
+ */
+export const KPI_ACCENTS = {
+    users: { color: '#3b82f6', rgb: '59 130 246' },
+    sessions: { color: '#0ea5e9', rgb: '14 165 233' },
+    conversions: { color: '#16a34a', rgb: '22 163 74' },
+    revenue: { color: '#8b5cf6', rgb: '139 92 246' },
+    ads: { color: '#f59e0b', rgb: '245 158 11' },
+    impressions: { color: '#06b6d4', rgb: '6 182 212' },
+    clicks: { color: '#3b82f6', rgb: '59 130 246' },
+    spend: { color: '#f43f5e', rgb: '244 63 94' },
+} as const;
+export type KpiAccentKey = keyof typeof KPI_ACCENTS;
+/**
+ * Returns CSS custom properties for a KPI accent color,
+ * to be applied via `style` on a card element.
+ */
+export function kpiAccentStyle(key: KpiAccentKey): CSSProperties {
+    const accent = KPI_ACCENTS[key];
+    return {
+        '--kpi-accent': accent.color,
+        '--kpi-accent-rgb': accent.rgb,
+    } as CSSProperties;
 }

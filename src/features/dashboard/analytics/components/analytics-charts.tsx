@@ -18,8 +18,8 @@ const CHART_TOOLTIP_CURSOR = { strokeDasharray: '3 3' } as const;
 const CONVERSIONS_BAR_CURSOR = { fill: 'hsl(var(--muted))', opacity: 0.2 } as const;
 const CHART_ACTIVE_DOT = { r: 5, strokeWidth: 0 } as const;
 const CHART_MARGIN = { top: 8, right: 12, left: 4, bottom: 4 } as const;
-const CHART_CARD_CLASS = 'border border-border/60 bg-card shadow-sm';
-const CHART_HEADER_CLASS = 'border-b border-border/60 bg-muted/30 px-6 py-4';
+const CHART_CARD_CLASS = 'card-depth card-depth-hover border border-border/60 bg-card';
+const CHART_HEADER_CLASS = 'border-b border-border/60 bg-muted/20 px-6 py-4';
 function formatDateTick(value: string) {
     const date = new Date(value);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });

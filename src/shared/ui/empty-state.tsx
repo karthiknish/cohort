@@ -47,9 +47,9 @@ export function EmptyState({ className, icon: Icon = Inbox, title, description, 
           </Button>)}
       </div>);
     }
-    return (<div className={cn('flex flex-col items-center justify-center text-center', emptyStateEnterClass, variant === 'card' && 'rounded-lg border border-dashed border-muted-foreground/30 bg-muted/10', variant === 'default' ? 'py-12 px-4' : 'p-8', className)} {...props}>
-      <div className="flex size-14 items-center justify-center rounded-full bg-muted/80 ring-4 ring-muted/40 mb-4">
-        <Icon className="size-7 text-muted-foreground"/>
+    return (<div className={cn('flex flex-col items-center justify-center text-center', emptyStateEnterClass, variant === 'card' && 'rounded-2xl border border-dashed border-muted-foreground/25 bg-muted/5', variant === 'default' ? 'py-12 px-4' : 'p-8', className)} {...props}>
+      <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/[0.08] ring-1 ring-primary/15 mb-4 shadow-sm">
+        <Icon className="size-7 text-primary"/>
       </div>
       <h3 className="text-base font-semibold text-foreground">{title}</h3>
       {description && (<p className="mt-1.5 max-w-sm text-sm text-muted-foreground leading-relaxed">{description}</p>)}

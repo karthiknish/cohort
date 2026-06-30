@@ -247,7 +247,12 @@ function AnalyticsPerformanceSection() {
         </div>
       </div>
 
-      <AnalyticsSummaryCards totals={totals} deltas={story.deltas} formatRevenue={formatRevenue} isLoading={initialMetricsLoading}/>
+      <AnalyticsSummaryCards totals={totals} deltas={story.deltas} formatRevenue={formatRevenue} isLoading={initialMetricsLoading} sparklineData={chartData.length >= 2 ? {
+        users: chartData.map((d) => d.users),
+        sessions: chartData.map((d) => d.sessions),
+        conversions: chartData.map((d) => d.conversions),
+        revenue: chartData.map((d) => d.revenue),
+      } : undefined}/>
       <AnalyticsMetricCards avgUsersPerDay={avgUsersPerDay} avgSessionsPerDay={avgSessionsPerDay} revenuePerSession={revenuePerSession} sessionsPerUser={sessionsPerUser} formatRevenue={formatRevenue} isLoading={initialMetricsLoading}/>
       <AnalyticsDeepDiveSection story={story} formatRevenue={formatRevenue}/>
       <AnalyticsBreakdownSection breakdowns={breakdowns} formatRevenue={formatRevenue}/>

@@ -26,7 +26,7 @@ function SecondaryMetric({ label, tooltip, value, isLoading, }: {
     </div>);
 }
 export function AnalyticsMetricCards({ avgUsersPerDay, avgSessionsPerDay, revenuePerSession, sessionsPerUser, formatRevenue, isLoading, }: AnalyticsMetricCardsProps) {
-    return (<Card className="border border-border/60 bg-muted/20 shadow-sm">
+    return (<Card className="card-depth border border-border/60 bg-muted/20">
       <CardContent className="grid grid-cols-2 gap-6 py-5 sm:grid-cols-4">
         <SecondaryMetric label="Avg users / day" tooltip="Total users divided by the number of days in your selected range." value={avgUsersPerDay.toFixed(1)} isLoading={isLoading}/>
         <SecondaryMetric label="Avg sessions / day" tooltip="Total sessions divided by days in range — useful for spotting steady traffic vs spikes." value={avgSessionsPerDay.toFixed(1)} isLoading={isLoading}/>

@@ -1,10 +1,9 @@
 'use client';
 import { Link } from '@/shared/ui/link';
-import { CheckCircle2, Link2 } from 'lucide-react';
+import { Check, Link2 } from 'lucide-react';
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
-import { Badge } from '@/shared/ui/badge';
 import { cn } from '@/lib/utils';
 import { ADS_WORKFLOW_STEPS } from './utils';
 type WorkflowCardProps = {
@@ -18,6 +17,8 @@ export function WorkflowCard({ connectedCount = 0, hasSuccessfulSync = false, ha
         hasSuccessfulSync,
         hasSuccessfulSync,
     ];
+    const completedCount = stepDone.filter(Boolean).length;
+    const progressPercent = (completedCount / ADS_WORKFLOW_STEPS.length) * 100;
     return (<Card className={ADS_PAGE_THEME.surfaceCardHighlight}>
       <CardHeader className="flex flex-col gap-4 border-b border-border/50 pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
@@ -34,22 +35,33 @@ export function WorkflowCard({ connectedCount = 0, hasSuccessfulSync = false, ha
           <Link href="#connect-ad-platforms">Connect platforms</Link>
         </Button>
       </CardHeader>
-      <CardContent className="grid gap-3 pt-4 sm:grid-cols-3">
-        {ADS_WORKFLOW_STEPS.map((step, index) => {
+      <CardContent className="pt-6">
+        {/* Progress bar */}
+        <div className="mb-6 flex items-center gap-3">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-all duration-500 ease-out" style={{ width: `${progressPercent}%` }}/>
+          </div>
+          <span className="text-xs font-semibold tabular-nums text-muted-foreground">{completedCount}/{ADS_WORKFLOW_STEPS.length}</span>
+        </div>
+        {/* Steps with connectors */}
+        <div className="grid gap-4 sm:grid-cols-3 sm:gap-0">
+          {ADS_WORKFLOW_STEPS.map((step, index) => {
             const done = stepDone[index] ?? false;
-            return (<div key={step.title} className={cn('space-y-2.5 rounded-2xl border p-4', done
-                    ? 'border-success/30 bg-success/[0.06] ring-1 ring-success/15'
-                    : 'border-border/60 bg-background/80')}>
-              <Badge variant={done ? 'default' : 'secondary'} className={cn('rounded-full font-medium', done && 'bg-success text-success-foreground')}>
-                {done ? (<span className="inline-flex items-center gap-1">
-                    <CheckCircle2 className="size-3" aria-hidden/>
-                    Done
-                  </span>) : (`Step ${index + 1}`)}
-            </Badge>
-            <p className="text-sm font-semibold text-foreground">{step.title}</p>
-            <p className="text-xs leading-relaxed text-muted-foreground">{step.description}</p>
-          </div>);
-        })}
+            const isLast = index === ADS_WORKFLOW_STEPS.length - 1;
+            return (<div key={step.title} className={cn('relative flex flex-col gap-3 sm:px-4', !isLast && 'sm:border-r sm:border-dashed sm:border-border/50')}>
+              {/* Step indicator circle */}
+              <div className="flex items-center gap-2.5">
+                <div className={cn('flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors', done
+                    ? 'bg-success text-success-foreground'
+                    : 'bg-muted text-muted-foreground ring-1 ring-border/60')}>
+                  {done ? <Check className="size-4" aria-hidden/> : index + 1}
+                </div>
+                <p className="text-sm font-semibold text-foreground">{step.title}</p>
+              </div>
+              <p className="text-xs leading-relaxed text-muted-foreground sm:pl-9">{step.description}</p>
+            </div>);
+          })}
+        </div>
       </CardContent>
     </Card>);
 }

@@ -99,9 +99,9 @@ function NavigationList({ onNavigate, collapsed = false }: {
     return (<TooltipProvider delayDuration={300} skipDelayDuration={100}>
       <nav className="flex flex-1 flex-col gap-y-4">
         <ScrollArea className="min-h-0 flex-1">
-          <div className="space-y-4 px-1">
-            {navigationGroups.map((group) => (<div key={group.id} className="space-y-1.5">
-                {!collapsed ? (<p className="px-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/65">
+          <div className="space-y-5 px-1">
+            {navigationGroups.map((group) => (<div key={group.id} className="space-y-1">
+                {!collapsed ? (<p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">
                     {group.label}
                   </p>) : null}
                 {group.items.map((item) => {
@@ -109,9 +109,9 @@ function NavigationList({ onNavigate, collapsed = false }: {
                 const isActive = isDashboardRoot
                     ? pathname === item.href
                     : pathname === item.href || pathname.startsWith(`${item.href}/`);
-                const linkClasses = cn('flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors', collapsed ? 'justify-center px-0' : 'justify-start', isActive
-                    ? 'bg-primary text-primary-foreground hover:bg-[color-mix(in_srgb,var(--primary)_88%,#0f172a_12%)] shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/80');
+                const linkClasses = cn('flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all duration-200', collapsed ? 'justify-center px-0' : 'justify-start', isActive
+                    ? 'bg-primary/[0.08] text-primary font-semibold'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/60');
                 const navLink = (<NavItemLink key={item.name} item={item} linkClasses={linkClasses} onNavigate={onNavigate} prefetchRoute={prefetchRoute} collapsed={collapsed} isActive={isActive}/>);
                 if (collapsed) {
                     return (<Tooltip key={item.name}>
@@ -130,32 +130,32 @@ function NavigationList({ onNavigate, collapsed = false }: {
           </div>
         </ScrollArea>
 
-        <div className="space-y-2 border-t pt-4 px-1">
+        <div className="space-y-1 border-t border-border/40 pt-3 px-1">
           {/* Admin Panel Link - Only for admins */}
           {user?.role === 'admin' && (collapsed ? (<Tooltip>
                 <TooltipTrigger asChild>
-                  <Link href="/admin" onClick={onNavigate} onMouseEnter={prefetchAdmin} className="flex h-9 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80">
+                  <Link href="/admin" onClick={onNavigate} onMouseEnter={prefetchAdmin} className="flex h-9 w-full items-center justify-center gap-2.5 rounded-lg text-sm font-medium text-muted-foreground transition-all duration-200 hover:text-foreground hover:bg-muted/60">
                     <Shield className="size-4"/>
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">
                   <span className="font-medium">Admin Panel</span>
                 </TooltipContent>
-              </Tooltip>) : (<Link href="/admin" onClick={onNavigate} onMouseEnter={prefetchAdmin} className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80">
+              </Tooltip>) : (<Link href="/admin" onClick={onNavigate} onMouseEnter={prefetchAdmin} className="flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-all duration-200 hover:text-foreground hover:bg-muted/60">
                 <Shield className="size-4"/>
                 <span>Admin Panel</span>
               </Link>))}
 
           {collapsed ? (<Tooltip>
               <TooltipTrigger asChild>
-                <Link href="/settings" onClick={onNavigate} onMouseEnter={prefetchSettings} className="flex h-9 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80">
+                <Link href="/settings" onClick={onNavigate} onMouseEnter={prefetchSettings} className="flex h-9 w-full items-center justify-center gap-2.5 rounded-lg text-sm font-medium text-muted-foreground transition-all duration-200 hover:text-foreground hover:bg-muted/60">
                   <Settings className="size-4"/>
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="right">
                 <span className="font-medium">Settings</span>
               </TooltipContent>
-            </Tooltip>) : (<Link href="/settings" onClick={onNavigate} onMouseEnter={prefetchSettings} className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80">
+            </Tooltip>) : (<Link href="/settings" onClick={onNavigate} onMouseEnter={prefetchSettings} className="flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-all duration-200 hover:text-foreground hover:bg-muted/60">
               <Settings className="size-4"/>
               <span>Settings</span>
             </Link>)}
@@ -195,8 +195,8 @@ export function Sidebar() {
         });
     };
     const accent = useDashboardRoleAccent();
-    return (<aside id="tour-sidebar" className={cn('hidden min-h-0 h-full shrink-0 border-r bg-background/60 backdrop-blur-sm lg:flex', chromaticTransitionNormalClass, collapsed ? 'w-16 flex-col items-center p-3' : 'w-64 flex-col p-4', accent.sidebarClass)} data-dashboard-role={accent.key} style={DASHBOARD_SIDEBAR_TRANSITION_STYLE}>
-      <button type="button" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} className={cn('mb-6 inline-flex size-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground hover:border-accent/40 hover:text-primary hover:bg-muted/50', chromaticTransitionClass, collapsed && 'mt-2')} onClick={toggleCollapsed}>
+    return (<aside id="tour-sidebar" className={cn('hidden min-h-0 h-full shrink-0 border-r border-border/60 bg-muted/20 backdrop-blur-sm lg:flex', chromaticTransitionNormalClass, collapsed ? 'w-16 flex-col items-center p-3' : 'w-64 flex-col p-4', accent.sidebarClass)} data-dashboard-role={accent.key} style={DASHBOARD_SIDEBAR_TRANSITION_STYLE}>
+      <button type="button" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} className={cn('mb-4 inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground/70 hover:text-primary hover:bg-primary/[0.08]', chromaticTransitionClass, collapsed && 'mt-1')} onClick={toggleCollapsed}>
         {collapsed ? (<ChevronRight className="size-4 transition-transform"/>) : (<ChevronLeft className="size-4 transition-transform"/>)}
       </button>
       <div className={cn('min-h-0 flex-1', collapsed ? 'w-full' : '')}>

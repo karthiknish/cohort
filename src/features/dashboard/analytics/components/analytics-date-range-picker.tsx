@@ -1,9 +1,7 @@
 'use client';
 import { useCallback, useMemo, useState } from 'react';
-import type { ChangeEvent, MouseEvent } from 'react';
 import { format, subDays, differenceInDays, startOfDay, endOfDay } from 'date-fns';
-import { CalendarIcon, ChevronDown, X } from 'lucide-react';
-import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
+import { CalendarIcon, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Popover, PopoverContent, PopoverTrigger, } from '@/shared/ui/popover';
@@ -38,20 +36,6 @@ function formatDateRange(range: AnalyticsDateRange): string {
     const endStr = format(range.end, 'MMM d, yyyy');
     return `${startStr} – ${endStr}`;
 }
-function QuickPresetButton({ onSelect, preset, }: {
-    onSelect: (days: number) => void;
-    preset: {
-        days: number;
-        label: string;
-    };
-}) {
-    const onSelectPreset = () => {
-        onSelect(preset.days);
-    };
-    return (<Button variant="ghost" size="sm" className="justify-start font-normal" onClick={onSelectPreset}>
-      {preset.label}
-    </Button>);
-}
 interface AnalyticsDateRangePickerProps {
     value: AnalyticsDateRange;
     onChange: (range: AnalyticsDateRange, days?: number) => void;
@@ -73,11 +57,12 @@ export function AnalyticsDateRangePicker({ value, onChange, className, }: Analyt
             return '90d';
         return 'custom';
     })();
-    const dateRange = ({
+    const currentPresetLabel = PERIOD_OPTIONS.find((opt) => opt.value === currentPreset)?.label ?? 'Custom range';
+    const dateRange = useMemo(() => ({
         from: value.start,
         to: value.end,
-    });
-    const handleSelect = (range: Partial<DayPickerRange> | undefined) => {
+    }), [value.start, value.end]);
+    const handleSelect = useCallback((range: Partial<DayPickerRange> | undefined) => {
         if (range?.from && range?.to) {
             const newRange: AnalyticsDateRange = {
                 start: startOfDay(range.from),
@@ -86,64 +71,44 @@ export function AnalyticsDateRangePicker({ value, onChange, className, }: Analyt
             const days = differenceInDays(newRange.end, newRange.start) + 1;
             onChange(newRange, days);
         }
-    };
-    const handlePresetSelect = (period: PeriodValue) => {
-        if (period === 'custom')
-            return;
-        const option = PERIOD_OPTIONS.find((opt) => opt.value === period);
-        if (option) {
-            onChange(getPresetRange(option.days), option.days);
-            setOpen(false);
-        }
-    };
-    const handleClearCustom = () => {
-        onChange(getPresetRange(30), 30);
-    };
-    const handlePresetChange = (event: ChangeEvent<HTMLSelectElement>) => {
-        handlePresetSelect(event.target.value as PeriodValue);
-    };
-    const handleClearClick = (event: MouseEvent<SVGElement>) => {
-        event.stopPropagation();
-        handleClearCustom();
-    };
-    const handleQuickPresetClick = (days: number) => {
+    }, [onChange]);
+    const handleQuickPresetClick = useCallback((days: number) => {
         onChange(getPresetRange(days), days);
         setOpen(false);
-    };
-    const handleDisabledDate = (date: Date) => date > maxDisabledDate || date < minDisabledDate;
+    }, [onChange]);
+    const handleDisabledDate = useCallback((date: Date) => date > maxDisabledDate || date < minDisabledDate, [maxDisabledDate, minDisabledDate]);
     return (<div className={cn('flex flex-wrap items-center gap-2', className)}>
-      <div className="relative">
-        <select value={currentPreset} onChange={handlePresetChange} aria-label="Analytics date range" className={cn(DASHBOARD_THEME.inputs.base, 'h-9 min-w-[9.5rem] cursor-pointer appearance-none py-2 pr-9 text-sm font-medium text-foreground')}>
-          {PERIOD_OPTIONS.map((option) => (<option key={option.value} value={option.value}>
-              {option.label}
-            </option>))}
-        </select>
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/>
-      </div>
-
-      {currentPreset === 'custom' ? (<Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className={cn('h-9 justify-start text-left font-normal', !value && 'text-muted-foreground')}>
-              <CalendarIcon className="mr-2 size-4"/>
-              {formatDateRange(value)}
-              <X className="ml-2 size-3 opacity-50 hover:opacity-100" onClick={handleClearClick}/>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <div className="flex flex-col sm:flex-row">
-              <div className="flex flex-col gap-1 border-b p-3 sm:border-b-0 sm:border-r">
-                <span className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Quick select
-                </span>
-                {PERIOD_OPTIONS.flatMap((preset) => preset.value !== 'custom'
-                ? [<QuickPresetButton key={preset.days} preset={preset} onSelect={handleQuickPresetClick}/>]
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className={cn('h-9 justify-start text-left font-normal', !value && 'text-muted-foreground')}>
+            <CalendarIcon className="mr-2 size-4"/>
+            <span className="flex items-center gap-1.5">
+              {currentPresetLabel}
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">{formatDateRange(value)}</span>
+            </span>
+            <ChevronDown className="ml-1 size-3.5 opacity-50"/>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="end">
+          <div className="flex flex-col sm:flex-row">
+            <div className="flex flex-col gap-1 border-b p-3 sm:border-b-0 sm:border-r">
+              <span className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Quick select
+              </span>
+              {PERIOD_OPTIONS.flatMap((preset) => preset.value !== 'custom'
+                ? [<button key={preset.days} type="button" onClick={() => handleQuickPresetClick(preset.days)} className={cn('rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted', currentPreset === preset.value
+                        ? 'bg-primary/[0.08] font-medium text-primary'
+                        : 'text-foreground')}>
+                    {preset.label}
+                  </button>]
                 : [])}
-              </div>
-              <div className="p-1">
-                <Calendar initialFocus mode="range" defaultMonth={dateRange.from} selected={dateRange} onSelect={handleSelect} numberOfMonths={2} disabled={handleDisabledDate}/>
-              </div>
             </div>
-          </PopoverContent>
-        </Popover>) : null}
+            <div className="p-1">
+              <Calendar initialFocus mode="range" defaultMonth={dateRange.from} selected={dateRange} onSelect={handleSelect} numberOfMonths={2} disabled={handleDisabledDate}/>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>);
 }

@@ -47,6 +47,8 @@ async function runBreakdownReport(options: {
                     { name: 'sessions' },
                     { name: 'conversions' },
                     { name: 'totalRevenue' },
+                    { name: 'itemRevenue' },
+                    { name: 'purchaseRevenue' },
                 ],
                 limit: 10000,
                 offset,
@@ -73,7 +75,10 @@ async function runBreakdownReport(options: {
             const users = Number(metricValues[0]?.value ?? 0);
             const sessions = Number(metricValues[1]?.value ?? 0);
             const conversions = Number(metricValues[2]?.value ?? 0);
-            const revenue = Number(metricValues[3]?.value ?? 0);
+            const totalRevenue = Number(metricValues[3]?.value ?? 0);
+            const itemRevenue = Number(metricValues[4]?.value ?? 0);
+            const purchaseRevenue = Number(metricValues[5]?.value ?? 0);
+            const revenue = Math.max(totalRevenue, itemRevenue, purchaseRevenue);
             const date = formatGaDate(rawDate);
             if (!date)
                 return [];

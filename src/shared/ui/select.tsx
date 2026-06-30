@@ -67,11 +67,12 @@ const SelectContent = ({ className, children, position = 'popper', align, sideOf
       align={align}
       sideOffset={sideOffset}
       side={side}
+      className="z-[3000]"
     >
       <SelectPrimitive.Popup
         ref={ref}
         className={cn(
-          'relative z-[3000] min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md',
+          'relative min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md',
           surfaceMotionClasses.popoverContent,
           className,
         )}

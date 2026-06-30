@@ -44,6 +44,8 @@ export async function runGaReport(options: {
                     { name: 'sessions' },
                     { name: 'conversions' },
                     { name: 'totalRevenue' },
+                    { name: 'itemRevenue' },
+                    { name: 'purchaseRevenue' },
                 ],
                 limit: RUN_REPORT_PAGE_LIMIT,
                 offset,
@@ -71,6 +73,12 @@ export async function runGaReport(options: {
             const sessions = Number(metricValues[1]?.value ?? 0);
             const conversions = Number(metricValues[2]?.value ?? 0);
             const totalRevenue = Number(metricValues[3]?.value ?? 0);
+            const itemRevenue = Number(metricValues[4]?.value ?? 0);
+            const purchaseRevenue = Number(metricValues[5]?.value ?? 0);
+            // Use the maximum of totalRevenue, itemRevenue, and purchaseRevenue
+            // to capture all revenue sources. totalRevenue should include both,
+            // but some GA4 properties may not report it correctly.
+            const resolvedRevenue = Math.max(totalRevenue, itemRevenue, purchaseRevenue);
             const date = formatGaDate(rawDate);
             if (typeof date !== 'string' || date.length < 8)
                 return [];
@@ -79,7 +87,7 @@ export async function runGaReport(options: {
                     totalUsers: Number.isFinite(totalUsers) ? totalUsers : 0,
                     sessions: Number.isFinite(sessions) ? sessions : 0,
                     conversions: Number.isFinite(conversions) ? conversions : 0,
-                    totalRevenue: Number.isFinite(totalRevenue) ? totalRevenue : 0,
+                    totalRevenue: Number.isFinite(resolvedRevenue) ? resolvedRevenue : 0,
                 }];
         });
         allRows.push(...pageRows);
