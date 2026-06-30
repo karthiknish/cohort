@@ -1,10 +1,10 @@
 /**
  * Server-only session validation.
  *
- * Split from auth-guard.ts because getToken requires a server-only import
- * (@tanstack/react-start/server) which cannot be in client-bundled modules.
+ * Uses the official `getToken` from `convexBetterAuthReactStart` via
+ * `@/lib/auth-server`. The token fetch is server-only (reads request cookies).
  */
-import { getToken } from '@/lib/auth-token.server'
+import { getToken } from '@/lib/auth-server'
 import { decodeJwtSubject } from '@/lib/jwt-utils'
 import { getSystemConvexClient } from '@/lib/convex-system-client'
 import { internal } from '@convex/_generated/api'
@@ -24,13 +24,10 @@ export async function hasValidSession(_request: Request): Promise<boolean> {
 
 /**
  * Resolve the signed-in user's domain status server-side for the SSR auth
- * guard. Replaces the legacy `cohorts_status` cookie: with the official
- * Convex + Better Auth structure there are no custom session cookies, so the
- * `_authed` beforeLoad guard derives status from the Convex JWT subject
- * (= better-auth user id = domain `users.legacyId`) via the domain table.
+ * guard. Derives status from the Convex JWT subject (= better-auth user id
+ * = domain `users.legacyId`) via the domain table.
  *
- * Returns `null` when the status can't be determined (no session, decode
- * failure, Convex unavailable, or no domain row yet). Callers treat `null` as
+ * Returns `null` when the status can't be determined. Callers treat `null` as
  * "no SSR redirect" and let the client `ProtectedRoute` gate handle it.
  */
 export async function resolveUserStatus(): Promise<string | null> {
@@ -41,8 +38,6 @@ export async function resolveUserStatus(): Promise<string | null> {
     if (!legacyId) return null
     const client = getSystemConvexClient()
     if (!client) return null
-    // ConvexHttpClient.query expects a public reference; the internal query is
-    // callable here because the system client authenticates with a deploy key.
     const result = await client.query(
       internal.users.getStatusByLegacyId as unknown as FunctionReference<'query'>,
       { legacyId },

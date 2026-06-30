@@ -12,7 +12,7 @@ import { ApiError } from './api-errors';
 import { decodeJwtSubject } from './jwt-utils';
 import { fetchWithTimeout } from './retry-utils';
 import { ConvexHttpClient } from 'convex/browser';
-import { getToken as getNextJsToken } from '@/lib/auth-token.server';
+import { getToken as getNextJsToken } from '@/lib/auth-server';
 import { getConvexSiteUrl } from '@/lib/convex-env';
 import { api } from '/_generated/api';
 class AuthenticationError extends ApiError {
