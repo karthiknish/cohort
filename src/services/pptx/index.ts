@@ -164,6 +164,7 @@ export async function generateProposalPptx(
                     totalSlides,
                     image,
                     aiSlideIdx,
+                    slideContent,
                 );
                 aiSlideIdx++;
             }

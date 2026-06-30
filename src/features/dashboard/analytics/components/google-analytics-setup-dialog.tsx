@@ -53,11 +53,24 @@ export function GoogleAnalyticsSetupDialog({ open, onOpenChange, setupMessage, p
             <p className="text-sm font-medium">Property</p>
             <Select value={selectedPropertyId || undefined} onValueChange={onPropertySelectionChange} disabled={loadingProperties || initializing || properties.length === 0}>
               <SelectTrigger className="h-auto min-h-10 items-start py-3 text-left">
-                <SelectValue placeholder={loadingProperties ? 'Loading properties...' : 'Select Google Analytics property'}/>
+                <SelectValue placeholder={loadingProperties ? 'Loading properties...' : 'Select Google Analytics property'}>
+                  {(value: string | null) => {
+                    if (!value) return null;
+                    const selected = properties.find((p) => p.id === value);
+                    if (!selected) return value;
+                    return (<span className="flex flex-col gap-0.5">
+                      <span className="font-medium text-foreground">{selected.name}</span>
+                      <span className="text-xs text-muted-foreground">{selected.id}</span>
+                    </span>);
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="max-h-[24rem]">
                 {properties.map((property) => (<SelectItem key={property.id} value={property.id} className="py-2.5">
-                    {property.name}
+                    <span className="flex flex-col gap-0.5">
+                      <span className="font-medium text-foreground">{property.name}</span>
+                      <span className="text-xs text-muted-foreground">{property.id}</span>
+                    </span>
                   </SelectItem>))}
               </SelectContent>
             </Select>
