@@ -68,12 +68,12 @@ export function useCollaborationUrlState(): CollaborationUrlState & Collaboratio
         [DEEP_LINK_MESSAGE_PARAM]: searchParams.get(DEEP_LINK_MESSAGE_PARAM),
         [DEEP_LINK_THREAD_PARAM]: searchParams.get(DEEP_LINK_THREAD_PARAM),
       };
-      if (CHANNEL_PARAM in updates) current[CHANNEL_PARAM] = updates.channelId ?? null;
-      if (CONVERSATION_PARAM in updates) current[CONVERSATION_PARAM] = updates.conversationLegacyId ?? null;
-      if (PROJECT_PARAM in updates) current[PROJECT_PARAM] = updates.projectId ?? null;
-      if (PROJECT_NAME_PARAM in updates) current[PROJECT_NAME_PARAM] = updates.projectName ?? null;
-      if (DEEP_LINK_MESSAGE_PARAM in updates) current[DEEP_LINK_MESSAGE_PARAM] = updates.deepLinkMessageId ?? null;
-      if (DEEP_LINK_THREAD_PARAM in updates) current[DEEP_LINK_THREAD_PARAM] = updates.deepLinkThreadId ?? null;
+      if ('channelId' in updates) current[CHANNEL_PARAM] = updates.channelId ?? null;
+      if ('conversationLegacyId' in updates) current[CONVERSATION_PARAM] = updates.conversationLegacyId ?? null;
+      if ('projectId' in updates) current[PROJECT_PARAM] = updates.projectId ?? null;
+      if ('projectName' in updates) current[PROJECT_NAME_PARAM] = updates.projectName ?? null;
+      if ('deepLinkMessageId' in updates) current[DEEP_LINK_MESSAGE_PARAM] = updates.deepLinkMessageId ?? null;
+      if ('deepLinkThreadId' in updates) current[DEEP_LINK_THREAD_PARAM] = updates.deepLinkThreadId ?? null;
       const search = buildSearchString(current);
       router.replace(`${pathname}${search}`, { scroll: false });
     },
