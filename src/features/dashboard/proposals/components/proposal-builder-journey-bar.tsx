@@ -50,7 +50,7 @@ export function ProposalBuilderJourneyBar({ isSubmitting, isRecheckingDeck, subm
               </Link>
             </Button>) : null}
           {deckDownloadUrl ? (<Button size="sm" variant="outline" asChild>
-              <a href={deckDownloadUrl} target="_blank" rel="noopener noreferrer">
+              <a href={deckDownloadUrl} download="proposal-deck.pptx" target="_blank" rel="noopener noreferrer">
                 Download
               </a>
             </Button>) : null}

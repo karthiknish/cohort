@@ -1,7 +1,6 @@
 'use client';
 import { useRouter } from '@/shared/ui/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ProposalDraft } from '@/types/proposals';
+import { useCallback, useEffect, useState } from 'react';
 import type { ProposalFormData } from '@/lib/proposals';
 import { can } from '@/lib/access-control/dashboard-access';
 import { useAuth } from '@/shared/contexts/auth-context';
@@ -37,8 +36,6 @@ export function useProposalsPageContent() {
             document.body.style.overflow = previousOverflow;
         };
     }, [isWizardOpen]);
-    // Local state for proposals list (needed by deck preparation)
-    const [proposals, setProposals] = useState<ProposalDraft[]>([]);
     // Wizard hook - form state and step navigation
     const wizard = useProposalWizard();
     const { currentStep, formState, validationErrors, steps, step, isFirstStep, isLastStep, hasPersistableData, setCurrentStep, setFormState, updateField, toggleArrayValue, handleSocialHandleChange, clearErrors, undo, redo, canUndo, canRedo, handleBack, goToStep, } = wizard;
@@ -56,18 +53,14 @@ export function useProposalsPageContent() {
         onLastSubmissionSnapshotChange: (snapshot) => submission.setLastSubmissionSnapshot(snapshot),
         steps,
     });
-    const { draftId, isLoadingProposals, isCreatingDraft, isBootstrapping, proposalsQueryError, autosaveStatus, deletingProposalId, proposalPendingDelete, isDeleteDialogOpen, setDraftId, setAutosaveStatus, refreshProposals, ensureDraftId, saveDraftNow, handleCreateNewProposal, handleResumeProposal, handleDeleteProposal, requestDeleteProposal, handleDeleteDialogChange, wizardRef, } = drafts;
+    const { draftId, proposals: draftProposals, isLoadingProposals, isCreatingDraft, isBootstrapping, proposalsQueryError, autosaveStatus, deletingProposalId, proposalPendingDelete, isDeleteDialogOpen, setDraftId, setAutosaveStatus, refreshProposals, ensureDraftId, saveDraftNow, handleCreateNewProposal, handleResumeProposal, handleDeleteProposal, requestDeleteProposal, handleDeleteDialogChange, wizardRef, } = drafts;
     // Submission hook - AI generation and deck polling
     const submission = useProposalSubmission({
         draftId,
         formState,
         currentStep,
         ensureDraftId,
-        refreshProposals: async () => {
-            const result = await refreshProposals();
-            setProposals(result);
-            return result;
-        },
+        refreshProposals,
         setDraftId,
         setFormState,
         setCurrentStep,
@@ -76,31 +69,21 @@ export function useProposalsPageContent() {
         steps,
     });
     const { isSubmitting, isRecheckingDeck, submitted, isPresentationReady, presentationDeck, lastSubmissionSnapshot, submitProposal, handleContinueEditingFromSnapshot, handleRecheckDeck, canResumeSubmission, deckDownloadUrl, activeProposalIdForDeck, } = submission;
-    // Deck preparation hook
+    // Deck preparation hook — setProposals is a no-op because Convex realtime
+    // updates the proposals list automatically. The optimistic update in deck
+    // prep is redundant; removing it avoids a local-state sync effect that
+    // caused a render storm (refreshProposals was unmemoized → effect ran every
+    // render → setProposals → re-render → infinite loop).
     const deckPrep = useDeckPreparation({
         draftId,
-        refreshProposals: async () => {
-            const result = await refreshProposals();
-            setProposals(result);
-            return result;
-        },
+        refreshProposals,
         setPresentationDeck: submission.setPresentationDeck,
         setAiSuggestions: submission.setAiSuggestions,
-        setProposals,
+        setProposals: useCallback(() => {}, []),
         presentationDeck,
     });
     const { downloadingDeckId, deckProgressStage, handleDownloadDeck } = deckPrep;
     const hasSelectedClient = Boolean(selectedClientId);
-    // Initial load of proposals
-    useEffect(() => {
-        const loadProposals = async () => {
-            const result = await refreshProposals();
-            setProposals(result);
-        };
-        if (!isBootstrapping && hasSelectedClient) {
-            void loadProposals();
-        }
-    }, [hasSelectedClient, isBootstrapping, refreshProposals]);
     // Handle next button with submit
     const handleNext = () => {
         if (isLastStep) {
@@ -120,7 +103,7 @@ export function useProposalsPageContent() {
     const activeDeckStage: DeckProgressStage = deckProgressStage ?? 'polling';
     const previewProposals = getPreviewProposals(selectedClientId ?? null);
     const previewDraftId = previewProposals.find((proposal) => proposal.status === 'draft')?.id ?? null;
-    const displayedProposals = isPreviewMode ? previewProposals : proposals;
+    const displayedProposals = isPreviewMode ? previewProposals : draftProposals;
     const displayedDraftId = isPreviewMode ? previewDraftId : draftId;
     const displayedLoadingState = isPreviewMode ? false : isLoadingProposals;
     const isInitialLoading = displayedLoadingState && displayedProposals.length === 0 && !isWizardOpen;
@@ -181,7 +164,7 @@ export function useProposalsPageContent() {
         handleContinueEditingFromSnapshot,
     });
     const handleRefreshProposals = () => {
-        void refreshProposals().then(setProposals);
+        void refreshProposals();
     };
     const handleConfirmDeleteProposal = () => {
         if (proposalPendingDelete) {

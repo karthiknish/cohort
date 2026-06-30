@@ -126,7 +126,7 @@ export const generateFromProposal = zWorkspaceAction({
       })
 
       // Generate PPTX directly using pptxgenjs
-      const pptxBuffer = await generateProposalPptx(formData, instructions)
+      const pptxArrayBuffer = await generateProposalPptx(formData, instructions)
 
       // Store the PPTX in R2
       const label = slugifyProposalLabel(proposal.clientName ?? proposal.legacyId)
@@ -135,7 +135,7 @@ export const generateFromProposal = zWorkspaceAction({
         r2,
         ctx,
         key: objectKey,
-        body: pptxBuffer.buffer.slice(pptxBuffer.byteOffset, pptxBuffer.byteOffset + pptxBuffer.byteLength) as ArrayBuffer,
+        body: pptxArrayBuffer,
         contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         downloadFilename: `${label}-proposal.pptx`,
       })
@@ -173,6 +173,7 @@ export const generateFromProposal = zWorkspaceAction({
         aiSuggestions: suggestions ?? null,
         presentationDeck: deckPayload,
         pptUrl: pptxUrl,
+        pptStorageId,
         pdfUrl: null,
         updatedAtMs: Date.now(),
         lastAutosaveAtMs: Date.now(),

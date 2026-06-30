@@ -264,6 +264,7 @@ export const proposalsApi = {
 };
 export const proposalArchivesApi = {
     getArtifactDownloadUrls: looseApi.proposalArchives.getArtifactDownloadUrls,
+    refreshSignedUrl: looseApi.proposalArchives.refreshSignedUrl,
 };
 export const proposalGenerationApi = {
     generateFromProposal: looseApi.proposalGeneration.generateFromProposal,

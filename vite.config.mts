@@ -29,7 +29,18 @@ export default defineConfig({
     noExternal: ['@convex-dev/better-auth'],
   },
   plugins: [
-    tanstackStart(),
+    // This project uses the `.client.*` suffix in the Next.js sense
+    // ("Client Component" — still SSR-rendered as a route `component`),
+    // not the TanStack Start sense ("client-only, forbidden on server").
+    // Override the default server-env denial of `**/*.client.*` so route
+    // files can import `page.client.tsx` modules. The `.server.*` client-env
+    // denial is left intact — that's the rule that catches real server-only
+    // leaks into the client bundle.
+    tanstackStart({
+      importProtection: {
+        server: { files: [] },
+      },
+    }),
     // Source map upload + React component annotation + tunnel route.
     // Only active when SENTRY_AUTH_TOKEN is present (production builds).
     ...(isProduction && hasSentryAuthToken

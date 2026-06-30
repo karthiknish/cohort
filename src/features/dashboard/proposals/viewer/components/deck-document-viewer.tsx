@@ -14,6 +14,8 @@ const PptViewer = dynamic(() => import('@/shared/components/ppt-viewer').then((m
 });
 export type DeckDocumentViewerProps = {
     src: string;
+    /** Optional callback to fetch a fresh signed URL when the current one expires (503). */
+    refreshUrl?: () => Promise<string | null>;
     fileName?: string | null;
     backHref?: string;
     backLabel?: string;
@@ -43,7 +45,7 @@ function FormatIcon({ kind }: {
     }
     return <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden/>;
 }
-export function DeckDocumentViewer({ src, fileName: fileNameProp, backHref = '/dashboard/proposals', backLabel = 'Back to proposals', subtitle, embedded = false, className, }: DeckDocumentViewerProps) {
+export function DeckDocumentViewer({ src, refreshUrl, fileName: fileNameProp, backHref = '/dashboard/proposals', backLabel = 'Back to proposals', subtitle, embedded = false, className, }: DeckDocumentViewerProps) {
     const fileName = fileNameProp ?? getFileNameFromUrl(src);
     const kind = getDocumentKind(fileName);
     const displayTitle = (() => {
@@ -64,7 +66,7 @@ export function DeckDocumentViewer({ src, fileName: fileNameProp, backHref = '/d
         </a>
       </Button>
     </div>);
-    return (<div className={cn('flex flex-col gap-4', embedded ? 'min-h-0' : 'min-h-[calc(100dvh-10rem)]', className)}>
+    return (<div className={cn('flex min-h-0 min-w-0 flex-col gap-4 overflow-x-hidden', embedded ? 'min-h-0' : 'min-h-[calc(100dvh-10rem)]', className)}>
       {embedded ? (<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <FormatIcon kind={kind}/>
@@ -99,8 +101,8 @@ export function DeckDocumentViewer({ src, fileName: fileNameProp, backHref = '/d
           {toolbar}
         </header>)}
 
-      <div className="flex min-h-0 flex-1 flex-col">
-        {kind === 'pdf' ? (<PdfViewer url={src} title={displayTitle} className="flex-1"/>) : kind === 'pptx' ? (<PptViewer url={src} title={displayTitle} className="flex-1"/>) : (<div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/70 bg-muted/20 p-10 text-center">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
+        {kind === 'pdf' ? (<PdfViewer url={src} title={displayTitle} className="flex-1"/>) : kind === 'pptx' ? (<PptViewer url={src} refreshUrl={refreshUrl} title={displayTitle} className="flex-1"/>) : (<div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/70 bg-muted/20 p-10 text-center">
             <p className="text-sm text-muted-foreground">
               This file type cannot be previewed in the browser.
             </p>

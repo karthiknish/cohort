@@ -1,178 +1,230 @@
 'use client';
-import { useEffect, useEffectEvent, useReducer, useRef } from 'react';
-import JSZip from 'jszip';
-import { createInitialPptViewerState, pptViewerReducer, type PptViewerProps, type Slide, } from './ppt-viewer-types';
-export function usePptViewer({ url }: Pick<PptViewerProps, 'url'>) {
-    const [state, dispatch] = useReducer(pptViewerReducer, undefined, createInitialPptViewerState);
-    const { slides, currentSlide, isLoading, error, isFullscreen } = state;
-    const loadRequestRef = useRef(0);
-    const extractSlides = async (arrayBuffer: ArrayBuffer): Promise<Slide[]> => {
-        const zip = await JSZip.loadAsync(arrayBuffer);
-        const extractedSlides: Slide[] = [];
-        const slideFiles = Object.keys(zip.files)
-            .filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
-            .sort((a, b) => {
-            const numA = parseInt(a.match(/slide(\d+)/)?.[1] || '0', 10);
-            const numB = parseInt(b.match(/slide(\d+)/)?.[1] || '0', 10);
-            return numA - numB;
-        });
-        const mediaFiles: Record<string, string> = {};
-        const mediaEntries = Object.entries(zip.files).filter(([name]) => name.startsWith('ppt/media/'));
-        await Promise.all(mediaEntries.map(async ([name, file]) => {
-            const blob = await file.async('blob').catch(() => null);
-            if (blob) {
-                mediaFiles[name] = URL.createObjectURL(blob);
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { PptxViewer, RECOMMENDED_ZIP_LIMITS } from '@aiden0z/pptx-renderer';
+
+export interface UsePptViewerOptions {
+    url: string;
+    /** Optional callback to fetch a fresh signed URL when the current one expires (503). */
+    refreshUrl?: () => Promise<string | null>;
+}
+
+export interface UsePptViewerReturn {
+    containerRef: React.RefObject<HTMLDivElement | null>;
+    slideCount: number;
+    currentSlide: number;
+    isLoading: boolean;
+    error: string | null;
+    isFullscreen: boolean;
+    goToSlide: (index: number) => void;
+    handlePrevSlide: () => void;
+    handleNextSlide: () => void;
+    handleToggleFullscreen: () => void;
+    handleRetry: () => void;
+}
+
+/**
+ * Fetch a PPTX file through the proxy with retry + expired-URL refresh logic.
+ * Returns an ArrayBuffer suitable for passing to PptxViewer.
+ */
+async function fetchPresentation(
+    fileUrl: string,
+    refreshUrl: (() => Promise<string | null>) | undefined,
+): Promise<ArrayBuffer> {
+    let currentUrl = fileUrl;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+            const proxyUrl = `/api/proxy/file?url=${encodeURIComponent(currentUrl)}`;
+            const response = await fetch(proxyUrl, {
+                method: 'GET',
+                credentials: 'include',
+            });
+            if (response.ok) {
+                return response.arrayBuffer();
             }
-        }));
-        const mediaValues = Object.values(mediaFiles);
-        const parsedSlides = await Promise.all(slideFiles.map(async (slideFile, i) => {
-            if (!slideFile)
-                return null;
-            const slideNum = parseInt(slideFile.match(/slide(\d+)/)?.[1] || '0', 10);
-            let imageUrl: string | null = null;
-            let textContent = '';
-            const relsPath = `ppt/slides/_rels/slide${slideNum}.xml.rels`;
-            const relsFile = zip.files[relsPath];
-            if (relsFile) {
-                const relsContent = await relsFile.async('text').catch(() => null);
-                if (relsContent) {
-                    const imageMatch = relsContent.match(/Target="\.\.\/media\/(image\d+\.[^"]+)"/);
-                    if (imageMatch) {
-                        const mediaPath = `ppt/media/${imageMatch[1]}`;
-                        imageUrl = mediaFiles[mediaPath] || null;
-                    }
-                }
-            }
-            const slideFileEntry = zip.files[slideFile];
-            if (slideFileEntry) {
-                const slideContent = await slideFileEntry.async('text').catch(() => null);
-                if (slideContent) {
-                    const textMatches = slideContent.match(/<a:t>([^<]*)<\/a:t>/g);
-                    if (textMatches) {
-                        textContent = textMatches
-                            .flatMap((match: string | undefined) => {
-                            const text = match?.replace(/<\/?a:t>/g, '') ?? '';
-                            return text.trim() ? [text] : [];
-                        })
-                            .join(' ');
-                    }
-                }
-            }
-            if (!imageUrl && mediaValues.length > 0 && mediaValues[i]) {
-                imageUrl = mediaValues[i] ?? null;
-            }
-            return {
-                index: i,
-                imageUrl,
-                textContent: textContent.slice(0, 500),
-            };
-        }));
-        extractedSlides.push(...parsedSlides.filter((slide): slide is NonNullable<typeof slide> => slide !== null));
-        return extractedSlides;
-    };
-    const fetchPresentation = async (fileUrl: string): Promise<ArrayBuffer> => {
-        const proxyUrl = `/api/proxy/file?url=${encodeURIComponent(fileUrl)}`;
-        const response = await fetch(proxyUrl, {
-            method: 'GET',
-            credentials: 'include',
-        });
-        if (!response.ok) {
             if (response.status === 401 || response.status === 403) {
                 throw new Error('Access denied. You may not have permission to view this file.');
             }
             const errorData = await response.json().catch(() => ({}));
-            throw new Error((errorData as {
-                error?: string;
-            }).error || `Failed to fetch presentation: ${response.status}`);
+            const errorMsg =
+                (errorData as { error?: string }).error ||
+                `Failed to fetch presentation: ${response.status}`;
+            if (response.status === 503) {
+                if (errorMsg === 'FILE_URL_EXPIRED' && refreshUrl) {
+                    const freshUrl = await refreshUrl().catch(() => null);
+                    if (freshUrl && freshUrl !== currentUrl) {
+                        currentUrl = freshUrl;
+                        lastError = new Error('File URL expired, refreshing...');
+                        continue;
+                    }
+                }
+                if (attempt < 3) {
+                    lastError = new Error(
+                        errorMsg === 'FILE_URL_EXPIRED'
+                            ? 'File URL has expired. Please refresh the page.'
+                            : errorMsg,
+                    );
+                    await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+                    continue;
+                }
+            }
+            throw new Error(
+                errorMsg === 'FILE_URL_EXPIRED'
+                    ? 'File URL has expired. Please refresh the page.'
+                    : errorMsg,
+            );
+        } catch (err) {
+            if (err instanceof Error && err.message.includes('Access denied')) {
+                throw err;
+            }
+            lastError = err instanceof Error ? err : new Error(String(err));
+            if (attempt < 3) {
+                await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+                continue;
+            }
         }
-        return response.arrayBuffer();
-    };
-    const loadPresentation = useEffectEvent(() => {
+    }
+    throw lastError ?? new Error('Failed to fetch presentation after retries');
+}
+
+export function usePptViewer({ url, refreshUrl }: UsePptViewerOptions): UsePptViewerReturn {
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const viewerRef = useRef<PptxViewer | null>(null);
+    const refreshUrlRef = useRef(refreshUrl);
+    refreshUrlRef.current = refreshUrl;
+    const loadRequestRef = useRef(0);
+
+    const [slideCount, setSlideCount] = useState(0);
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    const loadPresentation = useCallback(async () => {
         const requestId = loadRequestRef.current + 1;
         loadRequestRef.current = requestId;
-        dispatch({ type: 'beginLoad' });
-        void fetchPresentation(url)
-            .then((arrayBuffer) => {
-            if (loadRequestRef.current !== requestId)
-                return null;
-            return extractSlides(arrayBuffer);
-        })
-            .then((extractedSlides) => {
-            if (loadRequestRef.current !== requestId || !extractedSlides)
-                return;
-            if (extractedSlides.length === 0) {
-                throw new Error('No slides found in presentation');
-            }
-            dispatch({ type: 'loadResolved', slides: extractedSlides });
-        })
-            .catch((err) => {
-            if (loadRequestRef.current !== requestId)
-                return;
-            dispatch({
-                type: 'loadResolved',
-                slides: [],
-                error: err instanceof Error ? err.message : 'Failed to load presentation',
+
+        setIsLoading(true);
+        setError(null);
+
+        // Destroy any existing viewer
+        viewerRef.current?.destroy();
+        viewerRef.current = null;
+
+        if (!containerRef.current) return;
+
+        try {
+            const arrayBuffer = await fetchPresentation(url, refreshUrlRef.current);
+            if (loadRequestRef.current !== requestId) return; // superseded
+
+            // The page layout container can be wider than the viewport (max-w-[1600px]).
+            // Cap the viewer width to the viewport so slides scale to fit the visible area
+            // instead of being scaled up to match the oversized container.
+            const containerEl = containerRef.current;
+            const availableWidth = Math.min(containerEl.clientWidth, window.innerWidth);
+            containerEl.style.maxWidth = `${availableWidth}px`;
+
+            const viewer = await PptxViewer.open(arrayBuffer, containerEl, {
+                renderMode: 'slide',
+                fitMode: 'contain',
+                width: availableWidth,
+                zipLimits: RECOMMENDED_ZIP_LIMITS,
+                onSlideChange: (index: number) => {
+                    setCurrentSlide(index);
+                },
             });
-        });
-    });
-    useEffect(() => {
-        loadPresentation();
+
+            if (loadRequestRef.current !== requestId) {
+                viewer.destroy();
+                return;
+            }
+
+            viewerRef.current = viewer;
+            setSlideCount(viewer.slideCount);
+            setCurrentSlide(0);
+            setIsLoading(false);
+        } catch (err) {
+            if (loadRequestRef.current !== requestId) return;
+            setError(err instanceof Error ? err.message : 'Failed to load presentation');
+            setIsLoading(false);
+        }
     }, [url]);
+
+    useEffect(() => {
+        void loadPresentation();
+    }, [loadPresentation]);
+
+    // Re-fit the viewer when the window is resized
+    useEffect(() => {
+        const onResize = () => {
+            const viewer = viewerRef.current;
+            const containerEl = containerRef.current;
+            if (!viewer || !containerEl) return;
+            const availableWidth = Math.min(containerEl.clientWidth, window.innerWidth);
+            void viewer.setFitMode('contain');
+            // The viewer reads container width on fit; cap it for oversized layouts
+            containerEl.style.maxWidth = `${availableWidth}px`;
+        };
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+
+    // Cleanup on unmount
     useEffect(() => {
         return () => {
-            slides.forEach((slide) => {
-                if (slide.imageUrl) {
-                    URL.revokeObjectURL(slide.imageUrl);
-                }
-            });
+            viewerRef.current?.destroy();
+            viewerRef.current = null;
         };
-    }, [slides]);
-    const goToSlide = useEffectEvent((index: number) => {
-        if (index >= 0 && index < slides.length) {
-            dispatch({ type: 'setCurrentSlide', value: index });
+    }, []);
+
+    const goToSlide = useCallback((index: number) => {
+        const viewer = viewerRef.current;
+        if (!viewer) return;
+        if (index >= 0 && index < viewer.slideCount) {
+            void viewer.goToSlide(index);
+            setCurrentSlide(index);
         }
-    });
-    const handlePrevSlide = () => {
+    }, []);
+
+    const handlePrevSlide = useCallback(() => {
         goToSlide(currentSlide - 1);
-    };
-    const handleNextSlide = () => {
+    }, [currentSlide, goToSlide]);
+
+    const handleNextSlide = useCallback(() => {
         goToSlide(currentSlide + 1);
-    };
-    const handleToggleFullscreen = () => {
-        dispatch({ type: 'toggleFullscreen' });
-    };
-    const handleKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => { });
-    useEffect(() => {
-        handleKeyDownRef.current = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowLeft') {
-                goToSlide(currentSlide - 1);
-            }
-            else if (e.key === 'ArrowRight') {
-                goToSlide(currentSlide + 1);
-            }
-            else if (e.key === 'Home') {
-                goToSlide(0);
-            }
-            else if (e.key === 'End') {
-                goToSlide(slides.length - 1);
-            }
-            else if (e.key === 'Escape' && isFullscreen) {
-                dispatch({ type: 'setFullscreen', value: false });
-            }
-        };
-    }, [currentSlide, isFullscreen, slides.length]);
+    }, [currentSlide, goToSlide]);
+
+    const handleToggleFullscreen = useCallback(() => {
+        setIsFullscreen((prev) => !prev);
+    }, []);
+
+    const handleRetry = useCallback(() => {
+        void loadPresentation();
+    }, [loadPresentation]);
+
+    // Keyboard navigation
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
-            handleKeyDownRef.current(e);
+            if (e.key === 'ArrowLeft') {
+                handlePrevSlide();
+            } else if (e.key === 'ArrowRight') {
+                handleNextSlide();
+            } else if (e.key === 'Home') {
+                goToSlide(0);
+            } else if (e.key === 'End') {
+                goToSlide(slideCount - 1);
+            } else if (e.key === 'Escape' && isFullscreen) {
+                setIsFullscreen(false);
+            }
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, []);
-    const handleRetry = () => {
-        loadPresentation();
-    };
+    }, [handlePrevSlide, handleNextSlide, goToSlide, slideCount, isFullscreen]);
+
     return {
-        slides,
+        containerRef,
+        slideCount,
         currentSlide,
         isLoading,
         error,

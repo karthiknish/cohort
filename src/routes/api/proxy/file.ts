@@ -42,6 +42,48 @@ function isAllowedHostname(hostname: string): boolean {
   return false
 }
 
+const MAX_RETRIES = 2
+const RETRY_DELAY_MS = 300
+
+async function fetchWithRetry(
+  url: string,
+  retries = MAX_RETRIES,
+): Promise<Response> {
+  let lastError: Error | null = null
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const resp = await fetch(url, {
+        cache: 'no-store',
+        redirect: 'follow',
+        headers: {
+          Accept:
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation,application/octet-stream,*/*',
+        },
+      })
+      if (resp.ok) return resp
+      // Log non-ok responses for debugging
+      console.warn(`[proxy/file] Upstream returned ${resp.status} (attempt ${attempt + 1}/${retries + 1}) for ${url.substring(0, 120)}...`)
+      // Retry on 5xx (transient server errors)
+      if (resp.status >= 500 && attempt < retries) {
+        lastError = new Error(`Upstream returned ${resp.status}`)
+        // Consume the body to avoid leaking the stream
+        await resp.text().catch(() => {})
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * (attempt + 1)))
+        continue
+      }
+      return resp
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+      console.warn(`[proxy/file] Fetch error (attempt ${attempt + 1}/${retries + 1}):`, lastError.message)
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * (attempt + 1)))
+        continue
+      }
+    }
+  }
+  throw lastError ?? new Error('Fetch failed after retries')
+}
+
 const handlers = adaptApiHandler(
   {
     auth: 'required',
@@ -55,29 +97,34 @@ const handlers = adaptApiHandler(
     if (!isAllowedHostname(parsedUrl.hostname)) {
       throw new ForbiddenError('URL domain not allowed')
     }
-    const upstream = await fetch(fileUrl, {
-      cache: 'no-store',
-      headers: {
-        Accept:
-          'application/vnd.openxmlformats-officedocument.presentationml.presentation,application/octet-stream,*/*',
-      },
-    })
+    let upstream: Response
+    try {
+      upstream = await fetchWithRetry(fileUrl)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[proxy/file] All retries exhausted:', msg)
+      throw new ServiceUnavailableError('File storage is temporarily unavailable. Please try again.')
+    }
     if (!upstream.ok) {
+      if (upstream.status === 403) {
+        // Signed URL has expired — the client needs to request a fresh URL
+        throw new ServiceUnavailableError('FILE_URL_EXPIRED')
+      }
       throw new ServiceUnavailableError(`Failed to fetch file: ${upstream.status}`)
     }
     const contentType = upstream.headers.get('content-type') || 'application/octet-stream'
-    const contentLength = upstream.headers.get('content-length')
     const rawFilename = decodeURIComponent(parsedUrl.pathname.split('/').pop() || 'file')
     const filename = sanitizeFilename(rawFilename)
+    // Read the full body as arrayBuffer — streaming (upstream.body) can fail
+    // in some server environments (Nitro/Vinxi) due to web stream compatibility
+    const bodyBuffer = await upstream.arrayBuffer()
     const headers: Record<string, string> = {
       'Content-Type': contentType,
       'Cache-Control': 'private, max-age=3600',
       'Content-Disposition': `inline; filename="${filename}"; filename*=UTF-8''${encodeContentDispositionFilename(filename)}`,
+      'Content-Length': String(bodyBuffer.byteLength),
     }
-    if (contentLength) {
-      headers['Content-Length'] = contentLength
-    }
-    return new Response(upstream.body, { status: 200, headers })
+    return new Response(bodyBuffer, { status: 200, headers })
   },
 )
 

@@ -5,13 +5,12 @@ import { useConvexAuth, useQuery } from 'convex/react';
 import { ArrowUpRight, CheckSquare, Clock } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { tasksApi } from '@/lib/convex-api';
 import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
-import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
 import { cn, getWorkspaceId } from '@/lib/utils';
 import type { TaskRecord } from '@/types/tasks';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -131,10 +130,12 @@ function TaskRow({ task, nowMs }: {
     nowMs: number;
 }) {
     const isOverdue = task.dueDate ? Date.parse(task.dueDate) < nowMs : false;
-    return (<Link href={`/dashboard/tasks?taskId=${task.id}`} className="group flex items-start gap-3 rounded-xl border border-border/50 bg-background/80 p-3 transition-colors hover:border-border hover:bg-muted/20">
-      <CheckSquare className={cn('mt-0.5 size-4 shrink-0', isOverdue ? 'text-destructive' : 'text-muted-foreground/60')}/>
+    return (<Link href={`/dashboard/tasks?taskId=${task.id}`} className="group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 transition-colors hover:border-muted hover:bg-muted/40">
+      <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-md border', isOverdue ? 'border-destructive/30 bg-destructive/10 text-destructive' : 'border-muted bg-muted/40 text-muted-foreground')}>
+        <CheckSquare className="size-3.5" aria-hidden/>
+      </span>
 
-      <div className="min-w-0 flex-1 space-y-1.5">
+      <div className="min-w-0 flex-1 space-y-1">
         <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">{task.title}</p>
 
         <div className="flex flex-wrap items-center gap-1.5">
@@ -153,22 +154,22 @@ function TaskRow({ task, nowMs }: {
               {task.client}
             </Badge>)}
         </div>
+      </div>
 
-        {/* Due date */}
+      <div className="flex shrink-0 flex-col items-end gap-1">
         {task.dueDate && (<p className={cn('flex items-center gap-1 text-[11px]', isOverdue ? 'font-medium text-destructive' : 'text-muted-foreground')}>
             <Clock className="size-3"/>
             {formatDueDate(task.dueDate, nowMs)}
           </p>)}
+        <ArrowUpRight className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"/>
       </div>
-
-      <ArrowUpRight className="mt-0.5 size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"/>
     </Link>);
 }
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 const TASK_SKELETON_KEYS = ['ts-a', 'ts-b', 'ts-c', 'ts-d'] as const;
 function TaskSkeleton() {
-    return (<div className="flex items-start gap-3 rounded-xl border border-border/40 bg-background/80 p-3">
-      <Skeleton className="mt-0.5 size-4 shrink-0 rounded"/>
+    return (<div className="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5">
+      <Skeleton className="size-7 shrink-0 rounded-md"/>
       <div className="flex-1 space-y-2">
         <Skeleton className="h-4 w-3/4"/>
         <div className="flex gap-1.5">
@@ -196,39 +197,37 @@ export function MyTasksSection() {
     const groups = groupTasks(tasks, currentTimeMs);
     const isLoading = rawTasks === undefined;
     const openCount = tasks.length;
-    return (<Card className={DASHBOARD_THEME.cards.base}>
-      <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'pb-4')}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-base">My work</CardTitle>
-              {!isLoading && openCount > 0 && (<Badge variant="secondary" className="rounded-full text-xs">
-                  {openCount}
-                </Badge>)}
-            </div>
-            <CardDescription>
-              Tasks assigned to you or awaiting ownership across all clients.
-            </CardDescription>
+    return (<Card className="border-muted/60 bg-background shadow-sm">
+      <CardHeader className="border-b border-muted/40 pb-4">
+        <CardDescription className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">Workload</CardDescription>
+        <CardTitle className="text-lg tracking-tight">My work</CardTitle>
+        <CardAction>
+          <div className="flex items-center gap-2">
+            {!isLoading && openCount > 0 && (<Badge variant="secondary" className="rounded-full text-xs tabular-nums">
+                {openCount}
+              </Badge>)}
+            <Button asChild variant="ghost" size="sm" className="w-fit">
+              <Link href="/dashboard/tasks">View all tasks</Link>
+            </Button>
           </div>
-          <Button asChild variant="ghost" size="sm" className="w-fit">
-            <Link href="/dashboard/tasks">View all tasks</Link>
-          </Button>
-        </div>
+        </CardAction>
       </CardHeader>
 
-      <CardContent>
-        {tasksError ? (<Alert variant="destructive"><AlertDescription>{tasksError}</AlertDescription></Alert>) : isLoading ? (<div className="space-y-2">
+      <CardContent className="pt-4">
+        {tasksError ? (<Alert variant="destructive"><AlertDescription>{tasksError}</AlertDescription></Alert>) : isLoading ? (<div className="space-y-1">
             {TASK_SKELETON_KEYS.map((k) => (<TaskSkeleton key={k}/>))}
-          </div>) : tasks.length === 0 ? (<div className="rounded-xl border border-dashed p-5 text-center text-sm text-muted-foreground">
-            <CheckSquare className="mx-auto mb-2 size-6 opacity-30"/>
-            <p>You&apos;re all caught up, no open tasks assigned to you right now.</p>
-          </div>) : (<div className="space-y-5">
+          </div>) : tasks.length === 0 ? (<div className="flex flex-col items-center gap-3 rounded-xl border border-dashed p-8 text-center">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground">
+              <CheckSquare className="size-5 opacity-60"/>
+            </span>
+            <p className="text-sm text-muted-foreground">You&apos;re all caught up, no open tasks assigned to you right now.</p>
+          </div>) : (<div className="space-y-4">
             {groups.map((group) => (<div key={group.label}>
-                <p className={cn('mb-2 text-[11px] font-semibold uppercase tracking-wider', TONE_HEADER[group.tone])}>
+                <p className={cn('mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider', TONE_HEADER[group.tone])}>
                   {group.label}
-                  <span className="ml-1.5 font-normal opacity-70">({group.tasks.length})</span>
+                  <span className="ml-1.5 font-normal opacity-70 tabular-nums">({group.tasks.length})</span>
                 </p>
-                <div className="space-y-2">
+                <div className="space-y-0.5">
                   {group.tasks.map((t) => (<TaskRow key={t.id} task={t} nowMs={currentTimeMs}/>))}
                 </div>
               </div>))}

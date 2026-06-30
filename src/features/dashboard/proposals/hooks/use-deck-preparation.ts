@@ -37,6 +37,7 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
         }
         const anchor = document.createElement('a');
         anchor.href = url;
+        anchor.download = 'proposal-deck.pptx';
         anchor.target = '_blank';
         anchor.rel = 'noopener';
         anchor.style.display = 'none';

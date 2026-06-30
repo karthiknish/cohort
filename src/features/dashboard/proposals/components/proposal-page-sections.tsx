@@ -168,7 +168,7 @@ export function ProposalBuilderOverlay(props: {
             onClose();
         }
     };
-    const builderBody = (<div className="flex h-full min-h-0 flex-col overflow-hidden bg-linear-to-b from-muted/15 via-background to-background supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    const builderBody = (<div className="flex h-full min-h-0 flex-col overflow-hidden bg-background supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border/50 bg-background/90 p-4 backdrop-blur-md sm:items-center sm:px-6">
           <div className="min-w-0 space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Proposal builder</p>
@@ -200,26 +200,20 @@ export function ProposalBuilderOverlay(props: {
                 <CardContent className="p-6">
                   <ProposalSubmittedPanel summary={summary} presentationDeck={presentationDeck as Parameters<typeof ProposalSubmittedPanel>[0]['presentationDeck']} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} onResumeSubmission={onResumeSubmission} isSubmitting={isSubmitting} onRecheckDeck={onRecheckDeck} isRecheckingDeck={isRecheckingDeck}/>
                 </CardContent>
-              </Card>) : (<div className="grid min-h-0 gap-4 lg:grid-cols-[minmax(240px,280px)_1fr] lg:gap-6">
-                <aside className="hidden min-h-0 lg:block">
-                  <div className="sticky top-0 rounded-2xl border border-border/50 bg-card/80 p-3 shadow-sm backdrop-blur-sm">
-                    <p className="mb-3 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Sections
-                    </p>
-                    <ProposalStepNav steps={steps} currentStep={currentStep} submitted={submitted} onGoToStep={onGoToStep}/>
-                  </div>
+              </Card>) : (<Card className="flex min-h-0 flex-col overflow-hidden border-border/60 bg-background p-0 shadow-sm md:grid md:grid-cols-4">
+                <aside className="hidden min-h-0 flex-col border-b border-border/50 p-6 md:flex md:border-r md:border-b-0">
+                  <p className="mb-4 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Sections
+                  </p>
+                  <ProposalStepNav steps={steps} currentStep={currentStep} submitted={submitted} onGoToStep={onGoToStep}/>
                 </aside>
-                <div className="flex min-h-0 flex-col gap-4">
+                <div className="flex min-h-0 flex-col gap-4 p-4 md:col-span-3 sm:p-6">
                   <div className="lg:hidden">
                     <ProposalStepIndicator steps={steps} currentStep={currentStep} submitted={submitted}/>
                   </div>
-                  <Card className="flex min-h-0 flex-col overflow-hidden border-border/60 bg-background shadow-sm">
-                    <CardContent className="flex min-h-0 flex-col p-4 sm:p-6">
-                      <ProposalDraftPanel draftId={draftId} autosaveStatus={autosaveStatus} stepContent={stepContent} onBack={onBack} onNext={onNext} isFirstStep={isFirstStep} isLastStep={isLastStep} currentStep={currentStep} totalSteps={steps.length} isSubmitting={isSubmitting} validationMessages={validationMessages}/>
-                    </CardContent>
-                  </Card>
+                  <ProposalDraftPanel draftId={draftId} autosaveStatus={autosaveStatus} stepContent={stepContent} onBack={onBack} onNext={onNext} isFirstStep={isFirstStep} isLastStep={isLastStep} currentStep={currentStep} totalSteps={steps.length} isSubmitting={isSubmitting} validationMessages={validationMessages}/>
                 </div>
-              </div>)}
+              </Card>)}
           </div>
         </div>
     </div>);

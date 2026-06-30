@@ -4,6 +4,7 @@ import { resolveProposalDeck } from '@/types/proposals';
 import { ConvexReactClient } from 'convex/react';
 import { logger } from '@/lib/logger';
 import { cache } from 'react';
+import { getConvexUrl } from '@/lib/convex-env';
 type ConvexAuthArgs = {
     workspaceId: string;
     convexToken: string;
@@ -33,11 +34,7 @@ interface ConvexCreateResponse {
     legacyId: string;
 }
 function requireConvexUrl(): string {
-    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-    if (!convexUrl) {
-        throw new Error('Convex URL is missing');
-    }
-    return convexUrl;
+    return getConvexUrl();
 }
 function createAuthedConvexClient(token: string): ConvexReactClient {
     const convex = new ConvexReactClient(requireConvexUrl());

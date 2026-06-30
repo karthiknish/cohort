@@ -1,8 +1,8 @@
 'use client';
 import { Link } from '@/shared/ui/link';
 import { useParams } from '@/shared/ui/navigation';
-import { Download, LoaderCircle, Presentation, Target, Layers, BarChart3, Rocket, Users, Lightbulb, Wallet, Calendar, Sparkles, Clock } from 'lucide-react';
-import { useMemo } from 'react';
+import { Download, LoaderCircle, Clock } from 'lucide-react';
+import { useCallback } from 'react';
 import { ViewTransition } from '@/shared/ui/view-transition';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -11,19 +11,14 @@ import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import { mergeProposalForm } from '@/lib/proposals';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { usePreview } from '@/shared/contexts/preview-context';
-import { useQuery } from 'convex/react';
-import { proposalsApi } from '@/lib/convex-api';
+import { useConvex, useQuery } from 'convex/react';
+import { proposalsApi, proposalArchivesApi } from '@/lib/convex-api';
 import { resolveProposalDeckUrls, useProposalArtifactUrls, } from '@/features/dashboard/proposals/hooks/use-proposal-artifact-urls';
 import { getPreviewProposals } from '@/lib/preview-data';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { DirectionalPageTransition } from '@/shared/ui/page-transition';
 import { BackLink } from '@/shared/components/back-link';
 import { DeckPageViewerSection } from '@/features/dashboard/proposals/[proposalId]/deck/deck-page-viewer-section';
-const getSlideIcon = (index: number) => {
-    const icons = [Presentation, Target, Lightbulb, Users, Sparkles, Layers, BarChart3, Wallet, Calendar, Rocket];
-    const Icon = icons[index % icons.length] ?? Presentation;
-    return <Icon className="size-4"/>;
-};
 export default function ProposalDeckPage() {
     const params = useParams() as {
         proposalId: string;
@@ -32,6 +27,7 @@ export default function ProposalDeckPage() {
     const { user } = useAuth();
     const { isPreviewMode } = usePreview();
     const workspaceId = user?.agencyId ?? null;
+    const convex = useConvex();
     const proposalRow = useQuery(proposalsApi.getByLegacyId, !isPreviewMode && workspaceId && proposalId ? { workspaceId, legacyId: proposalId } : 'skip');
     const previewProposal = (isPreviewMode && proposalId ? getPreviewProposals(null).find((proposal) => proposal.id === proposalId) ?? null : null);
     const isLoading = !isPreviewMode && proposalRow === undefined;
@@ -72,6 +68,22 @@ export default function ProposalDeckPage() {
     });
     const pdfDownloadUrl = pdfViewerUrl;
     const pptDownloadUrl = pptxViewerUrl;
+    // Callback to fetch a fresh signed PPTX URL when the current one expires (503).
+    // Calls the Convex action to generate a new signed URL from the R2 object key.
+    const refreshPptxUrl = useCallback(async (): Promise<string | null> => {
+        if (!workspaceId || !proposalId || !pptxViewerUrl) return null;
+        try {
+            const result = await convex.action(proposalArchivesApi.refreshSignedUrl, { workspaceId, url: pptxViewerUrl }) as unknown;
+            // zWorkspaceAction wraps returns as { ok: true, data: result }
+            if (typeof result === 'string') return result || null;
+            if (result && typeof result === 'object' && 'data' in result) {
+                return (result as { data: string | null }).data ?? null;
+            }
+            return null;
+        } catch {
+            return null;
+        }
+    }, [convex, workspaceId, proposalId, pptxViewerUrl]);
     const cloudCopyPending = Boolean(proposal &&
         workspaceId &&
         ((proposal.pdfUrl && !artifactUrls?.pdfArchived) || (proposal.pptUrl && !artifactUrls?.pptArchived)));
@@ -80,23 +92,6 @@ export default function ProposalDeckPage() {
             return null;
         const parsed = new Date(proposal.updatedAt);
         return Number.isNaN(parsed.getTime()) ? proposal.updatedAt : parsed.toLocaleString();
-    })();
-    const slideGuidance = (() => {
-        const text = proposal?.presentationDeck?.instructions;
-        if (!text)
-            return [];
-        // Parse: "Slide 1: Title * point 1 * point 2 Slide 2: Title 2..."
-        const rawSlides = text.split(/(?=Slide \d+:)/).filter(Boolean);
-        return rawSlides.map((s, index) => {
-            const titleMatch = s.match(/Slide \d+:\s*([^*]+)/);
-            const title = typeof titleMatch?.[1] === 'string' ? titleMatch[1].trim() : `Slide ${index + 1}`;
-            const points = s.split('*').slice(1).flatMap(p => { const t = p.trim(); return t ? [t] : []; });
-            return {
-                id: index + 1,
-                title,
-                points
-            };
-        });
     })();
     const proposalDisplayName = proposal?.clientName ?? 'Strategy Proposal';
     return (<DirectionalPageTransition>
@@ -152,52 +147,17 @@ export default function ProposalDeckPage() {
                       Updated: {lastUpdated}
                     </span>)}
                 </div>
-
-                {slideGuidance.length > 0 && (<div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-1 bg-primary rounded-full"/>
-                      <div>
-                        <h4 className="text-sm uppercase tracking-widest text-foreground/80">Slide-by-Slide Guidance</h4>
-                        <p className="text-xs text-muted-foreground">Strategic walkthrough of your proposal deck</p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {slideGuidance.map((slide, index) => (<Card key={slide.id} className="relative overflow-hidden border-muted/40 bg-muted/5 motion-chromatic hover:bg-muted/10 hover:border-accent/20 group">
-                          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-100 transition-opacity">
-                            <span className="text-4xl font-black text-primary/10">0{slide.id}</span>
-                          </div>
-                          <CardHeader className="p-4 pb-2">
-                            <div className="flex items-center gap-2 text-primary">
-                              <div className="p-1.5 rounded-lg bg-accent/10 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                                {getSlideIcon(index)}
-                              </div>
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Slide {slide.id}</span>
-                            </div>
-                            <CardTitle className="text-sm font-bold leading-tight mt-1">{slide.title}</CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-4 pt-2">
-                            <ul className="space-y-2">
-                              {slide.points.map((point) => (<li key={`${slide.id}-${point}`} className="flex gap-2 text-[12px] leading-relaxed text-muted-foreground">
-                                  <span className="mt-1.5 size-1 shrink-0 rounded-full bg-accent/40"/>
-                                  {point}
-                                </li>))}
-                            </ul>
-                          </CardContent>
-                        </Card>))}
-                    </div>
-                  </div>)}
               </div>
 
               <div className="flex flex-wrap gap-3">
                 {pdfDownloadUrl ? (<Button variant="outline" asChild>
-                    <a href={pdfDownloadUrl} target="_blank" rel="noreferrer">
+                    <a href={pdfDownloadUrl} download={`${proposalDisplayName}.pdf`} target="_blank" rel="noreferrer">
                       <Download className="mr-2 size-4"/>
                       Download PDF
                     </a>
                   </Button>) : null}
                 {pptDownloadUrl ? (<Button variant="outline" asChild>
-                    <a href={pptDownloadUrl} target="_blank" rel="noreferrer">
+                    <a href={pptDownloadUrl} download={`${proposalDisplayName}.pptx`} target="_blank" rel="noreferrer">
                       <Download className="mr-2 size-4"/>
                       Download PowerPoint
                     </a>
@@ -205,7 +165,7 @@ export default function ProposalDeckPage() {
                 {cloudCopyPending ? (<p className="text-xs text-muted-foreground">Cloud copies are syncing to durable storage…</p>) : null}
               </div>
 
-              <DeckPageViewerSection pdfUrl={pdfViewerUrl} pptxUrl={pptxViewerUrl} proposalDisplayName={proposalDisplayName}/>
+              <DeckPageViewerSection pdfUrl={pdfViewerUrl} pptxUrl={pptxViewerUrl} proposalDisplayName={proposalDisplayName} refreshPptxUrl={refreshPptxUrl}/>
             </CardContent>
           </Card>
         </div>) : (<Card>

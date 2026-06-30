@@ -1,7 +1,7 @@
 'use client';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { useConvexAuth, useQuery } from 'convex/react';
-import { TrendingUp, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { aggregateMetricFinancials, formatAggregatedMoney, financialTotalsHelper, } from '@/domain/ads/aggregate-financials';
 import { buildChartData } from '@/features/dashboard/home/lib/dashboard-calculations';
@@ -26,7 +26,7 @@ import { StatsCards } from '@/features/dashboard/home/components/stats-cards';
 import type { SummaryStat } from '@/types/dashboard';
 import { FadeIn } from '@/shared/ui/animate-in';
 import { Button } from '@/shared/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
 export function DashboardOverviewSpendRevenueChart({ chartMetrics, metricsLoading, displayCurrency, }: {
     chartMetrics: ReturnType<typeof buildChartData>;
@@ -39,27 +39,22 @@ export function DashboardOverviewSpendRevenueChart({ chartMetrics, metricsLoadin
     return (<FadeIn id="tour-performance-chart">
       <Card className="overflow-hidden border-muted/40 bg-card shadow-sm ring-1 ring-muted/20">
         <CardHeader className="border-b border-muted/40 bg-muted/[0.02] pb-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
-                  <TrendingUp className="size-4" aria-hidden/>
-                </span>
-                <CardTitle className="text-lg tracking-tight">Spend & revenue</CardTitle>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="size-4 cursor-help text-muted-foreground"/>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      Daily ad spend and revenue from synced platforms for the current client.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <CardDescription>Trend over the synced reporting window</CardDescription>
-            </div>
-          </div>
+          <CardDescription className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">Performance</CardDescription>
+          <CardTitle className="text-lg tracking-tight">Spend &amp; revenue</CardTitle>
+          <CardAction>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
+                    <Info className="size-4 cursor-help"/>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  Daily ad spend and revenue from synced platforms for the current client.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </CardAction>
         </CardHeader>
         <CardContent className="h-[320px] pt-6 sm:h-[340px]">
           <PerformanceChart metrics={chartMetrics} loading={metricsLoading} currency={displayCurrency ?? undefined} dataSource="ads" showDetailLink={false} hideHeader/>
@@ -126,7 +121,13 @@ export function DashboardOverviewSummarySection({ displayStats, statsLoading, }:
     }
     return (<FadeIn>
       <section className="space-y-4" aria-label="Summary statistics">
-        <DashboardSectionHeading eyebrow="Signals" title="Summary" description="Cross-channel KPIs rolled up for this workspace."/>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80">Signals</p>
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">Summary</h2>
+            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">Cross-channel KPIs rolled up for this workspace.</p>
+          </div>
+        </div>
         <StatsCards stats={displayStats} loading={statsLoading} primaryCount={4} linkless/>
       </section>
     </FadeIn>);

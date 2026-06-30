@@ -30,11 +30,11 @@ export function WorkspaceLayoutInner({
         <div className="relative flex min-h-screen bg-background">
           <div className="flex min-h-0 w-full flex-1">
             <Sidebar />
-            <div className="flex min-h-0 flex-1 flex-col bg-muted/20">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden bg-muted/20">
               <Header />
               <NetworkStatusBanner />
-              <ScrollArea className="min-h-0 flex-1">
-                <div className="min-h-full">
+              <ScrollArea className="min-h-0 min-w-0 flex-1">
+                <div className="min-h-full overflow-x-hidden">
                   <DashboardMainRoleFrame>
                     <NavigationBreadcrumbs />
                     <PreviewDataBanner />

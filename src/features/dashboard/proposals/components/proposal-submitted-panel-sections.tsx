@@ -171,7 +171,7 @@ function ProposalDeckReadyState({ activeProposalIdForDeck, deckDownloadUrl, isRe
           <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Export & Share</p>
           <div className="space-y-3">
             {deckDownloadUrl || presentationDeck.storageUrl || presentationDeck.pptxUrl ? (<Button variant="outline" className="group h-14 w-full justify-start rounded-2xl border-muted/60 motion-chromatic hover:border-accent/30 hover:bg-accent/[0.03]" asChild>
-                <a href={deckDownloadUrl || presentationDeck.storageUrl || presentationDeck.pptxUrl || '#'} target="_blank" rel="noreferrer">
+                <a href={deckDownloadUrl || presentationDeck.storageUrl || presentationDeck.pptxUrl || '#'} download="proposal-deck.pptx" target="_blank" rel="noreferrer">
                   <div className="mr-4 rounded-xl bg-muted p-2 transition-colors group-hover:bg-accent/10">
                     <Download className="size-4 text-muted-foreground transition-colors group-hover:text-primary"/>
                   </div>

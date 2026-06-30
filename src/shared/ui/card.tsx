@@ -24,4 +24,9 @@ const CardContent = ({ className, ref, ...props }: CardProps) => (<div ref={ref}
 CardContent.displayName = "CardContent";
 const CardFooter = ({ className, ref, ...props }: CardProps) => (<div ref={ref} className={cn("flex items-center gap-2 p-6 pt-0", className)} {...props}/>);
 CardFooter.displayName = "CardFooter";
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
+type CardActionProps = React.HTMLAttributes<HTMLDivElement> & {
+    ref?: React.Ref<HTMLDivElement>;
+};
+const CardAction = ({ className, ref, ...props }: CardActionProps) => (<div ref={ref} className={cn("flex items-center gap-2 self-start", className)} {...props}/>);
+CardAction.displayName = "CardAction";
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent, CardAction };

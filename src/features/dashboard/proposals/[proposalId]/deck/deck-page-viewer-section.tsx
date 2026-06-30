@@ -7,8 +7,10 @@ type DeckPageViewerSectionProps = {
     pdfUrl: string | null;
     pptxUrl: string | null;
     proposalDisplayName: string;
+    /** Callback to fetch a fresh signed PPTX URL when the current one expires. */
+    refreshPptxUrl?: () => Promise<string | null>;
 };
-export function DeckPageViewerSection({ pdfUrl, pptxUrl, proposalDisplayName, }: DeckPageViewerSectionProps) {
+export function DeckPageViewerSection({ pdfUrl, pptxUrl, proposalDisplayName, refreshPptxUrl, }: DeckPageViewerSectionProps) {
     const defaultTab = pdfUrl ? 'pdf' : 'pptx';
     const [tab, setTab] = useState<'pdf' | 'pptx'>(defaultTab);
     const activeSrc = (() => {
@@ -28,7 +30,7 @@ export function DeckPageViewerSection({ pdfUrl, pptxUrl, proposalDisplayName, }:
     }
     const showTabs = Boolean(pdfUrl && pptxUrl);
     if (!showTabs && activeSrc) {
-        return (<DeckDocumentViewer src={activeSrc} embedded subtitle={proposalDisplayName}/>);
+        return (<DeckDocumentViewer src={activeSrc} refreshUrl={tab === 'pptx' ? refreshPptxUrl : undefined} embedded subtitle={proposalDisplayName}/>);
     }
     return (<div className="space-y-4">
       <Tabs value={tab} onValueChange={handleTabChange}>
@@ -46,7 +48,7 @@ export function DeckPageViewerSection({ pdfUrl, pptxUrl, proposalDisplayName, }:
           {pdfUrl ? (<DeckDocumentViewer src={pdfUrl} embedded subtitle={`${proposalDisplayName} · PDF`}/>) : null}
         </TabsContent>
         <TabsContent value="pptx" className="mt-4 focus-visible:outline-none">
-          {pptxUrl ? (<DeckDocumentViewer src={pptxUrl} embedded subtitle={`${proposalDisplayName} · Slides`}/>) : null}
+          {pptxUrl ? (<DeckDocumentViewer src={pptxUrl} refreshUrl={refreshPptxUrl} embedded subtitle={`${proposalDisplayName} · Slides`}/>) : null}
         </TabsContent>
       </Tabs>
     </div>);

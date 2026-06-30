@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { ConvexHttpClient } from 'convex/browser';
 import { logger } from '@/lib/logger';
 import { authClient } from '@/lib/auth-client';
+import { getConvexUrl } from '@/lib/convex-env';
 import type { ProposalAnalyticsEvent, ProposalAnalyticsSummary, ProposalAnalyticsTimeSeriesPoint, ProposalAnalyticsByClient, ProposalAnalyticsInput, ProposalAnalyticsFilters, } from '@/types/proposal-analytics';
 type WorkspaceScopedInput = ProposalAnalyticsInput & {
     workspaceId: string;
@@ -26,10 +27,7 @@ type AnalyticsEventRow = {
     createdAtMs: number;
 };
 function getConvexHttpClient(): ConvexHttpClient {
-    const url = process.env.NEXT_PUBLIC_CONVEX_URL;
-    if (!url)
-        throw new Error('NEXT_PUBLIC_CONVEX_URL not set');
-    return new ConvexHttpClient(url);
+    return new ConvexHttpClient(getConvexUrl());
 }
 async function getConvexToken(): Promise<string | null> {
     if (typeof window === 'undefined')
