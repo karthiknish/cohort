@@ -8,12 +8,12 @@ import {
   parseClientSummaryResponse,
 } from '@/features/dashboard/home/lib/client-summary'
 import {
-  buildGeminiRateLimitKey,
-  formatGeminiRateLimitMessage,
-  GEMINI_RATE_LIMITS,
-} from '@/lib/geminiRateLimits'
+  buildDeepSeekRateLimitKey,
+  formatDeepSeekRateLimitMessage,
+  DEEPSEEK_RATE_LIMITS,
+} from '@/lib/deepseekRateLimits'
 import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
-import { GeminiAIService, resolveGeminiApiKey, resolveGeminiModel } from '@/services/gemini'
+import { DeepSeekAIService, resolveDeepSeekApiKey, resolveDeepSeekModel } from '@/services/deepseek'
 
 const providerSnapshotSchema = z.object({
   providerId: z.string().min(1),
@@ -74,29 +74,29 @@ const handlers = adaptApiHandler(
     }
     const generatedAt = new Date().toISOString()
     const snapshot = body.snapshot
-    const model = resolveGeminiModel()
+    const model = resolveDeepSeekModel()
 
     try {
       const rateLimit = await checkConvexRateLimit(
-        buildGeminiRateLimitKey({
+        buildDeepSeekRateLimitKey({
           name: 'clientSummary',
           userId: auth.uid,
           workspaceId: auth.claims?.agencyId ? String(auth.claims.agencyId) : null,
           resourceId: snapshot.clientId,
         }),
-        GEMINI_RATE_LIMITS.clientSummary,
+        DEEPSEEK_RATE_LIMITS.clientSummary,
       )
       if (!rateLimit.allowed) {
-        throw new RateLimitError(formatGeminiRateLimitMessage(rateLimit.resetMs))
+        throw new RateLimitError(formatDeepSeekRateLimitMessage(rateLimit.resetMs))
       }
 
-      const apiKey = resolveGeminiApiKey()
+      const apiKey = resolveDeepSeekApiKey()
       if (!apiKey) {
         return { summary: buildFallbackClientSummary(snapshot, generatedAt) }
       }
 
-      const gemini = new GeminiAIService(apiKey)
-      const raw = await gemini.generateContent(buildClientSummaryPrompt(snapshot))
+      const ai = new DeepSeekAIService(apiKey)
+      const raw = await ai.generateContent(buildClientSummaryPrompt(snapshot))
       const parsed = parseClientSummaryResponse({ raw, generatedAt, model })
       return { summary: parsed ?? buildFallbackClientSummary(snapshot, generatedAt) }
     } catch (error) {

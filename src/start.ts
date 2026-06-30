@@ -3,6 +3,9 @@ import {
   sentryGlobalFunctionMiddleware,
   sentryGlobalRequestMiddleware,
 } from '@sentry/tanstackstart-react'
+// Server-side Sentry init must run before any middleware executes so the
+// Sentry middleware has an initialized client to capture events with.
+import '@/instrument.server'
 import {
   buildRateLimitHeaders,
   createRateLimitConfig,
@@ -168,13 +171,31 @@ function finalizeMiddlewareResult<T extends { response: Response }>(
   extraHeaders?: Record<string, string>,
 ): T | Response {
   const response = resolveMiddlewareResponse(result)
-  response.headers.set('x-pathname', pathname)
+  // Handle immutable headers (e.g. from Response.redirect)
+  let mutable = response
+  try {
+    response.headers.set('x-test-mutability', '1')
+    response.headers.delete('x-test-mutability')
+  } catch {
+    const cloned = new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: new Headers(response.headers),
+    })
+    if (result instanceof Response) {
+      result = cloned as T | Response
+    } else {
+      ;(result as { response: Response }).response = cloned
+    }
+    mutable = cloned
+  }
+  mutable.headers.set('x-pathname', pathname)
   if (extraHeaders) {
     for (const [key, value] of Object.entries(extraHeaders)) {
-      response.headers.set(key, value)
+      mutable.headers.set(key, value)
     }
   }
-  applySecurityHeaders(response)
+  applySecurityHeaders(mutable)
   return result
 }
 
@@ -288,8 +309,14 @@ const securityMiddleware = createMiddleware().server(async ({ next, request }) =
   return finalizeMiddlewareResult(response, pathname)
 })
 
+const isProd = process.env.NODE_ENV === 'production'
+
 export const startInstance = createStart(() => ({
-  // Sentry middleware must run first to capture errors from downstream middleware
-  requestMiddleware: [sentryGlobalRequestMiddleware, securityMiddleware],
-  functionMiddleware: [sentryGlobalFunctionMiddleware],
+  // Sentry middleware must run first to capture errors from downstream middleware.
+  // Only included in production — in dev the Sentry SDK is not initialized.
+  requestMiddleware: [
+    ...(isProd ? [sentryGlobalRequestMiddleware] : []),
+    securityMiddleware,
+  ],
+  functionMiddleware: isProd ? [sentryGlobalFunctionMiddleware] : [],
 }))

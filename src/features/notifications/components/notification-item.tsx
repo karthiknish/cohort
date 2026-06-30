@@ -79,7 +79,13 @@ export function NotificationItem({ notification, compact = false, selected = fal
     const handleSelectClick = (event: React.MouseEvent) => {
         event.stopPropagation();
     };
-    return (<button type="button" onClick={onOpenNotification} className={cn('group relative flex w-full cursor-pointer gap-3 border-b border-border/50 border-l-[3px] text-left transition-[background-color,box-shadow]', listItemEnterClass, accentClass, compact ? 'px-3.5 py-3' : 'rounded-lg border p-4', !notification.read && 'shadow-sm', selected && 'ring-2 ring-primary/25 ring-inset', 'hover:bg-muted/35')}>
+    const handleKeyDown = (event: React.KeyboardEvent) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onOpenNotification();
+        }
+    };
+    return (<div role="button" tabIndex={0} onClick={onOpenNotification} onKeyDown={handleKeyDown} className={cn('group relative flex w-full cursor-pointer gap-3 border-b border-border/50 border-l-[3px] text-left transition-[background-color,box-shadow]', listItemEnterClass, accentClass, compact ? 'px-3.5 py-3' : 'rounded-lg border p-4', !notification.read && 'shadow-sm', selected && 'ring-2 ring-primary/25 ring-inset', 'hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-inset')}>
       {onSelectToggle ? (<input type="checkbox" checked={selected} className="mt-1 size-4 shrink-0 accent-primary" onChange={handleSelectChange} onClick={handleSelectClick} aria-label={`Select ${notification.title}`}/>) : null}
 
       <Avatar className={cn('shrink-0 ring-1 ring-border/40', compact ? 'size-9' : 'size-10')}>
@@ -114,5 +120,5 @@ export function NotificationItem({ notification, compact = false, selected = fal
             <Trash2 className="size-3.5"/>
           </Button>) : null}
       </div>
-    </button>);
+    </div>);
 }

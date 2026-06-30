@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import CollaborationPage from '@/features/dashboard/collaboration/page'
+import CollaborationV2Page from '@/features/collaboration-v2/page'
 
 export const Route = createFileRoute('/_authed/dashboard/collaboration')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -15,5 +15,5 @@ export const Route = createFileRoute('/_authed/dashboard/collaboration')({
   head: () => ({
     meta: [{ title: 'Collaboration | Cohorts' }],
   }),
-  component: () => <CollaborationPage />,
+  component: () => <CollaborationV2Page />,
 })

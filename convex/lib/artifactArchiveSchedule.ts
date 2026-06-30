@@ -58,7 +58,7 @@ export function scheduleProposalDeckArchive(
   )
 }
 
-/** Archive deck files while Gamma URLs are still fresh (generation poll handler). */
+/** Archive deck files while storage URLs are still fresh (generation handler). */
 export async function runProposalDeckArchive(
   ctx: Pick<ActionCtx, 'runAction'>,
   args: {

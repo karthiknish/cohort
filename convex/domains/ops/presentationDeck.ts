@@ -6,12 +6,7 @@ import { Errors, withErrorHandling } from '../../errors'
 import { v } from 'convex/values'
 import type { Doc } from '../../_generated/dataModel'
 
-import {
-  GammaService,
-  GAMMA_IMAGE_MODEL_CREDITS,
-  GAMMA_RECOMMENDED_MODELS,
-} from '../../../src/services/gamma/api'
-import { PRESENTATION_ENGINE_LABEL } from '../../../src/lib/proposal-deck-generation'
+import { resolveDeepSeekApiKey } from '../../../src/services/deepseek'
 
 async function requireAuthenticatedUser(ctx: ActionCtx): Promise<Doc<'users'>> {
   const identity = await ctx.auth.getUserIdentity()
@@ -47,6 +42,7 @@ async function requireAdminUser(ctx: ActionCtx): Promise<Doc<'users'>> {
 
 /**
  * Presentation deck provider status (admin / diagnostics only).
+ * With pptxgenjs, the "engine" is the local library + DeepSeek for AI content.
  */
 export const getStatus = action({
   args: {},
@@ -54,64 +50,21 @@ export const getStatus = action({
     configured: v.boolean(),
     valid: v.boolean(),
     error: v.optional(v.string()),
-    imageModels: v.optional(v.record(v.string(), v.number())),
-    recommendedModels: v.optional(
-      v.object({
-        fast: v.array(v.string()),
-        balanced: v.array(v.string()),
-        premium: v.array(v.string()),
-        vector: v.array(v.string()),
-      }),
-    ),
-    formats: v.optional(v.array(v.string())),
-    exportFormats: v.optional(v.array(v.string())),
-    textModes: v.optional(v.array(v.string())),
-    textAmounts: v.optional(v.array(v.string())),
-    imageSources: v.optional(v.array(v.string())),
-    presentationDimensions: v.optional(v.array(v.string())),
-    documentDimensions: v.optional(v.array(v.string())),
-    socialDimensions: v.optional(v.array(v.string())),
+    engine: v.optional(v.string()),
+    aiConfigured: v.optional(v.boolean()),
   }),
   handler: async (ctx) =>
     withErrorHandling(async () => {
       await requireAdminUser(ctx)
 
-      const gammaService = new GammaService()
-      const isConfigured = gammaService.isConfigured()
-
-      if (!isConfigured) {
-        return {
-          configured: false,
-          valid: false,
-          error: 'Presentation engine API key is not configured',
-        }
-      }
-
-      const isValid = await gammaService.validateApiKey()
+      const aiConfigured = Boolean(resolveDeepSeekApiKey())
 
       return {
         configured: true,
-        valid: isValid,
-        imageModels: GAMMA_IMAGE_MODEL_CREDITS,
-        recommendedModels: GAMMA_RECOMMENDED_MODELS,
-        formats: ['presentation', 'document', 'social', 'webpage'],
-        exportFormats: ['pdf', 'pptx'],
-        textModes: ['generate', 'condense', 'preserve'],
-        textAmounts: ['brief', 'medium', 'detailed', 'extensive'],
-        imageSources: [
-          'aiGenerated',
-          'pictographic',
-          'unsplash',
-          'giphy',
-          'webAllImages',
-          'webFreeToUse',
-          'webFreeToUseCommercially',
-          'placeholder',
-          'noImages',
-        ],
-        presentationDimensions: ['fluid', '16x9', '4x3'],
-        documentDimensions: ['fluid', 'pageless', 'letter', 'a4'],
-        socialDimensions: ['1x1', '4x5', '9x16'],
+        valid: true,
+        engine: 'pptxgenjs',
+        aiConfigured,
+        ...(!aiConfigured ? { error: 'DEEPSEEK_API_KEY is not configured — AI content generation will use fallbacks' } : {}),
       }
     }, 'presentationDeck:getStatus'),
 })
@@ -132,21 +85,16 @@ export const listFolders = action({
     hasMore: v.boolean(),
     nextCursor: v.union(v.string(), v.null()),
   }),
-  handler: async (ctx, args) =>
+  handler: async (ctx) =>
     withErrorHandling(async () => {
       await requireAuthenticatedUser(ctx)
 
-      const gammaService = new GammaService()
-
-      if (!gammaService.isConfigured()) {
-        throw Errors.integration.notConfigured(PRESENTATION_ENGINE_LABEL, 'Presentation engine is not configured')
+      // pptxgenjs is a local library — no folders concept.
+      return {
+        data: [],
+        hasMore: false,
+        nextCursor: null,
       }
-
-      return await gammaService.listFolders({
-        query: args.query,
-        limit: args.limit,
-        after: args.after,
-      })
     }, 'presentationDeck:listFolders'),
 })
 
@@ -168,31 +116,15 @@ export const listThemes = action({
     hasMore: v.boolean(),
     nextCursor: v.union(v.string(), v.null()),
   }),
-  handler: async (ctx, args) =>
+  handler: async (ctx) =>
     withErrorHandling(async () => {
       await requireAuthenticatedUser(ctx)
 
-      const gammaService = new GammaService()
-
-      if (!gammaService.isConfigured()) {
-        throw Errors.integration.notConfigured(PRESENTATION_ENGINE_LABEL, 'Presentation engine is not configured')
-      }
-
-      const result = await gammaService.listThemes({
-        query: args.query,
-        limit: args.limit,
-        after: args.after,
-      })
-
+      // pptxgenjs uses built-in styling — no external themes.
       return {
-        data: result.data.map((theme) => ({
-          id: theme.id,
-          name: theme.name,
-          type: theme.type,
-          thumbnailUrl: undefined,
-        })),
-        hasMore: result.hasMore,
-        nextCursor: result.nextCursor,
+        data: [],
+        hasMore: false,
+        nextCursor: null,
       }
     }, 'presentationDeck:listThemes'),
 })

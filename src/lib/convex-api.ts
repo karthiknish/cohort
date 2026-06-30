@@ -311,8 +311,6 @@ export const presentationDeckApi = {
     listFolders: looseApi.presentationDeck.listFolders,
     listThemes: looseApi.presentationDeck.listThemes,
 };
-/** @deprecated Use presentationDeckApi */
-export const gammaApi = presentationDeckApi;
 export const analyticsInsightsApi = {
     generateInsights: looseApi.analyticsInsights.generateInsights,
 };

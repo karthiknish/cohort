@@ -14,9 +14,11 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react'
-import { PREVIEW_ROUTE_REQUEST_HEADER } from '@/lib/preview-data'
+import {
+  isScreenRecordingAuthBypassEnabled,
+  PREVIEW_ROUTE_REQUEST_HEADER,
+} from '@/lib/preview-data'
 import { ProtectedRoute } from '@/shared/components/protected-route'
-import { NavigationProvider } from '@/shared/contexts/navigation-context'
 import { AgentModeDynamic } from '@/shared/components/agent-mode/agent-mode-dynamic'
 import { cn } from '@/lib/utils'
 import { Button } from '@/shared/ui/button'
@@ -43,7 +45,9 @@ const adminNavItems = [
 const loadAdminShell = createServerFn({ method: 'GET' }).handler(async () => {
   const { getRequestHeader } = await import('@tanstack/react-start/server')
   return {
-    allowPreviewAccess: getRequestHeader(PREVIEW_ROUTE_REQUEST_HEADER) === '1',
+    allowPreviewAccess:
+      isScreenRecordingAuthBypassEnabled() ||
+      getRequestHeader(PREVIEW_ROUTE_REQUEST_HEADER) === '1',
   }
 })
 
@@ -147,20 +151,18 @@ function AdminLayoutRoute() {
   return (
     <ProtectedRoute requiredRole="admin" allowPreviewAccess={allowPreviewAccess}>
       <WorkspaceProviders enablePreview>
-        <NavigationProvider>
-          <div className="relative min-h-dvh bg-background">
-            <main className="min-h-dvh">
-              <div className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
-                <AdminNav />
-                <AdminBreadcrumb />
-              </div>
-              <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                <Outlet />
-              </div>
-            </main>
-            <AgentModeDynamic />
-          </div>
-        </NavigationProvider>
+        <div className="relative min-h-dvh bg-background">
+          <main className="min-h-dvh">
+            <div className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
+              <AdminNav />
+              <AdminBreadcrumb />
+            </div>
+            <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+              <Outlet />
+            </div>
+          </main>
+          <AgentModeDynamic />
+        </div>
       </WorkspaceProviders>
     </ProtectedRoute>
   )

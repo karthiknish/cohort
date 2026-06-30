@@ -24,15 +24,9 @@ export function FadeInItem({ children, as, y = 18, duration = defaultFadeInDurat
         hidden: { opacity: 0, y },
         visible: { opacity: 1, y: 0, transition: { duration, ease: motionEasing.out } },
     });
-    if (mounted && prefersReducedMotion) {
-        return (<LazyMotion features={domAnimation}>
-        <Tag initial={false} whileInView={WHILE_IN_VIEW_FADE} viewport={resolvedViewport} {...props}>
-          {children}
-        </Tag>
-      </LazyMotion>);
-    }
+    const reducedMotion = mounted && prefersReducedMotion;
     return (<LazyMotion features={domAnimation}>
-      <Tag initial={initial ?? 'hidden'} whileInView={whileInView ?? 'visible'} viewport={resolvedViewport} variants={variants} {...props}>
+      <Tag initial={reducedMotion ? false : (initial ?? 'hidden')} whileInView={reducedMotion ? WHILE_IN_VIEW_FADE : (whileInView ?? 'visible')} viewport={resolvedViewport} variants={reducedMotion ? undefined : variants} {...props}>
         {children}
       </Tag>
     </LazyMotion>);

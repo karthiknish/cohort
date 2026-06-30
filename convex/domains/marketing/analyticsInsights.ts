@@ -5,10 +5,10 @@ import { v } from 'convex/values'
 import { api } from '/_generated/api'
 import { action } from '../../_generated/server'
 
-import { geminiAI } from '../../../src/services/gemini'
+import { deepseekAI } from '../../../src/services/deepseek'
 import { formatCurrency } from '../../../src/lib/utils'
 import { withErrorHandling } from '../../errors'
-import { enforceGeminiActionRateLimit } from '../../geminiRateLimit'
+import { enforceDeepSeekActionRateLimit } from '../../deepseekRateLimit'
 import type { AdMetricsSummary, AlgorithmicInsight, EnrichedMetricsSummary } from '../../../src/lib/ad-algorithms/types'
 import { getGlobalBudgetSuggestions } from '../../../src/lib/ad-algorithms/budget'
 import { enrichSummaryWithMetrics } from '../../../src/lib/ad-algorithms/efficiency'
@@ -283,7 +283,7 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
         : buildInsightPrompt(enrichSummaryWithMetrics(summary as AdMetricsSummary))
 
       try {
-        const content = await geminiAI.generateContent(prompt)
+        const content = await deepseekAI.generateContent(prompt)
         return { providerId: summary.providerId, summary: content }
       } catch (error) {
         console.error('[analyticsInsights] gemini failed', error)
@@ -306,7 +306,7 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
   if (googleSummary && metaSummary && googleEnrichedSummary && metaEnrichedSummary) {
     const prompt = buildComparisonPrompt(googleEnrichedSummary, metaEnrichedSummary)
     try {
-      const content = await geminiAI.generateContent(prompt)
+      const content = await deepseekAI.generateContent(prompt)
       insights.push({ providerId: 'google_vs_facebook', summary: content })
     } catch (error) {
       console.error('[analyticsInsights] comparison prompt failed', error)
@@ -409,7 +409,7 @@ export const generateInsights = action({
           : 0
       )
 
-      await enforceGeminiActionRateLimit(ctx, {
+      await enforceDeepSeekActionRateLimit(ctx, {
         name: 'analyticsInsights',
         userId: identity?.subject ?? null,
         workspaceId: args.workspaceId,

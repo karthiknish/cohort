@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import ProjectsPage from '@/features/dashboard/projects/page'
+import ProjectsPage from '@/features/dashboard/projects-v2/page'
 
 export const Route = createFileRoute('/_authed/dashboard/projects')({
   validateSearch: (search: Record<string, unknown>) => ({

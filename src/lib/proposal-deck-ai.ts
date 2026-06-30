@@ -1,5 +1,5 @@
 import type { ProposalFormData } from '@/lib/proposals';
-import { geminiAI } from '@/services/gemini';
+import { deepseekAI } from '@/services/deepseek';
 const FALLBACK_DECK_INSTRUCTIONS = `Slide 1: Executive Summary
 Slide 2: Objectives & KPIs
 Slide 3: Strategy Overview
@@ -69,7 +69,7 @@ async function resolveDeckInstructions(formData: ProposalFormData, candidate?: s
     }
     try {
         const prompt = buildDeckInstructionPrompt(formData);
-        const raw = await geminiAI.generateContent(prompt);
+        const raw = await deepseekAI.generateContent(prompt);
         const generated = truncateDeckInstructions(raw);
         if (generated.length > 0) {
             return generated;
@@ -99,7 +99,7 @@ ${baseContext}
 
 AI outline:
 ${summary ?? 'Not available'}`;
-        const raw = await geminiAI.generateContent(prompt);
+        const raw = await deepseekAI.generateContent(prompt);
         const cleaned = raw.trim();
         if (!cleaned) {
             return null;
@@ -127,4 +127,4 @@ ${summary ?? 'Not available'}`;
     }
 }
 /** @deprecated Use generateDeckInstructions */
-export const generateGammaInstructions = generateDeckInstructions;
+export const generatePresentationInstructions = generateDeckInstructions;

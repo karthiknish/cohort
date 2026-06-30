@@ -26,10 +26,10 @@ import type {
   JsonRecord,
 } from './agentActions/types'
 import { Errors, withErrorHandling } from '../../errors'
-import { enforceGeminiActionRateLimit } from '../../geminiRateLimit'
+import { enforceDeepSeekActionRateLimit } from '../../deepseekRateLimit'
 
 import { v } from 'convex/values'
-import { geminiAI } from '../../../src/services/gemini'
+import { deepseekAI } from '../../../src/services/deepseek'
 
 function serializeExecuteResultForStorage(executeResult: {
   success: boolean
@@ -114,7 +114,7 @@ export const sendMessage = action({
       const geminiRequestCount = (isNewConversation ? 1 : 0) + (deterministicIntent ? 0 : 1)
 
       if (geminiRequestCount > 0) {
-        await enforceGeminiActionRateLimit(ctx, {
+        await enforceDeepSeekActionRateLimit(ctx, {
           name: 'agentMessage',
           userId,
           workspaceId: args.workspaceId,
@@ -240,7 +240,7 @@ export const sendMessage = action({
         requiresConfirmation = executeTurn.requiresConfirmation ?? false
         confirmation = executeTurn.confirmation
       } else {
-        const raw = await geminiAI.generateContent(prompt)
+        const raw = await deepseekAI.generateContent(prompt)
         const parsed = parseGeminiResponse(raw)
 
         agentAction = parsed.action || 'chat'

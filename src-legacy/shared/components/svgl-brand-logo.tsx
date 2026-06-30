@@ -57,11 +57,7 @@ function ThemeBrandLogo({ brand, className, labeled, title, }: {
     title: string;
 }) {
     const lightSrc = brand === 'tiktok' ? '/svgl/tiktok-light.svg' : '/svgl/x-light.svg';
-    const darkSrc = brand === 'tiktok' ? '/svgl/tiktok-dark.svg' : '/svgl/x-dark.svg';
-    return (<>
-      <BrandImage src={lightSrc} className={cn(className, 'dark:hidden')} labeled={labeled} title={title}/>
-      <BrandImage src={darkSrc} className={cn(className, 'hidden dark:block')} labeled={labeled} title={title}/>
-    </>);
+    return <BrandImage src={lightSrc} className={className} labeled={labeled} title={title}/>;
 }
 type SvglBrandLogoProps = {
     brand: SvglBrandSlug;

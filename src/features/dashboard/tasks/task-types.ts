@@ -50,9 +50,9 @@ export const taskViewStatusPill: Record<TaskStatus, string> = {
 };
 export const taskViewPriorityPill: Record<TaskPriority, string> = {
     low: 'border-border bg-muted text-muted-foreground',
-    medium: 'border-violet-300/80 bg-violet-100 text-violet-950 dark:border-violet-500/50 dark:bg-violet-950/80 dark:text-violet-100',
-    high: 'border-amber-300/80 bg-amber-50 text-amber-950 dark:border-amber-500/50 dark:bg-amber-950/80 dark:text-amber-100',
-    urgent: 'border-destructive/40 bg-destructive/15 text-destructive dark:bg-destructive/20 dark:text-destructive-foreground',
+    medium: 'border-violet-300/80 bg-violet-100 text-violet-950',
+    high: 'border-amber-300/80 bg-amber-50 text-amber-950',
+    urgent: 'border-destructive/40 bg-destructive/15 text-destructive',
 };
 export const priorityAccentColors: Record<TaskPriority, string> = {
     urgent: 'bg-destructive',

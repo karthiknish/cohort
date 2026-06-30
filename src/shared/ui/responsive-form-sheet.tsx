@@ -48,7 +48,7 @@ type FormSheetCloseProps = React.ComponentProps<typeof SheetClose>;
 export function FormSheetClose({ ...props }: FormSheetCloseProps) {
     const kind = use(ResponsiveFormSheetContext);
     if (kind === 'drawer') {
-        return <DrawerClose {...props}/>;
+        return <DrawerClose {...props as any}/>;
     }
     return <SheetClose {...props}/>;
 }

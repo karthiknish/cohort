@@ -8,7 +8,6 @@ import { usePreview } from '@/shared/contexts/preview-context';
 import { PageMotionShell } from '@/shared/components/page-motion-shell';
 import { FadeInItem } from '@/shared/ui/animate-in';
 import { cn } from '@/lib/utils';
-import { AppearanceSettingsCard } from './components/appearance-settings-card';
 import { DataExportCard } from './components/data-export-card';
 import { DeleteAccountCard } from './components/delete-account-card';
 import { NotificationPreferencesPanel } from './components/notification-preferences-panel';
@@ -74,9 +73,6 @@ function SettingsPageInner() {
         <TabsContent value="profile" className="mt-0 space-y-6 focus-visible:outline-none">
           <FadeInItem>
             <ProfileCard />
-          </FadeInItem>
-          <FadeInItem>
-            <AppearanceSettingsCard />
           </FadeInItem>
           <FadeInItem>
             <RegionalPreferencesCard />

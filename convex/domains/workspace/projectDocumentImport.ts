@@ -5,8 +5,8 @@ import { api } from '../../_generated/api'
 import { v } from 'convex/values'
 import { loadStoredObjectBlob } from '../../lib/fileStorage'
 
-import { geminiAI, type GeminiRequestPart } from '../../../src/services/gemini'
-import { enforceGeminiActionRateLimit } from '../../geminiRateLimit'
+import { deepseekAI, type DeepSeekRequestPart } from '../../../src/services/deepseek'
+import { enforceDeepSeekActionRateLimit } from '../../deepseekRateLimit'
 import { Errors, withErrorHandling } from '../../errors'
 import { asNonEmptyString } from '../platform/agentActions/helpers/values'
 import { resolveAgentDueDateMs } from '../platform/agentActions/helpers/dates'
@@ -147,7 +147,7 @@ ${fileList}${supplementalBlock}`
 async function loadVisualGeminiParts(
   ctx: Parameters<typeof loadStoredObjectBlob>[0],
   documents: Array<{ fileName: string; mimeType: string; storageId: string }>,
-): Promise<GeminiRequestPart[]> {
+): Promise<DeepSeekRequestPart[]> {
   return Promise.all(
     documents.map(async (document) => {
       const blob = await loadStoredObjectBlob(ctx, document.storageId)
@@ -171,7 +171,7 @@ async function loadVisualGeminiParts(
           mimeType: document.mimeType,
           data: buffer.toString('base64'),
         },
-      } satisfies GeminiRequestPart
+      } satisfies DeepSeekRequestPart
     }),
   )
 }
@@ -315,7 +315,7 @@ export const extractProjectsFromDocument = action({
         throw Errors.validation.invalidInput('Could not read any text from this document.')
       }
 
-      await enforceGeminiActionRateLimit(ctx, {
+      await enforceDeepSeekActionRateLimit(ctx, {
         name: 'projectDocumentImport',
         userId: identity.subject,
         resourceId: workspaceId,
@@ -336,7 +336,7 @@ export const extractProjectsFromDocument = action({
           supplementalText: hasText ? extractedText : null,
         })
         const visualParts = await loadVisualGeminiParts(ctx, visualDocuments)
-        raw = await geminiAI.generateContentWithParts([{ text: prompt }, ...visualParts])
+        raw = await deepseekAI.generateContentWithParts([{ text: prompt }, ...visualParts])
       } else {
         const prompt = buildTextExtractionPrompt({
           fileName: args.fileName,
@@ -345,7 +345,7 @@ export const extractProjectsFromDocument = action({
           preferredClientId,
           clients,
         })
-        raw = await geminiAI.generateContent(prompt)
+        raw = await deepseekAI.generateContent(prompt)
       }
 
       const nowMs = Date.now()

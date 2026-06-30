@@ -4,7 +4,7 @@ import { action } from '../../_generated/server'
 import { v } from 'convex/values'
 
 import { formatMetaCallToActionLabel } from '../../../src/services/integrations/meta-ads/meta-call-to-action'
-import { geminiAI } from '../../../src/services/gemini'
+import { deepseekAI } from '../../../src/services/deepseek'
 import { Errors, withErrorHandling } from '../../errors'
 
 function requireIdentity(identity: unknown): asserts identity {
@@ -12,7 +12,7 @@ function requireIdentity(identity: unknown): asserts identity {
     throw Errors.auth.unauthorized()
   }
 }
-import { enforceGeminiActionRateLimit } from '../../geminiRateLimit'
+import { enforceDeepSeekActionRateLimit } from '../../deepseekRateLimit'
 
 const providerIdValidator = v.union(
   v.literal('google'),
@@ -238,7 +238,7 @@ export const generateCopy = action({
       const identity = await ctx.auth.getUserIdentity()
       requireIdentity(identity)
 
-      await enforceGeminiActionRateLimit(ctx, {
+      await enforceDeepSeekActionRateLimit(ctx, {
         name: 'creativeCopy',
         userId: identity?.subject ?? null,
         resourceId: `${args.campaignId}:${args.creativeId}`,
@@ -263,7 +263,7 @@ export const generateCopy = action({
       }
 
       const prompt = buildPrompt(input)
-      const raw = await geminiAI.generateContent(prompt)
+      const raw = await deepseekAI.generateContent(prompt)
 
       const parsed = parseGeneratedCopyResponse(raw, args.providerId)
 

@@ -89,10 +89,10 @@ function beforeSend(event: Sentry.ErrorEvent): Sentry.ErrorEvent | null {
   return event
 }
 
-if (typeof window !== 'undefined' && clientDsn) {
+if (typeof window !== 'undefined' && clientDsn && process.env.NODE_ENV === 'production') {
   Sentry.init({
     dsn: clientDsn,
-    environment: process.env.NODE_ENV ?? 'development',
+    environment: 'production',
     // The Sentry Vite plugin injects SENTRY_RELEASE at build time; fall back
     // to the Next.js-style public var for parity with the server init.
     release: process.env.SENTRY_RELEASE ?? process.env.NEXT_PUBLIC_SENTRY_RELEASE,
@@ -106,8 +106,8 @@ if (typeof window !== 'undefined' && clientDsn) {
     // Capture 10% of sessions for replay, 100% of sessions with errors
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
-    // Performance tracing -- sample 10% in production, 100% in dev
-    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    // Performance tracing -- 10% sample in production
+    tracesSampleRate: 0.1,
     // Don't send PII
     sendDefaultPii: false,
     beforeSend,

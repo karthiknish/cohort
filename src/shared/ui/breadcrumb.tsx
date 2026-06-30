@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
+import { Slot } from "@/shared/ui/slot";
 import { ChevronRight, MoreHorizontal } from "lucide-react";
 import { linkMotionClass } from "@/lib/motion";
 import { cn } from "@/lib/utils";

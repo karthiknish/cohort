@@ -1,2 +1,12 @@
 'use client';
-export { useUrlSearchParamsContext as useUrlSearchParams } from '@/shared/contexts/url-search-params-context';
+
+import { useSearchParams } from '@/shared/ui/navigation';
+
+/**
+ * Returns the current URL search params.
+ * Directly backed by TanStack Router's `useRouterState` — no context
+ * provider needed.
+ */
+export function useUrlSearchParams(): URLSearchParams {
+  return useSearchParams();
+}

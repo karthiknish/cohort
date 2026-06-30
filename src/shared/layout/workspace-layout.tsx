@@ -1,7 +1,5 @@
-import { headers } from '@/lib/server-headers'
 import { Sidebar, Header } from '@/shared/layout/navigation'
 import { ProtectedRoute } from '@/shared/components/protected-route'
-import { NavigationProvider } from '@/shared/contexts/navigation-context'
 import { NavigationBreadcrumbs } from '@/shared/layout/navigation/breadcrumbs'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { ClientAccessGate } from '@/features/dashboard/home/components/client-access-gate'
@@ -29,29 +27,27 @@ export function WorkspaceLayoutInner({
   return (
     <ProtectedRoute allowPreviewAccess={allowPreviewAccess}>
       <WorkspaceProviders enablePreview enableProject>
-        <NavigationProvider>
-          <div className="relative flex min-h-screen bg-background">
-            <div className="flex min-h-0 w-full flex-1">
-              <Sidebar />
-              <div className="flex min-h-0 flex-1 flex-col bg-muted/20">
-                <Header />
-                <NetworkStatusBanner />
-                <ScrollArea className="min-h-0 flex-1">
-                  <div className="min-h-full">
-                    <DashboardMainRoleFrame>
-                      <NavigationBreadcrumbs />
-                      <PreviewDataBanner />
-                      <ClientAccessGate>
-                        <DashboardAgencyRoutesGate>{children}</DashboardAgencyRoutesGate>
-                      </ClientAccessGate>
-                    </DashboardMainRoleFrame>
-                  </div>
-                </ScrollArea>
-              </div>
+        <div className="relative flex min-h-screen bg-background">
+          <div className="flex min-h-0 w-full flex-1">
+            <Sidebar />
+            <div className="flex min-h-0 flex-1 flex-col bg-muted/20">
+              <Header />
+              <NetworkStatusBanner />
+              <ScrollArea className="min-h-0 flex-1">
+                <div className="min-h-full">
+                  <DashboardMainRoleFrame>
+                    <NavigationBreadcrumbs />
+                    <PreviewDataBanner />
+                    <ClientAccessGate>
+                      <DashboardAgencyRoutesGate>{children}</DashboardAgencyRoutesGate>
+                    </ClientAccessGate>
+                  </DashboardMainRoleFrame>
+                </div>
+              </ScrollArea>
             </div>
-            <AgentModeDynamic />
           </div>
-        </NavigationProvider>
+          <AgentModeDynamic />
+        </div>
       </WorkspaceProviders>
     </ProtectedRoute>
   )
@@ -61,6 +57,7 @@ export function WorkspaceLayoutInner({
 export async function WorkspaceLayout({ children, allowPreviewAccess }: WorkspaceLayoutProps) {
   let resolvedPreviewAccess = allowPreviewAccess
   if (resolvedPreviewAccess === undefined) {
+    const { headers } = await import('@/lib/server-headers')
     const requestHeaders = await headers()
     resolvedPreviewAccess =
       isScreenRecordingAuthBypassEnabled() ||

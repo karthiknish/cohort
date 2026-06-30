@@ -23,7 +23,7 @@ const SERVICE_META: Record<string, {
 }> = {
     convex: { label: 'Convex', description: 'Realtime database and backend functions' },
     betterauth: { label: 'Better Auth', description: 'Authentication and session plumbing' },
-    gemini: { label: 'Gemini', description: 'AI summaries and admin intelligence' },
+    deepseek: { label: 'DeepSeek', description: 'AI summaries and admin intelligence' },
     posthog: { label: 'PostHog', description: 'Product analytics and event tracking' },
     brevo: { label: 'Brevo', description: 'Transactional email delivery' },
     googleads: { label: 'Google Ads', description: 'Ads OAuth and sync configuration' },
@@ -102,7 +102,7 @@ function getServiceIcon(name: string) {
             return <Database className="size-4" aria-hidden/>;
         case 'betterauth':
             return <Server className="size-4" aria-hidden/>;
-        case 'gemini':
+        case 'deepseek':
             return <Zap className="size-4" aria-hidden/>;
         case 'brevo':
             return <Mail className="size-4" aria-hidden/>;

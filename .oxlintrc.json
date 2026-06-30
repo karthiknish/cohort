@@ -189,6 +189,43 @@
       "rules": {
         "react/jsx-no-useless-fragment": "off"
       }
+    },
+    {
+      "files": [
+        "src/shared/ui/slot.tsx",
+        "src/shared/ui/slottable.tsx",
+        "src/shared/ui/base-ui-utils.ts",
+        "src/shared/ui/select.tsx",
+        "src/shared/ui/dropdown-menu.tsx",
+        "src/shared/ui/context-menu.tsx",
+        "src/shared/ui/dialog.tsx",
+        "src/shared/ui/dialog-primitives.tsx",
+        "src/shared/ui/sheet.tsx",
+        "src/shared/ui/alert-dialog.tsx",
+        "src/shared/ui/tooltip.tsx",
+        "src/shared/ui/hover-card-trigger.tsx",
+        "src/shared/ui/hover-card-content.tsx",
+        "src/shared/ui/hover-card.tsx",
+        "src/shared/ui/popover.tsx",
+        "src/shared/ui/tabs.tsx",
+        "src/shared/ui/tabs-list.tsx",
+        "src/shared/ui/tabs-trigger.tsx",
+        "src/shared/ui/tabs-content.tsx",
+        "src/shared/ui/collapsible.tsx",
+        "src/shared/ui/radio-group.tsx",
+        "src/shared/ui/responsive-form-sheet.tsx",
+        "src/shared/ui/button.tsx",
+        "src/shared/ui/breadcrumb.tsx",
+        "src/shared/ui/badge.tsx",
+        "src/shared/ui/data-table/data-table-view-options.tsx",
+        "src/shared/ui/sonner.tsx",
+        "src/instrument.client.ts",
+        "src/instrument.server.ts",
+        "src/features/dashboard/collaboration/debug-page.tsx"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "off"
+      }
     }
   ]
 }

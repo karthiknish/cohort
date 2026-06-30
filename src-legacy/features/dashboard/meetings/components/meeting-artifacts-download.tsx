@@ -23,7 +23,8 @@ export function MeetingArtifactsDownload({ className, legacyId, meetingTitle, no
     const { user } = useAuth();
     const workspaceId = getWorkspaceId(user);
     const [downloading, setDownloading] = useState<'notes-pdf' | 'notes-cloud' | 'transcript' | 'transcript-cloud' | null>(null);
-    const artifactUrls = useQuery(meetingArchivesApi.getArtifactDownloadUrls, workspaceId ? { workspaceId, legacyId } : 'skip');
+    const isPreviewId = legacyId.startsWith('preview-');
+    const artifactUrls = useQuery(meetingArchivesApi.getArtifactDownloadUrls, workspaceId && !isPreviewId ? { workspaceId, legacyId } : 'skip');
     const hasNotes = Boolean(notesSummary?.trim());
     const hasTranscript = Boolean(transcriptText?.trim());
     const notesArchived = Boolean(notesStorageId) || Boolean(artifactUrls?.notesArchived);

@@ -24,7 +24,7 @@ export function GoogleWorkspaceCard(props: GoogleWorkspaceCardProps) {
           <p className="text-base font-semibold leading-tight text-foreground">Google Workspace</p>
           {loading ? (<Badge variant="outline" className="font-normal">
               Checking…
-            </Badge>) : connected ? (<Badge variant="secondary" className="font-normal text-emerald-700 dark:text-emerald-400">
+            </Badge>) : connected ? (<Badge variant="secondary" className="font-normal text-emerald-700">
               Connected
             </Badge>) : (<Badge variant="outline" className="font-normal">
               Setup required

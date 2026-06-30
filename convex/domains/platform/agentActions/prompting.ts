@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 
 import { buildRoutesForPrompt } from '@/domain/agent/navigation-intents'
-import { geminiAI } from '../../../../src/services/gemini'
+import { deepseekAI } from '../../../../src/services/deepseek'
 import { Errors } from '../../../errors'
 
 import type { ParsedAgentResponse } from './types'
@@ -292,7 +292,7 @@ Request: ${JSON.stringify(message)}
 
 Title:`
 
-  const raw = await geminiAI.generateContent(prompt)
+  const raw = await deepseekAI.generateContent(prompt)
   const cleaned = raw
     .replace(/"/g, '')
     .replace(/\s+/g, ' ')

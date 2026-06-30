@@ -6,8 +6,6 @@ import { fetchWithTimeout, isTimeoutError } from '@/lib/retry-utils'
 
 const ALLOWED_DOMAINS = [
   'storage.googleapis.com',
-  'public-api.gamma.app',
-  'gamma.app',
 ]
 
 function validateProxiedHost(hostname: string): boolean {

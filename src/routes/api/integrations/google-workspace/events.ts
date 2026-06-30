@@ -2,10 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { adaptApiHandler } from '@/lib/api-handler-start'
 import { z } from 'zod'
 import { BadRequestError, UnauthorizedError } from '@/lib/api-errors'
-import { buildGeminiRateLimitKey, formatGeminiRateLimitMessage, GEMINI_RATE_LIMITS } from '@/lib/geminiRateLimits'
+import { buildDeepSeekRateLimitKey, formatDeepSeekRateLimitMessage, DEEPSEEK_RATE_LIMITS } from '@/lib/deepseekRateLimits'
 import { saveMeetingNotes, saveMeetingTranscript } from '@/lib/meetings-admin'
 import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
-import { GeminiAIService, resolveGeminiApiKey } from '@/services/gemini'
+import { DeepSeekAIService, resolveDeepSeekApiKey } from '@/services/deepseek'
 
 type MeetingStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
 type PubSubContext = {
@@ -239,9 +239,9 @@ function getMissingFields(payload: NormalizedTranscriptWebhookPayload): string[]
   return missing
 }
 async function generateConciseMeetingNotes(transcriptText: string): Promise<{ summary: string; model: string } | null> {
-  const apiKey = resolveGeminiApiKey()
+  const apiKey = resolveDeepSeekApiKey()
   if (!apiKey) return null
-  const gemini = new GeminiAIService(apiKey)
+  const ai = new DeepSeekAIService(apiKey)
   const prompt = [
     'You are an expert meeting note taker.',
     'Read the transcript and return concise markdown notes with these sections:',
@@ -254,8 +254,8 @@ async function generateConciseMeetingNotes(transcriptText: string): Promise<{ su
     'Transcript:',
     transcriptText,
   ].join('\n')
-  const summary = await gemini.generateContent(prompt)
-  const model = gemini.getModel()
+  const summary = await ai.generateContent(prompt)
+  const model = ai.getModel()
   return { summary, model }
 }
 
@@ -319,17 +319,17 @@ const handlers = adaptApiHandler(
     let notesGenerated = false
     try {
       const rateLimit = await checkConvexRateLimit(
-        buildGeminiRateLimitKey({
+        buildDeepSeekRateLimitKey({
           name: 'meetingWebhookNotes',
           userId: normalized.userId,
           workspaceId: normalized.workspaceId,
           resourceId: normalized.meetingLegacyId ?? normalized.calendarEventId,
           scope: normalized.eventType,
         }),
-        GEMINI_RATE_LIMITS.meetingWebhookNotes,
+        DEEPSEEK_RATE_LIMITS.meetingWebhookNotes,
       )
       if (!rateLimit.allowed) {
-        throw new Error(formatGeminiRateLimitMessage(rateLimit.resetMs))
+        throw new Error(formatDeepSeekRateLimitMessage(rateLimit.resetMs))
       }
       const notes = await generateConciseMeetingNotes(normalized.transcriptText as string)
       if (notes) {

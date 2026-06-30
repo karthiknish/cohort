@@ -1,4 +1,4 @@
-import { GeminiAIService, resolveGeminiApiKey, type GeminiContentGenerationOptions, } from '@/services/gemini';
+import { DeepSeekAIService, resolveDeepSeekApiKey, type DeepSeekContentGenerationOptions, } from '@/services/deepseek';
 export const MEETING_NOTES_REQUIRED_HEADINGS = [
     '## Summary',
     '## Decisions',
@@ -108,45 +108,39 @@ export function validateAndNormalizeMeetingNotes(raw: string): {
     }
     return { ok: true, notes };
 }
-const MEETING_NOTES_GENERATION_OPTIONS: GeminiContentGenerationOptions = {
+const MEETING_NOTES_GENERATION_OPTIONS: DeepSeekContentGenerationOptions = {
     systemInstruction: MEETING_NOTES_SYSTEM_INSTRUCTION,
     temperature: 0.2,
     maxOutputTokens: 1024,
-    safetySettings: [
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-    ],
 };
 export async function generateConciseMeetingNotes(transcriptText: string): Promise<{
     summary: string;
     model: string;
     truncated: boolean;
 } | null> {
-    const apiKey = resolveGeminiApiKey();
+    const apiKey = resolveDeepSeekApiKey();
     if (!apiKey) {
         return null;
     }
-    const gemini = new GeminiAIService(apiKey);
+    const ai = new DeepSeekAIService(apiKey);
     const excerpt = buildTranscriptExcerptForNotes(transcriptText);
-    const firstAttempt = await gemini.generateContentWithOptions(buildMeetingNotesUserPrompt(transcriptText), MEETING_NOTES_GENERATION_OPTIONS);
+    const firstAttempt = await ai.generateContentWithOptions(buildMeetingNotesUserPrompt(transcriptText), MEETING_NOTES_GENERATION_OPTIONS);
     const firstValidation = validateAndNormalizeMeetingNotes(firstAttempt);
     if (firstValidation.ok) {
         return {
             summary: firstValidation.notes,
-            model: gemini.getModel(),
+            model: ai.getModel(),
             truncated: excerpt.truncated,
         };
     }
-    const retryAttempt = await gemini.generateContentWithOptions(buildMeetingNotesUserPrompt(transcriptText, { retryInvalidFormat: true }), MEETING_NOTES_GENERATION_OPTIONS);
+    const retryAttempt = await ai.generateContentWithOptions(buildMeetingNotesUserPrompt(transcriptText, { retryInvalidFormat: true }), MEETING_NOTES_GENERATION_OPTIONS);
     const retryValidation = validateAndNormalizeMeetingNotes(retryAttempt);
     if (!retryValidation.ok) {
         throw new Error(retryValidation.reason);
     }
     return {
         summary: retryValidation.notes,
-        model: gemini.getModel(),
+        model: ai.getModel(),
         truncated: excerpt.truncated,
     };
 }

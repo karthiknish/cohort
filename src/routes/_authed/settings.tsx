@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { ProtectedRoute } from '@/shared/components/protected-route'
-import { NavigationProvider } from '@/shared/contexts/navigation-context'
 import { Sidebar, Header } from '@/shared/layout/navigation'
 import { NavigationBreadcrumbs } from '@/shared/layout/navigation/breadcrumbs'
 import { AgentModeDynamic } from '@/shared/components/agent-mode/agent-mode-dynamic'
@@ -42,23 +41,21 @@ function SettingsRoute() {
   return (
     <ProtectedRoute allowPreviewAccess={allowPreviewAccess}>
       <WorkspaceProviders enablePreview enablePreferences>
-        <NavigationProvider>
-          <div className="relative flex min-h-screen bg-background">
-            <div className="flex min-h-0 w-full flex-1">
-              <Sidebar />
-              <div className="flex min-h-0 flex-1 flex-col bg-muted/20">
-                <Header />
-                <ScrollArea className="min-h-0 flex-1">
-                  <main className="min-h-full space-y-6 p-6">
-                    <NavigationBreadcrumbs />
-                    <SettingsPage />
-                  </main>
-                </ScrollArea>
-              </div>
+        <div className="relative flex min-h-screen bg-background">
+          <div className="flex min-h-0 w-full flex-1">
+            <Sidebar />
+            <div className="flex min-h-0 flex-1 flex-col bg-muted/20">
+              <Header />
+              <ScrollArea className="min-h-0 flex-1">
+                <main className="min-h-full space-y-6 p-6">
+                  <NavigationBreadcrumbs />
+                  <SettingsPage />
+                </main>
+              </ScrollArea>
             </div>
-            <AgentModeDynamic />
           </div>
-        </NavigationProvider>
+          <AgentModeDynamic />
+        </div>
       </WorkspaceProviders>
     </ProtectedRoute>
   )

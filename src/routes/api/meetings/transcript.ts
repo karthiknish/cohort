@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { adaptApiHandler } from '@/lib/api-handler-start'
 import { z } from 'zod'
 import { BadRequestError, ForbiddenError, UnauthorizedError } from '@/lib/api-errors'
-import { buildGeminiRateLimitKey, formatGeminiRateLimitMessage, GEMINI_RATE_LIMITS } from '@/lib/geminiRateLimits'
+import { buildDeepSeekRateLimitKey, formatDeepSeekRateLimitMessage, DEEPSEEK_RATE_LIMITS } from '@/lib/deepseekRateLimits'
 import { getMeetingRecord, saveMeetingNotes, saveMeetingTranscript, setMeetingProcessingState, updateMeetingRecord } from '@/lib/meetings-admin'
 import { generateConciseMeetingNotes, normalizeNotesSummary } from '@/lib/meeting-notes-gemini'
 import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
@@ -113,10 +113,10 @@ const handlers = adaptApiHandler(
     if (shouldGenerateNotes && effectiveTranscript.length >= 20) {
       try {
         const rateLimit = await checkConvexRateLimit(
-          buildGeminiRateLimitKey({ name: 'meetingNotes', userId: auth.uid, workspaceId: workspace.workspaceId, resourceId: body.legacyId, scope: mode }),
-          GEMINI_RATE_LIMITS.meetingNotes,
+          buildDeepSeekRateLimitKey({ name: 'meetingNotes', userId: auth.uid, workspaceId: workspace.workspaceId, resourceId: body.legacyId, scope: mode }),
+          DEEPSEEK_RATE_LIMITS.meetingNotes,
         )
-        if (!rateLimit.allowed) throw new Error(formatGeminiRateLimitMessage(rateLimit.resetMs))
+        if (!rateLimit.allowed) throw new Error(formatDeepSeekRateLimitMessage(rateLimit.resetMs))
         const notes = await generateConciseMeetingNotes(effectiveTranscript)
         if (notes) {
           await saveMeetingNotes({

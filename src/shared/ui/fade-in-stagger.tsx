@@ -20,15 +20,9 @@ export function FadeInStagger({ children, as, delay = 0, duration = defaultFadeI
         hidden: HIDDEN_VARIANTS_STAGGER,
         visible: { transition: { staggerChildren: stagger, delayChildren: delay, duration } },
     });
-    if (mounted && prefersReducedMotion) {
-        return (<LazyMotion features={domAnimation}>
-        <Tag initial={false} whileInView={WHILE_IN_VIEW_FADE} viewport={VIEWPORT_DEFAULT} {...props}>
-          {children}
-        </Tag>
-      </LazyMotion>);
-    }
+    const reducedMotion = mounted && prefersReducedMotion;
     return (<LazyMotion features={domAnimation}>
-      <Tag initial="hidden" whileInView="visible" viewport={VIEWPORT_DEFAULT} variants={variants} {...props}>
+      <Tag initial={reducedMotion ? false : 'hidden'} whileInView={reducedMotion ? WHILE_IN_VIEW_FADE : 'visible'} viewport={VIEWPORT_DEFAULT} variants={reducedMotion ? undefined : variants} {...props}>
         {children}
       </Tag>
     </LazyMotion>);

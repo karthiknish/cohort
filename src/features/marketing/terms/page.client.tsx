@@ -4,7 +4,6 @@ import { FileText, CircleCheck, User, Key, LayoutDashboard, Copyright, LogOut, T
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { cn } from '@/lib/utils';
-import { FadeIn, FadeInStagger, FadeInItem } from '@/shared/ui/animate-in';
 const sections = [
     {
         title: 'Acceptance of Terms',
@@ -54,7 +53,7 @@ const sections = [
 ];
 export default function TermsPage() {
     return (<div className="mx-auto max-w-4xl space-y-8 px-6 py-12 md:py-20">
-      <FadeIn>
+      <div className="animate-fade-in">
         <div className="flex flex-col gap-4">
           <Link href="/" className="group flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground w-fit">
             <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-1"/>
@@ -65,9 +64,9 @@ export default function TermsPage() {
             <p className="text-sm text-muted-foreground">Last updated: January 6, 2026</p>
           </div>
         </div>
-      </FadeIn>
+      </div>
 
-      <FadeIn delay={0.2}>
+      <div className="animate-fade-in">
         <Card className="border-border/60 shadow-xl shadow-black/[0.04]">
           <CardHeader className="border-b bg-muted/30 pb-8 pt-8">
             <div className="flex items-center gap-4">
@@ -83,8 +82,8 @@ export default function TermsPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-0 p-0 text-sm leading-7 text-muted-foreground">
-            <FadeInStagger>
-              {sections.map((section, index) => (<FadeInItem key={section.title} className={cn("p-8 transition-colors hover:bg-muted/10", index !== sections.length - 1 && "border-b border-border/40")}>
+            <div>
+              {sections.map((section, index) => (<div key={section.title} className={cn("p-8 transition-colors hover:bg-muted/10 animate-slide-in-from-bottom", index !== sections.length - 1 && "border-b border-border/40")}>
                   <div className="flex flex-col gap-4 sm:flex-row sm:gap-8">
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:bg-accent/10 group-hover:text-primary transition-colors">
                       <section.icon className="size-5"/>
@@ -94,9 +93,9 @@ export default function TermsPage() {
                       <p className="max-w-2xl">{section.description}</p>
                     </div>
                   </div>
-                </FadeInItem>))}
-            </FadeInStagger>
-            
+                </div>))}
+            </div>
+
             <div className="border-t border-border bg-muted/30 p-8 sm:p-12 text-center">
               <h2 className="text-xl font-semibold text-foreground mb-4">Legal Inquiries</h2>
               <p className="mb-8 max-w-lg mx-auto">
@@ -110,6 +109,6 @@ export default function TermsPage() {
             </div>
           </CardContent>
         </Card>
-      </FadeIn>
+      </div>
     </div>);
 }

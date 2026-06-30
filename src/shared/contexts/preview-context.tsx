@@ -1,66 +1,66 @@
 'use client';
-import { createContext, use, useEffect, useState, useCallback, useMemo, type PropsWithChildren } from 'react';
-import { isPreviewModeEnabled, isScreenRecordingModeEnabled, setPreviewModeEnabled, PREVIEW_MODE_EVENT, PREVIEW_MODE_STORAGE_KEY, } from '@/lib/preview-data';
+
+import { useCallback, useSyncExternalStore } from 'react';
+import {
+  isPreviewModeEnabled,
+  isScreenRecordingModeEnabled,
+  setPreviewModeEnabled,
+  PREVIEW_MODE_EVENT,
+  PREVIEW_MODE_STORAGE_KEY,
+} from '@/lib/preview-data';
+
 interface PreviewContextValue {
-    isPreviewMode: boolean;
-    togglePreviewMode: () => void;
-    setPreviewMode: (enabled: boolean) => void;
+  isPreviewMode: boolean;
+  togglePreviewMode: () => void;
+  setPreviewMode: (enabled: boolean) => void;
 }
-const PreviewContext = createContext<PreviewContextValue | undefined>(undefined);
+
 const DEFAULT_PREVIEW_CONTEXT: PreviewContextValue = {
-    isPreviewMode: false,
-    togglePreviewMode: () => { },
-    setPreviewMode: () => { },
+  isPreviewMode: false,
+  togglePreviewMode: () => {},
+  setPreviewMode: () => {},
 };
-export function PreviewProvider({ children }: PropsWithChildren) {
-    const [storedPreviewMode, setStoredPreviewMode] = useState(() => isPreviewModeEnabled());
-    const isPreviewModeForced = isScreenRecordingModeEnabled();
-    const isPreviewMode = isPreviewModeForced || storedPreviewMode;
-    useEffect(() => {
-        const syncFromStorage = () => {
-            setStoredPreviewMode(isPreviewModeEnabled());
-        };
-        const onStorage = (event: StorageEvent) => {
-            if (event.key === PREVIEW_MODE_STORAGE_KEY) {
-                syncFromStorage();
-            }
-        };
-        const onPreviewEvent = () => {
-            syncFromStorage();
-        };
-        window.addEventListener('storage', onStorage);
-        window.addEventListener(PREVIEW_MODE_EVENT, onPreviewEvent as EventListener);
-        return () => {
-            window.removeEventListener('storage', onStorage);
-            window.removeEventListener(PREVIEW_MODE_EVENT, onPreviewEvent as EventListener);
-        };
-    }, []);
-    const updatePreviewMode = (enabled: boolean) => {
-        if (isPreviewModeForced)
-            return;
-        setStoredPreviewMode(enabled);
-        setPreviewModeEnabled(enabled);
-    };
-    const togglePreviewMode = useCallback(() => {
-        const nextValue = !isPreviewMode;
-        updatePreviewMode(nextValue);
-    }, [isPreviewMode]);
-    const setPreviewMode = useCallback((enabled: boolean) => {
-        updatePreviewMode(enabled);
-    }, []);
-    const value = useMemo<PreviewContextValue>(() => ({
-        isPreviewMode,
-        togglePreviewMode,
-        setPreviewMode,
-    }), [isPreviewMode, togglePreviewMode, setPreviewMode]);
-    return (<PreviewContext.Provider value={value}>
-      {children}
-    </PreviewContext.Provider>);
+
+function subscribe(onStoreChange: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === PREVIEW_MODE_STORAGE_KEY) onStoreChange();
+  };
+  const onPreviewEvent = () => onStoreChange();
+  window.addEventListener('storage', onStorage);
+  window.addEventListener(PREVIEW_MODE_EVENT, onPreviewEvent as EventListener);
+  return () => {
+    window.removeEventListener('storage', onStorage);
+    window.removeEventListener(PREVIEW_MODE_EVENT, onPreviewEvent as EventListener);
+  };
 }
-export function usePreview() {
-    const context = use(PreviewContext);
-    if (context === undefined) {
-        return DEFAULT_PREVIEW_CONTEXT;
-    }
-    return context;
+
+function getSnapshot(): boolean {
+  return isPreviewModeEnabled();
+}
+
+function getServerSnapshot(): boolean {
+  return false;
+}
+
+/**
+ * Hook for preview mode state — no provider needed.
+ * Backed by `useSyncExternalStore` reading from localStorage.
+ */
+export function usePreview(): PreviewContextValue {
+  const storedPreviewMode = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const isPreviewModeForced = isScreenRecordingModeEnabled();
+  const isPreviewMode = isPreviewModeForced || storedPreviewMode;
+
+  const setPreviewMode = useCallback((enabled: boolean) => {
+    if (isPreviewModeForced) return;
+    setPreviewModeEnabled(enabled);
+  }, [isPreviewModeForced]);
+
+  const togglePreviewMode = useCallback(() => {
+    if (isPreviewModeForced) return;
+    setPreviewModeEnabled(!isPreviewMode);
+  }, [isPreviewMode, isPreviewModeForced]);
+
+  return { isPreviewMode, togglePreviewMode, setPreviewMode };
 }

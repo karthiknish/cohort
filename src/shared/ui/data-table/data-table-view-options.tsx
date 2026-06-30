@@ -1,6 +1,6 @@
 'use client';
 import { useCallback } from 'react';
-import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
+import { DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
 import type { Table } from '@tanstack/react-table';
 import { Settings2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';

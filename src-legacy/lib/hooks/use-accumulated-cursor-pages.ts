@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+const EMPTY_ARRAY: readonly unknown[] = Object.freeze([]);
 export type ParsedCursorPage<TItem, TCursor> = {
     items: TItem[];
     nextCursor: TCursor | null;
@@ -32,21 +33,25 @@ export function useAccumulatedCursorPages<TItem, TCursor>({ scopeKey, queryData,
     useEffect(() => {
         getItemKeyRef.current = getItemKey;
     }, [getItemKey]);
-    const reset = () => {
+    const parsePageRef = useRef(parsePage);
+    useEffect(() => {
+        parsePageRef.current = parsePage;
+    }, [parsePage]);
+    const reset = useCallback(() => {
         setLoadCursor(null);
         setIsLoadingMore(false);
         setNextPageCursor(null);
         setOlderItems([]);
-    };
+    }, [setLoadCursor]);
     useEffect(() => {
         reset();
     }, [reset, scopeKey]);
-    const parsedPage = (() => {
+    const parsedPage = useMemo(() => {
         if (!enabled || queryData === undefined) {
             return null;
         }
-        return parsePage(queryData);
-    })();
+        return parsePageRef.current(queryData);
+    }, [enabled, queryData]);
     useEffect(() => {
         if (!enabled || queryData === undefined || !parsedPage) {
             return;
@@ -76,8 +81,12 @@ export function useAccumulatedCursorPages<TItem, TCursor>({ scopeKey, queryData,
         setLoadCursor(null);
         setIsLoadingMore(false);
     }, [enabled, loadCursor, parsedPage, queryData, setLoadCursor]);
-    const firstPageItems = parsedPage?.items ?? [];
-    const mergedItems = mergePages(firstPageItems, olderItems);
+    const firstPageItems = parsedPage?.items ?? (EMPTY_ARRAY as TItem[]);
+    const mergePagesRef = useRef(mergePages);
+    useEffect(() => {
+        mergePagesRef.current = mergePages;
+    }, [mergePages]);
+    const mergedItems = useMemo(() => mergePagesRef.current(firstPageItems, olderItems), [firstPageItems, olderItems]);
     const isInitialLoading = enabled && queryData === undefined && loadCursor === null;
     const loadMore = () => {
         if (!enabled || !nextPageCursor || isLoadingMore || isInitialLoading) {

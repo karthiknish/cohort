@@ -1,14 +1,12 @@
 import { v } from 'convex/values'
 import { adminAction } from '../../functions'
 import { Errors, withErrorHandling } from '../../errors'
-import { enforceGeminiActionRateLimit } from '../../geminiRateLimit'
+import { enforceDeepSeekActionRateLimit } from '../../deepseekRateLimit'
+import { deepseekAI } from '../../../src/services/deepseek'
 
-type GeminiContentPart = string | { text?: string }
-type GeminiPayload = {
-  candidates?: Array<{
-    content?: {
-      parts?: GeminiContentPart[]
-    }
+type DeepSeekPayload = {
+  choices?: Array<{
+    message?: { content?: string }
   }>
 }
 
@@ -24,7 +22,7 @@ function buildPrompt(args: {
   const { field, context } = args
 
   if (field === 'title') {
-    return `Generate a concise, professional feature title for a software development project. 
+    return `Generate a concise, professional feature title for a software development project.
 The title should be:
 - Clear and descriptive (3-6 words)
 - Action-oriented or feature-focused
@@ -50,59 +48,11 @@ ${context?.status ? `Status: ${context.status}` : ''}
 Return ONLY the description, nothing else. No quotes, no preamble.`
 }
 
-async function generateWithGemini(prompt: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
-  if (!apiKey) {
-    throw Errors.integration.notConfigured('Gemini', 'GEMINI_API_KEY (or GOOGLE_API_KEY) is not configured')
+async function generateWithDeepSeek(prompt: string): Promise<string> {
+  if (!deepseekAI.isConfigured()) {
+    throw Errors.integration.notConfigured('DeepSeek', 'DEEPSEEK_API_KEY is not configured')
   }
-
-  const model = (process.env.GEMINI_MODEL?.trim() || 'gemini-3-flash-preview').trim()
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            {
-              text: prompt,
-            },
-          ],
-        },
-      ],
-    }),
-  })
-
-  if (!response.ok) {
-    const details = await response.text()
-    throw Errors.base.internal(`Gemini API error ${response.status}: ${details}`)
-  }
-
-  const payload = (await response.json()) as GeminiPayload
-  const candidate = payload?.candidates?.[0]
-  const parts = candidate?.content?.parts
-
-  const text = Array.isArray(parts)
-    ? parts
-        .flatMap((part) => {
-          if (typeof part === 'string') return [part]
-          if (part && typeof part === 'object' && typeof part.text === 'string') return [part.text]
-          return []
-        })
-        .join('\n')
-        .trim()
-    : ''
-
-  if (!text) {
-    throw Errors.base.internal('Gemini API returned an empty response')
-  }
-
-  return text
+  return deepseekAI.generateContent(prompt)
 }
 
 function cleanupOutput(raw: string) {
@@ -127,7 +77,7 @@ export const generate = adminAction({
   },
   handler: async (ctx, args) =>
     withErrorHandling(async () => {
-      await enforceGeminiActionRateLimit(ctx, {
+      await enforceDeepSeekActionRateLimit(ctx, {
         name: 'adminFeatureAssist',
         userId: ctx.legacyId,
         workspaceId: ctx.agencyId,
@@ -135,7 +85,7 @@ export const generate = adminAction({
       })
 
       const prompt = buildPrompt({ field: args.field, context: args.context })
-      const raw = await generateWithGemini(prompt)
+      const raw = await generateWithDeepSeek(prompt)
       const cleaned = cleanupOutput(raw)
 
       return args.field === 'title' ? { title: cleaned } : { description: cleaned }

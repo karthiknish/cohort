@@ -1,18 +1,20 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createServerFn } from '@tanstack/react-start'
 import AuthPageClient from '@/features/auth/page.client'
-import { getServerRequest } from '@/lib/server-request.server'
-import { hasValidSession } from '@/lib/auth-session.server'
+import { getToken } from '@/lib/auth-server'
+
+const checkAuth = createServerFn({ method: 'GET' }).handler(async () => {
+  const token = await getToken()
+  return { isAuthenticated: !!token }
+})
 
 export const Route = createFileRoute('/auth/')({
   beforeLoad: async () => {
-    let request: Request | undefined
-    try {
-      request = getServerRequest()
-    } catch {
-      // SPA navigation — no server request; client auth handles protection
-      return
-    }
-    if (await hasValidSession(request)) {
+    // On client navigation, skip SSR auth check — client auth handles it
+    if (typeof document !== 'undefined') return
+
+    const { isAuthenticated } = await checkAuth()
+    if (isAuthenticated) {
       throw redirect({ to: '/for-you' })
     }
   },

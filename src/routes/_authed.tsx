@@ -1,13 +1,69 @@
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
+import { createServerFn } from '@tanstack/react-start'
 import {
   accountStatusRedirect,
   shouldBypassAuthForDemo,
 } from '@/lib/auth-guard'
-import { resolveUserStatus } from '@/lib/auth-session.server'
 import { getToken } from '@/lib/auth-server'
+import { decodeJwtSubject } from '@/lib/jwt-utils'
+import { getSystemConvexClient } from '@/lib/convex-system-client'
+import { internal } from '@convex/_generated/api'
+import type { FunctionReference } from 'convex/server'
 import { Button } from '@/shared/ui/button'
 import { DashboardLoading } from '@/shared/ui/route-boundaries/dashboard-loading'
+
+const checkAuthAndStatus = createServerFn({ method: 'GET' })
+  .validator((data: unknown) => {
+    if (data && typeof data === 'object' && 'pathname' in data) {
+      return { pathname: String((data as { pathname: unknown }).pathname) }
+    }
+    return { pathname: '/' }
+  })
+  .handler(async ({ data }) => {
+    const pathname = data.pathname
+    if (shouldBypassAuthForDemo(pathname)) {
+      return { authenticated: true, redirect: null }
+    }
+
+    const token = await getToken()
+    if (!token) {
+      return {
+        authenticated: false,
+        redirect: {
+          to: '/auth',
+          search: { redirect: pathname },
+        },
+      }
+    }
+
+    // Resolve user status server-side
+    let statusTarget: ReturnType<typeof accountStatusRedirect> = null
+    try {
+      const legacyId = decodeJwtSubject(token)
+      if (legacyId) {
+        const client = getSystemConvexClient()
+        if (client) {
+          const result = await client.query(
+            internal.users.getStatusByLegacyId as unknown as FunctionReference<'query'>,
+            { legacyId },
+          )
+          if (result) {
+            statusTarget = accountStatusRedirect(result.status, pathname)
+          }
+        }
+      }
+    } catch {
+      // Fall through — client gate handles it
+    }
+
+    if (statusTarget) {
+      return { authenticated: true, redirect: statusTarget }
+    }
+
+    return { authenticated: true, redirect: null }
+  },
+)
 
 /**
  * Pathless layout — auth gate for workspace routes.
@@ -17,27 +73,15 @@ export const Route = createFileRoute('/_authed')({
   beforeLoad: async ({ location }) => {
     const pathname = location.pathname
 
-    if (shouldBypassAuthForDemo(pathname)) return
-
-    // SSR: check auth via Better Auth token
-    // On the client, the ConvexBetterAuthProvider handles auth reactively
+    // On client navigation, skip SSR auth check — ConvexBetterAuthProvider handles it
     if (typeof document !== 'undefined') return
 
-    const token = await getToken()
-    if (!token) {
-      throw redirect({
-        to: '/auth',
-        search: { redirect: `${pathname}${location.searchStr}` },
-      })
+    const result = await checkAuthAndStatus({ data: { pathname } })
+    if (!result.authenticated && result.redirect) {
+      throw redirect(result.redirect)
     }
-
-    // Resolve the domain status server-side.
-    // On any failure, fall through — the client-side ProtectedRoute gate still
-    // enforces status redirects reactively once Convex auth settles.
-    const status = await resolveUserStatus()
-    const statusTarget = accountStatusRedirect(status, pathname)
-    if (statusTarget) {
-      throw redirect(statusTarget)
+    if (result.redirect) {
+      throw redirect(result.redirect)
     }
   },
   component: () => <Outlet />,

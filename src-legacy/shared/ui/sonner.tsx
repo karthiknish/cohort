@@ -1,7 +1,6 @@
 "use client";
 import { type CSSProperties, useMemo } from 'react';
 import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon, } from "lucide-react";
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 const TOASTER_ICONS = {
     success: <CircleCheckIcon className="size-4"/>,
@@ -19,11 +18,10 @@ const DEFAULT_TOAST_OPTIONS: NonNullable<ToasterProps['toastOptions']> = {
     closeButtonAriaLabel: 'Dismiss notification',
 };
 const Toaster = ({ toastOptions, ...props }: ToasterProps) => {
-    const { theme = "system" } = useTheme();
     const mergedToastOptions = ({
         ...DEFAULT_TOAST_OPTIONS,
         ...toastOptions,
     });
-    return (<Sonner theme={theme as ToasterProps["theme"]} className="toaster group" containerAriaLabel="Notifications" icons={TOASTER_ICONS} style={TOASTER_STYLE} toastOptions={mergedToastOptions} {...props}/>);
+    return (<Sonner theme="light" className="toaster group" containerAriaLabel="Notifications" icons={TOASTER_ICONS} style={TOASTER_STYLE} toastOptions={mergedToastOptions} {...props}/>);
 };
 export { Toaster };

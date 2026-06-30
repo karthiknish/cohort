@@ -5,8 +5,8 @@ import { api, internal } from '../../_generated/api'
 import { v } from 'convex/values'
 import { loadStoredObjectBlob } from '../../lib/fileStorage'
 
-import { geminiAI, type GeminiRequestPart } from '../../../src/services/gemini'
-import { enforceGeminiActionRateLimit } from '../../geminiRateLimit'
+import { deepseekAI, type DeepSeekRequestPart } from '../../../src/services/deepseek'
+import { enforceDeepSeekActionRateLimit } from '../../deepseekRateLimit'
 import { ErrorCode, Errors, isAppError, withErrorHandling } from '../../errors'
 import {
   listWorkspaceMembers,
@@ -147,7 +147,7 @@ ${fileList}${supplementalBlock}`
 async function loadVisualGeminiParts(
   ctx: Parameters<typeof loadStoredObjectBlob>[0],
   documents: Array<{ fileName: string; mimeType: string; storageId: string }>,
-): Promise<GeminiRequestPart[]> {
+): Promise<DeepSeekRequestPart[]> {
   return Promise.all(
     documents.map(async (document) => {
       const blob = await loadStoredObjectBlob(ctx, document.storageId)
@@ -171,7 +171,7 @@ async function loadVisualGeminiParts(
           mimeType: document.mimeType,
           data: buffer.toString('base64'),
         },
-      } satisfies GeminiRequestPart
+      } satisfies DeepSeekRequestPart
     }),
   )
 }
@@ -388,7 +388,7 @@ export const extractTasksFromDocument = action({
         throw Errors.validation.invalidInput('Could not read any text from this document.')
       }
 
-      await enforceGeminiActionRateLimit(ctx, {
+      await enforceDeepSeekActionRateLimit(ctx, {
         name: 'taskDocumentImport',
         userId: identity.subject,
         resourceId: workspaceId,
@@ -412,7 +412,7 @@ export const extractTasksFromDocument = action({
           supplementalText: hasText ? extractedText : null,
         })
         const visualParts = await loadVisualGeminiParts(ctx, visualDocuments)
-        raw = await geminiAI.generateContentWithParts([{ text: prompt }, ...visualParts])
+        raw = await deepseekAI.generateContentWithParts([{ text: prompt }, ...visualParts])
       } else {
         const prompt = buildTextExtractionPrompt({
           fileName: args.fileName,
@@ -421,7 +421,7 @@ export const extractTasksFromDocument = action({
           clientId: args.clientId ?? null,
           projectId: args.projectId ?? null,
         })
-        raw = await geminiAI.generateContent(prompt)
+        raw = await deepseekAI.generateContent(prompt)
       }
 
       const rawTasks = enrichExtractedTasksWithDocumentAssignees(

@@ -47,7 +47,7 @@ function StageMetrics({ stage, isLast }: {
           {stage.value.toLocaleString()}
         </span>
         <span>{stage.shareOfTopPct.toFixed(2)}% of top</span>
-        {!isLast && stage.dropOff > 0 ? (<span className="text-amber-600 dark:text-amber-500">
+        {!isLast && stage.dropOff > 0 ? (<span className="text-amber-600">
             −{stage.dropOff.toFixed(1)}% step drop
           </span>) : null}
       </div>

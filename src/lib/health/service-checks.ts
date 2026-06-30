@@ -1,4 +1,4 @@
-import { resolveGeminiApiKey } from '@/services/gemini';
+import { resolveDeepSeekApiKey } from '@/services/deepseek';
 import { resolveGoogleAdsOAuthCredentials, resolveGoogleAdsOAuthRedirectUri, resolveGoogleAnalyticsOAuthCredentials, resolveGoogleAnalyticsOAuthRedirectUri, } from '@/services/google-oauth';
 import { resolveGoogleWorkspaceOAuthCredentials, resolveGoogleWorkspaceOAuthRedirectUri } from '@/services/google-workspace';
 import { resolveLiveKitCredentials } from '@/services/livekit';
@@ -67,7 +67,7 @@ export function buildConfiguredServiceChecks(): Record<string, ServiceCheck> {
             hasSecret: Boolean(readEnv('BETTER_AUTH_SECRET')),
             hasConvexSiteUrl: Boolean(readEnv('NEXT_PUBLIC_CONVEX_SITE_URL') || readEnv('NEXT_PUBLIC_CONVEX_HTTP_URL')),
         }),
-        gemini: configuredCheck(Boolean(resolveGeminiApiKey()), 'Missing GEMINI_API_KEY or GOOGLE_API_KEY'),
+        deepseek: configuredCheck(Boolean(resolveDeepSeekApiKey()), 'Missing DEEPSEEK_API_KEY'),
         posthog: configuredCheck(Boolean(readEnv('NEXT_PUBLIC_POSTHOG_KEY') && readEnv('NEXT_PUBLIC_POSTHOG_HOST')), 'Missing NEXT_PUBLIC_POSTHOG_KEY or NEXT_PUBLIC_POSTHOG_HOST'),
         brevo: configuredCheck(Boolean(readEnv('BREVO_API_KEY')), 'BREVO_API_KEY is not configured'),
         googleAds: configuredCheck(Boolean(googleAdsCredentials.clientId && googleAdsCredentials.clientSecret && resolveGoogleAdsOAuthRedirectUri(appUrl) && readEnv('GOOGLE_ADS_DEVELOPER_TOKEN')), 'Missing Google Ads OAuth credentials, redirect URI, or GOOGLE_ADS_DEVELOPER_TOKEN', { hasDeveloperToken: Boolean(readEnv('GOOGLE_ADS_DEVELOPER_TOKEN')) }),

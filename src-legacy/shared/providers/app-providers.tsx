@@ -1,6 +1,5 @@
 'use client';
 import { Suspense, type ReactNode } from 'react';
-import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/shared/contexts/auth-context';
 import { UrlSearchParamsProvider } from '@/shared/contexts/url-search-params-context';
 import { AnalyticsProvider } from '@/shared/providers/analytics-provider';
@@ -13,22 +12,20 @@ interface AppProvidersProps {
     initialToken?: string | null;
 }
 export function AppProviders({ children, initialToken }: AppProvidersProps) {
-    return (<ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <ConvexClientProvider initialToken={initialToken}>
-        <AuthProvider>
-          <QueryProvider>
-            <Suspense fallback={null}>
-              <UrlSearchParamsProvider>
-                <AnalyticsProvider>
-                  <PostHogProvider>
-                    {children}
-                    <SonnerToaster />
-                  </PostHogProvider>
-                </AnalyticsProvider>
-              </UrlSearchParamsProvider>
-            </Suspense>
-          </QueryProvider>
-        </AuthProvider>
-      </ConvexClientProvider>
-    </ThemeProvider>);
+    return (<ConvexClientProvider initialToken={initialToken}>
+      <AuthProvider>
+        <QueryProvider>
+          <Suspense fallback={null}>
+            <UrlSearchParamsProvider>
+              <AnalyticsProvider>
+                <PostHogProvider>
+                  {children}
+                  <SonnerToaster />
+                </PostHogProvider>
+              </AnalyticsProvider>
+            </UrlSearchParamsProvider>
+          </Suspense>
+        </QueryProvider>
+      </AuthProvider>
+    </ConvexClientProvider>);
 }
