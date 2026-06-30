@@ -84,17 +84,32 @@ async function runInitializeGoogleAnalyticsProperty(
     }),
   ])
 
-  await Promise.all([
-    ctx.runMutation(internal.analyticsIntegrations.updateGoogleAnalyticsStatusInternal, {
+  // Mark the integration as "pending" — this must succeed regardless of whether
+  // the initial backfill sync succeeds. The property is already saved and the
+  // sync job is already enqueued; the cron will retry if the inline kick-off fails.
+  await ctx.runMutation(internal.analyticsIntegrations.updateGoogleAnalyticsStatusInternal, {
+    workspaceId: args.workspaceId,
+    clientId,
+    status: 'pending',
+    message: null,
+  })
+
+  // Best-effort inline kick-off of the initial backfill. Any failure is already
+  // recorded on the sync job by processNextQueuedSyncJob (status: 'error' +
+  // message). The cron-driven processAllQueuedJobs will pick up the queued job
+  // on the next tick. We must NOT let this failure propagate to the caller —
+  // the initialization itself (property selection + credential save) has
+  // already succeeded.
+  try {
+    await ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
       workspaceId: args.workspaceId,
-      clientId,
-      status: 'pending',
-      message: null,
-    }),
-    ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
-      workspaceId: args.workspaceId,
-    }),
-  ])
+    })
+  } catch (syncError) {
+    console.warn(
+      '[initializeGoogleAnalyticsProperty] Initial backfill kick-off failed; job remains queued for cron retry.',
+      syncError,
+    )
+  }
 
   return {
     accountId: selectedProperty.id,

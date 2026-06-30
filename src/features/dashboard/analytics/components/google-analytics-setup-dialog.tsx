@@ -6,7 +6,6 @@ import { SvglBrandLogo } from '@/shared/components/svgl-brand-logo';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
-import { TruncatedTextPreview } from '@/shared/ui/hover-preview';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 type GoogleAnalyticsPropertyOption = {
     id: string;
@@ -59,8 +58,8 @@ export function GoogleAnalyticsSetupDialog({ open, onOpenChange, setupMessage, p
               <SelectContent className="max-h-[min(24rem,var(--radix-select-content-available-height))] w-[var(--radix-select-trigger-width)]">
                 {properties.map((property) => (<SelectItem key={property.id} value={property.id} className="items-start py-2.5">
                     <div className="flex min-w-0 flex-col gap-0.5">
-                      <TruncatedTextPreview text={property.name} className="font-medium" detail={property.resourceName}/>
-                      <TruncatedTextPreview text={property.resourceName} className="text-xs text-muted-foreground"/>
+                      <span className="truncate font-medium">{property.name}</span>
+                      <span className="truncate text-xs text-muted-foreground">{property.resourceName}</span>
                     </div>
                   </SelectItem>))}
               </SelectContent>
