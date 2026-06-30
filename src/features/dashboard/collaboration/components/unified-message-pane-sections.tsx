@@ -1,0 +1,5 @@
+export { SharedPlatformBadges } from './unified-message-pane-sections/shared-platform-badges';
+export { UnifiedMessageActionBar } from './unified-message-pane-sections/message-action-bar';
+export { UnifiedThreadReplyCard } from './unified-message-pane-sections/thread-reply-card';
+export { UnifiedConversationHeader } from './unified-message-pane-sections/conversation-header';
+export { UnifiedComposerSection } from './unified-message-pane-sections/composer-section';

@@ -1,0 +1,576 @@
+'use client';
+import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useMutation, useQuery } from 'convex/react';
+import { useCallback, useEffect, useMemo, useReducer, useState, type Dispatch, type SetStateAction, } from 'react';
+import { tasksApi } from '@/lib/convex-api';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
+import { useAccumulatedCursorPages } from '@/lib/hooks/use-accumulated-cursor-pages';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
+import { getPreviewTasks } from '@/lib/preview-data';
+import type { TaskAttachment, TaskRecord, TaskStatus } from '@/types/tasks';
+import { formatStatusLabel } from '../task-types';
+import { taskListFiltersScopeKey, type TaskListFiltersInput } from './task-list-filters';
+import { mergeTaskPages, parsePaginatedTasksQuery, TASKS_PAGE_SIZE, type TaskPageCursor, } from './use-tasks-pagination';
+export type { TaskListFiltersInput } from './task-list-filters';
+export type UseTasksOptions = {
+    userId: string | undefined;
+    clientId: string | undefined;
+    authLoading: boolean;
+    isPreviewMode?: boolean;
+    workspaceId?: string | null;
+    listFilters?: TaskListFiltersInput;
+};
+export type UseTasksReturn = {
+    tasks: TaskRecord[];
+    setTasks: React.Dispatch<React.SetStateAction<TaskRecord[]>>;
+    nextCursor: TaskPageCursor | null;
+    hasMoreTasks: boolean;
+    loading: boolean;
+    loadingMore: boolean;
+    error: string | null;
+    setError: React.Dispatch<React.SetStateAction<string | null>>;
+    retryCount: number;
+    pendingStatusUpdates: Set<string>;
+    handleLoadMore: () => void;
+    handleRefresh: () => Promise<void>;
+    handleQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => Promise<void>;
+    handleDeleteTask: (task: TaskRecord) => Promise<boolean>;
+    handleCreateTask: (payload: CreateTaskPayload) => Promise<TaskRecord | null>;
+    handleUpdateTask: (taskId: string, payload: UpdateTaskPayload) => Promise<TaskRecord | null>;
+    handleBulkUpdate: (ids: string[], update: Partial<UpdateTaskPayload>) => Promise<boolean>;
+    handleBulkDelete: (ids: string[]) => Promise<boolean>;
+};
+export type CreateTaskPayload = {
+    title: string;
+    description?: string;
+    status: TaskStatus;
+    priority: string;
+    assignedTo: string[];
+    clientId: string;
+    client?: string;
+    projectId?: string;
+    projectName?: string;
+    dueDate?: string;
+    attachments?: TaskAttachment[];
+};
+export type UpdateTaskPayload = {
+    title: string;
+    description?: string;
+    status: TaskStatus;
+    priority: string;
+    assignedTo: string[];
+    dueDate?: string;
+};
+function msFromIsoDateString(input: string | undefined): number | null {
+    if (!input)
+        return null;
+    const ms = Date.parse(input);
+    return Number.isNaN(ms) ? null : ms;
+}
+function toIsoDateString(input: number | null): string | null {
+    if (input == null)
+        return null;
+    const date = new Date(input);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+type TaskQueryRow = {
+    legacyId: string;
+    title: string;
+    description: string | null;
+    status: TaskStatus;
+    priority: TaskRecord['priority'];
+    assignedTo: string[];
+    clientId: string | null;
+    client: string | null;
+    projectId: string | null;
+    projectName: string | null;
+    dueDateMs: number | null;
+    attachments?: TaskAttachment[];
+    createdAtMs: number | null;
+    updatedAtMs: number | null;
+    deletedAtMs: number | null;
+};
+type CreateTaskMutationResult = string | {
+    legacyId?: string | null;
+} | null | undefined;
+type UseTasksState = {
+    tasks: TaskRecord[];
+    error: string | null;
+    pendingStatusUpdates: Set<string>;
+};
+type UseTasksAction = {
+    type: 'syncData';
+    tasks: TaskRecord[];
+    error: string | null;
+} | {
+    type: 'setTasks';
+    updater: React.SetStateAction<TaskRecord[]>;
+} | {
+    type: 'setError';
+    updater: React.SetStateAction<string | null>;
+} | {
+    type: 'setPendingStatusUpdates';
+    updater: React.SetStateAction<Set<string>>;
+};
+const INITIAL_USE_TASKS_STATE: UseTasksState = {
+    tasks: [],
+    error: null,
+    pendingStatusUpdates: new Set(),
+};
+function resolveStateUpdate<T>(previous: T, updater: React.SetStateAction<T>): T {
+    return typeof updater === 'function'
+        ? (updater as (previousState: T) => T)(previous)
+        : updater;
+}
+function tasksReducer(state: UseTasksState, action: UseTasksAction): UseTasksState {
+    switch (action.type) {
+        case 'syncData':
+            return {
+                ...state,
+                tasks: action.tasks,
+                error: action.error,
+            };
+        case 'setTasks':
+            return {
+                ...state,
+                tasks: resolveStateUpdate(state.tasks, action.updater),
+            };
+        case 'setError':
+            return {
+                ...state,
+                error: resolveStateUpdate(state.error, action.updater),
+            };
+        case 'setPendingStatusUpdates':
+            return {
+                ...state,
+                pendingStatusUpdates: resolveStateUpdate(state.pendingStatusUpdates, action.updater),
+            };
+        default:
+            return state;
+    }
+}
+function mapConvexTaskToTaskRecord(row: TaskQueryRow): TaskRecord {
+    const attachments = Array.isArray(row.attachments)
+        ? row.attachments
+            .flatMap((item) => item && typeof item.name === 'string' && typeof item.url === 'string'
+            ? [{
+                    name: item.name,
+                    url: item.url,
+                    type: typeof item.type === 'string' ? item.type : null,
+                    size: typeof item.size === 'string' ? item.size : null,
+                }]
+            : [])
+        : [];
+    return {
+        id: String(row.legacyId),
+        title: row.title,
+        description: row.description ?? null,
+        status: row.status,
+        priority: row.priority,
+        assignedTo: Array.isArray(row.assignedTo) ? row.assignedTo : [],
+        clientId: row.clientId ?? null,
+        client: row.client ?? null,
+        projectId: row.projectId ?? null,
+        projectName: row.projectName ?? null,
+        dueDate: toIsoDateString(row.dueDateMs ?? null),
+        attachments,
+        createdAt: toIsoDateString(row.createdAtMs ?? null),
+        updatedAt: toIsoDateString(row.updatedAtMs ?? null),
+        deletedAt: toIsoDateString(row.deletedAtMs ?? null),
+    };
+}
+export function useTasks({ userId, clientId, authLoading, isPreviewMode = false, workspaceId, listFilters, }: UseTasksOptions): UseTasksReturn {
+    const [{ tasks, error, pendingStatusUpdates }, dispatch] = useReducer(tasksReducer, INITIAL_USE_TASKS_STATE);
+    const setTasks: UseTasksReturn['setTasks'] = (updater) => {
+        dispatch({ type: 'setTasks', updater });
+    };
+    const setError: UseTasksReturn['setError'] = (updater) => {
+        dispatch({ type: 'setError', updater });
+    };
+    const setPendingStatusUpdates: Dispatch<SetStateAction<Set<string>>> = (updater) => {
+        dispatch({ type: 'setPendingStatusUpdates', updater });
+    };
+    const paginationScopeKey = `${workspaceId ?? ''}|${clientId ?? ''}|${taskListFiltersScopeKey(listFilters)}|${isPreviewMode ? 'preview' : 'live'}`;
+    const tasksQueryEnabled = !isPreviewMode && !authLoading && Boolean(workspaceId);
+    const [loadCursor, setLoadCursor] = useState<TaskPageCursor | null>(null);
+    const convexListArgs = ({
+        workspaceId: workspaceId!,
+        limit: TASKS_PAGE_SIZE,
+        cursor: loadCursor,
+        ...(listFilters ?? {}),
+    });
+    const convexAllTasksQuery = useQuery(tasksApi.list, tasksQueryEnabled && clientId === undefined ? convexListArgs : 'skip');
+    const convexClientTasksQuery = useQuery(tasksApi.listByClient, tasksQueryEnabled && clientId !== undefined
+        ? {
+            ...convexListArgs,
+            clientId: clientId!,
+        }
+        : 'skip');
+    const convexTasksQuery = clientId === undefined ? convexAllTasksQuery : convexClientTasksQuery;
+    const tasksQueryError = useConvexQueryError({
+        data: convexTasksQuery,
+        skipped: !tasksQueryEnabled,
+        fallbackMessage: 'Unable to load tasks.',
+    });
+    const taskPagination = useAccumulatedCursorPages<TaskRecord, TaskPageCursor>({
+        scopeKey: paginationScopeKey,
+        queryData: convexTasksQuery,
+        loadCursor,
+        setLoadCursor,
+        enabled: tasksQueryEnabled,
+        getItemKey: (task) => task.id,
+        parsePage: (queryData) => {
+            const paginated = parsePaginatedTasksQuery(queryData);
+            if (!paginated) {
+                if (queryData !== undefined) {
+                    logError(queryData, 'useTasks:unexpectedQueryShape');
+                }
+                return { items: [], nextCursor: null };
+            }
+            return {
+                items: paginated.items.map((row) => mapConvexTaskToTaskRecord(row as TaskQueryRow)),
+                nextCursor: paginated.nextCursor,
+            };
+        },
+        mergePages: mergeTaskPages,
+    });
+    const createTask = useMutation(tasksApi.createTask);
+    const patchTask = useMutation(tasksApi.patchTask);
+    const bulkPatchTasks = useMutation(tasksApi.bulkPatchTasks);
+    const softDeleteTask = useMutation(tasksApi.softDeleteTask);
+    const bulkSoftDeleteTasks = useMutation(tasksApi.bulkSoftDeleteTasks);
+    const loading = (() => {
+        if (isPreviewMode)
+            return false;
+        if (authLoading)
+            return true;
+        if (!userId || !workspaceId)
+            return false;
+        return taskPagination.isInitialLoading;
+    })();
+    useEffect(() => {
+        if (isPreviewMode) {
+            dispatch({
+                type: 'syncData',
+                tasks: getPreviewTasks(clientId ?? null),
+                error: null,
+            });
+            return;
+        }
+        if (!userId || !workspaceId || convexTasksQuery === undefined) {
+            return;
+        }
+        dispatch({
+            type: 'syncData',
+            tasks: taskPagination.mergedItems,
+            error: tasksQueryError ?? null,
+        });
+    }, [
+        clientId,
+        convexTasksQuery,
+        isPreviewMode,
+        taskPagination.mergedItems,
+        userId,
+        workspaceId,
+        tasksQueryError,
+    ]);
+    const handleLoadMore = () => {
+        if (isPreviewMode) {
+            return;
+        }
+        taskPagination.loadMore();
+    };
+    const handleRefresh = async () => {
+        taskPagination.reset();
+        notifySuccess({ title: 'Up to date', message: 'Tasks update in real time.' });
+    };
+    const handleQuickStatusChange = async (task: TaskRecord, newStatus: TaskStatus) => {
+        if (isPreviewMode) {
+            setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)));
+            notifyInfo({
+                title: 'Preview mode',
+                message: `Status changed to "${formatStatusLabel(newStatus)}" (not saved).`,
+            });
+            return;
+        }
+        if (!workspaceId)
+            return;
+        if (pendingStatusUpdates.has(task.id))
+            return;
+        const previousStatus = task.status;
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)));
+        setPendingStatusUpdates((prev) => new Set(prev).add(task.id));
+        try {
+            await patchTask({
+                workspaceId,
+                legacyId: task.id,
+                update: { status: newStatus },
+            });
+            notifySuccess({
+                title: 'Status updated',
+                message: `Task moved to "${formatStatusLabel(newStatus)}".`,
+            });
+        }
+        catch (err) {
+            logError(err, 'useTasks:handleQuickStatusChange');
+            setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: previousStatus } : t)));
+            reportConvexFailure({
+                error: err,
+                context: 'use-tasks.ts:catch',
+                title: 'Status update failed',
+                fallbackMessage: 'Status update failed',
+            });
+        }
+        finally {
+            setPendingStatusUpdates((prev) => {
+                const next = new Set(prev);
+                next.delete(task.id);
+                return next;
+            });
+        }
+    };
+    const handleDeleteTask = async (task: TaskRecord): Promise<boolean> => {
+        if (isPreviewMode) {
+            notifyInfo({
+                title: 'Preview mode',
+                message: 'Changes are not saved in preview mode. Exit preview to make real changes.',
+            });
+            return true;
+        }
+        if (!workspaceId)
+            return false;
+        try {
+            await softDeleteTask({ workspaceId, legacyId: task.id });
+            notifySuccess({ title: 'Task deleted', message: `"${task.title}" has been removed.` });
+            return true;
+        }
+        catch (err) {
+            reportConvexFailure({
+                error: err,
+                context: 'useTasks:handleDeleteTask',
+                title: 'Deletion failed',
+                fallbackMessage: 'Deletion failed',
+            });
+            return false;
+        }
+    };
+    const handleCreateTask = async (payload: CreateTaskPayload): Promise<TaskRecord | null> => {
+        if (isPreviewMode) {
+            const fakeTask: TaskRecord = {
+                id: `preview-task-${Date.now()}`,
+                title: payload.title,
+                description: payload.description ?? null,
+                status: payload.status,
+                priority: payload.priority as TaskRecord['priority'],
+                assignedTo: payload.assignedTo,
+                clientId: payload.clientId,
+                client: payload.client ?? null,
+                projectId: payload.projectId ?? null,
+                projectName: payload.projectName ?? null,
+                dueDate: payload.dueDate ?? null,
+                attachments: payload.attachments ?? [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                deletedAt: null,
+            };
+            setTasks((prev) => [fakeTask, ...prev]);
+            notifyInfo({ title: 'Preview mode', message: 'Task created locally (not saved).' });
+            return fakeTask;
+        }
+        if (!workspaceId) {
+            throw new Error('Workspace not available.');
+        }
+        try {
+            const result = (await createTask({
+                workspaceId,
+                title: payload.title,
+                description: payload.description ?? null,
+                status: payload.status,
+                priority: payload.priority,
+                assignedTo: payload.assignedTo,
+                clientId: payload.clientId,
+                client: payload.client ?? null,
+                projectId: payload.projectId ?? null,
+                projectName: payload.projectName ?? null,
+                dueDateMs: msFromIsoDateString(payload.dueDate),
+                attachments: payload.attachments ?? [],
+            })) as CreateTaskMutationResult;
+            const legacyId = typeof result === 'string'
+                ? result
+                : typeof result?.legacyId === 'string'
+                    ? result.legacyId
+                    : null;
+            if (!legacyId) {
+                throw new Error('Task creation failed to return a task id.');
+            }
+            notifySuccess({ title: 'Task created', message: `"${payload.title}" added.` });
+            return {
+                id: legacyId,
+                title: payload.title,
+                description: payload.description ?? null,
+                status: payload.status,
+                priority: payload.priority as TaskRecord['priority'],
+                assignedTo: payload.assignedTo,
+                clientId: payload.clientId,
+                client: payload.client ?? null,
+                projectId: payload.projectId ?? null,
+                projectName: payload.projectName ?? null,
+                dueDate: payload.dueDate ?? null,
+                attachments: payload.attachments ?? [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                deletedAt: null,
+            };
+        }
+        catch (err) {
+            reportConvexFailure({
+                error: err,
+                context: 'useTasks:handleCreateTask',
+                title: 'Creation failed',
+                fallbackMessage: 'Creation failed',
+            });
+            return null;
+        }
+    };
+    const handleUpdateTask = async (taskId: string, payload: UpdateTaskPayload): Promise<TaskRecord | null> => {
+        if (isPreviewMode) {
+            setTasks((prev) => prev.map((t) => t.id === taskId
+                ? {
+                    ...t,
+                    title: payload.title ?? t.title,
+                    description: payload.description ?? t.description,
+                    status: payload.status ?? t.status,
+                    priority: (payload.priority as TaskRecord['priority']) ?? t.priority,
+                    assignedTo: payload.assignedTo ?? t.assignedTo,
+                    dueDate: payload.dueDate ?? t.dueDate,
+                    updatedAt: new Date().toISOString(),
+                }
+                : t));
+            notifyInfo({ title: 'Preview mode', message: 'Task updated locally (not saved).' });
+            return { id: taskId } as TaskRecord;
+        }
+        if (!workspaceId) {
+            const message = 'Workspace not available.';
+            notifyFailure({
+                title: 'Update failed',
+                message: message,
+            });
+            throw new Error(message);
+        }
+        try {
+            await patchTask({
+                workspaceId,
+                legacyId: taskId,
+                update: {
+                    title: payload.title,
+                    description: payload.description ?? null,
+                    status: payload.status,
+                    priority: payload.priority,
+                    assignedTo: payload.assignedTo,
+                    dueDateMs: msFromIsoDateString(payload.dueDate),
+                },
+            });
+            notifySuccess({ title: 'Task updated', message: 'Changes saved.' });
+            return { id: taskId } as TaskRecord;
+        }
+        catch (err) {
+            reportConvexFailure({
+                error: err,
+                context: 'useTasks:handleUpdateTask',
+                title: 'Update failed',
+                fallbackMessage: 'Update failed',
+            });
+            throw err;
+        }
+    };
+    const handleBulkUpdate = async (ids: string[], update: Partial<UpdateTaskPayload>): Promise<boolean> => {
+        if (isPreviewMode) {
+            const idSet = new Set(ids);
+            setTasks((prev) => prev.map((t) => {
+                if (!idSet.has(t.id))
+                    return t;
+                return {
+                    ...t,
+                    status: update.status ?? t.status,
+                    priority: (update.priority as TaskRecord['priority']) ?? t.priority,
+                    assignedTo: update.assignedTo ?? t.assignedTo,
+                    dueDate: update.dueDate ?? t.dueDate,
+                    updatedAt: new Date().toISOString(),
+                };
+            }));
+            notifyInfo({ title: 'Preview mode', message: `${ids.length} task(s) updated locally (not saved).` });
+            return true;
+        }
+        if (!workspaceId)
+            return false;
+        try {
+            await bulkPatchTasks({
+                workspaceId,
+                ids,
+                update: {
+                    status: update.status,
+                    priority: update.priority,
+                    assignedTo: update.assignedTo,
+                    dueDateMs: update.dueDate !== undefined ? msFromIsoDateString(update.dueDate) : undefined,
+                },
+            });
+            notifySuccess({ message: 'Bulk update complete' });
+            return true;
+        }
+        catch (err) {
+            reportConvexFailure({
+                error: err,
+                context: 'useTasks:handleBulkUpdate',
+                title: 'Bulk update failed',
+                fallbackMessage: 'Bulk update failed',
+            });
+            return false;
+        }
+    };
+    const handleBulkDelete = async (ids: string[]): Promise<boolean> => {
+        if (isPreviewMode) {
+            notifyInfo({
+                title: 'Preview mode',
+                message: 'Changes are not saved in preview mode. Exit preview to make real changes.',
+            });
+            return true;
+        }
+        if (!workspaceId)
+            return false;
+        try {
+            await bulkSoftDeleteTasks({ workspaceId, ids });
+            notifySuccess({ message: 'Bulk deletion complete' });
+            return true;
+        }
+        catch (err) {
+            reportConvexFailure({
+                error: err,
+                context: 'useTasks:handleBulkDelete',
+                title: 'Bulk deletion failed',
+                fallbackMessage: 'Bulk deletion failed',
+            });
+            return false;
+        }
+    };
+    return {
+        tasks,
+        setTasks,
+        nextCursor: taskPagination.nextCursor,
+        loading,
+        loadingMore: taskPagination.isLoadingMore,
+        hasMoreTasks: Boolean(taskPagination.nextCursor),
+        error,
+        setError,
+        retryCount: 0,
+        pendingStatusUpdates,
+        handleLoadMore,
+        handleRefresh,
+        handleQuickStatusChange,
+        handleDeleteTask,
+        handleCreateTask,
+        handleUpdateTask,
+        handleBulkUpdate,
+        handleBulkDelete,
+    };
+}

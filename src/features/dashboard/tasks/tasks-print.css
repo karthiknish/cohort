@@ -1,0 +1,317 @@
+/* Tasks page print styles */
+
+@media print {
+  /* Hide UI elements that shouldn't print */
+  .no-print,
+  button:not(.print-button),
+  [role="button"]:not(.print-button),
+  .cursor-pointer,
+  input:not(.print-input),
+  textarea:not(.print-textarea),
+  select:not(.print-select),
+  [data-print="hide"],
+  header:not(.print-header),
+  nav,
+  .sidebar,
+  .Toastify,
+  .print-hide {
+    display: none !important;
+  }
+
+  /* Print container */
+  .tasks-print-container {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  /* Task list for printing */
+  .tasks-print-list {
+    display: block !important;
+  }
+
+  /* Task cards for print */
+  .task-print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: white !important;
+  }
+
+  /* Print header */
+  .tasks-print-header {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 16px;
+  }
+
+  .tasks-print-title {
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  .tasks-print-meta {
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  /* Status badges in print */
+  .task-print-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    border: 1px solid currentColor;
+  }
+
+  .task-print-status.todo {
+    background-color: #f1f5f9;
+    color: #475569;
+  }
+
+  .task-print-status.in-progress {
+    background-color: #eff6ff;
+    color: #3b82f6;
+  }
+
+  .task-print-status.review {
+    background-color: #fef3c7;
+    color: #d97706;
+  }
+
+  .task-print-status.completed {
+    background-color: #f0fdf4;
+    color: #22c55e;
+  }
+
+  /* Priority badges in print */
+  .task-print-priority {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+
+  .task-print-priority.urgent {
+    background-color: #fef2f2;
+    color: #dc2626;
+  }
+
+  .task-print-priority.high {
+    background-color: #fff7ed;
+    color: #ea580c;
+  }
+
+  .task-print-priority.medium {
+    background-color: #eff6ff;
+    color: #3b82f6;
+  }
+
+  .task-print-priority.low {
+    background-color: #f0fdf4;
+    color: #22c55e;
+  }
+
+  /* Overdue indicator in print */
+  .task-print-overdue {
+    background-color: #fef2f2 !important;
+    border-color: #dc2626 !important;
+  }
+
+  /* Comments/attachments indicators */
+  .task-print-indicators {
+    display: flex;
+    gap: 8px;
+    font-size: 10px;
+    color: #6b7280;
+  }
+
+  /* Group by status */
+  .tasks-print-group {
+    page-break-inside: avoid;
+    margin-bottom: 16px;
+  }
+
+  .tasks-print-group-title {
+    font-size: 14px;
+    font-weight: bold;
+    padding: 8px 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  /* Print footer */
+  .tasks-print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 10px;
+    color: #9ca3af;
+    padding: 8px 0;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  /* Page numbers */
+  .tasks-print-page-number::after {
+    content: "Page " counter(page);
+  }
+
+  /* Force page breaks */
+  .tasks-page-break-before {
+    page-break-before: always;
+    break-before: always;
+  }
+
+  .tasks-page-break-after {
+    page-break-after: always;
+    break-after: always;
+  }
+
+  /* Print summary section */
+  .tasks-print-summary {
+    display: flex;
+    gap: 16px;
+    padding: 12px;
+    background-color: #f9fafb;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    page-break-inside: avoid;
+  }
+
+  .tasks-print-summary-item {
+    text-align: center;
+  }
+
+  .tasks-print-summary-value {
+    font-size: 24px;
+    font-weight: bold;
+  }
+
+  .tasks-print-summary-label {
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+  }
+
+  /* Adjust text colors for print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Better link rendering */
+  a {
+    text-decoration: underline;
+    color: #1f2937;
+  }
+
+  a[href]:after {
+    content: " (" attr(href) ")";
+    font-size: 10px;
+    word-break: break-all;
+  }
+
+  /* Table styles for print */
+  .tasks-print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+
+  .tasks-print-table th,
+  .tasks-print-table td {
+    border: 1px solid #e5e7eb;
+    padding: 6px 8px;
+    text-align: left;
+  }
+
+  .tasks-print-table th {
+    background-color: #f9fafb;
+    font-weight: bold;
+  }
+
+  /* Kanban print layout */
+  .tasks-kanban-print {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .tasks-kanban-print-column {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 8px;
+    page-break-inside: avoid;
+  }
+
+  .tasks-kanban-print-column-title {
+    font-size: 12px;
+    font-weight: bold;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  /* Checklist for print */
+  .tasks-print-checklist {
+    display: block !important;
+  }
+
+  .tasks-print-checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 4px 0;
+  }
+
+  .tasks-print-checkbox {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .tasks-print-checkbox.checked::after {
+    content: "✓";
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  .tasks-print-checkbox.checked {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+  }
+
+  /* Time entries in print */
+  .tasks-print-time {
+    font-size: 10px;
+    color: #6b7280;
+  }
+
+  /* Tags in print */
+  .tasks-print-tag {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    background-color: #f3f4f6;
+    margin-right: 4px;
+  }
+}

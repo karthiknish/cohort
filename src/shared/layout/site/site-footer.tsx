@@ -1,0 +1,47 @@
+'use client';
+import { Link } from '@/shared/ui/link';
+import Image from '@/shared/ui/image';
+import type { CSSProperties } from 'react';
+import { usePathname } from '@/shared/ui/navigation';
+import { Separator } from '@/shared/ui/separator';
+const SITE_FOOTER_TRANSITION_STYLE = { viewTransitionName: 'site-footer' } satisfies CSSProperties;
+export function SiteFooter() {
+    const currentYear = new Date().getFullYear();
+    const pathname = usePathname();
+    const isAppShellRoute = pathname.startsWith('/dashboard')
+        || pathname.startsWith('/admin')
+        || pathname.startsWith('/settings')
+        || pathname.startsWith('/auth')
+        || pathname.startsWith('/for-you')
+        || pathname.startsWith('/pending-approval');
+    if (isAppShellRoute) {
+        return null;
+    }
+    return (<footer className="border-t border-border/40 bg-background" style={SITE_FOOTER_TRANSITION_STYLE}>
+      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
+        <div className="grid gap-10 sm:grid-cols-2">
+          <div className="space-y-3">
+            <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-foreground">
+              <Image src="/logo.svg" alt="Cohorts" width={50} height={50} className="size-20" priority/>
+            </Link>
+            <p className="text-sm text-muted-foreground">
+              The unified command center for high-performing marketing agencies. Streamline campaigns, track revenue,
+              and keep clients delighted.
+            </p>
+          </div>
+        </div>
+        <Separator className="my-8"/>
+        <div className="flex flex-col gap-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <span>© {currentYear} Cohorts. All rights reserved.</span>
+          <div className="flex items-center gap-4">
+            <Link href="/terms" className="transition hover:text-foreground hover:underline underline-offset-4">
+              Terms
+            </Link>
+            <Link href="/privacy" className="transition hover:text-foreground hover:underline underline-offset-4">
+              Privacy
+            </Link>
+          </div>
+        </div>
+      </div>
+    </footer>);
+}

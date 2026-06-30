@@ -1,0 +1,249 @@
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { toISO as toISOStandard, parseDate } from './dates';
+import { formatEnUsCurrency } from './intl/formatters';
+export function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
+export function formatCurrency(value: number, currency = 'USD', options: Intl.NumberFormatOptions = {}) {
+    return formatEnUsCurrency(value, currency, options);
+}
+// Convert Firestore Timestamp-like, Date, or ISO strings to ISO string; fallback null
+export function toISO(value: unknown): string | null {
+    if (value === null || value === undefined)
+        return null;
+    // Firestore Timestamp duck-typing
+    if (typeof value === 'object' && value !== null) {
+        const asDate = (value as {
+            toDate?: () => Date;
+        }).toDate?.();
+        if (asDate instanceof Date) {
+            return toISOStandard(asDate);
+        }
+    }
+    if (value instanceof Date) {
+        return toISOStandard(value);
+    }
+    if (typeof value === 'string') {
+        const parsed = parseDate(value);
+        return parsed ? toISOStandard(parsed) : value;
+    }
+    return null;
+}
+/**
+ * Normalizes input strings before validation/storage.
+ * This is not HTML sanitization and must not be relied on for XSS protection.
+ */
+function isDisallowedInputChar(char: string): boolean {
+    const code = char.charCodeAt(0);
+    return (code <= 0x08 ||
+        code === 0x0b ||
+        code === 0x0c ||
+        (code >= 0x0e && code <= 0x1f) ||
+        code === 0x7f);
+}
+export function sanitizeInput(value: string): string {
+    if (typeof value !== 'string')
+        return value;
+    return [...value].filter((char) => !isDisallowedInputChar(char)).join('').trim();
+}
+/**
+ * Sanitize a value for CSV export to prevent formula injection.
+ * Prefixes values starting with =, +, -, or @ with a single quote.
+ */
+export function sanitizeCsvValue(value: unknown): string {
+    if (value === null || value === undefined)
+        return '';
+    const stringValue = String(value);
+    // CSV Injection protection: if the value starts with a sensitive character, prefix with '
+    if (/^[=+\-@\t\r]/.test(stringValue)) {
+        return `'${stringValue}`;
+    }
+    return stringValue;
+}
+// Normalize arrays of strings, trimming and removing empties
+export function coerceStringArray(value: unknown): string[] {
+    if (!Array.isArray(value))
+        return [];
+    return value.flatMap((item) => {
+        const trimmed = typeof item === 'string' ? item.trim() : '';
+        return trimmed.length > 0 ? [trimmed] : [];
+    });
+}
+// Coerce number from mixed inputs
+export function coerceNumber(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value))
+        return value;
+    if (typeof value === 'string') {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) {
+            return parsed;
+        }
+    }
+    return null;
+}
+// Coerce boolean from mixed inputs
+export function coerceBoolean(value: unknown): boolean {
+    if (typeof value === 'boolean')
+        return value;
+    if (typeof value === 'string') {
+        const lower = value.toLowerCase().trim();
+        return lower === 'true' || lower === '1' || lower === 'yes' || lower === 'on';
+    }
+    if (typeof value === 'number')
+        return value !== 0;
+    return false;
+}
+// Coerce Date from mixed inputs
+export function coerceDate(value: unknown): Date | null {
+    if (value instanceof Date)
+        return Number.isNaN(value.getTime()) ? null : value;
+    if (typeof value === 'string' || typeof value === 'number') {
+        const date = typeof value === 'string' ? parseDate(value) : new Date(value);
+        return date && !Number.isNaN(date.getTime()) ? date : null;
+    }
+    // Firestore Timestamp
+    if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as {
+        toDate: () => Date;
+    }).toDate === 'function') {
+        return (value as {
+            toDate: () => Date;
+        }).toDate();
+    }
+    return null;
+}
+/**
+ * Validates a file for upload.
+ * Checks for allowed MIME types and maximum file size.
+ */
+export function validateFile(file: File | Blob, options: {
+    allowedTypes?: string[];
+    maxSizeMb?: number;
+} = {}): {
+    valid: boolean;
+    error?: string;
+} {
+    const { allowedTypes, maxSizeMb = 5 } = options;
+    // Check file size
+    const maxSizeBytes = maxSizeMb * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+        return {
+            valid: false,
+            error: `File size exceeds the maximum limit of ${maxSizeMb}MB`,
+        };
+    }
+    // Check file type
+    if (allowedTypes && allowedTypes.length > 0) {
+        if (!allowedTypes.includes(file.type)) {
+            return {
+                valid: false,
+                error: `File type ${file.type} is not allowed. Allowed types: ${allowedTypes.join(', ')}`,
+            };
+        }
+    }
+    return { valid: true };
+}
+/**
+ * Validates if a redirect URL is safe to use.
+ * Prevents Open Redirect vulnerabilities by ensuring the URL is either:
+ * 1. A relative path (starts with /)
+ * 2. An absolute URL matching the application's base URL
+ */
+export function isValidRedirectUrl(url: string | null | undefined): boolean {
+    if (!url)
+        return false;
+    // Allow relative paths (must start with / and not //)
+    if (url.startsWith('/') && !url.startsWith('//')) {
+        return true;
+    }
+    try {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+        const appBase = new URL(appUrl);
+        const redirectBase = new URL(url);
+        // Check if the hostname and protocol match
+        return (redirectBase.protocol === appBase.protocol &&
+            redirectBase.hostname === appBase.hostname &&
+            redirectBase.port === appBase.port);
+    }
+    catch {
+        // If URL parsing fails, it's not a valid absolute URL
+        return false;
+    }
+}
+export function getSafeRedirectPath(url: string | null | undefined): string | null {
+    const candidateUrl = typeof url === 'string' ? url : null;
+    if (!candidateUrl || !isValidRedirectUrl(candidateUrl)) {
+        return null;
+    }
+    if (candidateUrl.startsWith('/') && !candidateUrl.startsWith('//')) {
+        return candidateUrl;
+    }
+    try {
+        const fallbackOrigin = (typeof window !== 'undefined' ? window.location.origin : null)
+            ?? process.env.NEXT_PUBLIC_APP_URL
+            ?? process.env.NEXT_PUBLIC_SITE_URL
+            ?? 'http://localhost:3000';
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || fallbackOrigin;
+        const appBase = new URL(appUrl);
+        const redirectUrl = new URL(candidateUrl, fallbackOrigin);
+        if (redirectUrl.origin !== appBase.origin) {
+            return null;
+        }
+        return `${redirectUrl.pathname}${redirectUrl.search}${redirectUrl.hash}`;
+    }
+    catch {
+        return null;
+    }
+}
+/**
+ * Gets the workspace ID from user data.
+ * Uses agencyId if available and non-empty, otherwise falls back to user.id.
+ * Returns null if neither is available.
+ */
+export function getWorkspaceId(user: {
+    agencyId?: string;
+    id?: string;
+} | null | undefined): string | null {
+    if (!user)
+        return null;
+    if (user.agencyId && user.agencyId.length > 0)
+        return user.agencyId;
+    if (user.id && user.id.length > 0)
+        return user.id;
+    return null;
+}
+/**
+ * Format a date as relative time (e.g., "2 hours ago", "3 days ago")
+ */
+export function formatRelativeTime(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    const diffYears = Math.floor(diffDays / 365);
+    if (diffSecs < 60) {
+        return 'just now';
+    }
+    else if (diffMins < 60) {
+        return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+    }
+    else if (diffHours < 24) {
+        return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    }
+    else if (diffDays < 7) {
+        return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+    else if (diffWeeks < 4) {
+        return `${diffWeeks} week${diffWeeks !== 1 ? 's' : ''} ago`;
+    }
+    else if (diffMonths < 12) {
+        return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
+    }
+    else {
+        return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
+    }
+}

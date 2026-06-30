@@ -1,0 +1,195 @@
+'use client';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
+import { useRef, useEffect, useEffectEvent } from 'react';
+import { useMutation, useQuery } from 'convex/react';
+import { collaborationApi } from '@/lib/convex-api';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
+import type { CollaborationMessage } from '@/types/collaboration';
+interface UseReadReceiptsOptions {
+    workspaceId: string | null;
+    userId: string | null;
+    channelId: string | null;
+    channelType: string;
+    clientId: string | null;
+    projectId: string | null;
+    messages: CollaborationMessage[];
+    enabled?: boolean;
+}
+export function useReadReceipts({ workspaceId, userId, channelId, channelType, clientId, projectId, messages, enabled = true, }: UseReadReceiptsOptions) {
+    const markAsRead = useMutation(collaborationApi.markAsRead);
+    const markMultipleAsRead = useMutation(collaborationApi.markMultipleAsRead);
+    const markChannelAsRead = useMutation(collaborationApi.markChannelAsRead);
+    // Track which messages have been marked as read in this session
+    const markedAsReadRef = useRef<Set<string>>(new Set());
+    // Get unread count for the channel
+    const unreadResult = useQuery(collaborationApi.getUnreadCount, enabled && workspaceId && userId && channelId
+        ? {
+            workspaceId: String(workspaceId),
+            channelId: channelType === 'team' && channelId !== 'team-agency' ? channelId : null,
+            channelType,
+            clientId: clientId ?? undefined,
+            projectId: projectId ?? undefined,
+            userId: String(userId),
+        }
+        : 'skip');
+    const unreadQueryError = useConvexQueryError({
+        data: unreadResult,
+        skipped: !enabled || !workspaceId || !userId || !channelId,
+        fallbackMessage: 'Unable to load unread count.',
+    });
+    const unreadCount = (unreadResult as {
+        count?: number;
+    } | null)?.count ?? 0;
+    // Mark a single message as read
+    const handleMarkAsRead = useEffectEvent(async (messageId: string) => {
+        if (!workspaceId || !userId || !enabled)
+            return;
+        // Skip if already marked in this session
+        if (markedAsReadRef.current.has(messageId))
+            return;
+        // Skip if message is from current user
+        const message = messages.find((m) => m.id === messageId);
+        if (message?.senderId === userId)
+            return;
+        try {
+            markedAsReadRef.current.add(messageId);
+            await markAsRead({
+                workspaceId: String(workspaceId),
+                legacyId: messageId,
+                userId: String(userId),
+            });
+        }
+        catch (error) {
+            logError(error, 'useReadReceipts:handleMarkAsRead');
+            markedAsReadRef.current.delete(messageId);
+            reportConvexFailure({
+                error: error,
+                context: 'use-read-receipts.ts:catch',
+                title: 'Read receipt update failed',
+                fallbackMessage: 'Read receipt update failed',
+            });
+        }
+    });
+    // Mark multiple messages as read
+    const handleMarkMultipleAsRead = async (messageIds: string[]) => {
+        if (!workspaceId || !userId || !enabled || messageIds.length === 0)
+            return;
+        // Filter out already marked and own messages
+        const messagesToMark = messageIds.filter((id) => {
+            if (markedAsReadRef.current.has(id))
+                return false;
+            const message = messages.find((m) => m.id === id);
+            return message?.senderId !== userId;
+        });
+        if (messagesToMark.length === 0)
+            return;
+        try {
+            messagesToMark.forEach((id) => markedAsReadRef.current.add(id));
+            await markMultipleAsRead({
+                workspaceId: String(workspaceId),
+                legacyIds: messagesToMark,
+                userId: String(userId),
+            });
+        }
+        catch (error) {
+            logError(error, 'useReadReceipts:handleMarkMultipleAsRead');
+            messagesToMark.forEach((id) => markedAsReadRef.current.delete(id));
+            reportConvexFailure({
+                error: error,
+                context: 'use-read-receipts.ts:catch',
+                title: 'Read receipt update failed',
+                fallbackMessage: 'Read receipt update failed',
+            });
+        }
+    };
+    // Mark all messages in channel as read
+    const handleMarkChannelAsRead = async (beforeMs?: number) => {
+        if (!workspaceId || !userId || !enabled)
+            return;
+        try {
+            await markChannelAsRead({
+                workspaceId: String(workspaceId),
+                channelId: channelType === 'team' && channelId !== 'team-agency' ? channelId : null,
+                channelType,
+                clientId: clientId ?? undefined,
+                projectId: projectId ?? undefined,
+                userId: String(userId),
+                beforeMs,
+            });
+            // Mark all current messages as read in session
+            messages.forEach((message) => {
+                if (message.senderId !== userId) {
+                    markedAsReadRef.current.add(message.id);
+                }
+            });
+        }
+        catch (error) {
+            reportConvexFailure({
+                error: error,
+                context: 'useReadReceipts:handleMarkChannelAsRead',
+                title: 'Failed to mark messages as read',
+                fallbackMessage: 'Failed to mark messages as read',
+            });
+        }
+    };
+    // Auto-mark visible messages as read
+    useEffect(() => {
+        if (!enabled || !userId)
+            return undefined;
+        // Mark messages that are visible as read
+        // In a real implementation, you'd use Intersection Observer
+        // For now, we'll mark the most recent message when channel changes
+        const mostRecentMessage = messages[0];
+        if (mostRecentMessage && mostRecentMessage.senderId !== userId) {
+            // Small delay to ensure message is actually visible
+            const timer = setTimeout(() => {
+                handleMarkAsRead(mostRecentMessage.id);
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+        return undefined;
+    }, [channelId, enabled, messages, userId]);
+    // Get read status for a message
+    const getMessageReadStatus = (messageId: string): {
+        readBy: string[];
+        isRead: boolean;
+    } => {
+        const message = messages.find((m) => m.id === messageId);
+        const readBy = message?.readBy ?? [];
+        return {
+            readBy,
+            isRead: userId ? readBy.includes(userId) : false,
+        };
+    };
+    // Get users who haven't read a message yet
+    const getUnreadUsers = (messageId: string, allUserIds: string[]): string[] => {
+        const { readBy } = getMessageReadStatus(messageId);
+        return allUserIds.filter((id) => !readBy.includes(id));
+    };
+    // Get read receipts for UI display
+    const getReadReceiptsForDisplay = (message: CollaborationMessage): {
+        readCount: number;
+        totalCount: number;
+        readByNames: string[];
+    } => {
+        const readBy = message.readBy ?? [];
+        // In a real implementation, you'd fetch user names
+        // For now, return the count
+        return {
+            readCount: readBy.length,
+            totalCount: 0, // Would be total channel members
+            readByNames: [], // Would map userIds to names
+        };
+    };
+    return {
+        unreadCount,
+        unreadQueryError,
+        markAsRead: handleMarkAsRead,
+        markMultipleAsRead: handleMarkMultipleAsRead,
+        markChannelAsRead: handleMarkChannelAsRead,
+        getMessageReadStatus,
+        getUnreadUsers,
+        getReadReceiptsForDisplay,
+    };
+}

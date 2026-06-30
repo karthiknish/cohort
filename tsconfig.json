@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
-    "ignoreDeprecations": "5.0",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
+    "jsx": "react-jsx",
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "target": "es2022",
     "skipLibCheck": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -12,13 +12,10 @@
     "noFallthroughCasesInSwitch": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "baseUrl": ".",
-    "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
+    "resolveJsonModule": true,
     "incremental": true,
+    "baseUrl": ".",
     "paths": {
       "@/features/*": ["./src/features/*"],
       "@/shared/*": ["./src/shared/*"],
@@ -34,5 +31,5 @@
     "src/**/*.d.ts",
     "src/routeTree.gen.ts"
   ],
-  "exclude": ["node_modules", "convex", "**/*.test.ts", "**/*.test.tsx"]
+  "exclude": ["node_modules", "convex", "src-legacy", "**/*.test.ts", "**/*.test.tsx"]
 }

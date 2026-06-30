@@ -1,5 +1,5 @@
 import { createClient } from "@convex-dev/better-auth";
-import { convex, crossDomain } from "@convex-dev/better-auth/plugins";
+import { convex } from "@convex-dev/better-auth/plugins";
 import type { GenericCtx } from "@convex-dev/better-auth/utils";
 import type { FunctionReference } from "convex/server";
 import { betterAuth, type BetterAuthOptions } from "better-auth/minimal";
@@ -220,7 +220,6 @@ export const createAuthOptions = (
       errorURL: `${appOrigin}/auth`,
     },
     plugins: [
-      crossDomain({ siteUrl: appOrigin }),
       convex({ authConfig }),
     ],
   };

@@ -1,0 +1,214 @@
+'use client';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useState, useCallback } from 'react';
+import { Forward, LoaderCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Textarea } from '@/shared/ui/textarea';
+import { Label } from '@/shared/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
+import { Checkbox } from '@/shared/ui/checkbox';
+import { useMutation } from 'convex/react';
+import { collaborationApi } from '@/lib/convex-api';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
+import type { CollaborationMessage, CollaborationChannelType } from '@/types/collaboration';
+import { cn } from '@/lib/utils';
+interface ChannelOption {
+    id: string;
+    name: string;
+    type: CollaborationChannelType;
+}
+interface MessageForwardDialogProps {
+    message: CollaborationMessage | null;
+    channels: ChannelOption[];
+    workspaceId: string | null;
+    userId: string | null;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onForward?: () => void;
+}
+/**
+ * Dialog for forwarding a message to another channel
+ */
+export function MessageForwardDialog({ message, channels, workspaceId, userId, open, onOpenChange, onForward, }: MessageForwardDialogProps) {
+    const createMessage = useMutation(collaborationApi.createMessage);
+    const [selectedChannelId, setSelectedChannelId] = useState<string>('');
+    const [forwardMessage, setForwardMessage] = useState('');
+    const [includeAttachments, setIncludeAttachments] = useState(true);
+    const [isForwarding, setIsForwarding] = useState(false);
+    const selectedChannel = channels.find((c) => c.id === selectedChannelId);
+    const handleForward = async () => {
+        if (isForwarding) {
+            return;
+        }
+        if (!message || !workspaceId || !userId || !selectedChannel) {
+            notifyFailure({
+                title: 'Cannot forward message',
+                message: 'Please select a channel to forward to.',
+            });
+            return;
+        }
+        setIsForwarding(true);
+        // Generate a unique ID for the forwarded message
+        const newMessageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        // Prepare the forwarded content
+        const forwardedContent = forwardMessage.trim()
+            ? `${forwardMessage.trim()}\n\n---\n\n*Forwarded message from ${message.senderName}:*\n\n${message.content}`
+            : `*Forwarded message from ${message.senderName}:*\n\n${message.content}`;
+        // Prepare attachments if included
+        const attachments = includeAttachments && message.attachments ? message.attachments : undefined;
+        await createMessage({
+            workspaceId: String(workspaceId),
+            legacyId: newMessageId,
+            channelType: selectedChannel.type,
+            clientId: selectedChannel.type === 'client' ? selectedChannel.id : null,
+            projectId: selectedChannel.type === 'project' ? selectedChannel.id : null,
+            senderId: String(userId),
+            senderName: 'You', // Would be populated from user context
+            senderRole: null,
+            content: forwardedContent,
+            format: 'markdown',
+            attachments,
+            mentions: [],
+            isThreadRoot: true,
+        })
+            .then(() => {
+            notifySuccess({
+                title: 'Message forwarded',
+                message: `Message has been forwarded to ${selectedChannel.name}.`,
+            });
+            onForward?.();
+            onOpenChange(false);
+            // Reset form
+            setSelectedChannelId('');
+            setForwardMessage('');
+            setIncludeAttachments(true);
+        })
+            .catch((error) => {
+            reportConvexFailure({
+                error: error,
+                context: 'MessageForwardDialog:handleForward',
+                title: 'Failed to forward message',
+                fallbackMessage: 'Failed to forward message',
+            });
+        })
+            .finally(() => {
+            setIsForwarding(false);
+        });
+    };
+    const handleOpenChange = (newOpen: boolean) => {
+        if (!newOpen) {
+            // Reset form when closing
+            setSelectedChannelId('');
+            setForwardMessage('');
+            setIncludeAttachments(true);
+        }
+        onOpenChange(newOpen);
+    };
+    const handleIncludeAttachmentsChange = (checked: boolean | 'indeterminate') => {
+        setIncludeAttachments(checked === true);
+    };
+    const handleForwardMessageChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setForwardMessage(event.target.value);
+    };
+    const handleCloseClick = () => {
+        handleOpenChange(false);
+    };
+    if (!message)
+        return null;
+    // Filter out current channel from options
+    const availableChannels = channels.filter((c) => c.id !== `${message.channelType}-${message.clientId || message.projectId || 'general'}`);
+    return (<Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Forward className="size-5"/>
+            Forward Message
+          </DialogTitle>
+          <DialogDescription>
+            Send this message to another channel
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {/* Original message preview */}
+          <div className="p-3 rounded-lg bg-muted/50">
+            <p className="text-xs text-muted-foreground mb-1">Original message:</p>
+            <p className="text-sm line-clamp-3">{message.content}</p>
+            {message.attachments && message.attachments.length > 0 && (<p className="text-xs text-muted-foreground mt-2">
+                📎 {message.attachments.length} attachment{message.attachments.length > 1 ? 's' : ''}
+              </p>)}
+          </div>
+
+          {/* Channel selection */}
+          <div className="space-y-2">
+            <Label htmlFor="channel">Forward to</Label>
+            <Select value={selectedChannelId} onValueChange={setSelectedChannelId} disabled={isForwarding}>
+              <SelectTrigger id="channel">
+                <SelectValue placeholder="Select a channel"/>
+              </SelectTrigger>
+              <SelectContent>
+                {availableChannels.map((channel) => (<SelectItem key={channel.id} value={channel.id}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs uppercase text-muted-foreground">
+                        {channel.type}
+                      </span>
+                      <span>{channel.name}</span>
+                    </div>
+                  </SelectItem>))}
+                {availableChannels.length === 0 && (<div className="p-2 text-sm text-muted-foreground text-center">
+                    No other channels available
+                  </div>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Optional message */}
+          <div className="space-y-2">
+            <Label htmlFor="message">Add a message (optional)</Label>
+            <Textarea id="message" placeholder="Add context or comments before the forwarded message…" value={forwardMessage} onChange={handleForwardMessageChange} disabled={isForwarding} rows={3} maxLength={500}/>
+            <p className="text-xs text-muted-foreground text-right">
+              {forwardMessage.length}/500
+            </p>
+          </div>
+
+          {/* Include attachments checkbox */}
+          {message.attachments && message.attachments.length > 0 && (<div className="flex items-center gap-x-2">
+              <Checkbox id="attachments" checked={includeAttachments} onCheckedChange={handleIncludeAttachmentsChange} disabled={isForwarding}/>
+              <Label htmlFor="attachments" className="text-sm font-normal cursor-pointer">
+                Include attachments ({message.attachments.length})
+              </Label>
+            </div>)}
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={handleCloseClick} disabled={isForwarding}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleForward} disabled={!selectedChannelId || isForwarding}>
+            {isForwarding ? (<>
+                <LoaderCircle className="mr-2 size-4 animate-spin"/>
+                Forwarding…
+              </>) : (<>
+                <Forward className="mr-2 size-4"/>
+                Forward
+              </>)}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>);
+}
+/**
+ * Forward button for message actions
+ */
+export function ForwardMessageButton({ onClick, disabled, className, }: {
+    onClick: () => void;
+    disabled?: boolean;
+    className?: string;
+}) {
+    return (<Button type="button" variant="ghost" size="icon" className={cn('size-7', className)} onClick={onClick} disabled={disabled}>
+      <Forward className="size-4"/>
+      <span className="sr-only">Forward message</span>
+    </Button>);
+}

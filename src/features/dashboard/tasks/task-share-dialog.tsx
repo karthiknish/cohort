@@ -1,0 +1,185 @@
+'use client';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
+import { useState, useCallback } from 'react';
+import { Link2, Check, Copy, Mail, Share2 } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
+import { Badge } from '@/shared/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+import { cn } from '@/lib/utils';
+import type { TaskRecord } from '@/types/tasks';
+type TaskShareDialogProps = {
+    task: TaskRecord;
+    onShareUpdate?: (sharedWith: string[]) => void;
+    trigger?: React.ReactNode;
+};
+export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialogProps) {
+    const [open, setOpen] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const [emailInput, setEmailInput] = useState('');
+    const [sharedWith, setSharedWith] = useState<string[]>(task.sharedWith ?? []);
+    const taskUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}${window.location.pathname}?taskId=${task.id}`
+        : '';
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(taskUrl);
+        setCopied(true);
+        notifySuccess({ message: 'Link copied to clipboard' });
+        setTimeout(() => setCopied(false), 2000);
+    };
+    const handleAddEmail = () => {
+        const email = emailInput.trim().toLowerCase();
+        if (!email)
+            return;
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            notifyFailure({
+                title: 'Invalid email',
+                message: 'Please enter a valid email address',
+            });
+            return;
+        }
+        if (sharedWith.includes(email)) {
+            notifyFailure({
+                title: 'Already shared',
+                message: 'This person already has access',
+            });
+            return;
+        }
+        const newSharedWith = [...sharedWith, email];
+        setSharedWith(newSharedWith);
+        setEmailInput('');
+        onShareUpdate?.(newSharedWith);
+        notifySuccess({ message: 'Shared with ' + email });
+    };
+    const handleRemoveEmail = (email: string) => {
+        const newSharedWith = sharedWith.filter(e => e !== email);
+        setSharedWith(newSharedWith);
+        onShareUpdate?.(newSharedWith);
+    };
+    const handleShareViaEmail = () => {
+        const subject = encodeURIComponent(`Task: ${task.title}`);
+        const body = encodeURIComponent(`Hi,\n\nI wanted to share this task with you:\n\n${task.title}\n\n${task.description || ''}\n\nYou can view it here: ${taskUrl}`);
+        window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    };
+    const handleEmailInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setEmailInput(event.target.value);
+    };
+    const handleEmailInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            handleAddEmail();
+        }
+    };
+    const handleDone = () => {
+        setOpen(false);
+    };
+    return (<Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger || (<Button variant="ghost" size="sm" className="h-8 gap-1">
+            <Share2 className="size-3.5"/>
+            Share
+          </Button>)}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Share2 className="size-5"/>
+            Share Task
+          </DialogTitle>
+          <DialogDescription>
+            Share &ldquo;{task.title}&rdquo; with others via link or email
+          </DialogDescription>
+        </DialogHeader>
+
+        <Tabs defaultValue="link" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="link">Copy Link</TabsTrigger>
+            <TabsTrigger value="email">Email</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="link" className="space-y-4">
+            <div className="space-y-2">
+              <Label>Task Link</Label>
+              <div className="flex gap-2">
+                <Input value={taskUrl} readOnly className="flex-1 text-xs bg-muted"/>
+                <Button onClick={handleCopyLink} className={cn('gap-1.5 shrink-0', copied && 'bg-success hover:bg-success/90')}>
+                  {copied ? (<>
+                      <Check className="size-4"/>
+                      Copied
+                    </>) : (<>
+                      <Copy className="size-4"/>
+                      Copy
+                    </>)}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Anyone with the link can view this task
+              </p>
+            </div>
+
+            {/* Currently shared with */}
+            {sharedWith.length > 0 && (<div className="space-y-2">
+                <Label>Shared with</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {sharedWith.map((email) => (<SharedEmailBadge key={email} email={email} onRemove={handleRemoveEmail}/>))}
+                </div>
+              </div>)}
+          </TabsContent>
+
+          <TabsContent value="email" className="space-y-4">
+            <div className="space-y-2">
+              <Label>Invite via email</Label>
+              <div className="flex gap-2">
+                <Input type="email" placeholder="colleague@example.com" value={emailInput} onChange={handleEmailInputChange} onKeyDown={handleEmailInputKeyDown}/>
+                <Button onClick={handleAddEmail} disabled={!emailInput} className="shrink-0">
+                  <Link2 className="size-4"/>
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="text-sm">
+                <p className="font-medium">Send via email</p>
+                <p className="text-xs text-muted-foreground">Open your email client with pre-filled content</p>
+              </div>
+              <Button onClick={handleShareViaEmail} variant="outline" size="sm" className="gap-1.5">
+                <Mail className="size-4"/>
+                Open Email
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <div className="flex justify-end pt-4 border-t">
+          <Button variant="outline" onClick={handleDone}>
+            Close share dialog
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>);
+}
+// Quick share button
+export function QuickShareButton({ task, onShareUpdate }: {
+    task: TaskRecord;
+    onShareUpdate?: (sharedWith: string[]) => void;
+}) {
+    return (<TaskShareDialog task={task} onShareUpdate={onShareUpdate}/>);
+}
+function SharedEmailBadge({ email, onRemove, }: {
+    email: string;
+    onRemove: (email: string) => void;
+}) {
+    const handleRemove = () => {
+        onRemove(email);
+    };
+    return (<Badge variant="secondary" className="gap-1.5 pr-1">
+      {email}
+      <button type="button" onClick={handleRemove} className="ml-1 rounded-full hover:bg-destructive/20 p-0.5">
+        ×
+      </button>
+    </Badge>);
+}

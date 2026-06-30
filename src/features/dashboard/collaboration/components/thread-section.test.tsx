@@ -1,0 +1,34 @@
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it, vi } from 'vitest';
+import type { CollaborationMessage } from '@/types/collaboration';
+import { ThreadSection } from './thread-section';
+function TestReplyRenderer({ reply }: {
+    reply: CollaborationMessage;
+}) {
+    return <div>{reply.content}</div>;
+}
+const THREAD_PANEL_LOADING = { isOpen: true, isLoading: true, hasNextCursor: false } as const;
+const THREAD_PANEL_EMPTY = { isOpen: true, isLoading: false, hasNextCursor: false } as const;
+const reply: CollaborationMessage = {
+    id: 'reply-1', senderId: 'user-2', senderName: 'Sam Lee', createdAt: '2026-03-11T12:30:00.000Z',
+    channelType: 'project', clientId: 'client-1', projectId: 'project-1', content: 'Reviewed.', updatedAt: null,
+    senderRole: 'designer', isEdited: false, deletedAt: null, deletedBy: null, isDeleted: false,
+    attachments: [], mentions: [], reactions: [], parentMessageId: 'root-1', threadRootId: 'root-1',
+    threadReplyCount: 0, threadLastReplyAt: null, readBy: [], deliveredTo: [], sharedTo: [],
+};
+describe('ThreadSection', () => {
+    it('renders deterministic loading, empty, and error states', () => {
+        const baseProps = {
+            threadRootId: 'root-1', replyCount: 1, unreadCount: 0, lastReplyIso: null, hasNextCursor: false,
+            onToggle: vi.fn(), onRetry: vi.fn(), onLoadMore: vi.fn(), onReply: vi.fn(), ReplyRenderer: TestReplyRenderer,
+        };
+        const loadingMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={THREAD_PANEL_LOADING} error={null} replies={[]}/>);
+        const emptyMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={THREAD_PANEL_EMPTY} error={null} replies={[]}/>);
+        const errorMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={THREAD_PANEL_EMPTY} error="Unable to load replies." replies={[]}/>);
+        const loadedMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} panel={THREAD_PANEL_EMPTY} error={null} replies={[reply]} ReplyRenderer={TestReplyRenderer}/>);
+        expect(loadingMarkup).toContain('Loading replies…');
+        expect(emptyMarkup).toContain('No replies yet');
+        expect(errorMarkup).toContain('Unable to load replies.');
+        expect(loadedMarkup).toContain('Reviewed.');
+    });
+});

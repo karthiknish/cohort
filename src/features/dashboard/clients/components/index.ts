@@ -1,0 +1,6 @@
+export { ClientsDashboardSkeleton } from './clients-dashboard-skeleton';
+export { TeamMembersCard } from './team-members-card';
+export { QuickActionCard } from './quick-action-card';
+export { ClientStatsGrid } from './client-stats-grid';
+export { ClientDetailsCard } from './client-details-card';
+export { ClientOnboardingChecklist } from './client-onboarding-card';

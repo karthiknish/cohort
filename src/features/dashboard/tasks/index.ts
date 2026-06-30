@@ -1,0 +1,32 @@
+// Task components barrel export
+export * from './delete-task-dialog';
+export * from './project-filter-banner';
+export * from './task-card';
+export * from './task-kanban';
+export * from './task-list';
+export * from './task-bulk-toolbar';
+export * from './task-filters';
+export * from './task-form-sheets';
+export * from './task-comments';
+export * from './task-results-count';
+export * from './task-data-table';
+export * from './task-summary-cards';
+export * from './task-types';
+export * from './task-view-controls';
+export * from './task-view-dialog';
+export * from './tasks-header';
+// New components
+export * from './task-templates';
+export * from './tag-management';
+export * from './task-activity-log';
+export * from './task-time-tracking';
+export * from './use-task-keyboard-navigation';
+export * from './task-offline-indicator';
+export * from './task-archive-view';
+export * from './task-dependencies';
+export * from './task-kanban-bulk-toolbar';
+export * from './task-print-view';
+export * from './task-share-dialog';
+export * from './task-recurring';
+// Hooks
+export * from './hooks';

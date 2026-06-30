@@ -1,0 +1,18 @@
+import * as React from 'react';
+import { interactiveTransitionClass } from '@/lib/motion';
+import { cn } from '@/lib/utils';
+interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'checked'> {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+    onChange?: React.ChangeEventHandler<HTMLInputElement>;
+    ref?: React.Ref<HTMLInputElement>;
+}
+const Checkbox = ({ className, checked, onCheckedChange, onChange, ref, ...props }: CheckboxProps) => {
+    const onCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onChange?.(e);
+        onCheckedChange?.(e.target.checked);
+    };
+    return (<input ref={ref} type="checkbox" checked={checked} onChange={onCheckboxChange} className={cn('size-4 rounded border border-input bg-background text-primary shadow-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', interactiveTransitionClass, className)} {...props}/>);
+};
+Checkbox.displayName = 'Checkbox';
+export { Checkbox };

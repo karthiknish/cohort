@@ -1,0 +1,98 @@
+'use client';
+import { useCallback } from 'react';
+import { ExternalLink, GripVertical, ImageIcon, Link2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Badge } from '@/shared/ui/badge';
+import { Button } from '@/shared/ui/button';
+import { LazyImage } from '@/shared/ui/lazy-image';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import type { FeatureItem } from '@/types/features';
+import { FEATURE_PRIORITY_LABELS, getFeaturePriorityBadgeStyle, } from '@/types/features';
+interface FeatureCardProps {
+    feature: FeatureItem;
+    onEdit: (feature: FeatureItem) => void;
+    onDelete: (feature: FeatureItem) => void;
+    isDragging?: boolean;
+}
+export function FeatureCard({ feature, onEdit, onDelete, isDragging = false, }: FeatureCardProps) {
+    const handleEditClick = () => {
+        onEdit(feature);
+    };
+    const handleDeleteClick = () => {
+        onDelete(feature);
+    };
+    const handleReferenceClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+        event.stopPropagation();
+    };
+    return (<div className={cn('group relative flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm motion-chromatic', 'hover:border-accent/30 hover:shadow-md', isDragging && 'opacity-50 rotate-2 shadow-lg')}>
+      {/* Drag Handle */}
+      <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab">
+        <GripVertical className="size-4 text-muted-foreground"/>
+      </div>
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2 pl-4">
+        <h4 className="font-semibold text-foreground line-clamp-2 text-sm">
+          {feature.title}
+        </h4>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="size-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              <MoreHorizontal className="size-4"/>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleEditClick}>
+              <Pencil className="mr-2 size-4"/>
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleDeleteClick} className="text-destructive focus:text-destructive">
+              <Trash2 className="mr-2 size-4"/>
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Image Preview */}
+      {feature.imageUrl && (<div className="relative aspect-video w-full overflow-hidden rounded-md bg-muted ml-4 mr-0">
+          
+          <LazyImage src={feature.imageUrl} alt={feature.title} className="size-full object-cover"/>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"/>
+        </div>)}
+
+      {/* Description */}
+      {feature.description && (<p className="text-xs text-muted-foreground line-clamp-2 pl-4">
+          {feature.description}
+        </p>)}
+
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-2 pl-4 pt-1">
+        <Badge variant="outline" className="h-5 px-1.5 py-0 text-[10px]" style={getFeaturePriorityBadgeStyle(feature.priority)}>
+          {FEATURE_PRIORITY_LABELS[feature.priority]}
+        </Badge>
+
+        <div className="flex items-center gap-2 text-muted-foreground">
+          {feature.imageUrl && (<div className="flex items-center gap-0.5" title="Has image">
+              <ImageIcon className="size-3"/>
+            </div>)}
+          {feature.references.length > 0 && (<div className="flex items-center gap-0.5" title={`${feature.references.length} reference(s)`}>
+              <Link2 className="size-3"/>
+              <span className="text-[10px]">{feature.references.length}</span>
+            </div>)}
+        </div>
+      </div>
+
+      {/* Reference Links Preview */}
+      {feature.references.length > 0 && (<div className="flex flex-wrap gap-1 pl-4 pt-1 border-t border-border/50">
+          {feature.references.slice(0, 2).map((ref) => (<a key={`${ref.url}-${ref.label}`} href={ref.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline max-w-[120px] truncate" onClick={handleReferenceClick}>
+              <ExternalLink className="size-2.5 shrink-0"/>
+              {ref.label}
+            </a>))}
+          {feature.references.length > 2 && (<span className="text-[10px] text-muted-foreground">
+              +{feature.references.length - 2} more
+            </span>)}
+        </div>)}
+    </div>);
+}

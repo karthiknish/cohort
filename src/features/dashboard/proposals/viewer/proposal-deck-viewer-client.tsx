@@ -1,0 +1,27 @@
+'use client';
+import { Link } from '@/shared/ui/link';
+import { ArrowLeft } from 'lucide-react';
+import { DeckDocumentViewer } from '@/features/dashboard/proposals/viewer/components/deck-document-viewer';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+type ProposalDeckViewerPageClientProps = {
+    src?: string | null;
+};
+export default function ProposalDeckViewerPageClient({ src = null }: ProposalDeckViewerPageClientProps) {
+    return (!src ? (<div className="space-y-6">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/dashboard/proposals">
+              <ArrowLeft className="mr-2 size-4"/>
+              Back to proposals
+            </Link>
+          </Button>
+          <Card className="border-destructive/40 bg-destructive/5">
+            <CardHeader>
+              <CardTitle className="text-destructive">This deck isn&apos;t available</CardTitle>
+              <CardDescription className="text-destructive/80">
+                Open a proposal from your dashboard and choose Preview to view the deck here.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>) : (<DeckDocumentViewer src={src} backHref="/dashboard/proposals" backLabel="Back to proposals" subtitle="Interactive deck preview"/>));
+}

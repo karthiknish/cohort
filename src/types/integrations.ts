@@ -1,0 +1,84 @@
+export type AnyFirestoreTimestamp = Date | string | number;
+export type SyncJobStatus = 'queued' | 'running' | 'success' | 'error';
+export type SyncJobType = 'initial-backfill' | 'scheduled-sync' | 'manual-sync';
+export interface SyncJob {
+    id: string;
+    providerId: string;
+    /** Optional client scope for this job (selected client in dashboard). */
+    clientId?: string | null;
+    jobType: SyncJobType;
+    timeframeDays: number;
+    status: SyncJobStatus;
+    createdAt?: AnyFirestoreTimestamp | null;
+    startedAt?: AnyFirestoreTimestamp | null;
+    processedAt?: AnyFirestoreTimestamp | null;
+    errorMessage?: string | null;
+}
+export interface AdIntegration {
+    id: string;
+    providerId: string;
+    accessToken: string | null;
+    idToken?: string | null;
+    refreshToken?: string | null;
+    scopes: string[];
+    accountId?: string | null;
+    accountName?: string | null;
+    currency?: string | null;
+    developerToken?: string | null;
+    loginCustomerId?: string | null;
+    lastSyncStatus?: 'never' | 'pending' | 'success' | 'error';
+    lastSyncMessage?: string | null;
+    lastSyncedAt?: AnyFirestoreTimestamp | null;
+    lastSyncRequestedAt?: AnyFirestoreTimestamp | null;
+    linkedAt?: AnyFirestoreTimestamp | null;
+    managerCustomerId?: string | null;
+    accessTokenExpiresAt?: AnyFirestoreTimestamp | null;
+    refreshTokenExpiresAt?: AnyFirestoreTimestamp | null;
+    autoSyncEnabled?: boolean | null;
+    syncFrequencyMinutes?: number | null;
+    scheduledTimeframeDays?: number | null;
+}
+export interface NormalizedMetric {
+    providerId: string;
+    /** Optional client scope for this metric record. */
+    clientId?: string | null;
+    /** The ad account ID this metric belongs to (for multi-account support). */
+    accountId?: string | null;
+    /**
+     * Native account currency for this metric row (e.g. 'USD', 'INR').
+     * Stamped at write time by the sync worker from the integration account currency.
+     */
+    currency?: string | null;
+    /**
+     * How the currency was determined: 'metric' | 'integration' | 'unknown'.
+     * Stamped at write time alongside currency.
+     */
+    currencySource?: string | null;
+    /**
+     * Canonical surface id (e.g. 'facebook', 'instagram', 'audience_network').
+     * Canonical field going forward — publisherPlatform is the legacy alias.
+     */
+    surfaceId?: string | null;
+    /** Legacy: Meta publisher platform or equivalent reporting surface. */
+    publisherPlatform?: string | null;
+    date: string;
+    spend: number;
+    impressions: number;
+    clicks: number;
+    conversions: number;
+    revenue?: number | null;
+    campaignId?: string;
+    campaignName?: string;
+    creatives?: Array<{
+        id: string;
+        name: string;
+        type: string;
+        url?: string;
+        spend?: number;
+        impressions?: number;
+        clicks?: number;
+        conversions?: number;
+        revenue?: number;
+    }>;
+    rawPayload?: unknown;
+}

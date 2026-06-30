@@ -1,0 +1,82 @@
+'use client';
+import { notifyFailure, notifyInfo } from '@/lib/notifications';
+import { useState, useCallback } from 'react';
+import { LoaderCircle, Download } from 'lucide-react';
+import { useAction } from 'convex/react';
+import { Button } from '@/shared/ui/button';
+import { usePreview } from '@/shared/contexts/preview-context';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card';
+import { authActionsApi } from '@/lib/convex-api';
+import { getPreviewSettingsExportData } from '@/lib/preview-data';
+import { useAuth } from '@/shared/contexts/auth-context';
+export function DataExportCard() {
+    const { user } = useAuth();
+    const { isPreviewMode } = usePreview();
+    const [exportingData, setExportingData] = useState(false);
+    const [exportError, setExportError] = useState<string | null>(null);
+    const exportUserData = useAction(authActionsApi.exportUserData);
+    const handleExportData = () => {
+        if (!user && !isPreviewMode) {
+            setExportError('You must be signed in to export your data.');
+            return;
+        }
+        setExportingData(true);
+        setExportError(null);
+        const exportPromise = isPreviewMode
+            ? Promise.resolve(getPreviewSettingsExportData())
+            : exportUserData();
+        void exportPromise
+            .then((exportData) => {
+            const filename = `cohort-data-export-${new Date().toISOString().split('T')[0]}.json`;
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            notifyInfo({
+                title: isPreviewMode ? 'Preview export downloaded' : 'Data exported successfully',
+                message: isPreviewMode
+                    ? 'Sample account data has been downloaded for this demo session.'
+                    : 'Your personal data has been downloaded as a JSON file.',
+            });
+        })
+            .catch((exportErr) => {
+            const message = exportErr instanceof Error ? exportErr.message : 'Failed to export data';
+            setExportError(message);
+            notifyFailure({
+                title: 'Export failed',
+                message: message,
+            });
+        })
+            .finally(() => {
+            setExportingData(false);
+        });
+    };
+    return (<Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Download className="size-5"/>
+          Export your data
+        </CardTitle>
+        <CardDescription>
+          Download a copy of all your personal data in JSON format (GDPR Article 20 - Right to Data Portability).
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground mb-4">
+          This export includes your profile information, clients, projects, tasks, proposals, messages, and activity history. The download will be in machine-readable JSON format.
+        </p>
+        {exportError && (<p className="text-sm text-destructive mb-4">{exportError}</p>)}
+      </CardContent>
+      <CardFooter className="flex justify-end">
+        <Button variant="outline" onClick={handleExportData} disabled={exportingData}>
+          {exportingData ? (<LoaderCircle className="mr-2 size-4 animate-spin"/>) : (<Download className="mr-2 size-4"/>)}
+          {exportingData ? 'Preparing export...' : 'Download my data'}
+        </Button>
+      </CardFooter>
+    </Card>);
+}
