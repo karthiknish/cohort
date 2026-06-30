@@ -121,5 +121,22 @@ export function mapGoogleAnalyticsIntegrationError(error: unknown): string {
     if (isIntegrationScopeAppError(error)) {
         return 'Google Analytics needs updated permissions. Disconnect the integration, then connect again and approve all requested access.';
     }
-    return asErrorMessage(error);
+    const code = extractErrorCode(error);
+    switch (code) {
+        case 'INTEGRATION_NOT_FOUND':
+        case 'MISSING_TOKEN':
+            return 'Google Analytics is not connected. Please reconnect your account and try again.';
+        case 'INTEGRATION_NOT_CONFIGURED':
+            return 'Google Analytics setup is incomplete. Select a property in the setup dialog before syncing.';
+        case 'INTEGRATION_EXPIRED':
+            return 'Your Google Analytics connection has expired. Disconnect and reconnect to continue.';
+        case 'INTERNAL_ERROR':
+            return 'Something went wrong while setting up Google Analytics. The property was saved, and sync will retry automatically. If the problem persists, please reconnect your account.';
+        case 'UNAUTHORIZED':
+            return 'You must be signed in to manage Google Analytics.';
+        case 'WORKSPACE_ACCESS_DENIED':
+            return 'You do not have access to this workspace.';
+        default:
+            return asErrorMessage(error);
+    }
 }

@@ -5,7 +5,7 @@ import { internal } from '/_generated/api'
 import { v } from 'convex/values'
 
 import type { NormalizedMetric } from '@/types/integrations'
-import { Errors, withErrorHandling } from '../../errors'
+import { Errors, asErrorMessage, withErrorHandling } from '../../errors'
 import { resolveMetricCurrency } from '@/domain/ads/money'
 import { normalizeSurfaceId } from '@/domain/ads/provider'
 import type { CanonicalAdsProviderId } from '@/domain/ads/provider'
@@ -14,6 +14,64 @@ function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
   if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
   const fiveMinutes = 5 * 60 * 1000
   return expiresAtMs - Date.now() <= fiveMinutes
+}
+
+function firstEnvValue(keys: readonly string[]): string | null {
+  for (const key of keys) {
+    const value = process.env[key]
+    if (typeof value === 'string' && value.trim().length > 0) return value.trim()
+  }
+  return null
+}
+
+/**
+ * Refresh a Google Analytics access token directly against Google's token
+ * endpoint. Used inside the Convex action runtime where the admin
+ * ConvexHttpClient (and thus `refreshGoogleAccessToken` from
+ * `@/lib/integration-token-refresh-google`) is unavailable.
+ */
+async function refreshGoogleAnalyticsAccessTokenInline(options: {
+  refreshToken: string
+}): Promise<string> {
+  const clientId = firstEnvValue(['GOOGLE_ANALYTICS_CLIENT_ID', 'GOOGLE_CLIENT_ID'])
+  const clientSecret = firstEnvValue([
+    'GOOGLE_ANALYTICS_CLIENT_SECRET',
+    'GOOGLE_CLIENT_SECRET',
+  ])
+  if (!clientId || !clientSecret) {
+    throw Errors.integration.notConfigured(
+      'Google Analytics',
+      'Google Analytics client credentials are not configured.',
+    )
+  }
+  const tokenEndpoint =
+    process.env.GOOGLE_TOKEN_ENDPOINT ?? 'https://oauth2.googleapis.com/token'
+  const params = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    grant_type: 'refresh_token',
+    refresh_token: options.refreshToken,
+  })
+  const response = await fetch(tokenEndpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString(),
+  })
+  if (!response.ok) {
+    const errorPayload = await response.text().catch(() => '')
+    throw Errors.integration.error(
+      'Google Analytics',
+      `Failed to refresh access token (${response.status}): ${errorPayload}`,
+    )
+  }
+  const payload = (await response.json()) as { access_token?: string }
+  if (!payload.access_token) {
+    throw Errors.integration.error(
+      'Google Analytics',
+      'Token refresh response missing access_token.',
+    )
+  }
+  return payload.access_token
 }
 
 function normalizeClientId(value: string | null | undefined): string | null {
@@ -106,6 +164,14 @@ export const processClaimedJob = internalAction({
       const clientId = normalizeClientId(args.clientId)
 
       if (args.providerId === 'google-analytics') {
+        // NOTE: We intentionally do NOT call `syncGoogleAnalyticsMetrics` here.
+        // That helper re-fetches the integration via an admin ConvexHttpClient
+        // (src/lib/analytics-admin.ts), which requires CONVEX_DEPLOY_KEY env
+        // vars that are NOT available inside a Convex action runtime. Doing so
+        // produced "Google Analytics is not connected" even when the OAuth
+        // connection was valid. Instead, mirror every other provider: use the
+        // integration already fetched via ctx.runQuery and write through
+        // internal mutations on ctx.
         const gaIntegration = await ctx.runQuery(
           internal.analyticsIntegrations.getGoogleAnalyticsIntegrationInternal,
           { workspaceId: args.workspaceId, clientId },
@@ -115,16 +181,132 @@ export const processClaimedJob = internalAction({
           throw Errors.integration.notFound('Google Analytics')
         }
 
-        const { syncGoogleAnalyticsMetrics } = await import(
-          '@/services/integrations/google-analytics/sync'
-        )
-        const result = await syncGoogleAnalyticsMetrics({
-          userId: args.workspaceId,
-          clientId,
-          days: args.timeframeDays,
-        })
+        const propertyId =
+          typeof gaIntegration.accountId === 'string' && gaIntegration.accountId.length > 0
+            ? gaIntegration.accountId
+            : null
+        if (!propertyId) {
+          throw Errors.integration.notConfigured(
+            'Google Analytics',
+            'Google Analytics property not configured. Select a property in Analytics setup before syncing.',
+          )
+        }
 
-        return { metricsInserted: result.written }
+        // Refresh the access token inline if it is expiring soon, persisting
+        // the new token directly via the internal mutation.
+        let accessToken = gaIntegration.accessToken
+        if (
+          gaIntegration.refreshToken &&
+          isTokenExpiringSoon(gaIntegration.accessTokenExpiresAtMs)
+        ) {
+          accessToken = await refreshGoogleAnalyticsAccessTokenInline({
+            refreshToken: gaIntegration.refreshToken,
+          })
+          await ctx.runMutation(
+            internal.analyticsIntegrations.updateGoogleAnalyticsCredentialsInternal,
+            {
+              workspaceId: args.workspaceId,
+              clientId,
+              accessToken,
+              accessTokenExpiresAtMs: Date.now() + 60 * 60 * 1000,
+            },
+          )
+        }
+
+        // Resolve reporting currency, fetching from the Admin API and
+        // persisting it when not already stored on the integration.
+        let reportingCurrency =
+          typeof gaIntegration.currency === 'string' && gaIntegration.currency.trim().length > 0
+            ? gaIntegration.currency.trim().toUpperCase()
+            : null
+        if (!reportingCurrency) {
+          const { fetchGoogleAnalyticsPropertyCurrency } = await import(
+            '@/services/integrations/google-analytics/properties'
+          )
+          reportingCurrency = await fetchGoogleAnalyticsPropertyCurrency({ accessToken, propertyId })
+          if (reportingCurrency) {
+            await ctx.runMutation(
+              internal.analyticsIntegrations.updateGoogleAnalyticsCredentialsInternal,
+              {
+                workspaceId: args.workspaceId,
+                clientId,
+                currency: reportingCurrency,
+              },
+            )
+          }
+        }
+
+        const [{ runGaReport }, { fetchGoogleAnalyticsBreakdowns }] = await Promise.all([
+          import('@/services/integrations/google-analytics/sync'),
+          import('@/services/integrations/google-analytics/breakdown'),
+        ])
+        const [reportRows, breakdownRows] = await Promise.all([
+          runGaReport({ accessToken, propertyId, days: args.timeframeDays }),
+          fetchGoogleAnalyticsBreakdowns({ accessToken, propertyId, days: args.timeframeDays }),
+        ])
+
+        const metrics: NormalizedMetric[] = reportRows.map((row) => ({
+          providerId: 'google-analytics',
+          clientId,
+          accountId: propertyId,
+          date: row.date,
+          spend: 0,
+          impressions: row.totalUsers,
+          clicks: row.sessions,
+          conversions: row.conversions,
+          revenue: row.totalRevenue,
+          currency: reportingCurrency,
+          currencySource: reportingCurrency ? 'integration' : 'unknown',
+        }))
+
+        await Promise.all([
+          ctx.runMutation(internal.adsIntegrations.writeMetricsBatchInternal, {
+            workspaceId: args.workspaceId,
+            metrics: metrics.map((metric) => ({
+              providerId: metric.providerId,
+              clientId,
+              accountId: metric.accountId ?? null,
+              currency: metric.currency ?? null,
+              currencySource: (reportingCurrency ? 'integration' : 'unknown') as
+                | 'metric'
+                | 'integration'
+                | 'unknown',
+              date: metric.date,
+              spend: metric.spend,
+              impressions: metric.impressions,
+              clicks: metric.clicks,
+              conversions: metric.conversions,
+              revenue: metric.revenue ?? null,
+            })),
+          }),
+          ctx.runMutation(internal.analyticsIntegrations.writeAnalyticsMetricsBatchInternal, {
+            workspaceId: args.workspaceId,
+            clientId,
+            propertyId,
+            currency: reportingCurrency ?? null,
+            daily: reportRows.map((row) => ({
+              propertyId,
+              date: row.date,
+              users: row.totalUsers,
+              sessions: row.sessions,
+              conversions: row.conversions,
+              revenue: row.totalRevenue,
+              currency: reportingCurrency ?? null,
+            })),
+            breakdowns: breakdownRows.map((row) => ({
+              propertyId,
+              date: row.date,
+              dimension: row.dimension,
+              dimensionValue: row.dimensionValue,
+              users: row.users,
+              sessions: row.sessions,
+              conversions: row.conversions,
+              revenue: row.revenue,
+            })),
+          }),
+        ])
+
+        return { metricsInserted: reportRows.length }
       }
 
       const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
@@ -344,7 +526,7 @@ export const processAllQueuedJobs = internalAction({
 
           processed++
         } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : 'Unknown error'
+          const message = asErrorMessage(err)
 
           await Promise.all([
             ctx.runMutation(internal.adsIntegrations.failSyncJobInternal, {
@@ -415,7 +597,11 @@ async function processNextQueuedSyncJob(
 
     return { synced: true }
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
+    // Use asErrorMessage to extract the user-friendly message from ConvexError
+    // (which stores it in .data.message), rather than .message which may be
+    // "[object Object]" or a JSON string for ConvexErrors constructed with
+    // object data.
+    const message = asErrorMessage(err)
 
     await Promise.all([
       ctx.runMutation(internal.adsIntegrations.failSyncJobInternal, {
