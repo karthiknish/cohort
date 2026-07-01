@@ -1,5 +1,4 @@
 import {
-  zAuthenticatedMutation,
   zWorkspaceMutation,
   zWorkspaceQuery,
   zWorkspacePaginatedQueryActive,

@@ -1,5 +1,5 @@
 import {
-  zAuthenticatedMutation,
+  zWorkspaceMutation,
   zWorkspaceQueryActive,
   zWorkspacePaginatedQueryActive,
 } from '../../functions'
@@ -243,7 +243,7 @@ export const listForUser = zWorkspaceQueryActive({
   },
 })
 
-export const createTask = zAuthenticatedMutation({
+export const createTask = zWorkspaceMutation({
   args: {
     workspaceId: z.string(),
     title: z.string(),
@@ -338,7 +338,7 @@ export const createTask = zAuthenticatedMutation({
   },
 })
 
-export const patchTask = zAuthenticatedMutation({
+export const patchTask = zWorkspaceMutation({
   args: {
     workspaceId: z.string(),
     legacyId: z.string(),
@@ -441,7 +441,7 @@ export const patchTask = zAuthenticatedMutation({
   },
 })
 
-export const bulkPatchTasks = zAuthenticatedMutation({
+export const bulkPatchTasks = zWorkspaceMutation({
   args: {
     workspaceId: z.string(),
     ids: z.array(z.string()),
@@ -492,7 +492,7 @@ export const bulkPatchTasks = zAuthenticatedMutation({
   },
 })
 
-export const softDeleteTask = zAuthenticatedMutation({
+export const softDeleteTask = zWorkspaceMutation({
   args: { workspaceId: z.string(), legacyId: z.string() },
   returns: z.object({ ok: z.boolean() }),
   handler: async (ctx, args) => {
@@ -508,7 +508,7 @@ export const softDeleteTask = zAuthenticatedMutation({
   },
 })
 
-export const bulkSoftDeleteTasks = zAuthenticatedMutation({
+export const bulkSoftDeleteTasks = zWorkspaceMutation({
   args: { workspaceId: z.string(), ids: z.array(z.string()) },
   returns: z.object({ ok: z.boolean(), deleted: z.number() }),
   handler: async (ctx, args) => {
