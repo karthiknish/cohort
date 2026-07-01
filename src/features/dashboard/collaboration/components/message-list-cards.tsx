@@ -78,7 +78,7 @@ export function ChannelMessageCard({ currentUserId, highlighted, pending, localR
         {renderers.renderMessageFooter?.(message)}
       </div>
 
-      {!isEditing && !message.deleted ? (<MessageReactionPickerActions actions={renderers.renderMessageActions?.(message)} disabled={isDeleting || isUpdating} message={message} onReact={onReact}/>) : null}
+      {!isEditing && !message.deleted ? (<MessageReactionPickerActions actions={renderers.renderMessageActions?.(message)} disabled={isDeleting || isUpdating} message={message} onReact={onReact} alwaysVisible/>) : null}
 
       {isDeleting ? (<div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/80">
           <LoaderCircle className="size-4 animate-spin text-muted-foreground"/>
@@ -127,7 +127,7 @@ export function DirectMessageCard({ currentUserId, isDeleting, isEditing, localR
         {renderers.renderMessageExtras?.(message)}
         {renderers.renderMessageFooter?.(message)}
 
-        {!isEditing && !message.deleted ? (<div className={cn('mt-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100', isOwn && 'justify-end')}>
+        {!isEditing && !message.deleted ? (<div className={cn('mt-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100', isOwn && 'justify-end')}>
             <MessageReactionPickerActions actions={renderers.renderMessageActions?.(message)} align="start" message={message} onReact={onReact}/>
           </div>) : null}
       </div>

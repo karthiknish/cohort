@@ -130,9 +130,18 @@ export function UnifiedConversationHeader({ header, canSearchMessages = false, m
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-          {canSearchMessages && onToggleMessageSearch ? (<Button type="button" variant={messageSearchOpen ? 'secondary' : 'outline'} size="icon" className="size-8" onClick={onToggleMessageSearch} aria-label={messageSearchOpen ? 'Hide message search' : 'Search messages'} aria-pressed={messageSearchOpen}>
-              {messageSearchOpen ? <X className="size-3.5"/> : <Search className="size-3.5"/>}
-            </Button>) : null}
+          {canSearchMessages && onToggleMessageSearch ? (<TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="button" variant={messageSearchOpen ? 'secondary' : 'outline'} size="icon" className="size-8" onClick={onToggleMessageSearch} aria-label={messageSearchOpen ? 'Close search bar' : 'Search in conversation'} aria-pressed={messageSearchOpen}>
+                    {messageSearchOpen ? <X className="size-3.5"/> : <Search className="size-3.5"/>}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>{messageSearchOpen ? 'Close search' : 'Search messages'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>) : null}
           {header.channelInfo ? (<>
               <Button type="button" variant="outline" size="icon" className="size-8" aria-label="Channel details" onClick={handleOpenChannelInfo}>
                 <Info className="size-3.5"/>
@@ -184,12 +193,15 @@ export function UnifiedConversationHeader({ header, canSearchMessages = false, m
               Muted
             </Badge>) : null}
 
-          {header.onArchive || header.onMute || header.onExport ? (<DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-8" aria-label="Conversation actions">
-                  <MoreVertical className="size-4"/>
-                </Button>
-              </DropdownMenuTrigger>
+          {header.onArchive || header.onMute || header.onExport ? (<TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="size-8" aria-label="More actions">
+                        <MoreVertical className="size-4"/>
+                      </Button>
+                    </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {header.onArchive ? (<DropdownMenuItem onClick={handleArchiveToggle}>
                     {header.isArchived ? (<>
@@ -214,7 +226,13 @@ export function UnifiedConversationHeader({ header, canSearchMessages = false, m
                     Export messages
                   </DropdownMenuItem>) : null}
               </DropdownMenuContent>
-            </DropdownMenu>) : null}
+                  </DropdownMenu>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>More actions</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>) : null}
         </div>
       </div>
     </div>);

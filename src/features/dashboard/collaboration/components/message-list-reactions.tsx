@@ -38,9 +38,10 @@ export function MessageReactionRow({ currentUserId, disabled, localReactionPendi
     </div>);
 }
 
-export function MessageReactionPickerActions({ actions, align = 'start', disabled, message, onReact, }: {
+export function MessageReactionPickerActions({ actions, align = 'start', alwaysVisible, disabled, message, onReact, }: {
     actions?: ReactNode;
     align?: 'start' | 'end';
+    alwaysVisible?: boolean;
     disabled?: boolean;
     message: UnifiedMessage;
     onReact: (messageId: string, emoji: string) => void;
@@ -48,7 +49,7 @@ export function MessageReactionPickerActions({ actions, align = 'start', disable
     const handleEmojiClick = (emojiData: EmojiClickData) => {
         onReact(message.id, emojiData.emoji);
     };
-    return (<div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 shrink-0">
+    return (<div className={cn('flex gap-1 transition-opacity shrink-0', alwaysVisible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100')}>
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon" className="size-6" disabled={disabled} aria-label="Add reaction">

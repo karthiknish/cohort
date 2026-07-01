@@ -102,8 +102,13 @@ export function NewDMDialog({ open, onOpenChange, onUserSelect, workspaceId, cur
         <ScrollArea className="h-[300px] mt-4">
           {filteredUsers.length === 0 ? (<div className="flex flex-col items-center justify-center py-8 text-center">
               <User className="size-12 text-muted-foreground/40 mb-3"/>
-              <p className="text-sm text-muted-foreground">
-                {searchQuery ? 'No teammates match your search.' : 'No teammates available.'}
+              <p className="text-sm font-medium text-muted-foreground">
+                {searchQuery ? 'No teammates match your search.' : 'No teammates available yet'}
+              </p>
+              <p className="mt-1.5 max-w-xs text-xs leading-relaxed text-muted-foreground/70">
+                {searchQuery
+                  ? 'Try a different name or email.'
+                  : 'Invite teammates to your workspace from Settings to start sending direct messages.'}
               </p>
             </div>) : (<div className="space-y-1 pr-4">
               {filteredUsers.map((user) => (<button key={user.id} type="button" onClick={userClickHandlers[user.id]} disabled={isCreating} className="w-full flex items-center gap-3 p-3 rounded-lg text-left motion-chromatic hover:bg-muted/50 disabled:opacity-50">

@@ -2,7 +2,7 @@
 import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { createElement, useReducer, useState, useCallback, useMemo } from 'react';
-import { Dialog, DialogContent, } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, } from '@/shared/ui/dialog';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { cn } from '@/lib/utils';
 import { CreatePollDialogFooter, CreatePollDialogHeader, CreatePollDialogTrigger, CreatePollFormFields, CreatePollSettings, PollCardFooterActions, PollCardHeader, PollOptionRow, QuickPollTrigger, } from './message-polls-sections';
@@ -324,7 +324,7 @@ export function CreatePollDialog({ workspaceId, userId, onCreate, trigger, }: Cr
         setOpen(false);
     };
     return (<Dialog open={open} onOpenChange={setOpen}>
-      {trigger ?? CREATE_POLL_DEFAULT_TRIGGER}
+      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : CREATE_POLL_DEFAULT_TRIGGER}
       <DialogContent className="sm:max-w-md">
         <CreatePollDialogHeader />
         <CreatePollFormFields onAddOption={handleAddOption} onOptionChange={handleOptionChange} onQuestionChange={handleQuestionChange} onRemoveOption={handleRemoveOption} options={options} question={question}/>
