@@ -25,12 +25,15 @@ import { buildTaskListFilters } from './hooks/task-list-filters';
 import { TASKS_THEME } from './tasks-theme';
 import { isFeatureEnabled } from '@/lib/features';
 import { exportToCsv } from '@/lib/export/export-to-spreadsheet';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
-import type { TaskStatus } from '@/types/tasks';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
+import type { TaskPriority, TaskStatus } from '@/types/tasks';
 import { useTasksDocumentImport } from './use-tasks-document-import';
 import { TasksDocumentImportOverlay } from './tasks-document-import-overlay';
 import { TasksDocumentImportReviewSheet } from './tasks-document-import-review-sheet';
 import { TaskParticipantsProvider } from './task-participants-context';
+import { TaskBoardErrorBoundary } from './task-board-error-boundary';
 const TaskList = dynamic(() => import('@/features/dashboard/tasks/task-list').then((mod) => mod.TaskList), {
     loading: () => <div className="p-6 text-sm text-muted-foreground">Loading tasks…</div>,
 });
@@ -121,6 +124,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     };
     const [selectedStatus, setSelectedStatus] = useState<'all' | TaskStatus>('all');
     const [selectedAssignee, setSelectedAssignee] = useState('all');
+    const [selectedPriority, setSelectedPriority] = useState<'all' | TaskPriority>('all');
     const [rawSearchQuery, setRawSearchQuery] = useState('');
     const debouncedQuery = useDebouncedValue(rawSearchQuery, 300);
     const listFilters = buildTaskListFilters({
@@ -198,6 +202,8 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
         setSearchQuery: setRawSearchQuery,
         selectedAssignee,
         setSelectedAssignee,
+        selectedPriority,
+        setSelectedPriority,
     });
     const [rawSelectedTaskIds, setRawSelectedTaskIds] = useState<Set<string>>(new Set());
     const [bulkState, setBulkState] = useState<{
@@ -245,27 +251,44 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
         enabled: !form.isCreateOpen && !newTaskDisabledReason,
     });
     // Export handler
-    const handleExport = () => {
-        if (filters.filteredTasks.length === 0)
+    const [isExporting, setIsExporting] = useState(false);
+    const handleExport = async () => {
+        if (filters.filteredTasks.length === 0 || isExporting)
             return;
-        const exportRows = filters.filteredTasks.map((task) => ({
-            Title: task.title,
-            Status: task.status,
-            Priority: task.priority,
-            Client: task.client || 'Internal',
-            'Assigned To': formatAssigneeList(task.assignedTo ?? [], taskParticipants),
-            'Due Date': task.dueDate ? formatDate(task.dueDate) : 'No due date',
-            Description: task.description || '',
-        }));
-        const charts = [
-            buildCategoryCountChart(exportRows, 'Status', 'Tasks by status', 'pie'),
-            buildCategoryCountChart(exportRows, 'Priority', 'Tasks by priority', 'bar'),
-        ].filter((chart): chart is NonNullable<typeof chart> => chart !== null);
-        void exportToCsv(exportRows, `tasks-export-${new Date().toISOString().split('T')[0]}.xlsx`, undefined, {
-            title: 'Tasks export',
-            subtitle: `${filters.filteredTasks.length} task${filters.filteredTasks.length === 1 ? '' : 's'}`,
-            charts,
-        });
+        setIsExporting(true);
+        try {
+            const exportRows = filters.filteredTasks.map((task) => ({
+                Title: task.title,
+                Status: task.status,
+                Priority: task.priority,
+                Client: task.client || 'Internal',
+                'Assigned To': formatAssigneeList(task.assignedTo ?? [], taskParticipants),
+                'Due Date': task.dueDate ? formatDate(task.dueDate) : 'No due date',
+                Description: task.description || '',
+            }));
+            const charts = [
+                buildCategoryCountChart(exportRows, 'Status', 'Tasks by status', 'pie'),
+                buildCategoryCountChart(exportRows, 'Priority', 'Tasks by priority', 'bar'),
+            ].filter((chart): chart is NonNullable<typeof chart> => chart !== null);
+            await exportToCsv(exportRows, `tasks-export-${new Date().toISOString().split('T')[0]}.xlsx`, undefined, {
+                title: 'Tasks export',
+                subtitle: `${filters.filteredTasks.length} task${filters.filteredTasks.length === 1 ? '' : 's'}`,
+                charts,
+            });
+            notifySuccess({
+                title: 'Export complete',
+                message: `Exported ${filters.filteredTasks.length} task${filters.filteredTasks.length === 1 ? '' : 's'} to Excel.`,
+            });
+        }
+        catch (exportError) {
+            notifyFailure({
+                title: 'Export failed',
+                message: exportError instanceof Error ? exportError.message : 'Could not build the spreadsheet.',
+            });
+        }
+        finally {
+            setIsExporting(false);
+        }
     };
     const handleNewTaskClick = () => {
         form.handleCreateOpenChange(true);
@@ -279,6 +302,10 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
         form.setDeleting(false);
         if (success) {
             form.handleDeleteClose();
+            // Also close the edit sheet if it happens to be open for this task
+            if (form.editingTask?.id === form.deletingTask.id) {
+                form.handleEditClose();
+            }
         }
     };
     const handleEditDialogOpenChange = (open: boolean) => {
@@ -348,6 +375,19 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
         });
         setRawSelectedTaskIds(new Set(filtered.map((task) => task.id)));
     };
+    const highPriorityCount = visibleTasks.filter((task) => task.priority === 'high' || task.priority === 'urgent').length;
+    const dueSoonCount = (() => {
+        const now = Date.now();
+        const cutoff = now + 7 * 24 * 60 * 60 * 1000;
+        return visibleTasks.filter((task) => {
+            if (!task.dueDate)
+                return false;
+            const ts = Date.parse(task.dueDate);
+            if (Number.isNaN(ts))
+                return false;
+            return ts >= now && ts <= cutoff;
+        }).length;
+    })();
     const handleBulkStatusChange = async (status: TaskStatus) => {
         if (!hasSelection)
             return;
@@ -416,6 +456,9 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
         filters.resetListFilters();
         setRawSearchQuery('');
     };
+    const handlePriorityChange = (value: string) => {
+        setSelectedPriority(value as 'all' | TaskPriority);
+    };
     const handleSummaryStatusClick = (status: TaskStatus) => {
         if (filters.selectedStatus === status) {
             filters.handleStatusChange('all');
@@ -459,18 +502,18 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
                   My tasks
                 </TabsTrigger>
               </TabsList>
-              <TaskViewControls viewMode={filters.viewMode} onViewModeChange={filters.setViewMode} onExport={handleExport} canExport={filters.sortedTasks.length > 0}/>
+              <TaskViewControls viewMode={filters.viewMode} onViewModeChange={filters.setViewMode} onExport={handleExport} canExport={filters.sortedTasks.length > 0} isExporting={isExporting} exportDisabledReason={filters.sortedTasks.length === 0 ? 'No tasks to export' : undefined}/>
             </div>
 
             <div>
-              <TaskFilters searchQuery={rawSearchQuery} onSearchChange={setRawSearchQuery} selectedStatus={filters.selectedStatus} onStatusChange={filters.handleStatusChange} selectedAssignee={filters.selectedAssignee} onAssigneeChange={filters.handleAssigneeChange} assigneeOptions={filters.assigneeOptions} showAssigneeFilter={filters.activeTab === 'all-tasks'} sortField={filters.sortField} onSortFieldChange={filters.setSortField} sortDirection={filters.sortDirection} onSortDirectionToggle={filters.toggleSortDirection} hasActiveFilters={filters.hasActiveFilters} onClearFilters={handleClearListFilters}/>
+              <TaskFilters searchQuery={rawSearchQuery} onSearchChange={setRawSearchQuery} selectedStatus={filters.selectedStatus} onStatusChange={filters.handleStatusChange} selectedAssignee={filters.selectedAssignee} onAssigneeChange={filters.handleAssigneeChange} assigneeOptions={filters.assigneeOptions} showAssigneeFilter={filters.activeTab === 'all-tasks'} selectedPriority={selectedPriority} onPriorityChange={handlePriorityChange} sortField={filters.sortField} onSortFieldChange={filters.setSortField} sortDirection={filters.sortDirection} onSortDirectionToggle={filters.toggleSortDirection} hasActiveFilters={filters.hasActiveFilters} activeFilterCount={filters.activeFilterCount} onClearFilters={handleClearListFilters}/>
 
               <ProjectFilterBanner projectId={projectFilter.id} projectName={projectFilter.name} onClear={clearProjectFilter}/>
 
-              {filters.viewMode !== 'board' && (<TaskBulkToolbar selectedCount={selectedTasks.length} totalVisible={visibleTasks.length} hasSelection={hasSelection} bulkActive={bulkState.active} bulkLabel={bulkState.label} bulkProgress={bulkState.progress} onSelectAll={handleSelectAllVisible} onClearSelection={handleClearSelection} onSelectHighPriority={handleSelectHighPriority} onSelectDueSoon={handleSelectDueSoon} onBulkStatusChange={handleBulkStatusChange} onBulkAssign={handleBulkAssign} onBulkDueDate={handleBulkDueDate} onBulkDelete={handleBulkDeleteAction}/>)}
+              {filters.viewMode !== 'board' && (<TaskBulkToolbar selectedCount={selectedTasks.length} totalVisible={visibleTasks.length} hasSelection={hasSelection} bulkActive={bulkState.active} bulkLabel={bulkState.label} bulkProgress={bulkState.progress} onSelectAll={handleSelectAllVisible} onClearSelection={handleClearSelection} onSelectHighPriority={handleSelectHighPriority} onSelectDueSoon={handleSelectDueSoon} highPriorityCount={highPriorityCount} dueSoonCount={dueSoonCount} onBulkStatusChange={handleBulkStatusChange} onBulkAssign={handleBulkAssign} onBulkDueDate={handleBulkDueDate} onBulkDelete={handleBulkDeleteAction}/>)}
 
               <div className={cn(TASKS_THEME.content, filters.viewMode === 'list' && TASKS_THEME.contentList)}>
-              {filters.viewMode === 'board' ? (<TaskKanban tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={form.handleEditOpen} onDelete={form.handleDeleteClick} onQuickStatusChange={handleQuickStatusChange} onRefresh={handleRefresh} loadingMore={loadingMore} hasMore={Boolean(nextCursor)} onLoadMore={handleLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={handleClearListFilters} onEmptyCreateTask={handleNewTaskClick} workspaceId={user?.agencyId ?? null} userId={user?.id ?? null} userName={user?.name ?? null} userRole={user?.role ?? null} participants={taskParticipants}/>) : (<TaskList tasks={filters.sortedTasks} viewMode={filters.viewMode} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={form.handleEditOpen} onDelete={form.handleDeleteClick} onQuickStatusChange={handleQuickStatusChange} onRefresh={handleRefresh} loadingMore={loadingMore} hasMore={Boolean(nextCursor)} onLoadMore={handleLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={handleClearListFilters} onEmptyCreateTask={handleNewTaskClick} selectedTaskIds={selectedTaskIds} onToggleTaskSelection={handleToggleTaskSelection} workspaceId={user?.agencyId ?? null} userId={user?.id ?? null} userName={user?.name ?? null} userRole={user?.role ?? null} participants={taskParticipants}/>)}
+              {filters.viewMode === 'board' ? (<TaskBoardErrorBoundary onSwitchToList={() => filters.setViewMode('list')}><TaskKanban tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={form.handleEditOpen} onDelete={form.handleDeleteClick} onQuickStatusChange={handleQuickStatusChange} onRefresh={handleRefresh} loadingMore={loadingMore} hasMore={Boolean(nextCursor)} onLoadMore={handleLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={handleClearListFilters} onEmptyCreateTask={handleNewTaskClick} workspaceId={user?.agencyId ?? null} userId={user?.id ?? null} userName={user?.name ?? null} userRole={user?.role ?? null} participants={taskParticipants}/></TaskBoardErrorBoundary>) : (<TaskList tasks={filters.sortedTasks} viewMode={filters.viewMode} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={form.handleEditOpen} onDelete={form.handleDeleteClick} onQuickStatusChange={handleQuickStatusChange} onRefresh={handleRefresh} loadingMore={loadingMore} hasMore={Boolean(nextCursor)} onLoadMore={handleLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={handleClearListFilters} onEmptyCreateTask={handleNewTaskClick} selectedTaskIds={selectedTaskIds} onToggleTaskSelection={handleToggleTaskSelection} workspaceId={user?.agencyId ?? null} userId={user?.id ?? null} userName={user?.name ?? null} userRole={user?.role ?? null} participants={taskParticipants}/>)}
               </div>
 
               {!initialLoading && !displayError && (<TaskResultsCount sortedCount={filters.sortedTasks.length} totalCount={tasks.length} loading={loading && !loadingMore}/>)}

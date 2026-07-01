@@ -1,14 +1,28 @@
 'use client';
 import { useCallback, useMemo, useState } from 'react';
+import { usePathname, useRouter } from '@/shared/ui/navigation';
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';
 import { TASK_STATUSES } from '@/types/tasks';
-import type { TaskRecord, TaskStatus } from '@/types/tasks';
+import type { TaskRecord, TaskStatus, TaskPriority } from '@/types/tasks';
 import { PRIORITY_ORDER, resolveAssigneeLabel } from '../task-types';
 import type { SortField, SortDirection, TaskParticipant } from '../task-types';
 import type { TaskListFiltersInput } from './task-list-filters';
 const TASK_VIEW_MODE_STORAGE_KEY = 'dashboard:tasks:view-mode';
+const TASK_VIEW_MODE_URL_PARAM = 'view';
 function getInitialTaskViewMode(): 'list' | 'grid' | 'board' {
     if (typeof window === 'undefined') {
         return 'list';
+    }
+    // Check URL first
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fromUrl = urlParams.get(TASK_VIEW_MODE_URL_PARAM);
+        if (fromUrl === 'list' || fromUrl === 'grid' || fromUrl === 'board') {
+            return fromUrl;
+        }
+    }
+    catch {
+        // ignore
     }
     const persisted = window.localStorage.getItem(TASK_VIEW_MODE_STORAGE_KEY);
     if (persisted === 'list' || persisted === 'grid' || persisted === 'board') {
@@ -38,6 +52,8 @@ export type UseTaskFiltersOptions = {
     setSearchQuery?: React.Dispatch<React.SetStateAction<string>>;
     selectedAssignee?: string;
     setSelectedAssignee?: React.Dispatch<React.SetStateAction<string>>;
+    selectedPriority?: 'all' | TaskPriority;
+    setSelectedPriority?: React.Dispatch<React.SetStateAction<'all' | TaskPriority>>;
 };
 export type UseTaskFiltersReturn = {
     // Filter state
@@ -47,6 +63,8 @@ export type UseTaskFiltersReturn = {
     setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
     selectedAssignee: string;
     setSelectedAssignee: React.Dispatch<React.SetStateAction<string>>;
+    selectedPriority: 'all' | TaskPriority;
+    setSelectedPriority: React.Dispatch<React.SetStateAction<'all' | TaskPriority>>;
     activeTab: string;
     setActiveTab: React.Dispatch<React.SetStateAction<string>>;
     // Sort state
@@ -67,26 +85,47 @@ export type UseTaskFiltersReturn = {
     assigneeOptions: string[];
     /** True when list filters (not tab) narrow the result set. */
     hasActiveFilters: boolean;
+    /** Count of active list filters (for badge display). */
+    activeFilterCount: number;
     /** Reset status, search, and assignee filters (not tab or view mode). */
     resetListFilters: () => void;
     // Handlers
     handleStatusChange: (value: string) => void;
     handleAssigneeChange: (value: string) => void;
 };
-export function useTaskFilters({ tasks, userId, userName, participants = [], selectedClient, selectedClientId, projectFilterId, projectFilterName, activeTab: controlledActiveTab, setActiveTab: controlledSetActiveTab, serverListFilters, selectedStatus: controlledSelectedStatus, setSelectedStatus: controlledSetSelectedStatus, searchQuery: controlledSearchQuery, setSearchQuery: controlledSetSearchQuery, selectedAssignee: controlledSelectedAssignee, setSelectedAssignee: controlledSetSelectedAssignee, }: UseTaskFiltersOptions): UseTaskFiltersReturn {
+export function useTaskFilters({ tasks, userId, userName, participants = [], selectedClient, selectedClientId, projectFilterId, projectFilterName, activeTab: controlledActiveTab, setActiveTab: controlledSetActiveTab, serverListFilters, selectedStatus: controlledSelectedStatus, setSelectedStatus: controlledSetSelectedStatus, searchQuery: controlledSearchQuery, setSearchQuery: controlledSetSearchQuery, selectedAssignee: controlledSelectedAssignee, setSelectedAssignee: controlledSetSelectedAssignee, selectedPriority: controlledSelectedPriority, setSelectedPriority: controlledSetSelectedPriority, }: UseTaskFiltersOptions): UseTaskFiltersReturn {
     const [selectedStatusInternal, setSelectedStatusInternal] = useState<'all' | TaskStatus>('all');
     const [searchQueryInternal, setSearchQueryInternal] = useState('');
     const [selectedAssigneeInternal, setSelectedAssigneeInternal] = useState('all');
+    const [selectedPriorityInternal, setSelectedPriorityInternal] = useState<'all' | TaskPriority>('all');
     const selectedStatus = controlledSelectedStatus ?? selectedStatusInternal;
     const setSelectedStatus = controlledSetSelectedStatus ?? setSelectedStatusInternal;
     const searchQuery = controlledSearchQuery ?? searchQueryInternal;
     const setSearchQuery = controlledSetSearchQuery ?? setSearchQueryInternal;
     const selectedAssignee = controlledSelectedAssignee ?? selectedAssigneeInternal;
     const setSelectedAssignee = controlledSetSelectedAssignee ?? setSelectedAssigneeInternal;
+    const selectedPriority = controlledSelectedPriority ?? selectedPriorityInternal;
+    const setSelectedPriority = controlledSetSelectedPriority ?? setSelectedPriorityInternal;
     const [activeTabInternal, setActiveTabInternal] = useState('all-tasks');
     const [sortField, setSortField] = useState<SortField>('updatedAt');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-    const [viewMode, setViewMode] = useState<'list' | 'grid' | 'board'>(() => getInitialTaskViewMode());
+    const [viewMode, setViewModeState] = useState<'list' | 'grid' | 'board'>(() => getInitialTaskViewMode());
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useUrlSearchParams();
+    const setViewMode = useCallback((next: 'list' | 'grid' | 'board') => {
+        setViewModeState(next);
+        try {
+            window.localStorage.setItem(TASK_VIEW_MODE_STORAGE_KEY, next);
+        }
+        catch {
+            // ignore storage errors
+        }
+        const params = new URLSearchParams(searchParams.toString());
+        params.set(TASK_VIEW_MODE_URL_PARAM, next);
+        const queryString = params.toString();
+        router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+    }, [router, pathname, searchParams]);
     const activeTab = controlledActiveTab ?? activeTabInternal;
     const setActiveTab = controlledSetActiveTab ?? setActiveTabInternal;
     const toggleSortDirection = () => {
@@ -101,12 +140,26 @@ export function useTaskFilters({ tasks, userId, userName, participants = [], sel
     const hasActiveFilters = (() => {
         const hasSearch = searchQuery.trim().length > 0;
         const hasAssigneePick = activeTab === 'all-tasks' && selectedAssignee !== 'all';
-        return selectedStatus !== 'all' || hasSearch || hasAssigneePick;
+        const hasPriority = selectedPriority !== 'all';
+        return selectedStatus !== 'all' || hasSearch || hasAssigneePick || hasPriority;
+    })();
+    const activeFilterCount = (() => {
+        let count = 0;
+        if (selectedStatus !== 'all')
+            count += 1;
+        if (searchQuery.trim().length > 0)
+            count += 1;
+        if (activeTab === 'all-tasks' && selectedAssignee !== 'all')
+            count += 1;
+        if (selectedPriority !== 'all')
+            count += 1;
+        return count;
     })();
     const resetListFilters = () => {
         setSelectedStatus('all');
         setSearchQuery('');
         setSelectedAssignee('all');
+        setSelectedPriority('all');
     };
     // Filter tasks by client
     const tasksForClient = (() => {
@@ -147,11 +200,16 @@ export function useTaskFilters({ tasks, userId, userName, participants = [], sel
         });
     })();
     // Apply list filters (server handles status/search/assignee/project when serverListFilters is set)
+    const priorityScopedTasks = (() => {
+        if (selectedPriority === 'all')
+            return projectScopedTasks;
+        return projectScopedTasks.filter((task) => task.priority === selectedPriority);
+    })();
     const filteredTasks = (() => {
         if (serverListFilters) {
-            return projectScopedTasks;
+            return priorityScopedTasks;
         }
-        return projectScopedTasks.filter((task) => {
+        return priorityScopedTasks.filter((task) => {
             const matchesStatus = selectedStatus === 'all' || task.status === selectedStatus;
             const title = task.title.toLowerCase();
             const description = (task.description ?? '').toLowerCase();
@@ -254,15 +312,6 @@ export function useTaskFilters({ tasks, userId, userName, participants = [], sel
         }
         return selectedAssignee;
     })();
-    const setViewModePersisted = (mode: 'list' | 'grid' | 'board' | ((current: 'list' | 'grid' | 'board') => 'list' | 'grid' | 'board')) => {
-        setViewMode((current) => {
-            const resolved = typeof mode === 'function' ? mode(current) : mode;
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem(TASK_VIEW_MODE_STORAGE_KEY, resolved);
-            }
-            return resolved;
-        });
-    };
     return {
         selectedStatus,
         setSelectedStatus,
@@ -270,6 +319,8 @@ export function useTaskFilters({ tasks, userId, userName, participants = [], sel
         setSearchQuery,
         selectedAssignee,
         setSelectedAssignee,
+        selectedPriority,
+        setSelectedPriority,
         activeTab,
         setActiveTab,
         sortField,
@@ -277,7 +328,7 @@ export function useTaskFilters({ tasks, userId, userName, participants = [], sel
         sortDirection,
         toggleSortDirection,
         viewMode,
-        setViewMode: setViewModePersisted,
+        setViewMode: setViewMode as React.Dispatch<React.SetStateAction<'list' | 'grid' | 'board'>>,
         tasksForClient,
         projectScopedTasks,
         filteredTasks,
@@ -286,6 +337,7 @@ export function useTaskFilters({ tasks, userId, userName, participants = [], sel
         completionRate,
         assigneeOptions,
         hasActiveFilters,
+        activeFilterCount,
         resetListFilters,
         handleStatusChange,
         handleAssigneeChange,

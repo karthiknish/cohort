@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { Search, ArrowUp, ArrowDown, Filter, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -7,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '
 import { Popover, PopoverContent, PopoverTrigger, } from '@/shared/ui/popover';
 import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts';
 import { SORT_OPTIONS } from './task-types';
+import { formatPriorityLabel } from './task-types';
 import type { SortField, SortDirection } from './task-types';
 import { TASKS_THEME } from './tasks-theme';
+import type { TaskPriority } from '@/types/tasks';
 export type TaskFiltersProps = {
     searchQuery: string;
     onSearchChange: (query: string) => void;
@@ -18,14 +20,18 @@ export type TaskFiltersProps = {
     onAssigneeChange: (assignee: string) => void;
     assigneeOptions: string[];
     showAssigneeFilter: boolean;
+    selectedPriority: 'all' | TaskPriority;
+    onPriorityChange: (priority: string) => void;
     sortField: SortField;
     onSortFieldChange: (field: SortField) => void;
     sortDirection: SortDirection;
     onSortDirectionToggle: () => void;
     hasActiveFilters?: boolean;
+    activeFilterCount?: number;
     onClearFilters?: () => void;
 };
-export function TaskFilters({ searchQuery, onSearchChange, selectedStatus, onStatusChange, selectedAssignee, onAssigneeChange, assigneeOptions, showAssigneeFilter, sortField, onSortFieldChange, sortDirection, onSortDirectionToggle, hasActiveFilters = false, onClearFilters, }: TaskFiltersProps) {
+const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
+export function TaskFilters({ searchQuery, onSearchChange, selectedStatus, onStatusChange, selectedAssignee, onAssigneeChange, assigneeOptions, showAssigneeFilter, selectedPriority, onPriorityChange, sortField, onSortFieldChange, sortDirection, onSortDirectionToggle, hasActiveFilters = false, activeFilterCount = 0, onClearFilters, }: TaskFiltersProps) {
     const [filtersOpen, setFiltersOpen] = useState(false);
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         onSearchChange(event.target.value);
@@ -53,8 +59,8 @@ export function TaskFilters({ searchQuery, onSearchChange, selectedStatus, onSta
             <Button type="button" variant="outline" size="sm" className="h-9 gap-1.5 border-border/60 bg-background font-normal shadow-sm">
               <Filter className="size-3.5" aria-hidden/>
               Filters
-              {hasActiveFilters ? (<span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground" aria-hidden>
-                  •
+              {activeFilterCount > 0 ? (<span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground" aria-label={`${activeFilterCount} active filter${activeFilterCount === 1 ? '' : 's'}`}>
+                  {activeFilterCount}
                 </span>) : null}
             </Button>
           </PopoverTrigger>
@@ -75,17 +81,28 @@ export function TaskFilters({ searchQuery, onSearchChange, selectedStatus, onSta
                 <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={selectedPriority} onValueChange={onPriorityChange}>
+              <SelectTrigger className="h-9 w-full" aria-label="Filter by priority">
+                <SelectValue placeholder="Priority"/>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All priority</SelectItem>
+                {PRIORITY_OPTIONS.map((priority) => (<SelectItem key={priority} value={priority}>
+                    {formatPriorityLabel(priority)}
+                  </SelectItem>))}
+              </SelectContent>
+            </Select>
             {showAssigneeFilter ? (<Select value={selectedAssignee} onValueChange={onAssigneeChange}>
-                <SelectTrigger className="h-9 w-full" aria-label="Filter by assignee">
-                  <SelectValue placeholder="Assignee"/>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All assignees</SelectItem>
-                  {assigneeOptions.map((name) => (<SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>))}
-                </SelectContent>
-              </Select>) : null}
+              <SelectTrigger className="h-9 w-full" aria-label="Filter by assignee">
+                <SelectValue placeholder="Assignee"/>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All assignees</SelectItem>
+                {assigneeOptions.map((name) => (<SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>))}
+              </SelectContent>
+            </Select>) : null}
             <div className="flex gap-2">
               <Select value={sortField} onValueChange={handleSortFieldChange}>
                 <SelectTrigger className="h-9 flex-1" aria-label="Sort by">

@@ -26,6 +26,8 @@ export type TaskBulkToolbarProps = {
     onClearSelection: () => void;
     onSelectHighPriority: () => void;
     onSelectDueSoon: () => void;
+    highPriorityCount?: number;
+    dueSoonCount?: number;
     onBulkStatusChange: (status: TaskStatus) => void;
     onBulkAssign: (assignees: string[]) => void;
     onBulkDueDate: (date: string | null) => void;
@@ -39,7 +41,7 @@ function parseAssignees(value: string): string[] {
         return trimmed.length > 0 ? [trimmed] : [];
     });
 }
-export function TaskBulkToolbar({ selectedCount, totalVisible, hasSelection, bulkActive, bulkLabel, bulkProgress, onSelectAll, onClearSelection, onSelectHighPriority, onSelectDueSoon, onBulkStatusChange, onBulkAssign, onBulkDueDate, onBulkDelete, }: TaskBulkToolbarProps) {
+export function TaskBulkToolbar({ selectedCount, totalVisible, hasSelection, bulkActive, bulkLabel, bulkProgress, onSelectAll, onClearSelection, onSelectHighPriority, onSelectDueSoon, highPriorityCount, dueSoonCount, onBulkStatusChange, onBulkAssign, onBulkDueDate, onBulkDelete, }: TaskBulkToolbarProps) {
     const [assignInput, setAssignInput] = useState('');
     const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
     const masterRef = useRef<HTMLInputElement | null>(null);
@@ -94,11 +96,13 @@ export function TaskBulkToolbar({ selectedCount, totalVisible, hasSelection, bul
           <Button variant="ghost" size="sm" onClick={onClearSelection} disabled={!hasSelection || bulkActive}>
             Clear
           </Button>
-          <Button variant="secondary" size="sm" onClick={onSelectHighPriority} disabled={bulkActive}>
+          <Button variant="secondary" size="sm" onClick={onSelectHighPriority} disabled={bulkActive || !highPriorityCount}>
             <Filter className="mr-2 size-4"/> High priority
+            {highPriorityCount ? <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-semibold text-primary">{highPriorityCount}</span> : null}
           </Button>
-          <Button variant="secondary" size="sm" onClick={onSelectDueSoon} disabled={bulkActive}>
+          <Button variant="secondary" size="sm" onClick={onSelectDueSoon} disabled={bulkActive || !dueSoonCount}>
             <CalendarClock className="mr-2 size-4"/> Due soon
+            {dueSoonCount ? <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-semibold text-primary">{dueSoonCount}</span> : null}
           </Button>
         </div>
       </div>

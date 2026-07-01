@@ -4,11 +4,12 @@ import { dynamic } from '@/shared/ui/dynamic';
 import { ProjectFilterBanner, TaskBulkToolbar, TaskFilters, type TaskParticipant, TaskResultsCount, TaskSummaryCards, TaskViewControls, } from '@/features/dashboard/tasks';
 import { cn } from '@/lib/utils';
 import type { SortField } from './task-types';
-import type { TaskRecord, TaskStatus } from '@/types/tasks';
+import type { TaskPriority, TaskRecord, TaskStatus } from '@/types/tasks';
 import { Card, CardAction, CardContent, CardHeader } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { TASKS_THEME } from './tasks-theme';
+import { TaskBoardErrorBoundary } from './task-board-error-boundary';
 import { TasksPageSkeleton } from './tasks-page-skeleton';
 const TaskList = dynamic(() => import('@/features/dashboard/tasks/task-list').then((mod) => mod.TaskList), {
     loading: () => <div className="p-6 text-sm text-muted-foreground">Loading tasks…</div>,
@@ -31,11 +32,14 @@ export function TasksPageWorkspace({ filters, rawSearchQuery, onSearchChange, pr
         selectedAssignee: string;
         handleAssigneeChange: (assignee: string) => void;
         assigneeOptions: string[];
+        selectedPriority: 'all' | TaskPriority;
+        setSelectedPriority: (priority: 'all' | TaskPriority) => void;
         sortField: SortField;
         setSortField: (field: SortField) => void;
         sortDirection: 'asc' | 'desc';
         toggleSortDirection: () => void;
         hasActiveFilters: boolean;
+        activeFilterCount: number;
         taskCounts: Record<TaskStatus, number>;
         sortedTasks: TaskRecord[];
     };
@@ -104,19 +108,19 @@ export function TasksPageWorkspace({ filters, rawSearchQuery, onSearchChange, pr
               </TabsTrigger>
             </TabsList>
             <CardAction>
-              <TaskViewControls viewMode={filters.viewMode} onViewModeChange={filters.setViewMode} onExport={onExport} canExport={filters.sortedTasks.length > 0}/>
+              <TaskViewControls viewMode={filters.viewMode} onViewModeChange={filters.setViewMode} onExport={onExport} canExport={filters.sortedTasks.length > 0} isExporting={false}/>
             </CardAction>
           </CardHeader>
 
           <div>
-            <TaskFilters searchQuery={rawSearchQuery} onSearchChange={onSearchChange} selectedStatus={filters.selectedStatus} onStatusChange={handleFilterStatusChange} selectedAssignee={filters.selectedAssignee} onAssigneeChange={filters.handleAssigneeChange} assigneeOptions={filters.assigneeOptions} showAssigneeFilter={filters.activeTab === 'all-tasks'} sortField={filters.sortField} onSortFieldChange={filters.setSortField} sortDirection={filters.sortDirection} onSortDirectionToggle={filters.toggleSortDirection} hasActiveFilters={filters.hasActiveFilters} onClearFilters={onClearListFilters}/>
+            <TaskFilters searchQuery={rawSearchQuery} onSearchChange={onSearchChange} selectedStatus={filters.selectedStatus} onStatusChange={handleFilterStatusChange} selectedAssignee={filters.selectedAssignee} onAssigneeChange={filters.handleAssigneeChange} assigneeOptions={filters.assigneeOptions} showAssigneeFilter={filters.activeTab === 'all-tasks'} selectedPriority={filters.selectedPriority} onPriorityChange={(value) => filters.setSelectedPriority(value as 'all' | TaskPriority)} sortField={filters.sortField} onSortFieldChange={filters.setSortField} sortDirection={filters.sortDirection} onSortDirectionToggle={filters.toggleSortDirection} hasActiveFilters={filters.hasActiveFilters} activeFilterCount={filters.activeFilterCount} onClearFilters={onClearListFilters}/>
 
             <ProjectFilterBanner projectId={projectFilter.id} projectName={projectFilter.name} onClear={onClearProjectFilter}/>
 
             {filters.viewMode !== 'board' ? (<TaskBulkToolbar selectedCount={selectedTasks.length} totalVisible={visibleTasks.length} hasSelection={hasSelection} bulkActive={bulkState.active} bulkLabel={bulkState.label} bulkProgress={bulkState.progress} onSelectAll={onSelectAllVisible} onClearSelection={onClearSelection} onSelectHighPriority={onSelectHighPriority} onSelectDueSoon={onSelectDueSoon} onBulkStatusChange={onBulkStatusChange} onBulkAssign={onBulkAssign} onBulkDueDate={onBulkDueDate} onBulkDelete={onBulkDelete}/>) : null}
 
             <CardContent className={cn(TASKS_THEME.content, 'p-0', filters.viewMode === 'list' && TASKS_THEME.contentList)}>
-              {filters.viewMode === 'board' ? (<TaskKanban tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} onRefresh={onRefresh} loadingMore={loadingMore} hasMore={hasMore} onLoadMore={onLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={onClearListFilters} onEmptyCreateTask={onNewTaskClick} workspaceId={workspaceId} userId={userId} userName={userName} userRole={userRole} participants={participants}/>) : (<TaskList tasks={filters.sortedTasks} viewMode={filters.viewMode} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} onRefresh={onRefresh} loadingMore={loadingMore} hasMore={hasMore} onLoadMore={onLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={onClearListFilters} onEmptyCreateTask={onNewTaskClick} selectedTaskIds={selectedTaskIds} onToggleTaskSelection={onToggleTaskSelection} workspaceId={workspaceId} userId={userId} userName={userName} userRole={userRole} participants={participants}/>)}
+              {filters.viewMode === 'board' ? (<TaskBoardErrorBoundary onSwitchToList={() => filters.setViewMode('list')}><TaskKanban tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} onRefresh={onRefresh} loadingMore={loadingMore} hasMore={hasMore} onLoadMore={onLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={onClearListFilters} onEmptyCreateTask={onNewTaskClick} workspaceId={workspaceId} userId={userId} userName={userName} userRole={userRole} participants={participants}/></TaskBoardErrorBoundary>) : (<TaskList tasks={filters.sortedTasks} viewMode={filters.viewMode} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} onRefresh={onRefresh} loadingMore={loadingMore} hasMore={hasMore} onLoadMore={onLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={onClearListFilters} onEmptyCreateTask={onNewTaskClick} selectedTaskIds={selectedTaskIds} onToggleTaskSelection={onToggleTaskSelection} workspaceId={workspaceId} userId={userId} userName={userName} userRole={userRole} participants={participants}/>)}
             </CardContent>
 
             {!initialLoading && !displayError ? (<TaskResultsCount sortedCount={filters.sortedTasks.length} totalCount={tasksCount} loading={loading}/>) : null}

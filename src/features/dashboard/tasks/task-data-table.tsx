@@ -82,7 +82,7 @@ function TaskSelectCell({ row }: CellContext<TaskRecord, unknown>) {
     };
     if (!onSelectToggle)
         return null;
-    return (<div className="flex justify-center" onPointerDown={stopRowActivation}>
+    return (<div className="flex justify-center" onPointerDown={stopRowActivation} onClick={stopRowActivation}>
       <Checkbox checked={selectedTaskIds?.has(task.id) ?? false} onCheckedChange={handleChange} aria-label={`Select ${task.title}`} className="size-4 rounded border-border"/>
     </div>);
 }
