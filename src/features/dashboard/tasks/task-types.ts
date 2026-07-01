@@ -22,17 +22,17 @@ export const SORT_OPTIONS: {
     { value: 'dueDate', label: 'Due date' },
 ];
 export const statusColors: Record<TaskStatus, string> = {
-    todo: 'border-border bg-muted text-muted-foreground shadow-sm',
-    'in-progress': 'border-transparent bg-accent/10 text-primary shadow-sm',
-    review: 'border-transparent bg-accent text-accent-foreground shadow-sm',
-    completed: 'border-transparent bg-accent/10 text-primary shadow-sm',
-    archived: 'border-border bg-background text-muted-foreground shadow-sm',
+    todo: 'border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground shadow-sm',
+    'in-progress': 'border-info/30 bg-info/15 text-info shadow-sm',
+    review: 'border-warning/40 bg-warning/15 text-warning-foreground shadow-sm',
+    completed: 'border-success/30 bg-success/15 text-success shadow-sm',
+    archived: 'border-border bg-muted text-muted-foreground shadow-sm',
 };
 export const statusLaneColors: Record<TaskStatus, string> = {
     todo: 'bg-muted-foreground',
-    'in-progress': 'bg-primary',
-    review: 'bg-accent-foreground',
-    completed: 'bg-primary',
+    'in-progress': 'bg-info',
+    review: 'bg-warning',
+    completed: 'bg-success',
     archived: 'bg-muted-foreground/60',
 };
 export const priorityColors: Record<TaskPriority, string> = {
@@ -42,10 +42,10 @@ export const priorityColors: Record<TaskPriority, string> = {
     urgent: 'border-transparent bg-destructive/10 text-destructive shadow-sm',
 };
 export const taskViewStatusPill: Record<TaskStatus, string> = {
-    todo: 'border-primary/25 bg-primary/10 text-primary',
-    'in-progress': 'border-primary/25 bg-primary/10 text-primary',
-    review: 'border-accent/30 bg-accent/15 text-accent-foreground',
-    completed: 'border-primary/25 bg-primary/10 text-primary',
+    todo: 'border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground',
+    'in-progress': 'border-info/30 bg-info/15 text-info',
+    review: 'border-warning/40 bg-warning/15 text-warning-foreground',
+    completed: 'border-success/30 bg-success/15 text-success',
     archived: 'border-border bg-muted text-muted-foreground',
 };
 export const taskViewPriorityPill: Record<TaskPriority, string> = {
