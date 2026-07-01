@@ -4,7 +4,7 @@ import { GripVertical, ListTodo, LoaderCircle, RefreshCw, TriangleAlert } from '
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { LiveRegion } from '@/shared/ui/live-region';
-import { ScrollArea } from '@/shared/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/shared/ui/scroll-area';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { TaskRecord, TaskStatus } from '@/types/tasks';
@@ -184,8 +184,8 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
     };
     if (initialLoading) {
         const columnSkeletonKeys = ['todo', 'in-progress', 'review', 'completed'] as const;
-        return (<div className="flex gap-4 overflow-hidden px-4 pb-4">
-        {columnSkeletonKeys.map((columnKey) => (<div key={columnKey} className="flex min-h-[min(68vh,560px)] w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 p-3">
+        return (<div className="flex gap-4 overflow-x-auto px-4 pb-4">
+        {columnSkeletonKeys.map((columnKey) => (<div key={columnKey} className="flex min-h-[min(68vh,560px)] w-[min(100%,280px)] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 p-3 sm:w-[280px]">
             <Skeleton className="mb-3 h-8 w-full rounded-lg"/>
             <Skeleton className="mb-3 h-28 w-full rounded-xl"/>
             <Skeleton className="h-28 w-full rounded-xl"/>
@@ -239,9 +239,10 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
       </div>
 
       <ScrollArea className="w-full">
-        <div className="flex w-full gap-4 pb-4 pr-2 min-h-[min(72vh,640px)]">
+        <div className="flex w-max gap-4 pb-4 pr-2 min-h-[min(72vh,640px)]">
           {columns.map((column) => (<KanbanColumn key={column.status} bulkActive={bulkActive} column={column} dragOverStatus={dragOverStatus} draggedTask={draggedTask} handleDragEnd={handleDragEnd} handleDragLeave={handleDragLeave} handleDragOver={handleDragOver} handleDrop={handleDrop} handleDragStart={handleDragStart} keyboardInstructionsId={keyboardInstructionsId} onKeyboardMoveTask={handleKeyboardMoveTask} handleViewTask={handleViewTask} onClone={onClone} onDelete={onDelete} onEdit={onEdit} onQuickStatusChange={onQuickStatusChange} onShare={onShare} onToggleTaskSelection={onToggleTaskSelection} pendingStatusUpdates={pendingStatusUpdates} searchQuery={searchQuery} selectedTaskIds={selectedTaskIds}/>))}
         </div>
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
 
       {hasMore ? (<div className="flex justify-center pt-2">
