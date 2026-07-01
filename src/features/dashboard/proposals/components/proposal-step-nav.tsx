@@ -21,8 +21,8 @@ type ProposalStepNavProps = {
 
 function ProposalStepNavComponent({ steps, currentStep, submitted, onGoToStep }: ProposalStepNavProps) {
     return (
-        <nav aria-label="Proposal steps" className="flex flex-col justify-between gap-y-4">
-            <ol className="flex flex-col gap-y-2">
+        <nav aria-label="Proposal steps" className="flex flex-col gap-3">
+            <ol className="flex flex-col gap-1">
                 {steps.map((step, index) => (
                     <ProposalStepNavItem
                         key={step.id}
@@ -58,14 +58,16 @@ function ProposalStepNavItem({ step, index, submitted, currentStep, onGoToStep }
                 onClick={() => onGoToStep(index)}
                 aria-current={isCurrent ? 'step' : undefined}
                 className={cn(
-                    'group/button inline-flex h-auto w-full shrink-0 cursor-pointer items-center justify-start gap-2.5 rounded p-0 transition-all',
-                    !canNavigate && 'cursor-default opacity-55',
+                    'flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors',
+                    canNavigate && 'hover:bg-muted/40',
+                    isCurrent && 'bg-muted/60',
+                    !canNavigate && 'opacity-50',
                 )}
             >
                 <span
                     className={cn(
-                        'relative flex size-9.5 shrink-0 items-center justify-center rounded-lg transition-colors',
-                        isCurrent && 'bg-primary text-primary-foreground shadow-sm',
+                        'flex size-8 shrink-0 items-center justify-center rounded-md transition-colors',
+                        isCurrent && 'bg-primary text-primary-foreground',
                         isComplete && !isCurrent && 'bg-primary/10 text-primary',
                         !isComplete && !isCurrent && 'bg-muted text-muted-foreground',
                     )}
@@ -76,11 +78,11 @@ function ProposalStepNavItem({ step, index, submitted, currentStep, onGoToStep }
                         <Icon className="size-4" aria-hidden />
                     )}
                 </span>
-                <div className="flex flex-col items-start gap-0.5">
-                    <span className={cn('text-sm font-medium', isCurrent ? 'text-foreground' : 'text-muted-foreground')}>
+                <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className={cn('truncate text-sm font-medium', isCurrent ? 'text-foreground' : 'text-muted-foreground')}>
                         {step.title}
                     </span>
-                    <span className="text-xs font-normal text-muted-foreground">
+                    <span className="truncate text-xs text-muted-foreground">
                         {step.description}
                     </span>
                 </div>

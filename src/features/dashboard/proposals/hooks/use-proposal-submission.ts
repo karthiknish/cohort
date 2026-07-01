@@ -132,7 +132,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         submittedRef.current = submitted;
     }, [submitted]);
     const activeProposalIdForDeck = lastSubmissionSnapshot?.draftId ?? draftId;
-    const artifactUrls = useProposalArtifactUrls(workspaceId, activeProposalIdForDeck ?? null);
+    const artifactUrls = useProposalArtifactUrls(!isPreviewMode ? workspaceId : null, activeProposalIdForDeck ?? null);
     const { pptUrl: deckDownloadUrl } = resolveProposalDeckUrls({
         artifactUrls,
         presentationDeck,
@@ -326,10 +326,12 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 });
             }
             if (isReady) {
-                setFormState(createInitialProposalFormState(), { resetHistory: true });
-                setCurrentStep(0);
-                setDraftId(null);
-                setAutosaveStatus('idle');
+                // Keep form state, draftId, and currentStep intact so users can
+                // edit, regenerate, or browse version history without losing context.
+                // The submitted panel shows because `submitted` is true, not because
+                // the form was reset. Form state is only cleared when the user
+                // explicitly starts a new proposal.
+                setAutosaveStatus('saved');
             }
             // Consolidated single toast: combine PPT + AI plan status into one notification
             // to avoid showing multiple toasts for the same submission.

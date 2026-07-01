@@ -47,7 +47,7 @@ export function ProposalsPageHeroSection({ clientName, workflow, formState, draf
       <ProposalPageActions canManage={canManageProposals} currentFormData={formState} draftId={draftId} isSubmitting={isSubmitting} selectedClientId={selectedClientId} isCreatingDraft={isCreatingDraft} onApplyTemplate={onApplyTemplate} onVersionRestored={onVersionRestored} onStartProposal={onStartProposal}/>
     </DashboardPageHero>);
 }
-export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clientName, workflow, viewState, formState, draftId, selectedClientId, onApplyTemplate, onVersionRestored, onStartProposal, displayedProposals, displayedDraftId, proposalHistoryWorkflow, proposalHistoryCapabilities, proposalsQueryError, deletingProposalId, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, proposalPendingDelete, onDeleteDialogChange, onConfirmDelete, activeDeckStage, onCloseWizard, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, onResumeSubmission, onRecheckDeck, steps, currentStep, autosaveStatus, stepContent, onBack, onNext, onGoToStep, validationMessages, }: {
+export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clientName, workflow, viewState, formState, draftId, selectedClientId, onApplyTemplate, onVersionRestored, onStartProposal, displayedProposals, displayedDraftId, proposalHistoryWorkflow, proposalHistoryCapabilities, proposalsQueryError, deletingProposalId, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, proposalPendingDelete, onDeleteDialogChange, onConfirmDelete, activeDeckStage, onCloseWizard, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, onResumeSubmission, onRegenerate, onRecheckDeck, steps, currentStep, autosaveStatus, stepContent, onBack, onNext, onGoToStep, validationMessages, }: {
     wizardRef: React.RefObject<HTMLDivElement | null>;
     submissionAnnouncement: string;
     clientName: string | null;
@@ -88,6 +88,7 @@ export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clien
     deckDownloadUrl: string | null;
     activeProposalIdForDeck: string | null;
     onResumeSubmission: () => void;
+    onRegenerate: () => void;
     onRecheckDeck: () => void | Promise<void>;
     steps: ProposalStep[];
     currentStep: number;
@@ -121,6 +122,6 @@ export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clien
       <ProposalGenerationOverlay isSubmitting={isSubmitting && !isWizardOpen} isPresentationReady={isPresentationReady && !isWizardOpen}/>
       <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)}/>
 
-      <ProposalBuilderOverlay open={isWizardOpen} onClose={onCloseWizard} isBootstrapping={isBootstrapping} submitted={submitted} isPresentationReady={isPresentationReady} summary={summary} presentationDeck={presentationDeck} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} onResumeSubmission={onResumeSubmission} isSubmitting={isSubmitting} onRecheckDeck={handleRecheckDeck} isRecheckingDeck={isRecheckingDeck} steps={steps} currentStep={currentStep} draftId={draftId} autosaveStatus={autosaveStatus} stepContent={stepContent} onBack={onBack} onNext={onNext} onGoToStep={onGoToStep} isFirstStep={isFirstStep} isLastStep={isLastStep} validationMessages={validationMessages}/>
+      <ProposalBuilderOverlay open={isWizardOpen} onClose={onCloseWizard} isBootstrapping={isBootstrapping} submitted={submitted} isPresentationReady={isPresentationReady} summary={summary} presentationDeck={presentationDeck} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} onResumeSubmission={onResumeSubmission} onRegenerate={onRegenerate} isSubmitting={isSubmitting} onRecheckDeck={handleRecheckDeck} isRecheckingDeck={isRecheckingDeck} steps={steps} currentStep={currentStep} draftId={draftId} autosaveStatus={autosaveStatus} stepContent={stepContent} onBack={onBack} onNext={onNext} onGoToStep={onGoToStep} isFirstStep={isFirstStep} isLastStep={isLastStep} validationMessages={validationMessages}/>
     </div>);
 }

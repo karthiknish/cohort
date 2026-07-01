@@ -9,6 +9,7 @@ import { buildMeetingArtifactFilename, downloadPdfArtifact, downloadTextArtifact
 import { buildMeetingNotesPdfBlob } from '@/lib/meeting-notes-pdf';
 import { cn, getWorkspaceId } from '@/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { SvglPdfIcon } from '@/shared/components/svgl-brand-logo';
 type MeetingArtifactsDownloadProps = {
     className?: string;
     legacyId: string;
@@ -129,7 +130,7 @@ export function MeetingArtifactsDownload({ className, legacyId, meetingTitle, no
     return (<div className={cn('flex flex-wrap gap-2', className)}>
       {hasNotes ? (<>
           <Button type="button" size={compact ? 'sm' : 'default'} variant="outline" onClick={handleDownloadNotesPdf} disabled={downloading !== null}>
-            <Download className="size-4"/>
+            <SvglPdfIcon className="size-4"/>
             {downloading === 'notes-pdf' ? 'Downloading…' : 'Download PDF'}
           </Button>
           {workspaceId ? (<Button type="button" size={compact ? 'sm' : 'default'} variant="ghost" onClick={handleNotesCloudClick} disabled={downloading !== null || !notesArchived}>

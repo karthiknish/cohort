@@ -1,13 +1,10 @@
 'use client';
-import { useMemo } from 'react';
 import { AlertTriangle, ArrowRightLeft, CheckCircle2, LoaderCircle, RefreshCw } from 'lucide-react';
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { getSurfaceStatusLabel, getSurfaceStatusVariant, } from './socials-connection-panel-surface-status';
 import type { SocialsMetaSetupState, SocialsSurfaceStatus } from './socials-state';
-export { SocialsMetaSourceSwitcherCard } from './socials-meta-source-switcher-card';
-export { SocialsSurfaceInventoryCard } from './socials-surface-inventory-card';
 export function SocialsMetaSetupCard(props: {
     setupState: SocialsMetaSetupState;
     selectedSourceLabel: string | null | undefined;
@@ -18,10 +15,8 @@ export function SocialsMetaSetupCard(props: {
     facebookCount: number;
     instagramCount: number;
     onReloadSources: () => void;
-    onRetryDiscovery: () => void;
 }) {
-    const { setupState, selectedSourceLabel, sourceSelectionRequired, loadingSources, facebookStatus, instagramStatus, facebookCount, instagramCount, onReloadSources, onRetryDiscovery, } = props;
-    const retryDiscoveryAction = ({ label: 'Retry discovery', onClick: onRetryDiscovery, icon: RefreshCw });
+    const { setupState, selectedSourceLabel, sourceSelectionRequired, loadingSources, facebookStatus, instagramStatus, facebookCount, instagramCount, onReloadSources, } = props;
     return (<div className="rounded-2xl border border-muted/40 bg-muted/[0.03] p-4 sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
@@ -42,10 +37,6 @@ export function SocialsMetaSetupCard(props: {
             {loadingSources ? <LoaderCircle className="mr-2 size-4 animate-spin"/> : <RefreshCw className="mr-2 size-4"/>}
             Reload sources
           </Button>
-          {!sourceSelectionRequired ? (<Button type="button" variant="outline" size="sm" onClick={onRetryDiscovery}>
-              <RefreshCw className="mr-2 size-4"/>
-              Retry discovery
-            </Button>) : null}
         </div>
       </div>
 

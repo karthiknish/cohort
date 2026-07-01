@@ -10,7 +10,7 @@ import {
     HEADER_H, BODY_TOP, BODY_H,
 } from './constants';
 import { addSlideHeader, addSlideFooter } from './shared-elements';
-import { COHORTS_LOGO_WHITE_BASE64 } from './logo-data';
+
 
 // ─── Services table slide ─────────────────────────────────────────
 
@@ -159,13 +159,8 @@ export function addClosingSlide(pptx: pptxgen, formData: ProposalFormData, image
         x: 0, y: SLIDE_H - 0.6, w: SLIDE_W, h: 0.6,
         fill: { color: COLORS.primaryDark },
     });
-    // Cohorts white logo — bottom left
-    slide.addImage({
-        data: COHORTS_LOGO_WHITE_BASE64,
-        x: 0.8, y: SLIDE_H - 0.55, w: 1.6, h: 0.45,
-    });
     slide.addText(`Prepared for ${companyName}`, {
-        x: 3.0, y: SLIDE_H - 0.6, w: 9, h: 0.6,
+        x: 0.9, y: SLIDE_H - 0.6, w: 11, h: 0.6,
         fontSize: 11, color: COLORS.muted,
         fontFace: FONT, align: 'center', valign: 'middle',
     });

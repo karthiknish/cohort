@@ -20,6 +20,7 @@ interface ProposalSubmittedPanelProps {
     activeProposalIdForDeck: string | null;
     canResumeSubmission: boolean;
     onResumeSubmission: () => void;
+    onRegenerate: () => void;
     onRecheckDeck?: () => Promise<void>;
     isRecheckingDeck?: boolean;
     isSubmitting: boolean;
@@ -32,6 +33,7 @@ export function ProposalSubmittedPanel({
     activeProposalIdForDeck,
     canResumeSubmission,
     onResumeSubmission,
+    onRegenerate,
     onRecheckDeck,
     isRecheckingDeck = false,
     isSubmitting,
@@ -100,6 +102,10 @@ Timeline: ${summary.timelines.startTime}
                                 Edit Responses
                             </Button>
                         ) : null}
+                        <Button size="lg" variant="outline" className="h-12 rounded-xl px-6 text-sm font-semibold" onClick={onRegenerate} disabled={isSubmitting}>
+                            {isSubmitting ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}
+                            Regenerate
+                        </Button>
                     </div>
                 </div>
             </m.div>
@@ -173,7 +179,7 @@ Timeline: ${summary.timelines.startTime}
                                     <div className="space-y-3">
                                         {downloadUrl ? (
                                             <Button variant="outline" className="h-12 w-full justify-start rounded-xl" asChild>
-                                                <a href={downloadUrl} download="proposal-deck.pptx" target="_blank" rel="noreferrer">
+                                                <a href={downloadUrl} download="proposal-deck.pptx" rel="noreferrer">
                                                     <Download className="mr-3 size-4 text-muted-foreground" />
                                                     <span className="text-sm font-semibold">Download PowerPoint</span>
                                                 </a>

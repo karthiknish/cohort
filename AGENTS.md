@@ -34,3 +34,10 @@
 - Settings UI lives at `/settings?tab=notifications` (`NotificationPreferencesPanel` + category matrix).
 - In-app feed filters by `categories.*.inApp` and `pauseAll` in `convex/notifications.ts` (read-time, not at create).
 - Email gating uses the same V2 model in `brevo.ts`, `alerts/processor.ts`, and collaboration webhook paths.
+
+## PPTX slide generation
+
+- **Never repeat images across slides.** `prefetchSlideImages` in `src/services/pexels-images.ts` performs cross-topic deduplication via `usedSourceUrls` — every slide must receive a unique photo. When adding new slide layouts or image sources, thread images through the same dedup pool; do not call `getImageForTopic` directly from individual slide functions.
+- **Side images are the most visible repetition risk.** Content slides that place an image on the right column (`addContentSlide` layout 0) or as a full-bleed background (layout 1) must use the pre-assigned image from `slideImages[imageIdx]`, not a freshly fetched one.
+- **No Cohorts logo on slide footers.** The closing slide footer should show "Prepared for {client}" text only — no brand logo image. The title slide may keep the logo in the top-right corner.
+- Slide structure: title → TOC → section dividers + content slides → services/budget/ROI → closing. Image topics are built in `index.ts` in the same order as slides are added.

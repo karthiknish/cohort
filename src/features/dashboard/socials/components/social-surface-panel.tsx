@@ -17,6 +17,7 @@ type SocialSurfacePanelProps = {
     kpis: SocialKpi[];
     overview: SocialOverview | null;
     overviewLoading: boolean;
+    overviewError?: string | null;
     connected: boolean;
     setupComplete: boolean;
     hasInstagramBinding?: boolean;
@@ -121,14 +122,21 @@ function SocialInsightCards({ insights }: {
         })}
     </div>);
 }
-export function SocialSurfacePanel({ surface, kpis, overview, overviewLoading, connected, setupComplete, hasInstagramBinding = true, hasData, onRequestSync, }: SocialSurfacePanelProps) {
+export function SocialSurfacePanel({ surface, kpis, overview, overviewLoading, overviewError, connected, setupComplete, hasInstagramBinding = true, hasData, onRequestSync, }: SocialSurfacePanelProps) {
     const copy = SURFACE_COPY[surface];
     const SurfaceIcon = copy.icon;
     const handleScrollToConnections = () => {
         document.getElementById('social-connections-panel')?.scrollIntoView({ behavior: 'smooth' });
     };
-    const showMetrics = connected && setupComplete && hasData && (surface !== 'instagram' || hasInstagramBinding);
+    const showMetrics = connected && setupComplete && hasData && !overviewError && (surface !== 'instagram' || hasInstagramBinding);
     const emptyState = (() => {
+        if (overviewError && connected && setupComplete) {
+            return {
+                title: 'Unable to load metrics',
+                description: overviewError,
+                action: { label: 'Try again', onClick: onRequestSync },
+            };
+        }
         if (!connected) {
             return {
                 title: `${copy.title} not connected`,

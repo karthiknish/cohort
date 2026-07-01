@@ -208,6 +208,8 @@ export async function getImagesForTopic(topic: string, count: number): Promise<P
  *
  * Each topic fetches multiple images. When the same topic appears multiple times
  * (e.g. two "strategy" slides), each slide gets a different image from the pool.
+ * Cross-topic deduplication ensures the same photo is never used on two different
+ * slides, even when different topics return overlapping search results.
  * Returns an array of PexelsImage (or null) in the same order as the input topics.
  */
 export async function prefetchSlideImages(topics: string[]): Promise<(PexelsImage | null)[]> {
@@ -217,23 +219,33 @@ export async function prefetchSlideImages(topics: string[]): Promise<(PexelsImag
         topicCounts.set(topic, (topicCounts.get(topic) ?? 0) + 1);
     }
 
-    // Fetch enough unique images per topic
+    // Fetch enough unique images per topic — request extra to allow for cross-topic dedup
     const uniqueTopics = [...new Set(topics)];
     const topicImagePools = new Map<string, PexelsImage[]>();
     await Promise.all(
         uniqueTopics.map(async (topic) => {
             const needed = topicCounts.get(topic) ?? 1;
-            const images = await getImagesForTopic(topic, needed);
+            // Over-fetch by 50% so we have spares after cross-topic dedup removes duplicates
+            const images = await getImagesForTopic(topic, Math.max(needed + 2, Math.ceil(needed * 1.5)));
             topicImagePools.set(topic, images);
         }),
     );
 
-    // Assign images to each topic occurrence in order, cycling through the pool
+    // Assign images to each topic occurrence in order, skipping any image already used
+    // by a different topic. This guarantees no photo appears on more than one slide.
+    const usedSourceUrls = new Set<string>();
     const topicCursors = new Map<string, number>();
     return topics.map((topic) => {
         const pool = topicImagePools.get(topic) ?? [];
-        const cursor = topicCursors.get(topic) ?? 0;
-        const image = pool[cursor % Math.max(pool.length, 1)] ?? null;
+        let cursor = topicCursors.get(topic) ?? 0;
+        // Advance past any images already claimed by another topic
+        while (cursor < pool.length && usedSourceUrls.has(pool[cursor]!.sourceUrl)) {
+            cursor++;
+        }
+        const image = cursor < pool.length ? pool[cursor]! : null;
+        if (image) {
+            usedSourceUrls.add(image.sourceUrl);
+        }
         topicCursors.set(topic, cursor + 1);
         return image;
     });

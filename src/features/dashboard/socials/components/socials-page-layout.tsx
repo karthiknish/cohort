@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { LineChart, Settings2 } from 'lucide-react';
 import { SvglBrandLogo } from '@/shared/components/svgl-brand-logo';
 import { cn } from '@/lib/utils';
@@ -15,8 +15,11 @@ type SocialsPageLayoutProps = {
     performance: ReactNode;
 };
 export function SocialsPageLayout({ showSetup, setupComplete, connected, setup, performance, }: SocialsPageLayoutProps) {
-    const defaultMobileTab = connected && setupComplete ? 'performance' : 'setup';
-    const [mobileTab, setMobileTab] = useState(defaultMobileTab);
+    const desiredTab = connected && setupComplete ? 'performance' : 'setup';
+    const [mobileTab, setMobileTab] = useState(desiredTab);
+    useEffect(() => {
+        setMobileTab(desiredTab);
+    }, [desiredTab]);
     const setupSection = <SocialsSetupSection>{setup}</SocialsSetupSection>;
     const performanceSection = <SocialsPerformanceSection>{performance}</SocialsPerformanceSection>;
     if (!showSetup) {

@@ -12,8 +12,9 @@ type ProposalBuilderJourneyBarProps = {
     activeProposalIdForDeck: string | null;
     deckDownloadUrl: string | null;
     autosaveStatus: 'idle' | 'saving' | 'saved' | 'error';
+    totalSteps: number;
 };
-export function ProposalBuilderJourneyBar({ isSubmitting, isRecheckingDeck, submitted, isPresentationReady, activeProposalIdForDeck, deckDownloadUrl, autosaveStatus, }: ProposalBuilderJourneyBarProps) {
+export function ProposalBuilderJourneyBar({ isSubmitting, isRecheckingDeck, submitted, isPresentationReady, activeProposalIdForDeck, deckDownloadUrl, autosaveStatus, totalSteps, }: ProposalBuilderJourneyBarProps) {
     const deckHref = activeProposalIdForDeck
         ? withPreviewModeSearchParamIfEnabled(`/dashboard/proposals/${activeProposalIdForDeck}/deck`, isPreviewModeEnabled())
         : null;
@@ -30,7 +31,7 @@ export function ProposalBuilderJourneyBar({ isSubmitting, isRecheckingDeck, subm
             </p>
           </div>
         </div>
-        <span className="text-xs font-medium text-muted-foreground">Step 5 of 5</span>
+        <span className="text-xs font-medium text-muted-foreground">Step {totalSteps} of {totalSteps}</span>
       </output>);
     }
     if (submitted && isPresentationReady) {
@@ -50,7 +51,7 @@ export function ProposalBuilderJourneyBar({ isSubmitting, isRecheckingDeck, subm
               </Link>
             </Button>) : null}
           {deckDownloadUrl ? (<Button size="sm" variant="outline" asChild>
-              <a href={deckDownloadUrl} download="proposal-deck.pptx" target="_blank" rel="noopener noreferrer">
+              <a href={deckDownloadUrl} download="proposal-deck.pptx" rel="noopener noreferrer">
                 Download
               </a>
             </Button>) : null}

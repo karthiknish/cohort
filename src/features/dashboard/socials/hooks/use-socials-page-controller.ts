@@ -18,6 +18,7 @@ export type SocialsPageData = {
     instagramKpis: SocialKpi[];
     dateRange: DateRange;
     setDateRange: (range: DateRange) => void;
+    overviewError: string | null;
 };
 export function useSocialsPageController(): SocialsPageData {
     const { selectedClient } = useClientContext();
@@ -35,5 +36,6 @@ export function useSocialsPageController(): SocialsPageData {
         instagramKpis,
         dateRange: metrics.dateRange,
         setDateRange: metrics.setDateRange,
+        overviewError: metrics.overviewError,
     };
 }

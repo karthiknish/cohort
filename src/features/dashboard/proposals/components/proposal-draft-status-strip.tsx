@@ -17,7 +17,7 @@ export function ProposalDraftStatusStrip({ autosaveLabel, autosaveStatus, draftI
         <span>{autosaveLabel}</span>
       </div>
       <span className="font-mono text-[10px] tracking-tight text-muted-foreground/80">
-        Draft #{draftId?.slice(0, 8).toUpperCase() ?? 'NEW'}
+        {draftId ? `Draft · ${draftId.slice(0, 8).toUpperCase()}` : 'New draft'}
       </span>
     </div>);
 }

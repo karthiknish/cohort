@@ -7,6 +7,7 @@ import { ViewTransition } from '@/shared/ui/view-transition';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';
+import { SvglPdfIcon } from '@/shared/components/svgl-brand-logo';
 import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals';
 import { mergeProposalForm } from '@/lib/proposals';
 import { useAuth } from '@/shared/contexts/auth-context';
@@ -64,7 +65,7 @@ export default function ProposalDeckPage() {
             presentationDeck: (proposalRow.presentationDeck ?? null) as ProposalPresentationDeck | null,
         };
     })();
-    const artifactUrls = useProposalArtifactUrls(workspaceId, proposalId ?? null);
+    const artifactUrls = useProposalArtifactUrls(!isPreviewMode ? workspaceId : null, proposalId ?? null);
     const { pdfUrl: pdfViewerUrl, pptUrl: pptxViewerUrl } = resolveProposalDeckUrls({
         artifactUrls,
         pdfUrl: proposal?.pdfUrl,
@@ -147,7 +148,7 @@ export default function ProposalDeckPage() {
                                     {pdfViewerUrl ? (
                                         <Button variant="outline" asChild>
                                             <a href={pdfViewerUrl} download={`${proposalDisplayName}.pdf`} target="_blank" rel="noreferrer">
-                                                <Download className="mr-2 size-4" />
+                                                <SvglPdfIcon className="mr-2 size-4" />
                                                 Download PDF
                                             </a>
                                         </Button>

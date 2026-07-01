@@ -131,6 +131,7 @@ export function ProposalBuilderOverlay(props: {
     activeProposalIdForDeck: string | null;
     canResumeSubmission: boolean;
     onResumeSubmission: () => void;
+    onRegenerate: () => void;
     isSubmitting: boolean;
     onRecheckDeck: () => Promise<void>;
     isRecheckingDeck: boolean;
@@ -146,7 +147,7 @@ export function ProposalBuilderOverlay(props: {
     isLastStep: boolean;
     validationMessages: string[];
 }) {
-    const { open, onClose, isBootstrapping, submitted, isPresentationReady, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, canResumeSubmission, onResumeSubmission, isSubmitting, onRecheckDeck, isRecheckingDeck, steps, currentStep, draftId, autosaveStatus, stepContent, onBack, onNext, onGoToStep, isFirstStep, isLastStep, validationMessages, } = props;
+    const { open, onClose, isBootstrapping, submitted, isPresentationReady, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, canResumeSubmission, onResumeSubmission, onRegenerate, isSubmitting, onRecheckDeck, isRecheckingDeck, steps, currentStep, draftId, autosaveStatus, stepContent, onBack, onNext, onGoToStep, isFirstStep, isLastStep, validationMessages, } = props;
     const isMobile = useIsMobile();
     useEffect(() => {
         if (!open) {
@@ -187,39 +188,41 @@ export function ProposalBuilderOverlay(props: {
             <Kbd className="hidden sm:inline">Esc</Kbd>
           </Button>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:px-6 sm:py-5">
-          <div className="mb-4">
-            <ProposalBuilderJourneyBar isSubmitting={isSubmitting} isRecheckingDeck={isRecheckingDeck} submitted={submitted} isPresentationReady={isPresentationReady} activeProposalIdForDeck={activeProposalIdForDeck} deckDownloadUrl={deckDownloadUrl} autosaveStatus={autosaveStatus}/>
-          </div>
-          <div className="flex min-h-0 flex-col gap-4">
-            {isBootstrapping ? (<Card className="border-border/60 bg-background shadow-sm">
-                <CardContent className="p-6">
-                  <DashboardSkeleton showStepIndicator/>
-                </CardContent>
-              </Card>) : submitted ? (<Card className="border-border/60 bg-background shadow-sm">
-                <CardContent className="p-6">
-                  <ProposalSubmittedPanel summary={summary} presentationDeck={presentationDeck as Parameters<typeof ProposalSubmittedPanel>[0]['presentationDeck']} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} onResumeSubmission={onResumeSubmission} isSubmitting={isSubmitting} onRecheckDeck={onRecheckDeck} isRecheckingDeck={isRecheckingDeck}/>
-                </CardContent>
-              </Card>) : (<Card className="flex min-h-0 flex-col overflow-hidden border-border/60 bg-background p-0 shadow-sm md:grid md:grid-cols-4">
-                <aside className="hidden min-h-0 flex-col border-b border-border/50 p-6 md:flex md:border-r md:border-b-0">
-                  <p className="mb-4 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Sections
-                  </p>
-                  <ProposalStepNav steps={steps} currentStep={currentStep} submitted={submitted} onGoToStep={onGoToStep}/>
-                </aside>
-                <div className="flex min-h-0 flex-col gap-4 p-4 md:col-span-3 sm:p-6">
-                  <div className="lg:hidden">
-                    <ProposalStepIndicator steps={steps} currentStep={currentStep} submitted={submitted}/>
-                  </div>
-                  <ProposalDraftPanel draftId={draftId} autosaveStatus={autosaveStatus} stepContent={stepContent} onBack={onBack} onNext={onNext} isFirstStep={isFirstStep} isLastStep={isLastStep} currentStep={currentStep} totalSteps={steps.length} isSubmitting={isSubmitting} validationMessages={validationMessages}/>
-                </div>
-              </Card>)}
-          </div>
+        <div className="mb-4 shrink-0 p-4 sm:px-6 sm:pt-5">
+          <ProposalBuilderJourneyBar isSubmitting={isSubmitting} isRecheckingDeck={isRecheckingDeck} submitted={submitted} isPresentationReady={isPresentationReady} activeProposalIdForDeck={activeProposalIdForDeck} deckDownloadUrl={deckDownloadUrl} autosaveStatus={autosaveStatus} totalSteps={steps.length}/>
         </div>
+        {isBootstrapping ? (<div className="min-h-0 flex-1 overflow-y-auto p-4 sm:px-6">
+          <Card className="border-border/60 bg-background shadow-sm">
+            <CardContent className="p-6">
+              <DashboardSkeleton showStepIndicator/>
+            </CardContent>
+          </Card>
+        </div>) : submitted ? (<div className="min-h-0 flex-1 overflow-y-auto p-4 sm:px-6">
+          <Card className="border-border/60 bg-background shadow-sm">
+            <CardContent className="p-6">
+              <ProposalSubmittedPanel summary={summary} presentationDeck={presentationDeck as Parameters<typeof ProposalSubmittedPanel>[0]['presentationDeck']} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} onResumeSubmission={onResumeSubmission} onRegenerate={onRegenerate} isSubmitting={isSubmitting} onRecheckDeck={onRecheckDeck} isRecheckingDeck={isRecheckingDeck}/>
+            </CardContent>
+          </Card>
+        </div>) : (<div className="flex min-h-0 flex-1 overflow-hidden border-t border-border/50">
+          <aside className="hidden min-h-0 w-64 shrink-0 flex-col overflow-y-auto border-r border-border/50 p-5 md:flex">
+            <p className="mb-4 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Sections
+            </p>
+            <ProposalStepNav steps={steps} currentStep={currentStep} submitted={submitted} onGoToStep={onGoToStep}/>
+          </aside>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="shrink-0 border-b border-border/50 px-4 py-3 lg:hidden">
+              <ProposalStepIndicator steps={steps} currentStep={currentStep} submitted={submitted}/>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
+              <ProposalDraftPanel draftId={draftId} autosaveStatus={autosaveStatus} stepContent={stepContent} onBack={onBack} onNext={onNext} isFirstStep={isFirstStep} isLastStep={isLastStep} currentStep={currentStep} totalSteps={steps.length} isSubmitting={isSubmitting} validationMessages={validationMessages}/>
+            </div>
+          </div>
+        </div>)}
     </div>);
     if (isMobile) {
         return (<Drawer open={open} onOpenChange={handleDrawerOpenChange} direction="right">
-        <DrawerContent className="inset-y-0 left-auto mt-0 h-full max-h-none w-full max-w-none rounded-none border-0 data-[vaul-drawer-direction=right]:w-full">
+        <DrawerContent className="inset-y-0 left-auto mt-0 flex h-full max-h-none w-full max-w-none flex-col rounded-none border-0 data-[vaul-drawer-direction=right]:w-full">
           {builderBody}
         </DrawerContent>
       </Drawer>);
@@ -250,6 +253,7 @@ export function ProposalsPageOverlays(props: {
     activeProposalIdForDeck: string | null;
     canResumeSubmission: boolean;
     onResumeSubmission: () => void;
+    onRegenerate: () => void;
     isSubmitting: boolean;
     onRecheckDeck: () => Promise<void>;
     isRecheckingDeck: boolean;
@@ -273,11 +277,11 @@ export function ProposalsPageOverlays(props: {
     deckProgressStage: DeckProgressStage | null;
     showDeckProgressOverlay: boolean;
 }) {
-    const { isWizardOpen, onCloseWizard, isBootstrapping, submitted, isPresentationReady, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, canResumeSubmission, onResumeSubmission, isSubmitting, onRecheckDeck, isRecheckingDeck, steps, currentStep, draftId, autosaveStatus, stepContent, onBack, onNext, onGoToStep, isFirstStep, isLastStep, validationMessages, isDeleteDialogOpen, deletingProposalId, proposalName, onDeleteDialogChange, onConfirmDelete, showGenerationOverlay, deckProgressStage, showDeckProgressOverlay, } = props;
+    const { isWizardOpen, onCloseWizard, isBootstrapping, submitted, isPresentationReady, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, canResumeSubmission, onResumeSubmission, onRegenerate, isSubmitting, onRecheckDeck, isRecheckingDeck, steps, currentStep, draftId, autosaveStatus, stepContent, onBack, onNext, onGoToStep, isFirstStep, isLastStep, validationMessages, isDeleteDialogOpen, deletingProposalId, proposalName, onDeleteDialogChange, onConfirmDelete, showGenerationOverlay, deckProgressStage, showDeckProgressOverlay, } = props;
     return (<>
       <ProposalDeleteDialog open={isDeleteDialogOpen} isDeleting={Boolean(deletingProposalId)} proposalName={proposalName} onOpenChange={onDeleteDialogChange} onConfirm={onConfirmDelete}/>
       <ProposalGenerationOverlay isSubmitting={showGenerationOverlay} isPresentationReady={isPresentationReady && !isWizardOpen}/>
       <DeckProgressOverlay stage={deckProgressStage ?? ('polling' satisfies DeckProgressStage)} isVisible={showDeckProgressOverlay}/>
-      <ProposalBuilderOverlay open={isWizardOpen} onClose={onCloseWizard} isBootstrapping={isBootstrapping} submitted={submitted} isPresentationReady={isPresentationReady} summary={summary} presentationDeck={presentationDeck} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} onResumeSubmission={onResumeSubmission} isSubmitting={isSubmitting} onRecheckDeck={onRecheckDeck} isRecheckingDeck={isRecheckingDeck} steps={steps} currentStep={currentStep} draftId={draftId} autosaveStatus={autosaveStatus} stepContent={stepContent} onBack={onBack} onNext={onNext} onGoToStep={onGoToStep} isFirstStep={isFirstStep} isLastStep={isLastStep} validationMessages={validationMessages}/>
+      <ProposalBuilderOverlay open={isWizardOpen} onClose={onCloseWizard} isBootstrapping={isBootstrapping} submitted={submitted} isPresentationReady={isPresentationReady} summary={summary} presentationDeck={presentationDeck} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} onResumeSubmission={onResumeSubmission} onRegenerate={onRegenerate} isSubmitting={isSubmitting} onRecheckDeck={onRecheckDeck} isRecheckingDeck={isRecheckingDeck} steps={steps} currentStep={currentStep} draftId={draftId} autosaveStatus={autosaveStatus} stepContent={stepContent} onBack={onBack} onNext={onNext} onGoToStep={onGoToStep} isFirstStep={isFirstStep} isLastStep={isLastStep} validationMessages={validationMessages}/>
     </>);
 }

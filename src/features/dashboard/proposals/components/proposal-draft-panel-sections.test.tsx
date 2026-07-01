@@ -6,7 +6,7 @@ describe('proposal draft panel sections', () => {
     it('renders the autosave status strip', () => {
         const markup = renderToStaticMarkup(<ProposalDraftStatusStrip autosaveLabel="All changes saved" autosaveStatus="saved" draftId="draft-12345678"/>);
         expect(markup).toContain('All changes saved');
-        expect(markup).toContain('Draft #DRAFT-12');
+        expect(markup).toContain('Draft · DRAFT-12');
     });
     it('renders the content shell and footer actions', () => {
         const markup = renderToStaticMarkup(<>

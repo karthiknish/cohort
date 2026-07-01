@@ -18,7 +18,7 @@ import { SocialsPageLoadingFallback } from './components/socials-page-loading-fa
 import { useSocialsPageController } from './hooks/use-socials-page-controller';
 export default function SocialsPage() {
     const { isPreviewMode } = usePreview();
-    const { selectedClient, connections, setup, metrics, facebookKpis, instagramKpis, dateRange, setDateRange, } = useSocialsPageController();
+    const { selectedClient, connections, setup, metrics, facebookKpis, instagramKpis, dateRange, setDateRange, overviewError, } = useSocialsPageController();
     const surfaceTab = usePersistedTab({
         defaultValue: 'facebook',
         allowedValues: ['facebook', 'instagram'] as const,
@@ -47,10 +47,10 @@ export default function SocialsPage() {
     const instagramHasData = (metrics.instagramOverview?.rowCount ?? 0) > 0;
     const setupSection = (<FadeIn>
     <div className="space-y-4">
-      <SocialsConnectionPanel panelId="social-connections-panel" selectedClientName={selectedClient?.name ?? null} connected={connected} setupComplete={setupComplete} accountName={connections.status?.facebookPageName ?? connections.status?.accountName} lastSyncedAtMs={connections.status?.lastSyncedAtMs} lastSyncStatus={connections.status?.lastSyncStatus} oauthPending={connections.oauthPending} syncPending={connections.syncPending} connectionError={connections.connectionError} onConnectMeta={connections.handleConnectMeta} onDisconnect={connections.handleDisconnect} onRequestSync={handleRequestSync}/>
+      <SocialsConnectionPanel panelId="social-connections-panel" selectedClientName={selectedClient?.name ?? null} connected={connected} setupComplete={setupComplete} accountName={connections.status?.facebookPageName ?? connections.status?.accountName} lastSyncedAtMs={connections.status?.lastSyncedAtMs} lastSyncStatus={connections.status?.lastSyncStatus} oauthPending={connections.oauthPending} syncPending={connections.syncPending} connectionError={connections.connectionError} statusQueryError={connections.statusQueryError} onConnectMeta={connections.handleConnectMeta} onDisconnect={connections.handleDisconnect} onRequestSync={handleRequestSync}/>
 
       {connected ? (<div className={cn('space-y-5', DASHBOARD_THEME.cards.base, 'rounded-2xl border border-muted/50 bg-card/80 p-5 shadow-sm backdrop-blur-sm sm:p-6')}>
-          <SocialsMetaSetupCard setupState={setup.setupState} selectedSourceLabel={setup.selectedPageLabel} sourceSelectionRequired={!setupComplete} loadingSources={setup.pagesLoading} facebookStatus={setup.facebookStatus} instagramStatus={setup.instagramStatus} facebookCount={setup.facebookCount} instagramCount={setup.instagramCount} onReloadSources={handleReloadSources} onRetryDiscovery={handleReloadSources}/>
+          <SocialsMetaSetupCard setupState={setup.setupState} selectedSourceLabel={setup.selectedPageLabel} sourceSelectionRequired={!setupComplete} loadingSources={setup.pagesLoading} facebookStatus={setup.facebookStatus} instagramStatus={setup.instagramStatus} facebookCount={setup.facebookCount} instagramCount={setup.instagramCount} onReloadSources={handleReloadSources}/>
           <SocialsPagePicker pages={setup.pages} selectedPageId={setup.selectedPageId} loading={setup.pagesLoading} confirming={setup.confirmingPage} error={setup.pagesError} setupComplete={setupComplete} instagramBusinessName={connections.status?.instagramBusinessName} onSelectPage={setup.setSelectedPageId} onConfirm={handleConfirmPage} onReload={handleReloadSources}/>
         </div>) : null}
     </div>
@@ -62,11 +62,11 @@ export default function SocialsPage() {
       </div>
 
       <TabsContent value="facebook" className="mt-0 focus-visible:outline-none">
-        <SocialSurfacePanel surface="facebook" kpis={facebookKpis} overview={metrics.facebookOverview} overviewLoading={metrics.overviewLoading} connected={connected || isPreviewMode} setupComplete={setupComplete || isPreviewMode} hasData={facebookHasData} onRequestSync={handleRequestSync}/>
+        <SocialSurfacePanel surface="facebook" kpis={facebookKpis} overview={metrics.facebookOverview} overviewLoading={metrics.overviewLoading} overviewError={overviewError} connected={connected || isPreviewMode} setupComplete={setupComplete || isPreviewMode} hasData={facebookHasData} onRequestSync={handleRequestSync}/>
       </TabsContent>
 
       <TabsContent value="instagram" className="mt-0 focus-visible:outline-none">
-        <SocialSurfacePanel surface="instagram" kpis={instagramKpis} overview={metrics.instagramOverview} overviewLoading={metrics.overviewLoading} connected={connected || isPreviewMode} setupComplete={setupComplete || isPreviewMode} hasInstagramBinding={Boolean(connections.status?.instagramBusinessId) || isPreviewMode} hasData={instagramHasData} onRequestSync={handleRequestSync}/>
+        <SocialSurfacePanel surface="instagram" kpis={instagramKpis} overview={metrics.instagramOverview} overviewLoading={metrics.overviewLoading} overviewError={overviewError} connected={connected || isPreviewMode} setupComplete={setupComplete || isPreviewMode} hasInstagramBinding={Boolean(connections.status?.instagramBusinessId) || isPreviewMode} hasData={instagramHasData} onRequestSync={handleRequestSync}/>
       </TabsContent>
     </Tabs>
     </FadeIn>);

@@ -1,10 +1,11 @@
 'use client';
 import { Link } from '@/shared/ui/link';
 import { AlertCircle, CheckCircle2, Circle, LoaderCircle, RefreshCw, Shield, Unplug, } from 'lucide-react';
-import { useCallback, useMemo } from 'react';
+import { useState } from 'react';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent } from '@/shared/ui/card';
+import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
 import { DASHBOARD_THEME, getBadgeClasses, getButtonClasses } from '@/lib/dashboard-theme';
 import { EN_US_DATETIME_MEDIUM_FORMATTER } from '@/lib/intl/formatters';
 import { SvglBrandLogo } from '@/shared/components/svgl-brand-logo';
@@ -20,6 +21,7 @@ type SocialsConnectionPanelProps = {
     oauthPending: boolean;
     syncPending: boolean;
     connectionError: string | null;
+    statusQueryError?: string | null;
     onConnectMeta: () => Promise<void>;
     onDisconnect: () => Promise<void>;
     onRequestSync: () => void;
@@ -78,12 +80,23 @@ function SetupStepper({ connected, setupComplete, hasSynced, }: {
         })}
     </ol>);
 }
-export function SocialsConnectionPanel({ panelId, selectedClientName, connected, setupComplete, accountName, lastSyncedAtMs, lastSyncStatus, oauthPending, syncPending, connectionError, onConnectMeta, onDisconnect, onRequestSync, }: SocialsConnectionPanelProps) {
+export function SocialsConnectionPanel({ panelId, selectedClientName, connected, setupComplete, accountName, lastSyncedAtMs, lastSyncStatus, oauthPending, syncPending, connectionError, statusQueryError, onConnectMeta, onDisconnect, onRequestSync, }: SocialsConnectionPanelProps) {
+    const [disconnectOpen, setDisconnectOpen] = useState(false);
+    const [disconnecting, setDisconnecting] = useState(false);
     const handleConnectMeta = () => {
         void onConnectMeta();
     };
-    const handleDisconnect = () => {
-        void onDisconnect();
+    const handleDisconnectClick = () => {
+        setDisconnectOpen(true);
+    };
+    const handleDisconnectConfirm = async () => {
+        setDisconnecting(true);
+        try {
+            await onDisconnect();
+        } finally {
+            setDisconnecting(false);
+            setDisconnectOpen(false);
+        }
     };
     const hasSynced = Boolean(lastSyncedAtMs);
     const syncLabel = (() => {
@@ -147,6 +160,11 @@ export function SocialsConnectionPanel({ panelId, selectedClientName, connected,
               <span>{connectionError}</span>
             </div>) : null}
 
+          {statusQueryError && !connectionError ? (<div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden/>
+              <span>{statusQueryError}</span>
+            </div>) : null}
+
           {connected && !setupComplete ? (<div className="flex items-start gap-2 rounded-xl border border-warning/20 bg-warning/5 px-3 py-2.5 text-sm text-foreground">
               <AlertCircle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden/>
               <p>
@@ -160,7 +178,7 @@ export function SocialsConnectionPanel({ panelId, selectedClientName, connected,
                 <RefreshCw className={cn('mr-2 size-4', syncPending && 'animate-spin')} aria-hidden/>
               Sync now
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={handleDisconnect} disabled={oauthPending} className={cn(getButtonClasses('outline'), 'text-destructive hover:bg-destructive/5 hover:text-destructive')}>
+            <Button type="button" variant="outline" size="sm" onClick={handleDisconnectClick} disabled={oauthPending} className={cn(getButtonClasses('outline'), 'text-destructive hover:bg-destructive/5 hover:text-destructive')}>
                 <Unplug className="mr-2 size-4" aria-hidden/>
                 Disconnect
             </Button>
@@ -172,5 +190,16 @@ export function SocialsConnectionPanel({ panelId, selectedClientName, connected,
             </p>)}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={disconnectOpen}
+        onOpenChange={setDisconnectOpen}
+        title="Disconnect Meta social?"
+        description="This removes organic social access for this workspace. Paid ads in Ad Manager are unaffected. You can reconnect at any time."
+        confirmLabel="Disconnect"
+        variant="destructive"
+        isLoading={disconnecting}
+        onConfirm={handleDisconnectConfirm}
+      />
     </div>);
 }
