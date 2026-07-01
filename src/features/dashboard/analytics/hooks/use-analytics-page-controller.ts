@@ -369,6 +369,8 @@ export function useAnalyticsPageController() {
                     ? 'Request timed out while starting Google connection. Check your network and try again.'
                     : undefined,
             });
+        }
+        finally {
             setGaLoading(false);
         }
     };

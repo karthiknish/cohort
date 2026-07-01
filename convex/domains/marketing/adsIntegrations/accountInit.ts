@@ -31,18 +31,30 @@ async function enqueueInitialSyncAndRun(
     timeframeDays: 90,
   })
 
-  await Promise.all([
-    ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+  await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+    workspaceId: args.workspaceId,
+    providerId: args.providerId,
+    clientId: args.clientId,
+    status: 'pending',
+    message: null,
+  })
+
+  // Best-effort inline kick-off of the initial backfill. Any failure is
+  // already recorded on the sync job by processNextQueuedSyncJob (status:
+  // 'error' + message). The cron-driven processAllQueuedJobs will pick up
+  // the queued job on the next tick. We must NOT let this failure propagate
+  // to the caller — the initialization itself (account selection +
+  // credential save) has already succeeded.
+  try {
+    await ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
       workspaceId: args.workspaceId,
-      providerId: args.providerId,
-      clientId: args.clientId,
-      status: 'pending',
-      message: null,
-    }),
-    ctx.runAction(internal.adSyncWorkerActions.processNextQueuedSyncJobInternal, {
-      workspaceId: args.workspaceId,
-    }),
-  ])
+    })
+  } catch (syncError) {
+    console.warn(
+      `[initializeAdAccount] Initial backfill kick-off failed for ${args.providerId}; job remains queued for cron retry.`,
+      syncError,
+    )
+  }
 }
 
 export const initializeAdAccount = action({

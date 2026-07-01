@@ -52,10 +52,10 @@ const handlers = adaptApiHandler(
         context = validateMetaOAuthState(state ?? '')
       } catch (stateError) {
         console.error('[meta.oauth.callback] State validation failed:', stateError)
-        return redirectResponse(`${appUrl}/dashboard/ads?error=invalid_state`)
+        return redirectResponse(`${appUrl}/dashboard/ads?oauth_error=invalid_state&provider=facebook`)
       }
       if (!context.state) {
-        return redirectResponse(`${appUrl}/dashboard/ads?error=invalid_state`)
+        return redirectResponse(`${appUrl}/dashboard/ads?oauth_error=invalid_state&provider=facebook`)
       }
 
       await completeMetaOAuthFlow({

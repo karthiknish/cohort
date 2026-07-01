@@ -41,10 +41,10 @@ const handlers = adaptApiHandler(
         context = validateLinkedInOAuthState(state ?? '')
       } catch (stateError) {
         console.error('[linkedin.oauth.callback] State validation failed:', stateError)
-        return redirectResponse(`${appUrl}/dashboard/ads?error=invalid_state`)
+        return redirectResponse(`${appUrl}/dashboard/ads?oauth_error=invalid_state&provider=linkedin`)
       }
       if (!context.state) {
-        return redirectResponse(`${appUrl}/dashboard/ads?error=invalid_state`)
+        return redirectResponse(`${appUrl}/dashboard/ads?oauth_error=invalid_state&provider=linkedin`)
       }
       await completeLinkedInOAuthFlow({ code, userId: context.state, redirectUri, clientId: context.clientId ?? null })
       let redirectTarget = context.redirect ?? `${appUrl}/dashboard/ads`

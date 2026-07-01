@@ -54,7 +54,7 @@ export const persistIntegrationTokens = mutation({
 
       accountId: args.accountId ?? null,
       accountName: args.accountName ?? null,
-      currency: null as string | null,
+      currency: existing?.currency ?? null,
 
       developerToken: args.developerToken ?? null,
       loginCustomerId: args.loginCustomerId ?? null,
@@ -63,15 +63,15 @@ export const persistIntegrationTokens = mutation({
       accessTokenExpiresAtMs: args.accessTokenExpiresAtMs ?? null,
       refreshTokenExpiresAtMs: args.refreshTokenExpiresAtMs ?? null,
 
-      lastSyncStatus: args.status ?? 'pending',
-      lastSyncMessage: null as string | null,
-      lastSyncedAtMs: null as number | null,
+      lastSyncStatus: args.status ?? existing?.lastSyncStatus ?? 'pending',
+      lastSyncMessage: existing?.lastSyncMessage ?? null,
+      lastSyncedAtMs: existing?.lastSyncedAtMs ?? null,
       lastSyncRequestedAtMs: timestamp,
       linkedAtMs: timestamp,
 
-      autoSyncEnabled: null as boolean | null,
-      syncFrequencyMinutes: null as number | null,
-      scheduledTimeframeDays: null as number | null,
+      autoSyncEnabled: existing?.autoSyncEnabled ?? null,
+      syncFrequencyMinutes: existing?.syncFrequencyMinutes ?? null,
+      scheduledTimeframeDays: existing?.scheduledTimeframeDays ?? null,
 
       createdAt: existing ? existing.createdAt : timestamp,
       updatedAt: timestamp,
