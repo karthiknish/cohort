@@ -19,6 +19,7 @@ import type { ProposalFormData } from '@/lib/proposals';
 import { parseSlideInstructions, parseBudgetAmount } from '../pptx/parsing';
 import { renderBarChart, renderLineChart } from '../chart-images';
 import { prefetchSlideImages, topicFromTitle, type PexelsImage } from '../pexels-images';
+import { COHORTS_LOGO_WHITE_BASE64 } from '../pptx/logo-data';
 import {
     COLORS, PAGE_W, PAGE_H, MARGIN, CONTENT_W,
     HEADER_H, FOOTER_H, BODY_TOP, BODY_BOTTOM, BODY_H, FONT,
@@ -175,6 +176,18 @@ function addTitlePage(doc: jsPDF, formData: ProposalFormData, image: PexelsImage
     }
     // Left accent stripe
     fillRect(doc, 0, 0, 10, PAGE_H, COLORS.secondary);
+
+    // Cohorts white logo — top right corner (600×337 aspect → ~80×45pt)
+    const logoW = 80;
+    const logoH = 45;
+    const logoX = PAGE_W - MARGIN - logoW;
+    const logoY = 24;
+    try {
+        const logoBase64 = COHORTS_LOGO_WHITE_BASE64.replace(/^image\/png;base64,/, '');
+        doc.addImage(logoBase64, 'PNG', logoX, logoY, logoW, logoH, undefined, 'FAST');
+    } catch {
+        // Logo embedding is non-fatal
+    }
 
     // Company name (uppercase, below hero)
     const textStartY = heroH + 50;
