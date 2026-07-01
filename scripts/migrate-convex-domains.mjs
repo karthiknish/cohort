@@ -89,7 +89,6 @@ const DOMAIN_FILES = {
     'proposalArchiveActions.ts',
     'proposalArchives.ts',
     'proposalGeneration.ts',
-    'proposalTemplates.ts',
     'proposalVersions.ts',
     'proposals.ts',
     'proposals.test.ts',

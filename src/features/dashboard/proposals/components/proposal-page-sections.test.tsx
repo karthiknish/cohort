@@ -19,9 +19,6 @@ vi.mock('./proposal-step-nav', () => ({
 vi.mock('./proposal-submitted-panel', () => ({
     ProposalSubmittedPanel: () => <div>ProposalSubmittedPanel</div>,
 }));
-vi.mock('./proposal-template-selector', () => ({
-    ProposalTemplateSelector: () => <div>ProposalTemplateSelector</div>,
-}));
 vi.mock('./proposal-version-history', () => ({
     ProposalVersionHistory: () => <div>ProposalVersionHistory</div>,
 }));

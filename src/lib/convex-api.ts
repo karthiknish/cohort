@@ -276,14 +276,6 @@ export const proposalVersionsApi = {
     restoreToVersion: looseApi.proposalVersions.restoreToVersion,
     countByWorkspace: looseApi.proposalVersions.countByWorkspace,
 };
-export const proposalTemplatesApi = {
-    list: looseApi.proposalTemplates.list,
-    count: looseApi.proposalTemplates.count,
-    getByLegacyId: looseApi.proposalTemplates.getByLegacyId,
-    create: looseApi.proposalTemplates.create,
-    update: looseApi.proposalTemplates.update,
-    remove: looseApi.proposalTemplates.remove,
-};
 export const proposalAnalyticsApi = {
     addEvent: looseApi.proposalAnalytics.addEvent,
     listEvents: looseApi.proposalAnalytics.listEvents,

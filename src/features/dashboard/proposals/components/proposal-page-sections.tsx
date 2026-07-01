@@ -21,7 +21,6 @@ import { ProposalStepIndicator } from './proposal-step-indicator';
 import { ProposalStepNav } from './proposal-step-nav';
 import type { ProposalStep } from './proposal-step-indicator';
 import { ProposalSubmittedPanel } from './proposal-submitted-panel';
-import { ProposalTemplateSelector } from './proposal-template-selector';
 import { ProposalVersionHistory } from './proposal-version-history';
 import { ProposalWizardHeader } from './proposal-wizard-header';
 import { DeckProgressOverlay, ProposalGenerationOverlay, type DeckProgressStage } from './deck-progress-overlays';
@@ -35,17 +34,15 @@ export function ProposalPageActions(props: {
     isSubmitting: boolean;
     selectedClientId: string | null;
     isCreatingDraft: boolean;
-    onApplyTemplate: (templateFormData: ProposalFormData) => void;
     onVersionRestored: (restoredFormData: ProposalFormData) => void;
     onStartProposal: () => void;
 }) {
-    const { canManage = true, currentFormData, draftId, isSubmitting, selectedClientId, isCreatingDraft, onApplyTemplate, onVersionRestored, onStartProposal, } = props;
+    const { canManage = true, currentFormData, draftId, isSubmitting, selectedClientId, isCreatingDraft, onVersionRestored, onStartProposal, } = props;
     if (!canManage) {
         return null;
     }
     return (<div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <ProposalTemplateSelector currentFormData={currentFormData} onApplyTemplate={onApplyTemplate}/>
         <ProposalVersionHistory proposalId={draftId} currentFormData={currentFormData} onVersionRestored={onVersionRestored} disabled={!draftId || isSubmitting}/>
       </div>
       <Button onClick={onStartProposal} disabled={!selectedClientId || isCreatingDraft} className={cn(getButtonClasses('primary'), 'w-full shrink-0 shadow-sm sm:w-auto')}>

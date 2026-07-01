@@ -31,23 +31,22 @@ export type ProposalsPageViewState = {
     isFirstStep: boolean;
     isLastStep: boolean;
 };
-export function ProposalsPageHeroSection({ clientName, workflow, formState, draftId, selectedClientId, onApplyTemplate, onVersionRestored, onStartProposal, }: {
+export function ProposalsPageHeroSection({ clientName, workflow, formState, draftId, selectedClientId, onVersionRestored, onStartProposal, }: {
     clientName: string | null;
     workflow: ProposalsPageWorkflowState;
     formState: ProposalFormData;
     draftId: string | null;
     selectedClientId: string | null;
-    onApplyTemplate: (templateFormData: ProposalFormData) => void;
     onVersionRestored: (restoredFormData: ProposalFormData) => void;
     onStartProposal: () => void;
 }) {
     const { canManageProposals, isSubmitting, isCreatingDraft } = workflow;
     return (<DashboardPageHero innerClassName="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
       <ProposalWizardHeader clientName={clientName}/>
-      <ProposalPageActions canManage={canManageProposals} currentFormData={formState} draftId={draftId} isSubmitting={isSubmitting} selectedClientId={selectedClientId} isCreatingDraft={isCreatingDraft} onApplyTemplate={onApplyTemplate} onVersionRestored={onVersionRestored} onStartProposal={onStartProposal}/>
+      <ProposalPageActions canManage={canManageProposals} currentFormData={formState} draftId={draftId} isSubmitting={isSubmitting} selectedClientId={selectedClientId} isCreatingDraft={isCreatingDraft} onVersionRestored={onVersionRestored} onStartProposal={onStartProposal}/>
     </DashboardPageHero>);
 }
-export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clientName, workflow, viewState, formState, draftId, selectedClientId, onApplyTemplate, onVersionRestored, onStartProposal, displayedProposals, displayedDraftId, proposalHistoryWorkflow, proposalHistoryCapabilities, proposalsQueryError, deletingProposalId, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, proposalPendingDelete, onDeleteDialogChange, onConfirmDelete, activeDeckStage, onCloseWizard, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, onResumeSubmission, onRegenerate, onRecheckDeck, steps, currentStep, autosaveStatus, stepContent, onBack, onNext, onGoToStep, validationMessages, }: {
+export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clientName, workflow, viewState, formState, draftId, selectedClientId, onVersionRestored, onStartProposal, displayedProposals, displayedDraftId, proposalHistoryWorkflow, proposalHistoryCapabilities, proposalsQueryError, deletingProposalId, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, proposalPendingDelete, onDeleteDialogChange, onConfirmDelete, activeDeckStage, onCloseWizard, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, onResumeSubmission, onRegenerate, onRecheckDeck, steps, currentStep, autosaveStatus, stepContent, onBack, onNext, onGoToStep, validationMessages, }: {
     wizardRef: React.RefObject<HTMLDivElement | null>;
     submissionAnnouncement: string;
     clientName: string | null;
@@ -56,7 +55,6 @@ export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clien
     formState: ProposalFormData;
     draftId: string | null;
     selectedClientId: string | null;
-    onApplyTemplate: (templateFormData: ProposalFormData) => void;
     onVersionRestored: (restoredFormData: ProposalFormData) => void;
     onStartProposal: () => void;
     displayedProposals: ProposalDraft[];
@@ -105,7 +103,7 @@ export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clien
     return (<div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
       <LiveRegion message={submissionAnnouncement}/>
 
-      <ProposalsPageHeroSection clientName={clientName} workflow={workflow} formState={formState} draftId={draftId} selectedClientId={selectedClientId} onApplyTemplate={onApplyTemplate} onVersionRestored={onVersionRestored} onStartProposal={onStartProposal}/>
+      <ProposalsPageHeroSection clientName={clientName} workflow={workflow} formState={formState} draftId={draftId} selectedClientId={selectedClientId} onVersionRestored={onVersionRestored} onStartProposal={onStartProposal}/>
 
       <FadeIn>
         <ProposalMetrics proposals={displayedProposals} isLoading={displayedLoadingState}/>

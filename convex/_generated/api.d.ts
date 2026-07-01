@@ -135,7 +135,6 @@ import type * as domains_ops_proposalAnalytics from "../domains/ops/proposalAnal
 import type * as domains_ops_proposalArchiveActions from "../domains/ops/proposalArchiveActions.js";
 import type * as domains_ops_proposalArchives from "../domains/ops/proposalArchives.js";
 import type * as domains_ops_proposalGeneration from "../domains/ops/proposalGeneration.js";
-import type * as domains_ops_proposalTemplates from "../domains/ops/proposalTemplates.js";
 import type * as domains_ops_proposalVersions from "../domains/ops/proposalVersions.js";
 import type * as domains_ops_proposals from "../domains/ops/proposals.js";
 import type * as domains_ops_schedulerAlertPreferences from "../domains/ops/schedulerAlertPreferences.js";
@@ -283,7 +282,6 @@ import type * as proposalAnalytics from "../proposalAnalytics.js";
 import type * as proposalArchiveActions from "../proposalArchiveActions.js";
 import type * as proposalArchives from "../proposalArchives.js";
 import type * as proposalGeneration from "../proposalGeneration.js";
-import type * as proposalTemplates from "../proposalTemplates.js";
 import type * as proposalVersions from "../proposalVersions.js";
 import type * as proposals from "../proposals.js";
 import type * as r2 from "../r2.js";
@@ -444,7 +442,6 @@ declare const fullApi: ApiFromModules<{
   "domains/ops/proposalArchiveActions": typeof domains_ops_proposalArchiveActions;
   "domains/ops/proposalArchives": typeof domains_ops_proposalArchives;
   "domains/ops/proposalGeneration": typeof domains_ops_proposalGeneration;
-  "domains/ops/proposalTemplates": typeof domains_ops_proposalTemplates;
   "domains/ops/proposalVersions": typeof domains_ops_proposalVersions;
   "domains/ops/proposals": typeof domains_ops_proposals;
   "domains/ops/schedulerAlertPreferences": typeof domains_ops_schedulerAlertPreferences;
@@ -592,7 +589,6 @@ declare const fullApi: ApiFromModules<{
   proposalArchiveActions: typeof proposalArchiveActions;
   proposalArchives: typeof proposalArchives;
   proposalGeneration: typeof proposalGeneration;
-  proposalTemplates: typeof proposalTemplates;
   proposalVersions: typeof proposalVersions;
   proposals: typeof proposals;
   r2: typeof r2;

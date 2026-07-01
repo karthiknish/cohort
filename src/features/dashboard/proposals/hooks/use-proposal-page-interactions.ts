@@ -18,14 +18,6 @@ export function useProposalPageInteractions(props: {
     const buildProposalDeckHref = (proposalId: string) => {
         return withPreviewModeSearchParamIfEnabled(`/dashboard/proposals/${proposalId}/deck`, isPreviewModeEnabled());
     };
-    const handleSelectTemplate = (templateFormData: ProposalFormData) => {
-        setFormState(templateFormData, { resetHistory: true });
-        setCurrentStep(0);
-        notifySuccess({
-            title: 'Template applied',
-            message: 'The template has been applied to your proposal. You can customize it as needed.',
-        });
-    };
     const handleVersionRestored = (restoredFormData: ProposalFormData) => {
         setFormState(restoredFormData, { resetHistory: true });
         setCurrentStep(0);
@@ -79,7 +71,6 @@ export function useProposalPageInteractions(props: {
         });
     };
     return {
-        handleSelectTemplate,
         handleVersionRestored,
         handleStartProposal,
         handleResumeProposalInModal,

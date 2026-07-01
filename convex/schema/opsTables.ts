@@ -54,23 +54,6 @@ export const opsTables = {
     .index('by_workspace_proposal_legacyId', ['workspaceId', 'proposalLegacyId', 'legacyId'])
     .index('by_workspace_proposal_versionNumber_legacyId', ['workspaceId', 'proposalLegacyId', 'versionNumber', 'legacyId']),
 
-  proposalTemplates: defineTable({
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    name: v.string(),
-    description: v.union(v.string(), v.null()),
-    formData: jsonRecordValidator,
-    industry: v.union(v.string(), v.null()),
-    tags: v.array(v.string()),
-    isDefault: v.boolean(),
-    createdBy: v.union(v.string(), v.null()),
-    createdAtMs: v.number(),
-    updatedAtMs: v.number(),
-  })
-    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
-    .index('by_workspace_createdAtMs_legacyId', ['workspaceId', 'createdAtMs', 'legacyId'])
-    .index('by_workspace_isDefault', ['workspaceId', 'isDefault']),
-
   proposalAnalyticsEvents: defineTable({
     workspaceId: v.string(),
     legacyId: v.string(),
