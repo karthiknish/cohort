@@ -33,6 +33,8 @@ export function getRouter() {
     defaultPreload: 'intent',
     context: { queryClient, convexQueryClient },
     scrollRestoration: true,
+    // Show pending component after 200ms of navigation loading
+    defaultPendingMs: 200,
   })
 
   setupRouterSsrQueryIntegration({

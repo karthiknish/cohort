@@ -30,6 +30,7 @@ import { MotionProvider } from '@/shared/providers/motion-provider'
 import { RootNotFound } from '@/shared/ui/route-boundaries/root-not-found'
 import { RootAppError } from '@/shared/ui/route-boundaries/root-error'
 import { NeutralPendingSkeleton } from '@/shared/ui/neutral-pending-skeleton'
+import { NavigationProgress } from '@/shared/ui/navigation-progress'
 
 const fontVariables: Record<string, string> = {
   '--font-geist-sans': "'Geist Variable', sans-serif",
@@ -90,6 +91,7 @@ function RootComponent() {
       initialToken={context.token}
     >
       <RootDocument>
+        <NavigationProgress />
         <AppProviders>
           <a
             href="#main-content"
