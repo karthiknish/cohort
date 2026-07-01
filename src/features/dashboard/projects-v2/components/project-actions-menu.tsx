@@ -84,6 +84,7 @@ export function ProjectActionsMenu({
           size="icon"
           className={cn('size-8 text-muted-foreground/60 hover:text-foreground', triggerClassName)}
           aria-label={`Actions for ${project.name}`}
+          onClick={(e) => e.stopPropagation()}
         >
           <MoreHorizontal className="size-4" />
         </Button>

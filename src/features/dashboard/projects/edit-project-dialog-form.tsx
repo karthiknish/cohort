@@ -120,7 +120,7 @@ export function EditProjectFormFields({ loading, name, description, status, clie
           Description
           <span className="ml-2 text-xs text-muted-foreground">({description.length}/2000)</span>
         </Label>
-        <Textarea id="edit-project-description" placeholder="Brief overview of the project goals and scope…" value={description} onChange={handleDescriptionChange} disabled={loading} rows={3} aria-invalid={!!validationErrors.description} aria-describedby={validationErrors.description ? 'edit-project-description-error' : undefined}/>
+        <Textarea id="edit-project-description" placeholder="Brief overview of the project goals and scope…" value={description} onChange={handleDescriptionChange} disabled={loading} rows={3} maxLength={2000} aria-invalid={!!validationErrors.description} aria-describedby={validationErrors.description ? 'edit-project-description-error' : undefined}/>
         {validationErrors.description ? (<p id="edit-project-description-error" className="text-xs text-destructive">
             {validationErrors.description}
           </p>) : null}
@@ -166,15 +166,15 @@ export function EditProjectFormFields({ loading, name, description, status, clie
       <div className="space-y-2">
         <Label htmlFor="edit-project-tags">Tags</Label>
         <div className="flex gap-2">
-          <Input id="edit-project-tags" placeholder="Add a tag…" value={tagInput} onChange={handleTagInputChange} onKeyDown={onTagKeyDown} disabled={loading || tags.length >= 10}/>
-          <Button type="button" variant="outline" size="icon" onClick={handleAddTagClick} disabled={loading || !tagInput.trim() || tags.length >= 10} aria-label="Add tag">
+          <Input id="edit-project-tags" placeholder="Add a tag…" value={tagInput} onChange={handleTagInputChange} onKeyDown={onTagKeyDown} disabled={loading || tags.length >= 10} aria-label="Tag input — press Enter to add"/>
+          <Button type="button" variant="outline" size="icon" onClick={handleAddTagClick} disabled={loading || !tagInput.trim() || tags.length >= 10} aria-label={tags.length >= 10 ? 'Tag limit reached (10/10)' : 'Add tag'} title={tags.length >= 10 ? 'Tag limit reached (10/10)' : 'Add tag (Enter)'} className="shrink-0">
             <Plus className="size-4"/>
           </Button>
         </div>
         {tags.length > 0 ? (<div className="flex flex-wrap gap-1.5 pt-2">
             {tags.map((tag) => (<ProjectTagBadge key={tag} loading={loading} onRemove={onRemoveTag} tag={tag}/>))}
           </div>) : null}
-        <p className="text-xs text-muted-foreground">{tags.length}/10 tags. Press Enter or click + to add.</p>
+        <p className="text-xs text-muted-foreground">{tags.length}/10 tags. {tags.length >= 10 ? 'Tag limit reached.' : 'Press Enter or click + to add.'}</p>
       </div>
     </div>);
 }

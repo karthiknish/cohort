@@ -65,6 +65,12 @@ type CalendarEvent = {
   endAt: Date;
 };
 
+type ProjectBarEvent = {
+  project: ProjectRecord;
+  startAt: Date;
+  endAt: Date;
+};
+
 export function CalendarView({
   projects,
   milestones,
@@ -111,6 +117,17 @@ export function CalendarView({
     return result;
   }, [projects, milestones]);
 
+  const projectBars = useMemo<ProjectBarEvent[]>(() => {
+    const result: ProjectBarEvent[] = [];
+    for (const project of projects) {
+      const startAt = parseDate(project.startDate);
+      const endAt = parseDate(project.endDate);
+      if (!startAt || !endAt) continue;
+      result.push({ project, startAt, endAt });
+    }
+    return result;
+  }, [projects]);
+
   const monthStart = useMemo(() => startOfMonth(cursor), [cursor]);
   const monthEnd = useMemo(() => endOfMonth(cursor), [cursor]);
   const gridStart = useMemo(() => startOfWeek(monthStart), [monthStart]);
@@ -128,6 +145,18 @@ export function CalendarView({
     }
     return map;
   }, [days, events]);
+
+  const projectBarsByDay = useMemo(() => {
+    const map = new Map<string, ProjectBarEvent[]>();
+    for (const day of days) {
+      const key = format(day, 'yyyy-MM-dd');
+      const dayBars = projectBars.filter(
+        (b) => day >= startOfDay(b.startAt) && day <= endOfDayLocal(b.endAt),
+      );
+      if (dayBars.length > 0) map.set(key, dayBars);
+    }
+    return map;
+  }, [days, projectBars]);
 
   const handleEventClick = (milestoneId: string) => {
     const milestone = milestoneById.get(milestoneId);
@@ -269,6 +298,16 @@ export function CalendarView({
                   )}
                 </div>
                 <div className="space-y-1">
+                  {(projectBarsByDay.get(key) ?? []).slice(0, 2).map((bar) => (
+                    <div
+                      key={`bar-${bar.project.id}`}
+                      className="flex items-center gap-1.5 rounded border border-primary/20 bg-primary/8 px-1.5 py-0.5 text-[11px] font-medium text-primary"
+                      title={`${bar.project.name} (${format(bar.startAt, 'MMM d')} – ${format(bar.endAt, 'MMM d')})`}
+                    >
+                      <span className="size-1.5 shrink-0 rounded-full bg-primary" />
+                      <span className="truncate">{bar.project.name}</span>
+                    </div>
+                  ))}
                   {dayEvents.slice(0, 4).map((event) => (
                     <button
                       key={event.milestone.id}
@@ -286,9 +325,9 @@ export function CalendarView({
                       <span className="truncate font-medium text-foreground">{event.milestone.title}</span>
                     </button>
                   ))}
-                  {dayEvents.length > 4 && (
+                  {(projectBarsByDay.get(key) ?? []).length + dayEvents.length > 6 && (
                     <p className="px-1.5 text-[10px] text-muted-foreground">
-                      +{dayEvents.length - 4} more
+                      +{(projectBarsByDay.get(key) ?? []).length + dayEvents.length - 6} more
                     </p>
                   )}
                 </div>

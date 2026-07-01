@@ -410,7 +410,11 @@ function ProjectsBacklogSection() {
           </CardDescription>
         </div>
         <CardAction className={cn(PROJECTS_THEME.toolbar, 'w-full lg:max-w-2xl lg:justify-end')}>
-          <ProjectSearch value={searchInput} onChange={setSearchInput} />
+          <ProjectSearch
+            value={searchInput}
+            onChange={setSearchInput}
+            isDebouncing={searchInput !== debouncedSearchQuery}
+          />
           <ProjectFilters
             sortField={sortField}
             sortDirection={sortDirection}
@@ -519,11 +523,11 @@ function ProjectsDetailDrawerSection() {
       }}
       onEdit={(p) => {
         closeDrawer();
-        openEditDialog(p);
+        setTimeout(() => openEditDialog(p), 250);
       }}
       onDelete={(p) => {
         closeDrawer();
-        openDeleteDialog(p);
+        setTimeout(() => openDeleteDialog(p), 250);
       }}
       onUpdateStatus={handleUpdateStatus}
       milestones={milestones}

@@ -150,8 +150,9 @@ export function BoardView({
         another column.
       </p>
       <p className="px-1 text-xs text-muted-foreground">
-        Drag projects between columns to update status. Use the grip handle so card links and menus stay
-        clickable.
+        Drag the <span className="font-medium text-primary/70">grip handle</span> to move projects between
+        columns, or use <kbd className="rounded border border-border/60 bg-muted/40 px-1 text-[10px] font-medium">Alt</kbd> +{' '}
+        <kbd className="rounded border border-border/60 bg-muted/40 px-1 text-[10px] font-medium">←/→</kbd> on a card.
       </p>
       <ScrollArea className="w-full">
         <div className="flex min-h-[28rem] w-full gap-4 pb-4 pr-2">
@@ -336,7 +337,7 @@ function KanbanProjectItem({
         {reorderEnabled ? (
           <button
             type="button"
-            className="mt-1 flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md border border-border/60 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted/60 active:cursor-grabbing"
+            className="mt-1 flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md border border-border/60 bg-primary/8 text-primary/70 transition-colors hover:bg-primary/15 hover:text-primary active:cursor-grabbing"
             aria-label={`Move ${project.name} to another status column`}
             aria-describedby={keyboardInstructionsId}
             aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"

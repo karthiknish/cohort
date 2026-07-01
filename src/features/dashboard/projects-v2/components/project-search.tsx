@@ -1,16 +1,17 @@
 'use client';
 
 import { type ChangeEvent } from 'react';
-import { Search, X } from 'lucide-react';
+import { LoaderCircle, Search, X } from 'lucide-react';
 import { Input } from '@/shared/ui/input';
 import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts';
 
 interface ProjectSearchProps {
   value: string;
   onChange: (value: string) => void;
+  isDebouncing?: boolean;
 }
 
-export function ProjectSearch({ value, onChange }: ProjectSearchProps) {
+export function ProjectSearch({ value, onChange, isDebouncing }: ProjectSearchProps) {
   const onSearchQueryChange = (event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value);
   const handleClear = () => onChange('');
   return (
@@ -27,7 +28,9 @@ export function ProjectSearch({ value, onChange }: ProjectSearchProps) {
       <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 sm:flex">
         {value ? null : <KeyboardShortcutBadge combo="mod+f" className="scale-90 opacity-70" />}
       </div>
-      {value ? (
+      {isDebouncing ? (
+        <LoaderCircle className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" aria-label="Searching…" />
+      ) : value ? (
         <button
           type="button"
           onClick={handleClear}

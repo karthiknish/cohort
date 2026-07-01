@@ -31,6 +31,7 @@ export function SavedViewsSelector({
 }: SavedViewsSelectorProps) {
   const [isNaming, setIsNaming] = useState(false);
   const [viewName, setViewName] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -39,58 +40,82 @@ export function SavedViewsSelector({
 
   const handleStartNaming = () => {
     setViewName('');
+    setNameError(null);
     setIsNaming(true);
   };
 
   const handleConfirmSave = () => {
     const trimmed = viewName.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      setNameError('Enter a name');
+      return;
+    }
+    if (savedViews.some((v) => v.name.toLowerCase() === trimmed.toLowerCase())) {
+      setNameError('A view with this name already exists');
+      return;
+    }
     onSaveView(trimmed);
     setViewName('');
+    setNameError(null);
     setIsNaming(false);
   };
 
   const handleCancelSave = () => {
     setViewName('');
+    setNameError(null);
     setIsNaming(false);
+  };
+
+  const handleNameChange = (value: string) => {
+    setViewName(value);
+    if (nameError) setNameError(null);
   };
 
   return (
     <div className="flex items-center gap-1.5">
       {isNaming ? (
-        <div className="flex items-center gap-1.5">
-          <Input
-            ref={inputRef}
-            value={viewName}
-            onChange={(e) => setViewName(e.target.value)}
-            placeholder="View name…"
-            className="h-9 w-36 border-border/60 bg-background text-xs shadow-sm"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleConfirmSave();
-              if (e.key === 'Escape') handleCancelSave();
-            }}
-          />
-          <Button
-            type="button"
-            variant="default"
-            size="icon"
-            className="size-9 shrink-0"
-            onClick={handleConfirmSave}
-            disabled={!viewName.trim()}
-            aria-label="Save view"
-          >
-            <Check className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-9 shrink-0"
-            onClick={handleCancelSave}
-            aria-label="Cancel save"
-          >
-            <X className="size-4" />
-          </Button>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1.5">
+            <Input
+              ref={inputRef}
+              value={viewName}
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="View name…"
+              className={cn(
+                'h-9 w-36 border-border/60 bg-background text-xs shadow-sm',
+                nameError && 'border-destructive',
+              )}
+              aria-invalid={Boolean(nameError)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleConfirmSave();
+                if (e.key === 'Escape') handleCancelSave();
+              }}
+            />
+            <Button
+              type="button"
+              variant="default"
+              size="icon"
+              className="size-9 shrink-0"
+              onClick={handleConfirmSave}
+              disabled={!viewName.trim()}
+              aria-label="Save view"
+            >
+              <Check className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-9 shrink-0"
+              onClick={handleCancelSave}
+              aria-label="Cancel save"
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
+          {nameError ? (
+            <p className="text-[10px] text-destructive">{nameError}</p>
+          ) : null}
         </div>
       ) : (
         <Button

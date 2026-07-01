@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { FolderKanban, Plus, RefreshCw, TriangleAlert } from 'lucide-react';
+import { FolderKanban, Plus, RefreshCw, TriangleAlert, ZoomIn, ZoomOut } from 'lucide-react';
 import type { ProjectRecord } from '@/types/projects';
 import type { MilestoneRecord, MilestoneStatus } from '@/types/milestones';
 import { MILESTONE_STATUSES } from '@/types/milestones';
 import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { CreateMilestoneDialog } from '@/features/dashboard/projects/create-milestone-dialog';
 import { EditMilestoneDialog } from '../edit-milestone-dialog';
 import {
@@ -25,6 +26,7 @@ import {
   GanttTimeline,
   GanttToday,
   type GanttStatus,
+  type Range,
 } from '@/components/kibo-ui/gantt';
 
 export interface GanttViewProps {
@@ -68,6 +70,25 @@ function milestoneToFeature(milestone: MilestoneRecord): GanttFeature | null {
   };
 }
 
+const PROJECT_BAR_STATUS: GanttStatus = {
+  id: 'project',
+  name: 'Project span',
+  color: 'hsl(var(--primary))',
+};
+
+function projectToFeature(project: ProjectRecord): GanttFeature | null {
+  const startAt = parseDate(project.startDate);
+  const endAt = parseDate(project.endDate);
+  if (!startAt || !endAt) return null;
+  return {
+    id: `project-bar-${project.id}`,
+    name: project.name,
+    startAt,
+    endAt,
+    status: PROJECT_BAR_STATUS,
+  };
+}
+
 export function GanttView({
   projects,
   milestones,
@@ -84,6 +105,8 @@ export function GanttView({
 
   const [editingMilestone, setEditingMilestone] = useState<MilestoneRecord | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [zoom, setZoom] = useState(100);
+  const [range, setRange] = useState<Range>('monthly');
 
   const milestoneById = useMemo(() => {
     const map = new Map<string, MilestoneRecord>();
@@ -94,6 +117,7 @@ export function GanttView({
   }, [milestones]);
 
   const handleFeatureClick = (featureId: string) => {
+    if (featureId.startsWith('project-bar-')) return;
     const milestone = milestoneById.get(featureId);
     if (milestone) {
       setEditingMilestone(milestone);
@@ -102,6 +126,7 @@ export function GanttView({
   };
 
   const handleMove = (featureId: string, startDate: Date, endDate: Date | null) => {
+    if (featureId.startsWith('project-bar-')) return;
     const milestone = milestoneById.get(featureId);
     if (milestone) {
       onMoveMilestone(milestone, startDate, endDate);
@@ -174,14 +199,68 @@ export function GanttView({
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/30 p-0.5">
+          <Button
+            variant={range === 'daily' ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 px-2.5 text-xs"
+            onClick={() => setRange('daily')}
+          >
+            Daily
+          </Button>
+          <Button
+            variant={range === 'monthly' ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 px-2.5 text-xs"
+            onClick={() => setRange('monthly')}
+          >
+            Monthly
+          </Button>
+          <Button
+            variant={range === 'quarterly' ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 px-2.5 text-xs"
+            onClick={() => setRange('quarterly')}
+          >
+            Quarterly
+          </Button>
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/30 p-0.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => setZoom((z) => Math.max(40, z - 20))}
+            disabled={zoom <= 40}
+            aria-label="Zoom out"
+          >
+            <ZoomOut className="size-3.5" />
+          </Button>
+          <span className="min-w-[3rem] text-center text-xs font-medium tabular-nums">{zoom}%</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => setZoom((z) => Math.min(300, z + 20))}
+            disabled={zoom >= 300}
+            aria-label="Zoom in"
+          >
+            <ZoomIn className="size-3.5" />
+          </Button>
+        </div>
+      </div>
+
       <div className="h-[70vh] overflow-hidden rounded-md border">
-        <GanttProvider range="monthly" zoom={100}>
+        <GanttProvider range={range} zoom={zoom}>
           <GanttSidebar>
             {projects.map((project) => {
               const projectMilestones = milestones[project.id] ?? [];
-              const features = projectMilestones
+              const projectBar = projectToFeature(project);
+              const milestoneFeatures = projectMilestones
                 .map(milestoneToFeature)
                 .filter((f): f is GanttFeature => f !== null);
+              const features = projectBar ? [projectBar, ...milestoneFeatures] : milestoneFeatures;
               return (
                 <GanttSidebarGroup key={project.id} name={project.name}>
                   {features.length > 0 ? (
@@ -217,24 +296,34 @@ export function GanttView({
             <GanttFeatureList>
               {projects.map((project) => {
                 const projectMilestones = milestones[project.id] ?? [];
-                const features = projectMilestones
+                const projectBar = projectToFeature(project);
+                const milestoneFeatures = projectMilestones
                   .map(milestoneToFeature)
                   .filter((f): f is GanttFeature => f !== null);
+                const features = projectBar ? [projectBar, ...milestoneFeatures] : milestoneFeatures;
                 return (
                   <GanttFeatureRow key={project.id} features={features} onMove={handleMove}>
-                    {(feature) => (
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-2 text-left"
-                        onClick={() => handleFeatureClick(feature.id)}
-                      >
-                        <div
-                          className="size-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: feature.status.color }}
-                        />
-                        <p className="flex-1 truncate text-xs font-medium">{feature.name}</p>
-                      </button>
-                    )}
+                    {(feature) => {
+                      const isProjectBar = feature.id.startsWith('project-bar-');
+                      return (
+                        <button
+                          type="button"
+                          className={cn(
+                            'flex w-full items-center gap-2 text-left',
+                            isProjectBar && 'font-semibold text-primary',
+                          )}
+                          onClick={() => handleFeatureClick(feature.id)}
+                        >
+                          <div
+                            className={cn('shrink-0 rounded-full', isProjectBar ? 'size-2.5' : 'size-2')}
+                            style={{ backgroundColor: feature.status.color }}
+                          />
+                          <p className="flex-1 truncate text-xs font-medium">
+                            {isProjectBar ? 'Project span' : feature.name}
+                          </p>
+                        </button>
+                      );
+                    }}
                   </GanttFeatureRow>
                 );
               })}

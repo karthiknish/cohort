@@ -255,7 +255,8 @@ export function CreateProjectSheet({ onProjectCreated, trigger }: CreateProjectS
     const handleTagInputChange = (value: string) => {
         dispatch({ type: 'setTagInput', value });
     };
-    const triggerNode = trigger ?? (<Button id="create-project-trigger" type="button" className="gap-2 shadow-sm transition-shadow hover:shadow-md">
+    const handleTriggerClick = () => handleOpenChange(true);
+    const triggerNode = trigger ?? (<Button id="create-project-trigger" type="button" onClick={handleTriggerClick} className="gap-2 shadow-sm transition-shadow hover:shadow-md">
         <Plus className="size-4" aria-hidden/>
         New project
       </Button>);

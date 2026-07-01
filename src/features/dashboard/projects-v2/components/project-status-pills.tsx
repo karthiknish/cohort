@@ -1,5 +1,6 @@
 'use client';
 
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PROJECT_STATUSES, type ProjectStatus } from '@/types/projects';
 import { formatStatusLabel, STATUS_DOT_STYLES } from '../utils/project-formatters';
@@ -60,11 +61,15 @@ function StatusPill({
         'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-[background-color,border-color,box-shadow]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         active
-          ? 'border-primary/30 bg-primary/8 text-foreground shadow-sm ring-1 ring-primary/10'
+          ? 'border-primary bg-primary/12 text-primary shadow-sm ring-2 ring-primary/20'
           : 'border-border/60 bg-card text-muted-foreground hover:border-border hover:bg-muted/30 hover:text-foreground',
       )}
     >
-      {dotStyle ? <span className="size-2 shrink-0 rounded-full" style={dotStyle} aria-hidden /> : null}
+      {active ? (
+        <Check className="size-3 shrink-0" aria-hidden />
+      ) : dotStyle ? (
+        <span className="size-2 shrink-0 rounded-full" style={dotStyle} aria-hidden />
+      ) : null}
       <span>{label}</span>
       <span
         className={cn(

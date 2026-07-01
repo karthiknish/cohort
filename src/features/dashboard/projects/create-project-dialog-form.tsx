@@ -94,8 +94,11 @@ export function CreateProjectFormFields({ loading, clients, state, nameError = n
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="project-description">Description</Label>
-        <Textarea id="project-description" placeholder="Brief overview of the project goals and scope…" value={state.description} onChange={handleDescriptionChange} disabled={loading} rows={3}/>
+        <Label htmlFor="project-description">
+          Description
+          <span className="ml-2 text-xs text-muted-foreground">({state.description.length}/2000)</span>
+        </Label>
+        <Textarea id="project-description" placeholder="Brief overview of the project goals and scope…" value={state.description} onChange={handleDescriptionChange} disabled={loading} rows={3} maxLength={2000}/>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -138,15 +141,15 @@ export function CreateProjectFormFields({ loading, clients, state, nameError = n
       <div className="space-y-2">
         <Label htmlFor="project-tags">Tags</Label>
         <div className="flex gap-2">
-          <Input id="project-tags" placeholder="Add a tag…" value={state.tagInput} onChange={handleTagInputChange} onKeyDown={onTagKeyDown} disabled={loading || state.tags.length >= 10}/>
-          <Button type="button" variant="outline" size="icon" onClick={onAddTag} disabled={loading || !state.tagInput.trim() || state.tags.length >= 10} aria-label="Add tag">
+          <Input id="project-tags" placeholder="Add a tag…" value={state.tagInput} onChange={handleTagInputChange} onKeyDown={onTagKeyDown} disabled={loading || state.tags.length >= 10} aria-label="Tag input — press Enter to add"/>
+          <Button type="button" variant="outline" size="icon" onClick={onAddTag} disabled={loading || !state.tagInput.trim() || state.tags.length >= 10} aria-label={state.tags.length >= 10 ? 'Tag limit reached (10/10)' : 'Add tag'} title={state.tags.length >= 10 ? 'Tag limit reached (10/10)' : 'Add tag (Enter)'} className="shrink-0">
             <Plus className="size-4"/>
           </Button>
         </div>
         {state.tags.length > 0 ? (<div className="flex flex-wrap gap-1.5 pt-2">
             {state.tags.map((tag) => (<ProjectTagChip key={tag} disabled={loading} onRemove={onRemoveTag} tag={tag}/>))}
           </div>) : null}
-        <p className="text-xs text-muted-foreground">{state.tags.length}/10 tags added. Press Enter or click + to add.</p>
+        <p className="text-xs text-muted-foreground">{state.tags.length}/10 tags added. {state.tags.length >= 10 ? 'Tag limit reached.' : 'Press Enter or click + to add.'}</p>
       </div>
     </div>);
 }
