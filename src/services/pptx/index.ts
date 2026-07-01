@@ -15,13 +15,8 @@
 
 import pptxgen from 'pptxgenjs';
 import type { ProposalFormData } from '@/lib/proposals';
-import {
-    prefetchSlideImages,
-    topicFromTitle,
-    type PexelsImage,
-} from '../pexels-images';
+import { prefetchSlideImages, type PexelsImage } from '../pexels-images';
 import { SLIDE_W, SLIDE_H } from './constants';
-import { parseSlideInstructions, parseBudgetAmount } from './parsing';
 import { addTitleSlide, addContentSlide } from './content-slides';
 import { addBudgetAllocationSlide, addRoiProjectionSlide } from './chart-slides';
 import {
@@ -30,6 +25,7 @@ import {
     addTocSlide,
     addSectionDivider,
 } from './structural-slides';
+import { buildDeckStructure, buildSlideTopics } from '../proposal-deck-structure';
 
 // Re-export public types and functions
 export type { PptxSlideContent } from './types';
@@ -57,71 +53,12 @@ export async function generateProposalPptx(
 
     const companyName = formData.company?.name?.trim() || 'Client';
 
-    // Parse AI-generated slides
-    const aiSlides = parseSlideInstructions(instructions);
+    // Build shared deck structure (content-aware section assignment)
+    const structure = buildDeckStructure(formData, instructions);
+    const { sections, aiSlides, hasBudget, hasServices, totalSlides } = structure;
 
-    // Determine which data-driven slides to include
-    const hasBudget = parseBudgetAmount(formData.marketing?.budget || '') !== null;
-    const hasServices = (formData.scope?.services || []).length > 0;
-
-    // Build section structure for TOC + dividers
-    const sections: { title: string; description: string; slideIndices: number[] }[] = [];
-
-    if (aiSlides.length > 0) {
-        const overviewCount = Math.min(3, Math.ceil(aiSlides.length / 2));
-        sections.push({
-            title: 'Company & Market Overview',
-            description: 'Executive summary, company background, and market analysis',
-            slideIndices: Array.from({ length: overviewCount }, (_, i) => i),
-        });
-        if (aiSlides.length > overviewCount) {
-            sections.push({
-                title: 'Strategy & Approach',
-                description: 'Proposed marketing strategy, target audience, and campaign structure',
-                slideIndices: Array.from({ length: aiSlides.length - overviewCount }, (_, i) => i + overviewCount),
-            });
-        }
-    }
-
-    if (hasServices) {
-        sections.push({
-            title: 'Scope of Services',
-            description: 'Detailed breakdown of services and deliverables',
-            slideIndices: [],
-        });
-    }
-    if (hasBudget) {
-        sections.push({
-            title: 'Budget & ROI Projections',
-            description: 'Investment breakdown and projected return on investment',
-            slideIndices: [],
-        });
-    }
-
-    // Calculate total slides
-    const dividerCount = sections.length;
-    const dataSlideCount = (hasServices ? 1 : 0) + (hasBudget ? 2 : 0);
-    const totalSlides = 1 + 1 + aiSlides.length + dividerCount + dataSlideCount + 1;
-
-    // Pre-fetch images from Pexels in parallel
-    // Build a topic list in the SAME ORDER as slides are created below,
-    // so each slide gets a unique image even when topics repeat.
-    const slideTopics = [
-        'company',  // title slide
-        // TOC slide has no image
-        ...sections.flatMap((section) => {
-            const dividerTopic = topicFromTitle(section.title);
-            if (section.slideIndices.length > 0) {
-                return [
-                    dividerTopic,
-                    ...section.slideIndices.map((idx) => topicFromTitle(aiSlides[idx]!.title)),
-                ];
-            }
-            // Data-driven sections (services, budget) have no content images
-            return [dividerTopic];
-        }),
-        'next',  // closing slide
-    ];
+    // Pre-fetch images from Pexels in parallel using shared topic list
+    const slideTopics = buildSlideTopics(structure);
     const slideImages = await prefetchSlideImages(slideTopics);
     let imageIdx = 0;
 

@@ -10,6 +10,7 @@ import {
     HEADER_H, BODY_TOP, BODY_H,
 } from './constants';
 import { addSlideHeader, addSlideFooter } from './shared-elements';
+import { getServiceDescriptions } from '../proposal-deck-structure';
 
 
 // ─── Services table slide ─────────────────────────────────────────
@@ -29,33 +30,23 @@ export function addServicesTableSlide(
 
     addSlideHeader(pptx, slide, 'Scope of Services', slideNum);
 
-    const serviceDescriptions: Record<string, string> = {
-        'PPC (Google Ads)': 'Search & display campaigns, keyword strategy, bid management, landing page optimisation',
-        'Paid Social (Meta/TikTok/LinkedIn)': 'Audience targeting, creative testing, retargeting funnels, lookalike audiences',
-        'SEO & Content Marketing': 'Technical SEO, content calendar, organic growth strategy, link building',
-        'Email Marketing': 'Automation flows, segmentation, lifecycle campaigns, A/B testing',
-        'Creative & Design': 'Ad creative, landing pages, brand assets, motion graphics',
-        'Strategy & Consulting': 'Marketing audits, growth planning, quarterly reviews, competitive analysis',
-        'Other': formData.scope?.otherService || 'Custom deliverables tailored to your requirements',
-    };
+    const serviceDescriptions = getServiceDescriptions(formData);
 
     const rows: pptxgen.TableRow[] = [
         [
             { text: 'Service', options: { bold: true, color: COLORS.white, fill: { color: COLORS.primary }, fontSize: 13, fontFace: FONT, align: 'left' } },
             { text: "What's Included", options: { bold: true, color: COLORS.white, fill: { color: COLORS.primary }, fontSize: 13, fontFace: FONT, align: 'left' } },
-            { text: 'Priority', options: { bold: true, color: COLORS.white, fill: { color: COLORS.primary }, fontSize: 13, fontFace: FONT, align: 'center' } },
+            { text: 'Status', options: { bold: true, color: COLORS.white, fill: { color: COLORS.primary }, fontSize: 13, fontFace: FONT, align: 'center' } },
         ],
     ];
 
     services.forEach((service, i) => {
         const desc = serviceDescriptions[service] || 'Tailored delivery based on your requirements';
-        const priority = i === 0 ? 'High' : i === 1 ? 'Medium' : 'Standard';
-        const priorityColor = i === 0 ? COLORS.warning : i === 1 ? COLORS.secondary : COLORS.muted;
         const rowBg = i % 2 === 0 ? COLORS.white : COLORS.light;
         rows.push([
             { text: service, options: { fontSize: 12, fontFace: FONT, color: COLORS.dark, bold: true, fill: { color: rowBg }, valign: 'middle' } },
             { text: desc, options: { fontSize: 11, fontFace: FONT, color: COLORS.muted, fill: { color: rowBg }, valign: 'middle' } },
-            { text: priority, options: { fontSize: 11, fontFace: FONT, color: priorityColor, align: 'center', bold: true, fill: { color: rowBg }, valign: 'middle' } },
+            { text: 'Included', options: { fontSize: 11, fontFace: FONT, color: COLORS.secondary, align: 'center', bold: true, fill: { color: rowBg }, valign: 'middle' } },
         ]);
     });
 
@@ -68,7 +59,7 @@ export function addServicesTableSlide(
         rowH: tableH / (rows.length),
         border: { type: 'solid', pt: 1, color: COLORS.mutedLight },
         valign: 'middle',
-        autoPage: false,
+        autoPage: true,
     });
 
     addSlideFooter(slide, companyName, slideNum, total);

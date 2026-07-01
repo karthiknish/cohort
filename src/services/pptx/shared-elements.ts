@@ -8,6 +8,7 @@ import type { ProposalFormData } from '@/lib/proposals';
 import { COLORS, FONT, FONT_LIGHT, SLIDE_W, SLIDE_H, HEADER_H, FOOTER_H, MARGIN, BODY_TOP, BODY_H } from './constants';
 import type { SidebarStat } from './types';
 import { sidebarKeyword } from './parsing';
+import { getSidebarStatsForKeyword } from '../proposal-deck-structure';
 
 export function addSlideHeader(pptx: pptxgen, slide: pptxgen.Slide, title: string, slideNum: number): void {
     // Header bar
@@ -54,52 +55,7 @@ export function addSlideFooter(slide: pptxgen.Slide, companyName: string, slideN
 }
 
 export function getSidebarStats(keyword: string, formData: ProposalFormData): SidebarStat[] {
-    switch (keyword) {
-        case 'company':
-            return [
-                { label: 'Industry', value: formData.company?.industry || '—' },
-                { label: 'Company Size', value: formData.company?.size || '—' },
-                { label: 'Locations', value: formData.company?.locations?.split('\n')[0] || '—' },
-            ];
-        case 'marketing':
-            return [
-                { label: 'Monthly Budget', value: formData.marketing?.budget || '—' },
-                { label: 'Ad Accounts', value: formData.marketing?.adAccounts || '—' },
-                { label: 'Platforms', value: formData.marketing?.platforms?.join(', ') || '—' },
-            ];
-        case 'goals':
-            return [
-                { label: 'Objectives', value: formData.goals?.objectives?.join(', ') || '—' },
-                { label: 'Audience', value: formData.goals?.audience?.substring(0, 80) || '—' },
-            ];
-        case 'scope':
-            return [
-                { label: 'Services', value: formData.scope?.services?.join(', ') || '—' },
-                { label: 'Custom Needs', value: formData.scope?.otherService?.substring(0, 80) || '—' },
-            ];
-        case 'timeline':
-            return [
-                { label: 'Start', value: formData.timelines?.startTime || '—' },
-                { label: 'Events', value: formData.timelines?.upcomingEvents?.substring(0, 80) || '—' },
-            ];
-        case 'budget':
-            return [
-                { label: 'Budget', value: formData.marketing?.budget || '—' },
-                { label: 'Engagement', value: formData.value?.engagementType || '—' },
-            ];
-        case 'audience':
-            return [
-                { label: 'Target', value: formData.goals?.audience?.substring(0, 80) || '—' },
-                { label: 'Goals', value: formData.goals?.objectives?.join(', ') || '—' },
-            ];
-        case 'challenges':
-            return [
-                { label: 'Barriers', value: formData.goals?.challenges?.join(', ') || '—' },
-                { label: 'Custom', value: formData.goals?.customChallenge || '—' },
-            ];
-        default:
-            return [];
-    }
+    return getSidebarStatsForKeyword(keyword, formData, 80);
 }
 
 export function addSidebar(

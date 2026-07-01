@@ -100,10 +100,41 @@ function truncateDeckInstructions(value: string): string {
     const cleaned = value.trim();
     if (!cleaned)
         return '';
-    return cleaned.length > 8000 ? cleaned.slice(0, 8000) : cleaned;
+    return cleaned.length > 12000 ? cleaned.slice(0, 12000) : cleaned;
 }
 
-const DECK_SYSTEM_INSTRUCTION = `You are a world-class marketing strategist and proposal writer who creates high-converting marketing proposal decks. Your output is parsed by a machine — follow the format rules EXACTLY. Never use markdown, bold, or headers beyond "Slide N:". Every slide MUST have a CALLOUT line. Use specific numbers, percentages, currency values, and timelines — never vague claims like "significant growth". Write action titles as full sentences that state the takeaway (e.g. "Paid social will drive 60% of new acquisition within Q1" not "Social Media Strategy").`;
+const DECK_SYSTEM_INSTRUCTION = `You are a world-class marketing strategist and proposal writer who creates high-converting marketing proposal decks for client decision-makers (CMOs, founders, marketing directors).
+
+Your output is parsed by a machine — follow the format rules EXACTLY.
+
+TONE: Confident but specific. Not salesy. Every claim must be backed by a number, benchmark, or concrete tactic. The client should feel they are reading analysis, not a brochure.
+
+AUDIENCE: The reader is a decision-maker evaluating whether to hire your agency. They care about: measurable outcomes, realistic timelines, budget efficiency, and execution credibility.
+
+ANTI-PATTERNS — NEVER DO THESE:
+- Never use placeholder numbers like "XX%" or "TBD" — if you don't have data, use industry benchmarks and label them as such.
+- Never name specific competitors you cannot verify.
+- Never promise specific revenue figures without stating the methodology or basis.
+- Never use vague claims like "significant growth", "many clients", "substantial improvement".
+- Never use markdown, bold, or headers beyond "Slide N:".
+- Never include commentary before or after the slides.
+
+FORMAT RULES:
+- Every slide MUST have a CALLOUT line (single sentence, max 20 words).
+- Every slide MUST have a NOTES line (talking points for the presenter, max 60 words).
+- Every slide MUST have an IMAGE line (a short topic description for stock photo search, 2-5 words).
+- Use the currency symbol provided in the client context for all monetary values.
+- Write action titles as full sentences that state the takeaway (e.g. "Paid social will drive 60% of new acquisition within Q1" not "Social Media Strategy").
+- Slides 1-3 should cover overview content (company, market, audience, challenges).
+- Slides 4+ should cover strategy, execution, and next steps.`;
+
+function detectCurrencySymbol(budget: string): string {
+    if (!budget) return '£';
+    if (budget.includes('$')) return '$';
+    if (budget.includes('€')) return '€';
+    if (budget.includes('₹')) return '₹';
+    return '£';
+}
 
 function buildDeckInstructionPrompt(formData: ProposalFormData): string {
     const company = formData.company?.name?.trim() || 'Client';
@@ -117,6 +148,16 @@ function buildDeckInstructionPrompt(formData: ProposalFormData): string {
     const timeline = formData.timelines?.startTime?.trim();
     const budget = formData.marketing?.budget?.trim();
     const platforms = formData.marketing?.platforms?.join(', ');
+    const currency = detectCurrencySymbol(budget || '');
+
+    // Count how many data sections are populated to determine slide count
+    const populatedSections = [
+        industry, goals, audience, challenges, scope, budget, platforms, timeline,
+    ].filter(Boolean).length;
+
+    // Adaptive slide count: 6 for sparse data, 9 for medium, 12 for rich data
+    const slideCount = populatedSections <= 2 ? 6 : populatedSections <= 5 ? 9 : 12;
+
     const context = [
         `Company: ${company}`,
         industry ? `Industry: ${industry}` : null,
@@ -127,11 +168,12 @@ function buildDeckInstructionPrompt(formData: ProposalFormData): string {
         budget ? `Monthly Budget: ${budget}` : null,
         platforms ? `Current Platforms: ${platforms}` : null,
         timeline ? `Desired Start Date: ${timeline}` : null,
+        `Currency: Use ${currency} for all monetary values`,
     ]
         .filter(Boolean)
         .join('\n');
 
-    return `Create a 9-slide marketing proposal deck for the following client. You MUST follow the exact slide structure below — each slide has a PRESCRIBED content type that you must use. Do NOT skip any content type. Do NOT change the content type for any slide.
+    return `Create a ${slideCount}-slide marketing proposal deck for the following client. Adapt the content depth to the available data — if only a company name and budget are provided, keep slides concise; if full form data is provided, add detail and specificity.
 
 CLIENT CONTEXT:
 ${context}
@@ -144,6 +186,8 @@ METRICS:
 - value: "[specific number]" | label: [KPI label]
 - value: "[specific number]" | label: [KPI label]
 CALLOUT: [One sentence summarising the strategic takeaway]
+NOTES: [2-3 sentences of talking points for the presenter — what to say, not what's on the slide]
+IMAGE: [2-5 word topic for stock photo search, e.g. "business growth chart"]
 BULLETS:
 - [Specific, actionable point with a number or timeline]
 - [Specific, actionable point with a number or timeline]
@@ -159,6 +203,8 @@ After:
 - [Proposed solution with specific outcome]
 - [Proposed solution with specific outcome]
 CALLOUT: [One sentence about the opportunity]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
 
 Slide 3: [Action title about target audience insights, max 12 words]
 METRICS:
@@ -166,45 +212,48 @@ METRICS:
 - value: "[number]" | label: [audience metric]
 - value: "[percentage]" | label: [audience metric]
 CALLOUT: [One sentence about the audience insight]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
 BULLETS:
 - [Persona detail with demographics and behaviour]
 - [Channel preference with data]
 
-Slide 4: [Action title about the proposed strategy, max 12 words]
+${slideCount >= 9 ? `Slide 4: [Action title about the proposed strategy, max 12 words]
 BULLETS:
 - [Strategy pillar 1 with specific tactic and expected outcome]
 - [Strategy pillar 2 with specific tactic and expected outcome]
 - [Strategy pillar 3 with specific tactic and expected outcome]
 CALLOUT: [One sentence about why this strategy wins]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
 
-Slide 5: [Action title about budget allocation, max 12 words]
-METRICS:
-- value: "[percentage]" | label: [channel name]
-- value: "[percentage]" | label: [channel name]
-- value: "[percentage]" | label: [channel name]
-- value: "[percentage]" | label: [channel name]
-CALLOUT: [One sentence about budget philosophy]
-BULLETS:
-- [Budget rationale with benchmark]
-- [Testing reserve explanation]
-
-Slide 6: [Action title about projected ROI, max 12 words]
-METRICS:
-- value: "[multiplier]" | label: Projected ROAS
-- value: "[currency]" | label: [revenue metric]
-- value: "[timeframe]" | label: [milestone]
-CALLOUT: [One sentence about the projection confidence]
-BULLETS:
-- [Revenue projection methodology]
-- [Break-even timeline]
-
-Slide 7: [Action title about execution roadmap, max 12 words]
+Slide 5: [Action title about execution roadmap, max 12 words]
 BULLETS:
 - [Phase 1 with weeks and deliverables]
 - [Phase 2 with weeks and deliverables]
 - [Phase 3 with weeks and deliverables]
-- [Phase 4 with weeks and deliverables]
+${slideCount >= 12 ? '- [Phase 4 with weeks and deliverables]' : ''}
 CALLOUT: [One sentence about timeline commitment]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
+
+${slideCount >= 12 ? `Slide 6: [Action title about channel strategy, max 12 words]
+BULLETS:
+- [Channel 1 with rationale and expected outcome]
+- [Channel 2 with rationale and expected outcome]
+- [Channel 3 with rationale and expected outcome]
+CALLOUT: [One sentence about channel mix]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
+
+Slide 7: [Action title about creative or content approach, max 12 words]
+BULLETS:
+- [Creative approach with specific tactic]
+- [Content strategy with cadence]
+- [Testing framework with methodology]
+CALLOUT: [One sentence about creative differentiation]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
 
 Slide 8: [Action title about optimisation/testing approach, max 12 words]
 COMPARISON:
@@ -215,17 +264,89 @@ After:
 - [Proposed optimisation process with frequency]
 - [Proposed optimisation process with frequency]
 CALLOUT: [One sentence about continuous improvement]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
 
-Slide 9: [Action title about next steps, max 12 words]
+Slide 9: [Action title about measurement and reporting, max 12 words]
+METRICS:
+- value: "[frequency]" | label: Reporting cadence
+- value: "[number]" | label: KPIs tracked
+- value: "[timeframe]" | label: First review
+CALLOUT: [One sentence about transparency]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
+BULLETS:
+- [KPI framework with specific metrics]
+- [Reporting dashboard and access]
+
+Slide 10: [Action title about team and credentials, max 12 words]
+BULLETS:
+- [Team structure with roles]
+- [Relevant experience with industry]
+- [Communication and collaboration process]
+CALLOUT: [One sentence about partnership]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
+
+Slide 11: [Action title about risk mitigation, max 12 words]
+COMPARISON:
+Before:
+- [Common risk without mitigation]
+After:
+- [Risk mitigation strategy]
+CALLOUT: [One sentence about risk management]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
+
+Slide 12: [Action title about next steps, max 12 words]
 METRICS:
 - value: "[timeframe]" | label: Time to launch
 - value: "[timeframe]" | label: First results
 - value: "[timeframe]" | label: Full optimisation
 CALLOUT: [One sentence with urgency]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
 BULLETS:
 - [Immediate action item with deadline]
 - [Immediate action item with deadline]
+- [Immediate action item with deadline]` : `Slide 6: [Action title about next steps, max 12 words]
+METRICS:
+- value: "[timeframe]" | label: Time to launch
+- value: "[timeframe]" | label: First results
+- value: "[timeframe]" | label: Full optimisation
+CALLOUT: [One sentence with urgency]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
+BULLETS:
 - [Immediate action item with deadline]
+- [Immediate action item with deadline]
+- [Immediate action item with deadline]`}` : `Slide 4: [Action title about the proposed strategy, max 12 words]
+BULLETS:
+- [Strategy pillar 1 with specific tactic and expected outcome]
+- [Strategy pillar 2 with specific tactic and expected outcome]
+CALLOUT: [One sentence about why this strategy wins]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
+
+Slide 5: [Action title about execution roadmap, max 12 words]
+BULLETS:
+- [Phase 1 with weeks and deliverables]
+- [Phase 2 with weeks and deliverables]
+CALLOUT: [One sentence about timeline commitment]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
+
+Slide 6: [Action title about next steps, max 12 words]
+METRICS:
+- value: "[timeframe]" | label: Time to launch
+- value: "[timeframe]" | label: First results
+- value: "[timeframe]" | label: Full optimisation
+CALLOUT: [One sentence with urgency]
+NOTES: [Presenter talking points]
+IMAGE: [stock photo topic]
+BULLETS:
+- [Immediate action item with deadline]
+- [Immediate action item with deadline]`}
 
 CONTENT QUALITY RULES:
 - Every number must be specific and realistic for the industry — use benchmarks if no client data is available.
@@ -233,6 +354,11 @@ CONTENT QUALITY RULES:
 - METRICS values should be short (1-5 characters) with descriptive labels (5-10 words).
 - COMPARISON "Before" points describe current pain; "After" points describe proposed outcomes.
 - CALLOUT is a single sentence (max 20 words) that becomes the highlighted takeaway box.
+- NOTES are presenter talking points (max 60 words) — what the salesperson should say, not what's on the slide.
+- IMAGE is a 2-5 word topic for stock photo search (e.g. "team meeting", "data analytics dashboard", "social media marketing").
+- Use ${currency} for all currency values.
+- Slides 1-3 should cover overview content (company, market, audience, challenges).
+- Slides 4+ should cover strategy, execution, and next steps.
 - Adapt all content to the client's industry, objectives, and challenges listed above.
 - Return plain text only. No markdown, no bold, no extra commentary.`;
 }
@@ -277,6 +403,24 @@ function ensureCallouts(instructions: string): string {
         .join('\n');
 }
 
+/**
+ * Validate that parsed slides have meaningful content.
+ * Returns the number of sparse slides (no bullets, no metrics, no comparison).
+ */
+function countSparseSlides(instructions: string): number {
+    const blocks = instructions.split(/\n(?=\*{0,2}Slide\s+\d+)/i);
+    let sparse = 0;
+    for (const block of blocks) {
+        const trimmed = block.trim();
+        if (!trimmed || !/^Slide\s+\d+/i.test(trimmed)) continue;
+        const hasBullets = /^-\s/m.test(trimmed);
+        const hasMetrics = /^-\s*value:/im.test(trimmed);
+        const hasComparison = /^before\s*:?$/im.test(trimmed);
+        if (!hasBullets && !hasMetrics && !hasComparison) sparse++;
+    }
+    return sparse;
+}
+
 async function resolveDeckInstructions(formData: ProposalFormData, candidate?: string | null): Promise<string> {
     const trimmedCandidate = typeof candidate === 'string' ? truncateDeckInstructions(candidate) : '';
     if (trimmedCandidate.length > 0) {
@@ -286,12 +430,27 @@ async function resolveDeckInstructions(formData: ProposalFormData, candidate?: s
         const prompt = buildDeckInstructionPrompt(formData);
         const raw = await deepseekAI.generateContentWithOptions(prompt, {
             systemInstruction: DECK_SYSTEM_INSTRUCTION,
-            temperature: 0.7,
-            maxOutputTokens: 4096,
+            temperature: 0.4,
+            maxOutputTokens: 8192,
         });
         const withCallouts = ensureCallouts(raw);
         const generated = truncateDeckInstructions(withCallouts);
         if (generated.length > 0) {
+            // Validate: if more than half the slides are sparse, retry once
+            const sparseCount = countSparseSlides(generated);
+            const totalSlides = (generated.match(/^Slide\s+\d+/gim) || []).length;
+            if (totalSlides > 0 && sparseCount > totalSlides / 2) {
+                console.warn(`[proposal-deck-ai] ${sparseCount}/${totalSlides} slides are sparse, retrying generation`);
+                const retryRaw = await deepseekAI.generateContentWithOptions(prompt, {
+                    systemInstruction: DECK_SYSTEM_INSTRUCTION,
+                    temperature: 0.3,
+                    maxOutputTokens: 8192,
+                });
+                const retryGenerated = truncateDeckInstructions(ensureCallouts(retryRaw));
+                if (retryGenerated.length > 0 && countSparseSlides(retryGenerated) < sparseCount) {
+                    return retryGenerated;
+                }
+            }
             return generated;
         }
     }

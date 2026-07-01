@@ -13,7 +13,8 @@ import {
     COLORS, FONT, FONT_LIGHT, SLIDE_W, MARGIN,
     BODY_TOP, BODY_H,
 } from './constants';
-import { parseBudgetAmount } from './parsing';
+import { parseBudgetAmount, detectCurrency, formatCurrency } from './parsing';
+import { computeBudgetWeights } from '../proposal-deck-structure';
 import { addSlideHeader, addSlideFooter } from './shared-elements';
 
 export async function addBudgetAllocationSlide(
@@ -25,6 +26,7 @@ export async function addBudgetAllocationSlide(
 ): Promise<void> {
     const budget = parseBudgetAmount(formData.marketing?.budget || '');
     if (!budget) return;
+    const currency = detectCurrency(formData.marketing?.budget || '');
 
     const slide = pptx.addSlide();
     slide.background = { color: COLORS.light };
@@ -35,7 +37,7 @@ export async function addBudgetAllocationSlide(
     const channelLabels = services.length > 0
         ? services
         : ['PPC (Google Ads)', 'Paid Social', 'SEO & Content', 'Creative & Design'];
-    const weights = [0.35, 0.25, 0.20, 0.12, 0.08].slice(0, channelLabels.length);
+    const weights = computeBudgetWeights(services).slice(0, channelLabels.length);
     const totalWeight = weights.reduce((a, b) => a + b, 0);
     const labels = channelLabels.map(s => s.length > 22 ? s.substring(0, 20) + '…' : s);
     const values = weights.map(w => Math.round((w / totalWeight) * budget));
@@ -43,7 +45,7 @@ export async function addBudgetAllocationSlide(
     const chartImg = await renderBarChart(
         labels,
         [{ label: 'Budget Allocation', data: values, color: '#2563EB' }],
-        { width: 900, height: 600, horizontal: true, valueFormat: '£' },
+        { width: 900, height: 600, horizontal: true, valueFormat: currency },
     );
 
     if (chartImg) {
@@ -51,6 +53,7 @@ export async function addBudgetAllocationSlide(
             data: chartImg,
             x: MARGIN, y: BODY_TOP + 0.2, w: 7.8, h: BODY_H - 0.4,
             sizing: { type: 'contain', w: 7.8, h: BODY_H - 0.4 },
+            altText: 'Budget allocation by channel — horizontal bar chart',
         });
     } else {
         slide.addText('Budget Allocation by Channel', {
@@ -58,7 +61,7 @@ export async function addBudgetAllocationSlide(
             fontSize: 16, bold: true, color: COLORS.dark, fontFace: FONT,
         });
         const fallbackText = labels.map((label, i) => ({
-            text: `${label}: £${values[i]!.toLocaleString('en-GB')}`,
+            text: `${label}: ${formatCurrency(values[i]!, currency)}`,
             options: { bullet: { code: '2022', indent: 20 }, breakLine: true, paraSpaceAfter: 8 },
         }));
         slide.addText(fallbackText, {
@@ -86,7 +89,7 @@ export async function addBudgetAllocationSlide(
         x: panelX + 0.3, y: panelY + 0.3, w: panelW - 0.5, h: 0.3,
         fontSize: 10, color: COLORS.muted, fontFace: FONT, bold: true, charSpacing: 1.5,
     });
-    slide.addText(`£${budget.toLocaleString('en-GB')}`, {
+    slide.addText(formatCurrency(budget, currency), {
         x: panelX + 0.3, y: panelY + 0.6, w: panelW - 0.5, h: 0.7,
         fontSize: 32, bold: true, color: COLORS.primary, fontFace: FONT_LIGHT,
     });
@@ -132,7 +135,7 @@ export async function addBudgetAllocationSlide(
         x: panelX + 0.4, y: annualBoxY + 0.15, w: panelW - 0.7, h: 0.25,
         fontSize: 10, color: COLORS.muted, fontFace: FONT, bold: true, charSpacing: 1.5,
     });
-    slide.addText(`£${(budget * 12).toLocaleString('en-GB')}`, {
+    slide.addText(formatCurrency(budget * 12, currency), {
         x: panelX + 0.4, y: annualBoxY + 0.4, w: panelW - 0.7, h: 0.5,
         fontSize: 24, bold: true, color: COLORS.secondary, fontFace: FONT_LIGHT,
     });
@@ -149,6 +152,7 @@ export async function addRoiProjectionSlide(
 ): Promise<void> {
     const budget = parseBudgetAmount(formData.marketing?.budget || '');
     if (!budget) return;
+    const currency = detectCurrency(formData.marketing?.budget || '');
 
     const slide = pptx.addSlide();
     slide.background = { color: COLORS.light };
@@ -167,8 +171,8 @@ export async function addRoiProjectionSlide(
         ),
         renderLineChart(
             ['Month 1', 'Month 2', 'Month 3'],
-            [{ label: 'Cost per Lead (£)', data: [50, 35, 25], color: '#F59E0B' }],
-            { width: 700, height: 600, title: 'Cost per Lead Trend (£)', valueFormat: '£', smooth: true },
+            [{ label: `Cost per Lead (${currency})`, data: [50, 35, 25], color: '#F59E0B' }],
+            { width: 700, height: 600, title: `Cost per Lead Trend (${currency})`, valueFormat: currency, smooth: true },
         ),
     ]);
 
@@ -178,6 +182,7 @@ export async function addRoiProjectionSlide(
             data: leadsChart,
             x: MARGIN, y: BODY_TOP + 0.2, w: leftW, h: BODY_H - 0.4,
             sizing: { type: 'contain', w: leftW, h: BODY_H - 0.4 },
+            altText: 'Projected leads per month — bar chart',
         });
     } else {
         slide.addText('Projected Leads per Month', {
@@ -201,16 +206,17 @@ export async function addRoiProjectionSlide(
             data: cplChart,
             x: rightX, y: BODY_TOP + 0.2, w: rightW, h: BODY_H - 0.4,
             sizing: { type: 'contain', w: rightW, h: BODY_H - 0.4 },
+            altText: 'Cost per lead trend — line chart',
         });
     } else {
-        slide.addText('Cost per Lead Trend (£)', {
+        slide.addText(`Cost per Lead Trend (${currency})`, {
             x: rightX, y: BODY_TOP + 0.3, w: rightW, h: 0.4,
             fontSize: 16, bold: true, color: COLORS.dark, fontFace: FONT,
         });
         slide.addText([
-            { text: 'Month 1: £50 per lead', options: { bullet: true, breakLine: true, paraSpaceAfter: 8 } },
-            { text: 'Month 2: £35 per lead', options: { bullet: true, breakLine: true, paraSpaceAfter: 8 } },
-            { text: 'Month 3: £25 per lead', options: { bullet: true } },
+            { text: `Month 1: ${currency}50 per lead`, options: { bullet: true, breakLine: true, paraSpaceAfter: 8 } },
+            { text: `Month 2: ${currency}35 per lead`, options: { bullet: true, breakLine: true, paraSpaceAfter: 8 } },
+            { text: `Month 3: ${currency}25 per lead`, options: { bullet: true } },
         ], {
             x: rightX + 0.2, y: BODY_TOP + 0.8, w: rightW - 0.2, h: BODY_H - 1.0,
             fontSize: 14, color: COLORS.dark, fontFace: FONT,

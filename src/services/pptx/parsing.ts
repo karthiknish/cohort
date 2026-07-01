@@ -87,6 +87,8 @@ export function parseSlideInstructions(instructions: string): PptxSlideContent[]
         const bullets: string[] = [];
         let callout: string | undefined;
         let comparison: SlideComparison | undefined;
+        let notes: string | undefined;
+        let imageTopic: string | undefined;
 
         let i = 1;
         while (i < lines.length) {
@@ -100,6 +102,22 @@ export function parseSlideInstructions(instructions: string): PptxSlideContent[]
             const calloutMatch = line.match(/^CALLOUT:\s*(.*)$/i);
             if (calloutMatch && calloutMatch[1]) {
                 callout = cleanMarkdown(calloutMatch[1]);
+                i++;
+                continue;
+            }
+
+            // NOTES: line — speaker notes for the presenter
+            const notesMatch = line.match(/^NOTES:\s*(.*)$/i);
+            if (notesMatch && notesMatch[1]) {
+                notes = cleanMarkdown(notesMatch[1]);
+                i++;
+                continue;
+            }
+
+            // IMAGE: line — AI-suggested image topic
+            const imageMatch = line.match(/^IMAGE:\s*(.*)$/i);
+            if (imageMatch && imageMatch[1]) {
+                imageTopic = cleanMarkdown(imageMatch[1]);
                 i++;
                 continue;
             }
@@ -170,6 +188,8 @@ export function parseSlideInstructions(instructions: string): PptxSlideContent[]
                 ...(metrics.length > 0 ? { metrics } : {}),
                 ...(callout ? { callout } : {}),
                 ...(comparison ? { comparison } : {}),
+                ...(notes ? { notes } : {}),
+                ...(imageTopic ? { imageTopic } : {}),
             });
         }
     }
@@ -186,6 +206,24 @@ export function parseBudgetAmount(budget: string): number | null {
     if (isNaN(num)) return null;
     if (/k$/i.test(budget)) return num * 1000;
     return num;
+}
+
+export type CurrencySymbol = '£' | '$' | '€' | '₹';
+
+/** Detect the currency symbol from a budget string. Defaults to £. */
+export function detectCurrency(budget: string): CurrencySymbol {
+    if (!budget) return '£';
+    if (budget.includes('$')) return '$';
+    if (budget.includes('€')) return '€';
+    if (budget.includes('₹')) return '₹';
+    if (budget.includes('£')) return '£';
+    return '£';
+}
+
+/** Format a number with the given currency symbol and locale. */
+export function formatCurrency(amount: number, symbol: CurrencySymbol = '£'): string {
+    const locale = symbol === '$' ? 'en-US' : symbol === '€' ? 'en-IE' : symbol === '₹' ? 'en-IN' : 'en-GB';
+    return `${symbol}${amount.toLocaleString(locale)}`;
 }
 
 /** Extract a short keyword from a slide title for the sidebar label. */

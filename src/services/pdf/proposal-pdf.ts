@@ -16,15 +16,21 @@
 
 import { jsPDF } from 'jspdf';
 import type { ProposalFormData } from '@/lib/proposals';
-import { parseSlideInstructions, parseBudgetAmount } from '../pptx/parsing';
+import { parseBudgetAmount, detectCurrency, formatCurrency, type CurrencySymbol } from '../pptx/parsing';
 import { renderBarChart, renderLineChart } from '../chart-images';
-import { prefetchSlideImages, topicFromTitle, type PexelsImage } from '../pexels-images';
+import { prefetchSlideImages, type PexelsImage } from '../pexels-images';
 import { COHORTS_LOGO_WHITE_BASE64 } from '../pptx/logo-data';
 import {
     COLORS, PAGE_W, PAGE_H, MARGIN, CONTENT_W,
     HEADER_H, FOOTER_H, BODY_TOP, BODY_BOTTOM, BODY_H, FONT,
 } from './constants';
 import type { PptxSlideContent } from '../pptx/types';
+import {
+    buildDeckStructure, buildSlideTopics,
+    getServiceDescriptions, getSidebarStatsForKeyword,
+    computeBudgetWeights,
+} from '../proposal-deck-structure';
+import { sidebarKeyword } from '../pptx/parsing';
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -454,7 +460,7 @@ function addContentSlide(
 }
 
 function addSidebarStrip(doc: jsPDF, title: string, formData: ProposalFormData, y: number): void {
-    const stats = getSidebarStats(title, formData);
+    const stats = getSidebarStatsForKeyword(sidebarKeyword(title), formData, 60);
     if (stats.length === 0) return;
 
     y = ensureSpace(doc, y, 50);
@@ -475,60 +481,6 @@ function addSidebarStrip(doc: jsPDF, title: string, formData: ProposalFormData, 
     });
 }
 
-function getSidebarStats(title: string, formData: ProposalFormData): { label: string; value: string }[] {
-    const lower = title.toLowerCase();
-    if (lower.includes('company') || lower.includes('about') || lower.includes('overview')) {
-        return [
-            { label: 'Industry', value: formData.company?.industry || '—' },
-            { label: 'Company Size', value: formData.company?.size || '—' },
-            { label: 'Locations', value: formData.company?.locations?.split('\n')[0] || '—' },
-        ];
-    }
-    if (lower.includes('market') || lower.includes('advertis') || lower.includes('channel')) {
-        return [
-            { label: 'Monthly Budget', value: formData.marketing?.budget || '—' },
-            { label: 'Ad Accounts', value: formData.marketing?.adAccounts || '—' },
-            { label: 'Platforms', value: formData.marketing?.platforms?.join(', ') || '—' },
-        ];
-    }
-    if (lower.includes('goal') || lower.includes('objective') || lower.includes('target')) {
-        return [
-            { label: 'Objectives', value: formData.goals?.objectives?.join(', ') || '—' },
-            { label: 'Audience', value: formData.goals?.audience?.substring(0, 60) || '—' },
-        ];
-    }
-    if (lower.includes('scope') || lower.includes('service') || lower.includes('deliver')) {
-        return [
-            { label: 'Services', value: formData.scope?.services?.join(', ') || '—' },
-            { label: 'Custom Needs', value: formData.scope?.otherService?.substring(0, 60) || '—' },
-        ];
-    }
-    if (lower.includes('timeline') || lower.includes('schedule') || lower.includes('phase')) {
-        return [
-            { label: 'Start', value: formData.timelines?.startTime || '—' },
-            { label: 'Events', value: formData.timelines?.upcomingEvents?.substring(0, 60) || '—' },
-        ];
-    }
-    if (lower.includes('budget') || lower.includes('cost') || lower.includes('invest')) {
-        return [
-            { label: 'Budget', value: formData.marketing?.budget || '—' },
-            { label: 'Engagement', value: formData.value?.engagementType || '—' },
-        ];
-    }
-    if (lower.includes('audience') || lower.includes('customer') || lower.includes('persona')) {
-        return [
-            { label: 'Target', value: formData.goals?.audience?.substring(0, 60) || '—' },
-            { label: 'Goals', value: formData.goals?.objectives?.join(', ') || '—' },
-        ];
-    }
-    if (lower.includes('challenge') || lower.includes('problem') || lower.includes('barrier')) {
-        return [
-            { label: 'Barriers', value: formData.goals?.challenges?.join(', ') || '—' },
-            { label: 'Custom', value: formData.goals?.customChallenge || '—' },
-        ];
-    }
-    return [];
-}
 
 // ─── Services table ───────────────────────────────────────
 
@@ -546,15 +498,7 @@ function addServicesTable(
     fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.light);
     addPageHeader(doc, 'Scope of Services', slideNum);
 
-    const serviceDescriptions: Record<string, string> = {
-        'PPC (Google Ads)': 'Search & display campaigns, keyword strategy, bid management, landing page optimisation',
-        'Paid Social (Meta/TikTok/LinkedIn)': 'Audience targeting, creative testing, retargeting funnels, lookalike audiences',
-        'SEO & Content Marketing': 'Technical SEO, content calendar, organic growth strategy, link building',
-        'Email Marketing': 'Automation flows, segmentation, lifecycle campaigns, A/B testing',
-        'Creative & Design': 'Ad creative, landing pages, brand assets, motion graphics',
-        'Strategy & Consulting': 'Marketing audits, growth planning, quarterly reviews, competitive analysis',
-        'Other': formData.scope?.otherService || 'Custom deliverables tailored to your requirements',
-    };
+    const serviceDescriptions = getServiceDescriptions(formData);
 
     const tableX = MARGIN + 8;
     const tableY = BODY_TOP + 12;
@@ -565,7 +509,7 @@ function addServicesTable(
 
     // Header row
     fillRect(doc, tableX, tableY, tableW, headerH, COLORS.primary);
-    const headers = ['Service', "What's Included", 'Priority'];
+    const headers = ['Service', "What's Included", 'Status'];
     let hx = tableX;
     headers.forEach((h, i) => {
         text(doc, h, hx + 8, tableY + 18, {
@@ -583,8 +527,8 @@ function addServicesTable(
         drawLine(doc, tableX, ry, tableX + tableW, ry, COLORS.mutedLight, 0.5);
 
         const desc = serviceDescriptions[service] || 'Tailored delivery based on your requirements';
-        const priority = i === 0 ? 'High' : i === 1 ? 'Medium' : 'Standard';
-        const priorityColor = i === 0 ? COLORS.warning : i === 1 ? COLORS.secondary : COLORS.muted;
+        const priority = 'Included';
+        const priorityColor = COLORS.secondary;
 
         let cx = tableX;
         text(doc, service, cx + 8, ry + rowH / 2 + 3, {
@@ -619,6 +563,7 @@ async function addBudgetAllocation(
 ): Promise<void> {
     const budget = parseBudgetAmount(formData.marketing?.budget || '');
     if (!budget) return;
+    const currency = detectCurrency(formData.marketing?.budget || '');
 
     addNewPage(doc);
     fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.light);
@@ -628,7 +573,7 @@ async function addBudgetAllocation(
     const channelLabels = services.length > 0
         ? services
         : ['PPC (Google Ads)', 'Paid Social', 'SEO & Content', 'Creative & Design'];
-    const weights = [0.35, 0.25, 0.20, 0.12, 0.08].slice(0, channelLabels.length);
+    const weights = computeBudgetWeights(services).slice(0, channelLabels.length);
     const totalWeight = weights.reduce((a, b) => a + b, 0);
     const labels = channelLabels.map(s => s.length > 20 ? s.substring(0, 18) + '…' : s);
     const values = weights.map(w => Math.round((w / totalWeight) * budget));
@@ -636,7 +581,7 @@ async function addBudgetAllocation(
     const chartImg = await renderBarChart(
         labels,
         [{ label: 'Budget Allocation', data: values, color: '#2563EB' }],
-        { width: 800, height: 500, horizontal: true, valueFormat: '£' },
+        { width: 800, height: 500, horizontal: true, valueFormat: currency },
     );
 
     // Chart on top, summary panel below (portrait layout)
@@ -650,10 +595,10 @@ async function addBudgetAllocation(
         try {
             doc.addImage(base64, 'PNG', chartX, chartY, chartW, chartH, undefined, 'FAST');
         } catch {
-            renderBudgetFallback(doc, labels, values, chartX, chartY, chartW);
+            renderBudgetFallback(doc, labels, values, chartX, chartY, chartW, currency);
         }
     } else {
-        renderBudgetFallback(doc, labels, values, chartX, chartY, chartW);
+        renderBudgetFallback(doc, labels, values, chartX, chartY, chartW, currency);
     }
 
     // Summary panel below chart
@@ -667,7 +612,7 @@ async function addBudgetAllocation(
     text(doc, 'MONTHLY INVESTMENT', panelX + 14, panelY + 20, {
         size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
     });
-    text(doc, `£${budget.toLocaleString('en-GB')}`, panelX + 14, panelY + 42, {
+    text(doc, formatCurrency(budget, currency), panelX + 14, panelY + 42, {
         size: FONT.panelBigValue, color: COLORS.primary, bold: true, align: 'left',
     });
 
@@ -706,7 +651,7 @@ async function addBudgetAllocation(
     text(doc, 'PROJECTED ANNUAL', panelX + 18, annualY + 16, {
         size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
     });
-    text(doc, `£${(budget * 12).toLocaleString('en-GB')}`, panelX + 18, annualY + 36, {
+    text(doc, formatCurrency(budget * 12, currency), panelX + 18, annualY + 36, {
         size: 16, color: COLORS.secondary, bold: true, align: 'left',
     });
 
@@ -718,13 +663,14 @@ function renderBudgetFallback(
     labels: string[],
     values: number[],
     x: number, y: number, w: number,
+    currency: CurrencySymbol = '£',
 ): void {
     text(doc, 'Budget Allocation by Channel', x, y + 20, {
         size: 14, color: COLORS.dark, bold: true, align: 'left',
     });
     let fy = y + 44;
     labels.forEach((label, i) => {
-        text(doc, `•  ${label}: £${values[i]!.toLocaleString('en-GB')}`, x + 8, fy, {
+        text(doc, `•  ${label}: ${formatCurrency(values[i]!, currency)}`, x + 8, fy, {
             size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16,
         });
         fy += 20;
@@ -742,6 +688,7 @@ async function addRoiProjection(
 ): Promise<void> {
     const budget = parseBudgetAmount(formData.marketing?.budget || '');
     if (!budget) return;
+    const currency = detectCurrency(formData.marketing?.budget || '');
 
     addNewPage(doc);
     fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.light);
@@ -759,8 +706,8 @@ async function addRoiProjection(
         ),
         renderLineChart(
             ['Month 1', 'Month 2', 'Month 3'],
-            [{ label: 'Cost per Lead (£)', data: [50, 35, 25], color: '#F59E0B' }],
-            { width: 700, height: 500, title: 'Cost per Lead Trend (£)', valueFormat: '£', smooth: true },
+            [{ label: `Cost per Lead (${currency})`, data: [50, 35, 25], color: '#F59E0B' }],
+            { width: 700, height: 500, title: `Cost per Lead Trend (${currency})`, valueFormat: currency, smooth: true },
         ),
     ]);
 
@@ -789,10 +736,10 @@ async function addRoiProjection(
         try {
             doc.addImage(base64, 'PNG', chartX, cplY, chartW, chartH, undefined, 'FAST');
         } catch {
-            renderCplFallback(doc, chartX, cplY, chartW);
+            renderCplFallback(doc, chartX, cplY, chartW, currency);
         }
     } else {
-        renderCplFallback(doc, chartX, cplY, chartW);
+        renderCplFallback(doc, chartX, cplY, chartW, currency);
     }
 
     addPageFooter(doc, companyName, slideNum, total);
@@ -810,13 +757,13 @@ function renderLeadsFallback(
     text(doc, `•  Month 3: ${m3} leads`, x + 8, y + 84, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
 }
 
-function renderCplFallback(doc: jsPDF, x: number, y: number, w: number): void {
-    text(doc, 'Cost per Lead Trend (£)', x, y + 20, {
+function renderCplFallback(doc: jsPDF, x: number, y: number, w: number, currency: CurrencySymbol = '£'): void {
+    text(doc, `Cost per Lead Trend (${currency})`, x, y + 20, {
         size: 14, color: COLORS.dark, bold: true, align: 'left',
     });
-    text(doc, '•  Month 1: £50 per lead', x + 8, y + 44, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
-    text(doc, '•  Month 2: £35 per lead', x + 8, y + 64, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
-    text(doc, '•  Month 3: £25 per lead', x + 8, y + 84, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
+    text(doc, `•  Month 1: ${currency}50 per lead`, x + 8, y + 44, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
+    text(doc, `•  Month 2: ${currency}35 per lead`, x + 8, y + 64, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
+    text(doc, `•  Month 3: ${currency}25 per lead`, x + 8, y + 84, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
 }
 
 // ─── Closing page ─────────────────────────────────────────
@@ -912,70 +859,12 @@ export async function generateProposalPdf(
 
     const companyName = formData.company?.name?.trim() || 'Client';
 
-    // Parse AI-generated slides
-    const aiSlides = parseSlideInstructions(instructions);
-
-    // Determine which data-driven slides to include
-    const hasBudget = parseBudgetAmount(formData.marketing?.budget || '') !== null;
-    const hasServices = (formData.scope?.services || []).length > 0;
-
-    // Build section structure for TOC + dividers
-    const sections: { title: string; description: string; slideIndices: number[] }[] = [];
-
-    if (aiSlides.length > 0) {
-        const overviewCount = Math.min(3, Math.ceil(aiSlides.length / 2));
-        sections.push({
-            title: 'Company & Market Overview',
-            description: 'Executive summary, company background, and market analysis',
-            slideIndices: Array.from({ length: overviewCount }, (_, i) => i),
-        });
-        if (aiSlides.length > overviewCount) {
-            sections.push({
-                title: 'Strategy & Approach',
-                description: 'Proposed marketing strategy, target audience, and campaign structure',
-                slideIndices: Array.from({ length: aiSlides.length - overviewCount }, (_, i) => i + overviewCount),
-            });
-        }
-    }
-
-    if (hasServices) {
-        sections.push({
-            title: 'Scope of Services',
-            description: 'Detailed breakdown of services and deliverables',
-            slideIndices: [],
-        });
-    }
-    if (hasBudget) {
-        sections.push({
-            title: 'Budget & ROI Projections',
-            description: 'Investment breakdown and projected return on investment',
-            slideIndices: [],
-        });
-    }
-
-    // Calculate total slides
-    const dividerCount = sections.length;
-    const dataSlideCount = (hasServices ? 1 : 0) + (hasBudget ? 2 : 0);
-    const totalSlides = 1 + 1 + aiSlides.length + dividerCount + dataSlideCount + 1;
+    // Build shared deck structure (content-aware section assignment)
+    const structure = buildDeckStructure(formData, instructions);
+    const { sections, aiSlides, hasBudget, hasServices, totalSlides } = structure;
 
     // Pre-fetch images from Pexels/Unsplash — same dedup pool as PPTX.
-    // Build topic list in the SAME ORDER as slides are created below.
-    const slideTopics = [
-        'company',  // title slide
-        // TOC slide has no image
-        ...sections.flatMap((section) => {
-            const dividerTopic = topicFromTitle(section.title);
-            if (section.slideIndices.length > 0) {
-                return [
-                    dividerTopic,
-                    ...section.slideIndices.map((idx) => topicFromTitle(aiSlides[idx]!.title)),
-                ];
-            }
-            // Data-driven sections (services, budget) have no content images
-            return [dividerTopic];
-        }),
-        'next',  // closing slide
-    ];
+    const slideTopics = buildSlideTopics(structure);
     const slideImages = await prefetchSlideImages(slideTopics);
     let imageIdx = 0;
 

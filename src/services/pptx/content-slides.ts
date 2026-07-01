@@ -242,7 +242,7 @@ function addContentSlideImageRight(
     slideNumber: number,
     totalSlides: number,
     image: PexelsImage | null,
-): void {
+): pptxgen.Slide {
     const slide = pptx.addSlide();
     slide.background = { color: COLORS.light };
 
@@ -283,6 +283,7 @@ function addContentSlideImageRight(
             x: leftX + 0.35, y: cursorY, w: leftW - 0.6, h: bodyH,
             fontSize: 15, color: COLORS.dark, fontFace: FONT,
             align: 'left', valign: 'top', lineSpacingMultiple: 1.35,
+            fit: 'shrink', autoFit: true,
         });
         cursorY += bodyH + 0.1;
     } else if (!hasMetrics) {
@@ -308,12 +309,14 @@ function addContentSlideImageRight(
             data: image.base64,
             x: imgX, y: imgY, w: imgW, h: imgH,
             sizing: { type: 'cover', w: imgW, h: imgH },
+            altText: content.imageTopic || `Image for ${content.title}`,
         });
     } else {
         addSidebar(pptx, slide, sidebarKeyword(content.title), formData);
     }
 
     addSlideFooter(slide, companyName, slideNumber, totalSlides);
+    return slide;
 }
 
 // ─── Layout variant 1: Full-bleed background image ────────────────
@@ -326,7 +329,7 @@ function addContentSlideImageBackground(
     slideNumber: number,
     totalSlides: number,
     image: PexelsImage | null,
-): void {
+): pptxgen.Slide {
     const slide = pptx.addSlide();
 
     if (image) {
@@ -391,6 +394,7 @@ function addContentSlideImageBackground(
             x: cardX + 0.35, y: cursorY, w: cardW - 0.6, h: bodyH,
             fontSize: 15, color: COLORS.dark, fontFace: FONT,
             align: 'left', valign: 'top', lineSpacingMultiple: 1.35,
+            fit: 'shrink', autoFit: true,
         });
     }
 
@@ -399,6 +403,7 @@ function addContentSlideImageBackground(
     }
 
     addSlideFooter(slide, companyName, slideNumber, totalSlides);
+    return slide;
 }
 
 // ─── Layout variant 2: Image on left ──────────────────────────────
@@ -411,7 +416,7 @@ function addContentSlideImageLeft(
     slideNumber: number,
     totalSlides: number,
     image: PexelsImage | null,
-): void {
+): pptxgen.Slide {
     const slide = pptx.addSlide();
     slide.background = { color: COLORS.light };
 
@@ -428,6 +433,7 @@ function addContentSlideImageLeft(
             data: image.base64,
             x: imgX, y: imgY, w: imgW, h: imgH,
             sizing: { type: 'cover', w: imgW, h: imgH },
+            altText: content.imageTopic || `Image for ${content.title}`,
         });
     } else {
         const sidebarKeywordVal = sidebarKeyword(content.title);
@@ -495,6 +501,7 @@ function addContentSlideImageLeft(
             x: rightX + 0.35, y: cursorY, w: rightW - 0.6, h: bodyH,
             fontSize: 15, color: COLORS.dark, fontFace: FONT,
             align: 'left', valign: 'top', lineSpacingMultiple: 1.35,
+            fit: 'shrink', autoFit: true,
         });
         cursorY += bodyH + 0.1;
     } else if (!hasMetrics) {
@@ -510,6 +517,7 @@ function addContentSlideImageLeft(
     }
 
     addSlideFooter(slide, companyName, slideNumber, totalSlides);
+    return slide;
 }
 
 // ─── Dispatcher ───────────────────────────────────────────────────
@@ -540,11 +548,17 @@ export function addContentSlide(
         variant = 0;
     }
 
+    let slide: pptxgen.Slide;
     if (variant === 0) {
-        addContentSlideImageRight(pptx, slideContent, formData, companyName, slideNumber, totalSlides, image);
+        slide = addContentSlideImageRight(pptx, slideContent, formData, companyName, slideNumber, totalSlides, image);
     } else if (variant === 1) {
-        addContentSlideImageBackground(pptx, slideContent, formData, companyName, slideNumber, totalSlides, image);
+        slide = addContentSlideImageBackground(pptx, slideContent, formData, companyName, slideNumber, totalSlides, image);
     } else {
-        addContentSlideImageLeft(pptx, slideContent, formData, companyName, slideNumber, totalSlides, image);
+        slide = addContentSlideImageLeft(pptx, slideContent, formData, companyName, slideNumber, totalSlides, image);
+    }
+
+    // Add speaker notes if available
+    if (slideContent.notes) {
+        slide.addNotes(slideContent.notes);
     }
 }
