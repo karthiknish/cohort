@@ -15,8 +15,10 @@ import { cn } from '@/lib/utils';
 import type { PendingTaskAttachment } from '@/services/task-attachments';
 import type { TaskPriority, TaskStatus } from '@/types/tasks';
 import { TaskContextChip, TaskFormField, TaskFormSection, } from './task-modal-primitives';
+import { TaskProjectPicker } from './task-project-picker';
 import { TASKS_THEME } from './tasks-theme';
 import { formatPriorityLabel, formatStatusLabel, isTaskDueDateDisabled, priorityAccentColors, type TaskFormState, } from './task-types';
+import type { TaskProjectOption } from './hooks/use-task-project-options';
 type MentionableUsers = Array<{
     id: string;
     name: string;
@@ -43,6 +45,9 @@ type TaskSheetFieldsProps = {
     projectHelpText?: string;
     dueDateLayout?: 'compact' | 'full';
     showStatus?: boolean;
+    projectOptions?: TaskProjectOption[];
+    projectOptionsLoading?: boolean;
+    allowProjectSelection?: boolean;
 };
 function PrioritySelectItem({ value }: {
     value: TaskPriority;
@@ -52,7 +57,7 @@ function PrioritySelectItem({ value }: {
       {formatPriorityLabel(value)}
     </span>);
 }
-export function TaskSheetFields({ ids, formState, setFormState, disabled, mentionableUsers, titlePlaceholder, clientPlaceholder, projectPlaceholder, clientHelpText, projectHelpText, dueDateLayout = 'full', showStatus = true, }: TaskSheetFieldsProps) {
+export function TaskSheetFields({ ids, formState, setFormState, disabled, mentionableUsers, titlePlaceholder, clientPlaceholder, projectPlaceholder, clientHelpText, projectHelpText, dueDateLayout = 'full', showStatus = true, projectOptions = [], projectOptionsLoading = false, allowProjectSelection = false, }: TaskSheetFieldsProps) {
     const handleDueDateSelect = (date: Date | undefined) => {
         setFormState((prev) => ({
             ...prev,
@@ -73,6 +78,13 @@ export function TaskSheetFields({ ids, formState, setFormState, disabled, mentio
     };
     const handleAssignedToChange = (value: string) => {
         setFormState((prev) => ({ ...prev, assignedTo: value }));
+    };
+    const handleProjectChange = (project: { id: string | null; name: string }) => {
+        setFormState((prev) => ({
+            ...prev,
+            projectId: project.id,
+            projectName: project.name,
+        }));
     };
     const dueDateField = (<TaskFormField id={ids.dueDate} label="Due date">
       <Popover>
@@ -155,11 +167,11 @@ export function TaskSheetFields({ ids, formState, setFormState, disabled, mentio
           </TaskFormField>
 
           <TaskFormField id={ids.project} label="Project" hint={projectHelpText}>
-            <TaskContextChip>
+            {allowProjectSelection ? (<TaskProjectPicker value={formState.projectId} projectName={formState.projectName} options={projectOptions} loading={projectOptionsLoading} disabled={disabled} placeholder={projectPlaceholder} onChange={handleProjectChange}/>) : (<TaskContextChip>
               <span className={cn(!formState.projectName && 'text-muted-foreground')}>
                 {formState.projectName || projectPlaceholder}
               </span>
-            </TaskContextChip>
+            </TaskContextChip>)}
           </TaskFormField>
         </div>
       </TaskFormSection>

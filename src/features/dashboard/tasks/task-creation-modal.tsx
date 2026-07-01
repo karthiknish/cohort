@@ -13,11 +13,12 @@ import { useClientContext } from '@/shared/contexts/client-context';
 import type { TaskPriority, TaskRecord } from '@/types/tasks';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { emitDashboardRefresh } from '@/lib/refresh-bus';
-import { useConvex, useMutation } from 'convex/react';
-import { filesApi, tasksApi } from '@/lib/convex-api';
+import { useConvex, useMutation, useQuery } from 'convex/react';
+import { filesApi, tasksApi, usersApi } from '@/lib/convex-api';
 import { buildPendingTaskAttachments, type PendingTaskAttachment, uploadTaskAttachment, } from '@/services/task-attachments';
 import { TaskCreationModalFormFields } from './task-creation-modal-form';
-import { isFutureTaskDueDateValue } from './task-types';
+import { isFutureTaskDueDateValue, resolveAssigneeUserIds, teamMembersToMentionable, type TaskParticipant, } from './task-types';
+import { useTaskProjectOptions } from './hooks/use-task-project-options';
 interface TaskCreationModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -45,6 +46,13 @@ export function TaskCreationModal({ isOpen, onClose, initialData, onTaskCreated,
     const syncMetadata = (args: {
         key: string;
     }) => syncMetadataMutation(args);
+    const { projects, loading: projectsLoading } = useTaskProjectOptions();
+    const workspaceId = user?.agencyId ? String(user.agencyId) : null;
+    const teamMembersRaw = useQuery(usersApi.listWorkspaceMembers, workspaceId
+        ? { workspaceId, limit: 500 }
+        : 'skip') as TaskParticipant[] | undefined;
+    const teamMembers: TaskParticipant[] = teamMembersRaw ?? [];
+    const mentionableUsers = teamMembersToMentionable(teamMembers);
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
     const [pendingAttachments, setPendingAttachments] = useState<PendingTaskAttachment[]>([]);
@@ -54,7 +62,7 @@ export function TaskCreationModal({ isOpen, onClose, initialData, onTaskCreated,
         description: string;
         priority: TaskPriority;
         dueDate: string;
-        assignedTo: string[];
+        assignedTo: string;
         projectId: string;
         projectName: string;
     }>({
@@ -62,7 +70,7 @@ export function TaskCreationModal({ isOpen, onClose, initialData, onTaskCreated,
         description: initialData?.description || '',
         priority: taskDefaults.priority || 'medium',
         dueDate: defaultDueDate,
-        assignedTo: taskDefaults.assignedTo || [],
+        assignedTo: '',
         projectId: initialData?.projectId || taskDefaults.projectId || '',
         projectName: initialData?.projectName || taskDefaults.projectName || '',
     });
@@ -84,13 +92,14 @@ export function TaskCreationModal({ isOpen, onClose, initialData, onTaskCreated,
         }
         startTransition(async () => {
             setError(null);
+            const assignedMembers = resolveAssigneeUserIds(formData.assignedTo, teamMembers);
             const payload = {
                 title: formData.title.trim(),
                 description: formData.description.trim() || undefined,
                 priority: formData.priority,
                 status: 'todo' as const,
                 dueDate: formData.dueDate || undefined,
-                assignedTo: formData.assignedTo,
+                assignedTo: assignedMembers,
                 clientId: selectedClientId || undefined,
                 client: selectedClient?.name || undefined,
                 projectId: formData.projectId || undefined,
@@ -163,7 +172,7 @@ export function TaskCreationModal({ isOpen, onClose, initialData, onTaskCreated,
                     description: '',
                     priority: taskDefaults.priority || 'medium',
                     dueDate: defaultDueDate,
-                    assignedTo: taskDefaults.assignedTo || [],
+                    assignedTo: '',
                     projectId: taskDefaults.projectId || '',
                     projectName: taskDefaults.projectName || '',
                 });
@@ -204,6 +213,16 @@ export function TaskCreationModal({ isOpen, onClose, initialData, onTaskCreated,
     const handlePriorityChange = (value: TaskPriority) => {
         setFormData((prev) => ({ ...prev, priority: value }));
     };
+    const handleAssigneeChange = (value: string) => {
+        setFormData((prev) => ({ ...prev, assignedTo: value }));
+    };
+    const handleProjectChange = (project: { id: string | null; name: string }) => {
+        setFormData((prev) => ({
+            ...prev,
+            projectId: project.id ?? '',
+            projectName: project.name,
+        }));
+    };
     const handleOpenChange = (open: boolean) => {
         if (!open)
             onClose();
@@ -225,7 +244,7 @@ export function TaskCreationModal({ isOpen, onClose, initialData, onTaskCreated,
         </div>
 
         <div className={TASKS_THEME.sheet.body}>
-          <TaskCreationModalFormFields title={formData.title} description={formData.description} priority={formData.priority} dueDate={formData.dueDate} projectName={formData.projectName} clientName={contextInfo.clientName} assigneeCount={formData.assignedTo.length} error={error} isLoading={isPending} pendingAttachments={pendingAttachments} fileInputRef={fileInputRef} onTitleChange={handleTitleChange} onDescriptionChange={handleDescriptionChange} onPriorityChange={handlePriorityChange} onDateSelect={handleDateSelect} onAddAttachments={handleAddAttachments} onRemoveAttachment={handleRemoveAttachment} onCancel={onClose}/>
+          <TaskCreationModalFormFields title={formData.title} description={formData.description} priority={formData.priority} dueDate={formData.dueDate} projectName={formData.projectName} projectId={formData.projectId || null} clientName={contextInfo.clientName} assigneeValue={formData.assignedTo} mentionableUsers={mentionableUsers} projectOptions={projects} projectOptionsLoading={projectsLoading} error={error} isLoading={isPending} pendingAttachments={pendingAttachments} fileInputRef={fileInputRef} onTitleChange={handleTitleChange} onDescriptionChange={handleDescriptionChange} onPriorityChange={handlePriorityChange} onDateSelect={handleDateSelect} onAssigneeChange={handleAssigneeChange} onProjectChange={handleProjectChange} onAddAttachments={handleAddAttachments} onRemoveAttachment={handleRemoveAttachment} onCancel={onClose}/>
         </div>
       </form>
     </ResponsiveFormSheet>);

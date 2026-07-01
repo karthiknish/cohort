@@ -9,6 +9,7 @@ import { TaskSheetAttachmentsSection, TaskSheetFields } from './task-form-sheet-
 import { TaskModalError, TaskSheetHeader } from './task-modal-primitives';
 import { TASKS_THEME } from './tasks-theme';
 import { teamMembersToMentionable, type TaskFormState, type TaskParticipant } from './task-types';
+import { useTaskProjectOptions } from './hooks/use-task-project-options';
 const EDIT_TASK_FIELD_IDS = {
     title: 'edit-task-title',
     description: 'edit-task-description',
@@ -43,11 +44,12 @@ export type CreateTaskSheetProps = {
 export function CreateTaskSheet({ open, onOpenChange, formState, setFormState, creating, createError, onSubmit, participants, pendingAttachments, onAddAttachments, onRemoveAttachment, }: CreateTaskSheetProps) {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const mentionableUsers = teamMembersToMentionable(participants);
+    const { projects, loading: projectsLoading } = useTaskProjectOptions();
     return (<ResponsiveFormSheet open={open} onOpenChange={onOpenChange} contentClassName={TASKS_THEME.sheet.content}>
       <form className="flex h-full min-h-0 flex-col" onSubmit={onSubmit}>
         <TaskSheetHeader icon={ListTodo} title="Create task" description="Capture work, assign teammates, and set a due date."/>
         <div className={TASKS_THEME.sheet.body}>
-          <TaskSheetFields ids={CREATE_TASK_FIELD_IDS} formState={formState} setFormState={setFormState} disabled={creating} mentionableUsers={mentionableUsers} titlePlaceholder="e.g. Prepare Q4 campaign brief" clientPlaceholder="Select a client from the dashboard" projectPlaceholder="Open tasks from a project to link automatically" clientHelpText="Switch clients in the header to change assignment." projectHelpText="Start from a project view to attach tasks here." dueDateLayout="compact" showStatus={false}/>
+          <TaskSheetFields ids={CREATE_TASK_FIELD_IDS} formState={formState} setFormState={setFormState} disabled={creating} mentionableUsers={mentionableUsers} titlePlaceholder="e.g. Prepare Q4 campaign brief" clientPlaceholder="Select a client from the dashboard" projectPlaceholder="Search and link a project" clientHelpText="Switch clients in the header to change assignment." projectHelpText="Optionally link this task to a project." dueDateLayout="compact" showStatus={false} projectOptions={projects} projectOptionsLoading={projectsLoading} allowProjectSelection/>
           <TaskSheetAttachmentsSection disabled={creating} pendingAttachments={pendingAttachments} onAddAttachments={onAddAttachments} onRemoveAttachment={onRemoveAttachment} fileInputRef={fileInputRef}/>
           {createError ? <TaskModalError message={createError}/> : null}
         </div>
@@ -81,11 +83,12 @@ export type EditTaskSheetProps = {
 };
 export function EditTaskSheet({ open, onOpenChange, taskId, formState, setFormState, updating, updateError, onSubmit, currentWorkspaceId, currentUserId, currentUserName, currentUserRole, participants, }: EditTaskSheetProps) {
     const mentionableUsers = teamMembersToMentionable(participants);
+    const { projects, loading: projectsLoading } = useTaskProjectOptions();
     return (<ResponsiveFormSheet open={open} onOpenChange={onOpenChange} contentClassName={TASKS_THEME.sheet.content}>
       <form className="flex h-full min-h-0 flex-col" onSubmit={onSubmit}>
         <TaskSheetHeader icon={Pencil} title="Edit task" description="Update details, assignments, and scheduling."/>
         <div className={TASKS_THEME.sheet.body}>
-          <TaskSheetFields ids={EDIT_TASK_FIELD_IDS} formState={formState} setFormState={setFormState} disabled={updating} mentionableUsers={mentionableUsers} titlePlaceholder="Task title" clientPlaceholder="No client linked" projectPlaceholder="No project linked"/>
+          <TaskSheetFields ids={EDIT_TASK_FIELD_IDS} formState={formState} setFormState={setFormState} disabled={updating} mentionableUsers={mentionableUsers} titlePlaceholder="Task title" clientPlaceholder="No client linked" projectPlaceholder="Search and link a project" projectOptions={projects} projectOptionsLoading={projectsLoading} allowProjectSelection/>
           {updateError ? <TaskModalError message={updateError}/> : null}
 
           {taskId ? (<section className={TASKS_THEME.formSection}>

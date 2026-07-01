@@ -6,6 +6,7 @@ import { PendingAttachmentsList } from '@/features/dashboard/collaboration/compo
 import { Button } from '@/shared/ui/button';
 import { Calendar } from '@/shared/ui/calendar';
 import { Input } from '@/shared/ui/input';
+import { MentionInput } from '@/shared/ui/mention-input';
 import { Popover, PopoverContent, PopoverTrigger, } from '@/shared/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
@@ -13,16 +14,27 @@ import { cn } from '@/lib/utils';
 import type { PendingTaskAttachment } from '@/services/task-attachments';
 import type { TaskPriority } from '@/types/tasks';
 import { TaskContextChip, TaskFormField, TaskFormSection, TaskModalActions, TaskModalError, } from './task-modal-primitives';
+import { TaskProjectPicker } from './task-project-picker';
 import { TASKS_THEME } from './tasks-theme';
 import { formatPriorityLabel, isTaskDueDateDisabled, priorityAccentColors, } from './task-types';
+import type { TaskProjectOption } from './hooks/use-task-project-options';
+type MentionableUsers = Array<{
+    id: string;
+    name: string;
+    role?: string;
+}>;
 type TaskCreationModalFormFieldsProps = {
     title: string;
     description: string;
     priority: TaskPriority;
     dueDate: string;
     projectName: string;
+    projectId: string | null;
     clientName: string | null | undefined;
-    assigneeCount: number;
+    assigneeValue: string;
+    mentionableUsers: MentionableUsers;
+    projectOptions: TaskProjectOption[];
+    projectOptionsLoading: boolean;
     error: string | null;
     isLoading: boolean;
     pendingAttachments: PendingTaskAttachment[];
@@ -31,6 +43,8 @@ type TaskCreationModalFormFieldsProps = {
     onDescriptionChange: (value: string) => void;
     onPriorityChange: (value: TaskPriority) => void;
     onDateSelect: (date: Date | undefined) => void;
+    onAssigneeChange: (value: string) => void;
+    onProjectChange: (project: { id: string | null; name: string }) => void;
     onAddAttachments: (files: FileList | null) => void;
     onRemoveAttachment: (attachmentId: string) => void;
     onCancel: () => void;
@@ -43,7 +57,7 @@ function PrioritySelectItem({ value }: {
       {formatPriorityLabel(value)}
     </span>);
 }
-export function TaskCreationModalFormFields({ title, description, priority, dueDate, projectName, clientName, assigneeCount, error, isLoading, pendingAttachments, fileInputRef, onTitleChange, onDescriptionChange, onPriorityChange, onDateSelect, onAddAttachments, onRemoveAttachment, onCancel, }: TaskCreationModalFormFieldsProps) {
+export function TaskCreationModalFormFields({ title, description, priority, dueDate, projectName, projectId, clientName, assigneeValue, mentionableUsers, projectOptions, projectOptionsLoading, error, isLoading, pendingAttachments, fileInputRef, onTitleChange, onDescriptionChange, onPriorityChange, onDateSelect, onAssigneeChange, onProjectChange, onAddAttachments, onRemoveAttachment, onCancel, }: TaskCreationModalFormFieldsProps) {
     const handleTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => onTitleChange(event.target.value);
     const handleDescriptionChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => onDescriptionChange(event.target.value);
     const handlePriorityChange = (value: string) => onPriorityChange(value as TaskPriority);
@@ -105,7 +119,11 @@ export function TaskCreationModalFormFields({ title, description, priority, dueD
         </div>
       </TaskFormSection>
 
-      <TaskFormSection title="Context">
+      <TaskFormSection title="Assignment & Context">
+        <TaskFormField label="Assigned to">
+          <MentionInput value={assigneeValue} onChange={onAssigneeChange} users={mentionableUsers} placeholder="Type @ to assign teammates" disabled={isLoading} allowMultiple/>
+        </TaskFormField>
+
         <div className="grid grid-cols-2 gap-3.5">
           <TaskFormField label="Client">
             <TaskContextChip>
@@ -113,16 +131,9 @@ export function TaskCreationModalFormFields({ title, description, priority, dueD
             </TaskContextChip>
           </TaskFormField>
           <TaskFormField label="Project">
-            <TaskContextChip>
-              <span className={cn(!projectName && 'text-muted-foreground')}>{projectName || 'None'}</span>
-            </TaskContextChip>
+            <TaskProjectPicker value={projectId} projectName={projectName} options={projectOptions} loading={projectOptionsLoading} disabled={isLoading} placeholder="Search projects…" onChange={onProjectChange}/>
           </TaskFormField>
         </div>
-        <TaskFormField label="Assigned to">
-          <TaskContextChip>
-            {assigneeCount > 0 ? `${assigneeCount} teammate${assigneeCount === 1 ? '' : 's'}` : 'Unassigned'}
-          </TaskContextChip>
-        </TaskFormField>
       </TaskFormSection>
 
       <TaskFormSection title="Attachments">
