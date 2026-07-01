@@ -8,6 +8,7 @@ import {
   scheduleMeetingNotesArchive,
   scheduleMeetingTranscriptArchive,
 } from '../../lib/artifactArchiveSchedule'
+import { internal } from '/_generated/api'
 import type { Doc } from '/_generated/dataModel'
 
 const meetingStatusValues = ['scheduled', 'in_progress', 'completed', 'cancelled'] as const
@@ -356,6 +357,34 @@ export const create = zWorkspaceMutation({
       throw Errors.resource.notFound('Meeting', legacyId)
     }
 
+    // Notify workspace team members about the new meeting
+    const startDate = new Date(args.startTimeMs).toLocaleDateString()
+    const startTime = new Date(args.startTimeMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+      workspaceId: args.workspaceId,
+      legacyId: `meeting:scheduled:${legacyId}`,
+      kind: 'meeting.scheduled',
+      title: `Meeting scheduled: ${title}`,
+      body: `${startDate} at ${startTime} · ${args.attendeeEmails.length} attendee${args.attendeeEmails.length === 1 ? '' : 's'}`,
+      actorId: ctx.legacyId ?? null,
+      actorName: null,
+      resourceType: 'meeting',
+      resourceId: legacyId,
+      recipientRoles: ['admin', 'team'],
+      recipientClientId: args.clientId ?? null,
+      recipientClientIds: args.clientId ? [args.clientId] : undefined,
+      metadata: {
+        meetingLegacyId: legacyId,
+        startTimeMs: args.startTimeMs,
+        endTimeMs: args.endTimeMs,
+        clientId: args.clientId ?? null,
+      },
+      createdAtMs: ctx.now,
+      updatedAtMs: ctx.now,
+    }).catch((error) => {
+      console.error('[meetings:create] Failed to create notification:', error)
+    })
+
     return mapMeeting(created)
   },
 })
@@ -383,6 +412,33 @@ export const updateStatus = zWorkspaceMutation({
       status: args.status,
       updatedAtMs: ctx.now,
     })
+
+    // Notify when a meeting is cancelled
+    if (args.status === 'cancelled') {
+      await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+        workspaceId: args.workspaceId,
+        legacyId: `meeting:cancelled:${args.legacyId}:${ctx.now}`,
+        kind: 'meeting.cancelled',
+        title: `Meeting cancelled: ${meeting.title}`,
+        body: `Scheduled for ${new Date(meeting.startTimeMs).toLocaleDateString()} has been cancelled.`,
+        actorId: ctx.legacyId ?? null,
+        actorName: null,
+        resourceType: 'meeting',
+        resourceId: args.legacyId,
+        recipientRoles: ['admin', 'team'],
+        recipientClientId: meeting.clientId ?? null,
+        recipientClientIds: meeting.clientId ? [meeting.clientId] : undefined,
+        metadata: {
+          meetingLegacyId: args.legacyId,
+          previousStatus: meeting.status,
+          clientId: meeting.clientId ?? null,
+        },
+        createdAtMs: ctx.now,
+        updatedAtMs: ctx.now,
+      }).catch((error) => {
+        console.error('[meetings:updateStatus] Failed to create notification:', error)
+      })
+    }
 
     return meeting.legacyId
   },
@@ -443,6 +499,37 @@ export const updateDetails = zWorkspaceMutation({
     const updated = await ctx.db.get(meeting._id)
     if (!updated) {
       throw Errors.resource.notFound('Meeting', args.legacyId)
+    }
+
+    // Notify when a meeting is rescheduled (start time changes)
+    const wasRescheduled = typeof args.startTimeMs === 'number' && args.startTimeMs !== meeting.startTimeMs
+    if (wasRescheduled && updated.status !== 'cancelled') {
+      const newStartDate = new Date(nextStartTimeMs).toLocaleDateString()
+      const newStartTime = new Date(nextStartTimeMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+        workspaceId: args.workspaceId,
+        legacyId: `meeting:rescheduled:${args.legacyId}:${ctx.now}`,
+        kind: 'meeting.rescheduled',
+        title: `Meeting rescheduled: ${nextTitle}`,
+        body: `Moved to ${newStartDate} at ${newStartTime}.`,
+        actorId: ctx.legacyId ?? null,
+        actorName: null,
+        resourceType: 'meeting',
+        resourceId: args.legacyId,
+        recipientRoles: ['admin', 'team'],
+        recipientClientId: updated.clientId ?? null,
+        recipientClientIds: updated.clientId ? [updated.clientId] : undefined,
+        metadata: {
+          meetingLegacyId: args.legacyId,
+          previousStartTimeMs: meeting.startTimeMs,
+          newStartTimeMs: nextStartTimeMs,
+          clientId: updated.clientId ?? null,
+        },
+        createdAtMs: ctx.now,
+        updatedAtMs: ctx.now,
+      }).catch((error) => {
+        console.error('[meetings:updateDetails] Failed to create notification:', error)
+      })
     }
 
     return mapMeeting(updated)

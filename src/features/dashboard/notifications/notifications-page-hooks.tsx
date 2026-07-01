@@ -65,7 +65,7 @@ export function useNotificationsPage() {
     })();
     const convex = useConvex();
     const workspaceId = user?.agencyId;
-    const { data: notificationsData, isLoading: isLoadingNotifications, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({
+    const { data: notificationsData, isLoading: isLoadingNotifications, isFetchingNextPage, hasNextPage, fetchNextPage, isError: isNotificationsError, error: notificationsError, refetch: refetchNotificationsQuery } = useInfiniteQuery({
         queryKey: ['notificationsPage', workspaceId, user?.role, selectedClientId, activeFilter],
         enabled: !isPreviewMode && Boolean(workspaceId),
         initialPageParam: null as NotificationsCursor | null,
@@ -107,7 +107,7 @@ export function useNotificationsPage() {
             items = items.filter((n: WorkspaceNotification) => n.kind.startsWith('collaboration.'));
         }
         else if (activeFilter === 'system') {
-            items = items.filter((n: WorkspaceNotification) => n.kind === 'proposal.deck.ready' || n.kind === 'report.generated' || n.kind === 'project.created');
+            items = items.filter((n: WorkspaceNotification) => n.kind === 'proposal.deck.ready' || n.kind === 'report.generated' || n.kind === 'project.created' || n.kind.startsWith('meeting.'));
         }
         return items;
     })();
@@ -116,8 +116,8 @@ export function useNotificationsPage() {
     const loadingMore = isPreviewMode ? false : isFetchingNextPage;
     const error = isPreviewMode
         ? null
-        : false
-            ? 'Failed to load notifications'
+        : isNotificationsError
+            ? (asErrorMessage(notificationsError) || 'Failed to load notifications')
             : null;
     const nextCursor = isPreviewMode ? false : hasNextPage;
     const updateNotificationStatus = (ids: string[], action: AckAction, label?: string) => {
@@ -202,7 +202,7 @@ export function useNotificationsPage() {
         void refetchNotifications();
     };
     const handleRetryNotificationsQuery = () => {
-        void refetchNotifications();
+        void refetchNotificationsQuery();
     };
     const handleLoadMore = () => {
         if (isPreviewMode) {

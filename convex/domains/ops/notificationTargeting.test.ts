@@ -77,6 +77,30 @@ describe('matchesNotificationRecipient', () => {
     })).toBe(false)
   })
 
+  it('excludes acknowledged (dismissed) notifications when requested', () => {
+    expect(matchesNotificationRecipient({
+      readBy: ['user-1'],
+      acknowledgedBy: ['user-1'],
+      recipientRoles: ['team'],
+    }, {
+      userId: 'user-1',
+      role: 'team',
+      excludeAcknowledged: true,
+    })).toBe(false)
+  })
+
+  it('keeps read-but-not-acknowledged notifications when excludeAcknowledged is set', () => {
+    expect(matchesNotificationRecipient({
+      readBy: ['user-1'],
+      acknowledgedBy: [],
+      recipientRoles: ['team'],
+    }, {
+      userId: 'user-1',
+      role: 'team',
+      excludeAcknowledged: true,
+    })).toBe(true)
+  })
+
   it('accepts metadata client fallbacks when the audience is otherwise valid', () => {
     expect(matchesNotificationRecipient({
       recipientRoles: ['team'],

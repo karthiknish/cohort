@@ -1,5 +1,5 @@
 export type WorkspaceNotificationRole = 'admin' | 'team' | 'client';
-export type WorkspaceNotificationKind = 'task.created' | 'task.updated' | 'task.comment' | 'task.mention' | 'project.created' | 'collaboration.message' | 'collaboration.mention' | 'proposal.deck.ready' | 'report.generated';
+export type WorkspaceNotificationKind = 'task.created' | 'task.updated' | 'task.comment' | 'task.mention' | 'project.created' | 'collaboration.message' | 'collaboration.mention' | 'proposal.deck.ready' | 'report.generated' | 'meeting.scheduled' | 'meeting.cancelled' | 'meeting.rescheduled';
 export type WorkspaceNotificationResource = {
     type: 'task';
     id: string;
@@ -11,6 +11,9 @@ export type WorkspaceNotificationResource = {
     id: string;
 } | {
     type: 'proposal';
+    id: string;
+} | {
+    type: 'meeting';
     id: string;
 };
 export type WorkspaceNotification = {

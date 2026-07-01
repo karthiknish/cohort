@@ -3,7 +3,6 @@ import { useAction } from 'convex/react';
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { logError } from '@/lib/convex-errors';
-import { notifyFailure } from '@/lib/notifications';
 import { adsIntegrationsApi } from '@/lib/convex-api';
 type SyncGoogleAnalyticsParams = {
     periodDays: number;
@@ -47,10 +46,8 @@ export function useGoogleAnalyticsSync() {
         }
         catch (error) {
             logError(error, 'useGoogleAnalyticsSync');
-            notifyFailure({
-                title: 'Sync failed',
-                message: 'Unable to sync Google Analytics data. Please try again.',
-            });
+            // Toast is handled by the caller to allow context-specific messages
+            // (e.g. timeout vs generic failure). Do not notify here.
             throw error;
         }
         finally {

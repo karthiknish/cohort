@@ -21,6 +21,8 @@ const RESOURCE_TO_URL: Record<string, string> = {
   collaboration: '/dashboard/collaboration',
   project: '/dashboard/projects',
   proposal: '/dashboard/proposals',
+  report: '/dashboard/analytics',
+  meeting: '/dashboard/meetings',
 }
 
 const metadataScalarValidator = v.union(v.null(), v.boolean(), v.number(), v.string())
@@ -63,6 +65,9 @@ function toNotificationKind(input: string): WorkspaceNotificationKind {
     'collaboration.mention',
     'proposal.deck.ready',
     'report.generated',
+    'meeting.scheduled',
+    'meeting.cancelled',
+    'meeting.rescheduled',
   ]
 
   return (allowed as readonly string[]).includes(input) ? (input as WorkspaceNotificationKind) : 'task.created'
@@ -82,6 +87,7 @@ function toResource(type: string, id: string): WorkspaceNotificationResource {
   if (type === 'project') return { type: 'project', id }
   if (type === 'collaboration') return { type: 'collaboration', id }
   if (type === 'proposal') return { type: 'proposal', id }
+  if (type === 'meeting') return { type: 'meeting', id }
   return { type: 'task', id }
 }
 
@@ -264,6 +270,7 @@ export const list = zWorkspaceQuery({
               role: args.role,
               clientId: args.clientId,
               unreadOnly: args.unread,
+              excludeAcknowledged: true,
               excludeActor: true,
             })
           ) {
@@ -298,6 +305,7 @@ export const list = zWorkspaceQuery({
             role: args.role,
             clientId: args.clientId,
             unreadOnly: args.unread,
+            excludeAcknowledged: true,
             excludeActor: true,
           })
         ) {

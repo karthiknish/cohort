@@ -8,6 +8,7 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useAuth } from '@/shared/contexts/auth-context';
+import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { notificationsApi } from '@/lib/convex-api';
 import { getPreviewNotifications } from '@/lib/preview-data';
@@ -64,6 +65,7 @@ export function ForYouNotifications() {
     const { user } = useAuth();
     const { isAuthenticated, isLoading: isConvexLoading } = useConvexAuth();
     const { isPreviewMode } = usePreview();
+    const { selectedClientId } = useClientContext();
     const workspaceId = getWorkspaceId(user);
     const canQuery = isAuthenticated && !isConvexLoading && !!workspaceId && !!user?.id;
     const livePage = useQuery(notificationsApi.list, canQuery && !isPreviewMode
@@ -71,6 +73,7 @@ export function ForYouNotifications() {
             workspaceId,
             pageSize: NOTIFICATIONS_FOR_YOU_PAGE_SIZE,
             role: user?.role ?? undefined,
+            clientId: user?.role === 'client' ? (selectedClientId ?? undefined) : undefined,
         }
         : 'skip') as {
         notifications?: WorkspaceNotification[];

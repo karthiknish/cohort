@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { ProposalAssetDeliveryCard, ProposalStrategyBriefCard, ProposalSubmittedHero } from './proposal-submitted-panel-sections';
+import { ProposalSubmittedPanel } from './proposal-submitted-panel';
 const summary = {
     company: { name: 'Acme', industry: 'SaaS', website: 'https://acme.test' },
     marketing: { budget: '$5k', platforms: ['Google Ads'] },
@@ -9,24 +9,39 @@ const summary = {
     timelines: { startTime: 'Next month' },
 } as never;
 const readyDeck = { status: 'ready', storageUrl: 'https://cdn.example.com/deck.pptx', pptxUrl: null } as never;
-describe('proposal submitted panel sections', () => {
-    it('renders the hero and strategy brief card', () => {
-        const markup = renderToStaticMarkup(<>
-        <ProposalSubmittedHero activeProposalIdForDeck="p1" canResumeSubmission={true} deckDownloadUrl="https://cdn.example.com/deck.pptx" isSubmitting={false} onResumeSubmission={vi.fn()}/>
-        <ProposalStrategyBriefCard onCopySummary={vi.fn()} summary={summary}/>
-      </>);
-        expect(markup).toContain('Your Proposal is Ready!');
+describe('ProposalSubmittedPanel', () => {
+    it('renders the hero, strategy brief, and asset delivery for a ready deck', () => {
+        const markup = renderToStaticMarkup(
+            <ProposalSubmittedPanel
+                summary={summary}
+                presentationDeck={readyDeck}
+                deckDownloadUrl="https://cdn.example.com/deck.pptx"
+                activeProposalIdForDeck="p1"
+                canResumeSubmission={true}
+                onResumeSubmission={vi.fn()}
+                isSubmitting={false}
+            />,
+        );
+        expect(markup).toContain('Your proposal is ready');
         expect(markup).toContain('View Presentation');
         expect(markup).toContain('Strategy Brief');
         expect(markup).toContain('Acme');
+        expect(markup).toContain('Presentation Deck');
+        expect(markup).toContain('Download PowerPoint');
+        expect(markup).toContain('Copy share link');
     });
-    it('renders ready and generating asset delivery states', () => {
-        const readyMarkup = renderToStaticMarkup(<ProposalAssetDeliveryCard activeProposalIdForDeck="p1" deckDownloadUrl="https://cdn.example.com/deck.pptx" isRecheckingDeck={false} onCopyShareLink={vi.fn()} onRecheckDeck={vi.fn()} presentationDeck={readyDeck} viewerHref="/dashboard/proposals/p1/deck"/>);
-        const pendingMarkup = renderToStaticMarkup(<ProposalAssetDeliveryCard activeProposalIdForDeck={null} deckDownloadUrl={null} isRecheckingDeck={false} onCopyShareLink={vi.fn()} presentationDeck={null} viewerHref={null}/>);
-        expect(readyMarkup).toContain('Asset Delivery');
-        expect(readyMarkup).toContain('PowerPoint (PPTX)');
-        expect(readyMarkup).toContain('In-app preview');
-        expect(readyMarkup).toContain('Copy Share Link');
-        expect(pendingMarkup).toContain('Architecting Your Deck');
+    it('renders the generating state when no deck is available', () => {
+        const markup = renderToStaticMarkup(
+            <ProposalSubmittedPanel
+                summary={summary}
+                presentationDeck={null}
+                deckDownloadUrl={null}
+                activeProposalIdForDeck={null}
+                canResumeSubmission={false}
+                onResumeSubmission={vi.fn()}
+                isSubmitting={false}
+            />,
+        );
+        expect(markup).toContain('Building your deck');
     });
 });

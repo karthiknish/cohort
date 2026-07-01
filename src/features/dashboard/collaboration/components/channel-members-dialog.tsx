@@ -1,5 +1,4 @@
 'use client';
-import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useMemo, useReducer } from 'react';
 import { LoaderCircle, Lock, Settings2, Trash2, Users } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
@@ -9,8 +8,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
-import { asErrorMessage, logError } from '@/lib/convex-errors';
-import { notifySuccess } from '@/lib/notifications';
 import type { Channel } from '../types';
 type WorkspaceMemberOption = {
     id: string;
@@ -115,16 +112,13 @@ function ChannelMembersDialogForm({ channel, teamMembers, onOpenChange, onSave, 
             visibility,
         }))
             .then(() => {
-            notifySuccess({ title: 'Channel updated', message: 'Access settings were saved.' });
+            // Toast is handled by the provider (handleSaveChannelMembers)
+            // which has channel-specific context. Just close the dialog.
             onOpenChange(false);
         })
-            .catch((error) => {
-            reportConvexFailure({
-                error: error,
-                context: 'ChannelMembersDialog:handleSave',
-                title: 'Could not save channel',
-                fallbackMessage: 'Could not save channel',
-            });
+            .catch(() => {
+            // Toast is handled by the provider (handleSaveChannelMembers)
+            // which rethrows after showing its own error toast.
         })
             .finally(() => {
             dispatch({ type: 'setSaving', value: false });
@@ -141,13 +135,9 @@ function ChannelMembersDialogForm({ channel, teamMembers, onOpenChange, onSave, 
             dispatch({ type: 'setConfirmDeleteOpen', value: false });
             onOpenChange(false);
         })
-            .catch((error) => {
-            reportConvexFailure({
-                error: error,
-                context: 'ChannelMembersDialog:handleDelete',
-                title: 'Could not delete channel',
-                fallbackMessage: 'Could not delete channel',
-            });
+            .catch(() => {
+            // Toast is handled by the provider (handleDeleteChannel)
+            // which rethrows after showing its own error toast.
         })
             .finally(() => {
             dispatch({ type: 'setDeleting', value: false });

@@ -3,6 +3,7 @@ import type { MutationCtx, QueryCtx } from '../../_generated/server'
 type NotificationAudienceRow = {
   actorId?: unknown
   readBy?: unknown
+  acknowledgedBy?: unknown
   recipientRoles?: unknown
   recipientClientId?: unknown
   recipientClientIds?: unknown
@@ -127,6 +128,7 @@ export function matchesNotificationRecipient(
     role?: string | null
     clientId?: string | null
     unreadOnly?: boolean
+    excludeAcknowledged?: boolean
     excludeActor?: boolean
   },
 ): boolean {
@@ -152,6 +154,14 @@ export function matchesNotificationRecipient(
 
   const readBy = normalizeStringArray(row.readBy)
   if (options.unreadOnly && readBy.includes(options.userId)) return false
+
+  if (options.excludeAcknowledged) {
+    const acknowledgedBy = Array.isArray(row.acknowledgedBy)
+      ? (row.acknowledgedBy as unknown[]).filter((value): value is string => typeof value === 'string')
+      : []
+    if (acknowledgedBy.includes(options.userId)) return false
+  }
+
   if (options.excludeActor && row.actorId === options.userId) return false
 
   return true

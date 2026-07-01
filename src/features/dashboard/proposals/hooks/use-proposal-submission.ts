@@ -331,39 +331,41 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 setDraftId(null);
                 setAutosaveStatus('idle');
             }
-            if (finalPptUrl) {
-                if (isPartialSuccess || hasPdfWarning) {
-                    notifyWarning({
-                        title: 'Presentation ready (PPTX only)',
-                        message: 'The PowerPoint presentation is ready for download. PDF generation encountered an issue, but you can still download the PPTX file.',
-                    });
-                }
-                else {
-                    notifySuccess({
-                        title: 'Presentation ready',
-                        message: 'We saved the presentation for instant download.',
-                    });
-                }
-            }
-            else if (isFailed) {
+            // Consolidated single toast: combine PPT + AI plan status into one notification
+            // to avoid showing multiple toasts for the same submission.
+            if (isFailed) {
                 notifyFailure({
                     title: 'Generation failed',
                     message: 'The presentation could not be generated. Please try again or contact support if the issue persists.',
                 });
             }
-            else {
-                notifySuccess({
-                    title: 'Presentation still generating',
-                    message: 'The presentation is taking longer than expected. You can download it from the proposal history once ready.',
+            else if (finalPptUrl && (isPartialSuccess || hasPdfWarning)) {
+                notifyWarning({
+                    title: 'Presentation ready (PPTX only)',
+                    message: isReady
+                        ? 'The PowerPoint and AI recommendations are ready. PDF generation had an issue, but you can download the PPTX.'
+                        : 'The PowerPoint is ready for download (PDF had an issue). AI recommendations are still processing — check back shortly.',
                 });
             }
-            if (!isReady && !isFailed) {
+            else if (finalPptUrl && isReady) {
+                notifySuccess({
+                    title: 'Proposal ready',
+                    message: 'Your AI-generated recommendations and presentation are ready for download.',
+                });
+            }
+            else if (finalPptUrl && !isReady) {
+                notifySuccess({
+                    title: 'Presentation ready',
+                    message: 'The presentation is ready for download. AI recommendations are still processing — check back shortly.',
+                });
+            }
+            else if (!isReady) {
                 notifySuccess({
                     title: 'AI plan pending',
                     message: 'We could not finish the AI proposal yet. Please try again in a few minutes.',
                 });
             }
-            else if (!isFailed) {
+            else {
                 notifySuccess({
                     title: 'Proposal ready',
                     message: 'Your AI-generated recommendations are ready for review.',

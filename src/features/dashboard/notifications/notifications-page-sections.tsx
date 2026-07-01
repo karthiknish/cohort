@@ -195,7 +195,7 @@ function getFilterCardDescription(activeFilter: FilterType) {
         case 'collaboration':
             return 'Channel messages, threads, and collaboration activity';
         case 'system':
-            return 'Automated updates about generated proposal decks';
+            return 'Automated updates about proposals, reports, projects, and meetings';
         default:
             return '';
     }

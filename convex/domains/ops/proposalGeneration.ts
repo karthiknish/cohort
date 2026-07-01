@@ -1,6 +1,6 @@
 "use node"
 
-import { api } from '/_generated/api'
+import { api, internal } from '/_generated/api'
 import { internalAction } from '../../_generated/server'
 import { Errors } from '../../errors'
 import { zWorkspaceAction } from '../../functions'
@@ -177,6 +177,31 @@ export const generateFromProposal = zWorkspaceAction({
         pdfUrl: null,
         updatedAtMs: Date.now(),
         lastAutosaveAtMs: Date.now(),
+      })
+
+      // Create in-app notification for the proposal deck being ready
+      await ctx.runMutation(internal.notifications.createInternal, {
+        workspaceId: args.workspaceId,
+        legacyId: `proposal_deck_ready_${args.legacyId}_${Date.now()}`,
+        kind: 'proposal.deck.ready',
+        title: 'Proposal deck ready',
+        body: `Your presentation for ${proposal.clientName ?? 'your client'} is ready to download.`,
+        actorId: ctx.legacyId,
+        actorName: null,
+        resourceType: 'proposal',
+        resourceId: args.legacyId,
+        recipientRoles: ['admin', 'team'],
+        recipientClientId: proposal.clientId ?? null,
+        recipientClientIds: proposal.clientId ? [proposal.clientId] : undefined,
+        recipientUserIds: [ctx.legacyId],
+        metadata: {
+          proposalLegacyId: args.legacyId,
+        },
+        createdAtMs: Date.now(),
+        updatedAtMs: Date.now(),
+      }).catch((notificationError) => {
+        // Don't fail the generation if notification creation fails
+        console.error('[proposalGeneration] Failed to create deck ready notification:', notificationError)
       })
 
       markGenerationComplete(args.workspaceId, args.legacyId)
