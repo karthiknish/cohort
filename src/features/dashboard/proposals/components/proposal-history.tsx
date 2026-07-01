@@ -84,6 +84,7 @@ function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, 
     const rows = proposals.map((proposal) => {
         const isActiveDraft = proposal.id === draftId;
         const presentationUrl = proposal.pptUrl ?? proposal.presentationDeck?.storageUrl ?? proposal.presentationDeck?.pptxUrl ?? null;
+        const pdfUrl = proposal.pdfUrl ?? proposal.presentationDeck?.pdfUrl ?? proposal.presentationDeck?.pdfStorageUrl ?? null;
         const suggestionText = (typeof proposal.aiSuggestions === 'string' ? proposal.aiSuggestions.trim() : '') || extractAiSummary(proposal.aiInsights);
         const displayName = proposal.clientName?.trim().length ? proposal.clientName : 'Unnamed company';
         const isGenerationInFlight = (isGenerating && isActiveDraft) || proposal.status === 'in_progress';
@@ -100,6 +101,7 @@ function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, 
             isActiveDraft,
             isDeckPreparing: downloadingDeckId === proposal.id,
             presentationUrl,
+            pdfUrl,
             proposal,
             resumeDisabled: proposal.status !== 'ready' && isGenerationInFlight,
             resumeLabel,

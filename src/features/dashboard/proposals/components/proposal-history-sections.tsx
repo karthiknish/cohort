@@ -80,6 +80,7 @@ export type ProposalHistoryRowViewModel = {
     isActiveDraft: boolean;
     isDeckPreparing: boolean;
     presentationUrl: string | null;
+    pdfUrl: string | null;
     proposal: ProposalDraft;
     resumeDisabled: boolean;
     resumeLabel: string;
@@ -92,7 +93,7 @@ export function ProposalHistoryRow({ canManage = true, deletingProposalId, onDow
     onResume: (proposal: ProposalDraft, forceEdit?: boolean) => void;
     row: ProposalHistoryRowViewModel;
 }) {
-    const { deckRequestable, displayName, isActiveDraft, isDeckPreparing, presentationUrl, proposal, resumeDisabled, resumeLabel } = row;
+    const { deckRequestable, displayName, isActiveDraft, isDeckPreparing, presentationUrl, pdfUrl, proposal, resumeDisabled, resumeLabel } = row;
     const handleResumeAsEdit = () => {
         onResume(proposal, true);
     };
@@ -154,6 +155,12 @@ export function ProposalHistoryRow({ canManage = true, deletingProposalId, onDow
                   PPT
                 </a>
               </Button>
+              {pdfUrl ? (<Button asChild size="sm" variant="ghost" className="h-9 rounded-full px-3">
+                  <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                    <FileText className="mr-1.5 size-3.5" aria-hidden/>
+                    PDF
+                  </a>
+                </Button>) : null}
             </>) : canManage && deckRequestable ? (<Button size="sm" variant="outline" onClick={handleDownloadDeck} disabled={isDeckPreparing} className="h-9 gap-1.5 rounded-full border-dashed px-3">
               {isDeckPreparing ? (<LoaderCircle className="size-3.5 animate-spin" aria-hidden/>) : (<FileText className="size-3.5 text-primary" aria-hidden/>)}
               {isDeckPreparing ? 'Preparing…' : 'Generate Deck'}

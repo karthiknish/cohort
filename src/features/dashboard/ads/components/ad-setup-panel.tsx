@@ -7,7 +7,6 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Progress } from '@/shared/ui/progress';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme';
 import { cn } from '@/lib/utils';
 import { PROVIDER_INFO, PROVIDER_IDS } from '@/features/dashboard/ads/components/constants';
@@ -137,16 +136,22 @@ export function AdSetupPanel({ connectedCount, totalProviders, googleNeedsAccoun
         {metaNeedsAccountSelection && !metaSetupMessage ? (<SetupTaskRow done={false} title="Select your Meta ad account" description={PROVIDER_INFO[PROVIDER_IDS.FACEBOOK].name +
                 ' only — organic Facebook/Instagram pages use Socials, not this flow.'}>
             <>
-              <Select value={selectedMetaAccountId || undefined} onValueChange={onMetaAccountSelectionChange} disabled={loadingMetaAccountOptions || initializingMeta || metaAccountOptions.length === 0}>
-                  <SelectTrigger className="w-full min-w-[12rem] sm:max-w-xs">
-                    <SelectValue placeholder={loadingMetaAccountOptions ? 'Loading accounts…' : 'Meta ad account'}/>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {metaAccountOptions.map((account) => (<SelectItem key={account.id} value={account.id}>
-                        {account.name}
-                      </SelectItem>))}
-                  </SelectContent>
-                </Select>
+              <select
+                className="h-9 w-full min-w-[12rem] rounded-md border border-input bg-transparent px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:max-w-xs"
+                value={selectedMetaAccountId || ''}
+                onChange={(e) => onMetaAccountSelectionChange(e.target.value)}
+                disabled={loadingMetaAccountOptions || initializingMeta || metaAccountOptions.length === 0}
+                aria-label="Meta ad account"
+              >
+                <option value="" disabled>
+                  {loadingMetaAccountOptions ? 'Loading accounts…' : 'Meta ad account'}
+                </option>
+                {metaAccountOptions.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
                 <Button size="sm" variant="outline" onClick={onReloadMetaAccountOptions} disabled={loadingMetaAccountOptions || initializingMeta}>
                   Reload
                 </Button>

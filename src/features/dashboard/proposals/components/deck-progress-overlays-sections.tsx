@@ -1,6 +1,6 @@
 'use client';
-import { useMemo } from 'react';
-import { CircleCheck, LoaderCircle, TriangleAlert } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, CircleCheck, LoaderCircle, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import type { DeckProgressStage } from './deck-progress-overlays';
@@ -30,6 +30,22 @@ function ProposalGenerationStatusIcon({ isComplete }: {
       </div>
     </div>);
 }
+function useElapsedSeconds(isActive: boolean): number {
+    const [seconds, setSeconds] = useState(0);
+    useEffect(() => {
+        if (!isActive) return;
+        setSeconds(0);
+        const id = setInterval(() => setSeconds((s) => s + 1), 1000);
+        return () => clearInterval(id);
+    }, [isActive]);
+    return seconds;
+}
+function formatElapsed(totalSeconds: number): string {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    if (mins > 0) return `${mins}m ${secs}s`;
+    return `${secs}s`;
+}
 export function ProposalGenerationOverlayContent({ currentStageHelper, currentStageLabel, isComplete, progressPercent, stageIndex, stageLabels, }: {
     currentStageHelper: string;
     currentStageLabel: string;
@@ -39,6 +55,7 @@ export function ProposalGenerationOverlayContent({ currentStageHelper, currentSt
     stageLabels: string[];
 }) {
     const progressStyle = ({ width: `${progressPercent}%` });
+    const elapsed = useElapsedSeconds(!isComplete);
     return (<div className="relative mx-auto flex w-full max-w-lg flex-col items-center gap-8 p-8">
       <ProposalGenerationStatusIcon isComplete={isComplete}/>
 
@@ -59,13 +76,28 @@ export function ProposalGenerationOverlayContent({ currentStageHelper, currentSt
             </div>
           </div>
           <div className="flex items-center justify-between px-1">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Processing Strategy</span>
-            <span className="text-[10px] font-bold text-primary">{Math.round(progressPercent)}%</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+              {isComplete ? 'Complete' : 'Processing Strategy'}
+            </span>
+            <span className="text-[10px] font-bold text-primary">
+              {Math.round(progressPercent)}% · {formatElapsed(elapsed)}
+            </span>
           </div>
         </div>
 
-        <div className="mt-4 grid w-full grid-cols-5 gap-2">
-          {stageLabels.map((label, index) => (<div key={label} className={cn('h-1 rounded-full motion-chromatic-slow', index <= stageIndex ? 'bg-primary' : 'bg-muted/40', index === stageIndex && !isComplete && 'animate-pulse')}/>))}
+        <div className="mt-4 w-full space-y-1.5">
+          {stageLabels.map((label, index) => {
+            const isDone = isComplete || index < stageIndex;
+            const isCurrent = index === stageIndex && !isComplete;
+            return (<div key={label} className={cn('flex items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors', isCurrent && 'bg-primary/5', !isCurrent && 'opacity-60')}>
+                <span className={cn('flex size-5 shrink-0 items-center justify-center rounded-full', isDone ? 'bg-success/15 text-success' : isCurrent ? 'bg-primary/15 text-primary' : 'bg-muted/30 text-muted-foreground')}>
+                  {isDone ? <Check className="size-3"/> : isCurrent ? <LoaderCircle className="size-3 animate-spin"/> : <span className="size-1.5 rounded-full bg-current"/>}
+                </span>
+                <span className={cn('text-xs font-medium', isCurrent ? 'text-foreground' : 'text-muted-foreground')}>
+                  {label}
+                </span>
+              </div>);
+          })}
         </div>
       </div>
 

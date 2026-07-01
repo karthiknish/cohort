@@ -47,6 +47,7 @@ export function ProposalSubmittedPanel({
             ? `/dashboard/proposals/viewer?src=${encodeURIComponent(deckDownloadUrl)}`
             : null;
     const downloadUrl = deckDownloadUrl || presentationDeck?.storageUrl || presentationDeck?.pptxUrl || null;
+    const pdfDownloadUrl = presentationDeck?.pdfUrl ?? presentationDeck?.pdfStorageUrl ?? null;
 
     const handleCopySummary = useCallback(() => {
         const text = `
@@ -182,6 +183,14 @@ Timeline: ${summary.timelines.startTime}
                                                 <a href={downloadUrl} download="proposal-deck.pptx" rel="noreferrer">
                                                     <Download className="mr-3 size-4 text-muted-foreground" />
                                                     <span className="text-sm font-semibold">Download PowerPoint</span>
+                                                </a>
+                                            </Button>
+                                        ) : null}
+                                        {pdfDownloadUrl ? (
+                                            <Button variant="outline" className="h-12 w-full justify-start rounded-xl" asChild>
+                                                <a href={pdfDownloadUrl} download="proposal.pdf" rel="noreferrer">
+                                                    <FileText className="mr-3 size-4 text-muted-foreground" />
+                                                    <span className="text-sm font-semibold">Download PDF</span>
                                                 </a>
                                             </Button>
                                         ) : null}

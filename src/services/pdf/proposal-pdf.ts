@@ -1,29 +1,31 @@
 /**
- * Custom proposal PDF generator — mirrors the PPTX deck structure using jsPDF.
+ * Custom proposal PDF generator — A4 portrait document with the Cohorts brand theme.
  *
- * Produces a landscape 16:9 PDF with the Cohorts brand theme:
- *   1. Title / cover page
+ * Structure:
+ *   1. Title / cover page (with hero image)
  *   2. Table of Contents
- *   3. Section dividers + content slides (from AI instructions)
+ *   3. Section dividers + content slides (from AI instructions, with images)
  *   4. Services table (when scope data exists)
  *   5. Budget allocation chart + ROI projection charts (when budget exists)
- *   6. Closing / Next Steps page
+ *   6. Closing / Next Steps page (with image)
  *
  * Chart images are fetched from the QuickChart API (same as PPTX) and embedded
- * as PNG images, guaranteeing consistent rendering across all PDF viewers.
+ * as PNG images. Slide images are fetched from Pexels/Unsplash (same as PPTX)
+ * with cross-topic deduplication via `prefetchSlideImages`.
  */
 
 import { jsPDF } from 'jspdf';
 import type { ProposalFormData } from '@/lib/proposals';
 import { parseSlideInstructions, parseBudgetAmount } from '../pptx/parsing';
 import { renderBarChart, renderLineChart } from '../chart-images';
+import { prefetchSlideImages, topicFromTitle, type PexelsImage } from '../pexels-images';
 import {
     COLORS, PAGE_W, PAGE_H, MARGIN, CONTENT_W,
     HEADER_H, FOOTER_H, BODY_TOP, BODY_BOTTOM, BODY_H, FONT,
 } from './constants';
 import type { PptxSlideContent } from '../pptx/types';
 
-// ─── Helpers ──────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────
 
 function rgb(c: readonly [number, number, number]): [number, number, number] {
     return [c[0], c[1], c[2]];
@@ -68,7 +70,7 @@ function text(
     doc.setFont('helvetica', bold ? 'bold' : italic ? 'italic' : 'normal');
     doc.setTextColor(...rgb(color));
     if (maxWidth) {
-        const lh = lineHeight ?? size * 1.35;
+        const lh = lineHeight ?? size * 1.4;
         const lines = doc.splitTextToSize(str, maxWidth);
         let cy = y;
         for (const line of lines) {
@@ -84,24 +86,54 @@ function text(
 function ensureSpace(doc: jsPDF, y: number, needed: number): number {
     if (y + needed > BODY_BOTTOM - 10) {
         doc.addPage();
+        fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.light);
         return BODY_TOP;
     }
     return y;
 }
 
-// ─── Page chrome ──────────────────────────────────────────────────
+/** Embed a Pexels image (base64 with MIME prefix) into the PDF. */
+function addImage(
+    doc: jsPDF,
+    image: PexelsImage | null,
+    x: number, y: number, w: number, h: number,
+): boolean {
+    if (!image) return false;
+    try {
+        const base64 = image.base64.replace(/^data:image\/[a-z]+;base64,/, '').replace(/^image\/[a-z]+;base64,/, '');
+        doc.addImage(base64, 'PNG', x, y, w, h, undefined, 'FAST');
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/** Draw a rounded rect card with optional accent strip on the left. */
+function drawCard(
+    doc: jsPDF,
+    x: number, y: number, w: number, h: number,
+    accentColor?: readonly [number, number, number],
+    radius = 4,
+): void {
+    doc.setFillColor(...rgb(COLORS.white));
+    doc.setDrawColor(...rgb(COLORS.mutedLight));
+    doc.setLineWidth(0.8);
+    doc.roundedRect(x, y, w, h, radius, radius, 'FD');
+    if (accentColor) {
+        fillRect(doc, x, y, 4, h, accentColor);
+    }
+}
+
+// ─── Page chrome ──────────────────────────────────────────
 
 function addPageHeader(doc: jsPDF, title: string, slideNum: number): void {
-    // Header bar
     fillRect(doc, 0, 0, PAGE_W, HEADER_H, COLORS.primary);
-    // Accent stripe
-    fillRect(doc, 0, HEADER_H, PAGE_W, 4, COLORS.secondary);
-    // Title
-    text(doc, title, MARGIN, HEADER_H / 2 + 6, {
+    fillRect(doc, 0, HEADER_H, PAGE_W, 3, COLORS.secondary);
+    text(doc, title, MARGIN, HEADER_H / 2 + 5, {
         size: FONT.headerTitle, color: COLORS.white, bold: true, align: 'left',
+        maxWidth: PAGE_W - MARGIN * 2 - 40,
     });
-    // Slide number badge
-    text(doc, String(slideNum), PAGE_W - MARGIN - 10, HEADER_H / 2 + 8, {
+    text(doc, String(slideNum), PAGE_W - MARGIN - 8, HEADER_H / 2 + 6, {
         size: FONT.slideNum, color: COLORS.accentLight, bold: true, align: 'right',
     });
 }
@@ -122,53 +154,66 @@ function addNewPage(doc: jsPDF): void {
     doc.addPage();
 }
 
-// ─── Title page ───────────────────────────────────────────────────
+// ─── Title page ───────────────────────────────────────────
 
-function addTitlePage(doc: jsPDF, formData: ProposalFormData): void {
+function addTitlePage(doc: jsPDF, formData: ProposalFormData, image: PexelsImage | null): void {
     const companyName = formData.company?.name?.trim() || 'Client';
     const industry = formData.company?.industry?.trim();
     const objectives = formData.goals?.objectives?.join(', ');
 
     // Full primary background
     fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.primary);
-    // Left accent stripe
-    fillRect(doc, 0, 0, 11, PAGE_H, COLORS.secondary);
 
-    // Company name (uppercase, top)
-    text(doc, companyName.toUpperCase(), MARGIN + 20, 60, {
+    // Hero image — top half (with fallback to accent stripe if no image)
+    const heroH = PAGE_H * 0.38;
+    if (addImage(doc, image, 0, 0, PAGE_W, heroH)) {
+        // Dark overlay on image for text legibility
+        doc.setFillColor(...rgb(COLORS.primary));
+        doc.setGState(doc.GState({ opacity: 0.45 }));
+        doc.rect(0, 0, PAGE_W, heroH, 'F');
+        doc.setGState(doc.GState({ opacity: 1 }));
+    }
+    // Left accent stripe
+    fillRect(doc, 0, 0, 10, PAGE_H, COLORS.secondary);
+
+    // Company name (uppercase, below hero)
+    const textStartY = heroH + 50;
+    text(doc, companyName.toUpperCase(), MARGIN + 16, textStartY, {
         size: FONT.subtitle, color: COLORS.accentLight, bold: true, align: 'left',
     });
 
     // Main heading
-    text(doc, 'Marketing Proposal', MARGIN + 20, 170, {
+    text(doc, 'Marketing Proposal', MARGIN + 16, textStartY + 44, {
         size: FONT.title, color: COLORS.white, bold: true, align: 'left',
+        maxWidth: PAGE_W - MARGIN * 2 - 32,
     });
 
     // Accent divider
-    drawLine(doc, MARGIN + 20, 190, MARGIN + 200, 190, COLORS.secondary, 3);
+    drawLine(doc, MARGIN + 16, textStartY + 60, MARGIN + 160, textStartY + 60, COLORS.secondary, 3);
 
     // Subtitle (industry | objectives)
     const subtitleParts = [industry, objectives].filter(Boolean);
     if (subtitleParts.length > 0) {
-        text(doc, subtitleParts.join('  |  '), MARGIN + 20, 220, {
-            size: 16, color: COLORS.accentLight, align: 'left',
+        text(doc, subtitleParts.join('  |  '), MARGIN + 16, textStartY + 84, {
+            size: 13, color: COLORS.accentLight, align: 'left',
+            maxWidth: PAGE_W - MARGIN * 2 - 32, lineHeight: 18,
         });
     }
 
     // Prepared by footer
-    fillRect(doc, 0, PAGE_H - 50, PAGE_W, 50, COLORS.primaryDark);
-    text(doc, 'Prepared by Cohorts', MARGIN + 20, PAGE_H - 22, {
-        size: 12, color: COLORS.accentLight, align: 'left',
+    fillRect(doc, 0, PAGE_H - 56, PAGE_W, 56, COLORS.primaryDark);
+    text(doc, 'Prepared by Cohorts', MARGIN + 16, PAGE_H - 24, {
+        size: 11, color: COLORS.accentLight, align: 'left',
     });
     const dateStr = new Date().toLocaleDateString('en-GB', {
         year: 'numeric', month: 'long', day: 'numeric',
     });
-    text(doc, dateStr, PAGE_W - MARGIN - 20, PAGE_H - 22, {
-        size: 12, color: COLORS.accentLight, align: 'right',
+    text(doc, dateStr, PAGE_W - MARGIN - 16, PAGE_H - 24, {
+        size: 11, color: COLORS.accentLight, align: 'right',
     });
 }
 
-// ─── Table of Contents ────────────────────────────────────────────
+// ─── Table of Contents ────────────────────────────────────
 
 function addTocPage(
     doc: jsPDF,
@@ -181,46 +226,37 @@ function addTocPage(
     fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.light);
     addPageHeader(doc, 'Table of Contents', slideNum);
 
-    const colW = 418;
-    const colGap = 29;
-    const rowH = 108;
-    const rowGap = 18;
+    // Single column layout for A4 portrait
+    const cardW = CONTENT_W;
+    const cardH = 64;
+    const cardGap = 12;
     const startX = MARGIN;
-    const startY = BODY_TOP + 22;
-    const perCol = Math.ceil(sections.length / 2);
+    const startY = BODY_TOP + 16;
 
     sections.forEach((section, i) => {
-        const col = i < perCol ? 0 : 1;
-        const row = i % perCol;
-        const x = startX + col * (colW + colGap);
-        const y = startY + row * (rowH + rowGap);
+        const y = startY + i * (cardH + cardGap);
+        if (y + cardH > BODY_BOTTOM - 10) return; // skip overflow
 
-        // Card background
-        doc.setFillColor(...rgb(COLORS.white));
-        doc.setDrawColor(...rgb(COLORS.mutedLight));
-        doc.setLineWidth(1);
-        doc.roundedRect(x, y, colW, rowH, 6, 6, 'FD');
-        // Accent strip
-        fillRect(doc, x, y, 6, rowH, COLORS.secondary);
+        drawCard(doc, startX, y, cardW, cardH, COLORS.secondary);
 
         const num = String(i + 1).padStart(2, '0');
-        text(doc, num, x + 18, y + 36, {
+        text(doc, num, startX + 16, y + 28, {
             size: FONT.tocNum, color: COLORS.secondary, bold: true, align: 'left',
         });
-        text(doc, section.title, x + 80, y + 30, {
+        text(doc, section.title, startX + 60, y + 24, {
             size: FONT.tocTitle, color: COLORS.primary, bold: true, align: 'left',
-            maxWidth: colW - 95,
+            maxWidth: cardW - 76,
         });
-        text(doc, section.description, x + 80, y + 52, {
+        text(doc, section.description, startX + 60, y + 42, {
             size: FONT.tocDesc, color: COLORS.muted, align: 'left',
-            maxWidth: colW - 95, lineHeight: 14,
+            maxWidth: cardW - 76, lineHeight: 13,
         });
     });
 
     addPageFooter(doc, companyName, slideNum, total);
 }
 
-// ─── Section divider ──────────────────────────────────────────────
+// ─── Section divider ──────────────────────────────────────
 
 function addSectionDivider(
     doc: jsPDF,
@@ -230,47 +266,57 @@ function addSectionDivider(
     slideNum: number,
     total: number,
     companyName: string,
+    image: PexelsImage | null,
 ): void {
     addNewPage(doc);
-    // Full primary background
+
+    // Top half: image with primary overlay; bottom half: primary background
+    const imageH = PAGE_H * 0.45;
     fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.primary);
+
+    if (addImage(doc, image, 0, 0, PAGE_W, imageH)) {
+        doc.setFillColor(...rgb(COLORS.primary));
+        doc.setGState(doc.GState({ opacity: 0.5 }));
+        doc.rect(0, 0, PAGE_W, imageH, 'F');
+        doc.setGState(doc.GState({ opacity: 1 }));
+    }
+
     // Left accent stripe
-    fillRect(doc, 0, 0, 22, PAGE_H, COLORS.secondary);
+    fillRect(doc, 0, 0, 18, PAGE_H, COLORS.secondary);
 
     const num = String(sectionNumber).padStart(2, '0');
     // Big faded number
     doc.setFontSize(FONT.sectionNum);
     doc.setFont('helvetica', 'bold');
-    // Simulate transparency by blending secondary with primary
     const blend = COLORS.secondary.map((s, i) => Math.round(s * 0.4 + (COLORS.primary[i] ?? 0) * 0.6)) as [number, number, number];
     doc.setTextColor(...blend);
-    doc.text(num, MARGIN + 30, 200);
+    doc.text(num, MARGIN + 24, imageH + 70);
 
     // Section title
-    text(doc, sectionTitle, MARGIN + 30, 300, {
+    text(doc, sectionTitle, MARGIN + 24, imageH + 110, {
         size: FONT.sectionTitle, color: COLORS.white, bold: true, align: 'left',
-        maxWidth: PAGE_W - MARGIN * 2 - 60,
+        maxWidth: PAGE_W - MARGIN * 2 - 48,
     });
 
     if (sectionSubtitle) {
-        text(doc, sectionSubtitle, MARGIN + 30, 340, {
-            size: 14, color: COLORS.accentLight, align: 'left',
-            maxWidth: PAGE_W - MARGIN * 2 - 60, lineHeight: 18,
+        text(doc, sectionSubtitle, MARGIN + 24, imageH + 138, {
+            size: 13, color: COLORS.accentLight, align: 'left',
+            maxWidth: PAGE_W - MARGIN * 2 - 48, lineHeight: 17,
         });
     }
 
     // Footer info
-    text(doc, `${slideNum} / ${total}`, PAGE_W - MARGIN - 10, PAGE_H - 25, {
+    text(doc, `${slideNum} / ${total}`, PAGE_W - MARGIN - 8, PAGE_H - 20, {
         size: 10, color: COLORS.muted, align: 'right',
     });
     if (companyName) {
-        text(doc, companyName, MARGIN + 10, PAGE_H - 25, {
+        text(doc, companyName, MARGIN + 8, PAGE_H - 20, {
             size: 10, color: COLORS.muted, align: 'left',
         });
     }
 }
 
-// ─── Content slide ────────────────────────────────────────────────
+// ─── Content slide ────────────────────────────────────────
 
 function addContentSlide(
     doc: jsPDF,
@@ -279,157 +325,141 @@ function addContentSlide(
     companyName: string,
     slideNum: number,
     total: number,
+    image: PexelsImage | null,
 ): void {
     addNewPage(doc);
     fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.light);
     addPageHeader(doc, slideContent.title, slideNum);
 
-    const contentX = MARGIN + 10;
-    const contentW = CONTENT_W - 220; // leave room for sidebar
-    let y = BODY_TOP + 20;
+    // Content image — placed at top right, below header
+    const imgW = 140;
+    const imgH = 90;
+    const imgX = PAGE_W - MARGIN - imgW;
+    const imgY = BODY_TOP + 8;
+    if (image) {
+        addImage(doc, image, imgX, imgY, imgW, imgH);
+    }
+
+    // Content area — full width below image, or beside it
+    const contentX = MARGIN + 8;
+    const contentW = CONTENT_W - 16;
+    let y = BODY_TOP + 16;
 
     // Metrics row
     if (slideContent.metrics && slideContent.metrics.length > 0) {
         const metricW = contentW / slideContent.metrics.length;
         slideContent.metrics.forEach((metric, i) => {
             const mx = contentX + i * metricW;
-            // Card background
-            doc.setFillColor(...rgb(COLORS.white));
-            doc.setDrawColor(...rgb(COLORS.mutedLight));
-            doc.setLineWidth(1);
-            doc.roundedRect(mx, y, metricW - 10, 60, 4, 4, 'FD');
-            fillRect(doc, mx, y, 4, 60, COLORS.secondary);
-
-            text(doc, metric.value, mx + 14, y + 28, {
+            drawCard(doc, mx, y, metricW - 8, 52, COLORS.secondary);
+            text(doc, metric.value, mx + 12, y + 24, {
                 size: FONT.metricValue, color: COLORS.primary, bold: true, align: 'left',
             });
-            text(doc, metric.label, mx + 14, y + 46, {
+            text(doc, metric.label, mx + 12, y + 40, {
                 size: FONT.metricLabel, color: COLORS.muted, align: 'left',
-                maxWidth: metricW - 28, lineHeight: 11,
+                maxWidth: metricW - 24, lineHeight: 10,
             });
         });
-        y += 75;
+        y += 64;
+    }
+
+    // If image is placed at top right, push content below it
+    if (image && y < imgY + imgH + 12) {
+        y = imgY + imgH + 16;
     }
 
     // Comparison block
     if (slideContent.comparison) {
-        const colW = (contentW - 20) / 2;
+        const colW = (contentW - 16) / 2;
+        const compH = 100;
         // Before
-        doc.setFillColor(...rgb(COLORS.white));
-        doc.setDrawColor(...rgb(COLORS.mutedLight));
-        doc.roundedRect(contentX, y, colW, 120, 4, 4, 'FD');
-        fillRect(doc, contentX, y, 4, 120, COLORS.warning);
-        text(doc, 'BEFORE', contentX + 14, y + 20, {
+        drawCard(doc, contentX, y, colW, compH, COLORS.warning);
+        text(doc, 'BEFORE', contentX + 12, y + 18, {
             size: FONT.panelLabel, color: COLORS.warning, bold: true, align: 'left',
         });
-        let beforeY = y + 38;
+        let beforeY = y + 34;
         for (const item of slideContent.comparison.before) {
-            const lines = text(doc, `•  ${item}`, contentX + 14, beforeY, {
+            const lines = text(doc, `•  ${item}`, contentX + 12, beforeY, {
                 size: FONT.bodySmall, color: COLORS.dark, align: 'left',
-                maxWidth: colW - 28, lineHeight: 14,
+                maxWidth: colW - 24, lineHeight: 12,
             });
-            beforeY += lines.length * 14 + 4;
+            beforeY += lines.length * 12 + 3;
         }
 
         // After
-        const afterX = contentX + colW + 20;
-        doc.setFillColor(...rgb(COLORS.white));
-        doc.setDrawColor(...rgb(COLORS.mutedLight));
-        doc.roundedRect(afterX, y, colW, 120, 4, 4, 'FD');
-        fillRect(doc, afterX, y, 4, 120, COLORS.success);
-        text(doc, 'AFTER', afterX + 14, y + 20, {
+        const afterX = contentX + colW + 16;
+        drawCard(doc, afterX, y, colW, compH, COLORS.success);
+        text(doc, 'AFTER', afterX + 12, y + 18, {
             size: FONT.panelLabel, color: COLORS.success, bold: true, align: 'left',
         });
-        let afterY = y + 38;
+        let afterY = y + 34;
         for (const item of slideContent.comparison.after) {
-            const lines = text(doc, `•  ${item}`, afterX + 14, afterY, {
+            const lines = text(doc, `•  ${item}`, afterX + 12, afterY, {
                 size: FONT.bodySmall, color: COLORS.dark, align: 'left',
-                maxWidth: colW - 28, lineHeight: 14,
+                maxWidth: colW - 24, lineHeight: 12,
             });
-            afterY += lines.length * 14 + 4;
+            afterY += lines.length * 12 + 3;
         }
-        y += 135;
+        y += compH + 16;
     }
 
     // Bullets
     if (slideContent.bullets.length > 0) {
         for (const bullet of slideContent.bullets) {
-            y = ensureSpace(doc, y, 30);
+            y = ensureSpace(doc, y, 24);
             const lines = text(doc, `•  ${bullet}`, contentX, y, {
                 size: FONT.body, color: COLORS.dark, align: 'left',
-                maxWidth: contentW, lineHeight: 18,
+                maxWidth: contentW, lineHeight: 16,
             });
-            y += lines.length * 18 + 6;
+            y += lines.length * 16 + 5;
         }
     }
 
     // Callout box
     if (slideContent.callout) {
-        y = ensureSpace(doc, y, 50);
+        y = ensureSpace(doc, y, 44);
         y += 6;
-        const calloutLines = doc.splitTextToSize(slideContent.callout, contentW - 30);
-        const calloutH = Math.max(40, calloutLines.length * 16 + 16);
+        const calloutLines = doc.splitTextToSize(slideContent.callout, contentW - 28);
+        const calloutH = Math.max(36, calloutLines.length * 15 + 14);
         doc.setFillColor(...rgb(COLORS.primary));
         doc.roundedRect(contentX, y, contentW, calloutH, 4, 4, 'F');
         fillRect(doc, contentX, y, 4, calloutH, COLORS.secondary);
-        let calloutY = y + 18;
+        let calloutY = y + 16;
         doc.setFontSize(FONT.callout);
         doc.setFont('helvetica', 'italic');
         doc.setTextColor(...rgb(COLORS.white));
         for (const line of calloutLines) {
-            doc.text(line, contentX + 16, calloutY);
-            calloutY += 16;
+            doc.text(line, contentX + 14, calloutY);
+            calloutY += 15;
         }
         y += calloutH + 10;
     }
 
-    // Sidebar with key stats
-    addSidebar(doc, slideContent.title, formData);
+    // Sidebar with key stats — placed at bottom as a full-width strip (avoids overlap)
+    addSidebarStrip(doc, slideContent.title, formData, y);
 
     addPageFooter(doc, companyName, slideNum, total);
 }
 
-function addSidebar(doc: jsPDF, title: string, formData: ProposalFormData): void {
-    const sidebarX = MARGIN + CONTENT_W - 200;
-    const sidebarW = 190;
-    const sidebarY = BODY_TOP + 10;
-    const sidebarH = BODY_H - 20;
-
-    // Card background
-    doc.setFillColor(...rgb(COLORS.white));
-    doc.setDrawColor(...rgb(COLORS.mutedLight));
-    doc.roundedRect(sidebarX, sidebarY, sidebarW, sidebarH, 4, 4, 'FD');
-    fillRect(doc, sidebarX, sidebarY, 4, sidebarH, COLORS.secondary);
-
+function addSidebarStrip(doc: jsPDF, title: string, formData: ProposalFormData, y: number): void {
     const stats = getSidebarStats(title, formData);
+    if (stats.length === 0) return;
 
-    text(doc, 'AT A GLANCE', sidebarX + 14, sidebarY + 20, {
-        size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
-    });
+    y = ensureSpace(doc, y, 50);
+    const stripH = 44;
+    drawCard(doc, MARGIN + 8, y, CONTENT_W - 16, stripH, COLORS.secondary);
 
-    if (stats.length === 0) {
-        text(doc, 'Key Takeaway', sidebarX + 14, sidebarY + 45, {
-            size: FONT.bodySmall, color: COLORS.muted, bold: true, align: 'left',
-        });
-        text(doc, 'A data-driven approach ensures every decision is backed by insights, not assumptions.', sidebarX + 14, sidebarY + 65, {
-            size: 12, color: COLORS.dark, italic: true, align: 'left',
-            maxWidth: sidebarW - 28, lineHeight: 16,
-        });
-        return;
-    }
-
-    let statY = sidebarY + 45;
-    const statSpacing = (sidebarH - 60) / stats.length;
-    for (const stat of stats) {
-        text(doc, stat.label, sidebarX + 14, statY, {
+    const statW = (CONTENT_W - 32) / stats.length;
+    stats.forEach((stat, i) => {
+        const sx = MARGIN + 16 + i * statW;
+        text(doc, stat.label, sx, y + 16, {
             size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
+            maxWidth: statW - 12,
         });
-        text(doc, stat.value, sidebarX + 14, statY + 16, {
-            size: FONT.panelValue, color: COLORS.dark, align: 'left',
-            maxWidth: sidebarW - 28, lineHeight: 15,
+        text(doc, stat.value, sx, y + 32, {
+            size: FONT.panelValue, color: COLORS.dark, bold: true, align: 'left',
+            maxWidth: statW - 12, lineHeight: 13,
         });
-        statY += statSpacing;
-    }
+    });
 }
 
 function getSidebarStats(title: string, formData: ProposalFormData): { label: string; value: string }[] {
@@ -451,19 +481,19 @@ function getSidebarStats(title: string, formData: ProposalFormData): { label: st
     if (lower.includes('goal') || lower.includes('objective') || lower.includes('target')) {
         return [
             { label: 'Objectives', value: formData.goals?.objectives?.join(', ') || '—' },
-            { label: 'Audience', value: formData.goals?.audience?.substring(0, 80) || '—' },
+            { label: 'Audience', value: formData.goals?.audience?.substring(0, 60) || '—' },
         ];
     }
     if (lower.includes('scope') || lower.includes('service') || lower.includes('deliver')) {
         return [
             { label: 'Services', value: formData.scope?.services?.join(', ') || '—' },
-            { label: 'Custom Needs', value: formData.scope?.otherService?.substring(0, 80) || '—' },
+            { label: 'Custom Needs', value: formData.scope?.otherService?.substring(0, 60) || '—' },
         ];
     }
     if (lower.includes('timeline') || lower.includes('schedule') || lower.includes('phase')) {
         return [
             { label: 'Start', value: formData.timelines?.startTime || '—' },
-            { label: 'Events', value: formData.timelines?.upcomingEvents?.substring(0, 80) || '—' },
+            { label: 'Events', value: formData.timelines?.upcomingEvents?.substring(0, 60) || '—' },
         ];
     }
     if (lower.includes('budget') || lower.includes('cost') || lower.includes('invest')) {
@@ -474,7 +504,7 @@ function getSidebarStats(title: string, formData: ProposalFormData): { label: st
     }
     if (lower.includes('audience') || lower.includes('customer') || lower.includes('persona')) {
         return [
-            { label: 'Target', value: formData.goals?.audience?.substring(0, 80) || '—' },
+            { label: 'Target', value: formData.goals?.audience?.substring(0, 60) || '—' },
             { label: 'Goals', value: formData.goals?.objectives?.join(', ') || '—' },
         ];
     }
@@ -487,7 +517,7 @@ function getSidebarStats(title: string, formData: ProposalFormData): { label: st
     return [];
 }
 
-// ─── Services table ───────────────────────────────────────────────
+// ─── Services table ───────────────────────────────────────
 
 function addServicesTable(
     doc: jsPDF,
@@ -513,19 +543,19 @@ function addServicesTable(
         'Other': formData.scope?.otherService || 'Custom deliverables tailored to your requirements',
     };
 
-    const tableX = MARGIN + 10;
-    const tableY = BODY_TOP + 15;
-    const tableW = CONTENT_W - 20;
-    const colWidths = [tableW * 0.28, tableW * 0.54, tableW * 0.18];
-    const headerH = 32;
-    const rowH = Math.min(50, (BODY_H - headerH - 20) / Math.max(services.length, 1));
+    const tableX = MARGIN + 8;
+    const tableY = BODY_TOP + 12;
+    const tableW = CONTENT_W - 16;
+    const colWidths = [tableW * 0.26, tableW * 0.56, tableW * 0.18];
+    const headerH = 28;
+    const rowH = Math.min(44, (BODY_H - headerH - 20) / Math.max(services.length, 1));
 
     // Header row
     fillRect(doc, tableX, tableY, tableW, headerH, COLORS.primary);
     const headers = ['Service', "What's Included", 'Priority'];
     let hx = tableX;
     headers.forEach((h, i) => {
-        text(doc, h, hx + 10, tableY + 20, {
+        text(doc, h, hx + 8, tableY + 18, {
             size: FONT.tableHeader, color: COLORS.white, bold: true,
             align: i === 2 ? 'center' : 'left',
         });
@@ -537,8 +567,6 @@ function addServicesTable(
         const ry = tableY + headerH + i * rowH;
         const rowBg = i % 2 === 0 ? COLORS.white : COLORS.light;
         fillRect(doc, tableX, ry, tableW, rowH, rowBg);
-
-        // Border
         drawLine(doc, tableX, ry, tableX + tableW, ry, COLORS.mutedLight, 0.5);
 
         const desc = serviceDescriptions[service] || 'Tailored delivery based on your requirements';
@@ -546,29 +574,28 @@ function addServicesTable(
         const priorityColor = i === 0 ? COLORS.warning : i === 1 ? COLORS.secondary : COLORS.muted;
 
         let cx = tableX;
-        text(doc, service, cx + 10, ry + rowH / 2 + 4, {
+        text(doc, service, cx + 8, ry + rowH / 2 + 3, {
             size: FONT.tableCell, color: COLORS.dark, bold: true, align: 'left',
-            maxWidth: colWidths[0]! - 20,
+            maxWidth: colWidths[0]! - 16,
         });
         cx += colWidths[0]!;
-        text(doc, desc, cx + 10, ry + rowH / 2 + 4, {
+        text(doc, desc, cx + 8, ry + rowH / 2 + 3, {
             size: FONT.tableCell, color: COLORS.muted, align: 'left',
-            maxWidth: colWidths[1]! - 20, lineHeight: 13,
+            maxWidth: colWidths[1]! - 16, lineHeight: 12,
         });
         cx += colWidths[1]!;
-        text(doc, priority, cx + colWidths[2]! / 2, ry + rowH / 2 + 4, {
+        text(doc, priority, cx + colWidths[2]! / 2, ry + rowH / 2 + 3, {
             size: FONT.tableCell, color: priorityColor, bold: true, align: 'center',
         });
     });
 
-    // Bottom border
     const bottomY = tableY + headerH + services.length * rowH;
     drawLine(doc, tableX, bottomY, tableX + tableW, bottomY, COLORS.mutedLight, 0.5);
 
     addPageFooter(doc, companyName, slideNum, total);
 }
 
-// ─── Budget allocation slide ──────────────────────────────────────
+// ─── Budget allocation slide ──────────────────────────────
 
 async function addBudgetAllocation(
     doc: jsPDF,
@@ -590,88 +617,84 @@ async function addBudgetAllocation(
         : ['PPC (Google Ads)', 'Paid Social', 'SEO & Content', 'Creative & Design'];
     const weights = [0.35, 0.25, 0.20, 0.12, 0.08].slice(0, channelLabels.length);
     const totalWeight = weights.reduce((a, b) => a + b, 0);
-    const labels = channelLabels.map(s => s.length > 22 ? s.substring(0, 20) + '…' : s);
+    const labels = channelLabels.map(s => s.length > 20 ? s.substring(0, 18) + '…' : s);
     const values = weights.map(w => Math.round((w / totalWeight) * budget));
 
-    // Fetch chart image
     const chartImg = await renderBarChart(
         labels,
         [{ label: 'Budget Allocation', data: values, color: '#2563EB' }],
-        { width: 900, height: 600, horizontal: true, valueFormat: '£' },
+        { width: 800, height: 500, horizontal: true, valueFormat: '£' },
     );
 
-    const chartW = 560;
-    const chartH = BODY_H - 30;
-    const chartX = MARGIN + 10;
-    const chartY = BODY_TOP + 10;
+    // Chart on top, summary panel below (portrait layout)
+    const chartW = CONTENT_W - 16;
+    const chartH = 260;
+    const chartX = MARGIN + 8;
+    const chartY = BODY_TOP + 8;
 
     if (chartImg) {
-        // chartImg is "image/png;base64,..." — extract the base64 part
         const base64 = chartImg.replace(/^image\/png;base64,/, '');
         try {
             doc.addImage(base64, 'PNG', chartX, chartY, chartW, chartH, undefined, 'FAST');
         } catch {
-            // Fallback to text if image embedding fails
             renderBudgetFallback(doc, labels, values, chartX, chartY, chartW);
         }
     } else {
         renderBudgetFallback(doc, labels, values, chartX, chartY, chartW);
     }
 
-    // Summary panel on right
-    const panelX = MARGIN + CONTENT_W - 290;
-    const panelW = 280;
-    const panelY = BODY_TOP + 10;
-    const panelH = BODY_H - 20;
+    // Summary panel below chart
+    const panelY = chartY + chartH + 16;
+    const panelH = BODY_BOTTOM - panelY - 10;
+    const panelX = MARGIN + 8;
+    const panelW = CONTENT_W - 16;
 
-    doc.setFillColor(...rgb(COLORS.white));
-    doc.setDrawColor(...rgb(COLORS.mutedLight));
-    doc.roundedRect(panelX, panelY, panelW, panelH, 4, 4, 'FD');
-    fillRect(doc, panelX, panelY, 4, panelH, COLORS.secondary);
+    drawCard(doc, panelX, panelY, panelW, panelH, COLORS.secondary);
 
-    text(doc, 'MONTHLY INVESTMENT', panelX + 14, panelY + 22, {
+    text(doc, 'MONTHLY INVESTMENT', panelX + 14, panelY + 20, {
         size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
     });
-    text(doc, `£${budget.toLocaleString('en-GB')}`, panelX + 14, panelY + 50, {
+    text(doc, `£${budget.toLocaleString('en-GB')}`, panelX + 14, panelY + 42, {
         size: FONT.panelBigValue, color: COLORS.primary, bold: true, align: 'left',
     });
 
-    drawLine(doc, panelX + 14, panelY + 65, panelX + panelW - 14, panelY + 65, COLORS.mutedLight, 1);
+    drawLine(doc, panelX + 14, panelY + 56, panelX + panelW - 14, panelY + 56, COLORS.mutedLight, 0.8);
 
-    let infoY = panelY + 85;
+    // Two-column info below
+    let infoY = panelY + 72;
+    const colW = (panelW - 28) / 2;
     const engagement = formData.value?.engagementType || '';
+    const timeline = formData.timelines?.startTime || '';
+
     if (engagement) {
         text(doc, 'ENGAGEMENT', panelX + 14, infoY, {
             size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
         });
-        text(doc, engagement, panelX + 14, infoY + 18, {
+        text(doc, engagement, panelX + 14, infoY + 16, {
             size: FONT.panelValue, color: COLORS.dark, align: 'left',
-            maxWidth: panelW - 28,
+            maxWidth: colW - 14,
         });
-        infoY += 50;
     }
-
-    const timeline = formData.timelines?.startTime || '';
     if (timeline) {
-        text(doc, 'START TIMELINE', panelX + 14, infoY, {
+        text(doc, 'START TIMELINE', panelX + 14 + colW, infoY, {
             size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
         });
-        text(doc, timeline, panelX + 14, infoY + 18, {
+        text(doc, timeline, panelX + 14 + colW, infoY + 16, {
             size: FONT.panelValue, color: COLORS.dark, align: 'left',
-            maxWidth: panelW - 28,
+            maxWidth: colW - 14,
         });
     }
 
     // Annual projection box
-    const annualY = panelY + panelH - 80;
+    const annualY = panelY + panelH - 56;
     doc.setFillColor(...rgb(COLORS.light));
     doc.setDrawColor(...rgb(COLORS.secondary));
-    doc.roundedRect(panelX + 10, annualY, panelW - 20, 60, 4, 4, 'FD');
-    text(doc, 'PROJECTED ANNUAL', panelX + 20, annualY + 18, {
+    doc.roundedRect(panelX + 10, annualY, panelW - 20, 44, 4, 4, 'FD');
+    text(doc, 'PROJECTED ANNUAL', panelX + 18, annualY + 16, {
         size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
     });
-    text(doc, `£${(budget * 12).toLocaleString('en-GB')}`, panelX + 20, annualY + 42, {
-        size: 18, color: COLORS.secondary, bold: true, align: 'left',
+    text(doc, `£${(budget * 12).toLocaleString('en-GB')}`, panelX + 18, annualY + 36, {
+        size: 16, color: COLORS.secondary, bold: true, align: 'left',
     });
 
     addPageFooter(doc, companyName, slideNum, total);
@@ -684,18 +707,18 @@ function renderBudgetFallback(
     x: number, y: number, w: number,
 ): void {
     text(doc, 'Budget Allocation by Channel', x, y + 20, {
-        size: 16, color: COLORS.dark, bold: true, align: 'left',
+        size: 14, color: COLORS.dark, bold: true, align: 'left',
     });
-    let fy = y + 50;
+    let fy = y + 44;
     labels.forEach((label, i) => {
-        text(doc, `•  ${label}: £${values[i]!.toLocaleString('en-GB')}`, x + 10, fy, {
-            size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 20,
+        text(doc, `•  ${label}: £${values[i]!.toLocaleString('en-GB')}`, x + 8, fy, {
+            size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16,
         });
-        fy += 24;
+        fy += 20;
     });
 }
 
-// ─── ROI projection slide ─────────────────────────────────────────
+// ─── ROI projection slide ─────────────────────────────────
 
 async function addRoiProjection(
     doc: jsPDF,
@@ -719,43 +742,44 @@ async function addRoiProjection(
         renderBarChart(
             ['Month 1', 'Month 2', 'Month 3'],
             [{ label: 'Projected Leads', data: [month1, month2, month3], color: '#2563EB' }],
-            { width: 700, height: 600, title: 'Projected Leads per Month', valueFormat: '' },
+            { width: 700, height: 500, title: 'Projected Leads per Month', valueFormat: '' },
         ),
         renderLineChart(
             ['Month 1', 'Month 2', 'Month 3'],
             [{ label: 'Cost per Lead (£)', data: [50, 35, 25], color: '#F59E0B' }],
-            { width: 700, height: 600, title: 'Cost per Lead Trend (£)', valueFormat: '£', smooth: true },
+            { width: 700, height: 500, title: 'Cost per Lead Trend (£)', valueFormat: '£', smooth: true },
         ),
     ]);
 
-    const leftW = 430;
-    const chartH = BODY_H - 30;
-    const chartY = BODY_TOP + 10;
+    // Stacked vertically for portrait — leads on top, CPL below
+    const chartW = CONTENT_W - 16;
+    const chartH = 280;
+    const chartX = MARGIN + 8;
+    const chartY = BODY_TOP + 8;
 
-    // Left chart — leads
+    // Leads chart
     if (leadsChart) {
         const base64 = leadsChart.replace(/^image\/png;base64,/, '');
         try {
-            doc.addImage(base64, 'PNG', MARGIN + 10, chartY, leftW, chartH, undefined, 'FAST');
+            doc.addImage(base64, 'PNG', chartX, chartY, chartW, chartH, undefined, 'FAST');
         } catch {
-            renderLeadsFallback(doc, month1, month2, month3, MARGIN + 10, chartY, leftW);
+            renderLeadsFallback(doc, month1, month2, month3, chartX, chartY, chartW);
         }
     } else {
-        renderLeadsFallback(doc, month1, month2, month3, MARGIN + 10, chartY, leftW);
+        renderLeadsFallback(doc, month1, month2, month3, chartX, chartY, chartW);
     }
 
-    // Right chart — CPL
-    const rightX = MARGIN + leftW + 30;
-    const rightW = CONTENT_W - leftW - 30;
+    // CPL chart below
+    const cplY = chartY + chartH + 12;
     if (cplChart) {
         const base64 = cplChart.replace(/^image\/png;base64,/, '');
         try {
-            doc.addImage(base64, 'PNG', rightX, chartY, rightW, chartH, undefined, 'FAST');
+            doc.addImage(base64, 'PNG', chartX, cplY, chartW, chartH, undefined, 'FAST');
         } catch {
-            renderCplFallback(doc, rightX, chartY, rightW);
+            renderCplFallback(doc, chartX, cplY, chartW);
         }
     } else {
-        renderCplFallback(doc, rightX, chartY, rightW);
+        renderCplFallback(doc, chartX, cplY, chartW);
     }
 
     addPageFooter(doc, companyName, slideNum, total);
@@ -766,43 +790,48 @@ function renderLeadsFallback(
     x: number, y: number, w: number,
 ): void {
     text(doc, 'Projected Leads per Month', x, y + 20, {
-        size: 16, color: COLORS.dark, bold: true, align: 'left',
+        size: 14, color: COLORS.dark, bold: true, align: 'left',
     });
-    text(doc, `•  Month 1: ${m1} leads`, x + 10, y + 50, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 20 });
-    text(doc, `•  Month 2: ${m2} leads`, x + 10, y + 74, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 20 });
-    text(doc, `•  Month 3: ${m3} leads`, x + 10, y + 98, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 20 });
+    text(doc, `•  Month 1: ${m1} leads`, x + 8, y + 44, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
+    text(doc, `•  Month 2: ${m2} leads`, x + 8, y + 64, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
+    text(doc, `•  Month 3: ${m3} leads`, x + 8, y + 84, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
 }
 
 function renderCplFallback(doc: jsPDF, x: number, y: number, w: number): void {
     text(doc, 'Cost per Lead Trend (£)', x, y + 20, {
-        size: 16, color: COLORS.dark, bold: true, align: 'left',
+        size: 14, color: COLORS.dark, bold: true, align: 'left',
     });
-    text(doc, '•  Month 1: £50 per lead', x + 10, y + 50, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 20 });
-    text(doc, '•  Month 2: £35 per lead', x + 10, y + 74, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 20 });
-    text(doc, '•  Month 3: £25 per lead', x + 10, y + 98, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 20 });
+    text(doc, '•  Month 1: £50 per lead', x + 8, y + 44, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
+    text(doc, '•  Month 2: £35 per lead', x + 8, y + 64, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
+    text(doc, '•  Month 3: £25 per lead', x + 8, y + 84, { size: FONT.body, color: COLORS.dark, align: 'left', maxWidth: w - 16 });
 }
 
-// ─── Closing page ─────────────────────────────────────────────────
+// ─── Closing page ─────────────────────────────────────────
 
-function addClosingPage(doc: jsPDF, formData: ProposalFormData): void {
+function addClosingPage(doc: jsPDF, formData: ProposalFormData, image: PexelsImage | null): void {
     const companyName = formData.company?.name?.trim() || 'Client';
     addNewPage(doc);
 
-    // Full primary background
+    // Top image area
+    const imageH = PAGE_H * 0.35;
     fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.primary);
-    // Left accent stripe
-    fillRect(doc, 0, 0, 11, PAGE_H, COLORS.secondary);
+    if (addImage(doc, image, 0, 0, PAGE_W, imageH)) {
+        doc.setFillColor(...rgb(COLORS.primary));
+        doc.setGState(doc.GState({ opacity: 0.5 }));
+        doc.rect(0, 0, PAGE_W, imageH, 'F');
+        doc.setGState(doc.GState({ opacity: 1 }));
+    }
+    fillRect(doc, 0, 0, 10, PAGE_H, COLORS.secondary);
 
     // Heading
-    text(doc, 'Next Steps', PAGE_W / 2, 120, {
+    text(doc, 'Next Steps', PAGE_W / 2, imageH + 60, {
         size: FONT.title, color: COLORS.white, bold: true, align: 'center',
     });
 
-    // Accent divider
-    drawLine(doc, PAGE_W / 2 - 54, 140, PAGE_W / 2 + 54, 140, COLORS.secondary, 3);
+    drawLine(doc, PAGE_W / 2 - 48, imageH + 76, PAGE_W / 2 + 48, imageH + 76, COLORS.secondary, 3);
 
-    text(doc, "Let's build something great together.", PAGE_W / 2, 170, {
-        size: 16, color: COLORS.accentLight, align: 'center',
+    text(doc, "Let's build something great together.", PAGE_W / 2, imageH + 104, {
+        size: 14, color: COLORS.accentLight, align: 'center',
     });
 
     const nextSteps = [
@@ -812,48 +841,51 @@ function addClosingPage(doc: jsPDF, formData: ProposalFormData): void {
         'Launch campaign within agreed timeline',
     ];
 
+    // 2×2 grid for portrait
     const cardW = 200;
-    const cardH = 115;
-    const cardGap = 18;
-    const totalCardsW = cardW * 4 + cardGap * 3;
-    const startX = (PAGE_W - totalCardsW) / 2;
-    const cardY = 240;
+    const cardH = 80;
+    const cardGapX = 16;
+    const cardGapY = 14;
+    const gridW = cardW * 2 + cardGapX;
+    const startX = (PAGE_W - gridW) / 2;
+    const startY = imageH + 140;
 
     nextSteps.forEach((step, i) => {
-        const cx = startX + i * (cardW + cardGap);
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const cx = startX + col * (cardW + cardGapX);
+        const cy = startY + row * (cardH + cardGapY);
 
-        // Card background
         doc.setFillColor(...rgb(COLORS.primaryDark));
         doc.setDrawColor(...rgb(COLORS.secondary));
         doc.setLineWidth(1);
-        doc.roundedRect(cx, cardY, cardW, cardH, 6, 6, 'FD');
+        doc.roundedRect(cx, cy, cardW, cardH, 6, 6, 'FD');
 
         // Number circle
         doc.setFillColor(...rgb(COLORS.secondary));
-        doc.circle(cx + cardW / 2, cardY + 25, 16, 'F');
-        text(doc, String(i + 1), cx + cardW / 2, cardY + 30, {
-            size: 16, color: COLORS.white, bold: true, align: 'center',
+        doc.circle(cx + 20, cy + 20, 12, 'F');
+        text(doc, String(i + 1), cx + 20, cy + 24, {
+            size: 14, color: COLORS.white, bold: true, align: 'center',
         });
 
-        // Step text
-        text(doc, step, cx + 10, cardY + 60, {
-            size: FONT.bodySmall, color: COLORS.accentLight, align: 'center',
-            maxWidth: cardW - 20, lineHeight: 14,
+        text(doc, step, cx + 38, cy + 18, {
+            size: FONT.bodySmall, color: COLORS.accentLight, align: 'left',
+            maxWidth: cardW - 48, lineHeight: 13,
         });
     });
 
     // Footer
-    fillRect(doc, 0, PAGE_H - 43, PAGE_W, 43, COLORS.primaryDark);
+    fillRect(doc, 0, PAGE_H - 44, PAGE_W, 44, COLORS.primaryDark);
     text(doc, `Prepared for ${companyName}`, PAGE_W / 2, PAGE_H - 20, {
         size: 11, color: COLORS.muted, align: 'center',
     });
 }
 
-// ─── Main generator ───────────────────────────────────────────────
+// ─── Main generator ───────────────────────────────────────
 
 /**
  * Generate a proposal PDF as an ArrayBuffer from slide instructions and proposal form data.
- * Mirrors the PPTX deck structure with the Cohorts brand theme.
+ * A4 portrait format with the Cohorts brand theme and Pexels slide images.
  */
 export async function generateProposalPdf(
     formData: ProposalFormData,
@@ -861,8 +893,8 @@ export async function generateProposalPdf(
 ): Promise<ArrayBuffer> {
     const doc = new jsPDF({
         unit: 'pt',
-        format: [PAGE_W, PAGE_H],
-        orientation: 'landscape',
+        format: 'a4',
+        orientation: 'portrait',
     });
 
     const companyName = formData.company?.name?.trim() || 'Client';
@@ -913,10 +945,32 @@ export async function generateProposalPdf(
     const dataSlideCount = (hasServices ? 1 : 0) + (hasBudget ? 2 : 0);
     const totalSlides = 1 + 1 + aiSlides.length + dividerCount + dataSlideCount + 1;
 
+    // Pre-fetch images from Pexels/Unsplash — same dedup pool as PPTX.
+    // Build topic list in the SAME ORDER as slides are created below.
+    const slideTopics = [
+        'company',  // title slide
+        // TOC slide has no image
+        ...sections.flatMap((section) => {
+            const dividerTopic = topicFromTitle(section.title);
+            if (section.slideIndices.length > 0) {
+                return [
+                    dividerTopic,
+                    ...section.slideIndices.map((idx) => topicFromTitle(aiSlides[idx]!.title)),
+                ];
+            }
+            // Data-driven sections (services, budget) have no content images
+            return [dividerTopic];
+        }),
+        'next',  // closing slide
+    ];
+    const slideImages = await prefetchSlideImages(slideTopics);
+    let imageIdx = 0;
+
     let currentSlideNum = 0;
 
     // 1. Title page
-    addTitlePage(doc, formData);
+    addTitlePage(doc, formData, slideImages[imageIdx] ?? null);
+    imageIdx++;
     currentSlideNum++;
 
     // 2. Table of Contents
@@ -932,7 +986,9 @@ export async function generateProposalPdf(
         addSectionDivider(
             doc, secIdx + 1, section.title, section.description,
             currentSlideNum, totalSlides, companyName,
+            slideImages[imageIdx] ?? null,
         );
+        imageIdx++;
 
         // Content slides for this section
         if (section.slideIndices.length > 0) {
@@ -942,7 +998,9 @@ export async function generateProposalPdf(
                 addContentSlide(
                     doc, slideContent, formData, companyName,
                     currentSlideNum, totalSlides,
+                    slideImages[imageIdx] ?? null,
                 );
+                imageIdx++;
             }
         } else if (hasServices && section.title.includes('Scope')) {
             currentSlideNum++;
@@ -957,7 +1015,7 @@ export async function generateProposalPdf(
 
     // 4. Closing page
     currentSlideNum++;
-    addClosingPage(doc, formData);
+    addClosingPage(doc, formData, slideImages[imageIdx] ?? null);
 
     // Set document metadata
     doc.setProperties({

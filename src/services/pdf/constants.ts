@@ -1,6 +1,8 @@
 /**
- * Shared constants for PDF generation — mirrors the PPTX theme in `pptx/constants.ts`.
+ * Shared constants for PDF generation — A4 portrait proposal document.
+ *
  * Colors match the site theme in globals.css and the PPTX deck.
+ * Page dimensions are A4 portrait (595.28 × 841.89 pt) for print-ready output.
  */
 
 // jsPDF uses RGB tuples (0–255). Hex values from pptx/constants.ts are converted here.
@@ -21,39 +23,38 @@ export const COLORS = {
     mutedLight: [226, 232, 240] as const,   // #E2E8F0 slate-200 — borders
 } as const;
 
-// Page dimensions — landscape, 16:9 aspect ratio (matches PPTX LAYOUT_WIDE)
-// jsPDF uses points (pt) by default. 1 inch = 72pt.
-// 13.333in × 7.5in → 960pt × 540pt
-export const PAGE_W = 960;
-export const PAGE_H = 540;
-export const MARGIN = 43;          // ~0.6in
-export const CONTENT_W = PAGE_W - MARGIN * 2;  // 874
-export const HEADER_H = 72;        // ~1.0in
-export const FOOTER_H = 29;        // ~0.4in
-export const BODY_TOP = HEADER_H + 11;  // ~1.15in → 83
-export const BODY_BOTTOM = PAGE_H - FOOTER_H;  // 511
-export const BODY_H = BODY_BOTTOM - BODY_TOP;  // ~428
+// A4 portrait dimensions (points)
+// 210mm × 297mm → 595.28pt × 841.89pt
+export const PAGE_W = 595.28;
+export const PAGE_H = 841.89;
+export const MARGIN = 48;                    // ~17mm
+export const CONTENT_W = PAGE_W - MARGIN * 2; // ~499pt
+export const HEADER_H = 64;                  // compact header for portrait
+export const FOOTER_H = 32;                  // footer
+export const BODY_TOP = HEADER_H + 16;       // 80
+export const BODY_BOTTOM = PAGE_H - FOOTER_H; // ~810
+export const BODY_H = BODY_BOTTOM - BODY_TOP; // ~730
 
-// Font sizes (pt) — tuned for landscape deck readability
+// Font sizes (pt) — tuned for A4 portrait readability
 export const FONT = {
-    title: 36,        // title slide main heading
-    subtitle: 14,     // title slide subtitle
-    sectionNum: 64,   // section divider big number
-    sectionTitle: 28, // section divider title
-    headerTitle: 20,  // content slide header
-    slideNum: 22,     // header slide number badge
-    body: 13,         // body text / bullets
-    bodySmall: 11,    // secondary body text
-    metricValue: 24,  // metric callout value
-    metricLabel: 10,  // metric callout label
-    callout: 13,      // callout box text
-    tocTitle: 14,     // TOC entry title
-    tocDesc: 11,      // TOC entry description
-    tocNum: 18,       // TOC entry number
-    tableHeader: 12,  // table header text
-    tableCell: 11,    // table cell text
+    title: 32,        // title slide main heading
+    subtitle: 13,     // title slide subtitle
+    sectionNum: 56,   // section divider big number
+    sectionTitle: 24, // section divider title
+    headerTitle: 18,  // content slide header
+    slideNum: 18,     // header slide number badge
+    body: 12,         // body text / bullets
+    bodySmall: 10,    // secondary body text
+    metricValue: 22,  // metric callout value
+    metricLabel: 9,   // metric callout label
+    callout: 12,      // callout box text
+    tocTitle: 13,     // TOC entry title
+    tocDesc: 10,      // TOC entry description
+    tocNum: 16,       // TOC entry number
+    tableHeader: 11,  // table header text
+    tableCell: 10,    // table cell text
     footer: 8,        // footer text
     panelLabel: 9,    // sidebar/panel label
-    panelValue: 13,   // sidebar/panel value
-    panelBigValue: 22,// sidebar big number
+    panelValue: 12,   // sidebar/panel value
+    panelBigValue: 20,// sidebar big number
 } as const;
