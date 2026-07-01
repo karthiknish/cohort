@@ -32,5 +32,5 @@
     "src/**/*.d.ts",
     "src/routeTree.gen.ts"
   ],
-  "exclude": ["node_modules", "convex", "src-legacy", "**/*.test.ts", "**/*.test.tsx"]
+  "exclude": ["node_modules", "convex", "**/*.test.ts", "**/*.test.tsx"]
 }

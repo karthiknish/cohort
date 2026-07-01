@@ -44,13 +44,10 @@ import { Route as ApiDashboardClientSummaryRouteImport } from './routes/api/dash
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedDashboardTasksRouteImport } from './routes/_authed/dashboard/tasks'
 import { Route as AuthedDashboardSocialsRouteImport } from './routes/_authed/dashboard/socials'
-import { Route as AuthedDashboardProjectsDebugRouteImport } from './routes/_authed/dashboard/projects-debug'
 import { Route as AuthedDashboardProjectsRouteImport } from './routes/_authed/dashboard/projects'
 import { Route as AuthedDashboardNotificationsRouteImport } from './routes/_authed/dashboard/notifications'
 import { Route as AuthedDashboardMeetingsRouteImport } from './routes/_authed/dashboard/meetings'
 import { Route as AuthedDashboardCollaborationRouteImport } from './routes/_authed/dashboard/collaboration'
-import { Route as AuthedDashboardCollabV2RouteImport } from './routes/_authed/dashboard/collab-v2'
-import { Route as AuthedDashboardCollabDebugRouteImport } from './routes/_authed/dashboard/collab-debug'
 import { Route as AuthedDashboardClientsRouteImport } from './routes/_authed/dashboard/clients'
 import { Route as AuthedDashboardAnalyticsRouteImport } from './routes/_authed/dashboard/analytics'
 import { Route as AuthedAdminUsersRouteImport } from './routes/_authed/admin/users'
@@ -259,12 +256,6 @@ const AuthedDashboardSocialsRoute = AuthedDashboardSocialsRouteImport.update({
   path: '/socials',
   getParentRoute: () => AuthedDashboardRoute,
 } as any)
-const AuthedDashboardProjectsDebugRoute =
-  AuthedDashboardProjectsDebugRouteImport.update({
-    id: '/projects-debug',
-    path: '/projects-debug',
-    getParentRoute: () => AuthedDashboardRoute,
-  } as any)
 const AuthedDashboardProjectsRoute = AuthedDashboardProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
@@ -285,17 +276,6 @@ const AuthedDashboardCollaborationRoute =
   AuthedDashboardCollaborationRouteImport.update({
     id: '/collaboration',
     path: '/collaboration',
-    getParentRoute: () => AuthedDashboardRoute,
-  } as any)
-const AuthedDashboardCollabV2Route = AuthedDashboardCollabV2RouteImport.update({
-  id: '/collab-v2',
-  path: '/collab-v2',
-  getParentRoute: () => AuthedDashboardRoute,
-} as any)
-const AuthedDashboardCollabDebugRoute =
-  AuthedDashboardCollabDebugRouteImport.update({
-    id: '/collab-debug',
-    path: '/collab-debug',
     getParentRoute: () => AuthedDashboardRoute,
   } as any)
 const AuthedDashboardClientsRoute = AuthedDashboardClientsRouteImport.update({
@@ -502,13 +482,10 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AuthedAdminUsersRoute
   '/dashboard/analytics': typeof AuthedDashboardAnalyticsRoute
   '/dashboard/clients': typeof AuthedDashboardClientsRoute
-  '/dashboard/collab-debug': typeof AuthedDashboardCollabDebugRoute
-  '/dashboard/collab-v2': typeof AuthedDashboardCollabV2Route
   '/dashboard/collaboration': typeof AuthedDashboardCollaborationRoute
   '/dashboard/meetings': typeof AuthedDashboardMeetingsRoute
   '/dashboard/notifications': typeof AuthedDashboardNotificationsRoute
   '/dashboard/projects': typeof AuthedDashboardProjectsRoute
-  '/dashboard/projects-debug': typeof AuthedDashboardProjectsDebugRoute
   '/dashboard/socials': typeof AuthedDashboardSocialsRoute
   '/dashboard/tasks': typeof AuthedDashboardTasksRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -573,13 +550,10 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AuthedAdminUsersRoute
   '/dashboard/analytics': typeof AuthedDashboardAnalyticsRoute
   '/dashboard/clients': typeof AuthedDashboardClientsRoute
-  '/dashboard/collab-debug': typeof AuthedDashboardCollabDebugRoute
-  '/dashboard/collab-v2': typeof AuthedDashboardCollabV2Route
   '/dashboard/collaboration': typeof AuthedDashboardCollaborationRoute
   '/dashboard/meetings': typeof AuthedDashboardMeetingsRoute
   '/dashboard/notifications': typeof AuthedDashboardNotificationsRoute
   '/dashboard/projects': typeof AuthedDashboardProjectsRoute
-  '/dashboard/projects-debug': typeof AuthedDashboardProjectsDebugRoute
   '/dashboard/socials': typeof AuthedDashboardSocialsRoute
   '/dashboard/tasks': typeof AuthedDashboardTasksRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -649,13 +623,10 @@ export interface FileRoutesById {
   '/_authed/admin/users': typeof AuthedAdminUsersRoute
   '/_authed/dashboard/analytics': typeof AuthedDashboardAnalyticsRoute
   '/_authed/dashboard/clients': typeof AuthedDashboardClientsRoute
-  '/_authed/dashboard/collab-debug': typeof AuthedDashboardCollabDebugRoute
-  '/_authed/dashboard/collab-v2': typeof AuthedDashboardCollabV2Route
   '/_authed/dashboard/collaboration': typeof AuthedDashboardCollaborationRoute
   '/_authed/dashboard/meetings': typeof AuthedDashboardMeetingsRoute
   '/_authed/dashboard/notifications': typeof AuthedDashboardNotificationsRoute
   '/_authed/dashboard/projects': typeof AuthedDashboardProjectsRoute
-  '/_authed/dashboard/projects-debug': typeof AuthedDashboardProjectsDebugRoute
   '/_authed/dashboard/socials': typeof AuthedDashboardSocialsRoute
   '/_authed/dashboard/tasks': typeof AuthedDashboardTasksRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -725,13 +696,10 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/dashboard/analytics'
     | '/dashboard/clients'
-    | '/dashboard/collab-debug'
-    | '/dashboard/collab-v2'
     | '/dashboard/collaboration'
     | '/dashboard/meetings'
     | '/dashboard/notifications'
     | '/dashboard/projects'
-    | '/dashboard/projects-debug'
     | '/dashboard/socials'
     | '/dashboard/tasks'
     | '/api/auth/$'
@@ -796,13 +764,10 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/dashboard/analytics'
     | '/dashboard/clients'
-    | '/dashboard/collab-debug'
-    | '/dashboard/collab-v2'
     | '/dashboard/collaboration'
     | '/dashboard/meetings'
     | '/dashboard/notifications'
     | '/dashboard/projects'
-    | '/dashboard/projects-debug'
     | '/dashboard/socials'
     | '/dashboard/tasks'
     | '/api/auth/$'
@@ -871,13 +836,10 @@ export interface FileRouteTypes {
     | '/_authed/admin/users'
     | '/_authed/dashboard/analytics'
     | '/_authed/dashboard/clients'
-    | '/_authed/dashboard/collab-debug'
-    | '/_authed/dashboard/collab-v2'
     | '/_authed/dashboard/collaboration'
     | '/_authed/dashboard/meetings'
     | '/_authed/dashboard/notifications'
     | '/_authed/dashboard/projects'
-    | '/_authed/dashboard/projects-debug'
     | '/_authed/dashboard/socials'
     | '/_authed/dashboard/tasks'
     | '/api/auth/$'
@@ -1212,13 +1174,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardSocialsRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
-    '/_authed/dashboard/projects-debug': {
-      id: '/_authed/dashboard/projects-debug'
-      path: '/projects-debug'
-      fullPath: '/dashboard/projects-debug'
-      preLoaderRoute: typeof AuthedDashboardProjectsDebugRouteImport
-      parentRoute: typeof AuthedDashboardRoute
-    }
     '/_authed/dashboard/projects': {
       id: '/_authed/dashboard/projects'
       path: '/projects'
@@ -1245,20 +1200,6 @@ declare module '@tanstack/react-router' {
       path: '/collaboration'
       fullPath: '/dashboard/collaboration'
       preLoaderRoute: typeof AuthedDashboardCollaborationRouteImport
-      parentRoute: typeof AuthedDashboardRoute
-    }
-    '/_authed/dashboard/collab-v2': {
-      id: '/_authed/dashboard/collab-v2'
-      path: '/collab-v2'
-      fullPath: '/dashboard/collab-v2'
-      preLoaderRoute: typeof AuthedDashboardCollabV2RouteImport
-      parentRoute: typeof AuthedDashboardRoute
-    }
-    '/_authed/dashboard/collab-debug': {
-      id: '/_authed/dashboard/collab-debug'
-      path: '/collab-debug'
-      fullPath: '/dashboard/collab-debug'
-      preLoaderRoute: typeof AuthedDashboardCollabDebugRouteImport
       parentRoute: typeof AuthedDashboardRoute
     }
     '/_authed/dashboard/clients': {
@@ -1523,13 +1464,10 @@ const AuthedDashboardAdsCampaignsProviderIdCampaignIdRouteWithChildren =
 interface AuthedDashboardRouteChildren {
   AuthedDashboardAnalyticsRoute: typeof AuthedDashboardAnalyticsRoute
   AuthedDashboardClientsRoute: typeof AuthedDashboardClientsRoute
-  AuthedDashboardCollabDebugRoute: typeof AuthedDashboardCollabDebugRoute
-  AuthedDashboardCollabV2Route: typeof AuthedDashboardCollabV2Route
   AuthedDashboardCollaborationRoute: typeof AuthedDashboardCollaborationRoute
   AuthedDashboardMeetingsRoute: typeof AuthedDashboardMeetingsRoute
   AuthedDashboardNotificationsRoute: typeof AuthedDashboardNotificationsRoute
   AuthedDashboardProjectsRoute: typeof AuthedDashboardProjectsRoute
-  AuthedDashboardProjectsDebugRoute: typeof AuthedDashboardProjectsDebugRoute
   AuthedDashboardSocialsRoute: typeof AuthedDashboardSocialsRoute
   AuthedDashboardTasksRoute: typeof AuthedDashboardTasksRoute
   AuthedDashboardIndexRoute: typeof AuthedDashboardIndexRoute
@@ -1544,13 +1482,10 @@ interface AuthedDashboardRouteChildren {
 const AuthedDashboardRouteChildren: AuthedDashboardRouteChildren = {
   AuthedDashboardAnalyticsRoute: AuthedDashboardAnalyticsRoute,
   AuthedDashboardClientsRoute: AuthedDashboardClientsRoute,
-  AuthedDashboardCollabDebugRoute: AuthedDashboardCollabDebugRoute,
-  AuthedDashboardCollabV2Route: AuthedDashboardCollabV2Route,
   AuthedDashboardCollaborationRoute: AuthedDashboardCollaborationRoute,
   AuthedDashboardMeetingsRoute: AuthedDashboardMeetingsRoute,
   AuthedDashboardNotificationsRoute: AuthedDashboardNotificationsRoute,
   AuthedDashboardProjectsRoute: AuthedDashboardProjectsRoute,
-  AuthedDashboardProjectsDebugRoute: AuthedDashboardProjectsDebugRoute,
   AuthedDashboardSocialsRoute: AuthedDashboardSocialsRoute,
   AuthedDashboardTasksRoute: AuthedDashboardTasksRoute,
   AuthedDashboardIndexRoute: AuthedDashboardIndexRoute,

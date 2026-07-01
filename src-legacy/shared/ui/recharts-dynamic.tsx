@@ -1,2 +1,0 @@
-'use client';
-export { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Funnel, FunnelChart, LabelList, Legend, Line, LineChart, Pie, PieChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, Tooltip, Tooltip as RechartsTooltip, XAxis, YAxis, } from 'recharts';
