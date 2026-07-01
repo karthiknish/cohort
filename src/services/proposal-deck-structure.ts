@@ -32,54 +32,65 @@ export function getSidebarStatsForTitle(title: string, formData: ProposalFormDat
 }
 
 export function getSidebarStatsForKeyword(keyword: string, formData: ProposalFormData, maxLen = 80): SidebarStat[] {
-    const truncate = (s: string | undefined) => s ? s.substring(0, maxLen) : '—';
+    const truncate = (s: string | undefined) => s ? s.substring(0, maxLen) : '';
+    const allStats: SidebarStat[] = [];
     switch (keyword) {
         case 'company':
-            return [
-                { label: 'Industry', value: formData.company?.industry || '—' },
-                { label: 'Company Size', value: formData.company?.size || '—' },
-                { label: 'Locations', value: formData.company?.locations?.split('\n')[0] || '—' },
-            ];
+            allStats.push(
+                { label: 'Industry', value: formData.company?.industry || '' },
+                { label: 'Company Size', value: formData.company?.size || '' },
+                { label: 'Locations', value: formData.company?.locations?.split('\n')[0] || '' },
+            );
+            break;
         case 'marketing':
-            return [
-                { label: 'Monthly Budget', value: formData.marketing?.budget || '—' },
-                { label: 'Ad Accounts', value: formData.marketing?.adAccounts || '—' },
-                { label: 'Platforms', value: formData.marketing?.platforms?.join(', ') || '—' },
-            ];
+            allStats.push(
+                { label: 'Monthly Budget', value: formData.marketing?.budget || '' },
+                { label: 'Ad Accounts', value: formData.marketing?.adAccounts || '' },
+                { label: 'Platforms', value: formData.marketing?.platforms?.join(', ') || '' },
+            );
+            break;
         case 'goals':
-            return [
-                { label: 'Objectives', value: formData.goals?.objectives?.join(', ') || '—' },
+            allStats.push(
+                { label: 'Objectives', value: formData.goals?.objectives?.join(', ') || '' },
                 { label: 'Audience', value: truncate(formData.goals?.audience) },
-            ];
+            );
+            break;
         case 'scope':
-            return [
-                { label: 'Services', value: formData.scope?.services?.join(', ') || '—' },
+            allStats.push(
+                { label: 'Services', value: formData.scope?.services?.join(', ') || '' },
                 { label: 'Custom Needs', value: truncate(formData.scope?.otherService) },
-            ];
+            );
+            break;
         case 'timeline':
-            return [
-                { label: 'Start', value: formData.timelines?.startTime || '—' },
+            allStats.push(
+                { label: 'Start', value: formData.timelines?.startTime || '' },
                 { label: 'Events', value: truncate(formData.timelines?.upcomingEvents) },
-            ];
+            );
+            break;
         case 'budget':
         case 'roi':
-            return [
-                { label: 'Budget', value: formData.marketing?.budget || '—' },
-                { label: 'Engagement', value: formData.value?.engagementType || '—' },
-            ];
+            allStats.push(
+                { label: 'Budget', value: formData.marketing?.budget || '' },
+                { label: 'Engagement', value: formData.value?.engagementType || '' },
+            );
+            break;
         case 'audience':
-            return [
+            allStats.push(
                 { label: 'Target', value: truncate(formData.goals?.audience) },
-                { label: 'Goals', value: formData.goals?.objectives?.join(', ') || '—' },
-            ];
+                { label: 'Goals', value: formData.goals?.objectives?.join(', ') || '' },
+            );
+            break;
         case 'challenges':
-            return [
-                { label: 'Barriers', value: formData.goals?.challenges?.join(', ') || '—' },
-                { label: 'Custom', value: formData.goals?.customChallenge || '—' },
-            ];
+            allStats.push(
+                { label: 'Barriers', value: formData.goals?.challenges?.join(', ') || '' },
+                { label: 'Custom', value: formData.goals?.customChallenge || '' },
+            );
+            break;
         default:
-            return [];
+            break;
     }
+    // Filter out stats with no data — empty values create blank cards
+    return allStats.filter((stat) => stat.value && stat.value.trim().length > 0);
 }
 
 // ─── Budget allocation weights (derived from selected services) ──

@@ -450,22 +450,38 @@ function addContentSlideImageLeft(
             fill: { color: COLORS.secondary },
         });
         const stats = getSidebarStats(sidebarKeywordVal, formData);
-        slide.addText('At a Glance', {
-            x: sidebarX + 0.3, y: sidebarY + 0.3, w: sidebarW - 0.5, h: 0.4,
-            fontSize: 12, bold: true, color: COLORS.muted, fontFace: FONT, charSpacing: 1,
-        });
-        let statY = sidebarY + 0.85;
-        const statSpacing = (sidebarH - 1.1) / Math.max(stats.length, 1);
-        for (const stat of stats) {
-            slide.addText(stat.label, {
-                x: sidebarX + 0.3, y: statY, w: sidebarW - 0.5, h: 0.3,
-                fontSize: 11, color: COLORS.muted, fontFace: FONT, bold: true,
+        if (stats.length === 0) {
+            // No form data for this topic — show a key takeaway instead of empty stats
+            slide.addText('Key Takeaway', {
+                x: sidebarX + 0.3, y: sidebarY + 0.3, w: sidebarW - 0.5, h: 0.4,
+                fontSize: 12, bold: true, color: COLORS.muted, fontFace: FONT, charSpacing: 1,
             });
-            slide.addText(stat.value, {
-                x: sidebarX + 0.3, y: statY + 0.3, w: sidebarW - 0.5, h: Math.min(statSpacing - 0.4, 1.2),
-                fontSize: 14, color: COLORS.dark, fontFace: FONT, valign: 'top', lineSpacingMultiple: 1.25,
+            slide.addText(
+                'A data-driven approach ensures every decision is backed by insights, not assumptions.',
+                {
+                    x: sidebarX + 0.3, y: sidebarY + 0.8, w: sidebarW - 0.5, h: sidebarH - 1.2,
+                    fontSize: 15, color: COLORS.dark, fontFace: FONT,
+                    italic: true, valign: 'top', lineSpacingMultiple: 1.4,
+                },
+            );
+        } else {
+            slide.addText('At a Glance', {
+                x: sidebarX + 0.3, y: sidebarY + 0.3, w: sidebarW - 0.5, h: 0.4,
+                fontSize: 12, bold: true, color: COLORS.muted, fontFace: FONT, charSpacing: 1,
             });
-            statY += statSpacing;
+            let statY = sidebarY + 0.85;
+            const statSpacing = (sidebarH - 1.1) / stats.length;
+            for (const stat of stats) {
+                slide.addText(stat.label, {
+                    x: sidebarX + 0.3, y: statY, w: sidebarW - 0.5, h: 0.3,
+                    fontSize: 11, color: COLORS.muted, fontFace: FONT, bold: true,
+                });
+                slide.addText(stat.value, {
+                    x: sidebarX + 0.3, y: statY + 0.3, w: sidebarW - 0.5, h: Math.min(statSpacing - 0.4, 1.2),
+                    fontSize: 14, color: COLORS.dark, fontFace: FONT, valign: 'top', lineSpacingMultiple: 1.25,
+                });
+                statY += statSpacing;
+            }
         }
     }
 

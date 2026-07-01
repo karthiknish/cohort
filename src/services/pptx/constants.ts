@@ -22,10 +22,10 @@ export const COLORS = {
     chartGrid: 'E2E8F0',     // slate-200 — gridline color
 } as const;
 
-// Geist Variable isn't available in PowerPoint — Segoe UI is the closest
-// system font (standard on Windows, widely available in PowerPoint)
-export const FONT = 'Segoe UI';
-export const FONT_LIGHT = 'Segoe UI Semibold';
+// Arial is universally available across Windows, Mac, Google Slides, and
+// LibreOffice — avoids font substitution warnings in PowerPoint.
+export const FONT = 'Arial';
+export const FONT_LIGHT = 'Arial';
 
 // Slide dimensions (LAYOUT_WIDE equivalent)
 export const SLIDE_W = 13.333;
