@@ -245,28 +245,28 @@ function addTocPage(
     fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.light);
     addPageHeader(doc, 'Table of Contents', slideNum);
 
-    // Single column layout for A4 portrait
+    // Single column layout for A4 portrait — cards sized to fill the page
     const cardW = CONTENT_W;
-    const cardH = 64;
     const cardGap = 12;
     const startX = MARGIN;
     const startY = BODY_TOP + 16;
+    const availableH = BODY_BOTTOM - startY - 10;
+    const cardH = Math.max(70, Math.min(100, (availableH - cardGap * (sections.length - 1)) / Math.max(sections.length, 1)));
 
     sections.forEach((section, i) => {
         const y = startY + i * (cardH + cardGap);
-        if (y + cardH > BODY_BOTTOM - 10) return; // skip overflow
 
         drawCard(doc, startX, y, cardW, cardH, COLORS.secondary);
 
         const num = String(i + 1).padStart(2, '0');
-        text(doc, num, startX + 16, y + 28, {
+        text(doc, num, startX + 16, y + 32, {
             size: FONT.tocNum, color: COLORS.secondary, bold: true, align: 'left',
         });
-        text(doc, section.title, startX + 60, y + 24, {
+        text(doc, section.title, startX + 60, y + 28, {
             size: FONT.tocTitle, color: COLORS.primary, bold: true, align: 'left',
             maxWidth: cardW - 76,
         });
-        text(doc, section.description, startX + 60, y + 42, {
+        text(doc, section.description, startX + 60, y + 46, {
             size: FONT.tocDesc, color: COLORS.muted, align: 'left',
             maxWidth: cardW - 76, lineHeight: 13,
         });
@@ -286,11 +286,12 @@ function addSectionDivider(
     total: number,
     companyName: string,
     image: PexelsImage | null,
+    slideTitles?: string[],
 ): void {
     addNewPage(doc);
 
-    // Top half: image with primary overlay; bottom half: primary background
-    const imageH = PAGE_H * 0.45;
+    // Top 40%: image with primary overlay; bottom 60%: primary background with content
+    const imageH = PAGE_H * 0.40;
     fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.primary);
 
     if (addImage(doc, image, 0, 0, PAGE_W, imageH)) {
@@ -309,19 +310,40 @@ function addSectionDivider(
     doc.setFont('helvetica', 'bold');
     const blend = COLORS.secondary.map((s, i) => Math.round(s * 0.4 + (COLORS.primary[i] ?? 0) * 0.6)) as [number, number, number];
     doc.setTextColor(...blend);
-    doc.text(num, MARGIN + 24, imageH + 70);
+    doc.text(num, MARGIN + 24, imageH + 60);
 
     // Section title
-    text(doc, sectionTitle, MARGIN + 24, imageH + 110, {
+    text(doc, sectionTitle, MARGIN + 24, imageH + 96, {
         size: FONT.sectionTitle, color: COLORS.white, bold: true, align: 'left',
         maxWidth: PAGE_W - MARGIN * 2 - 48,
     });
 
     if (sectionSubtitle) {
-        text(doc, sectionSubtitle, MARGIN + 24, imageH + 138, {
+        text(doc, sectionSubtitle, MARGIN + 24, imageH + 122, {
             size: 13, color: COLORS.accentLight, align: 'left',
             maxWidth: PAGE_W - MARGIN * 2 - 48, lineHeight: 17,
         });
+    }
+
+    // Key topics list from slide titles
+    if (slideTitles && slideTitles.length > 0) {
+        const topicsY = imageH + 160;
+        text(doc, 'IN THIS SECTION', MARGIN + 24, topicsY, {
+            size: FONT.panelLabel, color: COLORS.accentLight, bold: true, align: 'left',
+        });
+        drawLine(doc, MARGIN + 24, topicsY + 8, MARGIN + 140, topicsY + 8, COLORS.secondary, 2);
+
+        let ty = topicsY + 28;
+        for (const title of slideTitles) {
+            // Bullet circle
+            doc.setFillColor(...rgb(COLORS.secondary));
+            doc.circle(MARGIN + 30, ty - 3, 2.5, 'F');
+            text(doc, title, MARGIN + 40, ty, {
+                size: 12, color: COLORS.white, align: 'left',
+                maxWidth: PAGE_W - MARGIN * 2 - 64, lineHeight: 16,
+            });
+            ty += 24;
+        }
     }
 
     // Footer info
@@ -350,46 +372,42 @@ function addContentSlide(
     fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.light);
     addPageHeader(doc, slideContent.title, slideNum);
 
-    // Content image — placed at top right, below header
-    const imgW = 140;
-    const imgH = 90;
-    const imgX = PAGE_W - MARGIN - imgW;
+    // Content image — large banner across full width below header
+    const imgW = CONTENT_W;
+    const imgH = 130;
+    const imgX = MARGIN;
     const imgY = BODY_TOP + 8;
     if (image) {
         addImage(doc, image, imgX, imgY, imgW, imgH);
     }
 
-    // Content area — full width below image, or beside it
+    // Content area — full width below image
     const contentX = MARGIN + 8;
     const contentW = CONTENT_W - 16;
-    let y = BODY_TOP + 16;
+    let y = imgY + imgH + 16;
 
     // Metrics row
     if (slideContent.metrics && slideContent.metrics.length > 0) {
         const metricW = contentW / slideContent.metrics.length;
+        const metricH = 58;
         slideContent.metrics.forEach((metric, i) => {
             const mx = contentX + i * metricW;
-            drawCard(doc, mx, y, metricW - 8, 52, COLORS.secondary);
-            text(doc, metric.value, mx + 12, y + 24, {
+            drawCard(doc, mx, y, metricW - 8, metricH, COLORS.secondary);
+            text(doc, metric.value, mx + 12, y + 26, {
                 size: FONT.metricValue, color: COLORS.primary, bold: true, align: 'left',
             });
-            text(doc, metric.label, mx + 12, y + 40, {
+            text(doc, metric.label, mx + 12, y + 44, {
                 size: FONT.metricLabel, color: COLORS.muted, align: 'left',
                 maxWidth: metricW - 24, lineHeight: 10,
             });
         });
-        y += 64;
-    }
-
-    // If image is placed at top right, push content below it
-    if (image && y < imgY + imgH + 12) {
-        y = imgY + imgH + 16;
+        y += metricH + 14;
     }
 
     // Comparison block
     if (slideContent.comparison) {
         const colW = (contentW - 16) / 2;
-        const compH = 100;
+        const compH = 120;
         // Before
         drawCard(doc, contentX, y, colW, compH, COLORS.warning);
         text(doc, 'BEFORE', contentX + 12, y + 18, {
@@ -421,24 +439,35 @@ function addContentSlide(
         y += compH + 16;
     }
 
-    // Bullets
+    // Bullets — render in a card to fill space
     if (slideContent.bullets.length > 0) {
+        // Calculate height needed for bullets
+        let bulletH = 0;
         for (const bullet of slideContent.bullets) {
-            y = ensureSpace(doc, y, 24);
-            const lines = text(doc, `•  ${bullet}`, contentX, y, {
-                size: FONT.body, color: COLORS.dark, align: 'left',
-                maxWidth: contentW, lineHeight: 16,
-            });
-            y += lines.length * 16 + 5;
+            const lines = doc.splitTextToSize(`•  ${bullet}`, contentW - 24);
+            bulletH += lines.length * 16 + 5;
         }
+        bulletH += 20; // padding
+
+        // Draw a card around bullets
+        drawCard(doc, contentX, y, contentW, bulletH, COLORS.accent);
+        let bulletY = y + 14;
+        for (const bullet of slideContent.bullets) {
+            bulletY = ensureSpace(doc, bulletY, 24);
+            const lines = text(doc, `•  ${bullet}`, contentX + 12, bulletY, {
+                size: FONT.body, color: COLORS.dark, align: 'left',
+                maxWidth: contentW - 24, lineHeight: 16,
+            });
+            bulletY += lines.length * 16 + 5;
+        }
+        y += bulletH + 14;
     }
 
     // Callout box
     if (slideContent.callout) {
         y = ensureSpace(doc, y, 44);
-        y += 6;
         const calloutLines = doc.splitTextToSize(slideContent.callout, contentW - 28);
-        const calloutH = Math.max(36, calloutLines.length * 15 + 14);
+        const calloutH = Math.max(40, calloutLines.length * 15 + 16);
         doc.setFillColor(...rgb(COLORS.primary));
         doc.roundedRect(contentX, y, contentW, calloutH, 4, 4, 'F');
         fillRect(doc, contentX, y, 4, calloutH, COLORS.secondary);
@@ -453,33 +482,32 @@ function addContentSlide(
         y += calloutH + 10;
     }
 
-    // Sidebar with key stats — placed at bottom as a full-width strip (avoids overlap)
-    addSidebarStrip(doc, slideContent.title, formData, y);
+    // Sidebar with key stats — pinned to bottom of page as a full-width strip
+    const stats = getSidebarStatsForKeyword(sidebarKeyword(slideContent.title), formData, 60);
+    if (stats.length > 0) {
+        const stripH = 56;
+        const stripY = BODY_BOTTOM - stripH - 8;
+        // Only draw if there's room (avoid overlap with content)
+        if (y < stripY - 6) {
+            drawCard(doc, MARGIN + 8, stripY, CONTENT_W - 16, stripH, COLORS.secondary);
+            const statW = (CONTENT_W - 32) / stats.length;
+            stats.forEach((stat, i) => {
+                const sx = MARGIN + 16 + i * statW;
+                text(doc, stat.label, sx, stripY + 18, {
+                    size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
+                    maxWidth: statW - 12,
+                });
+                text(doc, stat.value, sx, stripY + 36, {
+                    size: FONT.panelValue, color: COLORS.dark, bold: true, align: 'left',
+                    maxWidth: statW - 12, lineHeight: 13,
+                });
+            });
+        }
+    }
 
     addPageFooter(doc, companyName, slideNum, total);
 }
 
-function addSidebarStrip(doc: jsPDF, title: string, formData: ProposalFormData, y: number): void {
-    const stats = getSidebarStatsForKeyword(sidebarKeyword(title), formData, 60);
-    if (stats.length === 0) return;
-
-    y = ensureSpace(doc, y, 50);
-    const stripH = 44;
-    drawCard(doc, MARGIN + 8, y, CONTENT_W - 16, stripH, COLORS.secondary);
-
-    const statW = (CONTENT_W - 32) / stats.length;
-    stats.forEach((stat, i) => {
-        const sx = MARGIN + 16 + i * statW;
-        text(doc, stat.label, sx, y + 16, {
-            size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
-            maxWidth: statW - 12,
-        });
-        text(doc, stat.value, sx, y + 32, {
-            size: FONT.panelValue, color: COLORS.dark, bold: true, align: 'left',
-            maxWidth: statW - 12, lineHeight: 13,
-        });
-    });
-}
 
 
 // ─── Services table ───────────────────────────────────────
@@ -505,7 +533,7 @@ function addServicesTable(
     const tableW = CONTENT_W - 16;
     const colWidths = [tableW * 0.26, tableW * 0.56, tableW * 0.18];
     const headerH = 28;
-    const rowH = Math.min(44, (BODY_H - headerH - 20) / Math.max(services.length, 1));
+    const rowH = Math.min(48, (BODY_H - headerH - 20) / Math.max(services.length, 1));
 
     // Header row
     fillRect(doc, tableX, tableY, tableW, headerH, COLORS.primary);
@@ -527,8 +555,6 @@ function addServicesTable(
         drawLine(doc, tableX, ry, tableX + tableW, ry, COLORS.mutedLight, 0.5);
 
         const desc = serviceDescriptions[service] || 'Tailored delivery based on your requirements';
-        const priority = 'Included';
-        const priorityColor = COLORS.secondary;
 
         let cx = tableX;
         text(doc, service, cx + 8, ry + rowH / 2 + 3, {
@@ -541,13 +567,68 @@ function addServicesTable(
             maxWidth: colWidths[1]! - 16, lineHeight: 12,
         });
         cx += colWidths[1]!;
-        text(doc, priority, cx + colWidths[2]! / 2, ry + rowH / 2 + 3, {
-            size: FONT.tableCell, color: priorityColor, bold: true, align: 'center',
+        text(doc, 'Included', cx + colWidths[2]! / 2, ry + rowH / 2 + 3, {
+            size: FONT.tableCell, color: COLORS.secondary, bold: true, align: 'center',
         });
     });
 
     const bottomY = tableY + headerH + services.length * rowH;
     drawLine(doc, tableX, bottomY, tableX + tableW, bottomY, COLORS.mutedLight, 0.5);
+
+    // Engagement summary panel below table to fill the page
+    const panelY = bottomY + 20;
+    const panelH = BODY_BOTTOM - panelY - 10;
+    if (panelH > 60) {
+        drawCard(doc, tableX, panelY, tableW, panelH, COLORS.secondary);
+
+        let summaryY = panelY + 20;
+        text(doc, 'ENGAGEMENT OVERVIEW', tableX + 14, summaryY, {
+            size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
+        });
+        summaryY += 18;
+
+        const colW = (tableW - 28) / 2;
+        const engagement = formData.value?.engagementType || '';
+        const timeline = formData.timelines?.startTime || '';
+        const objectives = formData.goals?.objectives?.join(', ') || '';
+        const audience = formData.goals?.audience || '';
+        const challenges = formData.goals?.challenges?.join(', ') || '';
+        const customNeeds = formData.scope?.otherService || '';
+
+        const leftItems: [string, string][] = [];
+        if (engagement) leftItems.push(['Engagement Type', engagement]);
+        if (timeline) leftItems.push(['Start Timeline', timeline]);
+        if (objectives) leftItems.push(['Objectives', objectives]);
+        if (audience) leftItems.push(['Target Audience', audience.substring(0, 120)]);
+
+        const rightItems: [string, string][] = [];
+        if (challenges) rightItems.push(['Key Challenges', challenges]);
+        if (customNeeds) rightItems.push(['Custom Needs', customNeeds.substring(0, 120)]);
+        rightItems.push(['Total Services', String(services.length)]);
+
+        for (const [label, value] of leftItems) {
+            text(doc, label, tableX + 14, summaryY, {
+                size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
+            });
+            const valLines = text(doc, value, tableX + 14, summaryY + 14, {
+                size: FONT.panelValue, color: COLORS.dark, align: 'left',
+                maxWidth: colW - 14, lineHeight: 14,
+            });
+            summaryY += 14 + valLines.length * 14 + 10;
+        }
+
+        let rightY = panelY + 38;
+        for (const [label, value] of rightItems) {
+            text(doc, label, tableX + 14 + colW, rightY, {
+                size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
+            });
+            const valLines = text(doc, value, tableX + 14 + colW, rightY + 14, {
+                size: FONT.panelValue, color: COLORS.dark, align: 'left',
+                maxWidth: colW - 14, lineHeight: 14,
+            });
+            rightY += 14 + valLines.length * 14 + 10;
+        }
+    }
 
     addPageFooter(doc, companyName, slideNum, total);
 }
@@ -586,7 +667,7 @@ async function addBudgetAllocation(
 
     // Chart on top, summary panel below (portrait layout)
     const chartW = CONTENT_W - 16;
-    const chartH = 260;
+    const chartH = 240;
     const chartX = MARGIN + 8;
     const chartY = BODY_TOP + 8;
 
@@ -601,59 +682,66 @@ async function addBudgetAllocation(
         renderBudgetFallback(doc, labels, values, chartX, chartY, chartW, currency);
     }
 
-    // Summary panel below chart
-    const panelY = chartY + chartH + 16;
+    // Channel breakdown table below chart
+    const tableY = chartY + chartH + 12;
+    const tableX = MARGIN + 8;
+    const tableW = CONTENT_W - 16;
+    const colW = [tableW * 0.40, tableW * 0.30, tableW * 0.30];
+    const bdHeaderH = 24;
+    const bdRowH = 22;
+
+    // Header
+    fillRect(doc, tableX, tableY, tableW, bdHeaderH, COLORS.primary);
+    text(doc, 'Channel', tableX + 8, tableY + 16, { size: FONT.tableHeader, color: COLORS.white, bold: true, align: 'left' });
+    text(doc, 'Monthly', tableX + colW[0]! + 8, tableY + 16, { size: FONT.tableHeader, color: COLORS.white, bold: true, align: 'left' });
+    text(doc, '% of Budget', tableX + colW[0]! + colW[1]! + colW[2]! / 2, tableY + 16, { size: FONT.tableHeader, color: COLORS.white, bold: true, align: 'center' });
+
+    labels.forEach((label, i) => {
+        const ry = tableY + bdHeaderH + i * bdRowH;
+        const rowBg = i % 2 === 0 ? COLORS.white : COLORS.light;
+        fillRect(doc, tableX, ry, tableW, bdRowH, rowBg);
+        drawLine(doc, tableX, ry, tableX + tableW, ry, COLORS.mutedLight, 0.5);
+        text(doc, label, tableX + 8, ry + 15, { size: FONT.tableCell, color: COLORS.dark, bold: true, align: 'left', maxWidth: colW[0]! - 16 });
+        text(doc, formatCurrency(values[i]!, currency), tableX + colW[0]! + 8, ry + 15, { size: FONT.tableCell, color: COLORS.dark, align: 'left' });
+        const pct = Math.round((weights[i]! / totalWeight) * 100);
+        text(doc, `${pct}%`, tableX + colW[0]! + colW[1]! + colW[2]! / 2, ry + 15, { size: FONT.tableCell, color: COLORS.secondary, bold: true, align: 'center' });
+    });
+    const bdBottom = tableY + bdHeaderH + labels.length * bdRowH;
+    drawLine(doc, tableX, bdBottom, tableX + tableW, bdBottom, COLORS.mutedLight, 0.5);
+
+    // Summary panel below table
+    const panelY = bdBottom + 14;
     const panelH = BODY_BOTTOM - panelY - 10;
     const panelX = MARGIN + 8;
     const panelW = CONTENT_W - 16;
 
-    drawCard(doc, panelX, panelY, panelW, panelH, COLORS.secondary);
+    if (panelH > 50) {
+        drawCard(doc, panelX, panelY, panelW, panelH, COLORS.secondary);
 
-    text(doc, 'MONTHLY INVESTMENT', panelX + 14, panelY + 20, {
-        size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
-    });
-    text(doc, formatCurrency(budget, currency), panelX + 14, panelY + 42, {
-        size: FONT.panelBigValue, color: COLORS.primary, bold: true, align: 'left',
-    });
+        const colW2 = (panelW - 28) / 3;
+        text(doc, 'MONTHLY INVESTMENT', panelX + 14, panelY + 18, { size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left' });
+        text(doc, formatCurrency(budget, currency), panelX + 14, panelY + 38, { size: FONT.panelBigValue, color: COLORS.primary, bold: true, align: 'left' });
 
-    drawLine(doc, panelX + 14, panelY + 56, panelX + panelW - 14, panelY + 56, COLORS.mutedLight, 0.8);
+        const engagement = formData.value?.engagementType || '';
+        const timeline = formData.timelines?.startTime || '';
 
-    // Two-column info below
-    let infoY = panelY + 72;
-    const colW = (panelW - 28) / 2;
-    const engagement = formData.value?.engagementType || '';
-    const timeline = formData.timelines?.startTime || '';
+        if (engagement) {
+            text(doc, 'ENGAGEMENT', panelX + 14 + colW2, panelY + 18, { size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left' });
+            text(doc, engagement, panelX + 14 + colW2, panelY + 38, { size: FONT.panelValue, color: COLORS.dark, align: 'left', maxWidth: colW2 - 14 });
+        }
+        if (timeline) {
+            text(doc, 'START TIMELINE', panelX + 14 + colW2 * 2, panelY + 18, { size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left' });
+            text(doc, timeline, panelX + 14 + colW2 * 2, panelY + 38, { size: FONT.panelValue, color: COLORS.dark, align: 'left', maxWidth: colW2 - 14 });
+        }
 
-    if (engagement) {
-        text(doc, 'ENGAGEMENT', panelX + 14, infoY, {
-            size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
-        });
-        text(doc, engagement, panelX + 14, infoY + 16, {
-            size: FONT.panelValue, color: COLORS.dark, align: 'left',
-            maxWidth: colW - 14,
-        });
+        // Annual projection box
+        const annualY = panelY + panelH - 42;
+        doc.setFillColor(...rgb(COLORS.light));
+        doc.setDrawColor(...rgb(COLORS.secondary));
+        doc.roundedRect(panelX + 10, annualY, panelW - 20, 34, 4, 4, 'FD');
+        text(doc, 'PROJECTED ANNUAL', panelX + 18, annualY + 14, { size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left' });
+        text(doc, formatCurrency(budget * 12, currency), panelX + panelW - 18, annualY + 14, { size: 14, color: COLORS.secondary, bold: true, align: 'right' });
     }
-    if (timeline) {
-        text(doc, 'START TIMELINE', panelX + 14 + colW, infoY, {
-            size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
-        });
-        text(doc, timeline, panelX + 14 + colW, infoY + 16, {
-            size: FONT.panelValue, color: COLORS.dark, align: 'left',
-            maxWidth: colW - 14,
-        });
-    }
-
-    // Annual projection box
-    const annualY = panelY + panelH - 56;
-    doc.setFillColor(...rgb(COLORS.light));
-    doc.setDrawColor(...rgb(COLORS.secondary));
-    doc.roundedRect(panelX + 10, annualY, panelW - 20, 44, 4, 4, 'FD');
-    text(doc, 'PROJECTED ANNUAL', panelX + 18, annualY + 16, {
-        size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
-    });
-    text(doc, formatCurrency(budget * 12, currency), panelX + 18, annualY + 36, {
-        size: 16, color: COLORS.secondary, bold: true, align: 'left',
-    });
 
     addPageFooter(doc, companyName, slideNum, total);
 }
@@ -711,9 +799,9 @@ async function addRoiProjection(
         ),
     ]);
 
-    // Stacked vertically for portrait — leads on top, CPL below
+    // Stacked vertically for portrait — leads on top, CPL below, assumptions panel at bottom
     const chartW = CONTENT_W - 16;
-    const chartH = 280;
+    const chartH = 220;
     const chartX = MARGIN + 8;
     const chartY = BODY_TOP + 8;
 
@@ -730,7 +818,7 @@ async function addRoiProjection(
     }
 
     // CPL chart below
-    const cplY = chartY + chartH + 12;
+    const cplY = chartY + chartH + 10;
     if (cplChart) {
         const base64 = cplChart.replace(/^image\/png;base64,/, '');
         try {
@@ -740,6 +828,53 @@ async function addRoiProjection(
         }
     } else {
         renderCplFallback(doc, chartX, cplY, chartW, currency);
+    }
+
+    // Assumptions & summary panel below charts
+    const panelY = cplY + chartH + 12;
+    const panelH = BODY_BOTTOM - panelY - 10;
+    const panelX = MARGIN + 8;
+    const panelW = CONTENT_W - 16;
+
+    if (panelH > 50) {
+        drawCard(doc, panelX, panelY, panelW, panelH, COLORS.secondary);
+
+        text(doc, 'PROJECTION ASSUMPTIONS', panelX + 14, panelY + 18, {
+            size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
+        });
+
+        const colW = (panelW - 28) / 3;
+        const totalLeads = month1 + month2 + month3;
+        const avgCpl = Math.round(budget / (totalLeads / 3));
+        const totalSpend = budget * 3;
+
+        // Three-column metrics
+        text(doc, 'TOTAL LEADS (90 DAYS)', panelX + 14, panelY + 38, { size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left' });
+        text(doc, String(totalLeads), panelX + 14, panelY + 56, { size: FONT.panelBigValue, color: COLORS.primary, bold: true, align: 'left' });
+
+        text(doc, 'AVG COST PER LEAD', panelX + 14 + colW, panelY + 38, { size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left' });
+        text(doc, formatCurrency(avgCpl, currency), panelX + 14 + colW, panelY + 56, { size: FONT.panelBigValue, color: COLORS.primary, bold: true, align: 'left' });
+
+        text(doc, 'TOTAL SPEND (90 DAYS)', panelX + 14 + colW * 2, panelY + 38, { size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left' });
+        text(doc, formatCurrency(totalSpend, currency), panelX + 14 + colW * 2, panelY + 56, { size: FONT.panelBigValue, color: COLORS.primary, bold: true, align: 'left' });
+
+        drawLine(doc, panelX + 14, panelY + 72, panelX + panelW - 14, panelY + 72, COLORS.mutedLight, 0.8);
+
+        // Assumptions text
+        const assumptions = [
+            'Lead generation improves as campaigns optimise over the 90-day period.',
+            'Cost per lead decreases from month 1 to month 3 as targeting and creative mature.',
+            'Projections are based on industry benchmarks and will be refined with live data.',
+            'Actual results depend on market conditions, competition, and landing page quality.',
+        ];
+        let ay = panelY + 88;
+        for (const assumption of assumptions) {
+            const lines = text(doc, `•  ${assumption}`, panelX + 14, ay, {
+                size: FONT.bodySmall, color: COLORS.dark, align: 'left',
+                maxWidth: panelW - 28, lineHeight: 12,
+            });
+            ay += lines.length * 12 + 4;
+        }
     }
 
     addPageFooter(doc, companyName, slideNum, total);
@@ -773,7 +908,7 @@ function addClosingPage(doc: jsPDF, formData: ProposalFormData, image: PexelsIma
     addNewPage(doc);
 
     // Top image area
-    const imageH = PAGE_H * 0.35;
+    const imageH = PAGE_H * 0.30;
     fillRect(doc, 0, 0, PAGE_W, PAGE_H, COLORS.primary);
     if (addImage(doc, image, 0, 0, PAGE_W, imageH)) {
         doc.setFillColor(...rgb(COLORS.primary));
@@ -784,31 +919,31 @@ function addClosingPage(doc: jsPDF, formData: ProposalFormData, image: PexelsIma
     fillRect(doc, 0, 0, 10, PAGE_H, COLORS.secondary);
 
     // Heading
-    text(doc, 'Next Steps', PAGE_W / 2, imageH + 60, {
+    text(doc, 'Next Steps', PAGE_W / 2, imageH + 50, {
         size: FONT.title, color: COLORS.white, bold: true, align: 'center',
     });
 
-    drawLine(doc, PAGE_W / 2 - 48, imageH + 76, PAGE_W / 2 + 48, imageH + 76, COLORS.secondary, 3);
+    drawLine(doc, PAGE_W / 2 - 48, imageH + 66, PAGE_W / 2 + 48, imageH + 66, COLORS.secondary, 3);
 
-    text(doc, "Let's build something great together.", PAGE_W / 2, imageH + 104, {
+    text(doc, "Let's build something great together.", PAGE_W / 2, imageH + 92, {
         size: 14, color: COLORS.accentLight, align: 'center',
     });
 
     const nextSteps = [
-        'Review this proposal and share feedback',
-        'Schedule a kickoff call to align on goals',
+        'Review this proposal and share feedback within 5 business days',
+        'Schedule a kickoff call to align on goals and success metrics',
         'Approve scope and finalise engagement terms',
-        'Launch campaign within agreed timeline',
+        'Launch campaign within agreed timeline and begin onboarding',
     ];
 
-    // 2×2 grid for portrait
-    const cardW = 200;
-    const cardH = 80;
+    // 2×2 grid for portrait — wider cards to fill the page
+    const cardW = 220;
+    const cardH = 90;
     const cardGapX = 16;
     const cardGapY = 14;
     const gridW = cardW * 2 + cardGapX;
     const startX = (PAGE_W - gridW) / 2;
-    const startY = imageH + 140;
+    const startY = imageH + 120;
 
     nextSteps.forEach((step, i) => {
         const col = i % 2;
@@ -823,16 +958,68 @@ function addClosingPage(doc: jsPDF, formData: ProposalFormData, image: PexelsIma
 
         // Number circle
         doc.setFillColor(...rgb(COLORS.secondary));
-        doc.circle(cx + 20, cy + 20, 12, 'F');
-        text(doc, String(i + 1), cx + 20, cy + 24, {
+        doc.circle(cx + 22, cy + 22, 13, 'F');
+        text(doc, String(i + 1), cx + 22, cy + 27, {
             size: 14, color: COLORS.white, bold: true, align: 'center',
         });
 
-        text(doc, step, cx + 38, cy + 18, {
+        text(doc, step, cx + 42, cy + 20, {
             size: FONT.bodySmall, color: COLORS.accentLight, align: 'left',
-            maxWidth: cardW - 48, lineHeight: 13,
+            maxWidth: cardW - 52, lineHeight: 13,
         });
     });
+
+    // Contact / summary panel below the grid
+    const panelY = startY + cardH * 2 + cardGapY + 20;
+    const panelH = PAGE_H - 44 - panelY - 10;
+    if (panelH > 40) {
+        const panelX = MARGIN + 20;
+        const panelW = PAGE_W - MARGIN * 2 - 40;
+        doc.setFillColor(...rgb(COLORS.primaryDark));
+        doc.setDrawColor(...rgb(COLORS.secondary));
+        doc.setLineWidth(0.8);
+        doc.roundedRect(panelX, panelY, panelW, panelH, 6, 6, 'FD');
+
+        text(doc, 'GET IN TOUCH', panelX + 16, panelY + 20, {
+            size: FONT.panelLabel, color: COLORS.accentLight, bold: true, align: 'left',
+        });
+
+        const colW = (panelW - 32) / 2;
+        const objectives = formData.goals?.objectives?.join(', ') || '';
+        const services = formData.scope?.services?.join(', ') || '';
+        const budget = formData.marketing?.budget || '';
+
+        if (objectives) {
+            text(doc, 'PROPOSAL OBJECTIVES', panelX + 16, panelY + 40, {
+                size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
+            });
+            const lines = text(doc, objectives, panelX + 16, panelY + 56, {
+                size: 11, color: COLORS.white, align: 'left',
+                maxWidth: colW - 16, lineHeight: 14,
+            });
+            void lines;
+        }
+
+        const rightX = panelX + 16 + colW;
+        if (services) {
+            text(doc, 'SCOPE', rightX, panelY + 40, {
+                size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
+            });
+            text(doc, services, rightX, panelY + 56, {
+                size: 11, color: COLORS.white, align: 'left',
+                maxWidth: colW - 16, lineHeight: 14,
+            });
+        }
+
+        if (budget) {
+            text(doc, 'INVESTMENT', rightX, panelY + 80, {
+                size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
+            });
+            text(doc, budget, rightX, panelY + 96, {
+                size: 12, color: COLORS.accentLight, bold: true, align: 'left',
+            });
+        }
+    }
 
     // Footer
     fillRect(doc, 0, PAGE_H - 44, PAGE_W, 44, COLORS.primaryDark);
@@ -885,10 +1072,14 @@ export async function generateProposalPdf(
 
         // Section divider
         currentSlideNum++;
+        const slideTitles = section.slideIndices.length > 0
+            ? section.slideIndices.map((idx) => aiSlides[idx]!.title)
+            : undefined;
         addSectionDivider(
             doc, secIdx + 1, section.title, section.description,
             currentSlideNum, totalSlides, companyName,
             slideImages[imageIdx] ?? null,
+            slideTitles,
         );
         imageIdx++;
 
