@@ -55,10 +55,11 @@ export function TaskCardHeaderSection({ task, isPendingUpdate, onOpen, searchQue
     titleClassName?: string;
 }) {
     const { title: showTitle, menu: showMenu, contextPills: showContextPills, indicators: showIndicators, compactIndicators, } = visibility;
-    const handleOpenTask = () => {
+    const handleOpenTask = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
         onOpen?.(task);
     };
-    const titleMarkup = onOpen ? (<button type="button" onClick={handleOpenTask} className="block min-w-0 rounded-md text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2" aria-label={`View task ${task.title}`}>
+    const titleMarkup = onOpen ? (<button type="button" onClick={(e) => handleOpenTask(e)} className="block min-w-0 rounded-md text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2" aria-label={`View task ${task.title}`}>
       <div className="flex items-start gap-2">
         <h3 className={cn('line-clamp-2 min-w-0 flex-1 font-semibold leading-tight text-foreground transition-colors group-hover:text-primary hover:text-primary', titleClassName ?? 'text-[1.05rem]')}>
           {highlightMatch(task.title, searchQuery)}
@@ -211,10 +212,10 @@ function TaskCardActionsMenu({ task, onEdit, onDelete, onQuickStatusChange, onCl
     const handleShareClick = () => {
         onShare?.(task);
     };
-    return (<div className="shrink-0">
+    return (<div className="shrink-0" onClick={(e) => e.stopPropagation()}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="size-8 rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground" aria-label="Task actions">
+          <Button variant="ghost" size="icon" className="size-8 rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground" aria-label="Task actions" onClick={(e) => e.stopPropagation()}>
             <MoreHorizontal className="size-4"/>
           </Button>
         </DropdownMenuTrigger>

@@ -39,7 +39,7 @@ export type ExportCohortsSpreadsheetRowsOptions = {
 };
 const DEFAULT_DATA_SHEET_NAME = 'Data';
 const DEFAULT_CHARTS_SHEET_NAME = 'Charts';
-const LOGO_WIDTH = 120;
+const LOGO_WIDTH = 54;
 const LOGO_HEIGHT = 30;
 export function ensureXlsxFilename(filename: string): string {
     const trimmed = filename.trim();
@@ -121,7 +121,7 @@ function embedWorksheetCharts(workbook: ExcelJS.Workbook, worksheet: ExcelJS.Wor
     }
     return currentRow + 1;
 }
-/** Add the Cohorts white logo to the right side of the brand header row. */
+/** Add the Cohorts white logo to the brand header row. */
 function addLogoToHeader(workbook: ExcelJS.Workbook, worksheet: ExcelJS.Worksheet, columnCount: number, row: number): void {
     try {
         const logoBase64 = COHORTS_LOGO_WHITE_BASE64.replace(/^image\/png;base64,/, '');
@@ -129,10 +129,9 @@ function addLogoToHeader(workbook: ExcelJS.Workbook, worksheet: ExcelJS.Workshee
             base64: logoBase64,
             extension: 'png',
         });
-        // Place logo at the right edge of the merged brand row
-        const logoCol = Math.max(columnCount - 2, 1);
+        // Place logo at the left of the brand row, vertically centered
         worksheet.addImage(imageId, {
-            tl: { col: logoCol - 1, row: row - 1 },
+            tl: { col: 0, row: row - 1 },
             ext: { width: LOGO_WIDTH, height: LOGO_HEIGHT },
         });
     } catch {
@@ -148,11 +147,10 @@ function buildChartsWorksheetHeader(worksheet: ExcelJS.Worksheet, columnCount: n
 }): number {
     const theme = COHORTS_SPREADSHEET_THEME;
     let currentRow = 1;
-    // Brand header row with primary fill
+    // Brand header row (logo only, no text)
     worksheet.mergeCells(currentRow, 1, currentRow, columnCount);
     const brandCell = worksheet.getCell(currentRow, 1);
-    brandCell.value = theme.brandName;
-    brandCell.font = { ...theme.fonts.brand, color: { argb: theme.colors.primaryForeground } };
+    brandCell.value = '';
     applyFill(brandCell, theme.colors.primary);
     brandCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
     worksheet.getRow(currentRow).height = 36;
@@ -248,11 +246,10 @@ async function buildBrandedWorkbook({ title, subtitle, sheetName, chartsSheetNam
     const worksheet = workbook.addWorksheet(dataSheetName);
     const columnCount = Math.max(headers.length, 1);
     const theme = COHORTS_SPREADSHEET_THEME;
-    // ─── Brand header row ───
+    // ─── Brand header row (logo only, no text) ───
     worksheet.mergeCells(1, 1, 1, columnCount);
     const brandCell = worksheet.getCell(1, 1);
-    brandCell.value = theme.brandName;
-    brandCell.font = { ...theme.fonts.brand, color: { argb: theme.colors.primaryForeground } };
+    brandCell.value = '';
     applyFill(brandCell, theme.colors.primary);
     brandCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
     worksheet.getRow(1).height = 36;
@@ -335,8 +332,8 @@ async function buildBrandedWorkbook({ title, subtitle, sheetName, chartsSheetNam
     const footerCell = worksheet.getCell(footerRowIndex, 1);
     footerCell.value =
         chartImages.length > 0
-            ? `Prepared in ${theme.brandName} — see "${resolvedChartsSheetName}" for charts`
-            : `Prepared in ${theme.brandName}`;
+            ? `See "${resolvedChartsSheetName}" for charts`
+            : '';
     footerCell.font = { ...theme.fonts.footer, color: { argb: theme.colors.mutedForeground } };
     footerCell.alignment = { horizontal: 'left', indent: 1 };
     // Top border on footer for visual separation

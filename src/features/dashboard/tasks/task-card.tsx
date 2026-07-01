@@ -81,8 +81,13 @@ function TaskCardComponent({ task, variant = 'grid', isPendingUpdate, onOpen, on
         contextPills: !isBoard,
         indicators: !isBoard,
     });
+    const handleCardClick = () => {
+        if (isBoard && onOpen) {
+            onOpen(task);
+        }
+    };
     return (<ViewTransition>
-      <div className={cn('group relative flex h-full flex-col overflow-hidden border border-border/70 bg-card shadow-sm transition-[border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] hover:border-primary/25 hover:shadow-md', listItemEnterClass, clickableCardClass, isBoard ? 'rounded-xl p-3.5' : 'rounded-2xl p-4 sm:p-5', isPendingUpdate && 'pointer-events-none opacity-75', selected && 'border-primary/30 ring-2 ring-primary/15', overdue && 'border-destructive/25', dueSoon && !overdue && 'border-warning/25', task.parentId && !isBoard && 'ml-4')}>
+      <div className={cn('group relative flex h-full flex-col overflow-hidden border border-border/70 bg-card shadow-sm transition-[border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] hover:border-primary/25 hover:shadow-md', listItemEnterClass, clickableCardClass, isBoard ? 'cursor-pointer rounded-xl p-3.5' : 'rounded-2xl p-4 sm:p-5', isPendingUpdate && 'pointer-events-none opacity-75', selected && 'border-primary/30 ring-2 ring-primary/15', overdue && 'border-destructive/25', dueSoon && !overdue && 'border-warning/25', task.parentId && !isBoard && 'ml-4')} onClick={handleCardClick} role={isBoard && onOpen ? 'button' : undefined} aria-label={isBoard && onOpen ? `View task ${task.title}` : undefined}>
         {!isBoard ? (<div className={cn('absolute left-0 top-0 bottom-0 w-1 rounded-l-[1.25rem] opacity-80', priorityAccentColors[task.priority])}/>) : null}
 
         {overdue ? <TaskCardOverdueBanner /> : null}
