@@ -1,9 +1,16 @@
 'use client';
 
-import { CalendarDays, ChartGantt, Columns3, LayoutGrid, List } from 'lucide-react';
+import { CalendarDays, ChartGantt, ChevronsUpDown, Columns3, LayoutGrid, List } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
-import { PROJECTS_THEME } from './projects-theme';
 import type { ViewMode } from '../types';
 
 const VIEW_OPTIONS: { mode: ViewMode; label: string; icon: typeof List }[] = [
@@ -20,28 +27,42 @@ interface ViewModeSelectorProps {
 }
 
 export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) {
+  const current = VIEW_OPTIONS.find((option) => option.mode === viewMode) ?? VIEW_OPTIONS[0]!;
+  const CurrentIcon = current.icon;
+
   return (
-    <fieldset
-      className={cn(PROJECTS_THEME.segmented, 'm-0 min-w-0 border-0 p-0')}
-      aria-label="Project view mode"
-    >
-      {VIEW_OPTIONS.map(({ mode, label, icon: Icon }) => (
-        <Tooltip key={mode}>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className={PROJECTS_THEME.segmentedItem(viewMode === mode)}
-              onClick={() => onChange(mode)}
-              aria-label={label}
-              aria-pressed={viewMode === mode}
-            >
-              <Icon className="size-3.5" aria-hidden />
-              <span className="hidden sm:inline">{label}</span>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{label} view</TooltipContent>
-        </Tooltip>
-      ))}
-    </fieldset>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 gap-2 border-border/60 shadow-sm"
+          aria-label="Select view mode"
+        >
+          <CurrentIcon className="size-4" aria-hidden />
+          <span className="hidden sm:inline">{current.label}</span>
+          <ChevronsUpDown className="size-3.5 text-muted-foreground" aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          View mode
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {VIEW_OPTIONS.map(({ mode, label, icon: Icon }) => (
+          <DropdownMenuItem
+            key={mode}
+            className={cn('gap-2', viewMode === mode && 'font-semibold')}
+            onClick={() => onChange(mode)}
+            aria-checked={viewMode === mode}
+          >
+            <Icon className="size-4" aria-hidden />
+            <span className="flex-1">{label}</span>
+            {viewMode === mode ? <span className="size-1.5 rounded-full bg-primary" aria-hidden /> : null}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

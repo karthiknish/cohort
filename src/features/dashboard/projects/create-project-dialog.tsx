@@ -256,9 +256,8 @@ export function CreateProjectSheet({ onProjectCreated, trigger }: CreateProjectS
         dispatch({ type: 'setTagInput', value });
     };
     const handleTriggerClick = () => handleOpenChange(true);
-    const triggerNode = trigger ?? (<Button id="create-project-trigger" type="button" onClick={handleTriggerClick} className="gap-2 shadow-sm transition-shadow hover:shadow-md">
+    const triggerNode = trigger ?? (<Button id="create-project-trigger" type="button" onClick={handleTriggerClick} className="gap-2 shadow-sm transition-shadow hover:shadow-md" aria-label="New project">
         <Plus className="size-4" aria-hidden/>
-        New project
       </Button>);
     return (<ResponsiveFormSheet open={open} onOpenChange={handleOpenChange} trigger={triggerNode} contentClassName={PROJECTS_THEME.sheet.content}>
       <form className="flex h-full min-h-0 flex-col" onSubmit={handleSubmit}>
