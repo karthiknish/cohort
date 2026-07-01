@@ -18,6 +18,7 @@ import {
     HEADER_H, BODY_TOP, BODY_BOTTOM, BODY_H,
 } from './constants';
 import { addSlideHeader, addSlideFooter, addSidebar, sidebarKeyword, getSidebarStats } from './shared-elements';
+import { COHORTS_LOGO_WHITE_BASE64 } from './logo-data';
 
 // ─── Title slide ──────────────────────────────────────────────────
 
@@ -45,6 +46,12 @@ export function addTitleSlide(pptx: pptxgen, formData: ProposalFormData, image: 
     slide.addShape(pptx.ShapeType.rect, {
         x: 0, y: 0, w: 0.15, h: SLIDE_H,
         fill: { color: COLORS.secondary },
+    });
+
+    // Cohorts white logo — top right corner
+    slide.addImage({
+        data: COHORTS_LOGO_WHITE_BASE64,
+        x: SLIDE_W - 3.2, y: 0.5, w: 2.5, h: 1.4,
     });
 
     slide.addText(companyName.toUpperCase(), {

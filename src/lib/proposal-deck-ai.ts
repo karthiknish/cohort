@@ -1,30 +1,49 @@
 import type { ProposalFormData } from '@/lib/proposals';
 import { deepseekAI } from '@/services/deepseek';
 const FALLBACK_DECK_INSTRUCTIONS = `Slide 1: A tailored strategy to achieve measurable growth
-BULLETS:
-- Audit current performance and identify the highest-impact growth opportunities
-- Propose a phased approach with clear KPIs and weekly reporting cadence
-- Align budget allocation with proven channels for your industry
-CALLOUT: This proposal outlines a data-driven path to scalable, profitable growth.
-
-Slide 2: Objectives & KPIs
 METRICS:
 - value: "25%" | label: Target conversion rate uplift
 - value: "3.5x" | label: Projected return on ad spend
 - value: "£0" | label: Wasted spend eliminated
-CALLOUT: Every objective is tied to a measurable KPI with weekly tracking.
+CALLOUT: This proposal outlines a data-driven path to scalable, profitable growth.
 BULLETS:
-- Define primary KPIs: ROAS, CAC, conversion rate, and revenue per session
-- Set secondary KPIs: brand awareness, engagement rate, and customer lifetime value
+- Audit current performance and identify the highest-impact growth opportunities
+- Propose a phased approach with clear KPIs and weekly reporting cadence
+- Align budget allocation with proven channels for your industry
 
-Slide 3: Strategy Overview
+Slide 2: Current state analysis reveals untapped growth potential
+COMPARISON:
+Before:
+- Manual bid management with no audience segmentation
+- Single-channel dependency on paid search
+- No conversion tracking on mobile checkout flow
+- Landing page bounce rate above 65%
+After:
+- Automated bid strategy with layered audience targeting
+- Diversified channel mix across paid social and search
+- Full-funnel tracking with event-based measurement
+- Optimised landing pages targeting a 40% bounce rate
+CALLOUT: Quick-win fixes in weeks 1-2 can recover an estimated 15% of wasted spend.
+
+Slide 3: Target audience insights shape channel selection
+METRICS:
+- value: "68%" | label: Mobile-first users
+- value: "2.3x" | label: Lookalike audience reach
+- value: "45%" | label: Repeat purchase rate
+CALLOUT: Audience research confirms mobile social is the highest-impact acquisition channel.
 BULLETS:
-- Phase 1: Foundation — audit, tracking setup, and quick-win optimisations
-- Phase 2: Scale — expand winning channels with incremental budget increases
-- Phase 3: Optimise — continuous testing and refinement based on performance data
-CALLOUT: A three-phase approach that balances quick wins with sustainable scaling.
+- Primary persona: 25-40 professionals researching on mobile during commute hours
+- Secondary persona: decision-makers active on LinkedIn during business hours
+- Retargeting pool of 50k site visitors ready for nurture campaigns
 
-Slide 4: Budget Allocation (distribute 100% across channels and note a testing allowance)
+Slide 4: A three-phase strategy balances quick wins with sustainable scaling
+BULLETS:
+- Phase 1 (Weeks 1-4): Foundation — audit, tracking setup, quick-win optimisations
+- Phase 2 (Weeks 5-8): Scale — expand winning channels with incremental budget increases
+- Phase 3 (Weeks 9-12): Optimise — continuous testing and refinement based on performance data
+CALLOUT: Each phase has clear deliverables, success criteria, and review checkpoints.
+
+Slide 5: Budget allocation prioritises proven channels with a testing allowance
 METRICS:
 - value: "40%" | label: Paid social
 - value: "30%" | label: Paid search
@@ -34,8 +53,20 @@ CALLOUT: 90% to proven channels, 10% reserved for testing new opportunities.
 BULLETS:
 - Allocate budget based on historical performance and industry benchmarks
 - Reserve 10% for testing emerging channels and creative variations
+- Monthly budget reallocation based on ROAS performance per channel
 
-Slide 5: Execution Roadmap
+Slide 6: Projected ROI delivers break-even within 4 months
+METRICS:
+- value: "3.2x" | label: Projected ROAS by month 6
+- value: "£125k" | label: Incremental revenue year 1
+- value: "4 mo" | label: Break-even timeline
+CALLOUT: Conservative projections assume a 15% conversion rate uplift in the first quarter.
+BULLETS:
+- Revenue projections based on industry benchmarks and current traffic levels
+- Break-even calculation includes management fee and ad spend
+- Upside scenario with 25% uplift delivers 4.8x ROAS by month 6
+
+Slide 7: Execution roadmap delivers first results within 4 weeks
 BULLETS:
 - Week 1-2: Kickoff, tracking audit, and account structure setup
 - Week 3-4: Creative production and campaign launch
@@ -43,19 +74,28 @@ BULLETS:
 - Week 9-12: Scaling winners and pausing underperformers
 CALLOUT: First results visible within 4 weeks, full optimisation cycle by week 12.
 
-Slide 6: Optimisation & Testing
-BULLETS:
-- Weekly A/B tests on ad creative, landing pages, and audience targeting
+Slide 8: Continuous testing ensures budget flows to the best-performing campaigns
+COMPARISON:
+Before:
+- Budget set once per quarter with no reallocation
+- Creative refreshed only when performance drops
+- No structured testing framework
+After:
 - Bi-weekly budget reallocation based on ROAS performance
-- Monthly strategy review with actionable recommendations
-CALLOUT: Continuous testing ensures budget always flows to the best-performing campaigns.
+- Creative refresh calendar with bi-weekly new variants
+- Structured A/B testing framework with statistical significance targets
+CALLOUT: A test-and-learn culture compounds returns over time.
 
-Slide 7: Next Steps & Call-to-Action
+Slide 9: Next steps to launch within 2 weeks of approval
+METRICS:
+- value: "2 wk" | label: Time to launch
+- value: "4 wk" | label: First results
+- value: "12 wk" | label: Full optimisation
+CALLOUT: Approve today to start seeing results within 4 weeks.
 BULLETS:
 - Approve the proposal and budget allocation by end of week
 - Schedule a kickoff meeting to align on access and tracking setup
-- Launch first campaigns within 2 weeks of approval
-CALLOUT: Approve today to start seeing results within 4 weeks.`;
+- Launch first campaigns within 2 weeks of approval`;
 function truncateDeckInstructions(value: string): string {
     const cleaned = value.trim();
     if (!cleaned)
@@ -88,11 +128,12 @@ function buildDeckInstructionPrompt(formData: ProposalFormData): string {
 ${context}
 
 FORMAT RULES (follow exactly — the output is parsed by a machine):
-- Use 7-10 slides.
+- Use 8-10 slides.
 - Each slide starts with "Slide N: " followed by an action-title (a full sentence stating the takeaway, max 12 words).
-- After the title line, include ONE of these content blocks per slide:
+- Every slide MUST include a CALLOUT line — it becomes the highlighted takeaway box.
+- Every slide MUST use at least one of these content blocks. VARY the content types across slides — do NOT use BULLETS-only on more than 2 consecutive slides.
 
-  METRICS: (use for slides with key numbers, KPIs, or benchmarks)
+  METRICS: (use for slides with key numbers, KPIs, benchmarks, or budget breakdowns)
   METRICS:
   - value: "45%" | label: Expected conversion rate uplift
   - value: "3.2x" | label: Projected ROAS
@@ -102,14 +143,7 @@ FORMAT RULES (follow exactly — the output is parsed by a machine):
   - First supporting point with specific, actionable detail
   - Second supporting point with specific, actionable detail
 
-  BULLETS: (use for strategy, approach, or execution slides)
-  BULLETS:
-  - First point: Brief explanation of what and why
-  - Second point: Brief explanation of what and why
-  - Third point: Brief explanation of what and why
-  CALLOUT: A single bottom-line sentence summarising the strategic takeaway.
-
-  COMPARISON: (use for before/after, current vs proposed, or competitive analysis)
+  COMPARISON: (use for before/after, current vs proposed, or competitive analysis — at least 2 slides MUST use this)
   COMPARISON:
   Before:
   - Current state point 1
@@ -118,6 +152,19 @@ FORMAT RULES (follow exactly — the output is parsed by a machine):
   - Proposed state point 1
   - Proposed state point 2
   CALLOUT: A single bottom-line sentence.
+
+  BULLETS: (use for strategy, approach, or execution slides — but combine with METRICS when possible)
+  BULLETS:
+  - First point: Brief explanation of what and why
+  - Second point: Brief explanation of what and why
+  - Third point: Brief explanation of what and why
+  CALLOUT: A single bottom-line sentence summarising the strategic takeaway.
+
+CONTENT DISTRIBUTION REQUIREMENTS (critical — the parser renders different layouts for each type):
+- At least 4 slides MUST include a METRICS block (KPIs, budget breakdown, ROI projections, audience stats).
+- At least 2 slides MUST include a COMPARISON block (current vs proposed state, before/after).
+- No more than 2 slides should be BULLETS-only (without METRICS or COMPARISON).
+- METRICS + BULLETS can coexist on the same slide — use this combination for data-rich slides.
 
 CONTENT GUIDELINES:
 - Write action titles as full sentences that state the takeaway (e.g. "Paid social will drive 60% of new acquisition within Q1" not "Social Media Strategy").

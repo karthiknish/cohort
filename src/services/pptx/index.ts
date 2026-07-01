@@ -104,21 +104,35 @@ export async function generateProposalPptx(
     const totalSlides = 1 + 1 + aiSlides.length + dividerCount + dataSlideCount + 1;
 
     // Pre-fetch images from Pexels in parallel
+    // Build a topic list in the SAME ORDER as slides are created below,
+    // so each slide gets a unique image even when topics repeat.
     const slideTopics = [
-        'company',
-        ...aiSlides.map((s) => topicFromTitle(s.title)),
-        ...sections.map((s) => topicFromTitle(s.title)),
-        'next',
+        'company',  // title slide
+        // TOC slide has no image
+        ...sections.flatMap((section) => {
+            const dividerTopic = topicFromTitle(section.title);
+            if (section.slideIndices.length > 0) {
+                return [
+                    dividerTopic,
+                    ...section.slideIndices.map((idx) => topicFromTitle(aiSlides[idx]!.title)),
+                ];
+            }
+            // Data-driven sections (services, budget) have no content images
+            return [dividerTopic];
+        }),
+        'next',  // closing slide
     ];
-    const imageMap = await prefetchSlideImages(slideTopics);
+    const slideImages = await prefetchSlideImages(slideTopics);
+    let imageIdx = 0;
 
     let currentSlideNum = 0;
 
     // 1. Title slide
-    addTitleSlide(pptx, formData, imageMap.get('company') ?? null);
+    addTitleSlide(pptx, formData, slideImages[imageIdx] ?? null);
+    imageIdx++;
     currentSlideNum++;
 
-    // 2. Table of Contents
+    // 2. Table of Contents (no image needed)
     addTocSlide(
         pptx,
         sections.map((s) => ({ title: s.title, description: s.description })),
@@ -135,7 +149,6 @@ export async function generateProposalPptx(
 
         // Section divider
         currentSlideNum++;
-        const dividerTopic = topicFromTitle(section.title);
         addSectionDivider(
             pptx,
             secIdx + 1,
@@ -144,16 +157,17 @@ export async function generateProposalPptx(
             currentSlideNum,
             totalSlides,
             companyName,
-            imageMap.get(dividerTopic) ?? null,
+            slideImages[imageIdx] ?? null,
         );
+        imageIdx++;
 
         // Content slides for this section
         if (section.slideIndices.length > 0) {
             for (const localIdx of section.slideIndices) {
                 const slideContent = aiSlides[localIdx]!;
                 currentSlideNum++;
-                const topic = topicFromTitle(slideContent.title);
-                const image = imageMap.get(topic) ?? null;
+                const image = slideImages[imageIdx] ?? null;
+                imageIdx++;
                 addContentSlide(
                     pptx,
                     slideContent.title,
@@ -181,7 +195,7 @@ export async function generateProposalPptx(
 
     // 4. Closing slide
     currentSlideNum++;
-    addClosingSlide(pptx, formData, imageMap.get('next') ?? null);
+    addClosingSlide(pptx, formData, slideImages[imageIdx] ?? null);
 
     // Render to ArrayBuffer
     const result = await pptx.write({ outputType: 'arraybuffer' });

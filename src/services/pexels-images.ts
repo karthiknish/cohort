@@ -22,22 +22,22 @@ export interface PexelsImage {
 
 /** Search query → Pexels search term mapping for slide topics */
 const TOPIC_QUERIES: Record<string, string[]> = {
-    company: ['modern office building architecture', 'corporate business team meeting', 'professional business handshake'],
-    marketing: ['digital marketing strategy laptop', 'social media marketing smartphone', 'online advertising screen'],
-    goals: ['business growth arrow upward', 'target bullseye achievement', 'mountain peak summit sunrise'],
-    scope: ['creative agency team brainstorming', 'marketing project whiteboard planning', 'design studio workspace'],
-    timeline: ['calendar schedule planning desk', 'project roadmap sticky notes', 'business timeline milestones'],
-    budget: ['financial charts graphs money', 'investment growth coins jar', 'calculator budget planning'],
-    roi: ['data analytics dashboard laptop', 'profit growth chart upward', 'business performance metrics screen'],
-    strategy: ['business strategy chess pieces', 'marketing plan presentation', 'strategy meeting discussion'],
-    challenges: ['problem solving jigsaw puzzle', 'business obstacle road barrier', 'mountain climbing rope adventure'],
-    audience: ['diverse people crowd market', 'customer target shopping retail', 'audience conference presentation'],
-    creative: ['creative design colorful desk', 'graphic designer working screen', 'brand identity logo design'],
-    next: ['business partnership handshake', 'team celebration success high five', 'signing contract agreement pen'],
-    market: ['stock market analysis screen', 'competitive business race track', 'industry trend graph data'],
-    campaign: ['advertising billboard city', 'social media app phone marketing', 'digital campaign creative design'],
-    measurement: ['analytics dashboard data visualization', 'kpi metrics dashboard screen', 'business report charts graph'],
-    default: ['modern business presentation', 'professional office workspace desk', 'corporate meeting conference room'],
+    company: ['modern office building architecture exterior', 'corporate business team meeting boardroom', 'professional business handshake deal'],
+    marketing: ['digital marketing strategy laptop analytics', 'social media marketing smartphone campaign', 'online advertising digital screen'],
+    goals: ['business growth chart arrow upward success', 'target bullseye dartboard achievement goal', 'mountain peak summit sunrise ambition'],
+    scope: ['creative agency team brainstorming whiteboard', 'marketing project planning sticky notes', 'design studio workspace creative process'],
+    timeline: ['calendar schedule planning desk organizer', 'project roadmap timeline milestones chart', 'business timeline gantt chart planning'],
+    budget: ['financial charts graphs money investment', 'budget planning calculator coins jar', 'investment growth pie chart allocation'],
+    roi: ['data analytics dashboard laptop performance', 'profit growth revenue chart upward trend', 'business performance metrics kpi screen'],
+    strategy: ['business strategy chess pieces board', 'marketing plan presentation flipchart', 'strategy meeting discussion whiteboard'],
+    challenges: ['problem solving puzzle pieces solution', 'business obstacle road barrier challenge', 'mountain climbing rope adventure difficulty'],
+    audience: ['diverse customers shopping retail store', 'target audience demographic research survey', 'audience conference presentation crowd'],
+    creative: ['creative design colorful desk workspace', 'graphic designer working screen studio', 'brand identity logo design sketch'],
+    next: ['business partnership handshake agreement deal', 'team celebration success high five office', 'signing contract agreement pen document'],
+    market: ['stock market analysis screen trading', 'competitive business race track strategy', 'industry trend graph data analysis report'],
+    campaign: ['advertising billboard city marketing outdoor', 'social media app phone marketing campaign', 'digital campaign creative design studio'],
+    measurement: ['analytics dashboard data visualization charts', 'kpi metrics dashboard screen performance', 'business report charts graph analysis'],
+    default: ['modern business presentation meeting room', 'professional office workspace desk laptop', 'corporate meeting conference room team'],
 };
 
 export function getQueriesForTopic(topic: string): string[] {
@@ -163,15 +163,80 @@ export async function getImageForTopic(topic: string): Promise<PexelsImage | nul
 }
 
 /**
- * Pre-fetch images for all slide topics in parallel.
- * Returns a map of topic → PexelsImage (or null if unavailable).
+ * Fetch multiple images for a topic, trying all query variations.
+ * Returns up to `count` unique images.
  */
-export async function prefetchSlideImages(topics: string[]): Promise<Map<string, PexelsImage | null>> {
+export async function getImagesForTopic(topic: string, count: number): Promise<PexelsImage[]> {
+    const queries = getQueriesForTopic(topic);
+    const results: PexelsImage[] = [];
+    const seenUrls = new Set<string>();
+
+    // Try Unsplash first — fetch from all query variations
+    const { searchUnsplashImages } = await import('./unsplash-images');
+    for (const query of queries) {
+        if (results.length >= count) break;
+        const images = await searchUnsplashImages(query, 5);
+        for (const img of images) {
+            if (results.length >= count) break;
+            if (!seenUrls.has(img.sourceUrl)) {
+                seenUrls.add(img.sourceUrl);
+                results.push(img);
+            }
+        }
+    }
+
+    // Fall back to Pexels for remaining slots
+    if (results.length < count) {
+        for (const query of queries) {
+            if (results.length >= count) break;
+            const images = await searchImages(query, 5);
+            for (const img of images) {
+                if (results.length >= count) break;
+                if (!seenUrls.has(img.sourceUrl)) {
+                    seenUrls.add(img.sourceUrl);
+                    results.push(img);
+                }
+            }
+        }
+    }
+
+    return results;
+}
+
+/**
+ * Pre-fetch images for all slide topics, ensuring no duplicates across slides.
+ *
+ * Each topic fetches multiple images. When the same topic appears multiple times
+ * (e.g. two "strategy" slides), each slide gets a different image from the pool.
+ * Returns an array of PexelsImage (or null) in the same order as the input topics.
+ */
+export async function prefetchSlideImages(topics: string[]): Promise<(PexelsImage | null)[]> {
+    // Count how many times each topic appears
+    const topicCounts = new Map<string, number>();
+    for (const topic of topics) {
+        topicCounts.set(topic, (topicCounts.get(topic) ?? 0) + 1);
+    }
+
+    // Fetch enough unique images per topic
     const uniqueTopics = [...new Set(topics)];
-    const results = await Promise.all(
-        uniqueTopics.map(async (topic) => [topic, await getImageForTopic(topic)] as const),
+    const topicImagePools = new Map<string, PexelsImage[]>();
+    await Promise.all(
+        uniqueTopics.map(async (topic) => {
+            const needed = topicCounts.get(topic) ?? 1;
+            const images = await getImagesForTopic(topic, needed);
+            topicImagePools.set(topic, images);
+        }),
     );
-    return new Map(results);
+
+    // Assign images to each topic occurrence in order, cycling through the pool
+    const topicCursors = new Map<string, number>();
+    return topics.map((topic) => {
+        const pool = topicImagePools.get(topic) ?? [];
+        const cursor = topicCursors.get(topic) ?? 0;
+        const image = pool[cursor % Math.max(pool.length, 1)] ?? null;
+        topicCursors.set(topic, cursor + 1);
+        return image;
+    });
 }
 
 /** Clear the in-process image cache */
