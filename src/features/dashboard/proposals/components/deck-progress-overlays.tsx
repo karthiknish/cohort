@@ -138,7 +138,7 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
     const isFinalStage = stageIndex === generationFlow.length - 1;
     const isComplete = showCompletionState || (isFinalStage && isPresentationReady);
     const progressPercent = ((stageIndex + (isComplete ? 1 : 0)) / generationFlow.length) * 100;
-    return (<DeckProgressOverlayShell className="fixed inset-0 z-[2100] flex items-center justify-center animate-in fade-in bg-background duration-500">
+    return (<DeckProgressOverlayShell className="fixed inset-0 z-[3000] flex items-center justify-center animate-in fade-in bg-background/95 backdrop-blur-sm duration-500 pointer-events-auto">
       <ProposalGenerationOverlayContent currentStageHelper={currentStageHelper} currentStageLabel={currentStageLabel} isComplete={isComplete} progressPercent={progressPercent} stageIndex={stageIndex} stageLabels={generationFlow.map((flowStage) => flowStage.label)}/>
     </DeckProgressOverlayShell>);
 }
@@ -151,7 +151,7 @@ export function DeckProgressOverlay({ stage, isVisible }: DeckProgressOverlayPro
         return null;
     }
     const copy = getDeckStageCopy(stage);
-    return (<DeckProgressOverlayShell className="fixed inset-0 z-[2100] flex flex-col items-center justify-center gap-6 bg-background">
+    return (<DeckProgressOverlayShell className="fixed inset-0 z-[3000] flex flex-col items-center justify-center gap-6 bg-background/95 backdrop-blur-sm pointer-events-auto">
       <DeckProgressOverlayContent copy={copy} stage={stage}/>
     </DeckProgressOverlayShell>);
 }

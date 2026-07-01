@@ -99,6 +99,12 @@ export function ProposalGenerationOverlayContent({ currentStageHelper, currentSt
               </div>);
           })}
         </div>
+
+        {!isComplete && (
+          <p className="mt-2 text-xs font-medium text-muted-foreground/60">
+            Please keep this tab open while we generate your proposal.
+          </p>
+        )}
       </div>
 
       <div className="absolute -left-8 top-1/4 size-16 animate-pulse rounded-full bg-accent/5 blur-xl"/>

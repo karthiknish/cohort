@@ -111,17 +111,20 @@ export function addClosingSlide(pptx: pptxgen, formData: ProposalFormData, image
     ];
 
     const cardW = 2.7;
-    const cardH = 1.6;
+    const cardH = 1.5;
     const cardGap = 0.25;
     const totalCardsW = cardW * 4 + cardGap * 3;
     const startX = (SLIDE_W - totalCardsW) / 2;
-    const cardY = 3.9;
+    const cardY = 3.8;
+    // Guard: cards must not overlap the footer
+    const maxCardH = SLIDE_H - 0.6 - cardY - 0.2;
+    const finalCardH = Math.min(cardH, maxCardH);
 
     nextSteps.forEach((step, i) => {
         const cx = startX + i * (cardW + cardGap);
 
         slide.addShape(pptx.ShapeType.roundRect, {
-            x: cx, y: cardY, w: cardW, h: cardH,
+            x: cx, y: cardY, w: cardW, h: finalCardH,
             fill: { color: COLORS.primaryDark, transparency: 10 },
             line: { color: COLORS.secondary, width: 1 },
             rectRadius: 0.1,
@@ -139,10 +142,11 @@ export function addClosingSlide(pptx: pptxgen, formData: ProposalFormData, image
         });
 
         slide.addText(step, {
-            x: cx + 0.15, y: cardY + 0.9, w: cardW - 0.3, h: 0.6,
+            x: cx + 0.15, y: cardY + 0.9, w: cardW - 0.3, h: Math.max(finalCardH - 1.0, 0.4),
             fontSize: 11, color: COLORS.accentLight,
             fontFace: FONT, align: 'center', valign: 'top',
             lineSpacingMultiple: 1.2,
+            fit: 'shrink',
         });
     });
 
@@ -173,11 +177,14 @@ export function addTocSlide(
 
     const colW = 5.8;
     const colGap = 0.4;
-    const rowH = 1.5;
-    const rowGap = 0.25;
     const startX = MARGIN;
     const startY = BODY_TOP + 0.3;
     const perCol = Math.ceil(sections.length / 2);
+    // Clamp row height so cards never overflow past the body area
+    const maxRowH = 1.5;
+    const availableH = BODY_H - 0.6;
+    const rowGap = 0.25;
+    const rowH = Math.min(maxRowH, (availableH - rowGap * (perCol - 1)) / Math.max(perCol, 1));
 
     sections.forEach((section, i) => {
         const col = i < perCol ? 0 : 1;
@@ -197,22 +204,24 @@ export function addTocSlide(
 
         const num = String(i + 1).padStart(2, '0');
         slide.addText(num, {
-            x: x + 0.25, y: y + 0.15, w: 0.8, h: 0.5,
+            x: x + 0.25, y: y + 0.1, w: 0.8, h: 0.5,
             fontSize: 28, bold: true, color: COLORS.secondary,
             fontFace: FONT_LIGHT, align: 'left', valign: 'middle',
         });
 
         slide.addText(section.title, {
-            x: x + 1.1, y: y + 0.15, w: colW - 1.3, h: 0.5,
+            x: x + 1.1, y: y + 0.1, w: colW - 1.3, h: 0.5,
             fontSize: 16, bold: true, color: COLORS.primary,
             fontFace: FONT, align: 'left', valign: 'middle', margin: 0,
+            fit: 'shrink',
         });
 
         slide.addText(section.description, {
-            x: x + 1.1, y: y + 0.65, w: colW - 1.3, h: 0.7,
+            x: x + 1.1, y: y + 0.6, w: colW - 1.3, h: Math.max(rowH - 0.7, 0.4),
             fontSize: 12, color: COLORS.muted,
             fontFace: FONT, align: 'left', valign: 'top',
             margin: 0, lineSpacingMultiple: 1.2,
+            fit: 'shrink',
         });
     });
 
@@ -250,23 +259,25 @@ export function addSectionDivider(
 
     const num = String(sectionNumber).padStart(2, '0');
     slide.addText(num, {
-        x: 1.0, y: 1.2, w: 5, h: 3,
-        fontSize: 120, bold: true, color: COLORS.secondary,
+        x: 1.0, y: 1.0, w: 5, h: 2.5,
+        fontSize: 100, bold: true, color: COLORS.secondary,
         fontFace: FONT_LIGHT, align: 'left', valign: 'middle',
         transparency: 20,
     });
 
     slide.addText(sectionTitle, {
-        x: 1.0, y: 4.0, w: 10, h: 1.0,
-        fontSize: 40, bold: true, color: COLORS.white,
+        x: 1.0, y: 3.7, w: 10, h: 1.0,
+        fontSize: 36, bold: true, color: COLORS.white,
         fontFace: FONT_LIGHT, align: 'left',
+        fit: 'shrink',
     });
 
     if (sectionSubtitle) {
         slide.addText(sectionSubtitle, {
-            x: 1.0, y: 5.1, w: 10, h: 0.6,
+            x: 1.0, y: 4.8, w: 10, h: 0.6,
             fontSize: 18, color: COLORS.accentLight,
             fontFace: FONT, align: 'left',
+            fit: 'shrink',
         });
     }
 

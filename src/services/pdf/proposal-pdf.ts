@@ -326,8 +326,8 @@ function addSectionDivider(
     }
 
     // Key topics list from slide titles
+    const topicsY = imageH + 160;
     if (slideTitles && slideTitles.length > 0) {
-        const topicsY = imageH + 160;
         text(doc, 'IN THIS SECTION', MARGIN + 24, topicsY, {
             size: FONT.panelLabel, color: COLORS.accentLight, bold: true, align: 'left',
         });
@@ -344,6 +344,20 @@ function addSectionDivider(
             });
             ty += 24;
         }
+    } else {
+        // No slide titles — add a descriptive paragraph to fill the space
+        text(doc, 'SECTION OVERVIEW', MARGIN + 24, topicsY, {
+            size: FONT.panelLabel, color: COLORS.accentLight, bold: true, align: 'left',
+        });
+        drawLine(doc, MARGIN + 24, topicsY + 8, MARGIN + 160, topicsY + 8, COLORS.secondary, 2);
+
+        const overviewText = sectionSubtitle
+            ? `${sectionSubtitle}. This section provides the foundation for the proposed strategy, combining market research, audience analysis, and proven methodologies to guide our recommendations.`
+            : `This section provides the foundation for the proposed strategy, combining market research, audience analysis, and proven methodologies to guide our recommendations. Our approach is tailored to your specific business context and growth objectives.`;
+        text(doc, overviewText, MARGIN + 24, topicsY + 28, {
+            size: 13, color: COLORS.white, align: 'left',
+            maxWidth: PAGE_W - MARGIN * 2 - 48, lineHeight: 18,
+        });
     }
 
     // Footer info
@@ -386,6 +400,12 @@ function addContentSlide(
     const contentW = CONTENT_W - 16;
     let y = imgY + imgH + 16;
 
+    // Reserve space for the bottom sidebar strip upfront to prevent overlap
+    const stats = getSidebarStatsForKeyword(sidebarKeyword(slideContent.title), formData, 60);
+    const stripH = stats.length > 0 ? 56 : 0;
+    const stripY = BODY_BOTTOM - stripH - 8;
+    const contentBottom = stripH > 0 ? stripY - 10 : BODY_BOTTOM - 10;
+
     // Metrics row
     if (slideContent.metrics && slideContent.metrics.length > 0) {
         const metricW = contentW / slideContent.metrics.length;
@@ -407,102 +427,149 @@ function addContentSlide(
     // Comparison block
     if (slideContent.comparison) {
         const colW = (contentW - 16) / 2;
-        const compH = 120;
-        // Before
-        drawCard(doc, contentX, y, colW, compH, COLORS.warning);
-        text(doc, 'BEFORE', contentX + 12, y + 18, {
-            size: FONT.panelLabel, color: COLORS.warning, bold: true, align: 'left',
-        });
-        let beforeY = y + 34;
-        for (const item of slideContent.comparison.before) {
-            const lines = text(doc, `•  ${item}`, contentX + 12, beforeY, {
-                size: FONT.bodySmall, color: COLORS.dark, align: 'left',
-                maxWidth: colW - 24, lineHeight: 12,
+        const compH = Math.min(120, contentBottom - y);
+        if (compH > 40) {
+            // Before
+            drawCard(doc, contentX, y, colW, compH, COLORS.warning);
+            text(doc, 'BEFORE', contentX + 12, y + 18, {
+                size: FONT.panelLabel, color: COLORS.warning, bold: true, align: 'left',
             });
-            beforeY += lines.length * 12 + 3;
-        }
+            let beforeY = y + 34;
+            for (const item of slideContent.comparison.before) {
+                if (beforeY > y + compH - 14) break;
+                const lines = text(doc, `•  ${item}`, contentX + 12, beforeY, {
+                    size: FONT.bodySmall, color: COLORS.dark, align: 'left',
+                    maxWidth: colW - 24, lineHeight: 12,
+                });
+                beforeY += lines.length * 12 + 3;
+            }
 
-        // After
-        const afterX = contentX + colW + 16;
-        drawCard(doc, afterX, y, colW, compH, COLORS.success);
-        text(doc, 'AFTER', afterX + 12, y + 18, {
-            size: FONT.panelLabel, color: COLORS.success, bold: true, align: 'left',
-        });
-        let afterY = y + 34;
-        for (const item of slideContent.comparison.after) {
-            const lines = text(doc, `•  ${item}`, afterX + 12, afterY, {
-                size: FONT.bodySmall, color: COLORS.dark, align: 'left',
-                maxWidth: colW - 24, lineHeight: 12,
+            // After
+            const afterX = contentX + colW + 16;
+            drawCard(doc, afterX, y, colW, compH, COLORS.success);
+            text(doc, 'AFTER', afterX + 12, y + 18, {
+                size: FONT.panelLabel, color: COLORS.success, bold: true, align: 'left',
             });
-            afterY += lines.length * 12 + 3;
+            let afterY = y + 34;
+            for (const item of slideContent.comparison.after) {
+                if (afterY > y + compH - 14) break;
+                const lines = text(doc, `•  ${item}`, afterX + 12, afterY, {
+                    size: FONT.bodySmall, color: COLORS.dark, align: 'left',
+                    maxWidth: colW - 24, lineHeight: 12,
+                });
+                afterY += lines.length * 12 + 3;
+            }
+            y += compH + 16;
         }
-        y += compH + 16;
     }
 
-    // Bullets — render in a card to fill space
+    // Bullets — render in a card, clamped to available space
     if (slideContent.bullets.length > 0) {
-        // Calculate height needed for bullets
-        let bulletH = 0;
-        for (const bullet of slideContent.bullets) {
-            const lines = doc.splitTextToSize(`•  ${bullet}`, contentW - 24);
-            bulletH += lines.length * 16 + 5;
-        }
-        bulletH += 20; // padding
+        const availH = contentBottom - y;
+        if (availH > 40) {
+            // Calculate height needed for bullets
+            let bulletH = 0;
+            for (const bullet of slideContent.bullets) {
+                const lines = doc.splitTextToSize(`•  ${bullet}`, contentW - 24);
+                bulletH += lines.length * 16 + 5;
+            }
+            bulletH += 20; // padding
+            // Clamp to available space
+            const actualH = Math.min(bulletH, availH);
 
-        // Draw a card around bullets
-        drawCard(doc, contentX, y, contentW, bulletH, COLORS.accent);
-        let bulletY = y + 14;
-        for (const bullet of slideContent.bullets) {
-            bulletY = ensureSpace(doc, bulletY, 24);
-            const lines = text(doc, `•  ${bullet}`, contentX + 12, bulletY, {
-                size: FONT.body, color: COLORS.dark, align: 'left',
-                maxWidth: contentW - 24, lineHeight: 16,
-            });
-            bulletY += lines.length * 16 + 5;
+            drawCard(doc, contentX, y, contentW, actualH, COLORS.accent);
+            let bulletY = y + 14;
+            for (const bullet of slideContent.bullets) {
+                if (bulletY > y + actualH - 10) break;
+                const lines = text(doc, `•  ${bullet}`, contentX + 12, bulletY, {
+                    size: FONT.body, color: COLORS.dark, align: 'left',
+                    maxWidth: contentW - 24, lineHeight: 16,
+                });
+                bulletY += lines.length * 16 + 5;
+            }
+            y += actualH + 14;
         }
-        y += bulletH + 14;
     }
 
     // Callout box
     if (slideContent.callout) {
-        y = ensureSpace(doc, y, 44);
-        const calloutLines = doc.splitTextToSize(slideContent.callout, contentW - 28);
-        const calloutH = Math.max(40, calloutLines.length * 15 + 16);
-        doc.setFillColor(...rgb(COLORS.primary));
-        doc.roundedRect(contentX, y, contentW, calloutH, 4, 4, 'F');
-        fillRect(doc, contentX, y, 4, calloutH, COLORS.secondary);
-        let calloutY = y + 16;
-        doc.setFontSize(FONT.callout);
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(...rgb(COLORS.white));
-        for (const line of calloutLines) {
-            doc.text(line, contentX + 14, calloutY);
-            calloutY += 15;
+        const availH = contentBottom - y;
+        if (availH > 40) {
+            const calloutLines = doc.splitTextToSize(slideContent.callout, contentW - 28);
+            const calloutH = Math.min(Math.max(40, calloutLines.length * 15 + 16), availH);
+            doc.setFillColor(...rgb(COLORS.primary));
+            doc.roundedRect(contentX, y, contentW, calloutH, 4, 4, 'F');
+            fillRect(doc, contentX, y, 4, calloutH, COLORS.secondary);
+            let calloutY = y + 16;
+            doc.setFontSize(FONT.callout);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(...rgb(COLORS.white));
+            for (const line of calloutLines) {
+                if (calloutY > y + calloutH - 8) break;
+                doc.text(line, contentX + 14, calloutY);
+                calloutY += 15;
+            }
+            y += calloutH + 10;
         }
-        y += calloutH + 10;
+    }
+
+    // Fallback: if no body content at all, add a descriptive paragraph
+    const hasBody = slideContent.bullets.length > 0 || slideContent.metrics?.length || slideContent.comparison || slideContent.callout;
+    if (!hasBody && y < contentBottom - 40) {
+        const fallbackH = contentBottom - y;
+        drawCard(doc, contentX, y, contentW, fallbackH, COLORS.accent);
+        text(doc, 'Overview', contentX + 12, y + 18, {
+            size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
+        });
+        const fallbackText = `This section covers ${slideContent.title.toLowerCase()} as part of the proposed marketing strategy. ` +
+            'Our approach combines data-driven insights with proven methodologies to deliver measurable results. ' +
+            'We will tailor the execution to your specific market position, audience segments, and growth objectives.';
+        const lines = text(doc, fallbackText, contentX + 12, y + 36, {
+            size: FONT.body, color: COLORS.dark, align: 'left',
+            maxWidth: contentW - 24, lineHeight: 16,
+        });
+        void lines;
+        y += fallbackH + 10;
+    }
+
+    // Fill remaining gap with contextual content if there's significant space left
+    if (y < contentBottom - 60) {
+        const gapH = contentBottom - y;
+        drawCard(doc, contentX, y, contentW, gapH, COLORS.secondary);
+        text(doc, 'KEY CONSIDERATIONS', contentX + 12, y + 18, {
+            size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
+        });
+        const considerations = [
+            'Aligned with your business objectives and target audience',
+            'Designed for measurable ROI and transparent reporting',
+            'Iterative optimisation based on performance data',
+        ];
+        let cy = y + 36;
+        for (const c of considerations) {
+            if (cy > y + gapH - 14) break;
+            const lines = text(doc, `•  ${c}`, contentX + 12, cy, {
+                size: FONT.bodySmall, color: COLORS.dark, align: 'left',
+                maxWidth: contentW - 24, lineHeight: 14,
+            });
+            cy += lines.length * 14 + 4;
+        }
     }
 
     // Sidebar with key stats — pinned to bottom of page as a full-width strip
-    const stats = getSidebarStatsForKeyword(sidebarKeyword(slideContent.title), formData, 60);
     if (stats.length > 0) {
-        const stripH = 56;
-        const stripY = BODY_BOTTOM - stripH - 8;
-        // Only draw if there's room (avoid overlap with content)
-        if (y < stripY - 6) {
-            drawCard(doc, MARGIN + 8, stripY, CONTENT_W - 16, stripH, COLORS.secondary);
-            const statW = (CONTENT_W - 32) / stats.length;
-            stats.forEach((stat, i) => {
-                const sx = MARGIN + 16 + i * statW;
-                text(doc, stat.label, sx, stripY + 18, {
-                    size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
-                    maxWidth: statW - 12,
-                });
-                text(doc, stat.value, sx, stripY + 36, {
-                    size: FONT.panelValue, color: COLORS.dark, bold: true, align: 'left',
-                    maxWidth: statW - 12, lineHeight: 13,
-                });
+        drawCard(doc, MARGIN + 8, stripY, CONTENT_W - 16, stripH, COLORS.secondary);
+        const statW = (CONTENT_W - 32) / stats.length;
+        stats.forEach((stat, i) => {
+            const sx = MARGIN + 16 + i * statW;
+            text(doc, stat.label, sx, stripY + 18, {
+                size: FONT.panelLabel, color: COLORS.muted, bold: true, align: 'left',
+                maxWidth: statW - 12,
             });
-        }
+            text(doc, stat.value, sx, stripY + 36, {
+                size: FONT.panelValue, color: COLORS.dark, bold: true, align: 'left',
+                maxWidth: statW - 12, lineHeight: 13,
+            });
+        });
     }
 
     addPageFooter(doc, companyName, slideNum, total);

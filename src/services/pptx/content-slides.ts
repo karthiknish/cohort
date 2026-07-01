@@ -186,11 +186,12 @@ function addComparisonContent(slide: pptxgen.Slide, pptx: pptxgen, before: strin
     if (before.length > 0) {
         const beforeText = before.map((b) => ({
             text: b,
-            options: { bullet: { code: '2022', indent: 16 }, indentLevel: 0, breakLine: true, paraSpaceAfter: 8, fontSize: 12, color: COLORS.dark, fontFace: FONT },
+            options: { bullet: { code: '2022', indent: 16 }, indentLevel: 0, breakLine: true, paraSpaceAfter: 8, fontSize: 11, color: COLORS.dark, fontFace: FONT },
         }));
         slide.addText(beforeText, {
             x: x + 0.25, y: y + 0.6, w: colW - 0.45, h: h - 0.75,
-            valign: 'top', lineSpacingMultiple: 1.3,
+            valign: 'top', lineSpacingMultiple: 1.25,
+            fit: 'shrink',
         });
     }
 
@@ -214,11 +215,12 @@ function addComparisonContent(slide: pptxgen.Slide, pptx: pptxgen, before: strin
     if (after.length > 0) {
         const afterText = after.map((a) => ({
             text: a,
-            options: { bullet: { code: '2022', indent: 16 }, indentLevel: 0, breakLine: true, paraSpaceAfter: 8, fontSize: 12, color: COLORS.dark, fontFace: FONT },
+            options: { bullet: { code: '2022', indent: 16 }, indentLevel: 0, breakLine: true, paraSpaceAfter: 8, fontSize: 11, color: COLORS.dark, fontFace: FONT },
         }));
         slide.addText(afterText, {
             x: afterX + 0.25, y: y + 0.6, w: colW - 0.45, h: h - 0.75,
-            valign: 'top', lineSpacingMultiple: 1.3,
+            valign: 'top', lineSpacingMultiple: 1.25,
+            fit: 'shrink',
         });
     }
 }
@@ -281,9 +283,9 @@ function addContentSlideImageRight(
     } else if (content.bullets.length > 0) {
         slide.addText(makeBulletText(content.bullets), {
             x: leftX + 0.35, y: cursorY, w: leftW - 0.6, h: bodyH,
-            fontSize: 15, color: COLORS.dark, fontFace: FONT,
-            align: 'left', valign: 'top', lineSpacingMultiple: 1.35,
-            fit: 'shrink', autoFit: true,
+            fontSize: 14, color: COLORS.dark, fontFace: FONT,
+            align: 'left', valign: 'top', lineSpacingMultiple: 1.3,
+            fit: 'shrink',
         });
         cursorY += bodyH + 0.1;
     } else if (!hasMetrics) {
@@ -392,9 +394,9 @@ function addContentSlideImageBackground(
     } else if (content.bullets.length > 0) {
         slide.addText(makeBulletText(content.bullets), {
             x: cardX + 0.35, y: cursorY, w: cardW - 0.6, h: bodyH,
-            fontSize: 15, color: COLORS.dark, fontFace: FONT,
-            align: 'left', valign: 'top', lineSpacingMultiple: 1.35,
-            fit: 'shrink', autoFit: true,
+            fontSize: 14, color: COLORS.dark, fontFace: FONT,
+            align: 'left', valign: 'top', lineSpacingMultiple: 1.3,
+            fit: 'shrink',
         });
     }
 
@@ -515,9 +517,9 @@ function addContentSlideImageLeft(
     } else if (content.bullets.length > 0) {
         slide.addText(makeBulletText(content.bullets), {
             x: rightX + 0.35, y: cursorY, w: rightW - 0.6, h: bodyH,
-            fontSize: 15, color: COLORS.dark, fontFace: FONT,
-            align: 'left', valign: 'top', lineSpacingMultiple: 1.35,
-            fit: 'shrink', autoFit: true,
+            fontSize: 14, color: COLORS.dark, fontFace: FONT,
+            align: 'left', valign: 'top', lineSpacingMultiple: 1.3,
+            fit: 'shrink',
         });
         cursorY += bodyH + 0.1;
     } else if (!hasMetrics) {
