@@ -1,4 +1,5 @@
 import { useRef, useReducer, useEffect, useEffectEvent } from 'react';
+import { useHaptics } from '@/shared/lib/haptics';
 export interface PullToRefreshOptions {
     threshold?: number;
     onRefresh: () => Promise<void> | void;
@@ -76,6 +77,7 @@ export function usePullToRefresh(ref: React.RefObject<HTMLElement | null>, optio
     const threshold = options.threshold ?? DEFAULT_THRESHOLD;
     const onRefresh = options.onRefresh;
     const disabled = options.disabled ?? false;
+    const haptics = useHaptics();
     const [state, dispatch] = useReducer(pullToRefreshReducer, INITIAL_PULL_TO_REFRESH_STATE);
     const stateRef = useRef(state);
     useEffect(() => {
@@ -83,10 +85,12 @@ export function usePullToRefresh(ref: React.RefObject<HTMLElement | null>, optio
     });
     const startYRef = useRef<number>(0);
     const pullingRef = useRef<boolean>(false);
+    const tickFiredRef = useRef<boolean>(false);
     const handleRefresh = useEffectEvent(() => {
         if (stateRef.current.isRefreshing)
             return;
         dispatch({ type: 'start-refresh' });
+        haptics.success();
         void Promise.resolve(onRefresh())
             .finally(() => {
             dispatch({ type: 'finish-refresh' });
@@ -104,6 +108,7 @@ export function usePullToRefresh(ref: React.RefObject<HTMLElement | null>, optio
             if (element.scrollTop <= 0 && e.touches.length === 1) {
                 startYRef.current = e.touches[0]!.clientY;
                 pullingRef.current = true;
+                tickFiredRef.current = false;
             }
         };
         const handleTouchMove = (e: TouchEvent) => {
@@ -114,15 +119,21 @@ export function usePullToRefresh(ref: React.RefObject<HTMLElement | null>, optio
             if (deltaY > 0 && element.scrollTop <= 0) {
                 const pullDistance = Math.min(deltaY * 0.5, threshold * 1.5);
                 const progress = Math.min(pullDistance / threshold, 1);
+                if (progress >= 1 && !tickFiredRef.current) {
+                    tickFiredRef.current = true;
+                    haptics.tick();
+                }
                 dispatch({ type: 'start-pull', pullDistance, progress });
             }
             else {
                 pullingRef.current = false;
+                tickFiredRef.current = false;
                 dispatch({ type: 'reset-pull' });
             }
         };
         const handleTouchEnd = () => {
             pullingRef.current = false;
+            tickFiredRef.current = false;
             if (stateRef.current.progress >= 1 && !stateRef.current.isRefreshing) {
                 handleRefresh();
             }
@@ -139,7 +150,7 @@ export function usePullToRefresh(ref: React.RefObject<HTMLElement | null>, optio
             element.removeEventListener('touchmove', handleTouchMove);
             element.removeEventListener('touchend', handleTouchEnd);
         };
-    }, [disabled, ref, threshold]);
+    }, [disabled, ref, threshold, haptics]);
     return state;
 }
 export interface PullToRefreshIndicatorProps {

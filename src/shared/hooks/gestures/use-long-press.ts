@@ -1,4 +1,5 @@
 import { useRef, useCallback, useState, useEffect, useEffectEvent } from 'react';
+import { useHaptics } from '@/shared/lib/haptics';
 export interface LongPressOptions {
     threshold?: number;
     onStart?: () => void;
@@ -13,6 +14,7 @@ export interface LongPressState {
 const DEFAULT_THRESHOLD = 500;
 export function useLongPress(callback: () => void, options: LongPressOptions = {}) {
     const threshold = options.threshold ?? DEFAULT_THRESHOLD;
+    const haptics = useHaptics();
     const [state, setState] = useState<LongPressState>({
         isPressed: false,
         isLongPress: false,
@@ -36,6 +38,7 @@ export function useLongPress(callback: () => void, options: LongPressOptions = {
         clear();
         startTimeRef.current = Date.now();
         setState({ isPressed: true, isLongPress: false, progress: 0 });
+        haptics.selection();
         options.onStart?.();
         intervalRef.current = setInterval(() => {
             const elapsed = Date.now() - startTimeRef.current;
@@ -44,6 +47,7 @@ export function useLongPress(callback: () => void, options: LongPressOptions = {
         }, 16);
         timeoutRef.current = setTimeout(() => {
             setState(prev => ({ ...prev, isLongPress: true }));
+            haptics.impact('medium');
             callback();
             options.onFinish?.();
             clear();
@@ -73,6 +77,7 @@ export function useLongPress(callback: () => void, options: LongPressOptions = {
 }
 export function useLongPressRef(ref: React.RefObject<HTMLElement | null>, callback: () => void, options: LongPressOptions = {}) {
     const threshold = options.threshold ?? DEFAULT_THRESHOLD;
+    const haptics = useHaptics();
     const [isLongPressed, setIsLongPressed] = useState(false);
     const isLongPressedRef = useRef(false);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,6 +114,7 @@ export function useLongPressRef(ref: React.RefObject<HTMLElement | null>, callba
             optionsRef.current.onStart?.();
             timeoutRef.current = setTimeout(() => {
                 updateLongPressed(true);
+                haptics.impact('medium');
                 callback();
                 optionsRef.current.onFinish?.();
             }, threshold);
@@ -156,6 +162,6 @@ export function useLongPressRef(ref: React.RefObject<HTMLElement | null>, callba
             element.removeEventListener('mousemove', handleMove);
             clear();
         };
-    }, [callback, ref, threshold]);
+    }, [callback, ref, threshold, haptics]);
     return isLongPressed;
 }

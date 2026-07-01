@@ -10,6 +10,7 @@ import { FadeInItem } from '@/shared/ui/animate-in';
 import { cn } from '@/lib/utils';
 import { DataExportCard } from './components/data-export-card';
 import { DeleteAccountCard } from './components/delete-account-card';
+import { HapticsPreferencesCard } from './components/haptics-preferences-card';
 import { NotificationPreferencesPanel } from './components/notification-preferences-panel';
 import { PrivacySettingsCard } from './components/privacy-settings-card';
 import { ProfileCard } from './components/profile-card';
@@ -76,6 +77,9 @@ function SettingsPageInner() {
           </FadeInItem>
           <FadeInItem>
             <RegionalPreferencesCard />
+          </FadeInItem>
+          <FadeInItem>
+            <HapticsPreferencesCard />
           </FadeInItem>
         </TabsContent>
 

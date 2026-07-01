@@ -1,5 +1,6 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 import type { TouchEvent } from 'react';
+import { useHaptics } from '@/shared/lib/haptics';
 export interface SwipeHandlers {
     onSwipeLeft?: () => void;
     onSwipeRight?: () => void;
@@ -23,6 +24,7 @@ export function useSwipe(handlers: SwipeHandlers, options?: {
 }) {
     const threshold = options?.threshold ?? SWIPE_THRESHOLD;
     const preventScroll = options?.preventScroll ?? false;
+    const haptics = useHaptics();
     const [state, setState] = useState<SwipeState>({
         startX: 0,
         startY: 0,
@@ -88,6 +90,7 @@ export function useSwipe(handlers: SwipeHandlers, options?: {
         const duration = Date.now() - startTimeRef.current;
         const velocity = state.distance / duration;
         if (state.distance > threshold && velocity > SWIPE_VELOCITY_THRESHOLD) {
+            haptics.selection();
             switch (state.direction) {
                 case 'left':
                     handlers.onSwipeLeft?.();
@@ -119,6 +122,7 @@ export function useSwipeable(ref: React.RefObject<HTMLElement | null>, handlers:
     threshold?: number;
 }) {
     const threshold = options?.threshold ?? SWIPE_THRESHOLD;
+    const haptics = useHaptics();
     const [state, setState] = useState<SwipeState>({
         startX: 0,
         startY: 0,
@@ -202,6 +206,7 @@ export function useSwipeable(ref: React.RefObject<HTMLElement | null>, handlers:
             const duration = Date.now() - startTimeRef.current;
             const velocity = gesture.distance / duration;
             if (gesture.distance > threshold && velocity > SWIPE_VELOCITY_THRESHOLD) {
+                haptics.selection();
                 switch (gesture.direction) {
                     case 'left':
                         handlers.onSwipeLeft?.();
@@ -230,6 +235,6 @@ export function useSwipeable(ref: React.RefObject<HTMLElement | null>, handlers:
             element.removeEventListener('touchmove', handleTouchMove);
             element.removeEventListener('touchend', handleTouchEnd);
         };
-    }, [ref, threshold, handlers]);
+    }, [ref, threshold, handlers, haptics]);
     return state;
 }

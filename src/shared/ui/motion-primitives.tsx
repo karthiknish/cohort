@@ -3,16 +3,18 @@ import type { ReactNode } from 'react';
 import { m, useReducedMotion, type HTMLMotionProps, } from '@/shared/ui/motion';
 import { useMounted } from '@/shared/hooks/use-mounted';
 import { buttonPressVariants, cardHoverVariants, staggerContainerVariants, staggerItemVariants, subtlePulseVariants, } from '@/lib/motion';
+import { useHaptics } from '@/shared/lib/haptics';
 import { cn } from '@/lib/utils';
 type MotionPressableProps = Omit<HTMLMotionProps<'button'>, 'initial' | 'animate' | 'whileHover' | 'whileTap' | 'variants'> & {
     className?: string;
     children?: ReactNode;
 };
-export function MotionPressable({ className, children, ...props }: MotionPressableProps) {
+export function MotionPressable({ className, children, onPointerDown, ...props }: MotionPressableProps) {
     const mounted = useMounted();
     const prefersReducedMotion = useReducedMotion();
     const reduced = mounted && prefersReducedMotion;
-    return (<m.button type="button" initial={reduced ? false : 'rest'} animate={reduced ? undefined : 'rest'} whileHover={reduced ? undefined : 'rest'} whileTap={reduced ? undefined : 'tap'} variants={reduced ? undefined : buttonPressVariants} className={className} {...props}>
+    const haptics = useHaptics();
+    return (<m.button type="button" initial={reduced ? false : 'rest'} animate={reduced ? undefined : 'rest'} whileHover={reduced ? undefined : 'rest'} whileTap={reduced ? undefined : 'tap'} variants={reduced ? undefined : buttonPressVariants} onPointerDown={(e) => { haptics.impact('light'); onPointerDown?.(e); }} className={className} {...props}>
       {children}
     </m.button>);
 }

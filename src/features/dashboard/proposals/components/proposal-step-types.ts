@@ -10,7 +10,7 @@ export interface ProposalStepContentProps {
     formState: ProposalFormData;
     summary: ProposalFormData;
     validationErrors: Record<string, string>;
-    onUpdateField: (path: string[], value: string) => void;
+    onUpdateField: (path: string[], value: string | boolean) => void;
     onToggleArrayValue: (path: string[], value: string) => void;
     onChangeSocialHandle: (handle: string, value: string) => void;
 }

@@ -216,7 +216,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             setLastSubmissionSnapshot(null);
             // Trigger server-side AI + deck generation.
             if (workspaceId) {
-                generateProposalDeck({ workspaceId, legacyId: activeDraftId }).catch((error: unknown) => {
+                generateProposalDeck({ workspaceId, legacyId: activeDraftId, generatePdf: formState.value.generatePdf }).catch((error: unknown) => {
                     reportConvexFailure({
                         error: error,
                         context: 'useProposalSubmission:submitProposal:generate',

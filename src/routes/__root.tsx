@@ -27,6 +27,7 @@ import { SiteFooter } from '@/shared/layout/site/site-footer'
 import { MarketingThemeScope } from '@/shared/layout/marketing-theme-scope'
 import { AppProviders } from '@/shared/providers/app-providers'
 import { MotionProvider } from '@/shared/providers/motion-provider'
+import { HapticsProvider } from '@/shared/lib/haptics'
 import { RootNotFound } from '@/shared/ui/route-boundaries/root-not-found'
 import { RootAppError } from '@/shared/ui/route-boundaries/root-error'
 import { NeutralPendingSkeleton } from '@/shared/ui/neutral-pending-skeleton'
@@ -61,6 +62,14 @@ export const Route = createRootRouteWithContext<{
     links: [{ rel: 'icon', href: '/favicon.ico' }],
   }),
   beforeLoad: async (ctx) => {
+    // On client navigation, skip SSR auth check — ConvexBetterAuthProvider
+    // already holds the token from the initial SSR render. Calling getAuth()
+    // on the client triggers a server-function RPC that hits the Convex token
+    // endpoint directly (without app-proxy cookies), producing 401 spam.
+    if (typeof document !== 'undefined') {
+      return { isAuthenticated: false, token: undefined as string | undefined }
+    }
+
     const token = await getAuth()
 
     if (token) {
@@ -102,10 +111,12 @@ function RootComponent() {
           <MarketingThemeScope>
             <SiteHeader />
             <main id="main-content" className="flex-1">
-              <MotionProvider>
-                <Outlet />
-                {showAgentation ? <Agentation /> : null}
-              </MotionProvider>
+              <HapticsProvider>
+                <MotionProvider>
+                  <Outlet />
+                  {showAgentation ? <Agentation /> : null}
+                </MotionProvider>
+              </HapticsProvider>
             </main>
             <SiteFooter />
           </MarketingThemeScope>

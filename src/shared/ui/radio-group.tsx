@@ -4,6 +4,7 @@ import { RadioGroup as RadioGroupPrimitive } from '@base-ui/react/radio-group';
 import { Radio as RadioPrimitive } from '@base-ui/react/radio';
 import { Circle } from 'lucide-react';
 import { interactiveTransitionClass } from '@/lib/motion';
+import { useHaptics } from '@/shared/lib/haptics';
 import { cn } from '@/lib/utils';
 
 function RadioGroup({ className, ...props }: React.ComponentProps<typeof RadioGroupPrimitive>) {
@@ -12,10 +13,12 @@ function RadioGroup({ className, ...props }: React.ComponentProps<typeof RadioGr
   );
 }
 
-function RadioGroupItem({ className, ...props }: React.ComponentProps<typeof RadioPrimitive.Root>) {
+function RadioGroupItem({ className, onPointerDown, ...props }: React.ComponentProps<typeof RadioPrimitive.Root>) {
+  const haptics = useHaptics();
   return (
     <RadioPrimitive.Root
       data-slot="radio-group-item"
+      onPointerDown={(e) => { haptics.selection(); onPointerDown?.(e); }}
       className={cn(
         'aspect-square size-4 rounded-full border border-primary text-primary shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
         interactiveTransitionClass,

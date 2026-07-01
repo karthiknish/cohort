@@ -16,6 +16,7 @@
 import { asErrorMessage, extractErrorCode, isConflictAppError, isReadLimitAppError, } from '@/lib/convex-errors';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { toast as sonnerToast } from '@/shared/ui/sonner-toast';
+import { hapticError, hapticSuccess, hapticWarning } from '@/shared/lib/haptics';
 import * as React from 'react';
 // =============================================================================
 // TYPES
@@ -141,6 +142,7 @@ function resolveFailureMessage(options: FailureToastOptions): string {
  */
 export function notifySuccess(options: SuccessToastOptions): string | number {
     const content = resolveToastContent(options);
+    hapticSuccess();
     return sonnerToast.success(content.message, {
         id: options.id,
         description: content.description,
@@ -160,6 +162,7 @@ export function notifySuccess(options: SuccessToastOptions): string | number {
  */
 export function notifyError(options: ErrorToastOptions): string | number {
     const content = resolveToastContent(options);
+    hapticError();
     return sonnerToast.error(content.message, {
         id: options.id,
         description: content.description,
@@ -179,6 +182,7 @@ export function notifyError(options: ErrorToastOptions): string | number {
  */
 export function notifyWarning(options: WarningToastOptions): string | number {
     const content = resolveToastContent(options);
+    hapticWarning();
     return sonnerToast.warning(content.message, {
         id: options.id,
         description: content.description,

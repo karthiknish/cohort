@@ -11,6 +11,7 @@ import { z } from 'zod/v4'
 import { mergeProposalForm } from '../../../src/lib/proposals'
 import { generateDeckInstructions, generateProposalSuggestions } from '../../../src/lib/proposal-deck-ai'
 import { generateProposalPptx } from '../../../src/services/pptx-generator'
+import { generateProposalPdf } from '../../../src/services/pdf'
 import { storeR2Artifact } from '../../lib/r2ArtifactStore'
 import { r2 } from '../../r2'
 import { toR2ObjectKey } from '../../lib/fileStorage'
@@ -46,6 +47,10 @@ function buildPptObjectKey(workspaceId: string, legacyId: string): string {
   return `workspaces/${workspaceId}/proposals/${legacyId}/deck.pptx`
 }
 
+function buildPdfObjectKey(workspaceId: string, legacyId: string): string {
+  return `workspaces/${workspaceId}/proposals/${legacyId}/deck.pdf`
+}
+
 export const archiveProposalDeck = internalAction({
   args: {
     externalDeckId: v.union(v.string(), v.null()),
@@ -60,6 +65,7 @@ export const generateFromProposal = zWorkspaceAction({
   args: {
     workspaceId: z.string(),
     legacyId: z.string(),
+    generatePdf: z.boolean().optional().default(false),
   },
   handler: async (ctx, args) => {
     if (isGenerationInProgress(args.workspaceId, args.legacyId)) {
@@ -125,7 +131,7 @@ export const generateFromProposal = zWorkspaceAction({
         lastAutosaveAtMs: now,
       })
 
-      // Generate PPTX directly using pptxgenjs
+      // Generate PPTX using pptxgenjs
       const pptxArrayBuffer = await generateProposalPptx(formData, instructions)
 
       // Store the PPTX in R2
@@ -140,8 +146,37 @@ export const generateFromProposal = zWorkspaceAction({
         downloadFilename: `${label}-proposal.pptx`,
       })
 
-      // Get the R2 URL for the stored file
+      // Get the R2 URL for the stored PPTX
       const pptxUrl = await r2.getUrl(toR2ObjectKey(pptStorageId))
+
+      // Generate PDF separately using jsPDF (only when the user opted in via the form)
+      // Non-fatal — PPTX is still served if PDF generation fails.
+      let pdfUrl: string | null = null
+      let pdfStorageId: string | null = null
+      if (args.generatePdf) {
+        try {
+          const pdfArrayBuffer = await generateProposalPdf(formData, instructions)
+          const pdfObjectKey = buildPdfObjectKey(args.workspaceId, args.legacyId)
+          pdfStorageId = await storeR2Artifact({
+            r2,
+            ctx,
+            key: pdfObjectKey,
+            body: pdfArrayBuffer,
+            contentType: 'application/pdf',
+            downloadFilename: `${label}-proposal.pdf`,
+          })
+          pdfUrl = await r2.getUrl(toR2ObjectKey(pdfStorageId))
+        } catch (pdfError) {
+          console.error('[proposalGeneration] PDF generation failed, continuing with PPTX only:', pdfError)
+        }
+      }
+
+      const generatedFiles: Array<{ fileType: string; fileUrl: string }> = [
+        { fileType: 'pptx', fileUrl: pptxUrl },
+      ]
+      if (pdfUrl) {
+        generatedFiles.push({ fileType: 'pdf', fileUrl: pdfUrl })
+      }
 
       // Update proposal with the generated deck
       const deckPayload = {
@@ -151,14 +186,15 @@ export const generateFromProposal = zWorkspaceAction({
         webUrl: null,
         shareUrl: null,
         pptxUrl,
-        pdfUrl: null,
-        generatedFiles: [{
-          fileType: 'pptx',
-          fileUrl: pptxUrl,
-        }],
+        pdfUrl,
+        generatedFiles,
         storageUrl: pptxUrl,
-        pdfStorageUrl: null,
-        warnings: null,
+        pdfStorageUrl: pdfUrl,
+        warnings: !args.generatePdf
+          ? null
+          : pdfUrl
+            ? null
+            : ['PDF generation failed — PPTX is available for download.'],
         error: null,
         creditsDeducted: null,
         creditsRemaining: null,
@@ -174,7 +210,8 @@ export const generateFromProposal = zWorkspaceAction({
         presentationDeck: deckPayload,
         pptUrl: pptxUrl,
         pptStorageId,
-        pdfUrl: null,
+        pdfUrl,
+        pdfStorageId,
         updatedAtMs: Date.now(),
         lastAutosaveAtMs: Date.now(),
       })
@@ -205,7 +242,7 @@ export const generateFromProposal = zWorkspaceAction({
       })
 
       markGenerationComplete(args.workspaceId, args.legacyId)
-      return { ok: true, status: 'ready', pptxUrl }
+      return { ok: true, status: 'ready', pptxUrl, pdfUrl }
     } catch (error) {
       markGenerationComplete(args.workspaceId, args.legacyId)
 

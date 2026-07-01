@@ -56,5 +56,9 @@ export function parseDeckGenerationCredits(_raw: Record<string, unknown> | undef
 export function sanitizeDeckProviderWarnings(warnings: string[] | undefined): string[] {
     if (!warnings?.length)
         return [];
-    return warnings;
+    // Strip legacy vendor names from warnings so the UI never exposes them.
+    return warnings.map((w) => w
+        .replace(/\bGamma\b/gi, 'Presentation')
+        .replace(/\bgamma\b/gi, 'presentation')
+        .trim());
 }

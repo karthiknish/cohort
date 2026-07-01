@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { interactiveTransitionClass } from '@/lib/motion';
+import { useHaptics } from '@/shared/lib/haptics';
 import { cn } from '@/lib/utils';
 interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'checked'> {
     checked?: boolean;
@@ -8,7 +9,9 @@ interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>
     ref?: React.Ref<HTMLInputElement>;
 }
 const Checkbox = ({ className, checked, onCheckedChange, onChange, ref, ...props }: CheckboxProps) => {
+    const haptics = useHaptics();
     const onCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        haptics.selection();
         onChange?.(e);
         onCheckedChange?.(e.target.checked);
     };

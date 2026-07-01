@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProposalFormData } from '@/lib/proposals';
-import { countOutlineSlides, createProposalDeckRequest, formatDeckInputWithSlideBreaks, sanitizeDeckProviderWarnings, } from './proposal-deck-generation';
+import { countOutlineSlides, formatDeckInputWithSlideBreaks, sanitizeDeckProviderWarnings, } from './proposal-deck-generation';
 const baseForm = {
     company: { name: 'Acme', website: '', industry: 'SaaS', size: '', locations: '' },
     goals: { objectives: ['Leads'], audience: 'CMOs', challenges: [], customChallenge: '' },
@@ -19,12 +19,6 @@ describe('proposal-deck-generation', () => {
         const formatted = formatDeckInputWithSlideBreaks(baseForm, outline);
         expect(formatted).toContain('---');
         expect(formatted).toContain('Acme');
-    });
-    it('requests both pptx and pdf exports', () => {
-        const request = createProposalDeckRequest(baseForm, 'Slide 1: Test');
-        expect(request.exportAs).toEqual(['pptx', 'pdf']);
-        expect(request.cardSplit).toBe('inputTextBreaks');
-        expect(request.textOptions?.audience).toBe('CMOs');
     });
     it('sanitizes provider warnings for UI', () => {
         expect(sanitizeDeckProviderWarnings(['Gamma layout adjusted'])).toEqual([

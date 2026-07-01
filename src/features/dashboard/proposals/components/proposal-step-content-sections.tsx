@@ -1,10 +1,11 @@
 'use client';
-import { Building2, CircleCheck, Factory, Globe, MapPin, Megaphone, Users2 } from 'lucide-react';
+import { Building2, CircleCheck, Factory, FileText, Globe, MapPin, Megaphone, Users2 } from 'lucide-react';
 import { SvglBrandLogo, type SvglBrandSlug } from '@/shared/components/svgl-brand-logo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { FormField, FieldSection } from '@/shared/ui/form-field';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
+import { Switch } from '@/shared/ui/switch';
 import { Textarea } from '@/shared/ui/textarea';
 import { usePresentationThemes } from '../hooks/use-presentation-themes';
 import { listItemEnterClass } from '@/lib/motion';
@@ -343,6 +344,19 @@ export function ProposalValueStepSection({ formState, summary, validationErrors,
           </div>) : (<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {themes.map((theme) => (<PresentationThemeButton key={theme.id} theme={theme} isSelected={formState.value.presentationTheme === theme.id} onUpdateField={onUpdateField}/>))}
           </div>)}
+      </FieldSection>
+
+      <FieldSection title="Export options" className="border-t border-muted/20 pt-4">
+        <label htmlFor="generatePdf" className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-border bg-background p-4 transition-colors hover:border-muted-foreground/30 hover:bg-muted/5">
+          <div className="flex items-start gap-3">
+            <FileText className="mt-0.5 size-5 shrink-0 text-muted-foreground"/>
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold text-foreground">Also generate a PDF</p>
+              <p className="text-xs text-muted-foreground">Creates a branded PDF copy alongside the PowerPoint deck. Adds a few seconds to generation.</p>
+            </div>
+          </div>
+          <Switch id="generatePdf" checked={formState.value.generatePdf} onCheckedChange={(checked) => onUpdateField(['value', 'generatePdf'], checked)}/>
+        </label>
       </FieldSection>
 
       <Card className="border-dashed border-accent/20 bg-accent/5">

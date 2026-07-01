@@ -33,6 +33,7 @@ export const proposalFormSchema = z.object({
         engagementType: z.string().default(''),
         additionalNotes: z.string().default(''),
         presentationTheme: z.string().default(''),
+        generatePdf: z.boolean().default(false),
     }),
 });
 export type ProposalFormData = z.infer<typeof proposalFormSchema>;
@@ -73,6 +74,7 @@ const DEFAULT_PROPOSAL_FORM: ProposalFormData = {
         engagementType: '',
         additionalNotes: '',
         presentationTheme: '',
+        generatePdf: false,
     },
 };
 export const proposalDraftSchema = z.object({

@@ -24,7 +24,7 @@ export interface UseProposalWizardReturn {
     setCurrentStep: (step: number) => void;
     setFormState: (state: ProposalFormData | ((prev: ProposalFormData) => ProposalFormData), options?: FormStateUpdateOptions) => void;
     setValidationErrors: (errors: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
-    updateField: (path: string[], value: string) => void;
+    updateField: (path: string[], value: string | boolean) => void;
     toggleArrayValue: (path: string[], value: string) => void;
     handleSocialHandleChange: (handle: string, value: string) => void;
     clearErrors: (paths: string | string[]) => void;
@@ -139,7 +139,7 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
         }, { recordHistory: true });
         clearErrors(path.join('.'));
     };
-    const updateField = (path: string[], value: string) => {
+    const updateField = (path: string[], value: string | boolean) => {
         setFormState((prev) => {
             const field = path.at(-1);
             if (!field) {

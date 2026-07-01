@@ -515,6 +515,7 @@ export function getPreviewProposals(clientId: string | null): ProposalDraft[] {
                     engagementType: 'Retainer',
                     additionalNotes: 'Need executive-friendly reporting and strong creative testing cadence.',
                     presentationTheme: 'Executive growth board',
+                    generatePdf: false,
                 },
             }),
             aiInsights: {
@@ -570,6 +571,7 @@ export function getPreviewProposals(clientId: string | null): ProposalDraft[] {
                     engagementType: 'Project',
                     additionalNotes: 'Need launch-ready content calendar and creator shortlist.',
                     presentationTheme: 'Launch sprint',
+                    generatePdf: false,
                 },
             }),
             aiInsights: {
@@ -624,6 +626,7 @@ export function getPreviewProposals(clientId: string | null): ProposalDraft[] {
                     engagementType: 'Retainer',
                     additionalNotes: 'Retention work should pair lifecycle email with dynamic remarketing.',
                     presentationTheme: 'Retail retention engine',
+                    generatePdf: false,
                 },
             }),
             aiInsights: {

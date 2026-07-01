@@ -15,6 +15,15 @@
 - Prefer `listItemEnterClass` over inline `animate-in fade-in slide-in-from-bottom-*` strings.
 - Respect `prefers-reduced-motion` via `MotionProvider` and `motion-reduce:` utility classes.
 
+## Haptic feedback
+
+- Import from `@/shared/lib/haptics` — never import `web-haptics` directly in app code.
+- `HapticsProvider` is mounted in `__root.tsx` (wraps `MotionProvider`). It gates haptics by device support (`WebHaptics.isSupported`), a localStorage preference (`cohorts:haptics-enabled`), and `prefers-reduced-motion` (auto-disables).
+- In React components use `useHaptics()` → `{ success, error, warning, selection, tick, buzz, impact, preset, trigger }`. In non-React code (e.g. `notifySuccess`) use the module helpers `hapticSuccess` / `hapticError` / `hapticWarning` / `hapticSelection` / `hapticImpact`.
+- Semantic presets: `selection` (tabs/switches/checkboxes/radio), `impact('light'|'medium'|'heavy')` (button/card taps, long-press), `success`/`error`/`warning` (notifications, pull-to-refresh), `tick` (threshold cross). All calls no-op when inactive — safe to call unconditionally.
+- Selection components (`Switch`, `Checkbox`, `Toggle`, `TabsTrigger`, `RadioGroupItem`) and `MotionPressable` already fire haptics; do not double-trigger in feature code that wraps them.
+- Settings toggle lives at `/settings?tab=profile` (`HapticsPreferencesCard`).
+
 ## Errors and warnings
 
 **Convex:** Throw user-facing failures with `Errors.*` from `convex/errors.ts` (`ConvexError` + `code` + `message`). Do not use bare `throw new Error` in production handlers. Use `withErrorHandling` in actions for rate limits, OCC, and read limits.
@@ -41,3 +50,11 @@
 - **Side images are the most visible repetition risk.** Content slides that place an image on the right column (`addContentSlide` layout 0) or as a full-bleed background (layout 1) must use the pre-assigned image from `slideImages[imageIdx]`, not a freshly fetched one.
 - **No Cohorts logo on slide footers.** The closing slide footer should show "Prepared for {client}" text only — no brand logo image. The title slide may keep the logo in the top-right corner.
 - Slide structure: title → TOC → section dividers + content slides → services/budget/ROI → closing. Image topics are built in `index.ts` in the same order as slides are added.
+
+## PDF deck generation
+
+- Custom PDF is generated with jsPDF in `src/services/pdf/` — mirrors the PPTX deck structure (title → TOC → sections → services/budget/ROI → closing) with the same Cohorts brand theme (colors in `pdf/constants.ts` match `pptx/constants.ts`).
+- Landscape 16:9 format (960×540pt). Chart images are fetched from the same QuickChart API as PPTX and embedded as PNGs.
+- PDF and PPTX are generated sequentially in `convex/domains/ops/proposalGeneration.ts` (PPTX first, then PDF) and stored as separate R2 artifacts (`deck.pptx` + `deck.pdf`). PDF failure is non-fatal — PPTX is still served and a warning is surfaced to the user.
+- `sanitizeDeckProviderWarnings` strips legacy vendor names (e.g. "Gamma" → "Presentation") so the UI never exposes them.
+
