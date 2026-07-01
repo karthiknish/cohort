@@ -2,6 +2,7 @@ import type ExcelJS from 'exceljs';
 import { sanitizeCsvValue } from '@/lib/utils';
 import { renderSpreadsheetCharts, type SpreadsheetChartImage, type SpreadsheetChartSpec, } from './cohorts-spreadsheet-charts';
 import { COHORTS_SPREADSHEET_THEME } from './cohorts-spreadsheet-theme';
+import { COHORTS_LOGO_WHITE_BASE64 } from '@/services/pptx/logo-data';
 export type CohortsSpreadsheetColumn<T extends Record<string, unknown> = Record<string, unknown>> = {
     key: keyof T | string;
     label: string;
@@ -38,6 +39,8 @@ export type ExportCohortsSpreadsheetRowsOptions = {
 };
 const DEFAULT_DATA_SHEET_NAME = 'Data';
 const DEFAULT_CHARTS_SHEET_NAME = 'Charts';
+const LOGO_WIDTH = 120;
+const LOGO_HEIGHT = 30;
 export function ensureXlsxFilename(filename: string): string {
     const trimmed = filename.trim();
     if (!trimmed)
@@ -75,10 +78,23 @@ function applyBorder(cell: ExcelJS.Cell) {
         right: { style: 'thin', color },
     };
 }
+function applyTopBorder(cell: ExcelJS.Cell, argb: string) {
+    cell.border = {
+        ...cell.border,
+        top: { style: 'medium', color: { argb } },
+    };
+}
 function buildMetadataLines(metadata?: Record<string, string>): string[] {
     if (!metadata)
         return [];
     return Object.entries(metadata).flatMap(([key, value]) => value.trim().length > 0 ? [`${key}: ${value}`] : []);
+}
+/** Detect if a string value is numeric (for right-alignment). */
+function isNumericValue(value: string): boolean {
+    if (!value || value.trim().length === 0)
+        return false;
+    const cleaned = value.replace(/[£$,%\s]/g, '');
+    return cleaned !== '' && !Number.isNaN(Number(cleaned));
 }
 /** Reserve enough row height so floating chart images do not cover the data table above. */
 function chartImageRowSpan(chartHeight: number): number {
@@ -87,7 +103,6 @@ function chartImageRowSpan(chartHeight: number): number {
 function embedWorksheetCharts(workbook: ExcelJS.Workbook, worksheet: ExcelJS.Worksheet, charts: SpreadsheetChartImage[], columnCount: number, startRow: number): number {
     if (charts.length === 0)
         return startRow;
-    const theme = COHORTS_SPREADSHEET_THEME;
     let currentRow = startRow;
     for (const chart of charts) {
         const rowSpan = chartImageRowSpan(chart.height);
@@ -106,6 +121,24 @@ function embedWorksheetCharts(workbook: ExcelJS.Workbook, worksheet: ExcelJS.Wor
     }
     return currentRow + 1;
 }
+/** Add the Cohorts white logo to the right side of the brand header row. */
+function addLogoToHeader(workbook: ExcelJS.Workbook, worksheet: ExcelJS.Worksheet, columnCount: number, row: number): void {
+    try {
+        const logoBase64 = COHORTS_LOGO_WHITE_BASE64.replace(/^image\/png;base64,/, '');
+        const imageId = workbook.addImage({
+            base64: logoBase64,
+            extension: 'png',
+        });
+        // Place logo at the right edge of the merged brand row
+        const logoCol = Math.max(columnCount - 2, 1);
+        worksheet.addImage(imageId, {
+            tl: { col: logoCol - 1, row: row - 1 },
+            ext: { width: LOGO_WIDTH, height: LOGO_HEIGHT },
+        });
+    } catch {
+        // Logo embedding is non-fatal
+    }
+}
 function buildChartsWorksheetHeader(worksheet: ExcelJS.Worksheet, columnCount: number, options: {
     dataSheetName: string;
     title?: string;
@@ -115,21 +148,31 @@ function buildChartsWorksheetHeader(worksheet: ExcelJS.Worksheet, columnCount: n
 }): number {
     const theme = COHORTS_SPREADSHEET_THEME;
     let currentRow = 1;
+    // Brand header row with primary fill
     worksheet.mergeCells(currentRow, 1, currentRow, columnCount);
     const brandCell = worksheet.getCell(currentRow, 1);
     brandCell.value = theme.brandName;
     brandCell.font = { ...theme.fonts.brand, color: { argb: theme.colors.primaryForeground } };
     applyFill(brandCell, theme.colors.primary);
     brandCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-    worksheet.getRow(currentRow).height = 30;
+    worksheet.getRow(currentRow).height = 36;
     currentRow += 1;
+    // Accent stripe
     worksheet.mergeCells(currentRow, 1, currentRow, columnCount);
-    const titleCell = worksheet.getCell(currentRow, 1);
-    titleCell.value = options.title?.trim() || 'Visual summary';
-    titleCell.font = { ...theme.fonts.title, color: { argb: theme.colors.foreground } };
-    titleCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-    worksheet.getRow(currentRow).height = 22;
+    const stripeCell = worksheet.getCell(currentRow, 1);
+    applyFill(stripeCell, theme.colors.secondary);
+    worksheet.getRow(currentRow).height = 4;
     currentRow += 1;
+    // Title
+    if (options.title?.trim()) {
+        worksheet.mergeCells(currentRow, 1, currentRow, columnCount);
+        const titleCell = worksheet.getCell(currentRow, 1);
+        titleCell.value = options.title.trim();
+        titleCell.font = { ...theme.fonts.title, color: { argb: theme.colors.foreground } };
+        titleCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+        worksheet.getRow(currentRow).height = 24;
+        currentRow += 1;
+    }
     const metaLines = [
         `Numeric data is on the "${options.dataSheetName}" sheet.`,
         options.subtitle?.trim(),
@@ -151,7 +194,7 @@ async function loadExcelJS() {
     const module = await import('exceljs');
     return module.default;
 }
-function writeTableSection(worksheet: ExcelJS.Worksheet, columnCount: number, headers: string[], rows: string[][], startRow: number): number {
+function writeTableSection(worksheet: ExcelJS.Worksheet, columnCount: number, headers: string[], rows: string[][], startRow: number): { lastRow: number; headerRow: number } {
     const theme = COHORTS_SPREADSHEET_THEME;
     const headerRowIndex = startRow;
     headers.forEach((header, index) => {
@@ -162,7 +205,7 @@ function writeTableSection(worksheet: ExcelJS.Worksheet, columnCount: number, he
         applyBorder(cell);
         cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
     });
-    worksheet.getRow(headerRowIndex).height = 22;
+    worksheet.getRow(headerRowIndex).height = 24;
     rows.forEach((rowValues, rowOffset) => {
         const rowIndex = headerRowIndex + 1 + rowOffset;
         const zebraFill = rowOffset % 2 === 1 ? theme.colors.muted : theme.colors.white;
@@ -172,10 +215,17 @@ function writeTableSection(worksheet: ExcelJS.Worksheet, columnCount: number, he
             cell.font = { ...theme.fonts.body, color: { argb: theme.colors.foreground } };
             applyFill(cell, zebraFill);
             applyBorder(cell);
-            cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1, wrapText: true };
+            // Right-align numeric values for better readability
+            const numeric = isNumericValue(value);
+            cell.alignment = {
+                vertical: 'middle',
+                horizontal: numeric ? 'right' : 'left',
+                indent: numeric ? 0 : 1,
+                wrapText: !numeric,
+            };
         });
     });
-    return headerRowIndex + rows.length;
+    return { lastRow: headerRowIndex + rows.length, headerRow: headerRowIndex };
 }
 async function buildBrandedWorkbook({ title, subtitle, sheetName, chartsSheetName, headers, rows, extraTables = [], metadata, charts = [], }: {
     title?: string;
@@ -198,23 +248,33 @@ async function buildBrandedWorkbook({ title, subtitle, sheetName, chartsSheetNam
     const worksheet = workbook.addWorksheet(dataSheetName);
     const columnCount = Math.max(headers.length, 1);
     const theme = COHORTS_SPREADSHEET_THEME;
+    // ─── Brand header row ───
     worksheet.mergeCells(1, 1, 1, columnCount);
     const brandCell = worksheet.getCell(1, 1);
     brandCell.value = theme.brandName;
     brandCell.font = { ...theme.fonts.brand, color: { argb: theme.colors.primaryForeground } };
     applyFill(brandCell, theme.colors.primary);
     brandCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-    worksheet.getRow(1).height = 30;
+    worksheet.getRow(1).height = 36;
+    addLogoToHeader(workbook, worksheet, columnCount, 1);
     let currentRow = 2;
+    // ─── Accent stripe ───
+    worksheet.mergeCells(currentRow, 1, currentRow, columnCount);
+    const stripeCell = worksheet.getCell(currentRow, 1);
+    applyFill(stripeCell, theme.colors.secondary);
+    worksheet.getRow(currentRow).height = 4;
+    currentRow += 1;
+    // ─── Title ───
     if (title?.trim()) {
         worksheet.mergeCells(currentRow, 1, currentRow, columnCount);
         const titleCell = worksheet.getCell(currentRow, 1);
         titleCell.value = title.trim();
         titleCell.font = { ...theme.fonts.title, color: { argb: theme.colors.foreground } };
         titleCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-        worksheet.getRow(currentRow).height = 22;
+        worksheet.getRow(currentRow).height = 24;
         currentRow += 1;
     }
+    // ─── Metadata lines ───
     const metaLines = [
         ...(subtitle?.trim() ? [subtitle.trim()] : []),
         `Exported ${new Date().toLocaleString()}`,
@@ -228,9 +288,19 @@ async function buildBrandedWorkbook({ title, subtitle, sheetName, chartsSheetNam
         metaCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
         currentRow += 1;
     }
+    // ─── Data table ───
     const headerRowIndex = currentRow + 1;
-    const lastDataRow = writeTableSection(worksheet, columnCount, headers, rows, headerRowIndex);
-    let nextRow = lastDataRow + 2;
+    const { lastRow, headerRow } = writeTableSection(worksheet, columnCount, headers, rows, headerRowIndex);
+    // Auto-filter on the data table
+    if (rows.length > 0) {
+        const lastColLetter = worksheet.getColumn(columnCount).letter;
+        worksheet.autoFilter = {
+            from: { row: headerRow, column: 1 },
+            to: { row: lastRow, column: columnCount },
+        };
+    }
+    let nextRow = lastRow + 2;
+    // ─── Extra tables ───
     for (const table of extraTables) {
         worksheet.mergeCells(nextRow, 1, nextRow, columnCount);
         const tableTitleCell = worksheet.getCell(nextRow, 1);
@@ -240,8 +310,10 @@ async function buildBrandedWorkbook({ title, subtitle, sheetName, chartsSheetNam
         worksheet.getRow(nextRow).height = 22;
         nextRow += 1;
         const sanitizedExtraRows = table.rows.map((row) => row.map((value) => sanitizeSpreadsheetCell(value)));
-        nextRow = writeTableSection(worksheet, columnCount, table.headers, sanitizedExtraRows, nextRow) + 2;
+        const extraResult = writeTableSection(worksheet, columnCount, table.headers, sanitizedExtraRows, nextRow);
+        nextRow = extraResult.lastRow + 2;
     }
+    // ─── Column widths ───
     const maxColumns = Math.max(columnCount, ...extraTables.map((table) => table.headers.length));
     for (let index = 0; index < maxColumns; index += 1) {
         const column = worksheet.getColumn(index + 1);
@@ -257,6 +329,7 @@ async function buildBrandedWorkbook({ title, subtitle, sheetName, chartsSheetNam
         }
         column.width = Math.min(Math.max(maxCellLength + 4, 12), 48);
     }
+    // ─── Footer ───
     const footerRowIndex = nextRow;
     worksheet.mergeCells(footerRowIndex, 1, footerRowIndex, columnCount);
     const footerCell = worksheet.getCell(footerRowIndex, 1);
@@ -266,6 +339,10 @@ async function buildBrandedWorkbook({ title, subtitle, sheetName, chartsSheetNam
             : `Prepared in ${theme.brandName}`;
     footerCell.font = { ...theme.fonts.footer, color: { argb: theme.colors.mutedForeground } };
     footerCell.alignment = { horizontal: 'left', indent: 1 };
+    // Top border on footer for visual separation
+    for (let col = 1; col <= columnCount; col++) {
+        applyTopBorder(worksheet.getCell(footerRowIndex, col), theme.colors.border);
+    }
     worksheet.views = [
         {
             state: 'frozen',
@@ -273,6 +350,7 @@ async function buildBrandedWorkbook({ title, subtitle, sheetName, chartsSheetNam
             activeCell: `A${headerRowIndex + 1}`,
         },
     ];
+    // ─── Charts sheet ───
     if (chartImages.length > 0) {
         const chartsColumnCount = 8;
         const chartsWorksheet = workbook.addWorksheet(resolvedChartsSheetName === dataSheetName ? DEFAULT_CHARTS_SHEET_NAME : resolvedChartsSheetName);
@@ -283,11 +361,13 @@ async function buildBrandedWorkbook({ title, subtitle, sheetName, chartsSheetNam
             metadata,
             chartCount: chartImages.length,
         });
+        // Add logo to charts sheet header too
+        addLogoToHeader(workbook, chartsWorksheet, chartsColumnCount, 1);
         embedWorksheetCharts(workbook, chartsWorksheet, chartImages, chartsColumnCount, chartStartRow);
         for (let index = 0; index < chartsColumnCount; index += 1) {
             chartsWorksheet.getColumn(index + 1).width = 14;
         }
-        chartsWorksheet.views = [{ state: 'frozen', ySplit: 1, activeCell: 'A2' }];
+        chartsWorksheet.views = [{ state: 'frozen', ySplit: 3, activeCell: 'A4' }];
     }
     return workbook;
 }
