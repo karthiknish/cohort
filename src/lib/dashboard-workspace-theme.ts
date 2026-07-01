@@ -15,6 +15,6 @@ export const DASHBOARD_WORKSPACE_THEME = {
         ? 'bg-background text-foreground shadow-sm ring-1 ring-border/50'
         : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'),
     tabList: 'h-9 gap-0 rounded-lg border border-border/60 bg-background/80 p-0.5 shadow-sm',
-    tabTrigger: 'h-8 rounded-md px-3 text-xs font-medium data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:shadow-none',
+    tabTrigger: 'h-8 rounded-md px-3 text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm',
     projectPill: 'inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs text-foreground',
 } as const;

@@ -32,7 +32,6 @@ import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '../../collaboration/utils';
 import { ProjectTaskProgress } from './project-task-progress';
 import {
-  STATUS_ACCENT_COLORS,
   STATUS_CLASSES,
   STATUS_ICONS,
   formatDate,
@@ -89,13 +88,6 @@ export function ProjectDetailDrawer({
 
   const StatusIcon = STATUS_ICONS[project.status];
   const overdue = isProjectOverdue(project);
-
-  const statusAccentStyles = Object.fromEntries(
-    Object.entries(STATUS_ACCENT_COLORS).map(([status, backgroundColor]) => [
-      status,
-      { backgroundColor },
-    ]),
-  ) as Record<ProjectStatus, { backgroundColor: string }>;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -220,6 +212,7 @@ export function ProjectDetailDrawer({
               <div className="flex flex-wrap gap-2">
                 {PROJECT_STATUSES.map((status) => {
                   const isActive = project.status === status;
+                  const StatusPillIcon = STATUS_ICONS[status];
                   return (
                     <button
                       key={status}
@@ -230,13 +223,16 @@ export function ProjectDetailDrawer({
                         'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                         isActive
-                          ? 'border-primary/30 bg-primary/8 text-foreground shadow-sm'
-                          : 'border-border/60 bg-card text-muted-foreground hover:border-border hover:bg-muted/30 hover:text-foreground',
+                          ? cn(STATUS_CLASSES[status], 'shadow-sm ring-1 ring-primary/10')
+                          : cn(
+                              STATUS_CLASSES[status],
+                              'opacity-60 hover:opacity-100',
+                            ),
                         pendingStatusUpdate && 'opacity-50',
                       )}
                       aria-pressed={isActive}
                     >
-                      <span className="size-2 rounded-full" style={statusAccentStyles[status]} />
+                      <StatusPillIcon className="size-3" />
                       {formatStatusLabel(status)}
                     </button>
                   );

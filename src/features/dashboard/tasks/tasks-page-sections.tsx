@@ -1,12 +1,11 @@
 'use client';
 import { useCallback } from 'react';
 import { dynamic } from '@/shared/ui/dynamic';
-import { ProjectFilterBanner, TaskBulkToolbar, TaskFilters, type TaskParticipant, TaskResultsCount, TaskSummaryCards, TaskViewControls, } from '@/features/dashboard/tasks';
+import { ProjectFilterBanner, TaskBulkToolbar, TaskFilters, type TaskParticipant, TaskViewControls, } from '@/features/dashboard/tasks';
 import { cn } from '@/lib/utils';
 import type { SortField } from './task-types';
 import type { TaskPriority, TaskRecord, TaskStatus } from '@/types/tasks';
 import { Card, CardAction, CardContent, CardHeader } from '@/shared/ui/card';
-import { Skeleton } from '@/shared/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { TASKS_THEME } from './tasks-theme';
 import { TaskBoardErrorBoundary } from './task-board-error-boundary';
@@ -21,7 +20,7 @@ const TaskKanban = dynamic(() => import('@/features/dashboard/tasks/task-kanban'
 export function TasksPageFallback() {
     return <TasksPageSkeleton />;
 }
-export function TasksPageWorkspace({ filters, rawSearchQuery, onSearchChange, projectFilter, onClearProjectFilter, visibleTasks, selectedTasks, selectedTaskIds, hasSelection, bulkState, onSelectAllVisible, onClearSelection, onSelectHighPriority, onSelectDueSoon, onBulkStatusChange, onBulkAssign, onBulkDueDate, onBulkDelete, initialLoading, loading, displayError, pendingStatusUpdates, onEdit, onDelete, onQuickStatusChange, onRefresh, loadingMore, hasMore, onLoadMore, emptyStateMessage, showFilteredEmpty, onClearListFilters, onNewTaskClick, tasksCount, workspaceId, userId, userName, userRole, participants, onSummaryStatusClick, onExport, onToggleTaskSelection, }: {
+export function TasksPageWorkspace({ filters, rawSearchQuery, onSearchChange, projectFilter, onClearProjectFilter, visibleTasks, selectedTasks, selectedTaskIds, hasSelection, bulkState, onSelectAllVisible, onClearSelection, onSelectHighPriority, onSelectDueSoon, onBulkStatusChange, onBulkAssign, onBulkDueDate, onBulkDelete, initialLoading, loading, displayError, pendingStatusUpdates, onEdit, onDelete, onQuickStatusChange, onRefresh, loadingMore, hasMore, onLoadMore, emptyStateMessage, showFilteredEmpty, onClearListFilters, onNewTaskClick, tasksCount, workspaceId, userId, userName, userRole, participants, onExport, onToggleTaskSelection, }: {
     filters: {
         activeTab: string;
         setActiveTab: (value: string) => void;
@@ -88,25 +87,29 @@ export function TasksPageWorkspace({ filters, rawSearchQuery, onSearchChange, pr
     userName: string | null;
     userRole: string | null;
     participants: TaskParticipant[];
-    onSummaryStatusClick: (status: TaskStatus) => void;
     onExport: () => void;
     onToggleTaskSelection: (taskId: string, checked: boolean) => void;
 }) {
     const handleFilterStatusChange = (status: string) => filters.handleStatusChange(status as TaskStatus | 'all');
     return (<>
-      {initialLoading ? (<Skeleton className={cn(TASKS_THEME.summaryCard, 'h-24')}/>) : (<TaskSummaryCards taskCounts={filters.taskCounts} selectedStatus={filters.selectedStatus} onStatusCardClick={onSummaryStatusClick}/>)}
-
       <Tabs defaultValue="all-tasks" value={filters.activeTab} onValueChange={filters.setActiveTab} className="space-y-0">
         <Card className={cn(TASKS_THEME.workspace, 'rounded-2xl ring-1 ring-border/40')}>
           <CardHeader className={cn(TASKS_THEME.rail, 'sticky top-0 z-10 space-y-0 backdrop-blur-md')}>
-            <TabsList className={TASKS_THEME.tabList}>
-              <TabsTrigger value="all-tasks" className={TASKS_THEME.tabTrigger}>
-                All tasks
-              </TabsTrigger>
-              <TabsTrigger value="my-tasks" className={TASKS_THEME.tabTrigger}>
-                My tasks
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex items-center gap-2">
+              <TabsList className={TASKS_THEME.tabList}>
+                <TabsTrigger value="all-tasks" className={TASKS_THEME.tabTrigger}>
+                  All tasks
+                </TabsTrigger>
+                <TabsTrigger value="my-tasks" className={TASKS_THEME.tabTrigger}>
+                  My tasks
+                </TabsTrigger>
+              </TabsList>
+              {!initialLoading && !displayError ? (
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {filters.sortedTasks.length} of {tasksCount}
+                </span>
+              ) : null}
+            </div>
             <CardAction>
               <TaskViewControls viewMode={filters.viewMode} onViewModeChange={filters.setViewMode} onExport={onExport} canExport={filters.sortedTasks.length > 0} isExporting={false}/>
             </CardAction>
@@ -122,8 +125,6 @@ export function TasksPageWorkspace({ filters, rawSearchQuery, onSearchChange, pr
             <CardContent className={cn(TASKS_THEME.content, 'p-0', filters.viewMode === 'list' && TASKS_THEME.contentList)}>
               {filters.viewMode === 'board' ? (<TaskBoardErrorBoundary onSwitchToList={() => filters.setViewMode('list')}><TaskKanban tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} onRefresh={onRefresh} loadingMore={loadingMore} hasMore={hasMore} onLoadMore={onLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={onClearListFilters} onEmptyCreateTask={onNewTaskClick} workspaceId={workspaceId} userId={userId} userName={userName} userRole={userRole} participants={participants}/></TaskBoardErrorBoundary>) : (<TaskList tasks={filters.sortedTasks} viewMode={filters.viewMode} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} onRefresh={onRefresh} loadingMore={loadingMore} hasMore={hasMore} onLoadMore={onLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={onClearListFilters} onEmptyCreateTask={onNewTaskClick} selectedTaskIds={selectedTaskIds} onToggleTaskSelection={onToggleTaskSelection} workspaceId={workspaceId} userId={userId} userName={userName} userRole={userRole} participants={participants}/>)}
             </CardContent>
-
-            {!initialLoading && !displayError ? (<TaskResultsCount sortedCount={filters.sortedTasks.length} totalCount={tasksCount} loading={loading}/>) : null}
           </div>
         </Card>
       </Tabs>

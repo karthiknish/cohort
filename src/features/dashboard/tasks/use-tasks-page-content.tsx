@@ -4,12 +4,10 @@ import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-qu
 import { dynamic } from '@/shared/ui/dynamic';
 import { usePathname, useRouter } from '@/shared/ui/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { formatAssigneeList, formatDate, clientRosterAssigneeNames, mergeTaskParticipants, resolveAssigneeUserIds, ProjectFilterBanner, TaskBulkToolbar, TaskFilters, type TaskParticipant, TaskResultsCount, TasksHeader, TaskSummaryCards, TaskViewControls, useDebouncedValue, useTaskFilters, useTaskForm, useTasks, } from '@/features/dashboard/tasks';
+import { formatAssigneeList, formatDate, clientRosterAssigneeNames, mergeTaskParticipants, resolveAssigneeUserIds, ProjectFilterBanner, TaskBulkToolbar, TaskFilters, type TaskParticipant, TasksHeader, TaskViewControls, useDebouncedValue, useTaskFilters, useTaskForm, useTasks, } from '@/features/dashboard/tasks';
 import { PageMotionShell } from '@/shared/components/page-motion-shell';
-import { Card, CardContent } from '@/shared/ui/card';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { TasksPageSkeleton } from '@/features/dashboard/tasks/tasks-page-skeleton';
-import { Skeleton } from '@/shared/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { TooltipProvider } from '@/shared/ui/tooltip';
 import { useAuth } from '@/shared/contexts/auth-context';
@@ -489,19 +487,24 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
 
         <TasksHeader loading={loading} retryCount={retryCount} onRefresh={handleRefresh} onNewTaskClick={handleNewTaskClick} scopeLabel={scopeLabel} scopeHelper={scopeHelper} newTaskDisabledReason={newTaskDisabledReason}/>
 
-        {initialLoading ? (<Skeleton className={cn(TASKS_THEME.summaryCard, 'h-24')}/>) : (<TaskSummaryCards taskCounts={filters.taskCounts} selectedStatus={filters.selectedStatus} onStatusCardClick={handleSummaryStatusClick}/>)}
-
         <Tabs defaultValue="all-tasks" value={filters.activeTab} onValueChange={filters.setActiveTab} className="space-y-0">
           <div className={TASKS_THEME.workspace}>
             <div className={cn(TASKS_THEME.rail, 'sticky top-0 z-10 backdrop-blur-md')}>
-              <TabsList className={TASKS_THEME.tabList}>
-                <TabsTrigger value="all-tasks" className={TASKS_THEME.tabTrigger}>
-                  All tasks
-                </TabsTrigger>
-                <TabsTrigger value="my-tasks" className={TASKS_THEME.tabTrigger}>
-                  My tasks
-                </TabsTrigger>
-              </TabsList>
+              <div className="flex items-center gap-2">
+                <TabsList className={TASKS_THEME.tabList}>
+                  <TabsTrigger value="all-tasks" className={TASKS_THEME.tabTrigger}>
+                    All tasks
+                  </TabsTrigger>
+                  <TabsTrigger value="my-tasks" className={TASKS_THEME.tabTrigger}>
+                    My tasks
+                  </TabsTrigger>
+                </TabsList>
+                {!initialLoading && !displayError ? (
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {filters.sortedTasks.length} of {tasks.length}
+                  </span>
+                ) : null}
+              </div>
               <TaskViewControls viewMode={filters.viewMode} onViewModeChange={filters.setViewMode} onExport={handleExport} canExport={filters.sortedTasks.length > 0} isExporting={isExporting} exportDisabledReason={filters.sortedTasks.length === 0 ? 'No tasks to export' : undefined}/>
             </div>
 
@@ -515,8 +518,6 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
               <div className={cn(TASKS_THEME.content, filters.viewMode === 'list' && TASKS_THEME.contentList)}>
               {filters.viewMode === 'board' ? (<TaskBoardErrorBoundary onSwitchToList={() => filters.setViewMode('list')}><TaskKanban tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={form.handleEditOpen} onDelete={form.handleDeleteClick} onQuickStatusChange={handleQuickStatusChange} onRefresh={handleRefresh} loadingMore={loadingMore} hasMore={Boolean(nextCursor)} onLoadMore={handleLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={handleClearListFilters} onEmptyCreateTask={handleNewTaskClick} workspaceId={user?.agencyId ?? null} userId={user?.id ?? null} userName={user?.name ?? null} userRole={user?.role ?? null} participants={taskParticipants}/></TaskBoardErrorBoundary>) : (<TaskList tasks={filters.sortedTasks} viewMode={filters.viewMode} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={form.handleEditOpen} onDelete={form.handleDeleteClick} onQuickStatusChange={handleQuickStatusChange} onRefresh={handleRefresh} loadingMore={loadingMore} hasMore={Boolean(nextCursor)} onLoadMore={handleLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={handleClearListFilters} onEmptyCreateTask={handleNewTaskClick} selectedTaskIds={selectedTaskIds} onToggleTaskSelection={handleToggleTaskSelection} workspaceId={user?.agencyId ?? null} userId={user?.id ?? null} userName={user?.name ?? null} userRole={user?.role ?? null} participants={taskParticipants}/>)}
               </div>
-
-              {!initialLoading && !displayError && (<TaskResultsCount sortedCount={filters.sortedTasks.length} totalCount={tasks.length} loading={loading && !loadingMore}/>)}
             </div>
           </div>
         </Tabs>

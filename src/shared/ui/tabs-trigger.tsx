@@ -13,7 +13,7 @@ const TabsTrigger = ({ className, ref, onPointerDown, ...props }: TabsTriggerPro
       ref={ref}
       onPointerDown={(e) => { haptics.selection(); onPointerDown?.(e); }}
       className={cn(
-        'focus-ring-subtle inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-background data-[active]:text-foreground data-[active]:shadow',
+        'focus-ring-subtle inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:shadow-sm',
         interactiveTransitionClass,
         className,
       )}
