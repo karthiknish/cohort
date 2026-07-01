@@ -198,9 +198,17 @@ export function ProjectsListState({
     </div>
   ) : null;
 
+  const filterLoadingBar = loading && !initialLoading && hasVisibleProjects ? (
+    <div className="flex items-center gap-2 rounded-md border border-border/40 bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground">
+      <LoaderCircle className="size-3.5 animate-spin" />
+      <span>Updating results…</span>
+    </div>
+  ) : null;
+
   if (viewMode === 'gantt') {
     return (
       <div className="space-y-3">
+        {filterLoadingBar}
         <GanttView
           projects={sortedProjects}
           milestones={milestonesByProject}
@@ -220,6 +228,7 @@ export function ProjectsListState({
   if (viewMode === 'calendar') {
     return (
       <div className="space-y-3">
+        {filterLoadingBar}
         <CalendarView
           projects={sortedProjects}
           milestones={milestonesByProject}
@@ -239,6 +248,7 @@ export function ProjectsListState({
   if (viewMode === 'list') {
     return (
       <div className="space-y-3 py-2">
+        {filterLoadingBar}
         <ListView
           projects={sortedProjects}
           pendingStatusUpdates={pendingStatusUpdates}
@@ -255,6 +265,7 @@ export function ProjectsListState({
   if (viewMode === 'grid') {
     return (
       <div className="space-y-3 py-2">
+        {filterLoadingBar}
         <GridView
           projects={sortedProjects}
           pendingStatusUpdates={pendingStatusUpdates}
@@ -271,6 +282,7 @@ export function ProjectsListState({
   // Board view
   return (
     <div className="space-y-3">
+      {filterLoadingBar}
       <BoardView
         projects={sortedProjects}
         pendingStatusUpdates={pendingStatusUpdates}

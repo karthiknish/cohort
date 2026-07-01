@@ -56,6 +56,7 @@ export function useProjectsPageController() {
     projects,
     setProjects,
     loading,
+    initialLoading,
     loadingMore,
     error,
     hasMoreProjects,
@@ -128,7 +129,6 @@ export function useProjectsPageController() {
     [projects, statusCounts],
   );
 
-  const initialLoading = loading && projects.length === 0;
   const hasActiveFilters = hasActiveFilterState(
     statusFilter,
     debouncedQuery,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from 'convex/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { projectsApi, tasksApi } from '@/lib/convex-api';
 import { useAccumulatedCursorPages } from '@/lib/hooks/use-accumulated-cursor-pages';
 import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
@@ -30,6 +30,7 @@ export function useProjects({
 }: UseProjectsArgs) {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [loadCursor, setLoadCursor] = useState<ProjectPageCursor | null>(null);
+  const hasEverLoadedRef = useRef(false);
   const searchQuery = debouncedSearchQuery.trim();
 
   const paginationScopeKey = [
@@ -130,10 +131,17 @@ export function useProjects({
   }, [isPreviewMode, selectedClientId, statusFilter, searchQuery, paginatedProjects, taskCountsRealtime]);
 
   useEffect(() => {
+    if (projectsWithTaskCounts.length > 0) {
+      hasEverLoadedRef.current = true;
+    }
+    // Preserve previous projects while a filter change query is loading
+    // so the UI doesn't flash an empty state or skeleton.
+    if (projectsInitialLoading && hasEverLoadedRef.current) return;
     setProjects(projectsWithTaskCounts);
-  }, [projectsWithTaskCounts]);
+  }, [projectsWithTaskCounts, projectsInitialLoading]);
 
   const loading = queryEnabled && projectsInitialLoading;
+  const initialLoading = loading && !hasEverLoadedRef.current;
   const loadingMore = projectsLoadingMore;
   const error = projectsQueryError ?? taskCountsQueryError ?? null;
 
@@ -145,6 +153,7 @@ export function useProjects({
     projects,
     setProjects,
     loading,
+    initialLoading,
     loadingMore,
     error,
     hasMoreProjects: Boolean(projectsNextCursor),
