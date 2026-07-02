@@ -13,7 +13,7 @@ import { useAuth } from '@/shared/contexts/auth-context';
 import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { onboardingApi } from '@/lib/convex-api';
-import { useOnboardingTour } from '@/shared/hooks/use-onboarding-tour';
+import { useOnboardingTour, isTourDismissed } from '@/shared/hooks/use-onboarding-tour';
 import { canAccessPath } from '@/lib/access-control/dashboard-access';
 import { getShortcutsForRole } from './keyboard-shortcuts';
 function HelpStepActionLink({ href, label, onClose, }: {
@@ -331,6 +331,7 @@ export function useHelpModal() {
     const userId = user?.id;
     const userCreatedAt = user?.createdAt;
     const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
+    const { startTour } = useOnboardingTour();
     const onboardingState = useQuery(onboardingApi.getByUserId, userId && isConvexAuthenticated ? { userId } : 'skip') as {
         welcomeSeenAtMs?: number | null;
         welcomeSeen?: boolean;
@@ -428,6 +429,13 @@ export function useHelpModal() {
         if (!nextOpen && showWelcome && userId) {
             setShowWelcome(false);
             void markWelcomeSeen();
+            // Auto-launch tour for first-time users who haven't completed or dismissed it
+            const tourCompleted = Boolean(onboardingState?.onboardingTourCompleted);
+            if (!tourCompleted && !isTourDismissed()) {
+                setTimeout(() => {
+                    void startTour({ ensureDashboard: true });
+                }, 400);
+            }
         }
     };
     return { open, setOpen, onOpenChange, showWelcome, setShowWelcome };

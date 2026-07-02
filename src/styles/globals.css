@@ -697,6 +697,24 @@ h6 {
     @apply !text-[10px] !font-medium !text-muted-foreground/80;
   }
 
+  /* Arrow color matches popover background */
+  .cohorts-tour-popover .driver-popover-arrow {
+    border-color: hsl(var(--background)) !important;
+  }
+
+  /* kbd hint styling inside tour descriptions */
+  .cohorts-tour-popover .driver-popover-description kbd {
+    @apply inline-flex items-center rounded border border-border bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-foreground;
+    font-family: var(--font-mono), monospace;
+  }
+
+  /* "Don't show again" button in tour footer */
+  .cohorts-tour-popover .tour-dont-show-again {
+    all: unset;
+    cursor: pointer;
+    @apply !text-xs !text-muted-foreground hover:!text-foreground !transition-colors !duration-200 !ml-2;
+  }
+
   /* Custom animation for tour highlights */
   .driver-active-element {
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1), 0 0 20px rgba(59, 130, 246, 0.2);
