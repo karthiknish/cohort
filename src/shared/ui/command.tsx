@@ -43,7 +43,7 @@ const CommandGroup = ({ className, ref, ...props }: CommandGroupProps) => (<Comm
 CommandGroup.displayName = CommandPrimitive.Group.displayName;
 const CommandSeparator = ({ className, ref, ...props }: CommandSeparatorProps) => (<CommandPrimitive.Separator ref={ref} className={cn("-mx-1 h-px bg-border", className)} {...props}/>);
 CommandSeparator.displayName = CommandPrimitive.Separator.displayName;
-const CommandItem = ({ className, ref, ...props }: CommandItemProps) => (<CommandPrimitive.Item ref={ref} className={cn(menuItemHighlightClass, "text-popover-foreground relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm data-[disabled=true]:pointer-events-none data-[selected=true]:bg-muted data-[selected=true]:text-foreground data-[disabled=true]:opacity-50", className)} {...props}/>);
+const CommandItem = ({ className, ref, ...props }: CommandItemProps) => (<CommandPrimitive.Item ref={ref} className={cn(menuItemHighlightClass, "text-popover-foreground relative flex min-h-11 cursor-default select-none items-center rounded-sm px-2 py-2.5 text-sm sm:min-h-0 sm:py-1.5 data-[disabled=true]:pointer-events-none data-[selected=true]:bg-muted data-[selected=true]:text-foreground data-[disabled=true]:opacity-50", className)} {...props}/>);
 CommandItem.displayName = CommandPrimitive.Item.displayName;
 const CommandShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => {
     return (<span className={cn("ml-auto text-xs tracking-widest text-muted-foreground", className)} {...props}/>);
