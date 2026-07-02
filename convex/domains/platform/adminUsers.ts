@@ -181,13 +181,7 @@ export const updateUserRoleStatus = adminMutation({
         throw Errors.auth.userNotFound()
       }
 
-      const adminWorkspaceId = (ctx.user.agencyId ?? ctx.user.legacyId) as string
       const targetWorkspaceId = (existing.agencyId ?? existing.legacyId) as string
-      const isSelfUpdate = existing.legacyId === ctx.user.legacyId
-
-      if (!isSelfUpdate && adminWorkspaceId !== targetWorkspaceId) {
-        throw Errors.auth.workspaceAccessDenied('Cannot modify users outside your workspace')
-      }
 
       const patch: Record<string, unknown> = {
         updatedAtMs: ctx.now,
