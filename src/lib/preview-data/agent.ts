@@ -314,6 +314,31 @@ function buildPerformanceReportAction(): PreviewAgentResponse {
 }
 export function getPreviewAgentModeResponse(input: string, context: PreviewAgentContext): PreviewAgentResponse {
     const normalized = input.trim().toLowerCase();
+    // Contextual responses that reference actual sample data
+    if (normalized.includes('how are my projects')
+        || normalized.includes('project status')
+        || normalized.includes('project health')) {
+        const projects = getPreviewProjects(context.activeClientId ?? null);
+        const active = projects.filter((p) => p.status === 'active').length;
+        const planning = projects.filter((p) => p.status === 'planning').length;
+        return {
+            action: 'response',
+            message: `You have ${projects.length} projects in total: ${active} active and ${planning} in planning. The "Website Refresh" project is on track with 68% of tasks completed. The "Mobile App Redesign" has 3 overdue tasks that need attention. Would you like me to navigate to the Projects page for details?`,
+            route: withPreviewModeSearchParam('/dashboard/projects'),
+        };
+    }
+    if (normalized.includes('what needs my attention')
+        || normalized.includes('what should i focus on')
+        || normalized.includes('priority')
+        || normalized.includes('overdue')) {
+        const tasks = getPreviewTasks(context.activeClientId ?? null);
+        const overdue = tasks.filter((t) => t.status !== 'completed' && t.priority === 'high').length;
+        return {
+            action: 'response',
+            message: `In preview mode, here is what needs attention: ${overdue} high-priority tasks are still open. The "Q4 Campaign Launch" project has 2 tasks blocked by design review. The "Weekly Sync" meeting notes from yesterday have 3 unassigned action items. Would you like me to open Tasks or Meetings?`,
+            route: withPreviewModeSearchParam('/dashboard/tasks'),
+        };
+    }
     if (normalized.includes('create sample project') || normalized.includes('run sample project action')) {
         return buildSampleProjectAction(context);
     }

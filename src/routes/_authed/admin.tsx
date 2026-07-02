@@ -21,6 +21,7 @@ import {
 } from '@/lib/preview-data'
 import { ProtectedRoute } from '@/shared/components/protected-route'
 import { AgentModeDynamic } from '@/shared/components/agent-mode/agent-mode-dynamic'
+import { PreviewDataBanner } from '@/features/dashboard/home/components/preview-data-banner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
@@ -159,6 +160,7 @@ function AdminLayoutRoute() {
               <AdminBreadcrumb />
             </div>
             <div className="mx-auto w-full max-w-7xl px-4 py-6 pb-[calc(3.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pb-6">
+              <PreviewDataBanner className="mb-6" />
               <Outlet />
             </div>
           </main>
