@@ -8,6 +8,7 @@ import { useConvexAuth } from 'convex/react';
 import { authClient } from '@/lib/auth-client';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { Button } from '@/shared/ui/button';
+import { Card, CardContent } from '@/shared/ui/card';
 import { SiteLogo } from '@/shared/components/site-logo';
 
 interface ProtectedRouteProps {
@@ -50,40 +51,44 @@ function AccessOverlay({
 }: AccessOverlayProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
-      <div className="w-full max-w-md rounded-lg border border-border bg-background p-8 text-center shadow-sm">
-        {showLogo ? (
-          <div className="mb-8 flex justify-center">
-            <SiteLogo size="wordmarkXl" />
+      <Card className="w-full max-w-md border-muted/60 text-center">
+        <CardContent className="space-y-4 p-8">
+          {showLogo ? (
+            <div className="flex justify-center">
+              <SiteLogo size="wordmarkXl" />
+            </div>
+          ) : null}
+          {showSpinner ? (
+            <div className="flex justify-center">
+              <LoaderCircle className="size-6 animate-spin text-primary" />
+            </div>
+          ) : null}
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+            <p className="text-sm text-muted-foreground">{message}</p>
           </div>
-        ) : null}
-        {showSpinner ? (
-          <div className="mb-4 flex justify-center">
-            <LoaderCircle className="size-6 animate-spin text-primary" />
-          </div>
-        ) : null}
-        <h2 className="mb-2 text-lg font-semibold text-foreground">{title}</h2>
-        <p className="text-sm text-muted-foreground">{message}</p>
-        {actionLabel || secondaryActionLabel ? (
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
-            {actionLabel ? (
-              actionHref ? (
-                <Button asChild variant={actionVariant}>
-                  <Link href={actionHref}>{actionLabel}</Link>
+          {actionLabel || secondaryActionLabel ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+              {actionLabel ? (
+                actionHref ? (
+                  <Button asChild variant={actionVariant}>
+                    <Link href={actionHref}>{actionLabel}</Link>
+                  </Button>
+                ) : (
+                  <Button variant={actionVariant} onClick={actionOnClick}>
+                    {actionLabel}
+                  </Button>
+                )
+              ) : null}
+              {secondaryActionLabel ? (
+                <Button variant="outline" onClick={secondaryActionOnClick}>
+                  {secondaryActionLabel}
                 </Button>
-              ) : (
-                <Button variant={actionVariant} onClick={actionOnClick}>
-                  {actionLabel}
-                </Button>
-              )
-            ) : null}
-            {secondaryActionLabel ? (
-              <Button variant="outline" onClick={secondaryActionOnClick}>
-                {secondaryActionLabel}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+              ) : null}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
     </div>
   );
 }
