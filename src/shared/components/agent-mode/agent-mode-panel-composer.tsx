@@ -95,6 +95,7 @@ function AgentComposerInput({ value, onChange, onKeyDown, inputRef, placeholder,
         </p>
         <span className={cn('text-[10px] tabular-nums', remaining < 80 ? 'font-medium text-warning' : 'text-muted-foreground')} aria-live="polite">
           {value.length}/{maxLength}
+          {remaining <= 0 ? ' · limit reached' : ''}
         </span>
       </div>
 
@@ -173,7 +174,7 @@ export function AgentComposerSection({ layout, inputValue, inputRef, mentionLabe
               {isExtractingAttachments ? (<Loader2 className="size-4 animate-spin"/>) : (<Paperclip className="size-4"/>)}
             </Button>
 
-            <Button size="icon" onClick={onSubmit} disabled={!inputValue.trim() || disabled} className="size-9 shrink-0 rounded-full bg-primary shadow-sm hover:bg-primary/90 disabled:opacity-40" aria-label="Send message" title="Send message">
+            <Button size="icon" onClick={onSubmit} disabled={!inputValue.trim() || disabled} className="size-9 shrink-0 rounded-full bg-primary shadow-sm hover:bg-primary/90 disabled:opacity-40" aria-label="Send message" title={!inputValue.trim() ? 'Type a message to send' : 'Send message'}>
               <Send className="size-4"/>
             </Button>
           </div>

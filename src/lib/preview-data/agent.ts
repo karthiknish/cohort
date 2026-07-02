@@ -362,6 +362,22 @@ export function getPreviewAgentModeResponse(input: string, context: PreviewAgent
         || normalized.includes('performance report')) {
         return buildPerformanceReportAction();
     }
+    if (normalized.includes('show me my projects')
+        || normalized.includes('list projects')
+        || normalized.includes('my projects')
+        || normalized.includes('what projects')) {
+        return {
+            action: 'navigate',
+            route: '/dashboard/projects',
+            message: 'In preview mode, I can navigate you to the Projects page where you can see all active and planned projects for your workspace.',
+        };
+    }
+    if (normalized.includes('summarize my tasks')
+        || normalized.includes('tasks due')
+        || normalized.includes('task summary')
+        || normalized.includes('what tasks')) {
+        return buildSampleTaskSummary(context);
+    }
     if (normalized.includes('open sample analytics')) {
         return {
             action: 'navigate',
@@ -383,8 +399,17 @@ export function getPreviewAgentModeResponse(input: string, context: PreviewAgent
             message: 'Opening Proposal analytics.',
         };
     }
+    // Contextual fallback: acknowledge what the user asked and suggest preview-compatible actions
+    const previewSuggestions = [
+        'Schedule a meeting',
+        'Create project Website Refresh',
+        'Show my tasks',
+        'How are my Meta ads doing this week?',
+        'Generate weekly report',
+        'Open For You',
+    ];
     return {
         action: 'response',
-        message: 'Sample agent mode is active. Try “Schedule a meeting”, “Create project Website Refresh”, “Update this project status to active”, “How are my Meta ads doing this week?”, “Generate weekly report”, “Show my Tasks”, “Open For You”, “Time off”, or “Proposal analytics”.',
+        message: `In preview mode, I can't process "${input.trim()}" with live data. Try one of these sample actions: ${previewSuggestions.map((s) => `"${s}"`).join(', ')}. Or exit preview mode to use the full agent.`,
     };
 }

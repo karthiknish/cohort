@@ -151,6 +151,8 @@ export function useAgentConversationHistory({ workspaceId, userId, conversationI
         setIsConversationLoading(true);
         setIsProcessing(true);
         clearError();
+        // Set conversation ID immediately so subsequent messages go to the right conversation
+        setConversationId(targetConversationId);
         try {
             if (!workspaceId) {
                 throw new Error('Workspace context is required');
@@ -179,7 +181,6 @@ export function useAgentConversationHistory({ workspaceId, userId, conversationI
                 return attachments ? { ...message, attachments } : message;
             }));
             setMessages(hydrated);
-            setConversationId(targetConversationId);
         }
         catch (err) {
             logError(err, 'useAgentMode:loadConversation');

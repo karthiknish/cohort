@@ -151,6 +151,7 @@ export function MentionDropdown({ ref, listboxId = "agent-mention-listbox", isOp
         return items;
     })();
     const clampedSelectedIndex = Math.min(selectedIndex, Math.max(filteredItems.length - 1, 0));
+    const allItemsCount = clients.length + projects.length + teams.length + users.length;
     const duplicateNameKeys = (() => {
         const counts = new Map<string, number>();
         for (const item of filteredItems) {
@@ -247,7 +248,11 @@ export function MentionDropdown({ ref, listboxId = "agent-mention-listbox", isOp
 						{isLoading ? (<div className="flex items-center justify-center py-6">
 								<Loader2 className="size-5 animate-spin text-muted-foreground"/>
 							</div>) : filteredItems.length === 0 ? (<div className="py-6 text-center text-sm text-muted-foreground">
-								No results found for &quot;{searchQuery}&quot;
+								{searchQuery.trim()
+                  ? `No results found for "${searchQuery}"`
+                  : allItemsCount === 0
+                    ? 'No clients, projects, or team members available to mention yet.'
+                    : 'Start typing to search clients, projects, teams, or users.'}
 							</div>) : (<div className="p-1">
 								{filteredItems.map((item, index) => (<MentionResultButton key={`${item.type}-${item.id}`} clampedSelectedIndex={clampedSelectedIndex} index={index} item={item} onSelect={onSelect} showAmbiguousSubtitle={duplicateNameKeys.has(item.name.trim().toLowerCase())}/>))}
 							</div>)}
