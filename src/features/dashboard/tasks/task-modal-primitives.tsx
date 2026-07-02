@@ -33,18 +33,22 @@ export function TaskFormSection({ title, children, className, }: {
       <div className="space-y-3.5">{children}</div>
     </section>);
 }
-export function TaskFormField({ id, label, hint, children, required, }: {
+export function TaskFormField({ id, label, hint, children, required, labelAction, }: {
     id?: string;
     label: string;
     hint?: string;
     children: ReactNode;
     required?: boolean;
+    labelAction?: ReactNode;
 }) {
     return (<div className={TASKS_THEME.field}>
-      <Label htmlFor={id} className={TASKS_THEME.label}>
-        {label}
-        {required ? <span className="text-destructive"> *</span> : null}
-      </Label>
+      <div className="flex items-center justify-between">
+        <Label htmlFor={id} className={TASKS_THEME.label}>
+          {label}
+          {required ? <span className="text-destructive"> *</span> : null}
+        </Label>
+        {labelAction}
+      </div>
       {children}
       {hint ? <p className={TASKS_THEME.hint}>{hint}</p> : null}
     </div>);

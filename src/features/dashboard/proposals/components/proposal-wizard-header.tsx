@@ -31,9 +31,18 @@ export function ProposalWizardHeader({ clientName }: ProposalWizardHeaderProps) 
             Build a tailored proposal in minutes
           </h1>
           <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-            Six guided sections with autosave. When you finish, we generate a client-ready deck you can preview,
+            Six guided sections with autosave. When you finish, AI generates a client-ready deck you can preview,
             download, or refine.
           </p>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Badge variant="secondary" className="gap-1 font-normal">
+              <Sparkles className="size-3 text-primary" aria-hidden/>
+              AI-powered deck generation
+            </Badge>
+            <Badge variant="outline" className="font-normal text-muted-foreground">
+              PPTX + PDF export
+            </Badge>
+          </div>
         </div>
       </div>
     </FadeIn>);

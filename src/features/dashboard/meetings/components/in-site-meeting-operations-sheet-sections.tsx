@@ -1,5 +1,6 @@
 'use client';
-import { Users } from 'lucide-react';
+import { Loader2, MessageCircleQuestion, RefreshCw, Users } from 'lucide-react';
+import { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
@@ -199,6 +200,20 @@ export function MeetingOperationsSummaryCard({ canGenerateNotes, generatingNotes
     transcriptStorageId?: string | null;
     transcriptText?: string | null;
 }) {
+    const [showAskAi, setShowAskAi] = useState(false);
+    const [aiQuestion, setAiQuestion] = useState('');
+    const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+    const [askingAi, setAskingAi] = useState(false);
+    const handleAskAi = () => {
+        if (!aiQuestion.trim() || !transcriptText) return;
+        setAskingAi(true);
+        setAiAnswer(null);
+        // Simulate AI response for now — backend action would go here
+        setTimeout(() => {
+            setAiAnswer('This feature is coming soon. You will be able to ask questions about the meeting transcript and get AI-powered answers.');
+            setAskingAi(false);
+        }, 800);
+    };
     if (notesProcessingState === 'processing' && !summaryPreview) {
         return (<FadeIn y={12} className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
         <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">AI summary</p>
@@ -214,11 +229,29 @@ export function MeetingOperationsSummaryCard({ canGenerateNotes, generatingNotes
         return (<FadeIn y={12} className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Latest AI summary</p>
-          {canGenerateNotes ? (<Button type="button" size="sm" variant="outline" className={cn(pressableScaleClass)} onClick={onGenerateNotes} disabled={generatingNotes || notesProcessingState === 'processing'}>
-              {generatingNotes || notesProcessingState === 'processing' ? 'Refreshing…' : 'Refresh summary'}
+          <div className="flex items-center gap-2">
+            {transcriptText ? (<Button type="button" size="sm" variant="ghost" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary" onClick={() => setShowAskAi((v) => !v)} disabled={askingAi}>
+              <MessageCircleQuestion className="size-3.5"/>
+              Ask AI
             </Button>) : null}
+            {canGenerateNotes ? (<Button type="button" size="sm" variant="outline" className={cn(pressableScaleClass)} onClick={onGenerateNotes} disabled={generatingNotes || notesProcessingState === 'processing'}>
+              {generatingNotes || notesProcessingState === 'processing' ? (<><RefreshCw className="size-3.5 animate-spin"/> Refreshing…</>) : 'Refresh summary'}
+            </Button>) : null}
+          </div>
         </div>
         <MeetingNotesMarkdown className="mt-3" content={summaryPreview}/>
+        {showAskAi ? (<div className="mt-4 space-y-2 border-t border-border/40 pt-3">
+          <div className="flex items-center gap-2">
+            <input type="text" value={aiQuestion} onChange={(e) => setAiQuestion(e.target.value)} placeholder="Ask a question about this meeting…" className="flex-1 rounded-lg border border-border/60 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20" disabled={askingAi} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAskAi(); } }}/>
+            <Button type="button" size="sm" onClick={handleAskAi} disabled={!aiQuestion.trim() || askingAi}>
+              {askingAi ? <Loader2 className="size-3.5 animate-spin"/> : 'Ask'}
+            </Button>
+          </div>
+          {aiAnswer ? (<div className="rounded-lg bg-muted/40 p-3 text-sm text-foreground">
+            <p className="text-xs font-medium text-muted-foreground">AI Answer</p>
+            <p className="mt-1">{aiAnswer}</p>
+          </div>) : null}
+        </div>) : null}
         <MeetingArtifactsDownload className="mt-4" compact legacyId={legacyId} meetingTitle={meetingTitle} notesStorageId={notesStorageId} notesSummary={summaryPreview} transcriptStorageId={transcriptStorageId} transcriptText={transcriptText}/>
       </FadeIn>);
     }
@@ -236,7 +269,7 @@ export function MeetingOperationsSummaryCard({ canGenerateNotes, generatingNotes
           {postCallProcessingActive ? <p className="mt-2 text-xs text-muted-foreground">Post-call processing is running. Keep this page open until transcript finalization and notes generation finish.</p> : null}
         </div>
         {canGenerateNotes ? (<Button type="button" size="sm" variant="outline" className={cn(pressableScaleClass)} onClick={onGenerateNotes} disabled={generatingNotes || notesProcessingState === 'processing'}>
-            {generatingNotes || notesProcessingState === 'processing' ? 'Generating...' : 'Generate notes'}
+            {generatingNotes || notesProcessingState === 'processing' ? (<><RefreshCw className="size-3.5 animate-spin"/> Generating…</>) : 'Generate notes'}
           </Button>) : null}
       </div>
     </FadeIn>);

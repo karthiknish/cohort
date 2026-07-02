@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import type { Dispatch, KeyboardEvent } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Plus, Tag, X } from 'lucide-react';
+import { Calendar as CalendarIcon, LoaderCircle, Plus, Sparkles, Tag, X } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Calendar } from '@/shared/ui/calendar';
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '
 import { Textarea } from '@/shared/ui/textarea';
 import { cn } from '@/lib/utils';
 import { PROJECT_STATUSES, type ProjectStatus } from '@/types/projects';
+import { useAiGenerate } from '../shared/hooks/use-ai-generate';
 import type { EditProjectAction } from './edit-project-dialog';
 const MINIMUM_PROJECT_DATE = new Date('1900-01-01');
 type EditProjectFormFieldsProps = {
@@ -80,6 +81,7 @@ function ProjectTagBadge({ loading, onRemove, tag, }: {
     </Badge>);
 }
 export function EditProjectFormFields({ loading, name, description, status, clientId, startDate, endDate, tags, tagInput, validationErrors, clients, onDispatch, onAddTag, onRemoveTag, onTagKeyDown, formatStatusLabel, }: EditProjectFormFieldsProps) {
+    const { generate, isGenerating } = useAiGenerate('project');
     const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         onDispatch({ type: 'setName', value: event.target.value });
     };
@@ -106,21 +108,47 @@ export function EditProjectFormFields({ loading, name, description, status, clie
     };
     const handleStartDateDisabled = (date: Date) => date < MINIMUM_PROJECT_DATE;
     const handleEndDateDisabled = (date: Date) => (startDate ? date < startDate : false) || date < MINIMUM_PROJECT_DATE;
+    const handleGenerateName = () => {
+        void generate('title', { currentTitle: name, currentDescription: description, status }).then((result) => {
+            if (result && 'title' in result) {
+                onDispatch({ type: 'setName', value: result.title });
+            }
+        });
+    };
+    const handleGenerateDescription = () => {
+        void generate('description', { currentTitle: name, currentDescription: description, status }).then((result) => {
+            if (result && 'description' in result) {
+                onDispatch({ type: 'setDescription', value: result.description });
+            }
+        });
+    };
     return (<div className="mt-6 space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="edit-project-name">
-          Project name <span className="text-destructive">*</span>
-        </Label>
-        <Input id="edit-project-name" placeholder="e.g., Q1 Marketing Campaign" value={name} onChange={handleNameChange} disabled={loading} aria-invalid={!!validationErrors.name} aria-describedby={validationErrors.name ? 'name-error' : undefined}/>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="edit-project-name">
+            Project name <span className="text-destructive">*</span>
+          </Label>
+          <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary" onClick={handleGenerateName} disabled={loading || isGenerating}>
+            {isGenerating ? (<LoaderCircle className="size-3.5 animate-spin"/>) : (<Sparkles className="size-3.5"/>)}
+            AI Generate
+          </Button>
+        </div>
+        <Input id="edit-project-name" placeholder="e.g., Q1 Marketing Campaign" value={name} onChange={handleNameChange} disabled={loading || isGenerating} aria-invalid={!!validationErrors.name} aria-describedby={validationErrors.name ? 'name-error' : undefined}/>
         {validationErrors.name ? (<p id="name-error" className="text-xs text-destructive">{validationErrors.name}</p>) : null}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="edit-project-description">
-          Description
-          <span className="ml-2 text-xs text-muted-foreground">({description.length}/2000)</span>
-        </Label>
-        <Textarea id="edit-project-description" placeholder="Brief overview of the project goals and scope…" value={description} onChange={handleDescriptionChange} disabled={loading} rows={3} maxLength={2000} aria-invalid={!!validationErrors.description} aria-describedby={validationErrors.description ? 'edit-project-description-error' : undefined}/>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="edit-project-description">
+            Description
+            <span className="ml-2 text-xs text-muted-foreground">({description.length}/2000)</span>
+          </Label>
+          <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary" onClick={handleGenerateDescription} disabled={loading || isGenerating}>
+            {isGenerating ? (<LoaderCircle className="size-3.5 animate-spin"/>) : (<Sparkles className="size-3.5"/>)}
+            AI Generate
+          </Button>
+        </div>
+        <Textarea id="edit-project-description" placeholder="Brief overview of the project goals and scope…" value={description} onChange={handleDescriptionChange} disabled={loading || isGenerating} rows={3} maxLength={2000} aria-invalid={!!validationErrors.description} aria-describedby={validationErrors.description ? 'edit-project-description-error' : undefined}/>
         {validationErrors.description ? (<p id="edit-project-description-error" className="text-xs text-destructive">
             {validationErrors.description}
           </p>) : null}

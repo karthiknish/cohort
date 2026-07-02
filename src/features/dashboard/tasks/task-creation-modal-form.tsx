@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, type RefObject } from 'react';
-import { Calendar as CalendarIcon, Paperclip } from 'lucide-react';
+import { Calendar as CalendarIcon, LoaderCircle, Paperclip, Sparkles } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { PendingAttachmentsList } from '@/features/dashboard/collaboration/components/message-composer';
 import { Button } from '@/shared/ui/button';
@@ -13,6 +13,7 @@ import { Textarea } from '@/shared/ui/textarea';
 import { cn } from '@/lib/utils';
 import type { PendingTaskAttachment } from '@/services/task-attachments';
 import type { TaskPriority } from '@/types/tasks';
+import { useAiGenerate } from '../shared/hooks/use-ai-generate';
 import { TaskContextChip, TaskFormField, TaskFormSection, TaskModalActions, TaskModalError, } from './task-modal-primitives';
 import { TaskProjectPicker } from './task-project-picker';
 import { TASKS_THEME } from './tasks-theme';
@@ -58,9 +59,24 @@ function PrioritySelectItem({ value }: {
     </span>);
 }
 export function TaskCreationModalFormFields({ title, description, priority, dueDate, projectName, projectId, clientName, assigneeValue, mentionableUsers, projectOptions, projectOptionsLoading, error, isLoading, pendingAttachments, fileInputRef, onTitleChange, onDescriptionChange, onPriorityChange, onDateSelect, onAssigneeChange, onProjectChange, onAddAttachments, onRemoveAttachment, onCancel, }: TaskCreationModalFormFieldsProps) {
+    const { generate, isGenerating } = useAiGenerate('task');
     const handleTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => onTitleChange(event.target.value);
     const handleDescriptionChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => onDescriptionChange(event.target.value);
     const handlePriorityChange = (value: string) => onPriorityChange(value as TaskPriority);
+    const handleGenerateTitle = () => {
+        void generate('title', { currentTitle: title, currentDescription: description, priority, assignee: assigneeValue }).then((result) => {
+            if (result && 'title' in result) {
+                onTitleChange(result.title);
+            }
+        });
+    };
+    const handleGenerateDescription = () => {
+        void generate('description', { currentTitle: title, currentDescription: description, priority, assignee: assigneeValue }).then((result) => {
+            if (result && 'description' in result) {
+                onDescriptionChange(result.description);
+            }
+        });
+    };
     const handleOpenFileDialog = () => {
         fileInputRef.current?.click();
     };
@@ -70,12 +86,18 @@ export function TaskCreationModalFormFields({ title, description, priority, dueD
     };
     return (<>
       <TaskFormSection title="Essentials">
-        <TaskFormField id="quick-task-title" label="Title" required>
-        <Input id="quick-task-title" placeholder="What needs to get done?" value={title} onChange={handleTitleChange} required disabled={isLoading} className={TASKS_THEME.input}/>
+        <TaskFormField id="quick-task-title" label="Title" required labelAction={<Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary" onClick={handleGenerateTitle} disabled={isLoading || isGenerating}>
+              {isGenerating ? (<LoaderCircle className="size-3.5 animate-spin"/>) : (<Sparkles className="size-3.5"/>)}
+              AI Generate
+            </Button>}>
+        <Input id="quick-task-title" placeholder="What needs to get done?" value={title} onChange={handleTitleChange} required disabled={isLoading || isGenerating} className={TASKS_THEME.input}/>
         </TaskFormField>
 
-        <TaskFormField id="quick-task-description" label="Description">
-        <Textarea id="quick-task-description" placeholder="Optional context or next steps" value={description} onChange={handleDescriptionChange} rows={3} disabled={isLoading} className={TASKS_THEME.textarea}/>
+        <TaskFormField id="quick-task-description" label="Description" labelAction={<Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary" onClick={handleGenerateDescription} disabled={isLoading || isGenerating}>
+              {isGenerating ? (<LoaderCircle className="size-3.5 animate-spin"/>) : (<Sparkles className="size-3.5"/>)}
+              AI Generate
+            </Button>}>
+        <Textarea id="quick-task-description" placeholder="Optional context or next steps" value={description} onChange={handleDescriptionChange} rows={3} disabled={isLoading || isGenerating} className={TASKS_THEME.textarea}/>
         </TaskFormField>
       </TaskFormSection>
 

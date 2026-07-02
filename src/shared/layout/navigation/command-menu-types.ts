@@ -29,7 +29,7 @@ export type SearchEntityResult = {
     icon: ComponentType<{
         className?: string;
     }>;
-    group: 'Clients' | 'Tasks' | 'Projects' | 'Proposals';
+    group: 'AI Search' | 'Clients' | 'Tasks' | 'Projects' | 'Proposals';
 };
 export interface CommandMenuProps {
     onOpenHelp?: () => void;

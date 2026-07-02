@@ -8,6 +8,7 @@ export const DEEPSEEK_RATE_LIMITS = {
     analyticsInsights: { maxRequests: 24, windowMs: 10 * 60000 },
     proposalGeneration: { maxRequests: 6, windowMs: 30 * 60000 },
     adminFeatureAssist: { maxRequests: 12, windowMs: 10 * 60000 },
+    workspaceAiAssist: { maxRequests: 12, windowMs: 10 * 60000 },
     agentMessage: { maxRequests: 30, windowMs: 10 * 60000 },
     taskDocumentImport: { maxRequests: 10, windowMs: 10 * 60000 },
     projectDocumentImport: { maxRequests: 10, windowMs: 10 * 60000 },

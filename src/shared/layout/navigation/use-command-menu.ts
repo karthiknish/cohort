@@ -2,7 +2,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from '@/shared/ui/navigation';
 import { useQuery } from 'convex/react';
-import { BarChart3, Briefcase, CheckSquare, FileText, Users, } from 'lucide-react';
+import { BarChart3, Briefcase, CheckSquare, FileText, Sparkles, Users, } from 'lucide-react';
 import { clientsApi, projectsApi, proposalsApi, tasksApi } from '@/lib/convex-api';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
@@ -96,7 +96,22 @@ export function useCommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps
             : []));
         return [...clientResults, ...taskResults, ...projectResults, ...proposalResults];
     })();
-    const groupedSearchResults = searchResults.reduce<Record<string, SearchEntityResult[]>>((accumulator, result) => {
+    // Add "Ask AI" suggestion when no substring matches found
+    const aiSearchResult = (() => {
+        if (normalizedQuery.length < 2 || searchResults.length > 0) {
+            return null;
+        }
+        return {
+            id: 'ai-search',
+            href: `/for-you?q=${encodeURIComponent(query.trim())}`,
+            label: `Ask AI: "${query.trim()}"`,
+            description: 'Search with AI for smarter results across your workspace',
+            icon: Sparkles,
+            group: 'AI Search' as const,
+        } satisfies SearchEntityResult;
+    })();
+    const searchResultsWithAi = aiSearchResult ? [aiSearchResult, ...searchResults] : searchResults;
+    const groupedSearchResults = searchResultsWithAi.reduce<Record<string, SearchEntityResult[]>>((accumulator, result) => {
         if (!accumulator[result.group]) {
             accumulator[result.group] = [];
         }
@@ -128,11 +143,11 @@ export function useCommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps
         if (isSearchLoading) {
             return `Searching for ${query.trim()}.`;
         }
-        if (searchResults.length === 0) {
+        if (searchResultsWithAi.length === 0) {
             return `No results found for ${query.trim()}.`;
         }
         const groupCount = Object.keys(groupedSearchResults).length;
-        return `${searchResults.length} results found for ${query.trim()} across ${groupCount} sections.`;
+        return `${searchResultsWithAi.length} results found for ${query.trim()} across ${groupCount} sections.`;
     })();
     useKeyboardShortcut({
         combo: 'mod+k',

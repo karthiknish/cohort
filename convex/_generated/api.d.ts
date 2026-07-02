@@ -215,6 +215,7 @@ import type * as domains_platform_schedulerEvents from "../domains/platform/sche
 import type * as domains_platform_serverCache from "../domains/platform/serverCache.js";
 import type * as domains_platform_settings from "../domains/platform/settings.js";
 import type * as domains_platform_users from "../domains/platform/users.js";
+import type * as domains_platform_workspaceAi from "../domains/platform/workspaceAi.js";
 import type * as domains_workspace_clients from "../domains/workspace/clients.js";
 import type * as domains_workspace_projectDocumentImport from "../domains/workspace/projectDocumentImport.js";
 import type * as domains_workspace_projectDocumentImportParsing from "../domains/workspace/projectDocumentImportParsing.js";
@@ -307,6 +308,7 @@ import type * as taskDocumentImportParsing from "../taskDocumentImportParsing.js
 import type * as taskDocumentImportQueries from "../taskDocumentImportQueries.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
+import type * as workspaceAi from "../workspaceAi.js";
 
 import type {
   ApiFromModules,
@@ -522,6 +524,7 @@ declare const fullApi: ApiFromModules<{
   "domains/platform/serverCache": typeof domains_platform_serverCache;
   "domains/platform/settings": typeof domains_platform_settings;
   "domains/platform/users": typeof domains_platform_users;
+  "domains/platform/workspaceAi": typeof domains_platform_workspaceAi;
   "domains/workspace/clients": typeof domains_workspace_clients;
   "domains/workspace/projectDocumentImport": typeof domains_workspace_projectDocumentImport;
   "domains/workspace/projectDocumentImportParsing": typeof domains_workspace_projectDocumentImportParsing;
@@ -614,6 +617,7 @@ declare const fullApi: ApiFromModules<{
   taskDocumentImportQueries: typeof taskDocumentImportQueries;
   tasks: typeof tasks;
   users: typeof users;
+  workspaceAi: typeof workspaceAi;
 }>;
 
 /**

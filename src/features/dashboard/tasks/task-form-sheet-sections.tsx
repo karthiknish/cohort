@@ -1,7 +1,7 @@
 'use client';
 import { useCallback } from 'react';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { Calendar as CalendarIcon, Paperclip } from 'lucide-react';
+import { Calendar as CalendarIcon, LoaderCircle, Paperclip, Sparkles } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { PendingAttachmentsList } from '@/features/dashboard/collaboration/components/message-composer';
 import { Button } from '@/shared/ui/button';
@@ -14,6 +14,7 @@ import { Textarea } from '@/shared/ui/textarea';
 import { cn } from '@/lib/utils';
 import type { PendingTaskAttachment } from '@/services/task-attachments';
 import type { TaskPriority, TaskStatus } from '@/types/tasks';
+import { useAiGenerate } from '../shared/hooks/use-ai-generate';
 import { TaskContextChip, TaskFormField, TaskFormSection, } from './task-modal-primitives';
 import { TaskProjectPicker } from './task-project-picker';
 import { TASKS_THEME } from './tasks-theme';
@@ -58,6 +59,7 @@ function PrioritySelectItem({ value }: {
     </span>);
 }
 export function TaskSheetFields({ ids, formState, setFormState, disabled, mentionableUsers, titlePlaceholder, clientPlaceholder, projectPlaceholder, clientHelpText, projectHelpText, dueDateLayout = 'full', showStatus = true, projectOptions = [], projectOptionsLoading = false, allowProjectSelection = false, }: TaskSheetFieldsProps) {
+    const { generate, isGenerating } = useAiGenerate('task');
     const handleDueDateSelect = (date: Date | undefined) => {
         setFormState((prev) => ({
             ...prev,
@@ -86,6 +88,20 @@ export function TaskSheetFields({ ids, formState, setFormState, disabled, mentio
             projectName: project.name,
         }));
     };
+    const handleGenerateTitle = () => {
+        void generate('title', { currentTitle: formState.title, currentDescription: formState.description, priority: formState.priority, status: formState.status, assignee: formState.assignedTo }).then((result) => {
+            if (result && 'title' in result) {
+                setFormState((prev) => ({ ...prev, title: result.title }));
+            }
+        });
+    };
+    const handleGenerateDescription = () => {
+        void generate('description', { currentTitle: formState.title, currentDescription: formState.description, priority: formState.priority, status: formState.status, assignee: formState.assignedTo }).then((result) => {
+            if (result && 'description' in result) {
+                setFormState((prev) => ({ ...prev, description: result.description }));
+            }
+        });
+    };
     const dueDateField = (<TaskFormField id={ids.dueDate} label="Due date">
       <Popover>
         <PopoverTrigger asChild>
@@ -101,12 +117,18 @@ export function TaskSheetFields({ ids, formState, setFormState, disabled, mentio
     </TaskFormField>);
     return (<>
       <TaskFormSection title="Essentials">
-        <TaskFormField id={ids.title} label="Title" required>
-          <Input id={ids.title} value={formState.title} onChange={handleTitleChange} placeholder={titlePlaceholder} required disabled={disabled} className={TASKS_THEME.input}/>
+        <TaskFormField id={ids.title} label="Title" required labelAction={<Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary" onClick={handleGenerateTitle} disabled={disabled || isGenerating}>
+              {isGenerating ? (<LoaderCircle className="size-3.5 animate-spin"/>) : (<Sparkles className="size-3.5"/>)}
+              AI Generate
+            </Button>}>
+          <Input id={ids.title} value={formState.title} onChange={handleTitleChange} placeholder={titlePlaceholder} required disabled={disabled || isGenerating} className={TASKS_THEME.input}/>
         </TaskFormField>
 
-        <TaskFormField id={ids.description} label="Description">
-          <Textarea id={ids.description} value={formState.description} onChange={handleDescriptionChange} placeholder="Add context, goals, or next steps" rows={4} disabled={disabled} className={TASKS_THEME.textarea}/>
+        <TaskFormField id={ids.description} label="Description" labelAction={<Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary" onClick={handleGenerateDescription} disabled={disabled || isGenerating}>
+              {isGenerating ? (<LoaderCircle className="size-3.5 animate-spin"/>) : (<Sparkles className="size-3.5"/>)}
+              AI Generate
+            </Button>}>
+          <Textarea id={ids.description} value={formState.description} onChange={handleDescriptionChange} placeholder="Add context, goals, or next steps" rows={4} disabled={disabled || isGenerating} className={TASKS_THEME.textarea}/>
         </TaskFormField>
       </TaskFormSection>
 

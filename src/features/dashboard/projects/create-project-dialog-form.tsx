@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, type ChangeEvent, type KeyboardEvent, type RefObject } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Plus, Tag, X } from 'lucide-react';
+import { Calendar as CalendarIcon, LoaderCircle, Plus, Sparkles, Tag, X } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Calendar } from '@/shared/ui/calendar';
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '
 import { Textarea } from '@/shared/ui/textarea';
 import { cn } from '@/lib/utils';
 import { PROJECT_STATUSES, type ProjectStatus } from '@/types/projects';
+import { useAiGenerate } from '../shared/hooks/use-ai-generate';
 import type { ProjectFormState } from './create-project-dialog';
 type CreateProjectFormFieldsProps = {
     loading: boolean;
@@ -76,29 +77,56 @@ function ProjectDateField({ disabled, fieldId, label, onSelect, selected, disabl
     </div>);
 }
 export function CreateProjectFormFields({ loading, clients, state, nameError = null, nameInputRef, onNameChange, onDescriptionChange, onStatusChange, onClientChange, onStartDateChange, onEndDateChange, onTagInputChange, onTagKeyDown, onAddTag, onRemoveTag, formatStatusLabel, }: CreateProjectFormFieldsProps) {
+    const { generate, isGenerating } = useAiGenerate('project');
     const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => onNameChange(event.target.value);
     const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => onDescriptionChange(event.target.value);
     const handleStatusChange = (value: ProjectStatus) => onStatusChange(value);
     const handleTagInputChange = (event: ChangeEvent<HTMLInputElement>) => onTagInputChange(event.target.value);
     const handleStartDateDisabled = (date: Date) => date < MIN_PROJECT_DATE;
     const handleEndDateDisabled = (date: Date) => (state.startDate ? date < state.startDate : false) || date < MIN_PROJECT_DATE;
+    const handleGenerateName = () => {
+        void generate('title', { currentTitle: state.name, currentDescription: state.description, status: state.status }).then((result) => {
+            if (result && 'title' in result) {
+                onNameChange(result.title);
+            }
+        });
+    };
+    const handleGenerateDescription = () => {
+        void generate('description', { currentTitle: state.name, currentDescription: state.description, status: state.status }).then((result) => {
+            if (result && 'description' in result) {
+                onDescriptionChange(result.description);
+            }
+        });
+    };
     return (<div className="mt-6 space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="project-name">
-          Project name <span className="text-destructive">*</span>
-        </Label>
-        <Input ref={nameInputRef} id="project-name" placeholder="e.g., Q1 Marketing Campaign" value={state.name} onChange={handleNameChange} disabled={loading} aria-invalid={Boolean(nameError)} aria-describedby={nameError ? 'project-name-error' : undefined}/>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="project-name">
+            Project name <span className="text-destructive">*</span>
+          </Label>
+          <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary" onClick={handleGenerateName} disabled={loading || isGenerating}>
+            {isGenerating ? (<LoaderCircle className="size-3.5 animate-spin"/>) : (<Sparkles className="size-3.5"/>)}
+            AI Generate
+          </Button>
+        </div>
+        <Input ref={nameInputRef} id="project-name" placeholder="e.g., Q1 Marketing Campaign" value={state.name} onChange={handleNameChange} disabled={loading || isGenerating} aria-invalid={Boolean(nameError)} aria-describedby={nameError ? 'project-name-error' : undefined}/>
         {nameError ? (<p id="project-name-error" className="text-xs text-destructive">
             {nameError}
           </p>) : null}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="project-description">
-          Description
-          <span className="ml-2 text-xs text-muted-foreground">({state.description.length}/2000)</span>
-        </Label>
-        <Textarea id="project-description" placeholder="Brief overview of the project goals and scope…" value={state.description} onChange={handleDescriptionChange} disabled={loading} rows={3} maxLength={2000}/>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="project-description">
+            Description
+            <span className="ml-2 text-xs text-muted-foreground">({state.description.length}/2000)</span>
+          </Label>
+          <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary" onClick={handleGenerateDescription} disabled={loading || isGenerating}>
+            {isGenerating ? (<LoaderCircle className="size-3.5 animate-spin"/>) : (<Sparkles className="size-3.5"/>)}
+            AI Generate
+          </Button>
+        </div>
+        <Textarea id="project-description" placeholder="Brief overview of the project goals and scope…" value={state.description} onChange={handleDescriptionChange} disabled={loading || isGenerating} rows={3} maxLength={2000}/>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
