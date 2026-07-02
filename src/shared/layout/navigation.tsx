@@ -315,12 +315,12 @@ export function Header() {
                   <Menu className="size-5"/>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-70 p-0">
+              <SheetContent side="left" className="w-72 p-0">
                 <SheetHeader className="border-b px-4 py-3 text-left">
                   <SheetTitle className="text-base font-semibold">Workspace</SheetTitle>
                   <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{accent.shellCaption}</p>
                 </SheetHeader>
-                <div className="p-4">
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                   <NavigationList onNavigate={handleNavigate}/>
                   <Button variant="ghost" className="mt-6 w-full justify-start gap-2 text-sm font-medium" onClick={handleSignOut}>
                     <LogOut className="size-4 shrink-0"/>
