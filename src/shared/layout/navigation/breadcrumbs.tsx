@@ -79,7 +79,7 @@ export function NavigationBreadcrumbs() {
       <div className="md:hidden">
         <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" size="sm" className="h-8 px-2" aria-label="Open breadcrumb trail">
+            <Button type="button" variant="ghost" size="sm" className="min-h-11 px-2" aria-label="Open breadcrumb trail">
               <div className="flex items-center gap-1">
                 {items[items.length - 2]?.icon && (() => {
             const secondToLastItem = items[items.length - 2];

@@ -66,6 +66,17 @@ export function DashboardOverviewPerformanceSection({ hasChartData, hasAdsData, 
             </FadeIn>) : null}
         </div>) : null}
 
+      {!hasChartData && !hasAdsData && !hasAnalyticsData && metricsLoading ? (<FadeIn>
+          <Card className="overflow-hidden border-muted/40 bg-card shadow-sm ring-1 ring-muted/20">
+            <CardContent className="flex h-[280px] flex-col items-center justify-center gap-3 text-center sm:h-[320px]">
+              <div className="size-10 animate-pulse rounded-lg bg-muted" aria-hidden/>
+              <div className="h-4 w-40 animate-pulse rounded bg-muted" aria-hidden/>
+              <div className="h-3 w-56 animate-pulse rounded bg-muted" aria-hidden/>
+              <p className="text-xs text-muted-foreground">Loading performance metrics…</p>
+            </CardContent>
+          </Card>
+        </FadeIn>) : null}
+
       {!hasChartData && !hasAdsData && !hasAnalyticsData && !metricsLoading ? (<FadeIn>
           <DashboardEmptyPerformanceCard />
         </FadeIn>) : null}
