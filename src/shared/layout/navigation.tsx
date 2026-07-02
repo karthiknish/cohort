@@ -9,7 +9,7 @@ import { getPreviewSettingsProfile } from '@/lib/preview-data';
 import { navItemsForRole } from '@/lib/access-control/dashboard-access';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { usePreview } from '@/shared/contexts/preview-context';
-import { Settings, LogOut, Menu, ChevronLeft, ChevronRight, Shield, Rocket, AlertCircle, Keyboard, } from 'lucide-react';
+import { Settings, LogOut, Menu, ChevronLeft, ChevronRight, Shield, Rocket, AlertCircle, Keyboard, MoreHorizontal, } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { ProfileDropdown } from '@/shared/layout/profile-dropdown';
 import { useOnboardingTour } from '@/shared/hooks/use-onboarding-tour';
@@ -29,6 +29,7 @@ import { notifyFailure } from '@/lib/notifications';
 import { KeyboardShortcutsOverlay } from '@/shared/layout/navigation/keyboard-shortcuts-overlay';
 import { getShortcutsForRole } from '@/shared/layout/navigation/keyboard-shortcuts';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, } from '@/shared/ui/dropdown-menu';
 type NavItem = {
     name: string;
     href: string;
@@ -348,6 +349,29 @@ export function Header() {
               <CommandMenuDynamic onOpenHelp={handleOpenHelp} onOpenShortcuts={handleOpenShortcuts}/>
             </div>
 
+            {/* Mobile overflow menu - groups utility buttons on small screens */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="shrink-0 sm:hidden" aria-label="More actions">
+                  <MoreHorizontal className="size-5"/>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={handleOpenShortcuts}>
+                  <Keyboard className="size-4 mr-2"/>
+                  <span>Keyboard shortcuts</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleOpenProblemReport}>
+                  <AlertCircle className="size-4 mr-2"/>
+                  <span>Report a problem</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleShowOnboarding}>
+                  <Rocket className="size-4 mr-2"/>
+                  <span>Onboarding tour</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -378,7 +402,7 @@ export function Header() {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button id="tour-help-trigger" variant="ghost" size="icon" onClick={handleShowOnboarding} className="inline-flex" aria-label="Show onboarding tour">
+                  <Button id="tour-help-trigger" variant="ghost" size="icon" onClick={handleShowOnboarding} className="hidden sm:inline-flex" aria-label="Show onboarding tour">
                     <Rocket className="size-4"/>
                   </Button>
                 </TooltipTrigger>
