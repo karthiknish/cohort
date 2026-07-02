@@ -223,7 +223,70 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
       <CardContent className="space-y-4">
         <AdminQueryErrorAlert error={workspaceQueryError} title="Unable to load workspace data"/>
         <AdminActionErrorAlert error={actionError} onDismiss={clearActionError}/>
-        <div className="overflow-x-auto rounded-md border border-muted/40">
+
+        {/* Mobile card layout */}
+        <div className="space-y-3 lg:hidden">
+          {filteredUsers.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              {loading ? 'Loading team…' : workspaceQueryError && internalUsers.length === 0 ? workspaceQueryError : !loading && internalUsers.length === 0 ? (
+                <span className="inline-flex flex-col items-center gap-3">
+                  <span>No internal teammates in this workspace yet.</span>
+                  <Button type="button" size="sm" variant="outline" onClick={onOpenInviteDialog}>
+                    <UserPlus className="mr-2 size-4"/>
+                    Invite teammate
+                  </Button>
+                </span>
+              ) : hasActiveFilters ? (
+                <span className="inline-flex flex-col items-center gap-3">
+                  <span>No teammates match current search or filters.</span>
+                  <Button type="button" size="sm" variant="outline" onClick={onClearFilters}>
+                    Clear filters
+                  </Button>
+                </span>
+              ) : 'No teammates match the current filters.'}
+            </div>
+          ) : filteredUsers.map((record) => {
+            const allocation = allocationSummary.byUserId[record.id] ?? { managedClientNames: [], supportingClientNames: [], totalClientNames: [] };
+            return (
+              <div key={record.id} className="rounded-lg border border-muted/40 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-foreground">{record.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">{record.email || 'No email on file'}</div>
+                    {record.agencyId && <div className="text-xs text-muted-foreground">Agency: {record.agencyId}</div>}
+                  </div>
+                  <Badge variant={statusToVariant(record.status)} className="capitalize shrink-0">
+                    {record.status.replace(/_/g, ' ')}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select value={record.role} onValueChange={createRoleChangeHandler(record.id)} disabled={savingId === record.id}>
+                    <SelectTrigger className="h-9 flex-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {ROLE_OPTIONS.map((role) => (<SelectItem key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                  <span className="flex h-9 items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                    <Checkbox checked={record.role === 'admin'} onChange={createAdminToggleHandler(record)} disabled={savingId === record.id} aria-label={`Toggle admin role for ${record.name}`}/>
+                    Admin
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <div><span className="font-medium text-foreground/70">Joined:</span> {formatDate(record.createdAt)}</div>
+                  <div><span className="font-medium text-foreground/70">Last active:</span> {formatDate(record.lastLoginAt)}</div>
+                  <div className="col-span-2"><span className="font-medium text-foreground/70">Clients:</span> {allocation.totalClientNames.length > 0 ? `${allocation.totalClientNames.length} (Owner ${allocation.managedClientNames.length} · Support ${allocation.supportingClientNames.length})` : 'Unassigned'}</div>
+                </div>
+                <Button type="button" variant={record.status === 'active' ? 'destructive' : 'outline'} size="sm" onClick={createStatusActionHandler(record)} disabled={savingId === record.id} className="w-full inline-flex items-center justify-center gap-2">
+                  {savingId === record.id ? <LoaderCircle className="size-4 animate-spin"/> : <ActionIcon status={record.status}/>}
+                  {statusActionLabel(record.status)}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop table layout */}
+        <div className="hidden overflow-x-auto rounded-md border border-muted/40 lg:block">
           <table className="min-w-full table-fixed text-left text-sm">
             <caption className="sr-only">Team members, roles, and client allocation</caption>
             <thead>

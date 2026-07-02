@@ -94,6 +94,55 @@ function UserRow({ record, savingId, onRoleChange, onApprovalToggle, onViewDetai
       </td>
     </tr>);
 }
+function UserCard({ record, savingId, onRoleChange, onApprovalToggle, onViewDetails, onRevokeAccess, }: {
+    record: AdminUserRecord;
+    savingId: string | null;
+    onRoleChange: (record: AdminUserRecord, role: AdminUserRole) => void;
+    onApprovalToggle: (record: AdminUserRecord, approved: boolean) => void;
+    onViewDetails: (user: AdminUserRecord) => void;
+    onRevokeAccess: (user: AdminUserRecord) => void;
+}) {
+    const handleRoleChange = (value: string) => onRoleChange(record, value as AdminUserRole);
+    const handleApprovalToggle = (checked: boolean | 'indeterminate') => onApprovalToggle(record, checked === true);
+    const handleViewDetails = () => onViewDetails(record);
+    const handleRevokeAccess = () => onRevokeAccess(record);
+    return (
+        <div className="rounded-lg border border-muted/40 p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                    <div className="font-medium text-foreground">{record.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">{record.email}</div>
+                </div>
+                <Badge variant={record.status === 'active' ? 'default' : 'secondary'} className="shrink-0 capitalize">
+                    {record.status}
+                </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+                <Select value={record.role} onValueChange={handleRoleChange} disabled={savingId === record.id}>
+                    <SelectTrigger className="h-9 flex-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                        {ROLE_ASSIGNABLE.map((role) => (<SelectItem key={role} value={role}>{roleLabel(role)}</SelectItem>))}
+                    </SelectContent>
+                </Select>
+                <span className="flex h-9 items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                    <Checkbox checked={record.status === 'active'} onCheckedChange={handleApprovalToggle} disabled={savingId === record.id} aria-label={`Toggle approval for ${record.name}`}/>
+                    Active
+                </span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+                Last active: {record.lastLoginAt ? formatRelativeTime(record.lastLoginAt) : 'Never'}
+            </div>
+            <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={handleViewDetails} className="flex-1">
+                    View details
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={handleRevokeAccess} className="text-destructive hover:text-destructive">
+                    <Trash2 className="size-4"/>
+                </Button>
+            </div>
+        </div>
+    );
+}
 function InvitationRow({ invitation, invitationActionKey, onResend, onRevoke, }: {
     invitation: AdminInvitationRecord;
     invitationActionKey: string | null;
@@ -144,6 +193,45 @@ function InvitationRow({ invitation, invitationActionKey, onResend, onRevoke, }:
         </div>
       </td>
     </tr>);
+}
+function InvitationCard({ invitation, invitationActionKey, onResend, onRevoke, }: {
+    invitation: AdminInvitationRecord;
+    invitationActionKey: string | null;
+    onResend: (invitation: AdminInvitationRecord) => void;
+    onRevoke: (invitation: AdminInvitationRecord) => void;
+}) {
+    const isLoading = invitationActionKey === invitation.id;
+    const handleResend = () => onResend(invitation);
+    const handleRevoke = () => onRevoke(invitation);
+    return (
+        <div className="rounded-lg border border-muted/40 p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                    <div className="font-medium text-foreground">{invitation.name || invitation.email}</div>
+                    {invitation.name && <div className="text-xs text-muted-foreground truncate">{invitation.email}</div>}
+                </div>
+                <Badge variant={invitation.effectiveStatus === 'accepted' ? 'default' : invitation.effectiveStatus === 'expired' ? 'destructive' : invitation.effectiveStatus === 'revoked' ? 'secondary' : 'outline'} className="shrink-0 capitalize">
+                    {invitation.effectiveStatus}
+                </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+                <Badge variant="outline" className="capitalize">{invitation.role}</Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <div><span className="font-medium text-foreground/70">Sent:</span> {formatRelativeTime(invitation.createdAtMs)}</div>
+                <div><span className="font-medium text-foreground/70">Expires:</span> {formatRelativeTime(invitation.expiresAtMs)}</div>
+                <div className="col-span-2"><span className="font-medium text-foreground/70">Invited by:</span> {invitation.invitedByName || invitation.invitedBy}</div>
+            </div>
+            {(invitation.effectiveStatus === 'pending' || invitation.effectiveStatus === 'expired') && (
+                <div className="flex gap-2">
+                    {invitation.effectiveStatus === 'pending' && (
+                        <Button variant="outline" size="sm" onClick={handleResend} disabled={isLoading} className="flex-1">Resend</Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={handleRevoke} disabled={isLoading} className="text-destructive hover:text-destructive flex-1">Revoke</Button>
+                </div>
+            )}
+        </div>
+    );
 }
 type AdminUsersSummaryCardsProps = {
     summary: {
@@ -257,7 +345,20 @@ export function AdminUsersDirectorySection({ loading, listQueryError, actionErro
       <CardContent className="space-y-4">
         <AdminQueryErrorAlert error={listQueryError} title="Unable to load workspace data"/>
         <AdminActionErrorAlert error={actionError} onDismiss={clearActionError}/>
-        <div className="overflow-x-auto rounded-md border border-muted/40">
+
+        {/* Mobile card layout */}
+        <div className="space-y-3 lg:hidden">
+          {filteredUsers.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              {loading ? 'Loading users…' : listQueryError ? listQueryError : 'No users match the current filters.'}
+            </div>
+          ) : filteredUsers.map((record) => (
+            <UserCard key={record.id} record={record} savingId={savingId} onRoleChange={onRoleChange} onApprovalToggle={onApprovalToggle} onViewDetails={onViewDetails} onRevokeAccess={onRevokeAccess}/>
+          ))}
+        </div>
+
+        {/* Desktop table layout */}
+        <div className="hidden overflow-x-auto rounded-md border border-muted/40 lg:block">
           <table className="min-w-full table-fixed text-left text-sm">
             <caption className="sr-only">Workspace users, roles, and approval status</caption>
             <thead>
@@ -325,7 +426,19 @@ export function AdminUsersInvitationsSection({ invitationSearchTerm, invitationS
           </TabsList>
         </Tabs>
 
-        <div className="overflow-x-auto rounded-md border border-muted/40">
+        {/* Mobile card layout */}
+        <div className="space-y-3 lg:hidden">
+          {filteredInvitations.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              {invitationsLoading ? 'Loading invitation lifecycle…' : 'No invitations match this lifecycle status and search.'}
+            </div>
+          ) : filteredInvitations.map((invitation) => (
+            <InvitationCard key={invitation.id} invitation={invitation} invitationActionKey={invitationActionKey} onResend={onResend} onRevoke={onRevoke}/>
+          ))}
+        </div>
+
+        {/* Desktop table layout */}
+        <div className="hidden overflow-x-auto rounded-md border border-muted/40 lg:block">
           <table className="min-w-full table-fixed text-left text-sm">
             <caption className="sr-only">Invitation lifecycle by status</caption>
             <thead>
