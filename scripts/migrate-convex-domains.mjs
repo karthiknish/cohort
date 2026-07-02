@@ -117,7 +117,7 @@ const DOMAIN_FILES = {
     'clientAdminTeamSync.ts',
     'clientAdminTeamSync.test.ts',
     'debug.ts',
-    'geminiRateLimit.ts',
+    'deepseekRateLimit.ts',
     'health.ts',
     'httpActions.ts',
     'onboardingStates.ts',

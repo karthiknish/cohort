@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { BadRequestError, ForbiddenError, UnauthorizedError } from '@/lib/api-errors'
 import { buildDeepSeekRateLimitKey, formatDeepSeekRateLimitMessage, DEEPSEEK_RATE_LIMITS } from '@/lib/deepseekRateLimits'
 import { getMeetingRecord, saveMeetingNotes, saveMeetingTranscript, setMeetingProcessingState, updateMeetingRecord } from '@/lib/meetings-admin'
-import { generateConciseMeetingNotes, normalizeNotesSummary } from '@/lib/meeting-notes-gemini'
+import { generateConciseMeetingNotes, normalizeNotesSummary } from '@/lib/meeting-notes-ai'
 import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
 
 const transcriptModeValues = ['save-transcript', 'save-transcript-and-generate-notes', 'save-notes', 'finalize-post-meeting'] as const

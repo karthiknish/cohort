@@ -89,14 +89,14 @@ function parseGeneratedCopyResponse(raw: string, providerId: GenerateCopyInput['
     return { headlines, captions }
   }
 
-  console.error('[creativesCopy:generateCopy] Failed to parse Gemini response', {
+  console.error('[creativesCopy:generateCopy] Failed to parse AI response', {
     providerId,
     hasJsonCandidate: Boolean(jsonCandidate),
     rawPreview: raw.slice(0, 500),
     error: lastError,
   })
 
-  throw Errors.integration.error('gemini', 'Generated copy response was not valid JSON', {
+  throw Errors.integration.error('deepseek', 'Generated copy response was not valid JSON', {
     providerId,
     hasJsonCandidate: Boolean(jsonCandidate),
   })
@@ -209,7 +209,7 @@ function buildPrompt(input: GenerateCopyInput): string {
 
 /**
  * Generate creative copy (headlines and captions) using AI.
- * Powered by Gemini for ad copy generation.
+ * Powered by AI for ad copy generation.
  */
 export const generateCopy = action({
   args: {

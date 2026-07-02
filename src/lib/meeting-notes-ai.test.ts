@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildMeetingNotesUserPrompt, buildTranscriptExcerptForNotes, MAX_TRANSCRIPT_CHARS_FOR_NOTES, MEETING_NOTES_REQUIRED_HEADINGS, validateAndNormalizeMeetingNotes, } from './meeting-notes-gemini';
+import { buildMeetingNotesUserPrompt, buildTranscriptExcerptForNotes, MAX_TRANSCRIPT_CHARS_FOR_NOTES, MEETING_NOTES_REQUIRED_HEADINGS, validateAndNormalizeMeetingNotes, } from './meeting-notes-ai';
 function validNotes(): string {
     return MEETING_NOTES_REQUIRED_HEADINGS.map((heading) => `${heading}\n- Example point`).join('\n\n');
 }
-describe('meeting-notes-gemini', () => {
+describe('meeting-notes-ai', () => {
     it('truncates long transcripts for note generation', () => {
         const transcript = 'a'.repeat(MAX_TRANSCRIPT_CHARS_FOR_NOTES + 500);
         const excerpt = buildTranscriptExcerptForNotes(transcript);

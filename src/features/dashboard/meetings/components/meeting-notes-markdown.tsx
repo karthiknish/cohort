@@ -1,7 +1,7 @@
 'use client';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import { cn } from '@/lib/utils';
-import { stripMarkdownFence } from '@/lib/meeting-notes-gemini';
+import { stripMarkdownFence } from '@/lib/meeting-notes-ai';
 const meetingNotesMarkdownComponents: Components = {
     h2: ({ children }) => (<h3 className="mt-4 text-sm font-semibold tracking-tight text-foreground first:mt-0">{children}</h3>),
     ul: ({ children }) => <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-foreground">{children}</ul>,

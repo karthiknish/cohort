@@ -56,7 +56,7 @@ export {
   agentRequestContext,
   fallbackTitleFromMessage,
   generateConversationTitle,
-  parseGeminiResponse,
+  parseAIResponse,
   requireIdentity,
   SYSTEM_PROMPT,
 } from './prompting'

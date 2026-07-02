@@ -447,7 +447,7 @@ export function getPreviewAdminHealthData(): PreviewAdminHealthData {
                 status: 'ok',
                 responseTime: 24,
             },
-            gemini: {
+            deepseek: {
                 status: 'warning',
                 message: 'Preview mode is using simulated AI responses for demos.',
                 responseTime: 88,

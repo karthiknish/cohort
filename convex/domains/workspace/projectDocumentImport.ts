@@ -144,7 +144,7 @@ Document file${args.fileNames.length === 1 ? '' : 's'}:
 ${fileList}${supplementalBlock}`
 }
 
-async function loadVisualGeminiParts(
+async function loadVisualDocumentParts(
   ctx: Parameters<typeof loadStoredObjectBlob>[0],
   documents: Array<{ fileName: string; mimeType: string; storageId: string }>,
 ): Promise<DeepSeekRequestPart[]> {
@@ -335,7 +335,7 @@ export const extractProjectsFromDocument = action({
           clients,
           supplementalText: hasText ? extractedText : null,
         })
-        const visualParts = await loadVisualGeminiParts(ctx, visualDocuments)
+        const visualParts = await loadVisualDocumentParts(ctx, visualDocuments)
         raw = await deepseekAI.generateContentWithParts([{ text: prompt }, ...visualParts])
       } else {
         const prompt = buildTextExtractionPrompt({

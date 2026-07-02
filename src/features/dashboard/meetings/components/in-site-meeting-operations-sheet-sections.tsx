@@ -51,7 +51,7 @@ export function MeetingOperationsCaptureCard({ canRecord, captureStatus, joinCon
         <p className="mt-3 text-sm text-muted-foreground">
           {captureStatus.supported
             ? recordingEnabled
-                ? 'Speech is transcribed locally, synced to the meeting record, and used for guarded Gemini notes.'
+                ? 'Speech is transcribed locally, synced to the meeting record, and used for guarded AI notes.'
                 : 'Start recording when the meeting begins so transcript capture and AI notes can run.'
             : 'Browser speech capture is unavailable in this browser. Transcript sync will stay idle until capture is available.'}
         </p>
@@ -181,7 +181,7 @@ export function MeetingOperationsAlerts({ captureError, notesProcessingError, no
 
       {notesReason === 'ai_not_configured' ? (<Alert>
           <AlertTitle>AI summary unavailable</AlertTitle>
-          <AlertDescription>Gemini is not configured for meeting notes in this environment.</AlertDescription>
+          <AlertDescription>AI is not configured for meeting notes in this environment.</AlertDescription>
         </Alert>) : null}
     </>);
 }
@@ -203,7 +203,7 @@ export function MeetingOperationsSummaryCard({ canGenerateNotes, generatingNotes
         return (<FadeIn y={12} className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
         <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">AI summary</p>
         <p className="mt-3 text-sm text-foreground">
-          Gemini is generating structured meeting notes from the saved transcript. This usually takes a few seconds.
+          AI is generating structured meeting notes from the saved transcript. This usually takes a few seconds.
         </p>
         <p className="mt-2 text-xs text-muted-foreground">
           Notes include Summary, Decisions, Action Items, and Risks / Blockers with factual guardrails applied.

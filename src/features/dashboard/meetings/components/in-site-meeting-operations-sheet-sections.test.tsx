@@ -35,7 +35,7 @@ describe('meeting operations sheet sections', () => {
         <MeetingOperationsCaptureCard canRecord captureStatus={captureStatus} joinConfig={joinConfig} onEnableRecording={vi.fn()} recordingEnabled={false} transcriptSource="livekit"/>
         <MeetingOperationsAttendeesCard meetingAttendeeEmails={['alex@example.com', 'sam@example.com']}/>
         <MeetingOperationsAutomationCard autoSyncing={true} finalizingSession={false} joinConfig={joinConfig} markCompleted={true} notesProcessingState="processing" retryingPostCallProcessing={false} transcriptProcessingState="idle"/>
-        <MeetingOperationsSyncCards notesModel="gemini-2.5" summaryStatus="Generating summary now" transcriptLength={120} transcriptProcessingState="processing" transcriptSource="livekit" transcriptStatus="Finalizing transcript now" transcriptTruncatedForNotes={true}/>
+        <MeetingOperationsSyncCards notesModel="deepseek-chat" summaryStatus="Generating summary now" transcriptLength={120} transcriptProcessingState="processing" transcriptSource="livekit" transcriptStatus="Finalizing transcript now" transcriptTruncatedForNotes={true}/>
         <MeetingAutomationPipeline captureListening={true} finalizingSession={false} hasTranscriptSaved={true} inRoom={true} notesProcessingState="processing" summaryReady={false} transcriptProcessingState="idle"/>
       </>);
         expect(markup).toContain('Room sidebar');
@@ -51,7 +51,7 @@ describe('meeting operations sheet sections', () => {
     });
     it('renders alerts, summary states, and live capture', () => {
         const markup = renderToStaticMarkup(<>
-        <MeetingOperationsAlerts captureError="Microphone unavailable" notesProcessingError="Gemini request failed" notesReason="generation_failed" canGenerateNotes={true} canRetryPostCallProcessing={true} generatingNotes={false} retryingPostCallProcessing={false} onGenerateNotes={vi.fn()} onRetryPostCallProcessing={vi.fn()} transcriptProcessingError="Transcript finalization failed"/>
+        <MeetingOperationsAlerts captureError="Microphone unavailable" notesProcessingError="AI request failed" notesReason="generation_failed" canGenerateNotes={true} canRetryPostCallProcessing={true} generatingNotes={false} retryingPostCallProcessing={false} onGenerateNotes={vi.fn()} onRetryPostCallProcessing={vi.fn()} transcriptProcessingError="Transcript finalization failed"/>
         <MeetingOperationsSummaryCard canGenerateNotes={true} generatingNotes={false} legacyId="meeting-1" meetingTitle="Weekly sync" notesProcessingState="idle" onGenerateNotes={vi.fn()} postCallProcessingActive={true} summaryPreview={null} transcriptLength={42}/>
         <MeetingOperationsSummaryCard canGenerateNotes={true} generatingNotes={false} legacyId="meeting-1" meetingTitle="Weekly sync" notesProcessingState="idle" onGenerateNotes={vi.fn()} postCallProcessingActive={false} summaryPreview={'## Summary\n- Discussed scope\n\n## Decisions\n- Ship next week\n\n## Action Items\n- Draft plan\n\n## Risks / Blockers\n- None noted.'} transcriptLength={42} transcriptText="Discussed scope and timeline for the launch."/>
         <MeetingOperationsLiveCapturePreview interimTranscript="Discussing scope and timeline"/>

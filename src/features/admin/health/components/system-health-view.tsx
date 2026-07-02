@@ -23,7 +23,7 @@ const SERVICE_META: Record<string, {
 }> = {
     convex: { label: 'Convex', description: 'Realtime database and backend functions' },
     betterauth: { label: 'Better Auth', description: 'Authentication and session plumbing' },
-    deepseek: { label: 'DeepSeek', description: 'AI summaries and admin intelligence' },
+    deepseek: { label: 'AI Service', description: 'AI summaries and admin intelligence' },
     posthog: { label: 'PostHog', description: 'Product analytics and event tracking' },
     brevo: { label: 'Brevo', description: 'Transactional email delivery' },
     googleads: { label: 'Google Ads', description: 'Ads OAuth and sync configuration' },

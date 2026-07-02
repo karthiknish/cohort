@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { normalizeNotesSummary, stripMarkdownFence } from '@/lib/meeting-notes-gemini';
+import { normalizeNotesSummary, stripMarkdownFence } from '@/lib/meeting-notes-ai';
 const PAGE_MARGIN_PT = 54;
 const HEADING_FONT_SIZE = 13;
 const BODY_FONT_SIZE = 11;

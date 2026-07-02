@@ -162,7 +162,7 @@ export function useInSiteMeetingRoomPostCall({ meetingLegacyId, markCompleted, n
             else if (result.notesReason === 'ai_not_configured') {
                 notifyFailure({
                     title: 'AI notes unavailable',
-                    message: 'Gemini is not configured for meeting note generation in this environment.',
+                    message: 'AI is not configured for meeting note generation in this environment.',
                 });
             }
             else if (result.notesReason === 'generation_failed') {

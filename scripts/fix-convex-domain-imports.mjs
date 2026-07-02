@@ -24,7 +24,7 @@ const CONVEX_ROOT_TARGETS = new Set([
  * local subfolders (e.g. `tasks/` under `domains/workspace/`).
  */
 const ROOT_SHIM_IMPORTS = new Set([
-  'geminiRateLimit',
+  'deepseekRateLimit',
   'notificationTargeting',
   'clientAdminTeamSync',
   'taskDocumentImportParsing',

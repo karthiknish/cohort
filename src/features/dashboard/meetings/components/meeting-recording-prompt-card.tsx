@@ -32,7 +32,7 @@ export function MeetingRecordingPromptCard({ canRecord, captureError, captureSup
                   <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Record this meeting</p>
                   <p className="text-sm text-foreground">
                     Start transcript capture when you are ready. Cohorts listens locally in your browser, saves the transcript,
-                    then generates Gemini meeting notes with guardrails after enough conversation is captured.
+                    then generates AI meeting notes with guardrails after enough conversation is captured.
                   </p>
                   <div className="flex items-start gap-2 text-xs text-muted-foreground">
                     <ShieldCheck className="mt-0.5 size-3.5 shrink-0"/>

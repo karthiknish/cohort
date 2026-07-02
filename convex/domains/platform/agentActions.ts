@@ -9,7 +9,7 @@ import {
   formatConversationHistory,
   generateConversationTitle,
   normalizeOperationName,
-  parseGeminiResponse,
+  parseAIResponse,
   requireIdentity,
   resolveDeterministicAgentIntent,
 } from './agentActions/helpers'
@@ -111,15 +111,15 @@ export const sendMessage = action({
               message: 'I’ll gather the proposal details with you here.',
             }
           : resolveDeterministicAgentIntent(args.message, args.context)
-      const geminiRequestCount = (isNewConversation ? 1 : 0) + (deterministicIntent ? 0 : 1)
+      const aiRequestCount = (isNewConversation ? 1 : 0) + (deterministicIntent ? 0 : 1)
 
-      if (geminiRequestCount > 0) {
+      if (aiRequestCount > 0) {
         await enforceDeepSeekActionRateLimit(ctx, {
           name: 'agentMessage',
           userId,
           workspaceId: args.workspaceId,
           resourceId: convId,
-          count: geminiRequestCount,
+          count: aiRequestCount,
         })
       }
 
@@ -241,7 +241,7 @@ export const sendMessage = action({
         confirmation = executeTurn.confirmation
       } else {
         const raw = await deepseekAI.generateContent(prompt)
-        const parsed = parseGeminiResponse(raw)
+        const parsed = parseAIResponse(raw)
 
         agentAction = parsed.action || 'chat'
         agentRoute = parsed.route || null

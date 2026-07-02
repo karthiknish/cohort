@@ -45,7 +45,7 @@ A comprehensive Next.js application for marketing agencies to manage clients, tr
 - Meeting summary generation
 - Sentiment analysis on communications
 
-### Gemini AI Integration
+### AI Integration
 - Analyze ad data and generate performance summaries
 - Predictive recommendations for budget optimization
 - Automated insights and weak KPI identification
@@ -61,7 +61,7 @@ A comprehensive Next.js application for marketing agencies to manage clients, tr
 - **Styling**: Tailwind CSS
 - **Charts**: Recharts
 - **UI**: Radix UI + shared design system under `src/shared/ui`
-- **AI**: Google Gemini API
+- **AI**: DeepSeek API
 - **PDF / decks**: jsPDF, Gamma integration
 
 See [docs/engineering-guardrails.md](docs/engineering-guardrails.md) for CI commands and [docs/convex-architecture.md](docs/convex-architecture.md) for backend layout.

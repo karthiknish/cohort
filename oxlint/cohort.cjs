@@ -20,7 +20,7 @@ const ALLOWED_DIRECT_UI_IMPORT_FILE_RE =
   /(?:^|[\\/])src[\\/]features[\\/]marketing[\\/]home[\\/]components[\\/]platform-brand-logos\.tsx$/;
 
 const RATE_LIMIT_CONFIG_FILE_RE =
-  /(?:^|[\\/])(?:src[\\/]lib[\\/](?:rate-limiter(?:-convex)?|geminiRateLimits)\.ts|convex[\\/](?:rateLimit|geminiRateLimit)\.ts)$/;
+  /(?:^|[\\/])(?:src[\\/]lib[\\/](?:rate-limiter(?:-convex)?|deepseekRateLimits)\.ts|convex[\\/](?:rateLimit|deepseekRateLimit)\.ts)$/;
 
 const RATE_LIMIT_CONFIG_PROPERTY_NAMES = new Set(["maxRequests", "windowMs"]);
 const FIXED_WINDOW_RATE_LIMIT_CONFIG_PROPERTY_NAMES = new Set(["kind", "rate", "period"]);

@@ -286,7 +286,7 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
         const content = await deepseekAI.generateContent(prompt)
         return { providerId: summary.providerId, summary: content }
       } catch (error) {
-        console.error('[analyticsInsights] gemini failed', error)
+        console.error('[analyticsInsights] AI request failed', error)
         return {
           providerId: summary.providerId,
           summary: isGoogleAnalyticsProvider(summary.providerId)

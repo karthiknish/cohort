@@ -140,7 +140,7 @@ export function MeetingRoomEmptyState({ inlineJoinError, hasJoinReference, }: {
           </div>
           <div className="rounded-2xl border border-border bg-muted/30 p-4">
             <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Auto transcript</p>
-            <p className="mt-2 text-sm text-foreground">Start recording when the call begins. Cohorts transcribes speech, then generates guarded Gemini notes after enough context is captured.</p>
+            <p className="mt-2 text-sm text-foreground">Start recording when the call begins. Cohorts transcribes speech, then generates guarded AI notes after enough context is captured.</p>
           </div>
           <div className="rounded-2xl border border-border bg-muted/30 p-4">
             <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">PiP + mobile tray</p>

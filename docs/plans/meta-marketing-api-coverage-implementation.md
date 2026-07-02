@@ -33,7 +33,7 @@ Close the coverage audit in `docs/integrations/meta-marketing-api-coverage.md` f
 - Pixel, Business Manager, Ad Library, webhooks — extended APIs, `meta-advanced-tools-panel.tsx`, inbound webhook storage
 - Placement positions — `meta-placement-positions.ts`, audience controller draft + serialize
 - Context-aware Meta UI — `meta-campaign-ui.ts`, conditional panels on campaign/account
-- Meeting summary UX — consent, Gemini guardrails, recording prompt, markdown display
+- Meeting summary UX — consent, AI guardrails, recording prompt, markdown display
 
 ### Done (this session)
 

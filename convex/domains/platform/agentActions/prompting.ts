@@ -303,7 +303,7 @@ Title:`
   return safe.length > 60 ? `${safe.slice(0, 57)}...` : safe
 }
 
-function parseGeminiResponse(raw: string): ParsedAgentResponse {
+function parseAIResponse(raw: string): ParsedAgentResponse {
   const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
 
   try {
@@ -329,6 +329,6 @@ export {
   agentRequestContext,
   fallbackTitleFromMessage,
   generateConversationTitle,
-  parseGeminiResponse,
+  parseAIResponse,
   requireIdentity,
 }

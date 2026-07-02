@@ -183,7 +183,7 @@ function ClientAiSummaryCardBody({ selectedClient, summarySnapshot, summarySnaps
         </div>) : state.summary ? (<>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={state.summary.usedFallback ? 'outline' : 'secondary'}>
-              {state.summary.usedFallback ? 'Fallback summary' : 'Gemini summary'}
+              {state.summary.usedFallback ? 'Fallback summary' : 'AI summary'}
             </Badge>
             {state.summary.model ? <Badge variant="outline">{state.summary.model}</Badge> : null}
             {state.persistedSnapshotHash ? <Badge variant="outline">Saved summary</Badge> : null}
