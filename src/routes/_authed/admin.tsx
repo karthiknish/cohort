@@ -3,6 +3,7 @@ import { createServerFn } from '@tanstack/react-start'
 import React from 'react'
 import { AdminError } from '@/shared/ui/route-boundaries/admin-error'
 import { AdminLoading } from '@/shared/ui/route-boundaries/admin-loading'
+import { MobileBottomNav } from '@/shared/layout/mobile-bottom-nav'
 import {
   Activity,
   AlertCircle,
@@ -157,11 +158,12 @@ function AdminLayoutRoute() {
               <AdminNav />
               <AdminBreadcrumb />
             </div>
-            <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <div className="mx-auto w-full max-w-7xl px-4 py-6 pb-[calc(3.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pb-6">
               <Outlet />
             </div>
           </main>
           <AgentModeDynamic />
+          <MobileBottomNav />
         </div>
       </WorkspaceProviders>
     </ProtectedRoute>

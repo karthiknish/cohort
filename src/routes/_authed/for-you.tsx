@@ -6,6 +6,7 @@ import { PreviewDataBanner } from '@/features/dashboard/home/components/preview-
 import { ForYouAgentMode } from '@/features/marketing/for-you/components/for-you-agent-mode'
 import { ForYouShell } from '@/features/marketing/for-you/components/for-you-shell'
 import { NetworkStatusBanner } from '@/shared/components/network-status-banner'
+import { MobileBottomNav } from '@/shared/layout/mobile-bottom-nav'
 import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
 import {
   isScreenRecordingAuthBypassEnabled,
@@ -53,12 +54,13 @@ function ForYouRoute() {
           <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
             <PreviewDataBanner />
             <ClientAccessGate>
-              <div className="pb-12 pt-6 sm:pt-8">
+              <div className="pb-[calc(3.5rem+env(safe-area-inset-bottom))] pt-6 sm:pb-12 sm:pt-8">
                 <ForYouPageClient />
               </div>
             </ClientAccessGate>
           </div>
           <ForYouAgentMode />
+          <MobileBottomNav />
         </div>
       </WorkspaceProviders>
     </ProtectedRoute>

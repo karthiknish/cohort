@@ -1,4 +1,5 @@
 import { Sidebar, Header } from '@/shared/layout/navigation'
+import { MobileBottomNav } from '@/shared/layout/mobile-bottom-nav'
 import { ProtectedRoute } from '@/shared/components/protected-route'
 import { NavigationBreadcrumbs } from '@/shared/layout/navigation/breadcrumbs'
 import { ScrollArea } from '@/shared/ui/scroll-area'
@@ -34,7 +35,7 @@ export function WorkspaceLayoutInner({
               <Header />
               <NetworkStatusBanner />
               <ScrollArea className="min-h-0 min-w-0 flex-1">
-                <div className="min-h-full overflow-x-hidden">
+                <div className="min-h-full overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
                   <DashboardMainRoleFrame>
                     <NavigationBreadcrumbs />
                     <PreviewDataBanner />
@@ -47,6 +48,7 @@ export function WorkspaceLayoutInner({
             </div>
           </div>
           <AgentModeDynamic />
+          <MobileBottomNav />
         </div>
       </WorkspaceProviders>
     </ProtectedRoute>
