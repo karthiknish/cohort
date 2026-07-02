@@ -74,7 +74,7 @@ function DialogContent({ className, children, ref, onOpenAutoFocus: _oaf, onClos
       <DialogPrimitive.Popup
         ref={ref}
         className={cn(
-          'focus-ring fixed left-1/2 top-1/2 z-[1100] grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border border-border bg-background p-6 shadow-lg sm:rounded-xl max-h-[85vh] overflow-y-auto',
+          'focus-ring fixed left-1/2 top-1/2 z-[1100] grid w-[calc(100%-1.5rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border border-border bg-background p-4 shadow-lg sm:w-full sm:rounded-xl sm:p-6 max-h-[85vh] overflow-y-auto',
           surfaceMotionClasses.modalContent,
           className,
         )}
