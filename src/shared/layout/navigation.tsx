@@ -311,7 +311,7 @@ export function Header() {
           <div className="lg:hidden">
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
-                <Button id="tour-mobile-nav" variant="ghost" size="icon" className="shrink-0" aria-label="Open navigation menu">
+                <Button id="tour-mobile-nav" variant="ghost" size="icon" className="shrink-0 min-h-11 min-w-11" aria-label="Open navigation menu">
                   <Menu className="size-5"/>
                 </Button>
               </SheetTrigger>
@@ -352,7 +352,7 @@ export function Header() {
             {/* Mobile overflow menu - groups utility buttons on small screens */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="shrink-0 sm:hidden" aria-label="More actions">
+                <Button variant="ghost" size="icon" className="shrink-0 min-h-11 min-w-11 sm:hidden" aria-label="More actions">
                   <MoreHorizontal className="size-5"/>
                 </Button>
               </DropdownMenuTrigger>
