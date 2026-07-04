@@ -20,6 +20,7 @@ import type { CollaborationAttachment, CollaborationMessage } from '@/types/coll
 import type { DirectConversation, DirectMessage } from '../../hooks/use-direct-messages';
 import { directMessageToCollaborationMessage } from '../../lib/direct-message-collaboration';
 import type { PendingAttachment, ReactionPendingState, SendMessageOptions, ThreadCursorsState, ThreadErrorsState, ThreadLoadingState, ThreadMessagesState } from '../../hooks/types';
+import { useChannelPresence } from '../../hooks/use-channel-presence';
 import type { Channel } from '../../types';
 import { buildCollaborationChannelShareUrl, buildCollaborationDmShareUrl, CHANNEL_TYPE_COLORS, CHAT_CONVERSATION_ROW_CLASS, CHAT_LIST_PREVIEW_CLASS, formatConversationSnippet, } from '../../utils';
 import { collaborationToUnifiedMessage } from '../message-list-utils';
@@ -49,11 +50,17 @@ export function DirectMessageConversationPane({ mentionParticipants, currentUser
         }
         return <EmptyMessagesState />;
     })();
+    const presenceMembers = useChannelPresence({
+        workspaceId: workspaceId ?? null,
+        userId: currentUserId,
+        conversationLegacyId: selectedDM.legacyId,
+    });
     const dmHeader = ({
         conversationKey: selectedDM.legacyId,
         name: selectedDM.otherParticipantName,
         type: 'dm' as const,
         role: selectedDM.otherParticipantRole,
+        presenceMembers,
         isArchived: selectedDM.isArchived,
         isMuted: selectedDM.isMuted,
         onArchive: onArchiveConversation,

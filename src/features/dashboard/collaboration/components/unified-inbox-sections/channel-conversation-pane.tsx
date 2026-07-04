@@ -20,6 +20,7 @@ import type { CollaborationAttachment, CollaborationMessage } from '@/types/coll
 import type { DirectConversation, DirectMessage } from '../../hooks/use-direct-messages';
 import { directMessageToCollaborationMessage } from '../../lib/direct-message-collaboration';
 import type { PendingAttachment, ReactionPendingState, SendMessageOptions, ThreadCursorsState, ThreadErrorsState, ThreadLoadingState, ThreadMessagesState } from '../../hooks/types';
+import { useChannelPresence } from '../../hooks/use-channel-presence';
 import type { Channel } from '../../types';
 import { buildCollaborationChannelShareUrl, buildCollaborationDmShareUrl, CHANNEL_TYPE_COLORS, CHAT_CONVERSATION_ROW_CLASS, CHAT_LIST_PREVIEW_CLASS, formatConversationSnippet, } from '../../utils';
 import { collaborationToUnifiedMessage } from '../message-list-utils';
@@ -100,6 +101,11 @@ function ChannelConversationPaneInner({ listState, searchState, composerState, c
         !isCurrentChannelLoading &&
         !searchingMessages &&
         !hasRequestedDeepLinkTarget(channelMessages, threadMessagesByRootId, deepLinkMessageId, deepLinkThreadId);
+    const presenceMembers = useChannelPresence({
+        workspaceId: workspaceId ?? null,
+        userId: currentUserId,
+        selectedChannel,
+    });
     const channelHeader = ({
         conversationKey: selectedChannel.id,
         name: selectedChannel.name,
@@ -107,6 +113,7 @@ function ChannelConversationPaneInner({ listState, searchState, composerState, c
         channelKind: selectedChannel.type,
         participantCount: channelParticipants.length,
         messageCount: channelMessages.length,
+        presenceMembers,
         onExport: onExportChannel,
         buildShareableUrl: () => buildCollaborationChannelShareUrl(selectedChannel),
         channelUnreadCount,

@@ -5,6 +5,8 @@ export type { RealtimeChannelSnapshot } from './use-realtime';
 export { useMessageActions } from './use-message-actions';
 export { useSendMessage, useFetchMessages } from './use-messages';
 export { useTyping } from './use-typing';
+export { useChannelPresence, buildPresenceRoomId } from './use-channel-presence';
+export type { ChannelPresenceMember } from './use-channel-presence';
 export { useAttachments } from './use-attachments';
 export { useThreads } from './use-threads';
 // Export types

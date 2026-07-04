@@ -232,6 +232,12 @@ export const collaborationApi = {
     generateUploadUrl: looseApi.r2.generateUploadUrl,
     syncMetadata: looseApi.r2.syncMetadata,
 };
+export const presenceApi = {
+    heartbeat: looseApi.presence.heartbeat,
+    list: looseApi.presence.list,
+    disconnect: looseApi.presence.disconnect,
+    updateRoomUser: looseApi.presence.updateRoomUser,
+};
 export const collaborationChannelsApi = {
     listAccessible: looseApi.collaborationChannels.listAccessible,
     create: looseApi.collaborationChannels.create,

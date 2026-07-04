@@ -2,6 +2,7 @@
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration';
 import type { ClientTeamMember } from '@/types/clients';
 import type { Channel } from '../types';
+import type { ChannelPresenceMember } from '../hooks/use-channel-presence';
 export type ChannelInfoHeaderConfig = {
     channel: Channel;
     channelMessages: CollaborationMessage[];
@@ -40,4 +41,7 @@ export interface MessagePaneHeaderInfo {
     onBack?: () => void;
     /** Opens channel info modal with roster and asset library (channels only). */
     channelInfo?: ChannelInfoHeaderConfig;
+    /** Live presence members for the conversation (online users). `undefined`
+     *  while loading, `null` when presence is disabled, or an array once loaded. */
+    presenceMembers?: ChannelPresenceMember[] | null;
 }

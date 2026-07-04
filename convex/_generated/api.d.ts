@@ -272,6 +272,7 @@ import type * as metaWebhookEvents from "../metaWebhookEvents.js";
 import type * as notificationTargeting from "../notificationTargeting.js";
 import type * as notifications from "../notifications.js";
 import type * as onboardingStates from "../onboardingStates.js";
+import type * as presence from "../presence.js";
 import type * as presentationDeck from "../presentationDeck.js";
 import type * as privacyMasks from "../privacyMasks.js";
 import type * as problemReports from "../problemReports.js";
@@ -581,6 +582,7 @@ declare const fullApi: ApiFromModules<{
   notificationTargeting: typeof notificationTargeting;
   notifications: typeof notifications;
   onboardingStates: typeof onboardingStates;
+  presence: typeof presence;
   presentationDeck: typeof presentationDeck;
   privacyMasks: typeof privacyMasks;
   problemReports: typeof problemReports;
@@ -650,4 +652,5 @@ export declare const components: {
   betterAuth: import("../betterAuth/_generated/component.js").ComponentApi<"betterAuth">;
   rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
   r2: import("@convex-dev/r2/_generated/component.js").ComponentApi<"r2">;
+  presence: import("@convex-dev/presence/_generated/component.js").ComponentApi<"presence">;
 };

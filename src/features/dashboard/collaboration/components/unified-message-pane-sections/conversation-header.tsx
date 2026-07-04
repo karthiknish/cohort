@@ -28,6 +28,7 @@ import { RichComposer } from '../rich-composer';
 import { ChannelAvatar } from '../channel-avatar';
 import { ChannelInfoDialog } from '../channel-info-dialog';
 import { PinMessageButton } from '../pinned-messages';
+import { ChannelPresenceList } from '../user-presence';
 import type { MessagePaneHeaderInfo } from '../unified-message-pane-types';
 function getInitials(name: string): string {
     return name
@@ -126,6 +127,13 @@ export function UnifiedConversationHeader({ header, canSearchMessages = false, m
                 </Badge>) : null}
             </div>
             {subtitleParts.length > 0 ? (<p className="text-xs text-muted-foreground">{subtitleParts.join(' · ')}</p>) : header.type === 'dm' ? (<p className="text-xs text-muted-foreground">Direct message</p>) : null}
+            {header.presenceMembers && header.presenceMembers.length > 0 ? (<ChannelPresenceList className="pt-0.5" members={header.presenceMembers.map((member) => ({
+                id: member.id,
+                name: member.name,
+                avatarUrl: member.avatarUrl,
+                role: member.role ?? undefined,
+                status: 'online',
+            }))} maxVisible={6}/>) : null}
           </div>
         </div>
 
