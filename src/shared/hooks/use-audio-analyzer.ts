@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useReducer } from 'react';
+import { logger } from '@/lib/logger';
 export interface UseAudioAnalyzerReturn {
     volume: number;
     frequencies: number[];
@@ -143,7 +144,7 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
                 updateVolume();
             }
             catch (err) {
-                console.error('Error accessing microphone:', err);
+                logger.error('Error accessing microphone', err);
                 dispatch({ type: 'error', message: 'Failed to access microphone for visualization' });
             }
         }

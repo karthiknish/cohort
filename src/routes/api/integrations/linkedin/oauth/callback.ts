@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { completeLinkedInOAuthFlow, validateLinkedInOAuthState } from '@/services/linkedin-oauth'
 import { isValidRedirectUrl } from '@/lib/utils'
 import { jsonResponse, redirectResponse } from '@/lib/server-response'
+import { logError, asErrorMessage } from '@/lib/convex-errors'
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -22,7 +23,7 @@ const handlers = adaptApiHandler(
     try {
       const { error, error_description: errorDescription, code, state } = query
       if (error) {
-        console.error('[linkedin.oauth.callback] OAuth error from LinkedIn:', { error, errorDescription })
+        logError(new Error(errorDescription || error || 'Unknown LinkedIn OAuth error'), '[linkedin.oauth.callback] OAuth error from LinkedIn')
         const errorUrl = new URL('/dashboard/ads', appUrl)
         errorUrl.searchParams.set('oauth_error', 'linkedin_error')
         errorUrl.searchParams.set('provider', 'linkedin')
@@ -40,7 +41,7 @@ const handlers = adaptApiHandler(
       try {
         context = validateLinkedInOAuthState(state ?? '')
       } catch (stateError) {
-        console.error('[linkedin.oauth.callback] State validation failed:', stateError)
+        logError(stateError, '[linkedin.oauth.callback] State validation failed')
         return redirectResponse(`${appUrl}/dashboard/ads?oauth_error=invalid_state&provider=linkedin`)
       }
       if (!context.state) {
@@ -58,8 +59,8 @@ const handlers = adaptApiHandler(
       }
       return redirectResponse(new URL(redirectTarget, req.url))
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      console.error('[linkedin.oauth.callback] Error completing OAuth flow:', { error: errorMessage, stack: error instanceof Error ? error.stack : undefined })
+      const errorMessage = asErrorMessage(error)
+      logError(error, '[linkedin.oauth.callback] Error completing OAuth flow')
       const errorUrl = new URL('/dashboard/ads', appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'linkedin')

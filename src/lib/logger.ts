@@ -1,8 +1,11 @@
 import { toISO } from './dates';
+import { logError, logWarning } from './convex-errors';
+
 type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 interface LogContext {
     [key: string]: unknown;
 }
+const isProduction = typeof process !== 'undefined' && process.env.NODE_ENV === 'production';
 class Logger {
     private static instance: Logger;
     private constructor() { }
@@ -26,16 +29,21 @@ class Logger {
         console.log(this.formatMessage('info', message, context));
     }
     warn(message: string, context?: LogContext) {
-        console.warn(this.formatMessage('warn', message, context));
+        logWarning(message, context);
     }
     error(message: string, error?: unknown, context?: LogContext) {
-        const errorContext = error instanceof Error
-            ? { ...context, error: error.message, stack: error.stack }
-            : { ...context, error: String(error) };
-        console.error(this.formatMessage('error', message, errorContext));
+        const resolvedError = error instanceof Error
+            ? error
+            : typeof error === 'string'
+                ? new Error(error)
+                : new Error(message);
+        const resolvedContext = error instanceof Error || typeof error === 'string' || error === undefined
+            ? context
+            : { ...context, ...(error as LogContext) };
+        logError(resolvedError, resolvedContext);
     }
     debug(message: string, context?: LogContext) {
-        if (process.env.NODE_ENV === 'development') {
+        if (!isProduction) {
             console.debug(this.formatMessage('debug', message, context));
         }
     }

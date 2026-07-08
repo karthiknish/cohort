@@ -3,7 +3,7 @@ import { notifyFailure } from '@/lib/notifications';
 import { useEffect, useEffectEvent, useReducer } from 'react';
 import { useAction } from 'convex/react';
 import { adsAdSetsApi, adsTargetingApi } from '@/lib/convex-api';
-import { logError } from '@/lib/convex-errors';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { useAuth } from '@/shared/contexts/auth-context';
 import type { LocationMarker } from '@/shared/ui/location-map';
 import { useGeocodeResolveBatch } from '@/shared/hooks/use-geocode';
@@ -83,7 +83,7 @@ export function useAudienceControlSection({ providerId, campaignId, clientId, is
             });
         })
             .catch((error) => {
-            const message = error instanceof Error ? error.message : 'Failed to load audience targeting';
+            const message = asErrorMessage(error, 'Failed to load audience targeting');
             if (message.includes('Unknown Meta API error') || message.includes('INTERNAL_ERROR')) {
                 logError(new Error(message), 'AudienceControl:fetchTargeting:suppressedMeta');
             }

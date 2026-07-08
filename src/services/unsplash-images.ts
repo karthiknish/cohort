@@ -14,6 +14,8 @@
  */
 
 import type { PexelsImage } from './pexels-images';
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
 
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY ?? '';
 const UNSPLASH_SECRET_KEY = process.env.UNSPLASH_SECRET_KEY ?? '';
@@ -58,7 +60,7 @@ const searchCache = new Map<string, PexelsImage[]>();
  */
 export async function searchUnsplashImages(query: string, perPage = 8): Promise<PexelsImage[]> {
     if (!UNSPLASH_ACCESS_KEY) {
-        console.warn('[Unsplash] No UNSPLASH_ACCESS_KEY set — skipping Unsplash search');
+        logger.warn('[Unsplash] No UNSPLASH_ACCESS_KEY set — skipping Unsplash search');
         return [];
     }
     if (searchCache.has(query)) {
@@ -80,7 +82,7 @@ export async function searchUnsplashImages(query: string, perPage = 8): Promise<
         });
 
         if (!resp.ok) {
-            console.warn(`[Unsplash] Search failed for "${query}": ${resp.status}`);
+            logger.warn(`[Unsplash] Search failed for "${query}"`, { status: resp.status });
             return [];
         }
 
@@ -115,14 +117,14 @@ export async function searchUnsplashImages(query: string, perPage = 8): Promise<
                     photographer: photo.user.name,
                 });
             } catch (err) {
-                console.warn(`[Unsplash] Failed to fetch image ${photo.id}:`, err);
+                logger.warn(`[Unsplash] Failed to fetch image ${photo.id}`, { error: asErrorMessage(err) });
             }
         }
 
         searchCache.set(query, images);
         return images;
     } catch (err) {
-        console.warn(`[Unsplash] Search error for "${query}":`, err);
+        logger.warn(`[Unsplash] Search error for "${query}"`, { error: asErrorMessage(err) });
         return [];
     }
 }

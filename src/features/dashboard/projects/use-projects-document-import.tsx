@@ -316,8 +316,22 @@ export function useProjectsDocumentImport({ workspaceId, ownerId, clients, prefe
         abortRef.current = true;
         resetImport();
     }, [resetImport]);
-    const handleConfirmReview = () => {
-        void createProjectsFromProposals(proposedProjects);
+    const handleConfirmReview = async () => {
+        try {
+            await createProjectsFromProposals(proposedProjects);
+        } catch (error) {
+            if (abortRef.current) return;
+            const message = asErrorMessage(error);
+            setErrorMessage(message);
+            setPhase('error');
+            setStatusMessage(null);
+            reportConvexFailure({
+                error,
+                context: 'useProjectsDocumentImport:handleConfirmReview',
+                title: 'Import failed',
+                fallbackMessage: message,
+            });
+        }
     };
     const updateProposedProject = (localId: string, patch: Partial<ProposedImportProject>) => {
         setProposedProjects((current) => current.map((project) => (project.localId === localId ? { ...project, ...patch } : project)));

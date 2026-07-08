@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
 import { isFeatureEnabled } from '@/lib/features';
 
 type NavigationState = {
@@ -62,7 +64,7 @@ function saveToStorage(state: NavigationState, selectedClientId: string | null):
     localStorage.setItem(getClientStorageKey(STORAGE_KEYS.LAST_VIEWED_TASK, selectedClientId), state.lastViewedTask ?? '');
     localStorage.setItem(getClientStorageKey(STORAGE_KEYS.LAST_VIEWED_CHANNEL, selectedClientId), state.lastViewedChannel ?? '');
   } catch (error) {
-    console.warn('[useNavigationContext] Failed to save:', error);
+    logger.warn('[useNavigationContext] Failed to save', { error: asErrorMessage(error) });
   }
 }
 
@@ -73,7 +75,7 @@ function clearStorage(selectedClientId: string | null): void {
       localStorage.removeItem(getClientStorageKey(baseKey, selectedClientId));
     });
   } catch (error) {
-    console.warn('[useNavigationContext] Failed to clear:', error);
+    logger.warn('[useNavigationContext] Failed to clear', { error: asErrorMessage(error) });
   }
 }
 

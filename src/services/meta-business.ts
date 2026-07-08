@@ -4,6 +4,7 @@ import { persistSocialIntegrationTokens } from '@/lib/social-admin';
 import { exchangeMetaCodeForToken, SOCIAL_META_SCOPES } from '@/services/facebook-oauth';
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils';
 import { logger } from '@/lib/logger';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { META_API_VERSION, META_OAUTH_TOKEN_ENDPOINT } from '@/services/integrations/meta-ads/constants';
 interface MetaOAuthContext {
     state: string;
@@ -97,8 +98,8 @@ export async function completeMetaOAuthFlow(options: {
         });
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : 'Token exchange failed';
-        logger.error('[Meta OAuth Flow] Code exchange failed', { userId, error: message });
+        const message = asErrorMessage(error);
+        logger.error('[Meta OAuth Flow] Code exchange failed', error, { userId });
         throw new MetaOAuthError(`Failed to exchange authorization code: ${message}`);
     }
     if (!tokenResponse.access_token) {
@@ -161,7 +162,7 @@ export async function completeMetaOAuthFlow(options: {
             return { accessToken: extended.access_token, expiresIn: extended.expires_in };
         }
         catch (exchangeError) {
-            const message = exchangeError instanceof Error ? exchangeError.message : 'Long-lived token exchange failed';
+            const message = asErrorMessage(exchangeError, 'Long-lived token exchange failed');
             const isRetryable = exchangeError instanceof MetaOAuthError
                 ? exchangeError.isRetryable
                 : true;

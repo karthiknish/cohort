@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { settingsApi } from '@/lib/convex-api';
 import { getPreviewSettingsProfile } from '@/lib/preview-data';
 import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { getAvatarInitials } from './utils';
 import { ProfileAvatarEditor } from './profile-card-avatar-editor';
 import { ProfileContactFields } from './profile-card-contact-fields';
@@ -79,11 +80,13 @@ export function ProfileCard() {
             notifySuccess({ title: 'Profile updated', message: 'Your changes were saved.' });
         })
             .catch((submitError) => {
-            const message = submitError instanceof Error ? submitError.message : 'Failed to update profile';
+            const message = asErrorMessage(submitError);
+            logError(submitError, 'profile-card:handleSubmit');
             dispatch({ type: 'setProfileError', value: message });
             notifyFailure({
+                error: submitError,
                 title: 'Profile update failed',
-                message,
+                fallbackMessage: 'Failed to update profile',
             });
         })
             .finally(() => {

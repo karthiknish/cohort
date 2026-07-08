@@ -1,6 +1,7 @@
 'use client';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Columns3, RefreshCw } from 'lucide-react';
+import { logError } from '@/lib/convex-errors';
 import { Button } from '@/shared/ui/button';
 
 type TaskBoardErrorBoundaryProps = {
@@ -25,7 +26,7 @@ export class TaskBoardErrorBoundary extends Component<TaskBoardErrorBoundaryProp
     }
 
     override componentDidCatch(error: Error, info: ErrorInfo) {
-        console.error('[TaskBoardErrorBoundary] Board view crashed:', error, info);
+        logError(error, 'TaskBoardErrorBoundary: Board view crashed');
     }
 
     handleRetry = () => {

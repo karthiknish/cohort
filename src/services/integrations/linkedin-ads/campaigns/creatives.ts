@@ -2,6 +2,8 @@
 // LINKEDIN ADS CAMPAIGNS - Creative and Metrics Operations
 // =============================================================================
 import { buildTimeRange, formatDate, normalizeCurrency, coerceNumber, } from '../client';
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
 import { linkedinAdsClient } from '@/services/integrations/shared/base-client';
 import type { LinkedInCreative, LinkedInCreativeMetric, } from '../types';
 // =============================================================================
@@ -36,7 +38,7 @@ export async function resolveLinkedInUrns(options: {
                 results[urn] = payload.downloadUrl;
         }
         catch (e) {
-            console.warn(`Failed to resolve video URN: ${urn}`, e);
+            logger.warn(`Failed to resolve video URN: ${urn}`, { error: asErrorMessage(e) });
         }
     };
     const resolveImageUrn = async (urn: string) => {
@@ -56,7 +58,7 @@ export async function resolveLinkedInUrns(options: {
                 results[urn] = payload.downloadUrl;
         }
         catch (e) {
-            console.warn(`Failed to resolve image URN: ${urn}`, e);
+            logger.warn(`Failed to resolve image URN: ${urn}`, { error: asErrorMessage(e) });
         }
     };
     await Promise.all([

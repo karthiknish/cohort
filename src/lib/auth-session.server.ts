@@ -8,6 +8,7 @@ import { getToken } from '@/lib/auth-server'
 import { decodeJwtSubject } from '@/lib/jwt-utils'
 import { getSystemConvexClient } from '@/lib/convex-system-client'
 import { internal } from '@convex/_generated/api'
+import { logError } from '@/lib/convex-errors'
 import type { FunctionReference } from 'convex/server'
 
 export async function hasValidSession(_request: Request): Promise<boolean> {
@@ -15,9 +16,7 @@ export async function hasValidSession(_request: Request): Promise<boolean> {
     const token = await getToken()
     return !!token
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('[auth-guard] session check error:', err)
-    }
+    logError(err, '[auth-guard] session check error')
     return false
   }
 }
@@ -45,9 +44,7 @@ export async function resolveUserStatus(): Promise<string | null> {
     if (!result) return null
     return result.status
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('[auth-guard] status resolution error:', err)
-    }
+    logError(err, '[auth-guard] status resolution error')
     return null
   }
 }

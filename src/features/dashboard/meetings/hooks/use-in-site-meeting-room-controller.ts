@@ -1,6 +1,7 @@
 'use client';
 import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { useCreateLayoutContext } from '@livekit/components-react';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { CaptureStatus, LiveKitJoinPayload, MeetingRoomPageProps, TranscriptActionResult, } from '../components/in-site-meeting-card.shared';
@@ -292,8 +293,14 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
             }
         })
             .catch((error) => {
-            const message = error instanceof Error ? error.message : 'Unable to join the meeting room';
+            const message = asErrorMessage(error);
             setJoinError(message);
+            reportConvexFailure({
+                error,
+                context: 'useInSiteMeetingRoomController:joinRoom',
+                title: 'Unable to join room',
+                fallbackMessage: 'Unable to join the meeting room',
+            });
         })
             .finally(() => {
             setJoiningRoom(false);

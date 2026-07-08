@@ -4,6 +4,7 @@
  */
 import { getAdIntegration, updateIntegrationCredentials } from '@/lib/ads-admin';
 import { getGoogleAnalyticsIntegration, updateGoogleAnalyticsCredentials } from '@/lib/analytics-admin';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { logger } from '@/lib/logger';
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils';
 import { IntegrationTokenError, type RefreshParams } from './integration-token-refresh-shared';
@@ -162,9 +163,9 @@ export async function refreshGoogleAccessToken({ userId, clientId, providerId }:
             if (error instanceof IntegrationTokenError) {
                 throw error;
             }
-            lastError = error instanceof Error ? error : new Error('Unknown error');
+            lastError = error instanceof Error ? error : new Error(asErrorMessage(error));
             if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
-                console.warn(`[Google Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message);
+                logger.warn(`[Google Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, { message: lastError.message });
                 await sleep(calculateBackoffDelay(attempt));
                 return attemptRefresh(attempt + 1);
             }

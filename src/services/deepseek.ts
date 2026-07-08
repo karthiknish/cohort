@@ -1,3 +1,4 @@
+import { logError } from '@/lib/convex-errors';
 import type { AIAnalysis, CampaignMetrics } from '@/types';
 
 export const DEFAULT_DEEPSEEK_MODEL = 'deepseek-chat';
@@ -114,7 +115,7 @@ export class DeepSeekAIService {
             return text;
         }
         catch (error) {
-            console.error('DeepSeek API error:', error);
+            logError(error, 'DeepSeek API error');
             if (error instanceof Error) {
                 throw error;
             }

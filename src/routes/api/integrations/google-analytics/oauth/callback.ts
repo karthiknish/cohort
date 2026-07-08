@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { isValidRedirectUrl } from '@/lib/utils'
 import { completeGoogleAnalyticsOAuthFlow, resolveGoogleAnalyticsOAuthRedirectUri, validateGoogleOAuthState } from '@/services/google-oauth'
 import { jsonResponse, redirectResponse } from '@/lib/server-response'
+import { logError, asErrorMessage } from '@/lib/convex-errors'
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -22,6 +23,7 @@ const handlers = adaptApiHandler(
     try {
       const { error, error_description: errorDescription, code, state } = query
       if (error) {
+        logError(new Error(errorDescription || error || 'Unknown Google Analytics OAuth error'), '[google-analytics.oauth.callback] OAuth error from Google Analytics')
         const errorUrl = new URL('/dashboard/analytics', appUrl)
         errorUrl.searchParams.set('oauth_error', 'google_analytics_error')
         errorUrl.searchParams.set('provider', 'google-analytics')
@@ -39,7 +41,7 @@ const handlers = adaptApiHandler(
       try {
         context = validateGoogleOAuthState(state ?? '')
       } catch (stateError) {
-        console.error('[google-analytics.oauth.callback] State validation failed:', stateError)
+        logError(stateError, '[google-analytics.oauth.callback] State validation failed')
         return redirectResponse(`${appUrl}/dashboard/analytics?oauth_error=invalid_state&provider=google-analytics`)
       }
       if (!context.state) {
@@ -57,8 +59,8 @@ const handlers = adaptApiHandler(
       }
       return redirectResponse(new URL(redirectTarget, req.url))
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      console.error('[google-analytics.oauth.callback] Error completing OAuth flow:', { error: errorMessage, stack: error instanceof Error ? error.stack : undefined })
+      const errorMessage = asErrorMessage(error)
+      logError(error, '[google-analytics.oauth.callback] Error completing OAuth flow')
       const errorUrl = new URL('/dashboard/analytics', appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'google-analytics')

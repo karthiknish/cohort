@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useState } from 'react';
 import { Mail, Share2 } from 'lucide-react';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { Button } from '@/shared/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
@@ -21,7 +22,8 @@ export function ShareMessageButton({ message, onShare, sharedTo = EMPTY_SHARED_T
         setShareError(null);
         await onShare('email')
             .catch((error) => {
-            setShareError(error instanceof Error ? error.message : 'Failed to share');
+            logError(error, 'message-share-button:handleShare');
+            setShareError(asErrorMessage(error));
         })
             .finally(() => {
             setIsSharing(false);

@@ -1,5 +1,6 @@
 import { ConvexError } from 'convex/values';
 import type { AppErrorData } from './convex-errors';
+import { asErrorMessage } from './convex-errors';
 import { UnifiedError } from './errors/unified-error';
 export type AgentErrorType = 'network' | 'rate-limit' | 'auth' | 'server' | 'validation' | 'unknown';
 export interface AgentErrorDetails {
@@ -155,14 +156,14 @@ export function parseAgentError(error: unknown, response?: Response | null): Age
             return new AgentServerError('The server is temporarily unavailable. Please try again.', error);
         }
         if (status >= 400) {
-            const message = error instanceof Error ? error.message : 'Invalid request';
+            const message = asErrorMessage(error, 'Invalid request');
             return new AgentValidationError(message, error);
         }
     }
     // Fallback for unknown errors
     return new AgentError({
         type: 'unknown',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        message: asErrorMessage(error, 'An unexpected error occurred'),
         retryable: true,
         originalError: error,
     });

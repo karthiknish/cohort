@@ -8,6 +8,7 @@ import { parseIntegrationError, type IntegrationPlatform } from '@/lib/errors';
 import { calculateBackoffDelay, composeAbortSignal, DEFAULT_RETRY_CONFIG, isAbortError, isRetryableStatus, isTimeoutError, parseRetryAfterMs, sleepWithSignal, } from '@/lib/retry-utils';
 import { GOOGLE_API_BASE } from '@/services/integrations/google-ads/types';
 import { META_API_BASE } from '@/services/integrations/meta-ads/constants';
+import { logger } from '@/lib/logger';
 const DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS = 45000;
 // =============================================================================
 // TYPES
@@ -69,7 +70,7 @@ function logRequest(context: RequestLogContext): void {
         ...extra,
     };
     if (error) {
-        console.error(`[${platform.toUpperCase()} API] ${operation} failed`, {
+        logger.error(`[${platform.toUpperCase()} API] ${operation} failed`, {
             ...logData,
             error: 'toJSON' in error && typeof error.toJSON === 'function'
                 ? error.toJSON()
@@ -77,7 +78,7 @@ function logRequest(context: RequestLogContext): void {
         });
     }
     else {
-        console.log(`[${platform.toUpperCase()} API] ${operation} completed`, logData);
+        logger.info(`[${platform.toUpperCase()} API] ${operation} completed`, logData);
     }
 }
 // =============================================================================
@@ -164,7 +165,7 @@ export class IntegrationApiClient {
                 if (isJsonResponse) {
                     rawBody = await responseClone.text();
                     const rawBodyPreview = rawBody?.slice(0, 500);
-                    console.log(`[${platformLabel} API] Raw response body:`, rawBodyPreview);
+                    logger.info(`[${platformLabel} API] Raw response body:`, { rawBodyPreview });
                     payload = JSON.parse(rawBody) as T;
                 }
                 else {
@@ -174,7 +175,7 @@ export class IntegrationApiClient {
             }
             catch (parseError) {
                 const rawBodyPreview = rawBody?.slice(0, 500);
-                console.error(`[${platformLabel} API] Failed to parse response:`, parseError, 'Raw body:', rawBodyPreview);
+                logger.error(`[${platformLabel} API] Failed to parse response:`, parseError, { rawBody: rawBodyPreview });
                 payload = { error: 'Failed to parse response', rawBody: rawBodyPreview } as unknown as T;
             }
             // Check success
@@ -191,7 +192,7 @@ export class IntegrationApiClient {
                 return { response, payload };
             }
             // Parse error
-            console.log(`[${platformLabel} API] Error response payload:`, payload);
+            logger.info(`[${platformLabel} API] Error response payload:`, { payload });
             const error = parseIntegrationError(response, payload, this.platform);
             lastError = error;
             logRequest({
@@ -224,7 +225,7 @@ export class IntegrationApiClient {
                     ?? calculateBackoffDelay(attempt) * 2;
                 onRateLimitHit?.(retryAfterMs);
                 if (attempt < maxRetries - 1) {
-                    console.warn(`[${platformLabel} API] Rate limited, waiting ${retryAfterMs}ms`);
+                    logger.warn(`[${platformLabel} API] Rate limited, waiting ${retryAfterMs}ms`);
                     await sleepWithSignal(retryAfterMs, signal);
                     continue;
                 }

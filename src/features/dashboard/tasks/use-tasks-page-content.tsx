@@ -9,7 +9,6 @@ import { PageMotionShell } from '@/shared/components/page-motion-shell';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { TasksPageSkeleton } from '@/features/dashboard/tasks/tasks-page-skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
-import { TooltipProvider } from '@/shared/ui/tooltip';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useNavigationContext } from '@/shared/contexts/navigation-context';
@@ -25,7 +24,7 @@ import { isFeatureEnabled } from '@/lib/features';
 import { exportToCsv } from '@/lib/export/export-to-spreadsheet';
 import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import type { TaskPriority, TaskStatus } from '@/types/tasks';
 import { useTasksDocumentImport } from './use-tasks-document-import';
 import { TasksDocumentImportOverlay } from './tasks-document-import-overlay';
@@ -281,7 +280,8 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
         catch (exportError) {
             notifyFailure({
                 title: 'Export failed',
-                message: exportError instanceof Error ? exportError.message : 'Could not build the spreadsheet.',
+                error: exportError,
+                fallbackMessage: 'Could not build the spreadsheet.',
             });
         }
         finally {

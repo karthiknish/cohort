@@ -17,6 +17,7 @@ import { processWorkspaceAlerts } from '@/lib/alerts'
 import { createConvexAdminClient } from '@/lib/convex-admin'
 import { logger } from '@/lib/logger'
 import { resolveWorkspaceIdForUser } from '@/lib/workspace'
+import { asErrorMessage } from '@/lib/convex-errors'
 
 async function getIntegrationForJob(options: { userId: string; providerId: string; clientId?: string | null }) {
   if (options.providerId === 'google-analytics') {
@@ -242,14 +243,13 @@ function extractSyncErrorDetails(error: unknown): SyncJobErrorLike {
   if (typeof error === 'object' && error !== null) {
     const candidate = error as SyncJobErrorLike
     return {
-      message: typeof candidate.message === 'string' ? candidate.message : undefined,
+      message: typeof candidate.message === 'string' ? candidate.message : asErrorMessage(error),
       userId: typeof candidate.userId === 'string' ? candidate.userId : undefined,
       jobId: typeof candidate.jobId === 'string' ? candidate.jobId : undefined,
       providerId: typeof candidate.providerId === 'string' ? candidate.providerId : undefined,
     }
   }
-  if (error instanceof Error) return { message: error.message }
-  return {}
+  return { message: asErrorMessage(error) }
 }
 
 export const Route = createFileRoute('/api/integrations/process')({

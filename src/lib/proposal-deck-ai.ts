@@ -1,5 +1,6 @@
 import type { ProposalFormData } from '@/lib/proposals';
 import { deepseekAI } from '@/services/deepseek';
+import { logger } from '@/lib/logger';
 const FALLBACK_DECK_INSTRUCTIONS = `Slide 1: A tailored strategy to achieve measurable growth
 METRICS:
 - value: "25%" | label: Target conversion rate uplift
@@ -440,7 +441,7 @@ async function resolveDeckInstructions(formData: ProposalFormData, candidate?: s
             const sparseCount = countSparseSlides(generated);
             const totalSlides = (generated.match(/^Slide\s+\d+/gim) || []).length;
             if (totalSlides > 0 && sparseCount > totalSlides / 2) {
-                console.warn(`[proposal-deck-ai] ${sparseCount}/${totalSlides} slides are sparse, retrying generation`);
+                logger.warn(`[proposal-deck-ai] ${sparseCount}/${totalSlides} slides are sparse, retrying generation`);
                 const retryRaw = await deepseekAI.generateContentWithOptions(prompt, {
                     systemInstruction: DECK_SYSTEM_INSTRUCTION,
                     temperature: 0.3,

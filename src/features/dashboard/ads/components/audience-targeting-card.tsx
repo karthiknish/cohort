@@ -1,4 +1,5 @@
 'use client';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { notifyFailure } from '@/lib/notifications';
 import { useCallback, useReducer } from 'react';
 import { useAction } from 'convex/react';
@@ -177,7 +178,7 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
             dispatch({ type: 'setInsights', value: payload?.insights ?? null });
         })
             .catch((error) => {
-            const message = error instanceof Error ? error.message : 'Failed to load audience targeting data';
+            const message = asErrorMessage(error, 'Failed to load audience targeting data');
             if (message.includes('not configured') || message.includes('missing token') || message.includes('expired')) {
                 notifyFailure({
                     title: 'Integration Issue',

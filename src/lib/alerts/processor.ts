@@ -4,6 +4,7 @@
 import { cache } from 'react';
 import { ConvexHttpClient } from 'convex/browser';
 import { api, internal } from '/_generated/api';
+import { logger } from '@/lib/logger';
 import { evaluateAlerts, formatAlertsForEmail } from './evaluator';
 import { sendTransactionalEmail } from '../notifications/brevo';
 import { isEmailPrefEnabled } from '../notifications/preferences';
@@ -29,7 +30,7 @@ function getConvexClient(): ConvexHttpClient | null {
         process.env.CONVEX_ADMIN_KEY ??
         process.env.CONVEX_ADMIN_TOKEN;
     if (!url || !deployKey) {
-        console.error('[AlertProcessor] CONVEX_URL or admin key not configured');
+        logger.error('[AlertProcessor] CONVEX_URL or admin key not configured');
         return null;
     }
     _convexClient = new ConvexHttpClient(url);
@@ -68,7 +69,7 @@ export async function processWorkspaceAlerts(options: {
     const { userId, workspaceId, clientId = null, recipientEmail } = options;
     const convex = getConvexClient();
     if (!convex) {
-        console.error('[AlertProcessor] Convex client not available');
+        logger.error('[AlertProcessor] Convex client not available');
         return { evaluated: 0, triggered: 0, results: [] };
     }
     try {
@@ -125,13 +126,13 @@ export async function processWorkspaceAlerts(options: {
                 });
             }
             else {
-                console.log(`[AlertProcessor] Skipping email notification for user ${userId} due to preference.`);
+                logger.info(`[AlertProcessor] Skipping email notification for user ${userId} due to preference.`);
             }
         }
         return evaluation;
     }
     catch (error) {
-        console.error(`[AlertProcessor] Failed to process alerts for workspace ${workspaceId}:`, error);
+        logger.error(`[AlertProcessor] Failed to process alerts for workspace ${workspaceId}:`, error);
         throw error;
     }
 }

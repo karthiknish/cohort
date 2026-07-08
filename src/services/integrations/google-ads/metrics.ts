@@ -3,6 +3,8 @@
 // =============================================================================
 import { googleAdsSearch, normalizeCost, DEFAULT_RETRY_CONFIG } from './client';
 import { parseJsonBodySafely } from '@/lib/response-json';
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
 import { GOOGLE_API_BASE, } from './types';
 import type { GoogleAdsOptions, GoogleAdsResult, NormalizedMetric, CustomerSummary, GoogleAdAccount, GoogleAccessibleCustomersResponse, } from './types';
 // =============================================================================
@@ -137,7 +139,7 @@ async function fetchCustomerSummary(options: {
             });
         }
         catch (innerError) {
-            console.error(`[Google Ads API] Failed to load customer metadata for ${customerId}:`, innerError);
+            logger.error(`[Google Ads API] Failed to load customer metadata for ${customerId}:`, innerError);
             return null;
         }
     }
@@ -207,7 +209,7 @@ async function fetchManagerClients(options: {
         return accounts;
     }
     catch (error) {
-        console.error(`[Google Ads API] Failed to load manager clients for ${managerId}:`, error);
+        logger.error(`[Google Ads API] Failed to load manager clients for ${managerId}`, error);
         return [];
     }
 }
@@ -372,7 +374,7 @@ export async function checkGoogleAdsIntegrationHealth(options: {
             tokenValid: false,
             developerTokenValid: false,
             accountAccessible: false,
-            error: error instanceof Error ? error.message : 'Health check failed',
+            error: asErrorMessage(error, 'Health check failed'),
         };
     }
 }

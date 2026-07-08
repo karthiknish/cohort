@@ -5,7 +5,7 @@ import { internal } from '/_generated/api'
 import { v } from 'convex/values'
 
 import type { NormalizedMetric } from '@/types/integrations'
-import { Errors, asErrorMessage, withErrorHandling } from '../../errors'
+import { Errors, asErrorMessage, isAppError, withErrorHandling } from '../../errors'
 import { resolveMetricCurrency } from '@/domain/ads/money'
 import { normalizeSurfaceId } from '@/domain/ads/provider'
 import type { CanonicalAdsProviderId } from '@/domain/ads/provider'
@@ -617,7 +617,10 @@ async function processNextQueuedSyncJob(
       }),
     ])
 
-    throw err
+    if (isAppError(err)) {
+      throw err
+    }
+    throw Errors.base.internal(asErrorMessage(err))
   }
 }
 
@@ -643,25 +646,29 @@ export const runManualSync = action({
     providerId: v.string(),
     clientId: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args): Promise<{ synced: boolean }> => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      throw Errors.auth.unauthorized()
-    }
+  handler: async (ctx, args): Promise<{ synced: boolean }> =>
+    withErrorHandling(
+      async () => {
+        const identity = await ctx.auth.getUserIdentity()
+        if (!identity) {
+          throw Errors.auth.unauthorized()
+        }
 
-    const clientId =
-      typeof args.clientId === 'string' && args.clientId.trim().length > 0
-        ? args.clientId.trim()
-        : null
+        const clientId =
+          typeof args.clientId === 'string' && args.clientId.trim().length > 0
+            ? args.clientId.trim()
+            : null
 
-    await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
-      workspaceId: args.workspaceId,
-      providerId: args.providerId,
-      clientId,
-      jobType: 'manual-sync',
-      timeframeDays: 30,
-    })
+        await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
+          workspaceId: args.workspaceId,
+          providerId: args.providerId,
+          clientId,
+          jobType: 'manual-sync',
+          timeframeDays: 30,
+        })
 
-    return await processNextQueuedSyncJob(ctx, args.workspaceId)
-  },
+        return await processNextQueuedSyncJob(ctx, args.workspaceId)
+      },
+      'adSyncWorkerActions:runManualSync',
+    ),
 })

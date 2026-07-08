@@ -14,7 +14,7 @@ import type { RateLimitPreset } from './rate-limiter';
 import { checkConvexRateLimit } from './rate-limiter-convex';
 import { sanitizeInput } from './utils';
 import { logger } from './logger';
-import { resolveConvexApiErrorResponse } from './convex-errors';
+import { asErrorMessage, resolveConvexApiErrorResponse } from './convex-errors';
 import { api } from '/_generated/api';
 // Lazy-init Convex client for idempotency
 let _convexClient: ConvexHttpClient | null = null;
@@ -593,7 +593,7 @@ export function createApiHandler<TBody extends z.ZodTypeAny = z.ZodTypeAny, TQue
             });
             return jsonResponse({
                 success: false,
-                error: options.errorMessage || (exposeInternalErrors && error instanceof Error ? error.message : 'Internal server error'),
+                error: options.errorMessage || (exposeInternalErrors ? asErrorMessage(error, 'Internal server error') : 'Internal server error'),
                 code: 'INTERNAL_ERROR',
                 requestId,
             }, {
@@ -645,7 +645,7 @@ function logApiError(error: unknown, req: Request, opts?: {
             userId: opts?.userId,
             workspaceId: opts?.workspaceId,
         };
-        const message = error instanceof Error ? error.message : String(error);
+        const message = asErrorMessage(error);
         if (asApiError && asApiError.status < 500) {
             logger.warn(`API Error: ${message}`, context);
         }

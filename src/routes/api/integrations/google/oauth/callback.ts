@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { completeGoogleOAuthFlow, resolveGoogleAdsOAuthRedirectUri, validateGoogleOAuthState } from '@/services/google-oauth'
 import { isValidRedirectUrl } from '@/lib/utils'
 import { jsonResponse, redirectResponse } from '@/lib/server-response'
+import { logError, asErrorMessage } from '@/lib/convex-errors'
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -22,7 +23,7 @@ const handlers = adaptApiHandler(
     try {
       const { error, error_description: errorDescription, code, state } = query
       if (error) {
-        console.error('[google.oauth.callback] OAuth error from Google:', { error, errorDescription })
+        logError(new Error(errorDescription || error || 'Unknown Google OAuth error'), '[google.oauth.callback] OAuth error from Google')
         const errorUrl = new URL('/dashboard/ads', appUrl)
         errorUrl.searchParams.set('oauth_error', 'google_error')
         errorUrl.searchParams.set('provider', 'google')
@@ -40,7 +41,7 @@ const handlers = adaptApiHandler(
       try {
         context = validateGoogleOAuthState(state ?? '')
       } catch (stateError) {
-        console.error('[google.oauth.callback] State validation failed:', stateError)
+        logError(stateError, '[google.oauth.callback] State validation failed')
         return redirectResponse(`${appUrl}/dashboard/ads?oauth_error=invalid_state&provider=google`)
       }
       if (!context.state) {
@@ -58,7 +59,7 @@ const handlers = adaptApiHandler(
       }
       return redirectResponse(new URL(redirectTarget, req.url))
     } catch (error: unknown) {
-      const rawMessage = error instanceof Error ? error.message : 'Unknown error'
+      const rawMessage = asErrorMessage(error)
       const messageLower = rawMessage.toLowerCase()
       const userFacingMessage = (() => {
         if (messageLower.includes('convex admin client is not configured'))
@@ -69,10 +70,7 @@ const handlers = adaptApiHandler(
           return 'Login session expired. Please try connecting again.'
         return rawMessage
       })()
-      console.error('[google.oauth.callback] Error completing OAuth flow:', {
-        error: rawMessage,
-        stack: error instanceof Error ? error.stack : undefined,
-      })
+      logError(error, '[google.oauth.callback] Error completing OAuth flow')
       const errorUrl = new URL('/dashboard/ads', appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'google')

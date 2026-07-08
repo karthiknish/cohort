@@ -6,6 +6,8 @@ import type { CollaborationMessage } from '@/types/collaboration';
 import type { TaskRecord } from '@/types/tasks';
 import type { ProjectRecord } from '@/types/projects';
 import type { WorkspaceNotificationRole } from '@/types/notifications';
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
 import { RETRY_CONFIG, sleep, calculateBackoffDelay } from './config';
 import type { WorkspaceNotificationInput, WorkspaceNotificationRecipients } from './types';
 // Lazy-init Convex client with admin auth
@@ -68,12 +70,12 @@ function sanitizeIdList(values?: unknown[]): string[] | undefined {
 async function createWorkspaceNotification(input: WorkspaceNotificationInput): Promise<void> {
     const { workspaceId, recipients, ...rest } = input;
     if (!workspaceId) {
-        console.warn('[notifications] missing workspaceId, skipping notification creation');
+        logger.warn('[notifications] missing workspaceId, skipping notification creation');
         return;
     }
     const convexClient = getConvexClient();
     if (!convexClient) {
-        console.warn('[notifications] convex client not available, skipping notification creation');
+        logger.warn('[notifications] convex client not available, skipping notification creation');
         return;
     }
     const normalizedRecipients: WorkspaceNotificationRecipients = {
@@ -120,19 +122,19 @@ async function createWorkspaceNotification(input: WorkspaceNotificationInput): P
                 createdAtMs: nowMs,
                 updatedAtMs: nowMs,
             });
-            console.log(`[notifications] workspace notification created: ${rest.kind}`);
+            logger.info(`[notifications] workspace notification created: ${rest.kind}`);
             return;
         }
         catch (error) {
-            lastError = error instanceof Error ? error : new Error('Unknown error');
+            lastError = error instanceof Error ? error : new Error(asErrorMessage(error));
             // Retry on transient errors
             if (attempt < RETRY_CONFIG.maxRetries - 1) {
-                console.warn(`[notifications] Convex write failed, retrying...`, error);
+                logger.warn(`[notifications] Convex write failed, retrying...`, { error: asErrorMessage(error) });
                 await sleep(calculateBackoffDelay(attempt));
                 return attemptCreate(attempt + 1);
             }
         }
-        console.error('[notifications] failed to record workspace notification after all retries', lastError);
+        logger.error('[notifications] failed to record workspace notification after all retries', lastError);
     };
     await attemptCreate(0);
 }

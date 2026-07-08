@@ -6,6 +6,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { FeatureItem, FeatureStatus } from '@/types/features';
 import { AdminPageShell } from '../components/admin-page-shell';
+import { AdminActionErrorAlert } from '../components/admin-action-error-alert';
 import { AdminQueryErrorAlert } from '../components/admin-query-error-alert';
 import { FeatureKanbanBoard } from './components/feature-kanban-board';
 import { FeatureFormDialog } from './components/feature-form-dialog';
@@ -65,6 +66,8 @@ type AdminFeaturesPageContentProps = {
     isPreviewMode: boolean;
     features: FeatureItem[];
     featuresQueryError: string | null;
+    actionError: string | null;
+    clearActionError: () => void;
     refreshing: boolean;
     formDialogOpen: boolean;
     editingFeature: FeatureItem | null;
@@ -82,9 +85,10 @@ type AdminFeaturesPageContentProps = {
     onMoveFeature: (featureId: string, newStatus: FeatureStatus) => void;
     onSubmitFeature: (data: FeatureSubmitData) => Promise<void>;
 };
-export function AdminFeaturesPageContent({ isPreviewMode, features, featuresQueryError, refreshing, formDialogOpen, editingFeature, defaultStatus, deleteConfirmOpen, featureToDelete, isDeleting, onRefresh, onAddFeature, onEditFeature, onDeleteFeature, onFormDialogOpenChange, onDeleteConfirmOpenChange, onConfirmDelete, onMoveFeature, onSubmitFeature, }: AdminFeaturesPageContentProps) {
+export function AdminFeaturesPageContent({ isPreviewMode, features, featuresQueryError, actionError, clearActionError, refreshing, formDialogOpen, editingFeature, defaultStatus, deleteConfirmOpen, featureToDelete, isDeleting, onRefresh, onAddFeature, onEditFeature, onDeleteFeature, onFormDialogOpenChange, onDeleteConfirmOpenChange, onConfirmDelete, onMoveFeature, onSubmitFeature, }: AdminFeaturesPageContentProps) {
     const toolbarActions = <AdminFeaturesToolbarActions refreshing={refreshing} onRefresh={onRefresh}/>;
     return (<>
+      <AdminActionErrorAlert error={actionError} onDismiss={clearActionError}/>
       <AdminPageShell title="Feature planning" description={<>
             Plan and track platform features on a visual Kanban board.
             {isPreviewMode ? ' Preview mode uses a local sample backlog.' : ''}

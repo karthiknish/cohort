@@ -5,6 +5,7 @@ import { BadRequestError, ForbiddenError, ServiceUnavailableError, UnauthorizedE
 import { ensureMeetingNativeRoom, getGoogleWorkspaceTokens, getMeetingRecord, getMeetingRecordByCalendarEventId, getMeetingRecordByRoomName, upsertGoogleWorkspaceTokens } from '@/lib/meetings-admin'
 import { refreshGoogleWorkspaceAccessToken, resolveGoogleWorkspaceOAuthCredentials, updateGoogleCalendarEvent } from '@/services/google-workspace'
 import { buildCohortsMeetingUrl, createLiveKitParticipantToken, createLiveKitRoomName, resolveLiveKitServerUrl } from '@/services/livekit'
+import { asErrorMessage } from '@/lib/convex-errors'
 
 const createTokenSchema = z.object({
   legacyId: z.string().trim().min(1).optional(),
@@ -74,7 +75,7 @@ const handlers = adaptApiHandler(
             calendarSyncWarning = 'Google Calendar invite could not be updated because no Google Workspace connection was found.'
           }
         } catch (error) {
-          calendarSyncWarning = error instanceof Error ? error.message : 'Google Calendar invite could not be updated.'
+          calendarSyncWarning = asErrorMessage(error)
         }
       }
       const ensured = await ensureMeetingNativeRoom({

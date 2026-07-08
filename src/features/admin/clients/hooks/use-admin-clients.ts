@@ -7,7 +7,7 @@ import { useConvex, useQuery as useConvexQuery } from 'convex/react';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { asErrorMessage } from '@/lib/convex-errors';
-import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useAdminActionError } from '@/features/admin/hooks/use-admin-action-error';
 import { clientsApi } from '@/lib/convex-api';
 import { getPreviewClients } from '@/lib/preview-data';
 import type { ClientRecord, ClientTeamMember } from '@/types/clients';
@@ -44,6 +44,9 @@ export interface UseAdminClientsReturn {
     nextCursor: string | null;
     loadingMore: boolean;
     existingTeamMembers: number;
+    // Admin action error
+    actionError: string | null;
+    clearActionError: () => void;
     // Actions
     loadClients: () => Promise<void>;
     handleLoadMore: () => Promise<void>;
@@ -98,6 +101,7 @@ export function useAdminClients(): UseAdminClientsReturn {
     const { isPreviewMode } = usePreview();
     const convex = useConvex();
     const queryClient = useQueryClient();
+    const { actionError, clearActionError, reportActionFailure } = useAdminActionError();
     const workspaceContext = useConvexQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip');
     const workspaceId = workspaceContext?.workspaceId ?? null;
     const includeAllWorkspaces = workspaceContext?.role === 'admin';
@@ -249,7 +253,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             }
             catch (err: unknown) {
                 hasSyncedAdminTeamMembersRef.current = false;
-                reportConvexFailure({
+                reportActionFailure({
                     error: err,
                     context: 'useAdminClients:syncAdminTeamMembers',
                     title: 'Could not sync admin teammates',
@@ -284,7 +288,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             await clientsInfiniteQuery.fetchNextPage();
         }
         catch (err: unknown) {
-            reportConvexFailure({
+            reportActionFailure({
                 error: err,
                 context: 'useAdminClients:handleLoadMore',
                 title: 'Could not load more',
@@ -331,7 +335,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             setIsDeleteDialogOpen(false);
         }
         catch (err: unknown) {
-            reportConvexFailure({
+            reportActionFailure({
                 error: err,
                 context: 'useAdminClients:handleDeleteClient',
                 title: 'Client delete failed',
@@ -417,7 +421,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             setClientPendingMembers(null);
         }
         catch (err: unknown) {
-            reportConvexFailure({
+            reportActionFailure({
                 error: err,
                 context: 'useAdminClients:handleAddTeamMember',
                 title: 'Add teammate failed',
@@ -474,7 +478,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             });
         }
         catch (err: unknown) {
-            reportConvexFailure({
+            reportActionFailure({
                 error: err,
                 context: 'useAdminClients:handleRemoveTeamMember',
                 title: 'Remove teammate failed',
@@ -556,7 +560,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             setEditingMemberRole('');
         }
         catch (err: unknown) {
-            reportConvexFailure({
+            reportActionFailure({
                 error: err,
                 context: 'useAdminClients:handleUpdateTeamMemberRole',
                 title: 'Update role failed',
@@ -636,7 +640,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             resetClientForm();
         }
         catch (err: unknown) {
-            reportConvexFailure({
+            reportActionFailure({
                 error: err,
                 context: 'useAdminClients:handleCreateClient',
                 title: 'Client create failed',
@@ -655,6 +659,8 @@ export function useAdminClients(): UseAdminClientsReturn {
         nextCursor,
         loadingMore,
         existingTeamMembers,
+        actionError,
+        clearActionError,
         loadClients,
         handleLoadMore,
         // Client form

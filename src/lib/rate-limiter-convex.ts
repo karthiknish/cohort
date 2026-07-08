@@ -3,6 +3,8 @@ import type { RateLimitConfig, RateLimitResult, RateLimitPreset } from './rate-l
 import { internal } from '/_generated/api';
 import type { FunctionReference } from 'convex/server';
 import { getSystemConvexClient } from './convex-system-client';
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
 type MutationReference = FunctionReference<'mutation'>;
 export async function checkConvexRateLimit(key: string, configOrPreset: RateLimitPreset | RateLimitConfig): Promise<RateLimitResult> {
     const config = typeof configOrPreset === 'string' ? RATE_LIMITS[configOrPreset] : configOrPreset;
@@ -46,7 +48,7 @@ export async function checkConvexRateLimit(key: string, configOrPreset: RateLimi
         };
     }
     catch (error) {
-        console.warn('[rate-limiter] Convex rate limit failed, falling back to in-memory', error);
+        logger.warn('[rate-limiter] Convex rate limit failed, falling back to in-memory', { error: asErrorMessage(error) });
         return checkRateLimit(key, config);
     }
 }

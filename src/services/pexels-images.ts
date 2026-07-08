@@ -8,6 +8,9 @@
  * quality and file size for 13.333" wide slides.
  */
 
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
+
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY ?? '';
 const PEXELS_SEARCH_URL = 'https://api.pexels.com/v1/search';
 
@@ -87,7 +90,7 @@ const searchCache = new Map<string, PexelsImage[]>();
  */
 export async function searchImages(query: string, perPage = 8): Promise<PexelsImage[]> {
     if (!PEXELS_API_KEY) {
-        console.warn('[Pexels] No PEXELS_API_KEY set — skipping Pexels search');
+        logger.warn('[Pexels] No PEXELS_API_KEY set — skipping Pexels search');
         return [];
     }
     if (searchCache.has(query)) {
@@ -101,7 +104,7 @@ export async function searchImages(query: string, perPage = 8): Promise<PexelsIm
         });
 
         if (!resp.ok) {
-            console.warn(`[Pexels] Search failed for "${query}": ${resp.status}`);
+            logger.warn(`[Pexels] Search failed for "${query}"`, { status: resp.status });
             return [];
         }
 
@@ -135,14 +138,14 @@ export async function searchImages(query: string, perPage = 8): Promise<PexelsIm
                     photographer: photo.photographer,
                 });
             } catch (err) {
-                console.warn(`[Pexels] Failed to fetch image ${photo.id}:`, err);
+                logger.warn(`[Pexels] Failed to fetch image ${photo.id}`, { error: asErrorMessage(err) });
             }
         }
 
         searchCache.set(query, images);
         return images;
     } catch (err) {
-        console.warn(`[Pexels] Search error for "${query}":`, err);
+        logger.warn(`[Pexels] Search error for "${query}"`, { error: asErrorMessage(err) });
         return [];
     }
 }

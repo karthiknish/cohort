@@ -2,6 +2,7 @@
  * Integration Error Parser
  * Unified error parsing for all ad platform APIs
  */
+import { logger } from '@/lib/logger';
 import { UnifiedError, type IntegrationPlatform } from './unified-error';
 // =============================================================================
 // PLATFORM ERROR CODE MAPS
@@ -50,12 +51,12 @@ function asCode(value: unknown): number | string | undefined {
 function extractMetaPayload(payload: unknown): ParsedPayload {
     // Handle null/undefined payload - log for debugging
     if (payload == null) {
-        console.error('[Meta Error Parser] Payload is null/undefined, raw response unavailable');
+        logger.error('[Meta Error Parser] Payload is null/undefined, raw response unavailable');
         return { message: 'Meta API request failed - unable to parse error details' };
     }
     // Handle string payload (e.g., plain text error response)
     if (typeof payload === 'string') {
-        console.error('[Meta Error Parser] Payload is a string:', payload);
+        logger.error('[Meta Error Parser] Payload is a string', undefined, { payload: payload.slice(0, 500) });
         return { message: payload.slice(0, 200) || 'Meta API error' };
     }
     const data = asRecord(payload);
@@ -100,7 +101,7 @@ function extractMetaPayload(payload: unknown): ParsedPayload {
     }
     // Log unparseable payload for debugging
     const rawPayload = JSON.stringify(data).slice(0, 200);
-    console.error('[Meta Error Parser] Unable to parse payload:', rawPayload);
+    logger.error('[Meta Error Parser] Unable to parse payload', undefined, { rawPayload });
     return { message: `Meta API error (Payload: ${rawPayload})` };
 }
 function extractGooglePayload(payload: unknown): ParsedPayload {
@@ -212,7 +213,7 @@ export function parseIntegrationError(response: Response, payload: unknown, plat
     const httpStatus = response.status;
     // Log for debugging - help identify why payload might be null
     if (payload == null) {
-        console.error(`[Error Parser] ${platform.toUpperCase()} error response has null payload`, {
+        logger.error(`[Error Parser] ${platform.toUpperCase()} error response has null payload`, undefined, {
             url: response.url,
             status: httpStatus,
             contentType: response.headers.get('content-type'),
@@ -273,14 +274,14 @@ export async function readResponsePayloadSafe(response: Response): Promise<unkno
             const text = await responseClone.text();
             // Log for debugging empty responses
             if (!text || text.trim() === '') {
-                console.error('[Response Parser] Empty JSON response from', response.url, 'status:', response.status);
+                logger.error('[Response Parser] Empty JSON response', undefined, { url: response.url, status: response.status });
                 return null;
             }
             try {
                 return JSON.parse(text);
             }
             catch {
-                console.error('[Response Parser] Failed to parse JSON:', text.slice(0, 500));
+                logger.error('[Response Parser] Failed to parse JSON', undefined, { text: text.slice(0, 500) });
                 return null;
             }
         }
@@ -288,7 +289,7 @@ export async function readResponsePayloadSafe(response: Response): Promise<unkno
         return text || null;
     }
     catch (error) {
-        console.error('[Response Parser] Error reading response:', error);
+        logger.error('[Response Parser] Error reading response', error);
         return null;
     }
 }

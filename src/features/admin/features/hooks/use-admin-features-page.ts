@@ -1,6 +1,6 @@
 'use client';
 import { notifyInfo, notifySuccess } from '@/lib/notifications';
-import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useAdminActionError } from '@/features/admin/hooks/use-admin-action-error';
 import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { useCallback, useMemo, useReducer } from 'react';
 import { useMutation, useQuery } from 'convex/react';
@@ -11,6 +11,7 @@ import type { FeatureItem, FeaturePriority, FeatureReference, FeatureStatus } fr
 import { adminFeaturesReducer, createInitialAdminFeaturesState, toFeatureDocId, type FeatureRow, type FeatureSubmitData, } from '../admin-features-types';
 export function useAdminFeaturesPage() {
     const { isPreviewMode } = usePreview();
+    const { actionError, clearActionError, reportActionFailure } = useAdminActionError();
     const [state, dispatch] = useReducer(adminFeaturesReducer, undefined, createInitialAdminFeaturesState);
     const { refreshing, previewFeatures, formDialogOpen, editingFeature, defaultStatus, deleteConfirmOpen, featureToDelete, isDeleting, } = state;
     const featuresResponse = useQuery(api.adminFeatures.listFeatures, isPreviewMode ? 'skip' : {});
@@ -96,7 +97,7 @@ export function useAdminFeaturesPage() {
             });
         })
             .catch((error) => {
-            reportConvexFailure({
+            reportActionFailure({
                 error: error,
                 context: 'AdminFeaturesPage:confirmDelete',
                 title: 'Delete failed',
@@ -130,7 +131,7 @@ export function useAdminFeaturesPage() {
             });
         })
             .catch((error) => {
-            reportConvexFailure({
+            reportActionFailure({
                 error,
                 context: 'AdminFeaturesPage:handleMoveFeature',
                 title: 'Move failed',
@@ -211,7 +212,7 @@ export function useAdminFeaturesPage() {
             });
         })
             .catch((error) => {
-            reportConvexFailure({
+            reportActionFailure({
                 error: error,
                 context: 'AdminFeaturesPage:handleSubmitFeature',
                 title: 'Save failed',
@@ -224,6 +225,8 @@ export function useAdminFeaturesPage() {
         loading,
         features,
         featuresQueryError,
+        actionError,
+        clearActionError,
         refreshing,
         formDialogOpen,
         editingFeature,

@@ -1,3 +1,4 @@
+import { asErrorMessage } from '@/lib/convex-errors';
 import { META_API_BASE } from '../client';
 import { inferUploadMimeType, isVideoMimeType } from './shared';
 import type { UploadMediaOptions } from './types';
@@ -33,7 +34,7 @@ export async function uploadVideoToMeta(options: UploadMediaOptions): Promise<{
     catch (error) {
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: asErrorMessage(error, 'Unknown error'),
         };
     }
 }
@@ -95,7 +96,7 @@ export async function uploadMediaToMeta(options: UploadMediaOptions): Promise<{
     catch (error) {
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: asErrorMessage(error, 'Unknown error'),
         };
     }
 }

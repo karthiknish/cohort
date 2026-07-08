@@ -19,6 +19,8 @@ import { proposalReadyTemplate } from './email-templates/proposal-ready';
 import { taskActivityTemplate } from './email-templates/task-activity';
 import { taskAssignedTemplate } from './email-templates/task-assigned';
 import { workspaceInviteTemplate } from './email-templates/workspace-invite';
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
 import { isEmailPrefEnabled } from './preferences';
 import type { IntegrationAlertTemplateParams } from './email-templates/integration-alert';
 import type { MeetingCancelledTemplateParams } from './email-templates/meeting-cancelled';
@@ -93,7 +95,7 @@ export interface MeetingNotificationSummary {
 // =============================================================================
 function getBrevoClient(): Brevo.TransactionalEmailsApi | null {
     if (!BREVO_API_KEY) {
-        console.warn('[brevo] BREVO_API_KEY not configured');
+        logger.warn('[brevo] BREVO_API_KEY not configured');
         return null;
     }
     const apiInstance = new Brevo.TransactionalEmailsApi();
@@ -118,7 +120,7 @@ async function isEmailNotificationEnabled(recipientEmail: string, prefKey: 'adAl
         return isEmailPrefEnabled(result.notificationPreferences, prefKey);
     }
     catch (error) {
-        console.error('[brevo] error checking preferences', error);
+        logger.error('[brevo] error checking preferences', error);
         return false;
     }
 }
@@ -152,26 +154,26 @@ export async function sendTransactionalEmail(options: BrevoSendOptions): Promise
     }> => {
         try {
             const result = await client.sendTransacEmail(sendSmtpEmail);
-            console.log(`[brevo] email sent successfully: ${options.subject}`);
+            logger.info(`[brevo] email sent successfully: ${options.subject}`);
             return {
                 success: true,
                 messageId: result.body?.messageId,
             };
         }
         catch (error) {
-            lastError = error instanceof Error ? error : new Error('Unknown Brevo error');
+            lastError = error instanceof Error ? error : new Error(asErrorMessage(error));
             // Check if retryable (rate limit, server error)
             const statusCode = (error as {
                 status?: number;
             })?.status;
             const retryable = statusCode === 429 || (statusCode && statusCode >= 500);
             if (retryable && attempt < RETRY_CONFIG.maxRetries - 1) {
-                console.warn(`[brevo] send failed (${statusCode}), retrying...`);
+                logger.warn(`[brevo] send failed (${statusCode}), retrying...`);
                 await sleep(calculateBackoffDelay(attempt));
                 return attemptSend(attempt + 1);
             }
         }
-        console.error('[brevo] failed to send email after all retries', lastError);
+        logger.error('[brevo] failed to send email after all retries', lastError);
         return { success: false, error: lastError ?? undefined };
     };
     return attemptSend(0);
@@ -199,7 +201,7 @@ async function sendMeetingNotificationBatch(notificationType: 'scheduled' | 'res
         try {
             const result = await sendEmail(recipientEmail);
             if (!result.success) {
-                console.warn(`[brevo] meeting ${notificationType} email failed`, {
+                logger.warn(`[brevo] meeting ${notificationType} email failed`, {
                     recipientEmail,
                     error: result.error?.message,
                 });
@@ -207,7 +209,7 @@ async function sendMeetingNotificationBatch(notificationType: 'scheduled' | 'res
             return result.success;
         }
         catch (error) {
-            console.error(`[brevo] unexpected meeting ${notificationType} email error`, {
+            logger.error(`[brevo] unexpected meeting ${notificationType} email error`, {
                 recipientEmail,
                 error,
             });
@@ -476,7 +478,7 @@ export async function checkBrevoHealth(): Promise<{
         return { configured: true, healthy: true };
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
+        const message = asErrorMessage(error);
         return { configured: true, healthy: false, error: message };
     }
 }

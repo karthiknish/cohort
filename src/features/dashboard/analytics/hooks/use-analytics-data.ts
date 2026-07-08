@@ -137,7 +137,7 @@ export function useAnalyticsData(_token: string | null, periodDays: number, clie
         }
         catch (error) {
             logError(error, 'useAnalyticsData:fetchInsights');
-            setInsightsError(error instanceof Error ? error : new Error(asErrorMessage(error)));
+            setInsightsError(new Error(asErrorMessage(error)));
         }
         finally {
             setInsightsLoading(false);

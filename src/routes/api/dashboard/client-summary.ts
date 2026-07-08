@@ -14,6 +14,7 @@ import {
 } from '@/lib/deepseekRateLimits'
 import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
 import { DeepSeekAIService, resolveDeepSeekApiKey, resolveDeepSeekModel } from '@/services/deepseek'
+import { logError } from '@/lib/convex-errors'
 
 const providerSnapshotSchema = z.object({
   providerId: z.string().min(1),
@@ -100,7 +101,7 @@ const handlers = adaptApiHandler(
       const parsed = parseClientSummaryResponse({ raw, generatedAt, model })
       return { summary: parsed ?? buildFallbackClientSummary(snapshot, generatedAt) }
     } catch (error) {
-      console.error('[dashboard/client-summary] Failed to generate AI summary', error)
+      logError(error, '[dashboard/client-summary] Failed to generate AI summary')
       return { summary: buildFallbackClientSummary(snapshot, generatedAt) }
     }
   },

@@ -1,5 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
+import { logger } from '@/lib/logger';
 import { useDebouncedValue } from './use-debounce';
 export type GeocodeSearchResult = {
     place_id: number;
@@ -119,7 +120,7 @@ export function useGeocodeResolveBatch(names: string[], options?: {
                     }
                 }
                 catch (e) {
-                    console.error(`Failed to geocode location: ${name}`, e);
+                    logger.error(`Failed to geocode location: ${name}`, e);
                     failedNames.push(name);
                 }
                 if (index + 1 < names.length) {

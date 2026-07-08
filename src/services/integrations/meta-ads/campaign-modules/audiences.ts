@@ -1,6 +1,7 @@
 // =============================================================================
 // AUDIENCES - Custom audience creation and management
 // =============================================================================
+import { asErrorMessage } from '@/lib/convex-errors';
 import { appendMetaAuthParams, META_API_BASE, } from '../client';
 import { metaAdsClient } from '@/services/integrations/shared/base-client';
 import { buildMetaLookalikeSpec } from '@/lib/meta-lookalike-spec';
@@ -178,7 +179,7 @@ export async function uploadMetaAudienceUsers(options: {
         };
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : 'Upload failed';
+        const message = asErrorMessage(error, 'Upload failed');
         return { success: false, error: message };
     }
 }

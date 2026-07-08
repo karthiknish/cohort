@@ -1,6 +1,8 @@
 export type OAuthCredential = {
     refreshToken?: unknown;
 };
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
 import type { AuthRole, AuthStatus, AuthUser } from './types';
 export function isFirebaseError(error: unknown): error is {
     code: string;
@@ -81,7 +83,7 @@ export function getBrowserCookie(name: string): string | undefined {
         return decodeURIComponent(match.split('=')[1] ?? '') || undefined;
     }
     catch (error) {
-        console.warn('Failed to decode cookie value', error);
+        logger.warn('Failed to decode cookie value', { error: asErrorMessage(error) });
         return undefined;
     }
 }

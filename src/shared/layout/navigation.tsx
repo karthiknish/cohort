@@ -230,10 +230,9 @@ export function Header() {
     const handleSignOut = () => {
         setOpen(false);
         void signOut().catch((err: unknown) => {
-            const message = err instanceof Error ? err.message : 'Sign out failed. You were signed out locally; try again or clear cookies if issues persist.';
             notifyFailure({
+                error: err,
                 title: 'Sign out incomplete',
-                message,
                 fallbackMessage: 'Sign out failed. You were signed out locally; try again or clear cookies if issues persist.',
             });
         });

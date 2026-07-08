@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import { ConvexHttpClient } from 'convex/browser';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { logger } from '@/lib/logger';
 import { authClient } from '@/lib/auth-client';
 import { getConvexUrl } from '@/lib/convex-env';
@@ -54,7 +55,7 @@ async function getConvexToken(): Promise<string | null> {
     }
     catch (error) {
         if (process.env.NODE_ENV !== 'production') {
-            console.warn('[ProposalAnalytics] Failed to fetch Convex token', error);
+            logger.warn('[ProposalAnalytics] Failed to fetch Convex token', { error: asErrorMessage(error) });
         }
         return null;
     }

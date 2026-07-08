@@ -1,6 +1,8 @@
 import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto';
 import { enqueueSyncJob, getAdIntegration, persistIntegrationTokens } from '@/lib/ads-admin';
 import { getGoogleAnalyticsIntegration, persistGoogleAnalyticsTokens } from '@/lib/analytics-admin';
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
 // =============================================================================
 // GOOGLE OAUTH CONFIGURATION
 // =============================================================================
@@ -258,7 +260,7 @@ export async function exchangeGoogleCodeForTokens(options: ExchangeCodeOptions):
         });
     }
     catch (networkError) {
-        const message = networkError instanceof Error ? networkError.message : 'Network error';
+        const message = asErrorMessage(networkError, 'Network error');
         throw new GoogleTokenExchangeError({
             message: `Network error during Google token exchange: ${message}`,
         });
@@ -314,8 +316,8 @@ export async function completeGoogleOAuthFlow(options: {
         });
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : 'Token exchange failed';
-        console.error('[Google OAuth] Code exchange failed:', message);
+        const message = asErrorMessage(error);
+        logger.error(`[Google OAuth] Code exchange failed: ${message}`);
         throw new GoogleOAuthError(`Failed to exchange authorization code: ${message}`);
     }
     if (!tokenResponse.access_token) {
@@ -380,8 +382,8 @@ export async function completeGoogleAnalyticsOAuthFlow(options: {
         });
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : 'Token exchange failed';
-        console.error('[Google Analytics OAuth] Code exchange failed:', message);
+        const message = asErrorMessage(error);
+        logger.error(`[Google Analytics OAuth] Code exchange failed: ${message}`);
         throw new GoogleOAuthError(`Failed to exchange authorization code: ${message}`);
     }
     if (!tokenResponse.access_token) {

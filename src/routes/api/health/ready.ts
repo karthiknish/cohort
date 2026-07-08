@@ -8,6 +8,7 @@ import {
 } from '@/lib/health/service-checks'
 import type { AuthResult } from '@/lib/server-auth'
 import { api as convexApi } from '/_generated/api'
+import { asErrorMessage } from '@/lib/convex-errors'
 
 function isReadyProbeAuthorized(req: Request, auth: AuthResult | null): boolean {
   const secret = process.env.HEALTH_CHECK_SECRET?.trim()
@@ -54,7 +55,7 @@ const handlers = adaptApiHandler(
     } catch (error) {
       checks.convex = {
         status: 'error',
-        message: error instanceof Error ? error.message : 'Convex connection failed',
+        message: asErrorMessage(error),
       }
     }
 
@@ -63,7 +64,7 @@ const handlers = adaptApiHandler(
     } catch (error) {
       checks.googleAdsLive = {
         status: 'error',
-        message: error instanceof Error ? error.message : 'Google Ads live health probe failed',
+        message: asErrorMessage(error),
       }
     }
 
@@ -81,7 +82,7 @@ const handlers = adaptApiHandler(
     } catch (error) {
       checks.brevo = {
         status: 'error',
-        message: error instanceof Error ? error.message : 'Brevo connection failed',
+        message: asErrorMessage(error),
       }
     }
 

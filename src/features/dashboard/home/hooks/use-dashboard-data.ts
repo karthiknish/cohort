@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 import { useConvexAuth, useQuery } from 'convex/react';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { getPreviewMetrics, getPreviewProposals, getPreviewTasks } from '@/lib/preview-data';
@@ -169,7 +170,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         catch (error) {
             return {
                 data: [] as MetricRecord[],
-                error: error instanceof Error ? error.message : 'Unable to load dashboard metrics',
+                error: asErrorMessage(error, 'Unable to load dashboard metrics'),
             };
         }
     })();
@@ -219,7 +220,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         catch (error) {
             return {
                 data: [] as TaskRecord[],
-                error: error instanceof Error ? error.message : 'Unable to load dashboard tasks',
+                error: asErrorMessage(error, 'Unable to load dashboard tasks'),
             };
         }
     })();
@@ -274,7 +275,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         catch (error) {
             return {
                 data: [] as ProposalDraft[],
-                error: error instanceof Error ? error.message : 'Unable to load proposals',
+                error: asErrorMessage(error, 'Unable to load proposals'),
             };
         }
     })();

@@ -369,7 +369,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             setAutosaveStatus('saved');
             // Track draft creation for analytics
             if (workspaceId) {
-                trackDraftCreated(workspaceId, newDraftId, selectedClientId, selectedClient?.name).catch(console.error);
+                trackDraftCreated(workspaceId, newDraftId, selectedClientId, selectedClient?.name).catch((err) => logError(err, 'useProposalDrafts:trackDraftCreated'));
             }
             notifySuccess({
                 title: 'New proposal started',

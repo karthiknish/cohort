@@ -1,6 +1,7 @@
 // =============================================================================
 // CAMPAIGNS CORE - Basic campaign CRUD operations
 // =============================================================================
+import { asErrorMessage } from '@/lib/convex-errors';
 import { appendMetaAuthParams, META_API_BASE, } from '../client';
 import { metaAdsClient } from '@/services/integrations/shared/base-client';
 import { isMutableAdvantageState, type MetaCampaign } from '../types';
@@ -140,7 +141,7 @@ export async function createMetaCampaign(options: CreateCampaignOptions): Promis
     catch (error) {
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error creating campaign',
+            error: asErrorMessage(error, 'Unknown error creating campaign'),
         };
     }
 }
@@ -222,7 +223,7 @@ export async function updateMetaCampaign(options: UpdateCampaignOptions): Promis
     catch (error) {
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error updating campaign',
+            error: asErrorMessage(error, 'Unknown error updating campaign'),
         };
     }
 }

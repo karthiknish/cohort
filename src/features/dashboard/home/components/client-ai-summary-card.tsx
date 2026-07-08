@@ -11,6 +11,7 @@ import type { ProposalDraft } from '@/types/proposals';
 import type { TaskSummary } from '../components';
 import type { IntegrationStatusSummary } from '../hooks';
 import { buildClientSummarySnapshotHash, buildClientSummarySnapshot, type ClientSummaryResult, } from '../utils/client-summary';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
 type ClientSummarySnapshot = NonNullable<ReturnType<typeof buildClientSummarySnapshot>>;
 type ClientAiSummaryCardProps = {
     selectedClient: ClientRecord | null;
@@ -146,10 +147,11 @@ function ClientAiSummaryCardBody({ selectedClient, summarySnapshot, summarySnaps
             if (requestIdRef.current !== requestId) {
                 return;
             }
+            logError(error, 'client-ai-summary-card:generateSummary');
             setState((prev) => ({
                 ...prev,
                 summaryStatus: 'error',
-                summaryError: error instanceof Error ? error.message : 'Unknown error',
+                summaryError: asErrorMessage(error),
             }));
         });
     });

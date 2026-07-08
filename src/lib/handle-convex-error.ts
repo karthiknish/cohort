@@ -25,9 +25,5 @@ export function reportConvexFailure(options: ReportConvexFailureOptions): string
  * Extract a user-facing message without showing a toast (e.g. inline Alert state).
  */
 export function convexErrorMessage(error: unknown, fallback = 'An unexpected error occurred'): string {
-    const message = asErrorMessage(error).trim();
-    if (message && message !== 'An unexpected error occurred') {
-        return message;
-    }
-    return fallback;
+    return asErrorMessage(error, fallback);
 }

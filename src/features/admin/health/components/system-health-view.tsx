@@ -1,4 +1,5 @@
 'use client';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
@@ -275,7 +276,7 @@ export function SystemHealthView() {
           <div className="max-w-sm space-y-2">
             <h3 className="text-lg font-semibold tracking-tight text-destructive">Monitoring unavailable</h3>
             <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
-              {resolvedError instanceof Error ? resolvedError.message : 'Failed to fetch health status.'}
+              {asErrorMessage(resolvedError, 'Failed to fetch health status.')}
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={handleRefetch}>
@@ -373,7 +374,7 @@ export function SystemHealthView() {
           <CardContent className="flex gap-3 py-4">
             <AlertCircle className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden/>
             <p className="text-pretty text-sm leading-relaxed text-warning">
-              Last refresh failed: {resolvedError instanceof Error ? resolvedError.message : 'Unknown error'}. Showing
+              Last refresh failed: {asErrorMessage(resolvedError, 'Unknown error')}. Showing
               cached data.
             </p>
           </CardContent>

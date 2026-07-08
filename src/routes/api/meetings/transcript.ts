@@ -6,6 +6,7 @@ import { buildDeepSeekRateLimitKey, formatDeepSeekRateLimitMessage, DEEPSEEK_RAT
 import { getMeetingRecord, saveMeetingNotes, saveMeetingTranscript, setMeetingProcessingState, updateMeetingRecord } from '@/lib/meetings-admin'
 import { generateConciseMeetingNotes, normalizeNotesSummary } from '@/lib/meeting-notes-ai'
 import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
+import { logError, asErrorMessage } from '@/lib/convex-errors'
 
 const transcriptModeValues = ['save-transcript', 'save-transcript-and-generate-notes', 'save-notes', 'finalize-post-meeting'] as const
 const transcriptModeZ = z.enum(transcriptModeValues)
@@ -92,7 +93,8 @@ const handlers = adaptApiHandler(
           })
           transcriptSaved = true
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Transcript finalization failed'
+          const message = asErrorMessage(error)
+          logError(error, '[meetings/transcript] Failed to save transcript')
           await setMeetingProcessingState({
             userId: auth.uid, workspaceId: workspace.workspaceId, legacyId: body.legacyId, userEmail: auth.email,
             status: body.markCompleted || shouldFinalizeAfterMeeting ? 'completed' : undefined,
@@ -137,10 +139,10 @@ const handlers = adaptApiHandler(
         }
       } catch (error) {
         notesReason = 'generation_failed'
-        console.error('[meetings/transcript] Failed to generate notes', error)
+        logError(error, '[meetings/transcript] Failed to generate notes')
         await setMeetingProcessingState({
           userId: auth.uid, workspaceId: workspace.workspaceId, legacyId: body.legacyId, userEmail: auth.email,
-          notesProcessingState: 'failed', notesProcessingError: error instanceof Error ? error.message : 'AI note generation failed',
+          notesProcessingState: 'failed', notesProcessingError: asErrorMessage(error),
         })
       }
     }

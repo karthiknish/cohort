@@ -5,7 +5,7 @@ import { agentApi, filesApi } from '@/lib/convex-api';
 import { buildAgentAttachmentContext, createPendingAttachmentPlaceholder, getPdfUploadSizeError, readFileAsBase64, type AgentAttachmentContext, type ServerPdfExtractionResult, } from '@/lib/agent-attachments';
 import { isPreviewModeEnabled } from '@/lib/preview-data';
 import { uploadStorageFileWithPublicUrl } from '@/lib/upload-storage-file';
-import { logError } from '@/lib/convex-errors';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
 export function useAgentAttachments(workspaceId: string | null) {
     const convex = useConvex();
     const extractPdfTextAction = useAction(agentApi.extractPdfText);
@@ -91,7 +91,7 @@ export function useAgentAttachments(workspaceId: string | null) {
                             ...attachment,
                             extractionStatus: 'failed',
                             excerpt: 'Could not read this file.',
-                            errorMessage: err instanceof Error ? err.message : 'Could not process this attachment.',
+                            errorMessage: asErrorMessage(err, 'Could not process this attachment.'),
                         }
                         : attachment));
                 }

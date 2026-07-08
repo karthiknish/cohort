@@ -1,6 +1,7 @@
 // =============================================================================
 // META GRAPH API — Batch requests (up to 50 per call)
 // =============================================================================
+import { asErrorMessage } from '@/lib/convex-errors';
 import { META_BATCH_MAX_REQUESTS } from '@/lib/meta-capi-events';
 import { appendMetaAuthParams, executeMetaApiRequest, META_API_BASE } from './client';
 export type MetaBatchRequestItem = {
@@ -108,7 +109,7 @@ export async function executeMetaBatch(options: {
         return { success: allOk, responses };
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : 'Batch request failed';
+        const message = asErrorMessage(error, 'Batch request failed');
         return { success: false, responses: [], error: message };
     }
 }

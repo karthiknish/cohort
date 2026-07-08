@@ -2,6 +2,7 @@
 // META ADS METRICS - Account discovery, metrics fetching, health checks
 // =============================================================================
 import { cache } from 'react';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { formatDate } from '@/lib/dates';
 import { logger } from '@/lib/logger';
 import { appendMetaAuthParams, buildTimeRange, coerceNumber, DEFAULT_RETRY_CONFIG, META_API_BASE, } from './client';
@@ -284,7 +285,7 @@ export async function checkMetaIntegrationHealth(options: {
             healthy: false,
             tokenValid: false,
             accountAccessible: false,
-            error: error instanceof Error ? error.message : 'Health check failed',
+            error: asErrorMessage(error, 'Health check failed'),
         };
     }
 }

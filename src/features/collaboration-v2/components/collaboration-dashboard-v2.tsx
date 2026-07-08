@@ -14,6 +14,8 @@ import type { SendMessageOptions } from '@/features/dashboard/collaboration/hook
 import type { UnifiedMessage } from '@/features/dashboard/collaboration/components/message-list-types';
 import { useQuery, useMutation } from 'convex/react';
 import { usersApi, collaborationChannelsApi } from '@/lib/convex-api';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { useCollaborationChannels } from '../hooks/use-collaboration-channels';
 import {
   useChannelMessages,
@@ -471,6 +473,14 @@ export function CollaborationDashboardV2() {
       if (draftKey) clearDraft(draftKey);
       if (isThreadReply) setReplyingToMessage(null);
       void stopTyping();
+    } catch (error) {
+      logError(error, 'collaboration-dashboard-v2:handleSendMessage');
+      reportConvexFailure({
+        error,
+        context: 'collaboration-dashboard-v2:handleSendMessage',
+        title: 'Message not sent',
+        fallbackMessage: 'Could not send your message. Please try again.',
+      });
     } finally {
       setSending(false);
     }
@@ -659,16 +669,25 @@ export function CollaborationDashboardV2() {
       memberIds: string[];
     }) => {
       if (!workspaceId) return;
-      const created = (await createChannelMutation({
-        workspaceId: String(workspaceId),
-        name: channel.name,
-        description: channel.description ?? null,
-        visibility: channel.visibility,
-        memberIds: channel.memberIds,
-      })) as { legacyId?: string } | undefined;
-      if (typeof created?.legacyId === 'string') {
-        urlState.setChannelId(created.legacyId);
-        selectChannel(created.legacyId);
+      try {
+        const created = (await createChannelMutation({
+          workspaceId: String(workspaceId),
+          name: channel.name,
+          description: channel.description ?? null,
+          visibility: channel.visibility,
+          memberIds: channel.memberIds,
+        })) as { legacyId?: string } | undefined;
+        if (typeof created?.legacyId === 'string') {
+          urlState.setChannelId(created.legacyId);
+          selectChannel(created.legacyId);
+        }
+      } catch (error) {
+        reportConvexFailure({
+          error,
+          context: 'CollaborationDashboardV2:handleCreateChannel',
+          title: 'Channel creation failed',
+          fallbackMessage: 'Unable to create the channel. Please try again.',
+        });
       }
     },
     [workspaceId, createChannelMutation, urlState, selectChannel],

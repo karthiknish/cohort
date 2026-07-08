@@ -5,7 +5,6 @@ import {
   use,
   useCallback,
   useEffect,
-  useEffectEvent,
   useMemo,
   useReducer,
   useRef,
@@ -15,7 +14,8 @@ import { useMutation, useQuery } from 'convex/react';
 import { useAuth } from '@/shared/contexts/auth-context';
 import type { ClientRecord, ClientTeamMember } from '@/types/clients';
 import { clientsApi } from '@/lib/convex-api';
-import { isNotFoundAppError } from '@/lib/convex-errors';
+import { asErrorMessage, isNotFoundAppError } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import {
   getPreviewClients,
@@ -198,7 +198,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     }
   }, [previewEnabled]);
 
-  const applyClientSelectionSync = useEffectEvent(() => {
+  const applyClientSelectionSync = useCallback(() => {
     if (previewEnabled) {
       dispatch({ type: 'syncState', selectedClientId: selectedClientIdRef.current, loading: false, error: null });
       return;
@@ -223,12 +223,11 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     const targetId = resolveSelectedClientId(clients, currentSelection, stored);
     hasInitializedRef.current = true;
     dispatch({ type: 'syncState', selectedClientId: targetId, loading: false, error: null });
-  });
+  }, [previewEnabled, authLoading, isSyncing, workspaceId, convexClients, storageKey]);
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => applyClientSelectionSync());
-    return () => cancelAnimationFrame(frame);
-  }, [authLoading, convexClients, isSyncing, previewEnabled, storageKey, workspaceId]);
+    applyClientSelectionSync();
+  }, [applyClientSelectionSync]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || previewEnabled || !workspaceId) return;
@@ -236,7 +235,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       try {
         window.localStorage.setItem(storageKey, selectedClientId);
       } catch (e) {
-        console.warn('[ClientProvider] failed to persist client selection', e);
+        logger.warn('[ClientProvider] failed to persist client selection', { error: asErrorMessage(e) });
       }
     } else if (hasInitializedRef.current) {
       window.localStorage.removeItem(storageKey);
@@ -257,13 +256,13 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   const refreshClients = useCallback(async () => clientsRef.current, []);
   const retryClients = useCallback(() => {
     dispatch({ type: 'setError', error: null });
-    requestAnimationFrame(() => applyClientSelectionSync());
+    applyClientSelectionSync();
   }, [applyClientSelectionSync]);
   const selectClient = useCallback((clientId: string | null) => {
     dispatch({ type: 'setSelectedClientId', selectedClientId: clientId });
   }, []);
 
-  const createClient = async (input: {
+  const createClient = useCallback(async (input: {
     name: string;
     accountManager: string;
     teamMembers: ClientTeamMember[];
@@ -301,9 +300,9 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       });
       throw err;
     }
-  };
+  }, [workspaceId, convexCreateClient, user]);
 
-  const removeClient = async (clientId: string) => {
+  const removeClient = useCallback(async (clientId: string) => {
     if (!workspaceId) throw new Error('Workspace is required to remove a client');
     const targetClient = clientsRef.current.find((c) => c.id === clientId);
     const targetWorkspaceId = targetClient?.workspaceId ?? workspaceId;
@@ -318,7 +317,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       type: 'setSelectedClientId',
       selectedClientId: selectedClientIdRef.current === clientId ? fallbackClientId : selectedClientIdRef.current,
     });
-  };
+  }, [workspaceId, convexSoftDeleteClient]);
 
   useEffect(() => {
     if (previewEnabled || loading || !selectedClientId) return;

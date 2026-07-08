@@ -58,16 +58,14 @@ export function calculateBackoffDelay(attempt: number): number {
     });
 }
 export function isNetworkError(error: unknown): boolean {
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-        return true;
+    if (error instanceof TypeError) {
+        const message = error.message.toLowerCase();
+        return message.includes('fetch');
     }
-    if (error instanceof Error && (error.message.includes('network') ||
-        error.message.includes('Network') ||
-        error.message.includes('Failed to fetch') ||
-        error.message.includes('Connection'))) {
-        return true;
-    }
-    return false;
+    const message = asErrorMessage(error).toLowerCase();
+    return message.includes('network') ||
+        message.includes('failed to fetch') ||
+        message.includes('connection');
 }
 export function formatStatusLabel(status: ProjectStatus | StatusFilter): string {
     if (status === 'all') {

@@ -1,6 +1,6 @@
 'use client';
 import { notifyFailure, notifySuccess } from '@/lib/notifications';
-import { logError } from '@/lib/convex-errors';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { useMutation } from 'convex/react';
 import { CircleAlert, LoaderCircle } from 'lucide-react';
@@ -288,12 +288,13 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
             onOpenChange(false);
         })
             .catch((err) => {
+            const message = asErrorMessage(err);
             logError(err, 'edit-project-dialog:handleUpdateProject');
-            const message = err instanceof Error ? err.message : 'Failed to update project';
             dispatch({ type: 'setError', value: message });
             notifyFailure({
+                error: err,
                 title: 'Update failed',
-                message: message,
+                fallbackMessage: 'Failed to update project',
             });
         })
             .finally(() => {

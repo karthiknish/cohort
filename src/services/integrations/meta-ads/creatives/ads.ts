@@ -1,3 +1,4 @@
+import { asErrorMessage } from '@/lib/convex-errors';
 import { appendMetaAuthParams, META_API_BASE } from '../client';
 import { metaAdsClient } from '@/services/integrations/shared/base-client';
 import type { CreateAdOptions, UpdateAdOptions } from './types';
@@ -49,7 +50,7 @@ export async function createMetaAd(options: CreateAdOptions): Promise<{
         return {
             success: false,
             adId: '',
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: asErrorMessage(error, 'Unknown error'),
         };
     }
 }
@@ -93,7 +94,7 @@ export async function updateMetaAd(options: UpdateAdOptions): Promise<{
     catch (error) {
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: asErrorMessage(error, 'Unknown error'),
         };
     }
 }

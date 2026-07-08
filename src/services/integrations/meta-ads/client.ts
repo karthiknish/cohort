@@ -5,6 +5,7 @@
 // Note: appsecret_proof is only computed when running in Node.js environment
 import { formatDate } from '@/lib/dates';
 import { coerceNumber as coerceNumberNullable } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 import { metaAdsClient } from '../shared/base-client';
 import { executeIntegrationRequest } from '../shared/execute-integration-request';
 import { META_API_BASE, META_API_VERSION } from './constants';
@@ -52,8 +53,7 @@ export async function appendMetaAuthParams(options: {
     catch (error) {
         // Log the error with more context for debugging
         // This can happen in environments where crypto.subtle is unavailable
-        console.error('[Meta API] Failed to compute appsecret_proof - API requests will proceed without proof', {
-            error: error instanceof Error ? error.message : 'Unknown error',
+        logger.error('[Meta API] Failed to compute appsecret_proof - API requests will proceed without proof', error, {
             // Security note: Without appsecret_proof, the request is less secure
             // and may be subject to stricter rate limits from Meta
         });

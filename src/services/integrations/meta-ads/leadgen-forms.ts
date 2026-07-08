@@ -1,6 +1,7 @@
 // =============================================================================
 // LEADGEN FORMS - Page lead form list/create for lead campaigns
 // =============================================================================
+import { asErrorMessage } from '@/lib/convex-errors';
 import { appendMetaAuthParams, META_API_BASE } from './client';
 import { metaAdsClient } from '@/services/integrations/shared/base-client';
 export type MetaLeadgenForm = {
@@ -89,7 +90,7 @@ export async function createMetaLeadgenForm(options: {
     catch (error) {
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error creating lead form',
+            error: asErrorMessage(error, 'Unknown error creating lead form'),
         };
     }
 }

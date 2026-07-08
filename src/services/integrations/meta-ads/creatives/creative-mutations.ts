@@ -1,3 +1,4 @@
+import { asErrorMessage } from '@/lib/convex-errors';
 import { appendMetaAuthParams, META_API_BASE } from '../client';
 import { metaAdsClient } from '@/services/integrations/shared/base-client';
 import { asRecord } from './shared';
@@ -34,7 +35,7 @@ export async function deleteMetaAdCreative(options: DeleteAdCreativeOptions): Pr
     catch (error) {
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: asErrorMessage(error, 'Unknown error'),
         };
     }
 }
@@ -160,7 +161,7 @@ export async function updateMetaAdCreative(options: UpdateAdCreativeOptions): Pr
     catch (error) {
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: asErrorMessage(error, 'Unknown error'),
         };
     }
 }

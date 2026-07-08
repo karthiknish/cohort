@@ -1,3 +1,4 @@
+import { asErrorMessage } from '@/lib/convex-errors';
 import { appendMetaAuthParams, META_API_BASE } from '../client';
 import { metaAdsClient } from '@/services/integrations/shared/base-client';
 import { toMetaApiDestinationSpec } from './destination-spec';
@@ -152,7 +153,7 @@ export async function createMetaAdCreative(options: CreateAdCreativeOptions): Pr
         return {
             success: false,
             creativeId: '',
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: asErrorMessage(error, 'Unknown error'),
         };
     }
 }

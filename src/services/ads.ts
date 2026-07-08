@@ -5,6 +5,7 @@ import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads';
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads';
 import type { NormalizedMetric } from '@/types/integrations';
 import { BadRequestError } from '@/lib/api-errors';
+import { logger } from '@/lib/logger';
 export type PlatformCredentials = Record<string, string>;
 export interface CampaignOverview {
     id: string;
@@ -73,7 +74,7 @@ export class GoogleAdsService implements AdPlatform {
             return Array.from(campaigns.values());
         }
         catch (error) {
-            console.error('Failed to fetch Google Ads campaigns:', error);
+            logger.error('Failed to fetch Google Ads campaigns:', error);
             return [];
         }
     }
@@ -95,7 +96,7 @@ export class GoogleAdsService implements AdPlatform {
                 .flatMap(m => m.campaignId === campaignId ? [mapToCampaignMetrics(m)] : []);
         }
         catch (error) {
-            console.error('Failed to fetch Google Ads metrics:', error);
+            logger.error('Failed to fetch Google Ads metrics:', error);
             return [];
         }
     }
@@ -126,7 +127,7 @@ export class MetaAdsService implements AdPlatform {
             return Array.from(campaigns.values());
         }
         catch (error) {
-            console.error('Failed to fetch Meta Ads campaigns:', error);
+            logger.error('Failed to fetch Meta Ads campaigns:', error);
             return [];
         }
     }
@@ -147,7 +148,7 @@ export class MetaAdsService implements AdPlatform {
                 .flatMap(m => m.campaignId === campaignId ? [mapToCampaignMetrics(m)] : []);
         }
         catch (error) {
-            console.error('Failed to fetch Meta Ads metrics:', error);
+            logger.error('Failed to fetch Meta Ads metrics:', error);
             return [];
         }
     }
@@ -178,7 +179,7 @@ export class TikTokAdsService implements AdPlatform {
             return Array.from(campaigns.values());
         }
         catch (error) {
-            console.error('Failed to fetch TikTok Ads campaigns:', error);
+            logger.error('Failed to fetch TikTok Ads campaigns:', error);
             return [];
         }
     }
@@ -199,7 +200,7 @@ export class TikTokAdsService implements AdPlatform {
                 .flatMap(m => m.campaignId === campaignId ? [mapToCampaignMetrics(m)] : []);
         }
         catch (error) {
-            console.error('Failed to fetch TikTok Ads metrics:', error);
+            logger.error('Failed to fetch TikTok Ads metrics:', error);
             return [];
         }
     }
@@ -232,7 +233,7 @@ export class LinkedInAdsService implements AdPlatform {
             return Array.from(campaigns.values());
         }
         catch (error) {
-            console.error('Failed to fetch LinkedIn Ads campaigns:', error);
+            logger.error('Failed to fetch LinkedIn Ads campaigns:', error);
             return [];
         }
     }
@@ -253,7 +254,7 @@ export class LinkedInAdsService implements AdPlatform {
                 .flatMap(m => m.campaignId === campaignId ? [mapToCampaignMetrics(m)] : []);
         }
         catch (error) {
-            console.error('Failed to fetch LinkedIn Ads metrics:', error);
+            logger.error('Failed to fetch LinkedIn Ads metrics:', error);
             return [];
         }
     }
@@ -287,7 +288,7 @@ export class AdsManager {
                 return metricsByCampaign.flat();
             }
             catch (error) {
-                console.error(`Failed to fetch metrics for ${account.platform}:`, error);
+                logger.error(`Failed to fetch metrics for ${account.platform}:`, error);
                 return [];
             }
         }));

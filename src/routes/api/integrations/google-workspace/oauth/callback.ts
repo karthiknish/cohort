@@ -5,6 +5,7 @@ import { isValidRedirectUrl } from '@/lib/utils'
 import { upsertGoogleWorkspaceTokens } from '@/lib/meetings-admin'
 import { exchangeGoogleWorkspaceCodeForTokens, parseGoogleScopeList, resolveGoogleWorkspaceOAuthCredentials, resolveGoogleWorkspaceOAuthRedirectUri, validateGoogleWorkspaceOAuthState } from '@/services/google-workspace'
 import { jsonResponse, redirectResponse } from '@/lib/server-response'
+import { logError, asErrorMessage } from '@/lib/convex-errors'
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -53,6 +54,7 @@ const handlers = adaptApiHandler(
     const fallbackSuccess = `${appUrl}/dashboard/meetings?oauth_success=true&provider=google-workspace`
     try {
       if (query.error) {
+        logError(new Error(query.error_description || query.error || 'Unknown Google Workspace OAuth error'), '[google-workspace.oauth.callback] OAuth error from Google Workspace')
         const errorUrl = new URL('/dashboard/meetings', appUrl)
         errorUrl.searchParams.set('oauth_error', 'google_workspace_error')
         errorUrl.searchParams.set('provider', 'google-workspace')
@@ -96,7 +98,7 @@ const handlers = adaptApiHandler(
       }
       return redirectResponse(successUrl.toString())
     } catch (error: unknown) {
-      const rawMessage = error instanceof Error ? error.message : 'OAuth callback failed'
+      const rawMessage = asErrorMessage(error)
       const messageLower = rawMessage.toLowerCase()
       const message = (() => {
         if (messageLower.includes('convex admin client is not configured'))
@@ -107,6 +109,7 @@ const handlers = adaptApiHandler(
           return 'Login session expired. Please try connecting again.'
         return rawMessage
       })()
+      logError(error, '[google-workspace.oauth.callback] Error completing OAuth flow')
       const errorUrl = new URL('/dashboard/meetings', appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'google-workspace')

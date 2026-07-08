@@ -69,7 +69,6 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
             setSeverity('medium');
         })
             .catch((error) => {
-            console.error('Error submitting problem report:', error);
             reportConvexFailure({
                 error: error,
                 context: 'problem-report-modal.tsx:catch',

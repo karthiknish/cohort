@@ -5,6 +5,7 @@ import { recordSchedulerEvent } from '@/lib/scheduler-monitor'
 import { getSchedulerAlertPreference } from '@/lib/scheduler-alert-preferences'
 import { ServiceUnavailableError, UnauthorizedError } from '@/lib/api-errors'
 import { fetchWithTimeout, isTimeoutError } from '@/lib/retry-utils'
+import { logError } from '@/lib/convex-errors'
 
 const workerSchema = z.object({
   maxJobs: z.number().optional(),
@@ -59,7 +60,7 @@ const handlers = adaptApiHandler(
     }
 
     if (!processResponse.ok) {
-      console.error('[integrations/worker] Convex ad sync worker failed:', result)
+      logError(new Error(result.error ?? `Convex ad sync worker failed (${processResponse.status})`), '[integrations/worker] Convex ad sync worker failed')
       await recordSchedulerEvent({
         source: 'worker', processedJobs, successfulJobs, failedJobs: failedJobs + 1, hadQueuedJobs,
         inspectedQueuedJobs: summary.inspectedQueuedJobs, durationMs: Date.now() - startedAt,
@@ -76,7 +77,7 @@ const handlers = adaptApiHandler(
           const preference = await getSchedulerAlertPreference(providerId)
           return { providerId, failedJobs: 0, threshold: preference?.failureThreshold ?? null }
         } catch (error) {
-          console.error('[integrations/worker] failed to load alert preference', providerId, error)
+          logError(error, `[integrations/worker] failed to load alert preference for ${providerId}`)
           return { providerId, failedJobs: 0, threshold: null }
         }
       }),

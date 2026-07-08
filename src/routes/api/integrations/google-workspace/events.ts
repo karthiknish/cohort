@@ -6,6 +6,7 @@ import { buildDeepSeekRateLimitKey, formatDeepSeekRateLimitMessage, DEEPSEEK_RAT
 import { saveMeetingNotes, saveMeetingTranscript } from '@/lib/meetings-admin'
 import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
 import { DeepSeekAIService, resolveDeepSeekApiKey } from '@/services/deepseek'
+import { logError } from '@/lib/convex-errors'
 
 type MeetingStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
 type PubSubContext = {
@@ -343,7 +344,7 @@ const handlers = adaptApiHandler(
         notesGenerated = true
       }
     } catch (error) {
-      console.error('[google-workspace/events] failed to generate meeting notes', error)
+      logError(error, '[google-workspace/events] failed to generate meeting notes')
     }
     return {
       received: true,

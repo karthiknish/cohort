@@ -10,6 +10,9 @@
  * This guarantees charts render identically in every viewer.
  */
 
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
+
 const QUICKCHART_URL = 'https://quickchart.io/chart';
 
 export interface ChartImageOptions {
@@ -220,7 +223,7 @@ async function fetchChartImage(
         const resp = await fetch(url);
 
         if (!resp.ok) {
-            console.warn(`[QuickChart] Failed: ${resp.status} ${resp.statusText}`);
+            logger.warn(`[QuickChart] Failed`, { status: resp.status, statusText: resp.statusText });
             return null;
         }
 
@@ -234,7 +237,7 @@ async function fetchChartImage(
         }
         return `image/png;base64,${btoa(binary)}`;
     } catch (err) {
-        console.warn('[QuickChart] Error:', err);
+        logger.warn('[QuickChart] Error', { error: asErrorMessage(err) });
         return null;
     }
 }

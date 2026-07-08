@@ -1,6 +1,7 @@
 // =============================================================================
 // CONVERSIONS API (CAPI) — server-side and offline events
 // =============================================================================
+import { asErrorMessage } from '@/lib/convex-errors';
 import type { MetaCapiHashedUserData } from '@/lib/meta-capi-events';
 import type { MetaCapiActionSource } from '@/lib/meta-capi-events';
 import { appendMetaAuthParams, executeMetaApiRequest, META_API_BASE } from './client';
@@ -105,7 +106,7 @@ export async function sendMetaCapiEvents(options: {
         };
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : 'CAPI request failed';
+        const message = asErrorMessage(error, 'CAPI request failed');
         return { success: false, error: message };
     }
 }

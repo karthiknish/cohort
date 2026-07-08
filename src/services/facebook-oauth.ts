@@ -1,5 +1,6 @@
 import { URLSearchParams } from 'node:url';
 import { logger } from '@/lib/logger';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { META_API_VERSION, META_OAUTH_DIALOG_BASE, META_OAUTH_TOKEN_ENDPOINT, } from '@/services/integrations/meta-ads/constants';
 interface BuildMetaAuthUrlOptions {
     businessConfigId: string;
@@ -124,8 +125,8 @@ export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Pr
         response = await fetch(url);
     }
     catch (networkError) {
-        const message = networkError instanceof Error ? networkError.message : 'Network error';
-        logger.error('[Meta OAuth] Network error during token exchange', { error: message });
+        const message = asErrorMessage(networkError);
+        logger.error('[Meta OAuth] Network error during token exchange', networkError);
         throw new MetaTokenExchangeError({
             message: `Network error during Meta token exchange: ${message}`
         });

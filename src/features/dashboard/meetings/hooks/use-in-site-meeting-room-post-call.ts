@@ -2,7 +2,7 @@
 import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, type Dispatch, type RefObject, type SetStateAction } from 'react';
-import { logError } from '@/lib/convex-errors';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
 import type { TranscriptActionResult, TranscriptMode } from '../components/in-site-meeting-card.shared';
 import { postMeetingTranscriptAction } from '../lib/in-site-meeting-transcript-client';
 import type { MeetingProcessingState, MeetingRecord } from '../types';
@@ -97,7 +97,8 @@ export function useInSiteMeetingRoomPostCall({ meetingLegacyId, markCompleted, n
             onClose();
             void finalizePromise
                 .catch((error) => {
-                const message = error instanceof Error ? error.message : 'Meeting finalization failed';
+                logError(error, 'useInSiteMeetingRoomPostCall:finalizeAfterRoomExit');
+                const message = asErrorMessage(error);
                 onMeetingUpdated?.(buildMeetingSnapshot({
                     status: 'completed',
                     transcriptProcessingState: 'failed',
@@ -117,7 +118,8 @@ export function useInSiteMeetingRoomPostCall({ meetingLegacyId, markCompleted, n
             applyTranscriptActionResult(result);
         })
             .catch((error) => {
-            const message = error instanceof Error ? error.message : 'Meeting finalization failed';
+            logError(error, 'useInSiteMeetingRoomPostCall:finalizeAfterRoomExit');
+            const message = asErrorMessage(error);
             setTranscriptProcessingState('failed');
             setTranscriptProcessingError(message);
             setNotesProcessingState('failed');
@@ -174,7 +176,7 @@ export function useInSiteMeetingRoomPostCall({ meetingLegacyId, markCompleted, n
         }
         catch (error) {
             setNotesProcessingState('failed');
-            setNotesProcessingError(error instanceof Error ? error.message : 'Unknown error');
+            setNotesProcessingError(asErrorMessage(error));
             reportConvexFailure({
                 error,
                 context: 'useInSiteMeetingRoomPostCall:generateNotes',
@@ -237,7 +239,7 @@ export function useInSiteMeetingRoomPostCall({ meetingLegacyId, markCompleted, n
             });
         }
         catch (error) {
-            const message = error instanceof Error ? error.message : 'Meeting finalization failed';
+            const message = asErrorMessage(error);
             setTranscriptProcessingState('failed');
             setTranscriptProcessingError(message);
             setNotesProcessingState('failed');
@@ -251,8 +253,9 @@ export function useInSiteMeetingRoomPostCall({ meetingLegacyId, markCompleted, n
                 notesProcessingError: 'AI notes could not be generated because post-call finalization failed.',
             }));
             notifyFailure({
+                error,
                 title: 'Post-call retry failed',
-                message,
+                fallbackMessage: 'Meeting finalization failed',
             });
         }
         finally {
@@ -273,7 +276,7 @@ export function useInSiteMeetingRoomPostCall({ meetingLegacyId, markCompleted, n
             applyTranscriptActionResult(data);
         })
             .catch((error) => {
-            const message = error instanceof Error ? error.message : 'Room automation sync failed';
+            const message = asErrorMessage(error);
             logError(error, 'useInSiteMeetingRoomPostCall:autoSyncTranscript');
             if (mode === 'save-transcript-and-generate-notes') {
                 setNotesReason('generation_failed');

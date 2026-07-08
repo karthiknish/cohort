@@ -1,6 +1,8 @@
 import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto';
 import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/ads-admin';
 import { fetchLinkedInAdAccounts } from '@/services/integrations/linkedin-ads';
+import { logger } from '@/lib/logger';
+import { asErrorMessage } from '@/lib/convex-errors';
 // =============================================================================
 // LINKEDIN OAUTH CONFIGURATION
 // =============================================================================
@@ -165,7 +167,7 @@ export async function exchangeLinkedInCodeForTokens(options: ExchangeCodeOptions
         });
     }
     catch (networkError) {
-        const message = networkError instanceof Error ? networkError.message : 'Network error';
+        const message = asErrorMessage(networkError, 'Network error');
         throw new LinkedInTokenExchangeError({
             message: `Network error during LinkedIn token exchange: ${message}`,
         });
@@ -222,8 +224,8 @@ export async function completeLinkedInOAuthFlow(options: {
         });
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : 'Token exchange failed';
-        console.error('[LinkedIn OAuth] Code exchange failed:', message);
+        const message = asErrorMessage(error);
+        logger.error('[LinkedIn OAuth] Code exchange failed', error);
         throw new LinkedInOAuthError(`Failed to exchange authorization code: ${message}`);
     }
     if (!tokenResponse.access_token) {
@@ -247,7 +249,7 @@ export async function completeLinkedInOAuthFlow(options: {
         accountName = preferredAccount?.name ?? null;
     }
     catch (error) {
-        console.warn('[LinkedIn OAuth] Failed to resolve account name during OAuth completion:', error);
+        logger.warn('[LinkedIn OAuth] Failed to resolve account name during OAuth completion', { error: asErrorMessage(error) });
     }
     await persistIntegrationTokens({
         userId,

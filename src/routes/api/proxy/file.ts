@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { adaptApiHandler } from '@/lib/api-handler-start'
 import { z } from 'zod'
 import { ForbiddenError, ServiceUnavailableError } from '@/lib/api-errors'
+import { logError, logWarning, asErrorMessage } from '@/lib/convex-errors'
 
 const ALLOWED_DOMAINS = new Set([
   'storage.googleapis.com',
@@ -62,7 +63,7 @@ async function fetchWithRetry(
       })
       if (resp.ok) return resp
       // Log non-ok responses for debugging
-      console.warn(`[proxy/file] Upstream returned ${resp.status} (attempt ${attempt + 1}/${retries + 1}) for ${url.substring(0, 120)}...`)
+      logWarning(`[proxy/file] Upstream returned ${resp.status} (attempt ${attempt + 1}/${retries + 1}) for ${url.substring(0, 120)}...`)
       // Retry on 5xx (transient server errors)
       if (resp.status >= 500 && attempt < retries) {
         lastError = new Error(`Upstream returned ${resp.status}`)
@@ -73,8 +74,8 @@ async function fetchWithRetry(
       }
       return resp
     } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err))
-      console.warn(`[proxy/file] Fetch error (attempt ${attempt + 1}/${retries + 1}):`, lastError.message)
+      lastError = err instanceof Error ? err : new Error(asErrorMessage(err))
+      logWarning(`[proxy/file] Fetch error (attempt ${attempt + 1}/${retries + 1}): ${lastError.message}`)
       if (attempt < retries) {
         await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * (attempt + 1)))
         continue
@@ -101,8 +102,8 @@ const handlers = adaptApiHandler(
     try {
       upstream = await fetchWithRetry(fileUrl)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[proxy/file] All retries exhausted:', msg)
+      const msg = asErrorMessage(err)
+      logError(err, '[proxy/file] All retries exhausted')
       throw new ServiceUnavailableError('File storage is temporarily unavailable. Please try again.')
     }
     if (!upstream.ok) {

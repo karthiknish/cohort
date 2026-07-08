@@ -6,6 +6,7 @@ import { api } from '/_generated/api'
 import { scheduleIntegrationSync, scheduleSyncsForAllUsers, scheduleSyncsForUser } from '@/lib/integration-auto-sync'
 import { recordSchedulerEvent } from '@/lib/scheduler-monitor'
 import { UnauthorizedError, ValidationError } from '@/lib/api-errors'
+import { logError, asErrorMessage } from '@/lib/convex-errors'
 
 let _convexClient: ConvexHttpClient | null = null
 function getConvexClient(): ConvexHttpClient {
@@ -64,7 +65,8 @@ const handlers = adaptApiHandler(
           enqueuedJobs = result.deleted
           processedCount = 1
         } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : 'Unknown error'
+          const message = asErrorMessage(error)
+          logError(error, '[integrations/cron] cleanup_old_jobs failed')
           errors.push(`Cleanup failed: ${message}`)
         }
         break
@@ -80,7 +82,8 @@ const handlers = adaptApiHandler(
           enqueuedJobs = result.reset
           processedCount = 1
         } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : 'Unknown error'
+          const message = asErrorMessage(error)
+          logError(error, '[integrations/cron] reset_stale_jobs failed')
           errors.push(`Reset stale jobs failed: ${message}`)
         }
         break

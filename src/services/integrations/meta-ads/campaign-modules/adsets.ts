@@ -1,6 +1,7 @@
 // =============================================================================
 // AD SETS - Ad set CRUD operations
 // =============================================================================
+import { asErrorMessage } from '@/lib/convex-errors';
 import { appendMetaAuthParams, META_API_BASE, } from '../client';
 import { metaAdsClient } from '@/services/integrations/shared/base-client';
 import type { MetaAdSet } from '../types';
@@ -136,7 +137,7 @@ export async function createMetaAdSet(options: CreateAdSetOptions): Promise<{
     catch (error) {
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error creating ad set',
+            error: asErrorMessage(error, 'Unknown error creating ad set'),
         };
     }
 }
@@ -192,7 +193,7 @@ export async function updateMetaAdSet(options: UpdateAdSetOptions): Promise<{
     catch (error) {
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error updating ad set',
+            error: asErrorMessage(error, 'Unknown error updating ad set'),
         };
     }
 }

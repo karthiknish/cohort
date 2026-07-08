@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { AdminPageShell } from '../components/admin-page-shell';
+import { AdminActionErrorAlert } from '../components/admin-action-error-alert';
 import type { AllocationUser } from '../lib/client-allocation';
 import type { TeamMemberField } from './hooks/use-admin-clients';
 import type { ClientRecord } from './admin-clients-types';
@@ -34,6 +35,8 @@ type AdminClientsPageContentProps = {
     clientSearch: string;
     workspaceQueryError: string | null;
     clientsError: string | null;
+    actionError: string | null;
+    clearActionError: () => void;
     clientName: string;
     clientAccountManager: string;
     teamMemberFields: TeamMemberField[];
@@ -92,9 +95,10 @@ type AdminClientsPageContentProps = {
     onConfirmEditTeamMemberRole: () => void;
 };
 export function AdminClientsPageContent(props: AdminClientsPageContentProps) {
-    const { isPreviewMode, clientsLoading, clients, nextCursor, existingTeamMembers, assignableUsers, allocationSummary, filteredClients, unmatchedByClientId, clientSearch, workspaceQueryError, clientsError, clientName, clientAccountManager, teamMemberFields, clientSaving, clientPendingDelete, isDeleteDialogOpen, deletingClientId, clientPendingMembers, isTeamDialogOpen, addingMember, removingTeamMemberKey, memberName, memberRole, updatingMemberRoleKey, editingMemberRole, isEditRoleDialogOpen, clientPendingEditMember, loadingMore, onRefresh, onFormSubmit, onClientNameChange, onAccountManagerChange, onAccountManagerInputChange, onClientSearchChange, onAddTeamMemberField, onUpdateTeamMemberName, onUpdateTeamMemberRole, onRemoveTeamMemberField, onResetClientForm, onRequestAddTeamMember, onRequestDeleteClient, onRemoveTeamMember, onEditTeamMemberRole, onLoadMore, onDeleteDialogChange, onCancelDelete, onConfirmDelete, onTeamDialogChange, onMemberNameChange, onMemberNameInputChange, onMemberRoleChange, onCancelTeamDialog, onConfirmAddTeamMember, onEditRoleDialogChange, onEditingMemberRoleChange, onCancelEditRoleDialog, onConfirmEditTeamMemberRole, } = props;
+    const { isPreviewMode, clientsLoading, clients, nextCursor, existingTeamMembers, assignableUsers, allocationSummary, filteredClients, unmatchedByClientId, clientSearch, workspaceQueryError, clientsError, actionError, clearActionError, clientName, clientAccountManager, teamMemberFields, clientSaving, clientPendingDelete, isDeleteDialogOpen, deletingClientId, clientPendingMembers, isTeamDialogOpen, addingMember, removingTeamMemberKey, memberName, memberRole, updatingMemberRoleKey, editingMemberRole, isEditRoleDialogOpen, clientPendingEditMember, loadingMore, onRefresh, onFormSubmit, onClientNameChange, onAccountManagerChange, onAccountManagerInputChange, onClientSearchChange, onAddTeamMemberField, onUpdateTeamMemberName, onUpdateTeamMemberRole, onRemoveTeamMemberField, onResetClientForm, onRequestAddTeamMember, onRequestDeleteClient, onRemoveTeamMember, onEditTeamMemberRole, onLoadMore, onDeleteDialogChange, onCancelDelete, onConfirmDelete, onTeamDialogChange, onMemberNameChange, onMemberNameInputChange, onMemberRoleChange, onCancelTeamDialog, onConfirmAddTeamMember, onEditRoleDialogChange, onEditingMemberRoleChange, onCancelEditRoleDialog, onConfirmEditTeamMemberRole, } = props;
     const shellActions = <AdminClientsPageHeaderActions clientsLoading={clientsLoading} onRefresh={onRefresh}/>;
     return (<>
+      <AdminActionErrorAlert error={actionError} onDismiss={clearActionError}/>
       <AdminPageShell title="Client workspaces" description={<>
             Allocate real internal teammates to each client workspace and keep ownership clean.
             {isPreviewMode ? ' Preview mode keeps client changes local to this session.' : ''}

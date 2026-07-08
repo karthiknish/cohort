@@ -1,5 +1,6 @@
 import { getAdIntegration, updateIntegrationCredentials } from '@/lib/ads-admin';
 import { getGoogleAnalyticsIntegration, updateGoogleAnalyticsCredentials } from '@/lib/analytics-admin';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { logger } from '@/lib/logger';
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils';
 import { cache } from 'react';
@@ -35,7 +36,7 @@ function cleanupStalePromises(): void {
         if (now - timestamp > PROMISE_TTL_MS) {
             refreshPromises.delete(key);
             refreshPromiseTimestamps.delete(key);
-            console.warn(`[Token Refresh] Cleaned up stale promise for ${key}`);
+            logger.warn(`[Token Refresh] Cleaned up stale promise for ${key}`);
         }
     }
 }
@@ -117,7 +118,7 @@ export async function refreshTikTokAccessToken({ userId, clientId }: RefreshPara
     let lastError: Error | null = null;
     for (let attempt = 0; attempt < TOKEN_REFRESH_CONFIG.maxRetries; attempt++) {
         try {
-            console.log(`[TikTok Token Refresh] Attempt ${attempt + 1}/${TOKEN_REFRESH_CONFIG.maxRetries} for user ${userId}`);
+            logger.info(`[TikTok Token Refresh] Attempt ${attempt + 1}/${TOKEN_REFRESH_CONFIG.maxRetries} for user ${userId}`);
             const response = await fetch(TIKTOK_REFRESH_ENDPOINT, {
                 method: 'POST',
                 headers: {
@@ -157,7 +158,7 @@ export async function refreshTikTokAccessToken({ userId, clientId }: RefreshPara
                             delayMs = Math.max(delayMs, retryAfterSeconds * 1000);
                         }
                     }
-                    console.warn(`[TikTok Token Refresh] Server error ${response.status} on attempt ${attempt + 1}, retrying in ${delayMs}ms...`);
+                    logger.warn(`[TikTok Token Refresh] Server error ${response.status} on attempt ${attempt + 1}, retrying in ${delayMs}ms...`);
                     await sleep(delayMs);
                     continue;
                 }
@@ -182,7 +183,7 @@ export async function refreshTikTokAccessToken({ userId, clientId }: RefreshPara
                 // Check for retryable TikTok error codes (40100 = rate limited)
                 const isRetryableCode = payload.code === 40100;
                 if (isRetryableCode && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
-                    console.warn(`[TikTok Token Refresh] TikTok error code ${payload.code} on attempt ${attempt + 1}, retrying...`);
+                    logger.warn(`[TikTok Token Refresh] TikTok error code ${payload.code} on attempt ${attempt + 1}, retrying...`);
                     await sleep(calculateBackoffDelay(attempt));
                     continue;
                 }
@@ -203,7 +204,7 @@ export async function refreshTikTokAccessToken({ userId, clientId }: RefreshPara
                 accessTokenExpiresAt: accessTokenExpiresAt ?? undefined,
                 refreshTokenExpiresAt: refreshTokenExpiresAt ?? undefined,
             });
-            console.log(`[TikTok Token Refresh] Successfully refreshed token for user ${userId}, expires in ${data.expires_in ?? 'unknown'} seconds`);
+            logger.info(`[TikTok Token Refresh] Successfully refreshed token for user ${userId}, expires in ${data.expires_in ?? 'unknown'} seconds`);
             return data.access_token;
         }
         catch (error) {
@@ -211,9 +212,9 @@ export async function refreshTikTokAccessToken({ userId, clientId }: RefreshPara
                 throw error;
             }
             // Network errors are retryable
-            lastError = error instanceof Error ? error : new Error('Unknown error');
+            lastError = error instanceof Error ? error : new Error(asErrorMessage(error));
             if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
-                console.warn(`[TikTok Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message);
+                logger.warn(`[TikTok Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, { message: lastError.message });
                 await sleep(calculateBackoffDelay(attempt));
                 continue;
             }
@@ -237,7 +238,7 @@ async function ensureGoogleAccessTokenInternal({ userId, clientId, forceRefresh 
             // Use a 10-minute buffer for pre-emptive refresh
             const PRE_EMPTIVE_REFRESH_BUFFER_MS = 10 * 60 * 1000;
             if (forceRefresh || isTokenExpiringSoon(integration.accessTokenExpiresAt, PRE_EMPTIVE_REFRESH_BUFFER_MS)) {
-                console.log(`[Google Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`);
+                logger.info(`[Google Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`);
                 return await refreshGoogleAccessToken({ userId, clientId });
             }
             return integration.accessToken;
@@ -268,7 +269,7 @@ export async function ensureMetaAccessToken({ userId, clientId, forceRefresh }: 
             // Use a 10-minute buffer for pre-emptive refresh
             const PRE_EMPTIVE_REFRESH_BUFFER_MS = 10 * 60 * 1000;
             if (forceRefresh || isTokenExpiringSoon(integration.accessTokenExpiresAt, PRE_EMPTIVE_REFRESH_BUFFER_MS)) {
-                console.log(`[Meta Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`);
+                logger.info(`[Meta Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`);
                 return await refreshMetaAccessToken({ userId, clientId });
             }
             return integration.accessToken;
@@ -330,7 +331,7 @@ export async function refreshLinkedInAccessToken({ userId, clientId }: RefreshPa
     let lastError: Error | null = null;
     const attemptRefresh = async (attempt: number): Promise<string> => {
         try {
-            console.log(`[LinkedIn Token Refresh] Attempt ${attempt + 1}/${TOKEN_REFRESH_CONFIG.maxRetries} for user ${userId}`);
+            logger.info(`[LinkedIn Token Refresh] Attempt ${attempt + 1}/${TOKEN_REFRESH_CONFIG.maxRetries} for user ${userId}`);
             const response = await fetch(LINKEDIN_TOKEN_ENDPOINT, {
                 method: 'POST',
                 headers: {
@@ -393,9 +394,9 @@ export async function refreshLinkedInAccessToken({ userId, clientId }: RefreshPa
                 throw error;
             }
             // Network errors are retryable
-            lastError = error instanceof Error ? error : new Error('Unknown error');
+            lastError = error instanceof Error ? error : new Error(asErrorMessage(error));
             if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
-                console.warn(`[LinkedIn Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message);
+                logger.warn(`[LinkedIn Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, { message: lastError.message });
                 await sleep(calculateBackoffDelay(attempt));
                 return attemptRefresh(attempt + 1);
             }
@@ -424,7 +425,7 @@ export async function ensureLinkedInAccessToken({ userId, clientId, forceRefresh
                 if (!integration.refreshToken) {
                     throw new IntegrationTokenError('LinkedIn access token is expiring and no refresh token is available. Please reconnect your LinkedIn Ads account.', 'linkedin', userId, { isRetryable: false });
                 }
-                console.log(`[LinkedIn Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`);
+                logger.info(`[LinkedIn Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`);
                 return await refreshLinkedInAccessToken({ userId, clientId });
             }
             return integration.accessToken;

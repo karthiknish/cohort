@@ -1,4 +1,5 @@
 'use client';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
 import { useState, useCallback, useEffect, type ChangeEvent } from 'react';
 import { useRouter } from '@/shared/ui/navigation';
@@ -113,7 +114,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
             push('/');
         })
             .catch((accountError) => {
-            const message = accountError instanceof Error ? accountError.message : 'Failed to delete account';
+            const message = asErrorMessage(accountError, 'Failed to delete account');
             setDeleteDialogState((prev) => ({ ...prev, error: message }));
             notifyFailure({
                 title: 'Account deletion failed',

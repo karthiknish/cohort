@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { completeMetaOAuthFlow, validateMetaOAuthState } from '@/services/meta-business'
 import { isValidRedirectUrl } from '@/lib/utils'
 import { jsonResponse, redirectResponse } from '@/lib/server-response'
+import { logError, asErrorMessage } from '@/lib/convex-errors'
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -24,7 +25,7 @@ const handlers = adaptApiHandler(
     try {
       const { error, error_reason: errorReason, error_description: errorDescription, code, state } = query
       if (error) {
-        console.error('[meta.oauth.callback] OAuth error from Meta:', { error, errorReason, errorDescription })
+        logError(new Error(errorDescription || error || 'Unknown Meta OAuth error'), '[meta.oauth.callback] OAuth error from Meta')
         let errorEntryPoint: 'socials' | 'ads' = 'ads'
         try {
           const ctx = validateMetaOAuthState(state ?? '')
@@ -51,7 +52,7 @@ const handlers = adaptApiHandler(
       try {
         context = validateMetaOAuthState(state ?? '')
       } catch (stateError) {
-        console.error('[meta.oauth.callback] State validation failed:', stateError)
+        logError(stateError, '[meta.oauth.callback] State validation failed')
         return redirectResponse(`${appUrl}/dashboard/ads?oauth_error=invalid_state&provider=facebook`)
       }
       if (!context.state) {
@@ -81,7 +82,7 @@ const handlers = adaptApiHandler(
       }
       return redirectResponse(new URL(redirectTarget, req.url))
     } catch (error: unknown) {
-      const rawMessage = error instanceof Error ? error.message : 'Unknown error'
+      const rawMessage = asErrorMessage(error)
       const messageLower = rawMessage.toLowerCase()
       const userFacingMessage = (() => {
         if (messageLower.includes('convex admin client is not configured'))
@@ -92,10 +93,7 @@ const handlers = adaptApiHandler(
           return 'Login session expired. Please try connecting again.'
         return rawMessage
       })()
-      console.error('[meta.oauth.callback] Error completing OAuth flow:', {
-        error: rawMessage,
-        stack: error instanceof Error ? error.stack : undefined,
-      })
+      logError(error, '[meta.oauth.callback] Error completing OAuth flow')
       let errorPath = '/dashboard/ads'
       try {
         const ctx = validateMetaOAuthState(query.state ?? '')

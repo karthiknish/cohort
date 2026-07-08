@@ -1,6 +1,7 @@
 // =============================================================================
 // TIKTOK ADS METRICS - Fetching ad metrics from TikTok API
 // =============================================================================
+import { asErrorMessage } from '@/lib/convex-errors';
 import { formatDate } from '@/lib/dates';
 import { parseJsonBodySafely, parseRequiredJsonBody } from '@/lib/response-json';
 import { coerceNumber, DEFAULT_RETRY_CONFIG } from './client';
@@ -263,7 +264,7 @@ export async function checkTikTokIntegrationHealth(options: {
             healthy: false,
             tokenValid: false,
             accountAccessible: false,
-            error: error instanceof Error ? error.message : 'Health check failed',
+            error: asErrorMessage(error, 'Health check failed'),
         };
     }
 }

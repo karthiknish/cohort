@@ -106,7 +106,7 @@ export function useAdsConnectionActions({ workspaceId, selectedClientId, convexA
             throw new Error('This provider does not support OAuth yet.');
         }
         catch (error: unknown) {
-            const rawMessage = error instanceof Error ? error.message : '';
+            const rawMessage = asErrorMessage(error, '');
             const isMetaConfigError = providerId === PROVIDER_IDS.FACEBOOK &&
                 /meta business login is not configured/i.test(rawMessage);
             const isTikTokConfigError = providerId === PROVIDER_IDS.TIKTOK && /tiktok oauth is not configured/i.test(rawMessage);

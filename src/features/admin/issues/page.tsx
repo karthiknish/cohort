@@ -1,7 +1,8 @@
 'use client';
 import { notifyInfo, notifySuccess } from '@/lib/notifications';
-import { reportConvexFailure } from '@/lib/handle-convex-error';
+import { useAdminActionError } from '@/features/admin/hooks/use-admin-action-error';
 import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
+import { AdminActionErrorAlert } from '../components/admin-action-error-alert';
 import { AdminQueryErrorAlert } from '../components/admin-query-error-alert';
 import { useCallback, useMemo, useReducer } from 'react';
 import { AlertCircle, CheckCircle2, Clock, LoaderCircle, RefreshCw, Search, Trash2, } from 'lucide-react';
@@ -151,6 +152,7 @@ function adminIssuesReducer(state: AdminIssuesState, action: AdminIssuesAction):
 }
 export default function AdminIssuesPage() {
     const { isPreviewMode } = usePreview();
+    const { actionError, clearActionError, reportActionFailure } = useAdminActionError();
     const [state, dispatch] = useReducer(adminIssuesReducer, {
         statusFilter: 'all',
         searchTerm: '',
@@ -193,7 +195,7 @@ export default function AdminIssuesPage() {
             notifySuccess({ title: 'Status updated', message: `Report marked as ${newStatus}` });
         })
             .catch((error) => {
-            reportConvexFailure({
+            reportActionFailure({
                 error,
                 context: 'AdminIssuesPage:updateStatus',
                 title: 'Status update failed',
@@ -223,7 +225,7 @@ export default function AdminIssuesPage() {
             dispatch({ type: 'setDeleteTarget', value: null });
         })
             .catch((error) => {
-            reportConvexFailure({
+            reportActionFailure({
                 error,
                 context: 'AdminIssuesPage:deleteReport',
                 title: 'Delete failed',
@@ -286,6 +288,7 @@ export default function AdminIssuesPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <AdminQueryErrorAlert error={reportsQueryError} title="Unable to load reports"/>
+          <AdminActionErrorAlert error={actionError} onDismiss={clearActionError}/>
           {loading && resolvedReports.length === 0 ? (<output className="flex flex-col items-center justify-center py-12 text-muted-foreground" aria-live="polite" aria-busy="true">
               <LoaderCircle className="mb-4 size-8 animate-spin" aria-hidden/>
               <p>Loading reports…</p>

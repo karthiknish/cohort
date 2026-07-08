@@ -2,6 +2,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useAction } from 'convex/react';
 import { adsMetaToolsApi } from '@/lib/convex-api';
+import { asErrorMessage } from '@/lib/convex-errors';
 export type MetaTargetingSearchResult = {
     id: string;
     name: string;
@@ -59,7 +60,7 @@ export function useMetaTargetingSearch({ workspaceId, clientId, mode, enabled = 
         catch (err) {
             if (requestId === requestIdRef.current) {
                 setResults([]);
-                setError(err instanceof Error ? err.message : 'Search failed');
+                setError(asErrorMessage(err, 'Search failed'));
             }
         }
         finally {

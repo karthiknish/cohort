@@ -1,4 +1,5 @@
 'use client';
+import { asErrorMessage } from './convex-errors';
 const MAX_ATTACHMENT_TEXT_LENGTH = 12000;
 const MAX_ATTACHMENT_EXCERPT_LENGTH = 1800;
 /** Matches convex/agentAttachments.ts — Convex action args cap base64 PDF uploads. */
@@ -288,7 +289,7 @@ async function extractTextFromAttachment(file: File): Promise<{
     catch (error) {
         return {
             extractionStatus: 'failed',
-            errorMessage: error instanceof Error ? error.message : 'Unable to read this attachment.',
+            errorMessage: asErrorMessage(error, 'Unable to read this attachment.'),
         };
     }
 }

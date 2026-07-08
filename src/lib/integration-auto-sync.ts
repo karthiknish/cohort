@@ -4,6 +4,8 @@ import { ConvexHttpClient } from 'convex/browser';
 import { internal } from '/_generated/api';
 import { enqueueSyncJob, getAdIntegration, hasPendingSyncJob, markIntegrationSyncRequested, } from '@/lib/ads-admin';
 import { getGoogleAnalyticsIntegration, hasPendingGoogleAnalyticsSyncJob, markGoogleAnalyticsSyncRequested, } from '@/lib/analytics-admin';
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
 import { resolveWorkspaceIdForUser } from '@/lib/workspace';
 type QueryReference = Parameters<ConvexHttpClient['query']>[0];
 const DEFAULT_SYNC_FREQUENCY_MINUTES = 6 * 60; // every 6 hours
@@ -76,7 +78,7 @@ function resolveTimestamp(value: unknown): Date | null {
             }).toDate();
         }
         catch (error) {
-            console.warn('[integration-auto-sync] failed to convert timestamp via toDate', error);
+            logger.warn('[integration-auto-sync] failed to convert timestamp via toDate', { error: asErrorMessage(error) });
             return null;
         }
     }
@@ -90,7 +92,7 @@ function resolveTimestamp(value: unknown): Date | null {
             return Number.isFinite(millis) ? new Date(millis) : null;
         }
         catch (error) {
-            console.warn('[integration-auto-sync] failed to convert timestamp via toMillis', error);
+            logger.warn('[integration-auto-sync] failed to convert timestamp via toMillis', { error: asErrorMessage(error) });
             return null;
         }
     }
@@ -112,7 +114,7 @@ export async function scheduleIntegrationSync(options: {
     const { userId, providerId, force = false, timeframeDays } = options;
     const integration = await getIntegrationForProvider(userId, providerId);
     if (!integration) {
-        console.warn('[integration-auto-sync] integration not found', { userId, providerId });
+        logger.warn('[integration-auto-sync] integration not found', { userId, providerId });
         return false;
     }
     if (integration.autoSyncEnabled === false && !force) {
@@ -183,7 +185,7 @@ export async function scheduleSyncsForUser(options: {
 async function getUserIntegrationIds(userId: string): Promise<string[]> {
     const convex = getConvexClient();
     if (!convex) {
-        console.warn('[integration-auto-sync] convex client not available');
+        logger.warn('[integration-auto-sync] convex client not available');
         return [];
     }
     const workspaceId = await resolveWorkspaceIdForUser(userId);
@@ -208,7 +210,7 @@ export async function scheduleSyncsForAllUsers(options: {
     const { force = false, providerIds, maxUsers, timeframeDays } = options;
     const convex = getConvexClient();
     if (!convex) {
-        console.warn('[integration-auto-sync] convex client not available');
+        logger.warn('[integration-auto-sync] convex client not available');
         return { scheduled: [], skipped: [] };
     }
     // Get all workspaces with integrations

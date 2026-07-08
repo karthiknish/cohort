@@ -1,6 +1,7 @@
 // =============================================================================
 // CREATIVES - Ad creative fetching and processing
 // =============================================================================
+import { asErrorMessage } from '@/lib/convex-errors';
 import { logger } from '@/lib/logger';
 import { appendMetaAuthParams, META_API_BASE, } from '../client';
 import { optimizeMetaImageUrl, isSignedMetaThumbnail, metaPageIdFromObjectStoryId } from '../utils';
@@ -496,7 +497,7 @@ export async function fetchMetaCreatives(options: {
                 }] as const;
         }
         catch (err) {
-            console.warn(`[Meta Ads] Failed to fetch video info for ${videoId}:`, err instanceof Error ? err.message : err);
+            logger.warn(`[Meta Ads] Failed to fetch video info for ${videoId}`, { error: asErrorMessage(err) });
             return [videoId, {}] as const;
         }
     }));

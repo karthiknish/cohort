@@ -1,5 +1,6 @@
 import type { FunctionReference } from 'convex/server';
 import { getSystemConvexClient } from '@/lib/convex-system-client';
+import { logger } from '@/lib/logger';
 import { internal } from '/_generated/api';
 type MutationReference = FunctionReference<'mutation'>;
 const ALERT_WEBHOOK_URL = process.env.SCHEDULER_ALERT_WEBHOOK_URL;
@@ -111,7 +112,7 @@ async function sendAlert(message: string, severity: SchedulerEventSeverity): Pro
         });
     }
     catch (error) {
-        console.error('[scheduler-monitor] failed to dispatch webhook alert', error);
+        logger.error('[scheduler-monitor] failed to dispatch webhook alert', error);
     }
 }
 export async function recordSchedulerEvent(input: SchedulerEventInput): Promise<void> {
@@ -148,7 +149,7 @@ export async function recordSchedulerEvent(input: SchedulerEventInput): Promise<
         }
     }
     catch (error) {
-        console.error('[scheduler-monitor] failed to persist event', error);
+        logger.error('[scheduler-monitor] failed to persist event', error);
     }
     if (severity === 'warning' || severity === 'critical') {
         const message = buildAlertMessage(input, severity);

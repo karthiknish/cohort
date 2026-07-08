@@ -1,6 +1,7 @@
 // =============================================================================
 // LINKEDIN ADS METRICS - Fetching ad metrics from LinkedIn API
 // =============================================================================
+import { asErrorMessage } from '@/lib/convex-errors';
 import { normalizeCurrency, coerceNumber, buildTimeRange, formatDate, DEFAULT_RETRY_CONFIG, } from './client';
 import { parseJsonBodySafely } from '@/lib/response-json';
 import { linkedinAdsClient } from '@/services/integrations/shared/base-client';
@@ -180,7 +181,7 @@ export async function checkLinkedInIntegrationHealth(options: {
             healthy: false,
             tokenValid: false,
             accountAccessible: false,
-            error: error instanceof Error ? error.message : 'Health check failed',
+            error: asErrorMessage(error, 'Health check failed'),
         };
     }
 }

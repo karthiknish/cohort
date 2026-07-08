@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PptxViewer, RECOMMENDED_ZIP_LIMITS } from '@aiden0z/pptx-renderer';
+import { asErrorMessage } from '@/lib/convex-errors';
 
 export interface UsePptViewerOptions {
     url: string;
@@ -75,10 +76,11 @@ async function fetchPresentation(
                     : errorMsg,
             );
         } catch (err) {
-            if (err instanceof Error && err.message.includes('Access denied')) {
-                throw err;
+            const message = asErrorMessage(err);
+            if (message.includes('Access denied')) {
+                throw new Error(message);
             }
-            lastError = err instanceof Error ? err : new Error(String(err));
+            lastError = err instanceof Error ? err : new Error(message);
             if (attempt < 3) {
                 await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
                 continue;
@@ -146,7 +148,7 @@ export function usePptViewer({ url, refreshUrl }: UsePptViewerOptions): UsePptVi
             setIsLoading(false);
         } catch (err) {
             if (loadRequestRef.current !== requestId) return;
-            setError(err instanceof Error ? err.message : 'Failed to load presentation');
+            setError(asErrorMessage(err));
             setIsLoading(false);
         }
     }, [url]);

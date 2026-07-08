@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { ConvexHttpClient } from 'convex/browser';
 import { internal } from '/_generated/api';
 import { ValidationError } from './api-errors';
+import { logger } from '@/lib/logger';
 type AdminAuthClient = ConvexHttpClient & {
     setAdminAuth?: (token: string, identity: {
         issuer: string;
@@ -43,7 +44,7 @@ export const resolveWorkspaceIdForUser = cache(async (userId: string): Promise<s
     const convex = getConvexClient();
     if (!convex) {
         // Fallback to userId if Convex is not configured
-        console.warn('[workspace] Convex not configured, falling back to userId as workspaceId');
+        logger.warn('[workspace] Convex not configured, falling back to userId as workspaceId');
         return userId;
     }
     try {
@@ -56,7 +57,7 @@ export const resolveWorkspaceIdForUser = cache(async (userId: string): Promise<s
         return result?.workspaceId ?? userId;
     }
     catch (error) {
-        console.error('[workspace] Failed to resolve workspace ID from Convex:', error);
+        logger.error('[workspace] Failed to resolve workspace ID from Convex', error);
         // Fallback to userId on error
         return userId;
     }

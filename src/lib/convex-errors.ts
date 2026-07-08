@@ -1,5 +1,8 @@
 import { ConvexError } from 'convex/values';
-import { captureError } from '@/lib/sentry-capture';
+import { captureError, captureMessage } from '@/lib/sentry-capture';
+
+const isProduction = typeof process !== 'undefined' && process.env.NODE_ENV === 'production';
+
 /**
  * Standardized error data passed to ConvexError.
  * Must match the definition in convex/errors.ts
@@ -10,44 +13,64 @@ export type AppErrorData = {
     details?: Record<string, unknown>;
 };
 /**
- * Logs an error to the console with rich context.
- * Use this in catch blocks before displaying a toast to the user.
+ * Logs an error to the console with rich context in non-production environments.
+ * Always forwards to Sentry. Use this in catch blocks before displaying a toast.
  */
-export function logError(error: unknown, context?: string): void {
+export function logError(error: unknown, context?: string | Record<string, unknown>): void {
     const code = extractErrorCode(error);
     const details = extractErrorDetails(error);
     const message = asErrorMessage(error);
-    // Console logging for debugging
-    console.group(`[Error]${context ? ` ${context}` : ''}`);
-    console.error('Message:', message);
-    if (code)
-        console.error('Code:', code);
-    if (details)
-        console.error('Details:', details);
-    console.error('Raw Error:', error);
-    console.groupEnd();
+    const contextString = typeof context === 'string' ? context : undefined;
+    const extraContext = typeof context === 'object' && context !== null ? context : undefined;
+    // Console logging for debugging only
+    if (!isProduction) {
+        console.group(`[Error]${contextString ? ` ${contextString}` : ''}`);
+        console.error('Message:', message);
+        if (code)
+            console.error('Code:', code);
+        if (details)
+            console.error('Details:', details);
+        if (extraContext)
+            console.error('Context:', extraContext);
+        console.error('Raw Error:', error);
+        console.groupEnd();
+    }
     // Forward to Sentry (no-op if SDK is not initialized)
     captureError(error, {
         tags: code ? { error_code: code } : undefined,
-        extra: { context, details },
+        extra: { context: contextString, details, ...extraContext },
+    });
+}
+/**
+ * Logs a warning to Sentry and the console in non-production environments.
+ * Use this for recoverable issues that should not surface a user-facing error.
+ */
+export function logWarning(message: string, context?: string | Record<string, unknown>, extra?: Record<string, unknown>): void {
+    const contextString = typeof context === 'string' ? context : undefined;
+    const contextExtra = typeof context === 'object' && context !== null ? context : undefined;
+    if (!isProduction) {
+        console.warn(`[Warning]${contextString ? ` ${contextString}` : ''}`, message, contextExtra ?? '', extra ?? '');
+    }
+    captureMessage(message, 'warning', {
+        extra: { context: contextString, ...contextExtra, ...extra },
     });
 }
 /**
  * Extract a user-friendly error message from unknown error values,
  * including standardized ConvexError objects.
  */
-export function asErrorMessage(error: unknown): string {
+export function asErrorMessage(error: unknown, fallback = 'An unexpected error occurred'): string {
     if (error instanceof ConvexError) {
         const data = error.data as AppErrorData;
-        return data?.message ?? 'An error occurred';
+        return data?.message?.trim() || fallback;
     }
     if (error instanceof Error) {
-        return error.message;
+        return error.message.trim() || fallback;
     }
     if (typeof error === 'string') {
-        return error;
+        return error.trim() || fallback;
     }
-    return 'An unexpected error occurred';
+    return fallback;
 }
 /**
  * Extract the standardized error code from a ConvexError.
