@@ -15,7 +15,7 @@ import { useMeetingAttendees } from './use-meeting-attendees';
 import { describeNotificationSummary, pluralize, type MeetingNotificationSummary } from '../lib/notifications';
 import { getPreviewGoogleWorkspaceStatus, getPreviewMeetingWorkspaceMembers, getPreviewMeetings, } from '../lib/preview-data';
 import type { MeetingRecord, WorkspaceMember } from '../types';
-import { extractRoomNameFromMeetingLink, isMeetingPostProcessing, toTimeValue, } from '../utils';
+import { extractRoomNameFromMeetingLink, isMeetingPostProcessing, toTimeValue, describeEarliestMeetingStart, MIN_MEETING_SCHEDULE_LEAD_MS, } from '../utils';
 const MEETING_ACTION_TIMEOUT_MS = 20000;
 type QuickMeetingResponse = {
     meeting?: MeetingRecord;
@@ -32,14 +32,10 @@ type CancelMeetingResponse = {
     };
 };
 type ScheduleMeetingResponse = {
-    meeting?: {
-        meetLink?: string | null;
-    };
+    meeting?: MeetingRecord;
     notificationSummary?: MeetingNotificationSummary;
     data?: {
-        meeting?: {
-            meetLink?: string | null;
-        };
+        meeting?: MeetingRecord;
         notificationSummary?: MeetingNotificationSummary;
     };
 };
@@ -488,6 +484,7 @@ export function useMeetingsPageController() {
         const startTimeMs = start.getTime();
         const endTimeMs = startTimeMs + duration * 60000;
         const now = Date.now();
+        const isEditing = Boolean(editingMeeting);
         if (normalizedTitle.length < 3) {
             notifyFailure({ title: 'Title too short', message: 'Meeting titles should be at least 3 characters long.' });
             return;
@@ -496,8 +493,13 @@ export function useMeetingsPageController() {
             notifyFailure({ title: 'Title too long', message: 'Meeting titles must stay within 120 characters.' });
             return;
         }
-        if (startTimeMs < now + 5 * 60000) {
-            notifyFailure({ title: 'Start time too soon', message: 'Schedule meetings at least 5 minutes in advance.' });
+        const startTimeUnchanged = isEditing && editingMeeting?.startTimeMs === startTimeMs;
+        if (!startTimeUnchanged && startTimeMs < now + MIN_MEETING_SCHEDULE_LEAD_MS) {
+            const earliestStart = describeEarliestMeetingStart(timezone, now);
+            notifyFailure({
+                title: 'Start time too soon',
+                message: `Schedule meetings at least 5 minutes in advance (${timezone}). Earliest available start: ${earliestStart}.`,
+            });
             return;
         }
         if (startTimeMs > now + 365 * 24 * 60 * 60 * 1000) {
@@ -513,7 +515,6 @@ export function useMeetingsPageController() {
             return;
         }
         setScheduling(true);
-        const isEditing = Boolean(editingMeeting);
         const endpoint = isEditing ? '/api/meetings/reschedule' : '/api/meetings/schedule';
         const legacyId = editingMeeting ? editingMeeting.legacyId : undefined;
         const trimmedDescription = description.trim();
@@ -535,8 +536,12 @@ export function useMeetingsPageController() {
             timeoutMs: MEETING_ACTION_TIMEOUT_MS,
         })
             .then((payload) => {
-            const meetLink = payload.data?.meeting?.meetLink ?? payload.meeting?.meetLink;
+            const updatedMeeting = payload.data?.meeting ?? payload.meeting;
+            const meetLink = updatedMeeting?.meetLink;
             const notificationSummary = payload.data?.notificationSummary ?? payload.notificationSummary;
+            if (updatedMeeting) {
+                handleMeetingUpdated(updatedMeeting);
+            }
             if (isEditing) {
                 notifySuccess({
                     title: 'Meeting rescheduled',

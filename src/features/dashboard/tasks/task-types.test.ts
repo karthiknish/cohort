@@ -9,7 +9,14 @@ describe('task form helpers', () => {
             projectName: 'Website Refresh',
             status: 'todo',
             priority: 'medium',
+            assignedTo: '',
         });
+    });
+    it('prefills the creator as assignee when participants are available', () => {
+        expect(buildInitialFormState(undefined, undefined, {
+            creatorUserId: 'user-alex',
+            participants: [{ id: 'user-alex', name: 'Alex Kim' }],
+        }).assignedTo).toBe('@[Alex Kim]');
     });
     it('exposes a dedicated project pill style', () => {
         expect(taskPillColors.project).toContain('bg-accent/10');

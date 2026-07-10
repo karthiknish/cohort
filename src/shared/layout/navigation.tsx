@@ -113,19 +113,7 @@ function NavigationList({ onNavigate, collapsed = false }: {
                 const linkClasses = cn('flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-all duration-200', collapsed ? 'justify-center px-0' : 'justify-start', isActive
                     ? 'bg-primary/[0.08] text-primary font-semibold'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/60');
-                const navLink = (<NavItemLink key={item.name} item={item} linkClasses={linkClasses} onNavigate={onNavigate} prefetchRoute={prefetchRoute} collapsed={collapsed} isActive={isActive}/>);
-                if (collapsed) {
-                    return (<Tooltip key={item.name}>
-                        <TooltipTrigger asChild>
-                          {navLink}
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="flex flex-col gap-0.5">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="text-xs text-muted-foreground">{item.description}</span>
-                        </TooltipContent>
-                      </Tooltip>);
-                }
-                return navLink;
+                return (<NavItemLink key={item.name} item={item} linkClasses={linkClasses} onNavigate={onNavigate} prefetchRoute={prefetchRoute} collapsed={collapsed} isActive={isActive}/>);
             })}
               </div>))}
           </div>

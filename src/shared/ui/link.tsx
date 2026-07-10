@@ -103,6 +103,14 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
           replace,
           ...(navigateOptions.search ? { search: navigateOptions.search as never } : {}),
           ...(navigateOptions.hash ? { hash: navigateOptions.hash } : {}),
+        }).catch(() => {
+          if (typeof window !== 'undefined') {
+            if (replace) {
+              window.location.replace(resolvedHref)
+            } else {
+              window.location.assign(resolvedHref)
+            }
+          }
         })
       }}
       {...rest}

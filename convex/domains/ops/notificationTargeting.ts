@@ -31,6 +31,34 @@ type TaskNotificationAudienceOptions = {
   includeCommentAuthors?: boolean
 }
 
+/** Creation confirmations stay visible to the actor in the inbox. */
+export const ACTOR_VISIBLE_NOTIFICATION_KINDS = new Set([
+  'task.created',
+  'project.created',
+  'meeting.scheduled',
+  'meeting.rescheduled',
+])
+
+export function shouldExcludeActorFromInbox(kind: unknown): boolean {
+  return typeof kind !== 'string' || !ACTOR_VISIBLE_NOTIFICATION_KINDS.has(kind)
+}
+
+export function finalizeNotificationRecipientUserIds(
+  recipientUserIds: string[],
+  actorId: string | null | undefined,
+  options: { allowActorConfirmation?: boolean },
+): string[] | undefined {
+  const actor = typeof actorId === 'string' && actorId.trim().length > 0 ? actorId.trim() : null
+  const uniqueRecipients = [...new Set(recipientUserIds.filter((id) => id.trim().length > 0))]
+  const withoutActor = actor ? uniqueRecipients.filter((id) => id !== actor) : uniqueRecipients
+
+  if (withoutActor.length > 0) return withoutActor
+
+  if (options.allowActorConfirmation && actor) return [actor]
+
+  return undefined
+}
+
 function normalizeStringArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)

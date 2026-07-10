@@ -12,7 +12,10 @@ import { Errors } from '../../errors'
 import { fetchFilteredTasksPage } from './tasks/listFilters'
 
 export { summarizeCountsByProject } from './tasks/projectCounts'
-import { resolveTaskNotificationRecipientUserIds } from '../../notificationTargeting'
+import {
+  finalizeNotificationRecipientUserIds,
+  resolveTaskNotificationRecipientUserIds,
+} from '../../notificationTargeting'
 import { normalizeTaskAssignees } from '../../taskAssignees'
 
 const taskListFilterArgsZ = {
@@ -298,14 +301,18 @@ export const createTask = zWorkspaceMutation({
     }
 
     const clientId = typeof args.clientId === 'string' && args.clientId.length > 0 ? args.clientId : null
-    const recipientUserIds = (await resolveTaskNotificationRecipientUserIds(ctx, {
-      workspaceId: args.workspaceId,
-      assignedTo,
-      createdBy: ctx.legacyId,
-      projectId: args.projectId ?? null,
-    })).filter((userId) => userId !== ctx.legacyId)
+    const recipientUserIds = finalizeNotificationRecipientUserIds(
+      await resolveTaskNotificationRecipientUserIds(ctx, {
+        workspaceId: args.workspaceId,
+        assignedTo,
+        createdBy: ctx.legacyId,
+        projectId: args.projectId ?? null,
+      }),
+      ctx.legacyId,
+      { allowActorConfirmation: true },
+    )
 
-    if (recipientUserIds.length > 0) {
+    if (recipientUserIds && recipientUserIds.length > 0) {
       await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
         workspaceId: args.workspaceId,
         legacyId: `task:created:${legacyId}`,
@@ -400,16 +407,20 @@ export const patchTask = zWorkspaceMutation({
     if (changes.length > 0) {
       const nowMs = ctx.now
       const clientId = typeof row.clientId === 'string' && row.clientId.length > 0 ? row.clientId : null
-      const recipientUserIds = (await resolveTaskNotificationRecipientUserIds(ctx, {
-        workspaceId: args.workspaceId,
-        assignedTo: (patch.assignedTo as string[] | undefined) ?? row.assignedTo,
-        createdBy: row.createdBy,
-        projectId: typeof row.projectId === 'string' ? row.projectId : null,
-        taskLegacyId: args.legacyId,
-        includeCommentAuthors: true,
-      })).filter((userId) => userId !== ctx.legacyId)
+      const recipientUserIds = finalizeNotificationRecipientUserIds(
+        await resolveTaskNotificationRecipientUserIds(ctx, {
+          workspaceId: args.workspaceId,
+          assignedTo: (patch.assignedTo as string[] | undefined) ?? row.assignedTo,
+          createdBy: row.createdBy,
+          projectId: typeof row.projectId === 'string' ? row.projectId : null,
+          taskLegacyId: args.legacyId,
+          includeCommentAuthors: true,
+        }),
+        ctx.legacyId,
+        { allowActorConfirmation: false },
+      )
 
-      if (recipientUserIds.length > 0) {
+      if (recipientUserIds && recipientUserIds.length > 0) {
         await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
           workspaceId: args.workspaceId,
           legacyId: `task:updated:${args.legacyId}:${nowMs}`,

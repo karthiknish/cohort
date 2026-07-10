@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  finalizeNotificationRecipientUserIds,
   matchesNotificationRecipient,
   resolveMentionRecipientUserIds,
   resolveProjectNotificationRecipientUserIds,
   resolveTaskNotificationRecipientUserIds,
   resolveWorkspaceUserIds,
+  shouldExcludeActorFromInbox,
 } from '../../notificationTargeting'
 
 function createDbStub() {
@@ -50,6 +52,36 @@ function createDbStub() {
     }),
   }
 }
+
+describe('shouldExcludeActorFromInbox', () => {
+  it('keeps creation confirmations visible to the actor', () => {
+    expect(shouldExcludeActorFromInbox('task.created')).toBe(false)
+    expect(shouldExcludeActorFromInbox('project.created')).toBe(false)
+    expect(shouldExcludeActorFromInbox('meeting.scheduled')).toBe(false)
+  })
+
+  it('still hides actor-authored updates and messages', () => {
+    expect(shouldExcludeActorFromInbox('task.updated')).toBe(true)
+    expect(shouldExcludeActorFromInbox('collaboration.message')).toBe(true)
+  })
+})
+
+describe('finalizeNotificationRecipientUserIds', () => {
+  it('removes the actor when other recipients remain', () => {
+    expect(finalizeNotificationRecipientUserIds(['user-1', 'user-2'], 'user-1', { allowActorConfirmation: true }))
+      .toEqual(['user-2'])
+  })
+
+  it('falls back to the actor for solo confirmations', () => {
+    expect(finalizeNotificationRecipientUserIds(['user-1'], 'user-1', { allowActorConfirmation: true }))
+      .toEqual(['user-1'])
+  })
+
+  it('returns undefined when no recipients remain and confirmations are disabled', () => {
+    expect(finalizeNotificationRecipientUserIds(['user-1'], 'user-1', { allowActorConfirmation: false }))
+      .toBeUndefined()
+  })
+})
 
 describe('matchesNotificationRecipient', () => {
   it('enforces explicit recipient user ids before role/client matches', () => {

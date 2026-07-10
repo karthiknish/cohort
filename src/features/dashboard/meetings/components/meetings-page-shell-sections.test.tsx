@@ -46,6 +46,12 @@ describe('meetings page shell sections', () => {
         expect(markup).toContain('Upcoming Meetings Card');
         expect(markup).toContain('All times are shown in Asia/Calcutta');
     });
+    it('keeps upcoming meetings visible while rescheduling', () => {
+        const markup = renderToStaticMarkup(<MeetingsDefaultView editingMeeting={true} meetingsHeaderProps={emptyProps} meetingCancelDialogProps={emptyProps} quickMeetDialogProps={emptyProps} createMeetingCardProps={emptyProps} rescheduleMeetingCardProps={rescheduleMeetingCardProps} showPreviewMode={false} showReadOnlyAccessAlert={false} upcomingMeetingsCardProps={emptyProps} timezone="UTC"/>);
+        expect(markup).toContain('Reschedule Meeting Card');
+        expect(markup).toContain('Upcoming Meetings Card');
+        expect(markup).not.toContain('Create Meeting Card');
+    });
     it('renders the room branches', () => {
         const markup = renderToStaticMarkup(<>
         <ActiveMeetingRoomSection meetingRoomKey="meeting-1" meeting={sharedMeeting} canRecord={true} onMeetingUpdated={noop} fallbackRoomName={null} onClose={noop}/>

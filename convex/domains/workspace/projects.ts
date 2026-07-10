@@ -7,7 +7,10 @@ import { z } from 'zod/v4'
 import { internal } from '/_generated/api'
 import { Errors } from '../../errors'
 import { fetchFilteredProjectsPage } from './projects/listFilters'
-import { resolveProjectNotificationRecipientUserIds } from '../../notificationTargeting'
+import {
+  finalizeNotificationRecipientUserIds,
+  resolveProjectNotificationRecipientUserIds,
+} from '../../notificationTargeting'
 
 const projectListFilterArgsZ = {
   status: z.string().optional(),
@@ -142,13 +145,13 @@ export const create = zWorkspaceMutation({
       deletedAtMs: null,
     })
 
-    const recipientUserIds = (await resolveProjectNotificationRecipientUserIds(
-      ctx,
-      args.workspaceId,
-      args.ownerId,
-    )).filter((userId) => userId !== ctx.legacyId)
+    const recipientUserIds = finalizeNotificationRecipientUserIds(
+      await resolveProjectNotificationRecipientUserIds(ctx, args.workspaceId, args.ownerId),
+      ctx.legacyId,
+      { allowActorConfirmation: true },
+    )
 
-    if (recipientUserIds.length > 0) {
+    if (recipientUserIds && recipientUserIds.length > 0) {
       const clientId = typeof args.clientId === 'string' && args.clientId.length > 0 ? args.clientId : null
       const segments = [`Status: ${args.status}`]
 

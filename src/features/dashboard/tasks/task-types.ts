@@ -140,12 +140,17 @@ export const buildInitialFormState = (client?: {
 }, project?: {
     id: string | null;
     name: string | null;
+}, options?: {
+    creatorUserId?: string;
+    participants?: TaskParticipant[];
 }): TaskFormState => ({
     title: '',
     description: '',
     status: 'todo',
     priority: 'medium',
-    assignedTo: '',
+    assignedTo: options?.creatorUserId && options.participants
+        ? formatAssigneeDraftFromUserIds([options.creatorUserId], options.participants)
+        : '',
     clientId: client?.id ?? null,
     clientName: client?.name ?? '',
     projectId: project?.id ?? null,

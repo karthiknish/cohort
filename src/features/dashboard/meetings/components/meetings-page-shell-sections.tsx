@@ -39,9 +39,10 @@ export function MeetingsTimezoneFooter({ timezone }: {
       All times are shown in {timezone}
     </p>);
 }
-function MeetingsMobileWorkspace({ createMeetingCardProps, upcomingMeetingsCardProps, }: {
+function MeetingsMobileWorkspace({ createMeetingCardProps, upcomingMeetingsCardProps, editingMeeting, }: {
     createMeetingCardProps: CreateMeetingCardProps;
     upcomingMeetingsCardProps: UpcomingMeetingsCardProps;
+    editingMeeting: boolean;
 }) {
     const [tab, setTab] = useState('upcoming');
     return (<Tabs value={tab} onValueChange={setTab} className="w-full lg:hidden">
@@ -50,17 +51,17 @@ function MeetingsMobileWorkspace({ createMeetingCardProps, upcomingMeetingsCardP
           <Video className="size-3.5 shrink-0"/>
           Upcoming
         </TabsTrigger>
-        <TabsTrigger value="schedule" className="gap-1.5 text-xs sm:text-sm">
-          <CalendarDays className="size-3.5 shrink-0"/>
-          Schedule
-        </TabsTrigger>
+        {!editingMeeting ? (<TabsTrigger value="schedule" className="gap-1.5 text-xs sm:text-sm">
+            <CalendarDays className="size-3.5 shrink-0"/>
+            Schedule
+          </TabsTrigger>) : null}
       </TabsList>
       <TabsContent value="upcoming" className="mt-4 focus-visible:outline-none">
         <UpcomingMeetingsCard {...upcomingMeetingsCardProps}/>
       </TabsContent>
-      <TabsContent value="schedule" className="mt-4 focus-visible:outline-none">
-        <CreateMeetingCard {...createMeetingCardProps}/>
-      </TabsContent>
+      {!editingMeeting ? (<TabsContent value="schedule" className="mt-4 focus-visible:outline-none">
+          <CreateMeetingCard {...createMeetingCardProps}/>
+        </TabsContent>) : null}
     </Tabs>);
 }
 export function MeetingsDefaultView({ editingMeeting, meetingsHeaderProps, meetingCancelDialogProps, quickMeetDialogProps, createMeetingCardProps, rescheduleMeetingCardProps, showPreviewMode, showReadOnlyAccessAlert, upcomingMeetingsCardProps, timezone, }: {
@@ -101,17 +102,18 @@ export function MeetingsDefaultView({ editingMeeting, meetingsHeaderProps, meeti
       <div className="space-y-6">
         <MeetingCancelDialog {...meetingCancelDialogProps}/>
 
-        {editingMeeting ? (<RescheduleMeetingCard {...rescheduleMeetingCardProps}/>) : (<>
-            <MeetingsMobileWorkspace createMeetingCardProps={createMeetingCardProps} upcomingMeetingsCardProps={upcomingMeetingsCardProps}/>
-            <div className="hidden gap-6 lg:grid lg:grid-cols-12 lg:items-start">
-              <div className="lg:col-span-7">
-                <CreateMeetingCard {...createMeetingCardProps}/>
-              </div>
-              <div className="lg:col-span-5">
-                <UpcomingMeetingsCard {...upcomingMeetingsCardProps}/>
-              </div>
-            </div>
-          </>)}
+        {editingMeeting ? (<RescheduleMeetingCard {...rescheduleMeetingCardProps}/>) : null}
+
+        <MeetingsMobileWorkspace createMeetingCardProps={createMeetingCardProps} upcomingMeetingsCardProps={upcomingMeetingsCardProps} editingMeeting={editingMeeting}/>
+
+        <div className="hidden gap-6 lg:grid lg:grid-cols-12 lg:items-start">
+          <div className="lg:col-span-7">
+            {editingMeeting ? null : <CreateMeetingCard {...createMeetingCardProps}/>}
+          </div>
+          <div className="lg:col-span-5">
+            <UpcomingMeetingsCard {...upcomingMeetingsCardProps}/>
+          </div>
+        </div>
 
         <MeetingsTimezoneFooter timezone={timezone}/>
       </div>

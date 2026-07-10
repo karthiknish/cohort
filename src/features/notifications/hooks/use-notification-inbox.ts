@@ -1,7 +1,7 @@
 'use client';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { mergeQueryErrors, queryErrorFromUnknown, useConvexQueryError, } from '@/lib/hooks/use-convex-query-error';
-import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useMutation, useQuery as useConvexQuery, useConvex } from 'convex/react';
 import { useAuth } from '@/shared/contexts/auth-context';
@@ -124,23 +124,6 @@ export function useNotificationInbox() {
             void notificationsInfiniteQuery.refetch();
         }
     };
-    const markUnreadNotificationsRead = useEffectEvent((ids: string[]) => {
-        void updateNotificationStatus(ids, 'read', { silent: true });
-    });
-    const unreadNotificationIds = notifications
-        .flatMap((item) => (!item.read ? [item.id] : []))
-        .join('\0');
-    useEffect(() => {
-        if (!open || ackInFlight)
-            return;
-        const unreadIds = unreadNotificationIds.length > 0 ? unreadNotificationIds.split('\0') : [];
-        if (unreadIds.length === 0)
-            return;
-        const frame = requestAnimationFrame(() => {
-            markUnreadNotificationsRead(unreadIds);
-        });
-        return () => cancelAnimationFrame(frame);
-    }, [ackInFlight, open, unreadNotificationIds]);
     const handleDismiss = (id: string) => {
         void updateNotificationStatus([id], 'dismiss');
     };

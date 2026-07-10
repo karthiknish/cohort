@@ -93,6 +93,12 @@ export function formatLocalDateTime(timestamp: number | string | null | undefine
         }
     }
 }
+export const MIN_MEETING_SCHEDULE_LEAD_MS = 5 * 60 * 1000;
+export function describeEarliestMeetingStart(timezone: string, nowMs: number = Date.now()): string {
+    const earliestMs = nowMs + MIN_MEETING_SCHEDULE_LEAD_MS;
+    const resolvedTimezone = timezone.trim().length > 0 ? timezone : (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+    return formatLocalDateTime(earliestMs, resolvedTimezone);
+}
 export function toTimeValue(timestamp: number | string | null | undefined): string {
     const date = coerceValidDate(timestamp);
     if (!date) {

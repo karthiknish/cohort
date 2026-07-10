@@ -61,7 +61,10 @@ export function useTaskForm({ selectedClient, selectedClientId, projectContext, 
     const { user } = useAuth();
     // Create form state
     const [isCreateOpen, setIsCreateOpen] = useState(initialCreateOpen);
-    const [formState, setFormState] = useState<TaskFormState>(() => buildInitialFormState(selectedClient ?? undefined, projectContext));
+    const [formState, setFormState] = useState<TaskFormState>(() => buildInitialFormState(selectedClient ?? undefined, projectContext, {
+        creatorUserId: userId,
+        participants,
+    }));
     const [createAttachments, setCreateAttachments] = useState<PendingTaskAttachment[]>([]);
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
@@ -106,7 +109,10 @@ export function useTaskForm({ selectedClient, selectedClientId, projectContext, 
         }));
     }
     const resetForm = () => {
-        setFormState(buildInitialFormState(selectedClient ?? undefined, projectContext));
+        setFormState(buildInitialFormState(selectedClient ?? undefined, projectContext, {
+            creatorUserId: userId,
+            participants,
+        }));
         setCreateAttachments([]);
         setCreateError(null);
     };
@@ -124,12 +130,9 @@ export function useTaskForm({ selectedClient, selectedClientId, projectContext, 
         onCreateOpenChange?.(open);
         if (open) {
             setCreateError(null);
-            setFormState((prev) => ({
-                ...prev,
-                clientId: selectedClient?.id ?? null,
-                clientName: selectedClient?.name ?? '',
-                projectId: projectContext?.id ?? null,
-                projectName: projectContext?.name ?? '',
+            setFormState(buildInitialFormState(selectedClient ?? undefined, projectContext, {
+                creatorUserId: userId,
+                participants,
             }));
         }
         else {
@@ -163,6 +166,9 @@ export function useTaskForm({ selectedClient, selectedClientId, projectContext, 
         setCreating(true);
         setCreateError(null);
         const assignedMembers = resolveAssigneeUserIds(formState.assignedTo, participants);
+        const normalizedAssignedTo = assignedMembers.length > 0
+            ? assignedMembers
+            : (userId ? [userId] : []);
         const normalizedClientName = (selectedClient?.name ?? formState.clientName).trim();
         const normalizedProjectName = formState.projectName.trim();
         const payload: CreateTaskPayload = {
@@ -170,7 +176,7 @@ export function useTaskForm({ selectedClient, selectedClientId, projectContext, 
             description: formState.description.trim() || undefined,
             status: formState.status,
             priority: formState.priority,
-            assignedTo: assignedMembers,
+            assignedTo: normalizedAssignedTo,
             clientId: selectedClientId,
             client: normalizedClientName || undefined,
             projectId: formState.projectId ?? undefined,

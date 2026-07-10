@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, type ChangeEvent, type KeyboardEvent, type RefObject } from 'react';
+import { useCallback, useState, type ChangeEvent, type KeyboardEvent, type RefObject } from 'react';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, LoaderCircle, Plus, Sparkles, Tag, X } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
@@ -60,10 +60,17 @@ function ProjectDateField({ disabled, fieldId, label, onSelect, selected, disabl
     selected: Date | undefined;
     disabledDate: (date: Date) => boolean;
 }) {
+    const [open, setOpen] = useState(false);
     const triggerId = `${fieldId}-trigger`;
+    const handleSelect = (value: Date | undefined) => {
+        onSelect(value);
+        if (value) {
+            setOpen(false);
+        }
+    };
     return (<div className="space-y-2">
       <Label htmlFor={triggerId}>{label}</Label>
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button id={triggerId} type="button" variant="outline" className={cn('w-full justify-start text-left font-normal', !selected && 'text-muted-foreground')} disabled={disabled} aria-label={`${label} — open calendar`}>
             <CalendarIcon className="mr-2 size-4" aria-hidden/>
@@ -71,7 +78,7 @@ function ProjectDateField({ disabled, fieldId, label, onSelect, selected, disabl
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar mode="single" selected={selected} onSelect={onSelect} initialFocus disabled={disabledDate}/>
+          <Calendar mode="single" selected={selected} onSelect={handleSelect} initialFocus disabled={disabledDate}/>
         </PopoverContent>
       </Popover>
     </div>);

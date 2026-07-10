@@ -14,7 +14,7 @@ import {
   normalizePreferences,
   type StoredNotificationPreferences,
 } from '../../../src/lib/notifications/preferences'
-import { matchesNotificationRecipient } from '../../notificationTargeting'
+import { matchesNotificationRecipient, shouldExcludeActorFromInbox } from '../../notificationTargeting'
 
 const RESOURCE_TO_URL: Record<string, string> = {
   task: '/dashboard/tasks',
@@ -271,7 +271,7 @@ export const list = zWorkspaceQuery({
               clientId: args.clientId,
               unreadOnly: args.unread,
               excludeAcknowledged: true,
-              excludeActor: true,
+              excludeActor: shouldExcludeActorFromInbox(row.kind),
             })
           ) {
             return null
@@ -306,7 +306,7 @@ export const list = zWorkspaceQuery({
             clientId: args.clientId,
             unreadOnly: args.unread,
             excludeAcknowledged: true,
-            excludeActor: true,
+            excludeActor: shouldExcludeActorFromInbox(row.kind),
           })
         ) {
           continue
@@ -436,7 +436,7 @@ export const getUnreadCount = zWorkspaceQuery({
             role: args.role,
             clientId: args.clientId,
             unreadOnly: true,
-            excludeActor: true,
+            excludeActor: shouldExcludeActorFromInbox(row.kind),
           }) &&
           passesInAppPreferenceFilter(row, ctx.user.notificationPreferences)
         ) {
@@ -492,7 +492,7 @@ export const ack = zRateLimitedWorkspaceMutation({
             userId,
             role: roleArg,
             clientId: args.clientId,
-            excludeActor: true,
+            excludeActor: shouldExcludeActorFromInbox(row.kind),
           })
         ) {
           return

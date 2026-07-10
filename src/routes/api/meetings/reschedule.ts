@@ -42,7 +42,6 @@ const handlers = adaptApiHandler(
     const now = Date.now()
     if (normalizedTitle.length < 3) throw new BadRequestError('Meeting title must be at least 3 characters long')
     if (normalizedTitle.length > 120) throw new BadRequestError('Meeting title must be 120 characters or fewer')
-    if (body.startTimeMs < now + MIN_SCHEDULE_LEAD_MS) throw new BadRequestError('Rescheduled meetings must start at least 5 minutes in the future')
     if (body.startTimeMs > now + MAX_SCHEDULE_AHEAD_MS) throw new BadRequestError('Meetings cannot be rescheduled more than 12 months ahead')
     if (durationMs < MIN_MEETING_DURATION_MS || durationMs > MAX_MEETING_DURATION_MS) throw new BadRequestError('Meetings must be between 10 minutes and 8 hours long')
 
@@ -50,6 +49,16 @@ const handlers = adaptApiHandler(
       userId: auth.uid, legacyId: body.legacyId, workspaceId: workspace.workspaceId, userEmail: auth.email,
     })
     if (meeting.status === 'cancelled') throw new BadRequestError('Cancelled meetings cannot be rescheduled')
+
+    const startTimeUnchanged = meeting.startTimeMs === body.startTimeMs
+    if (!startTimeUnchanged && body.startTimeMs < now + MIN_SCHEDULE_LEAD_MS) {
+      const earliestStart = new Intl.DateTimeFormat('en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: body.timezone,
+      }).format(new Date(now + MIN_SCHEDULE_LEAD_MS))
+      throw new BadRequestError(`Rescheduled meetings must start at least 5 minutes in the future (${body.timezone}). Earliest available start: ${earliestStart}.`)
+    }
 
     const attendeeEmails = sanitizeMeetingParticipantEmails(body.attendeeEmails, auth.email)
     if (attendeeEmails.length === 0) throw new BadRequestError('Add at least one participant before scheduling a meeting')
