@@ -3,19 +3,20 @@ import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import type { MilestoneRecord } from '@/types/milestones';
 import { mergeProposalForm } from '@/lib/proposals';
 import { getPreviewClients } from './clients';
-import { isoDaysAgo, withPreviewModeSearchParam } from './utils';
+import { getPreviewProposalDeckAssetUrl, isoDaysAgo, withPreviewModeSearchParam } from './utils';
 function buildPreviewDeck(proposalId: string, instructions: string): ProposalPresentationDeck {
     const previewRoute = withPreviewModeSearchParam(`/dashboard/proposals/${proposalId}/deck`);
+    const deckAssetUrl = getPreviewProposalDeckAssetUrl(proposalId);
     return {
         generationId: `preview-deck-${proposalId}`,
         status: 'ready',
         instructions,
         webUrl: previewRoute,
         shareUrl: previewRoute,
-        pptxUrl: previewRoute,
+        pptxUrl: deckAssetUrl ?? previewRoute,
         pdfUrl: null,
         generatedFiles: [],
-        storageUrl: previewRoute,
+        storageUrl: deckAssetUrl ?? previewRoute,
         pdfStorageUrl: null,
         warnings: null,
         error: null,
@@ -523,7 +524,7 @@ export function getPreviewProposals(clientId: string | null): ProposalDraft[] {
             },
             aiSuggestions: 'Based on your goals, we recommend focusing on LinkedIn and Google Ads for B2B lead generation, combined with thought leadership content to build brand authority.',
             presentationDeck: buildPreviewDeck('preview-proposal-1', 'Slide 1: Executive Growth Snapshot * Position Cohorts as the paid growth partner for Tech Corp * Align around pipeline quality, brand recall, and faster sales cycles Slide 2: Market Opportunity * Capture high-intent demand on Google Search * Build category authority with LinkedIn thought leadership Slide 3: Campaign Architecture * Search for intent capture * LinkedIn for ICP education and retargeting * Landing pages tuned for demo conversion Slide 4: Creative Direction * Executive-proof messaging * Proof-led customer stories * Clear value framing by funnel stage Slide 5: Measurement Plan * Weekly pacing and creative diagnostics * Pipeline contribution dashboard * Monthly board-ready narrative recap'),
-            pptUrl: withPreviewModeSearchParam('/dashboard/proposals/preview-proposal-1/deck'),
+            pptUrl: getPreviewProposalDeckAssetUrl('preview-proposal-1'),
             pdfUrl: null,
             createdAt: isoDaysAgo(7),
             updatedAt: isoDaysAgo(5),

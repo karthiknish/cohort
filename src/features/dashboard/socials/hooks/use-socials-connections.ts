@@ -61,14 +61,7 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
     });
     const statusLoading = canQuery && rawStatus === undefined;
     const status: SocialsConnectionStatus | null = isPreviewMode
-        ? {
-            ...getPreviewSocialConnectionStatus(),
-            facebookPageId: 'preview-page',
-            facebookPageName: 'Preview Page',
-            instagramBusinessId: 'preview-ig',
-            instagramBusinessName: 'preview_brand',
-            setupComplete: true,
-        }
+        ? getPreviewSocialConnectionStatus()
         : rawStatus
             ? {
                 connected: rawStatus.connected,

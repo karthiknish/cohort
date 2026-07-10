@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { m } from '@/shared/ui/motion';
 import { CircleCheck, Copy, Download, ExternalLink, FileText, LoaderCircle, Pencil, Presentation, RefreshCw } from 'lucide-react';
 import { Link } from '@/shared/ui/link';
+import { dynamic } from '@/shared/ui/dynamic';
 import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data';
 import { notifySuccess } from '@/lib/notifications';
 import { Badge } from '@/shared/ui/badge';
@@ -12,6 +13,31 @@ import { fadeInUpVariants, slideInLeftVariants, slideInRightVariants, transition
 import type { ProposalFormData } from '@/lib/proposals';
 import { cn } from '@/lib/utils';
 import type { ProposalPresentationDeck } from '@/types/proposals';
+
+const PptViewer = dynamic(() => import('@/shared/components/ppt-viewer').then((m) => ({ default: m.PptViewer })), {
+    loading: () => (
+        <div className="flex min-h-[min(42dvh,360px)] items-center justify-center rounded-xl border border-border/60 bg-muted/20">
+            <LoaderCircle className="size-6 animate-spin text-muted-foreground" aria-hidden />
+        </div>
+    ),
+    ssr: false,
+});
+
+function resolvePptxPreviewUrl(
+    presentationDeck: ProposalPresentationDeck | null,
+    deckDownloadUrl: string | null,
+): string | null {
+    for (const candidate of [deckDownloadUrl, presentationDeck?.storageUrl, presentationDeck?.pptxUrl]) {
+        if (!candidate) {
+            continue;
+        }
+        if (candidate.startsWith('/dashboard/')) {
+            continue;
+        }
+        return candidate;
+    }
+    return null;
+}
 
 interface ProposalSubmittedPanelProps {
     summary: ProposalFormData;
@@ -48,6 +74,7 @@ export function ProposalSubmittedPanel({
             : null;
     const downloadUrl = deckDownloadUrl || presentationDeck?.storageUrl || presentationDeck?.pptxUrl || null;
     const pdfDownloadUrl = presentationDeck?.pdfUrl ?? presentationDeck?.pdfStorageUrl ?? null;
+    const pptxPreviewUrl = resolvePptxPreviewUrl(presentationDeck, deckDownloadUrl);
 
     const handleCopySummary = useCallback(() => {
         const text = `
@@ -77,7 +104,7 @@ Timeline: ${summary.timelines.startTime}
     }, [presentationHref]);
 
     return (
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
             {/* Hero */}
             <m.div initial="hidden" animate="visible" variants={fadeInUpVariants} className="flex flex-col items-center gap-6 rounded-2xl border border-border/60 bg-background p-8 md:flex-row md:items-start">
                 <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/20">
@@ -112,7 +139,7 @@ Timeline: ${summary.timelines.startTime}
             </m.div>
 
             {/* Brief + Assets */}
-            <div className="grid gap-6 lg:grid-cols-3">
+            <div className="grid min-w-0 gap-6 lg:grid-cols-3">
                 {/* Strategy Brief */}
                 <m.div initial="hidden" animate="visible" variants={slideInLeftVariants} transition={{ ...transitions.slow, delay: 0.1 }}>
                     <Card className="flex h-full flex-col border-border/60 bg-background">
@@ -159,8 +186,8 @@ Timeline: ${summary.timelines.startTime}
                 </m.div>
 
                 {/* Asset Delivery */}
-                <m.div initial="hidden" animate="visible" variants={slideInRightVariants} transition={{ ...transitions.slow, delay: 0.15 }} className="lg:col-span-2">
-                    <Card className="flex h-full flex-col border-border/60 bg-background">
+                <m.div initial="hidden" animate="visible" variants={slideInRightVariants} transition={{ ...transitions.slow, delay: 0.15 }} className="min-w-0 lg:col-span-2">
+                    <Card className="flex h-full min-w-0 flex-col overflow-hidden border-border/60 bg-background">
                         <CardHeader className="border-b border-border/40 pb-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
@@ -177,6 +204,15 @@ Timeline: ${summary.timelines.startTime}
                         <CardContent className="flex flex-1 flex-col pt-4">
                             {presentationDeck ? (
                                 <div className="flex flex-1 flex-col gap-4">
+                                    {pptxPreviewUrl && presentationDeck.status === 'ready' ? (
+                                        <div className="min-w-0 overflow-hidden rounded-xl border border-border/60 bg-muted/10 p-3">
+                                            <PptViewer
+                                                url={pptxPreviewUrl}
+                                                title={summary.company.name ? `${summary.company.name} deck` : 'Presentation'}
+                                                embedded
+                                            />
+                                        </div>
+                                    ) : null}
                                     <div className="space-y-3">
                                         {downloadUrl ? (
                                             <Button variant="outline" className="h-12 w-full justify-start rounded-xl" asChild>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isScreenRecordingAuthBypassEnabled, isPreviewModeEnabled, isPreviewRouteRequest, isScreenRecordingModeEnabled, withPreviewModeSearchParam, withPreviewModeSearchParamIfEnabled, } from './utils';
+import { isScreenRecordingAuthBypassEnabled, isPreviewModeEnabled, isPreviewRouteRequest, isScreenRecordingModeEnabled, withPreviewModeSearchParam, withPreviewModeSearchParamIfEnabled, isPreviewLegacyId, getPreviewProposalDeckAssetUrl, } from './utils';
 afterEach(() => {
     vi.unstubAllEnvs();
 });
@@ -38,5 +38,11 @@ describe('preview route access helpers', () => {
         vi.stubEnv('VERCEL_ENV', 'production');
         vi.stubEnv('SCREEN_RECORDING_ALLOW_AUTH_BYPASS', 'true');
         expect(isScreenRecordingAuthBypassEnabled()).toBe(false);
+    });
+    it('identifies preview legacy ids and deck asset urls', () => {
+        expect(isPreviewLegacyId('preview-proposal-1')).toBe(true);
+        expect(isPreviewLegacyId('proposal-abc')).toBe(false);
+        expect(getPreviewProposalDeckAssetUrl('preview-proposal-1')).toBe('/preview/preview-proposal-1.pptx');
+        expect(getPreviewProposalDeckAssetUrl('preview-proposal-2')).toBeNull();
     });
 });

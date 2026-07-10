@@ -7,10 +7,14 @@ type PdfViewerProps = {
     url: string;
     title?: string;
     className?: string;
+    /** When true, uses a shorter viewport height for in-page deck cards. */
+    embedded?: boolean;
 };
-export function PdfViewer({ url, title = 'PDF document', className }: PdfViewerProps) {
+export function PdfViewer({ url, title = 'PDF document', className, embedded = false }: PdfViewerProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
+    const frameMinHeight = embedded ? 'min-h-[min(42dvh,360px)]' : 'min-h-[min(60dvh,560px)]';
+    const frameMaxHeight = embedded ? 'max-h-[min(55dvh,480px)]' : 'max-h-[min(72dvh,720px)]';
     const handleLoad = () => {
         setIsLoading(false);
         setLoadError(false);
@@ -19,8 +23,8 @@ export function PdfViewer({ url, title = 'PDF document', className }: PdfViewerP
         setIsLoading(false);
         setLoadError(true);
     };
-    return (<div className={cn('flex min-h-0 flex-1 flex-col', className)}>
-      <div className="relative min-h-[min(72dvh,720px)] flex-1 overflow-hidden rounded-xl border border-border/60 bg-foreground shadow-inner ring-1 ring-border/40">
+    return (<div className={cn('flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden', className)}>
+      <div className={cn('relative flex-1 overflow-hidden rounded-xl border border-border/60 bg-foreground shadow-inner ring-1 ring-border/40', frameMinHeight, frameMaxHeight)}>
         {isLoading && !loadError ? (<div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-foreground/90">
             <Loader2 className="size-8 animate-spin text-viewer-chrome/70" aria-hidden/>
             <p className="text-sm text-viewer-chrome/60">Loading PDF…</p>
@@ -44,7 +48,7 @@ export function PdfViewer({ url, title = 'PDF document', className }: PdfViewerP
             </div>
           </div>) : null}
 
-        <iframe src={url} title={title} sandbox="" className="h-full min-h-[min(72dvh,720px)] w-full bg-foreground" onLoad={handleLoad} onError={handleError}/>
+        <iframe src={url} title={title} sandbox="" className={cn('h-full w-full bg-foreground', frameMinHeight)} onLoad={handleLoad} onError={handleError}/>
       </div>
       <p className="mt-3 text-center text-xs text-muted-foreground">
         Use your browser&apos;s PDF controls to zoom and navigate pages.

@@ -7,7 +7,7 @@ import { usePreview } from '@/shared/contexts/preview-context';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { proposalGenerationApi, proposalsApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
-import { getPreviewProposals } from '@/lib/preview-data';
+import { getPreviewProposals, isPreviewLegacyId } from '@/lib/preview-data';
 import type { ProposalFormData } from '@/lib/proposals';
 import { trackAiGenerationCompleted, trackAiGenerationFailed, trackAiGenerationStarted, trackProposalSubmitted, } from '@/services/proposal-analytics';
 import { refreshProposalDraft } from '@/services/proposals';
@@ -113,7 +113,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
     const workspaceId = user?.agencyId ?? null;
     const convexUpdateProposal = useMutation(proposalsApi.update);
     const generateProposalDeck = useAction(proposalGenerationApi.generateFromProposal);
-    const canQuery = Boolean(workspaceId && draftId && !isSyncing && !authError);
+    const canQuery = Boolean(workspaceId && draftId && !isSyncing && !authError && !isPreviewMode && !isPreviewLegacyId(draftId));
     const activeConvexProposal = useQuery(proposalsApi.getByLegacyId, !canQuery
         ? 'skip'
         : {

@@ -149,6 +149,8 @@ describe('SocialsPage', () => {
         expect(markup).toContain('Facebook organic performance');
         expect(markup).toContain('Facebook');
         expect(markup).toContain('Instagram');
+        expect(markup).toContain('Reach');
+        expect(markup).toContain('Audience footprint');
     });
     it('renders the connection panel outside preview mode', () => {
         mockedUsePreview.mockReturnValue({

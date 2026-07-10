@@ -28,7 +28,9 @@ export default function SocialsPage() {
     });
     const connected = connections.status?.connected ?? false;
     const setupComplete = connections.status?.setupComplete ?? false;
-    const initialLoading = connections.statusLoading;
+    const effectiveConnected = connected || isPreviewMode;
+    const effectiveSetupComplete = setupComplete || isPreviewMode;
+    const initialLoading = isPreviewMode ? false : connections.statusLoading;
     const handleRequestSync = () => {
         void connections.handleRequestSync();
     };
@@ -43,8 +45,8 @@ export default function SocialsPage() {
             surfaceTab.setValue(value);
         }
     };
-    const facebookHasData = (metrics.facebookOverview?.rowCount ?? 0) > 0;
-    const instagramHasData = (metrics.instagramOverview?.rowCount ?? 0) > 0;
+    const facebookHasData = isPreviewMode || (metrics.facebookOverview?.rowCount ?? 0) > 0;
+    const instagramHasData = isPreviewMode || (metrics.instagramOverview?.rowCount ?? 0) > 0;
     const setupSection = (<FadeIn>
     <div className="space-y-4">
       <SocialsConnectionPanel panelId="social-connections-panel" selectedClientName={selectedClient?.name ?? null} connected={connected} setupComplete={setupComplete} accountName={connections.status?.facebookPageName ?? connections.status?.accountName} lastSyncedAtMs={connections.status?.lastSyncedAtMs} lastSyncStatus={connections.status?.lastSyncStatus} oauthPending={connections.oauthPending} syncPending={connections.syncPending} connectionError={connections.connectionError} statusQueryError={connections.statusQueryError} onConnectMeta={connections.handleConnectMeta} onDisconnect={connections.handleDisconnect} onRequestSync={handleRequestSync}/>
@@ -55,26 +57,26 @@ export default function SocialsPage() {
         </div>) : null}
     </div>
     </FadeIn>);
-    const performanceSection = (<FadeIn>
+    const performanceSection = (<div className="space-y-6">
     <Tabs value={surfaceTab.value} onValueChange={handleSurfaceChange} className="space-y-6">
       <div className="sticky top-0 z-10 -mx-1 rounded-xl border border-muted/30 bg-card/90 px-1 py-2 shadow-sm backdrop-blur-md supports-backdrop-filter:bg-card/75">
         <SocialsSurfaceTabsList facebookStatus={setup.facebookStatus} instagramStatus={setup.instagramStatus}/>
       </div>
 
       <TabsContent value="facebook" className="mt-0 focus-visible:outline-none">
-        <SocialSurfacePanel surface="facebook" kpis={facebookKpis} overview={metrics.facebookOverview} overviewLoading={metrics.overviewLoading} overviewError={overviewError} connected={connected || isPreviewMode} setupComplete={setupComplete || isPreviewMode} hasData={facebookHasData} onRequestSync={handleRequestSync}/>
+        <SocialSurfacePanel surface="facebook" kpis={facebookKpis} overview={metrics.facebookOverview} overviewLoading={metrics.overviewLoading} overviewError={overviewError} connected={effectiveConnected} setupComplete={effectiveSetupComplete} hasData={facebookHasData} onRequestSync={handleRequestSync}/>
       </TabsContent>
 
       <TabsContent value="instagram" className="mt-0 focus-visible:outline-none">
-        <SocialSurfacePanel surface="instagram" kpis={instagramKpis} overview={metrics.instagramOverview} overviewLoading={metrics.overviewLoading} overviewError={overviewError} connected={connected || isPreviewMode} setupComplete={setupComplete || isPreviewMode} hasInstagramBinding={Boolean(connections.status?.instagramBusinessId) || isPreviewMode} hasData={instagramHasData} onRequestSync={handleRequestSync}/>
+        <SocialSurfacePanel surface="instagram" kpis={instagramKpis} overview={metrics.instagramOverview} overviewLoading={metrics.overviewLoading} overviewError={overviewError} connected={effectiveConnected} setupComplete={effectiveSetupComplete} hasInstagramBinding={Boolean(connections.status?.instagramBusinessId) || isPreviewMode} hasData={instagramHasData} onRequestSync={handleRequestSync}/>
       </TabsContent>
     </Tabs>
-    </FadeIn>);
+    </div>);
     return (<PageMotionShell reveal={false} className={cn(DASHBOARD_THEME.layout.container, 'pb-10')}>
       <PageSkeletonBoundary loading={initialLoading} loadingContent={<SocialsPageLoadingFallback />}>
-        <SocialsHeader selectedClientName={selectedClient?.name ?? null} dateRange={dateRange} onDateRangeChange={setDateRange} metricsReady={connected && setupComplete}/>
+        <SocialsHeader selectedClientName={selectedClient?.name ?? null} dateRange={dateRange} onDateRangeChange={setDateRange} metricsReady={effectiveConnected && effectiveSetupComplete}/>
 
-        <SocialsPageLayout showSetup={!isPreviewMode} connected={connected} setupComplete={setupComplete} setup={setupSection} performance={performanceSection}/>
+        <SocialsPageLayout showSetup={!isPreviewMode} connected={effectiveConnected} setupComplete={effectiveSetupComplete} setup={setupSection} performance={performanceSection}/>
       </PageSkeletonBoundary>
     </PageMotionShell>);
 }

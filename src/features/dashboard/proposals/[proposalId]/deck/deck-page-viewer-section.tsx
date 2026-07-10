@@ -17,13 +17,13 @@ function PreviewDeckInstructions({ instructions, proposalDisplayName, }: {
     proposalDisplayName: string;
 }) {
     const slides = instructions.split(/(?=Slide \d+:)/).map((part) => part.trim()).filter(Boolean);
-    return (<div className="space-y-4 rounded-xl border border-dashed border-warning/30 bg-warning/5 p-5">
+    return (<div className="max-w-full space-y-4 overflow-hidden rounded-xl border border-dashed border-warning/30 bg-warning/5 p-4 sm:p-5">
       <p className="text-sm font-medium text-foreground">Preview deck — sample slides</p>
       <p className="text-xs text-muted-foreground">
         Showing representative slide content for {proposalDisplayName}. Download actions use live proposal files when you exit preview mode.
       </p>
-      <ol className="space-y-3">
-        {slides.map((slide) => (<li key={slide.slice(0, 40)} className="rounded-lg border border-border/60 bg-background p-4 text-sm leading-relaxed text-muted-foreground">
+      <ol className="max-h-[min(60dvh,560px)] space-y-3 overflow-y-auto overscroll-y-contain pr-1">
+        {slides.map((slide) => (<li key={slide.slice(0, 40)} className="break-words rounded-lg border border-border/60 bg-background p-4 text-sm leading-relaxed text-muted-foreground">
             {slide}
           </li>))}
       </ol>
@@ -54,7 +54,7 @@ export function DeckPageViewerSection({ pdfUrl, pptxUrl, proposalDisplayName, re
     if (!showTabs && activeSrc) {
         return (<DeckDocumentViewer src={activeSrc} refreshUrl={tab === 'pptx' ? refreshPptxUrl : undefined} embedded subtitle={proposalDisplayName}/>);
     }
-    return (<div className="space-y-4">
+    return (<div className="min-w-0 max-w-full space-y-4 overflow-hidden">
       <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList className="inline-flex h-auto w-full max-w-md gap-1 rounded-xl bg-muted/40 p-1">
           <TabsTrigger value="pdf" disabled={!pdfUrl} className="flex-1 gap-1.5 rounded-lg text-xs sm:text-sm data-[state=active]:shadow-sm">

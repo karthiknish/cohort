@@ -136,6 +136,8 @@ export function useSocialsSetup(status: SocialsConnectionStatus | null): UseSoci
     const setupComplete = Boolean(status?.facebookPageId);
     const hasInstagramBinding = Boolean(status?.instagramBusinessId);
     const facebookStatus: SocialsSurfaceStatus = (() => {
+        if (isPreviewMode)
+            return 'ready';
         if (!status?.connected)
             return 'disconnected';
         if (pagesLoading)
@@ -147,6 +149,8 @@ export function useSocialsSetup(status: SocialsConnectionStatus | null): UseSoci
         return 'ready';
     })();
     const instagramStatus: SocialsSurfaceStatus = (() => {
+        if (isPreviewMode)
+            return 'ready';
         if (!status?.connected)
             return 'disconnected';
         if (!setupComplete)

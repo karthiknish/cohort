@@ -1,7 +1,9 @@
 'use client';
+import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Download, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { cn } from '@/lib/utils';
+import type { PptThumbnailMount } from './use-ppt-viewer';
 
 export function PptViewerLoading({ className, overlay }: { className?: string; overlay?: boolean }) {
     return (
@@ -71,52 +73,114 @@ export function PptViewerFilmstrip({
     slideCount,
     currentSlide,
     onGoToSlide,
+    viewerReady,
+    renderThumbnail,
 }: {
     slideCount: number;
     currentSlide: number;
     onGoToSlide: (index: number) => void;
+    viewerReady: boolean;
+    renderThumbnail: (index: number, container: HTMLElement) => PptThumbnailMount | null;
 }) {
     if (slideCount <= 1) {
         return null;
     }
     return (
-        <div className="relative mt-4">
+        <div className="relative mt-4 min-w-0 max-w-full overflow-hidden">
             <div
-                className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background to-transparent"
+                className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent sm:w-8"
                 aria-hidden
             />
             <div
-                className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent"
+                className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent sm:w-8"
                 aria-hidden
             />
             <div
-                className="flex gap-2 overflow-x-auto px-1 pb-1 pt-0.5 scroll-smooth"
+                className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 pt-0.5 scroll-smooth"
                 role="tablist"
                 aria-label="Slide thumbnails"
             >
                 {Array.from({ length: slideCount }, (_, index) => (
-                    <button
+                    <SlideThumbnailButton
                         key={index}
-                        type="button"
-                        role="tab"
-                        onClick={() => onGoToSlide(index)}
-                        aria-label={
-                            index === currentSlide
-                                ? `Currently viewing slide ${index + 1}`
-                                : `Go to slide ${index + 1}`
-                        }
-                        aria-selected={index === currentSlide}
-                        className={cn(
-                            'flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-lg border-2 text-sm font-medium tabular-nums transition-[border-color,box-shadow,opacity] sm:h-16 sm:w-28',
-                            index === currentSlide
-                                ? 'border-primary bg-primary/10 text-primary shadow-md shadow-primary/20 ring-2 ring-primary/25'
-                                : 'border-transparent bg-muted/50 text-muted-foreground opacity-70 hover:border-muted-foreground/30 hover:opacity-100',
-                        )}
-                    >
-                        {index + 1}
-                    </button>
+                        index={index}
+                        isActive={index === currentSlide}
+                        onSelect={() => onGoToSlide(index)}
+                        viewerReady={viewerReady}
+                        renderThumbnail={renderThumbnail}
+                    />
                 ))}
             </div>
         </div>
+    );
+}
+
+function SlideThumbnailButton({
+    index,
+    isActive,
+    onSelect,
+    viewerReady,
+    renderThumbnail,
+}: {
+    index: number;
+    isActive: boolean;
+    onSelect: () => void;
+    viewerReady: boolean;
+    renderThumbnail: (index: number, container: HTMLElement) => PptThumbnailMount | null;
+}) {
+    const mountRef = useRef<HTMLDivElement>(null);
+    const [isReady, setIsReady] = useState(false);
+    const [failed, setFailed] = useState(false);
+
+    useEffect(() => {
+        const mount = mountRef.current;
+        if (!mount || !viewerReady) {
+            return;
+        }
+        setIsReady(false);
+        setFailed(false);
+        const thumbnail = renderThumbnail(index, mount);
+        if (!thumbnail) {
+            setFailed(true);
+            return;
+        }
+        void thumbnail.ready
+            .then(() => setIsReady(true))
+            .catch(() => setFailed(true));
+        return () => {
+            thumbnail.dispose();
+        };
+    }, [index, renderThumbnail, viewerReady]);
+
+    return (
+        <button
+            type="button"
+            role="tab"
+            onClick={onSelect}
+            aria-label={
+                isActive
+                    ? `Currently viewing slide ${index + 1}`
+                    : `Go to slide ${index + 1}`
+            }
+            aria-selected={isActive}
+            className={cn(
+                'relative h-14 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 bg-white transition-[border-color,box-shadow,opacity] sm:h-16 sm:w-28',
+                isActive
+                    ? 'border-primary shadow-md shadow-primary/20 ring-2 ring-primary/25'
+                    : 'border-transparent opacity-80 hover:border-muted-foreground/30 hover:opacity-100',
+            )}
+        >
+            <div ref={mountRef} className="size-full overflow-hidden bg-white" aria-hidden />
+            {!isReady && !failed ? (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-muted/40">
+                    <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
+                </div>
+            ) : null}
+            {failed ? (
+                <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-muted/50 text-sm font-medium tabular-nums text-muted-foreground">
+                    {index + 1}
+                </span>
+            ) : null}
+        </button>
     );
 }

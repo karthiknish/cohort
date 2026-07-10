@@ -9,6 +9,11 @@ export interface UsePptViewerOptions {
     refreshUrl?: () => Promise<string | null>;
 }
 
+export type PptThumbnailMount = {
+    dispose: () => void;
+    ready: Promise<void>;
+};
+
 export interface UsePptViewerReturn {
     containerRef: React.RefObject<HTMLDivElement | null>;
     slideCount: number;
@@ -21,6 +26,8 @@ export interface UsePptViewerReturn {
     handleNextSlide: () => void;
     handleToggleFullscreen: () => void;
     handleRetry: () => void;
+    isViewerReady: boolean;
+    renderThumbnail: (index: number, container: HTMLElement) => PptThumbnailMount | null;
 }
 
 /**
@@ -31,6 +38,18 @@ async function fetchPresentation(
     fileUrl: string,
     refreshUrl: (() => Promise<string | null>) | undefined,
 ): Promise<ArrayBuffer> {
+    // Same-origin static assets (preview decks in /public) bypass the remote file proxy.
+    if (fileUrl.startsWith('/')) {
+        const response = await fetch(fileUrl, {
+            method: 'GET',
+            credentials: 'include',
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to fetch presentation: ${response.status}`);
+        }
+        return response.arrayBuffer();
+    }
+
     let currentUrl = fileUrl;
     let lastError: Error | null = null;
 
@@ -205,6 +224,22 @@ export function usePptViewer({ url, refreshUrl }: UsePptViewerOptions): UsePptVi
         void loadPresentation();
     }, [loadPresentation]);
 
+    const renderThumbnail = useCallback((index: number, container: HTMLElement): PptThumbnailMount | null => {
+        const viewer = viewerRef.current;
+        if (!viewer) {
+            return null;
+        }
+        container.replaceChildren();
+        const handle = viewer.renderThumbnailToContainer(index, container, { width: 112 });
+        if (!handle) {
+            return null;
+        }
+        return {
+            dispose: () => handle.dispose(),
+            ready: handle.ready,
+        };
+    }, []);
+
     // Keyboard navigation
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
@@ -236,5 +271,7 @@ export function usePptViewer({ url, refreshUrl }: UsePptViewerOptions): UsePptVi
         handleNextSlide,
         handleToggleFullscreen,
         handleRetry,
+        isViewerReady: !isLoading && !error && slideCount > 0,
+        renderThumbnail,
     };
 }

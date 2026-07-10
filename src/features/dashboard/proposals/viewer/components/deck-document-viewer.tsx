@@ -66,7 +66,7 @@ export function DeckDocumentViewer({ src, refreshUrl, fileName: fileNameProp, ba
         </a>
       </Button>
     </div>);
-    return (<div className={cn('flex min-h-0 min-w-0 flex-col gap-4 overflow-x-hidden', embedded ? 'min-h-0' : 'min-h-[calc(100dvh-10rem)]', className)}>
+    return (<div className={cn('flex min-h-0 min-w-0 max-w-full flex-col gap-4 overflow-hidden', embedded ? 'min-h-0' : 'min-h-[calc(100dvh-10rem)]', className)}>
       {embedded ? (<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <FormatIcon kind={kind}/>
@@ -101,8 +101,8 @@ export function DeckDocumentViewer({ src, refreshUrl, fileName: fileNameProp, ba
           {toolbar}
         </header>)}
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
-        {kind === 'pdf' ? (<PdfViewer url={src} title={displayTitle} className="flex-1"/>) : kind === 'pptx' ? (<PptViewer url={src} refreshUrl={refreshUrl} title={displayTitle} className="flex-1"/>) : (<div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/70 bg-muted/20 p-10 text-center">
+      <div className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
+        {kind === 'pdf' ? (<PdfViewer url={src} title={displayTitle} embedded={embedded} className="min-h-0 flex-1"/>) : kind === 'pptx' ? (<PptViewer url={src} refreshUrl={refreshUrl} title={displayTitle} embedded={embedded} className="min-h-0 flex-1"/>) : (<div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/70 bg-muted/20 p-10 text-center">
             <p className="text-sm text-muted-foreground">
               This file type cannot be previewed in the browser.
             </p>

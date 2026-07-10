@@ -8,6 +8,7 @@ import { proposalsApi } from '@/lib/convex-api';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useAuth } from '@/shared/contexts/auth-context';
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params';
+import { getPreviewProposals, isPreviewLegacyId } from '@/lib/preview-data';
 import { isFeatureEnabled } from '@/lib/features';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, } from '@/shared/ui/breadcrumb';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
@@ -32,7 +33,10 @@ export function NavigationBreadcrumbs() {
         ? pathSegments[1]
         : null;
     const workspaceId = user?.agencyId ?? null;
-    const proposalRow = useQuery(proposalsApi.getByLegacyId, workspaceId && proposalId ? { workspaceId, legacyId: proposalId } : 'skip');
+    const previewProposal = proposalId && isPreviewLegacyId(proposalId)
+        ? getPreviewProposals(null).find((proposal) => proposal.id === proposalId) ?? null
+        : null;
+    const proposalRow = useQuery(proposalsApi.getByLegacyId, workspaceId && proposalId && !previewProposal ? { workspaceId, legacyId: proposalId } : 'skip');
     // Don't render if feature flag is disabled or not on dashboard pages
     if (!isFeatureEnabled('BREADCRUMBS') ||
         (!pathname.startsWith('/dashboard') && !pathname.startsWith('/for-you'))) {
@@ -42,7 +46,7 @@ export function NavigationBreadcrumbs() {
         id: selectedClient?.id ?? null,
         name: selectedClient?.name ?? null
     }, {
-        proposalTitle: proposalRow?.clientName ?? proposalRow?.legacyId ?? null,
+        proposalTitle: previewProposal?.clientName ?? proposalRow?.clientName ?? proposalRow?.legacyId ?? null,
     });
     if (items.length <= 1) {
         return null;

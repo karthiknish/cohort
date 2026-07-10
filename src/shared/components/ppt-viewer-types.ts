@@ -4,4 +4,6 @@ export interface PptViewerProps {
     refreshUrl?: () => Promise<string | null>;
     className?: string;
     title?: string;
+    /** When true, uses a shorter viewport height for in-page deck cards. */
+    embedded?: boolean;
 }

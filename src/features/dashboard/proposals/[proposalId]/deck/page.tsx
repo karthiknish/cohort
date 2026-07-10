@@ -15,7 +15,7 @@ import { usePreview } from '@/shared/contexts/preview-context';
 import { useConvex, useQuery } from 'convex/react';
 import { proposalsApi, proposalArchivesApi } from '@/lib/convex-api';
 import { resolveProposalDeckUrls, useProposalArtifactUrls, } from '@/features/dashboard/proposals/hooks/use-proposal-artifact-urls';
-import { getPreviewProposals } from '@/lib/preview-data';
+import { getPreviewProposals, getPreviewProposalDeckAssetUrl, isPreviewLegacyId } from '@/lib/preview-data';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { DirectionalPageTransition } from '@/shared/ui/page-transition';
 import { BackLink } from '@/shared/components/back-link';
@@ -37,16 +37,17 @@ export default function ProposalDeckPage() {
     const { isPreviewMode } = usePreview();
     const workspaceId = user?.agencyId ?? null;
     const convex = useConvex();
-    const proposalRow = useQuery(proposalsApi.getByLegacyId, !isPreviewMode && workspaceId && proposalId ? { workspaceId, legacyId: proposalId } : 'skip');
-    const previewProposal = (isPreviewMode && proposalId ? getPreviewProposals(null).find((proposal) => proposal.id === proposalId) ?? null : null);
-    const isLoading = !isPreviewMode && proposalRow === undefined;
-    const error = isPreviewMode
+    const isPreviewProposal = isPreviewMode || (proposalId ? isPreviewLegacyId(proposalId) : false);
+    const proposalRow = useQuery(proposalsApi.getByLegacyId, !isPreviewProposal && workspaceId && proposalId ? { workspaceId, legacyId: proposalId } : 'skip');
+    const previewProposal = (isPreviewProposal && proposalId ? getPreviewProposals(null).find((proposal) => proposal.id === proposalId) ?? null : null);
+    const isLoading = !isPreviewProposal && proposalRow === undefined;
+    const error = isPreviewProposal
         ? (previewProposal ? null : 'Proposal not found')
         : !isLoading && proposalRow === null
             ? 'Proposal not found'
             : null;
     const proposal: ProposalDraft | null = (() => {
-        if (isPreviewMode) return previewProposal;
+        if (isPreviewProposal) return previewProposal;
         if (!proposalRow) return null;
         return {
             id: proposalRow.legacyId,
@@ -65,16 +66,21 @@ export default function ProposalDeckPage() {
             presentationDeck: (proposalRow.presentationDeck ?? null) as ProposalPresentationDeck | null,
         };
     })();
-    const artifactUrls = useProposalArtifactUrls(!isPreviewMode ? workspaceId : null, proposalId ?? null);
+    const artifactUrls = useProposalArtifactUrls(!isPreviewProposal ? workspaceId : null, proposalId ?? null);
+    const previewDeckAssetUrl = isPreviewProposal && proposalId ? getPreviewProposalDeckAssetUrl(proposalId) : null;
     const resolvedDeckUrls = resolveProposalDeckUrls({
         artifactUrls,
         pdfUrl: proposal?.pdfUrl,
         pptUrl: proposal?.pptUrl,
         presentationDeck: proposal?.presentationDeck,
     });
-    const pdfViewerUrl = isPreviewMode ? null : resolvedDeckUrls.pdfUrl;
-    const pptxViewerUrl = isPreviewMode ? null : resolvedDeckUrls.pptUrl;
-    const previewDeckInstructions = isPreviewMode ? proposal?.presentationDeck?.instructions ?? null : null;
+    const pdfViewerUrl = isPreviewProposal ? null : resolvedDeckUrls.pdfUrl;
+    const pptxViewerUrl = isPreviewProposal
+        ? (previewDeckAssetUrl ?? resolvedDeckUrls.pptUrl)
+        : resolvedDeckUrls.pptUrl;
+    const previewDeckInstructions = isPreviewProposal && !pptxViewerUrl
+        ? proposal?.presentationDeck?.instructions ?? null
+        : null;
     const refreshPptxUrl = useCallback(async (): Promise<string | null> => {
         if (!workspaceId || !proposalId || !pptxViewerUrl) return null;
         try {
@@ -132,14 +138,14 @@ export default function ProposalDeckPage() {
                             </CardContent>
                         </Card>
                     ) : proposal ? (
-                        <Card className="border-border/60 bg-background">
+                        <Card className="min-w-0 overflow-hidden border-border/60 bg-background">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-xl">Presentation deck</CardTitle>
                                 <CardDescription>
                                     {proposal.clientName ? `Prepared for ${proposal.clientName}` : 'Presentation preview'}
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4">
+                            <CardContent className="min-w-0 space-y-4 overflow-hidden">
                                 {lastUpdated ? (
                                     <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                         <Clock className="size-3" />

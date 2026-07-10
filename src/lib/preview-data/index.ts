@@ -1,7 +1,7 @@
 // Types
 export * from './types';
 // Utilities
-export { PREVIEW_MODE_STORAGE_KEY, PREVIEW_MODE_EVENT, PREVIEW_MODE_QUERY_PARAM, PREVIEW_ROUTE_REQUEST_HEADER, SCREEN_RECORDING_ENABLED_ENV_KEY, SCREEN_RECORDING_AUTH_BYPASS_ENV_KEY, isPreviewModeEnabled, isScreenRecordingAuthBypassEnabled, isScreenRecordingModeEnabled, isPreviewModeQueryEnabled, isPublicPreviewPath, isPreviewRouteRequest, setPreviewModeEnabled, withPreviewModeSearchParam, withPreviewModeSearchParamIfEnabled, isoDaysAgo, } from './utils';
+export { PREVIEW_MODE_STORAGE_KEY, PREVIEW_MODE_EVENT, PREVIEW_MODE_QUERY_PARAM, PREVIEW_ROUTE_REQUEST_HEADER, SCREEN_RECORDING_ENABLED_ENV_KEY, SCREEN_RECORDING_AUTH_BYPASS_ENV_KEY, PREVIEW_PROPOSAL_DECK_ASSETS, isPreviewModeEnabled, isScreenRecordingAuthBypassEnabled, isScreenRecordingModeEnabled, isPreviewModeQueryEnabled, isPublicPreviewPath, isPreviewRouteRequest, isPreviewLegacyId, getPreviewProposalDeckAssetUrl, setPreviewModeEnabled, withPreviewModeSearchParam, withPreviewModeSearchParamIfEnabled, isoDaysAgo, } from './utils';
 // Clients and metrics
 export { getPreviewClients, getPreviewMetrics, getPreviewClientSummaries } from './clients';
 // Analytics

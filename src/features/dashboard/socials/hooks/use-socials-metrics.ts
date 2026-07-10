@@ -62,10 +62,18 @@ export function useSocialsMetrics(): UseSocialsMetricsReturn {
         skipped: !canQuery,
         fallbackMessage: 'Unable to load Instagram metrics.',
     });
-    const overviewError = mergeQueryErrors(facebookQueryError, instagramQueryError);
-    const overviewLoading = canQuery && (facebookRaw === undefined || instagramRaw === undefined);
-    const facebookOverview = (isPreviewMode ? getPreviewSocialOverview('facebook') : facebookRaw ? { ...facebookRaw } : null);
-    const instagramOverview = (isPreviewMode ? getPreviewSocialOverview('instagram') : instagramRaw ? { ...instagramRaw } : null);
+    const overviewError = isPreviewMode ? null : mergeQueryErrors(facebookQueryError, instagramQueryError);
+    const overviewLoading = !isPreviewMode && canQuery && (facebookRaw === undefined || instagramRaw === undefined);
+    const facebookOverview = isPreviewMode
+        ? getPreviewSocialOverview('facebook')
+        : facebookRaw
+            ? { ...facebookRaw }
+            : null;
+    const instagramOverview = isPreviewMode
+        ? getPreviewSocialOverview('instagram')
+        : instagramRaw
+            ? { ...instagramRaw }
+            : null;
     return {
         dateRange,
         setDateRange,

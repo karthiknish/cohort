@@ -12,6 +12,16 @@ const PREVIEW_ROUTE_PATTERNS = [
     /^\/dashboard\/ads\/campaigns\/[^/]+\/[^/]+$/,
     /^\/dashboard\/ads\/campaigns\/[^/]+\/[^/]+\/creative\/[^/]+$/,
 ];
+/** Static deck assets served from `/public/preview` for sample proposals. */
+export const PREVIEW_PROPOSAL_DECK_ASSETS: Record<string, string> = {
+    'preview-proposal-1': '/preview/preview-proposal-1.pptx',
+};
+export function isPreviewLegacyId(legacyId: string | null | undefined): boolean {
+    return typeof legacyId === 'string' && legacyId.startsWith('preview-');
+}
+export function getPreviewProposalDeckAssetUrl(proposalId: string): string | null {
+    return PREVIEW_PROPOSAL_DECK_ASSETS[proposalId] ?? null;
+}
 function isEnabledPreviewValue(value: string | null): boolean {
     if (!value)
         return false;

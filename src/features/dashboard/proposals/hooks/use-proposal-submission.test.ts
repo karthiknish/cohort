@@ -4,7 +4,7 @@ describe('getPreviewProposalSimulation', () => {
     it('prefers a client-specific preview deck when available', () => {
         const simulation = getPreviewProposalSimulation('preview-techcorp');
         expect(simulation?.draftId).toBe('preview-proposal-1');
-        expect(simulation?.presentationDeck?.storageUrl).toContain('/dashboard/proposals/preview-proposal-1/deck?preview=1');
+        expect(simulation?.presentationDeck?.storageUrl).toBe('/preview/preview-proposal-1.pptx');
     });
     it('falls back to a ready preview deck when the client has no generated preview proposal', () => {
         const simulation = getPreviewProposalSimulation('preview-startupxyz');

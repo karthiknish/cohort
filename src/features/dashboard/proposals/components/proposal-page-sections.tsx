@@ -194,8 +194,8 @@ export function ProposalBuilderOverlay(props: {
               <DashboardSkeleton showStepIndicator/>
             </CardContent>
           </Card>
-        </div>) : submitted ? (<div className="min-h-0 flex-1 overflow-y-auto p-4 sm:px-6">
-          <Card className="border-border/60 bg-background shadow-sm">
+        </div>) : submitted ? (<div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:px-6">
+          <Card className="min-w-0 overflow-hidden border-border/60 bg-background shadow-sm">
             <CardContent className="p-6">
               <ProposalSubmittedPanel summary={summary} presentationDeck={presentationDeck as Parameters<typeof ProposalSubmittedPanel>[0]['presentationDeck']} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} onResumeSubmission={onResumeSubmission} onRegenerate={onRegenerate} isSubmitting={isSubmitting} onRecheckDeck={onRecheckDeck} isRecheckingDeck={isRecheckingDeck}/>
             </CardContent>
