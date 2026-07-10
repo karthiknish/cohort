@@ -27,12 +27,17 @@ export type DeckDocumentViewerProps = {
 function ViewerLoadingState({ label }: {
     label: string;
 }) {
-    return (<div className="flex min-h-[min(60dvh,560px)] flex-1 items-center justify-center rounded-xl border border-border/60 bg-black/80">
-      <div className="flex flex-col items-center gap-3 text-viewer-chrome/70">
-        <Loader2 className="size-8 animate-spin" aria-hidden/>
-        <p className="text-sm">{label}</p>
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        className="flex aspect-video min-h-[min(44dvh,340px)] max-h-[min(72dvh,680px)] w-full flex-1 flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border border-border/60 bg-muted/40"
+      >
+        <Loader2 className="size-8 animate-spin text-muted-foreground" aria-hidden />
+        <p className="text-sm text-muted-foreground">{label}</p>
       </div>
-    </div>);
+    );
 }
 function FormatIcon({ kind }: {
     kind: DocumentKind;
@@ -66,7 +71,7 @@ export function DeckDocumentViewer({ src, refreshUrl, fileName: fileNameProp, ba
         </a>
       </Button>
     </div>);
-    return (<div className={cn('flex min-h-0 min-w-0 max-w-full flex-col gap-4 overflow-hidden', embedded ? 'min-h-0' : 'min-h-[calc(100dvh-10rem)]', className)}>
+    return (<div className={cn('flex min-h-0 w-0 min-w-full max-w-full flex-col gap-4 overflow-x-clip', embedded ? 'min-h-0' : 'min-h-[calc(100dvh-10rem)]', className)}>
       {embedded ? (<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <FormatIcon kind={kind}/>
@@ -101,8 +106,8 @@ export function DeckDocumentViewer({ src, refreshUrl, fileName: fileNameProp, ba
           {toolbar}
         </header>)}
 
-      <div className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
-        {kind === 'pdf' ? (<PdfViewer url={src} title={displayTitle} embedded={embedded} className="min-h-0 flex-1"/>) : kind === 'pptx' ? (<PptViewer url={src} refreshUrl={refreshUrl} title={displayTitle} embedded={embedded} className="min-h-0 flex-1"/>) : (<div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/70 bg-muted/20 p-10 text-center">
+      <div className="flex min-h-0 w-full min-w-0 max-w-full flex-1 flex-col overflow-x-clip">
+        {kind === 'pdf' ? (<PdfViewer url={src} title={displayTitle} embedded={embedded} className="min-h-0 w-full min-w-0 flex-1"/>) : kind === 'pptx' ? (<PptViewer url={src} refreshUrl={refreshUrl} title={displayTitle} embedded={embedded} className="min-h-0 w-full min-w-0 flex-1"/>) : (<div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/70 bg-muted/20 p-10 text-center">
             <p className="text-sm text-muted-foreground">
               This file type cannot be previewed in the browser.
             </p>

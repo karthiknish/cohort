@@ -2,29 +2,76 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Download, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { cn } from '@/lib/utils';
-import type { PptThumbnailMount } from './use-ppt-viewer';
+import type { PptLoadingPhase, PptThumbnailMount } from './use-ppt-viewer';
 
-export function PptViewerLoading({ className, overlay }: { className?: string; overlay?: boolean }) {
+const LOADING_COPY: Record<PptLoadingPhase, { title: string; detail: string }> = {
+    fetching: {
+        title: 'Loading presentation',
+        detail: 'Fetching the deck file…',
+    },
+    rendering: {
+        title: 'Preparing slides',
+        detail: 'Rendering with full fidelity…',
+    },
+};
+
+export function PptViewerLoading({
+    className,
+    overlay,
+    phase = 'fetching',
+}: {
+    className?: string;
+    overlay?: boolean;
+    phase?: PptLoadingPhase;
+}) {
+    const copy = LOADING_COPY[phase];
+
     return (
         <div
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
             className={cn(
                 overlay
-                    ? 'absolute inset-0 z-20 flex items-center justify-center bg-white/80 backdrop-blur-sm'
-                    : 'flex min-h-[min(60dvh,560px)] flex-1 items-center justify-center rounded-xl border border-border/60 bg-foreground',
+                    ? 'absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 bg-white/90 backdrop-blur-sm'
+                    : 'flex min-h-[min(40dvh,320px)] max-h-[min(58dvh,520px)] w-full flex-1 flex-col items-center justify-center gap-5 rounded-xl border border-border/60 bg-muted/30',
                 className,
             )}
         >
-            <div className={cn('flex flex-col items-center gap-4', overlay ? 'text-foreground/70' : 'text-viewer-chrome/70')}>
-                <Loader2 className="size-9 animate-spin" aria-hidden />
+            <div className="flex w-[min(70%,280px)] flex-col gap-2" aria-hidden>
+                <Skeleton className="h-3 w-1/3 rounded-full" />
+                <Skeleton className="h-2.5 w-full rounded-full" />
+                <Skeleton className="h-2.5 w-5/6 rounded-full" />
+                <Skeleton className="mt-2 h-16 w-full rounded-lg" />
+            </div>
+            <div className="flex flex-col items-center gap-3 text-foreground/70">
+                <Loader2 className="size-8 animate-spin" aria-hidden />
                 <div className="text-center">
-                    <p className={cn('text-sm font-medium', overlay ? 'text-foreground/90' : 'text-viewer-chrome/90')}>
-                        Loading presentation
-                    </p>
-                    <p className={cn('mt-1 text-xs', overlay ? 'text-foreground/50' : 'text-viewer-chrome/50')}>
-                        Rendering slides with full fidelity…
-                    </p>
+                    <p className="text-sm font-medium text-foreground/90">{copy.title}</p>
+                    <p className="mt-1 text-xs text-foreground/50">{copy.detail}</p>
                 </div>
+            </div>
+            <span className="sr-only">{copy.title}. {copy.detail}</span>
+        </div>
+    );
+}
+
+/** Placeholder chrome shown under the slide while the deck is loading. */
+export function PptViewerLoadingChrome({ className }: { className?: string }) {
+    return (
+        <div className={cn('space-y-2', className)} aria-hidden>
+            <div className="flex max-w-full items-center gap-2 overflow-hidden rounded-xl border border-border/60 bg-muted/30 p-1.5 sm:gap-3 sm:p-2 sm:px-3">
+                <Skeleton className="size-9 shrink-0 rounded-full sm:size-10" />
+                <Skeleton className="mx-auto h-4 w-16 rounded-full" />
+                <Skeleton className="size-9 shrink-0 rounded-full sm:size-10" />
+                <Skeleton className="size-9 shrink-0 rounded-full sm:size-10" />
+            </div>
+            <div className="flex max-w-full gap-2 overflow-hidden px-1">
+                {['thumb-a', 'thumb-b', 'thumb-c', 'thumb-d'].map((key) => (
+                    <Skeleton key={key} className="h-12 w-20 shrink-0 rounded-lg sm:h-14 sm:w-24" />
+                ))}
             </div>
         </div>
     );
@@ -86,7 +133,8 @@ export function PptViewerFilmstrip({
         return null;
     }
     return (
-        <div className="relative mt-4 min-w-0 max-w-full overflow-hidden">
+        // w-0 min-w-full: scroll without expanding ScrollArea/table ancestors
+        <div className="relative mt-2 w-0 min-w-full max-w-full overflow-hidden">
             <div
                 className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent sm:w-8"
                 aria-hidden
@@ -96,7 +144,7 @@ export function PptViewerFilmstrip({
                 aria-hidden
             />
             <div
-                className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 pt-0.5 scroll-smooth"
+                className="flex w-full min-w-0 max-w-full gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 pt-0.5 scroll-smooth"
                 role="tablist"
                 aria-label="Slide thumbnails"
             >
@@ -164,13 +212,17 @@ function SlideThumbnailButton({
             }
             aria-selected={isActive}
             className={cn(
-                'relative h-14 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 bg-white transition-[border-color,box-shadow,opacity] sm:h-16 sm:w-28',
+                'relative h-12 w-20 shrink-0 overflow-hidden rounded-lg border-2 bg-white transition-[border-color,box-shadow,opacity] sm:h-14 sm:w-24',
                 isActive
                     ? 'border-primary shadow-md shadow-primary/20 ring-2 ring-primary/25'
                     : 'border-transparent opacity-80 hover:border-muted-foreground/30 hover:opacity-100',
             )}
         >
-            <div ref={mountRef} className="size-full overflow-hidden bg-white" aria-hidden />
+            <div
+                ref={mountRef}
+                className="size-full max-h-full max-w-full overflow-hidden bg-white [&>*]:!size-full [&>*]:!max-h-full [&>*]:!max-w-full [&>*]:overflow-hidden"
+                aria-hidden
+            />
             {!isReady && !failed ? (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-muted/40">
                     <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
