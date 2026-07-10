@@ -81,7 +81,7 @@ function formatCurrencyValueFull(value: number, currency: string = 'USD'): strin
 }
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent, } from '@/shared/ui/chart';
 import type { Formatter, NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
-import { Area, AreaChart, CartesianGrid, Tooltip as RechartsTooltip, XAxis, YAxis, } from 'recharts';
+import { Area, AreaChart, CartesianGrid, RechartsTooltip, XAxis, YAxis, } from '@/shared/ui/recharts-dynamic';
 import type { AdsMetricsDisplayState } from '@/features/dashboard/ads/components/ads-metrics-display-state';
 const chartConfig = {
     revenue: {

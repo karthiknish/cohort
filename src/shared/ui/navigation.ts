@@ -13,6 +13,7 @@ import {
   useRouterState,
   redirect as tsRedirect,
 } from '@tanstack/react-router'
+import { toTanStackNavigateOptions } from '@/shared/lib/tanstack-href'
 
 export function usePathname(): string {
   return useRouterState({ select: (s) => s.location.pathname })
@@ -49,14 +50,35 @@ export function useRouter(): Router {
   const navigate = useNavigate()
   const router = useTanStackRouter()
   return {
-    push: (href, opts) => void navigate({ to: href as never, ...opts }),
-    replace: (href, opts) =>
-      void navigate({ to: href as never, replace: true, ...opts }),
+    push: (href, opts) => {
+      const { to, search, hash } = toTanStackNavigateOptions(href)
+      void navigate({
+        to: to as never,
+        ...(search ? { search: search as never } : {}),
+        ...(hash ? { hash } : {}),
+        ...opts,
+      })
+    },
+    replace: (href, opts) => {
+      const { to, search, hash } = toTanStackNavigateOptions(href)
+      void navigate({
+        to: to as never,
+        replace: true,
+        ...(search ? { search: search as never } : {}),
+        ...(hash ? { hash } : {}),
+        ...opts,
+      })
+    },
     back: () => router.history.back(),
     forward: () => router.history.forward(),
     refresh: () => void router.invalidate(),
     prefetch: (href?: string) => {
-      if (href) void router.preloadRoute({ to: href as never })
+      if (!href) return
+      const { to, search } = toTanStackNavigateOptions(href)
+      void router.preloadRoute({
+        to: to as never,
+        ...(search ? { search: search as never } : {}),
+      })
     },
   }
 }
@@ -69,7 +91,12 @@ export function redirect(
   _type?: 'replace' | 'push',
 ): never {
   const href = typeof url === 'string' ? url : url.href
-  throw tsRedirect({ to: href as never })
+  const { to, search, hash } = toTanStackNavigateOptions(href)
+  throw tsRedirect({
+    to: to as never,
+    ...(search ? { search: search as never } : {}),
+    ...(hash ? { hash } : {}),
+  })
 }
 
 export function permanentRedirect(url: string): never
@@ -78,7 +105,13 @@ export function permanentRedirect(
   url: string,
   _type?: 'replace' | 'push',
 ): never {
-  throw tsRedirect({ to: url as never, statusCode: 308 })
+  const { to, search, hash } = toTanStackNavigateOptions(url)
+  throw tsRedirect({
+    to: to as never,
+    statusCode: 308,
+    ...(search ? { search: search as never } : {}),
+    ...(hash ? { hash } : {}),
+  })
 }
 
 export function notFound(): never {

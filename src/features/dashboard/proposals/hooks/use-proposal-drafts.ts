@@ -470,21 +470,24 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             setProposalPendingDelete(null);
         }
     };
-    const proposalsKey = (() => {
-        if (!proposals.length) {
-            return 'none';
-        }
-        return proposals
-            .map((proposal) => `${proposal.id}:${proposal.updatedAt ?? ''}:${proposal.status ?? ''}`)
-            .join('|');
-    })();
-    // Bootstrap effect
+    const lastBootstrappedRef = useRef<{ clientKey: string; hadProposals: boolean } | null>(null);
+    // Bootstrap once per client, plus one more time when proposals first arrive.
+    // Do not re-run on later list updates — that wiped in-progress wizard edits
+    // (e.g. platform chips) after autosave refreshed the proposals query.
     useEffect(() => {
-        const bootstrapKey = `${selectedClientId ?? 'none'}:${proposalsKey}:${steps.length}`;
-        if (bootstrapKey === lastBootstrapKeyRef.current) {
+        if (!isPreviewMode && isLoadingProposals) {
             return;
         }
-        lastBootstrapKeyRef.current = bootstrapKey;
+        const clientKey = selectedClientId ?? 'none';
+        const hadProposals = proposals.length > 0;
+        const previous = lastBootstrappedRef.current;
+        if (previous?.clientKey === clientKey) {
+            if (previous.hadProposals || !hadProposals) {
+                return;
+            }
+        }
+        lastBootstrappedRef.current = { clientKey, hadProposals };
+        lastBootstrapKeyRef.current = `${clientKey}:${steps.length}`;
         setIsHydrated(false);
         let cancelled = false;
         const bootstrapDraft = async () => {
@@ -561,7 +564,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         return () => {
             cancelled = true;
         };
-    }, [proposals, proposalsKey, selectedClientId, steps.length]);
+    }, [isLoadingProposals, isPreviewMode, proposals, selectedClientId, steps.length]);
     const shouldScheduleAutosave = !isPreviewMode &&
         !isBootstrapping &&
         isHydrated &&

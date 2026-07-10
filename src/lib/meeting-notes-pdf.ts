@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf';
+import type { jsPDF } from 'jspdf';
 import { normalizeNotesSummary, stripMarkdownFence } from '@/lib/meeting-notes-ai';
 const PAGE_MARGIN_PT = 54;
 const HEADING_FONT_SIZE = 13;
@@ -53,8 +53,9 @@ export function parseMeetingNotesMarkdown(content: string): PdfBlock[] {
     }
     return blocks;
 }
-export function renderMeetingNotesPdf({ meetingTitle, content }: MeetingNotesPdfOptions): jsPDF {
-    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+export async function renderMeetingNotesPdf({ meetingTitle, content }: MeetingNotesPdfOptions): Promise<jsPDF> {
+    const { jsPDF: JsPDF } = await import('jspdf');
+    const doc = new JsPDF({ unit: 'pt', format: 'letter' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const maxWidth = pageWidth - PAGE_MARGIN_PT * 2;
@@ -113,15 +114,15 @@ export function renderMeetingNotesPdf({ meetingTitle, content }: MeetingNotesPdf
     }
     return doc;
 }
-export function buildMeetingNotesPdfArrayBuffer(options: MeetingNotesPdfOptions): ArrayBuffer {
-    const doc = renderMeetingNotesPdf(options);
+export async function buildMeetingNotesPdfArrayBuffer(options: MeetingNotesPdfOptions): Promise<ArrayBuffer> {
+    const doc = await renderMeetingNotesPdf(options);
     return doc.output('arraybuffer') as ArrayBuffer;
 }
-export function buildMeetingNotesPdfBytes(options: MeetingNotesPdfOptions): Uint8Array {
-    return new Uint8Array(buildMeetingNotesPdfArrayBuffer(options));
+export async function buildMeetingNotesPdfBytes(options: MeetingNotesPdfOptions): Promise<Uint8Array> {
+    return new Uint8Array(await buildMeetingNotesPdfArrayBuffer(options));
 }
-export function buildMeetingNotesPdfBlob(options: MeetingNotesPdfOptions): Blob {
-    return new Blob([buildMeetingNotesPdfArrayBuffer(options)], { type: 'application/pdf' });
+export async function buildMeetingNotesPdfBlob(options: MeetingNotesPdfOptions): Promise<Blob> {
+    return new Blob([await buildMeetingNotesPdfArrayBuffer(options)], { type: 'application/pdf' });
 }
 export function isPdfBytes(bytes: Uint8Array): boolean {
     return bytes.length >= 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;

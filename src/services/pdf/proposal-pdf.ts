@@ -14,7 +14,7 @@
  * with cross-topic deduplication via `prefetchSlideImages`.
  */
 
-import { jsPDF } from 'jspdf';
+import type { jsPDF } from 'jspdf';
 import type { ProposalFormData } from '@/lib/proposals';
 import { parseBudgetAmount, detectCurrency, formatCurrency, type CurrencySymbol } from '../pptx/parsing';
 import { renderBarChart, renderLineChart } from '../chart-images';
@@ -1105,7 +1105,8 @@ export async function generateProposalPdf(
     formData: ProposalFormData,
     instructions: string,
 ): Promise<ArrayBuffer> {
-    const doc = new jsPDF({
+    const { jsPDF: JsPDF } = await import('jspdf');
+    const doc = new JsPDF({
         unit: 'pt',
         format: 'a4',
         orientation: 'portrait',

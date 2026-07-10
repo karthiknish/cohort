@@ -30,14 +30,14 @@ export function MeetingArtifactsDownload({ className, legacyId, meetingTitle, no
     const hasTranscript = Boolean(transcriptText?.trim());
     const notesArchived = Boolean(notesStorageId) || Boolean(artifactUrls?.notesArchived);
     const transcriptArchived = Boolean(transcriptStorageId) || Boolean(artifactUrls?.transcriptArchived);
-    const handleDownloadNotesPdf = () => {
+    const handleDownloadNotesPdf = async () => {
         const content = notesSummary?.trim();
         if (!content) {
             return;
         }
         setDownloading('notes-pdf');
         try {
-            const blob = buildMeetingNotesPdfBlob({
+            const blob = await buildMeetingNotesPdfBlob({
                 meetingTitle,
                 content,
             });

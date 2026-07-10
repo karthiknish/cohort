@@ -66,6 +66,23 @@ export default defineConfig({
     // 'hidden' = generates .map files but doesn't reference them in the output
     // (so browsers don't download them; Sentry uploads them separately).
     sourcemap: isProduction ? 'hidden' : true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (id.includes('posthog-js')) return 'posthog'
+          if (id.includes('livekit-client') || id.includes('@livekit/')) return 'livekit'
+          if (id.includes('recharts')) return 'recharts'
+          if (id.includes('emoji-picker-react')) return 'emoji-picker'
+          if (id.includes('react-syntax-highlighter')) return 'syntax-highlighter'
+          if (id.includes('leaflet')) return 'leaflet'
+          if (id.includes('jspdf')) return 'jspdf'
+          if (id.includes('pptxgenjs')) return 'pptxgenjs'
+          if (id.includes('exceljs')) return 'exceljs'
+          if (id.includes('agentation')) return 'agentation'
+        },
+      },
+    },
   },
   optimizeDeps: {
     exclude: ['@tanstack/react-start'],

@@ -200,7 +200,13 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
   const applyClientSelectionSync = useCallback(() => {
     if (previewEnabled) {
-      dispatch({ type: 'syncState', selectedClientId: selectedClientIdRef.current, loading: false, error: null });
+      const previewClients = getPreviewClients();
+      const currentSelection = selectedClientIdRef.current;
+      const targetId =
+        currentSelection && previewClients.some((client) => client.id === currentSelection)
+          ? currentSelection
+          : previewClients[0]?.id ?? null;
+      dispatch({ type: 'syncState', selectedClientId: targetId, loading: false, error: null });
       return;
     }
     if (authLoading || isSyncing) return;
@@ -320,7 +326,16 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   }, [workspaceId, convexSoftDeleteClient]);
 
   useEffect(() => {
-    if (previewEnabled || loading || !selectedClientId) return;
+    if (loading) return;
+    if (!selectedClientId) {
+      if (previewEnabled) {
+        const fallbackClientId = getPreviewClients()[0]?.id ?? null;
+        if (fallbackClientId) {
+          dispatch({ type: 'setSelectedClientId', selectedClientId: fallbackClientId });
+        }
+      }
+      return;
+    }
     if (resolvedClients.some((c) => c.id === selectedClientId)) return;
     const fallbackClientId = resolveSelectedClientId(resolvedClients, null, null);
     dispatch({ type: 'setSelectedClientId', selectedClientId: fallbackClientId });

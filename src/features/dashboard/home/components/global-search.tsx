@@ -4,7 +4,7 @@ import { useReducer, useState, useCallback, useEffect, useEffectEvent, useMemo, 
 import { Search, X, FileText, MessageSquare, Users, FolderOpen, Clock } from 'lucide-react';
 import { Input } from '@/shared/ui/input';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogTrigger, } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, } from '@/shared/ui/dialog';
 import { Badge } from '@/shared/ui/badge';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { useClientRelativeTime } from '@/lib/hooks/use-client-relative-time';
@@ -251,6 +251,8 @@ export function GlobalSearch({ trigger, searchFunctions = EMPTY_SEARCH_FUNCTIONS
     return (<Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger || defaultTrigger}
       <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col p-0">
+        <DialogTitle className="sr-only">Search workspace</DialogTitle>
+        <DialogDescription className="sr-only">Search across tasks, projects, messages, and more.</DialogDescription>
         {/* Search input */}
         <div className="flex items-center gap-2 p-4 border-b">
           <Search className="size-5 text-muted-foreground"/>

@@ -13,14 +13,13 @@ import { createServerFn } from '@tanstack/react-start'
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
-import { Agentation } from 'agentation'
 import '@fontsource-variable/geist'
 import '@fontsource-variable/geist-mono'
 import '@fontsource-variable/anybody'
 import '@/styles/globals.css'
 import { cn } from '@/lib/utils'
-import '@/shared/ui/livekit-styles'
 import { authClient } from '@/lib/auth-client'
+import { dynamic } from '@/shared/ui/dynamic'
 import { getToken } from '@/lib/auth-server'
 import { SiteHeader } from '@/shared/layout/site/site-header'
 import { SiteFooter } from '@/shared/layout/site/site-footer'
@@ -91,6 +90,13 @@ const showAgentation =
   process.env.NODE_ENV === 'development' &&
   process.env.NEXT_PUBLIC_ENABLE_AGENTATION === 'true'
 
+const Agentation = showAgentation
+  ? dynamic(() => import('agentation').then((m) => m.Agentation), {
+      ssr: false,
+      loading: () => null,
+    })
+  : null
+
 function RootComponent() {
   const context = useRouteContext({ from: Route.id })
   return (
@@ -114,7 +120,7 @@ function RootComponent() {
               <HapticsProvider>
                 <MotionProvider>
                   <Outlet />
-                  {showAgentation ? <Agentation /> : null}
+                  {Agentation ? <Agentation /> : null}
                 </MotionProvider>
               </HapticsProvider>
             </main>

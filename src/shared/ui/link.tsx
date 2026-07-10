@@ -10,6 +10,7 @@
 import { forwardRef } from 'react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
 import { useNavigate, useRouter as useTanStackRouter } from '@tanstack/react-router'
+import { toTanStackNavigateOptions } from '@/shared/lib/tanstack-href'
 
 type LinkUrl = {
   pathname: string
@@ -68,17 +69,21 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 ) {
   const navigate = useNavigate()
   const router = useTanStackRouter()
-  const to = resolveHref(href)
+  const resolvedHref = resolveHref(href)
+  const navigateOptions = toTanStackNavigateOptions(resolvedHref)
 
   const warmRoute = () => {
     if (prefetch === false) return
-    void router.preloadRoute({ to: to as never })
+    void router.preloadRoute({
+      to: navigateOptions.to as never,
+      ...(navigateOptions.search ? { search: navigateOptions.search as never } : {}),
+    })
   }
 
   return (
     <a
       ref={ref}
-      href={to}
+      href={resolvedHref}
       target={target}
       onMouseEnter={(e) => {
         warmRoute()
@@ -93,7 +98,12 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
         if (e.defaultPrevented) return
         if (target === '_blank' || isModifiedEvent(e) || e.button !== 0) return
         e.preventDefault()
-        void navigate({ to: to as never, replace })
+        void navigate({
+          to: navigateOptions.to as never,
+          replace,
+          ...(navigateOptions.search ? { search: navigateOptions.search as never } : {}),
+          ...(navigateOptions.hash ? { hash: navigateOptions.hash } : {}),
+        })
       }}
       {...rest}
     >

@@ -13,9 +13,8 @@
  *   └── index.ts             — barrel export + main generator function
  */
 
-import pptxgen from 'pptxgenjs';
 import type { ProposalFormData } from '@/lib/proposals';
-import { prefetchSlideImages, type PexelsImage } from '../pexels-images';
+import { prefetchSlideImages } from '../pexels-images';
 import { SLIDE_W, SLIDE_H } from './constants';
 import { addTitleSlide, addContentSlide } from './content-slides';
 import { addBudgetAllocationSlide, addRoiProjectionSlide } from './chart-slides';
@@ -43,7 +42,8 @@ export async function generateProposalPptx(
     formData: ProposalFormData,
     instructions: string,
 ): Promise<ArrayBuffer> {
-    const pptx = new pptxgen();
+    const { default: PptxGenJS } = await import('pptxgenjs');
+    const pptx = new PptxGenJS();
     pptx.defineLayout({ name: 'Custom16x9', width: SLIDE_W, height: SLIDE_H });
     pptx.layout = 'Custom16x9';
     pptx.author = 'Cohorts';

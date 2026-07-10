@@ -1,8 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect } from 'react';
-import posthog from 'posthog-js';
-import { PostHogProvider as PHProvider } from 'posthog-js/react';
+import { type ComponentType, type ReactNode, useEffect, useState } from 'react';
 import { usePathname } from '@/shared/ui/navigation';
 import { logPageView, setAnalyticsUserId } from '@/lib/analytics';
 import { useAuth } from '@/shared/contexts/auth-context';
@@ -16,25 +14,53 @@ declare global {
 
 const PAGE_VIEW_DEBOUNCE_MS = 300;
 
+type PostHogClient = typeof import('posthog-js').default;
+type PostHogProviderComponent = ComponentType<{
+  client: PostHogClient;
+  children?: ReactNode;
+}>;
+
 function AnalyticsAndPostHog({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const searchParams = useUrlSearchParams();
   const { user } = useAuth();
   const serializedSearch = searchParams?.toString() ?? '';
+  const [posthogClient, setPosthogClient] = useState<PostHogClient | null>(null);
+  const [PostHogProvider, setPostHogProvider] = useState<PostHogProviderComponent | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (globalThis.__cohortsPostHogInitialized) return;
-    const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
-    if (!key || !host) return;
-    posthog.init(key, {
-      api_host: host,
-      person_profiles: 'always',
-      capture_pageview: false,
-      capture_pageleave: true,
-    });
-    globalThis.__cohortsPostHogInitialized = true;
+    let cancelled = false;
+
+    void (async () => {
+      const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+      const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+      if (!key || !host) return;
+
+      const [{ default: posthog }, { PostHogProvider: PHProvider }] = await Promise.all([
+        import('posthog-js'),
+        import('posthog-js/react'),
+      ]);
+
+      if (cancelled) return;
+
+      if (!globalThis.__cohortsPostHogInitialized) {
+        posthog.init(key, {
+          api_host: host,
+          person_profiles: 'always',
+          capture_pageview: false,
+          capture_pageleave: true,
+        });
+        globalThis.__cohortsPostHogInitialized = true;
+      }
+
+      setPosthogClient(posthog);
+      setPostHogProvider(() => PHProvider);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -60,7 +86,11 @@ function AnalyticsAndPostHog({ children }: { children: ReactNode }) {
     };
   }, [pathname, serializedSearch]);
 
-  return <PHProvider client={posthog}>{children}</PHProvider>;
+  if (!posthogClient || !PostHogProvider) {
+    return <>{children}</>;
+  }
+
+  return <PostHogProvider client={posthogClient}>{children}</PostHogProvider>;
 }
 
 interface AppProvidersProps {

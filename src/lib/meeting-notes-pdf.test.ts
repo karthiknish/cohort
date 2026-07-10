@@ -22,8 +22,8 @@ describe('meeting-notes-pdf', () => {
         ]);
         expect(blocks.some((block) => block.type === 'bullet' && block.text === 'Discussed launch scope')).toBe(true);
     });
-    it('builds a valid PDF document', () => {
-        const bytes = buildMeetingNotesPdfBytes({
+    it('builds a valid PDF document', async () => {
+        const bytes = await buildMeetingNotesPdfBytes({
             meetingTitle: 'Weekly sync',
             content: SAMPLE_NOTES,
         });
