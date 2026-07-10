@@ -9,8 +9,27 @@ type DeckPageViewerSectionProps = {
     proposalDisplayName: string;
     /** Callback to fetch a fresh signed PPTX URL when the current one expires. */
     refreshPptxUrl?: () => Promise<string | null>;
+    /** Sample slide outline shown in preview mode when no file URLs exist. */
+    previewInstructions?: string | null;
 };
-export function DeckPageViewerSection({ pdfUrl, pptxUrl, proposalDisplayName, refreshPptxUrl, }: DeckPageViewerSectionProps) {
+function PreviewDeckInstructions({ instructions, proposalDisplayName, }: {
+    instructions: string;
+    proposalDisplayName: string;
+}) {
+    const slides = instructions.split(/(?=Slide \d+:)/).map((part) => part.trim()).filter(Boolean);
+    return (<div className="space-y-4 rounded-xl border border-dashed border-warning/30 bg-warning/5 p-5">
+      <p className="text-sm font-medium text-foreground">Preview deck — sample slides</p>
+      <p className="text-xs text-muted-foreground">
+        Showing representative slide content for {proposalDisplayName}. Download actions use live proposal files when you exit preview mode.
+      </p>
+      <ol className="space-y-3">
+        {slides.map((slide) => (<li key={slide.slice(0, 40)} className="rounded-lg border border-border/60 bg-background p-4 text-sm leading-relaxed text-muted-foreground">
+            {slide}
+          </li>))}
+      </ol>
+    </div>);
+}
+export function DeckPageViewerSection({ pdfUrl, pptxUrl, proposalDisplayName, refreshPptxUrl, previewInstructions = null, }: DeckPageViewerSectionProps) {
     const defaultTab = pdfUrl ? 'pdf' : 'pptx';
     const [tab, setTab] = useState<'pdf' | 'pptx'>(defaultTab);
     const activeSrc = (() => {
@@ -24,6 +43,9 @@ export function DeckPageViewerSection({ pdfUrl, pptxUrl, proposalDisplayName, re
         setTab(value as 'pdf' | 'pptx');
     };
     if (!pdfUrl && !pptxUrl) {
+        if (previewInstructions?.trim()) {
+            return <PreviewDeckInstructions instructions={previewInstructions} proposalDisplayName={proposalDisplayName}/>;
+        }
         return (<div className="rounded-xl border border-dashed border-border/70 bg-muted/15 px-6 py-12 text-center text-sm text-muted-foreground">
         No presentation file is available for this proposal yet.
       </div>);

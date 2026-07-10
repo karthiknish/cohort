@@ -103,7 +103,7 @@ export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clien
     return (<div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
       <LiveRegion message={submissionAnnouncement}/>
 
-      <ProposalsPageHeroSection clientName={clientName} workflow={workflow} formState={formState} draftId={draftId} selectedClientId={selectedClientId} onVersionRestored={onVersionRestored} onStartProposal={onStartProposal}/>
+      <ProposalsPageHeroSection clientName={clientName} workflow={workflow} formState={formState} draftId={displayedDraftId} selectedClientId={selectedClientId} onVersionRestored={onVersionRestored} onStartProposal={onStartProposal}/>
 
       <FadeIn>
         <ProposalMetrics proposals={displayedProposals} isLoading={displayedLoadingState}/>

@@ -8,7 +8,7 @@ import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { ProposalsPageSkeleton } from '../components/proposals-page-skeleton';
-import { getPreviewProposals } from '@/lib/preview-data';
+import { getPreviewClients, getPreviewProposals } from '@/lib/preview-data';
 import { ProposalStepContent } from '../components/proposal-step-content';
 import { type DeckProgressStage } from '../components/deck-progress-overlays';
 import { ProposalsPageMainView } from '../components/proposals-page-content-sections';
@@ -105,9 +105,13 @@ export function useProposalsPageContent() {
     })();
     const activeDeckStage: DeckProgressStage = deckProgressStage ?? 'polling';
     const previewProposals = getPreviewProposals(selectedClientId ?? null);
-    const previewDraftId = previewProposals.find((proposal) => proposal.status === 'draft')?.id ?? null;
+    const previewDraftId = previewProposals.find((proposal) => proposal.status === 'draft')?.id ?? previewProposals[0]?.id ?? null;
     const displayedProposals = isPreviewMode ? previewProposals : draftProposals;
-    const displayedDraftId = isPreviewMode ? previewDraftId : draftId;
+    const displayedDraftId = isPreviewMode ? (draftId ?? previewDraftId) : draftId;
+    const resolvedClientName = selectedClient?.name ??
+        (selectedClientId && isPreviewMode
+            ? getPreviewClients().find((client) => client.id === selectedClientId)?.name ?? null
+            : null);
     const displayedLoadingState = isPreviewMode ? false : isLoadingProposals;
     const isInitialLoading = displayedLoadingState && displayedProposals.length === 0 && !isWizardOpen;
     const handleStartPreviewProposal = () => {
@@ -218,6 +222,6 @@ export function useProposalsPageContent() {
     });
     const stepContent = (<ProposalStepContent stepId={step.id} formState={formState} summary={summary} validationErrors={validationErrors} onUpdateField={updateField} onToggleArrayValue={toggleArrayValue} onChangeSocialHandle={handleSocialHandleChange}/>);
     return (<PageSkeletonBoundary loading={isInitialLoading} loadingContent={<ProposalsPageSkeleton />}>
-      <ProposalsPageMainView wizardRef={wizardRef} submissionAnnouncement={submissionAnnouncement} clientName={selectedClient?.name ?? null} workflow={proposalWorkflow} viewState={proposalViewState} formState={formState} draftId={draftId} selectedClientId={selectedClientId} onVersionRestored={handleVersionRestored} onStartProposal={isPreviewMode ? handleStartPreviewProposal : handleStartProposal} displayedProposals={displayedProposals} displayedDraftId={displayedDraftId} proposalHistoryWorkflow={proposalHistoryWorkflow} proposalHistoryCapabilities={proposalHistoryCapabilities} proposalsQueryError={proposalsQueryError} deletingProposalId={deletingProposalId} onRefresh={isPreviewMode ? handlePreviewRefresh : handleRefreshProposals} onResume={handleResumeProposalInModal} onRequestDelete={isPreviewMode ? handlePreviewRequestDelete : requestDeleteProposal} downloadingDeckId={downloadingDeckId} onDownloadDeck={isPreviewMode ? handlePreviewDownloadDeck : handleDownloadDeck} onCreateNew={isPreviewMode ? handleStartPreviewProposal : handleStartProposal} proposalPendingDelete={proposalPendingDelete} onDeleteDialogChange={handleDeleteDialogChange} onConfirmDelete={handleConfirmDeleteProposal} activeDeckStage={activeDeckStage} onCloseWizard={handleCloseWizard} summary={summary} presentationDeck={presentationDeck} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} onResumeSubmission={handleContinueEditingInModal} onRegenerate={handleRegenerate} onRecheckDeck={handleRecheckDeck} steps={steps} currentStep={currentStep} autosaveStatus={autosaveStatus} stepContent={stepContent} onBack={handleBack} onNext={handleNext} onGoToStep={goToStep} validationMessages={Object.values(validationErrors)}/>
+      <ProposalsPageMainView wizardRef={wizardRef} submissionAnnouncement={submissionAnnouncement} clientName={resolvedClientName} workflow={proposalWorkflow} viewState={proposalViewState} formState={formState} draftId={draftId} selectedClientId={selectedClientId} onVersionRestored={handleVersionRestored} onStartProposal={isPreviewMode ? handleStartPreviewProposal : handleStartProposal} displayedProposals={displayedProposals} displayedDraftId={displayedDraftId} proposalHistoryWorkflow={proposalHistoryWorkflow} proposalHistoryCapabilities={proposalHistoryCapabilities} proposalsQueryError={proposalsQueryError} deletingProposalId={deletingProposalId} onRefresh={isPreviewMode ? handlePreviewRefresh : handleRefreshProposals} onResume={handleResumeProposalInModal} onRequestDelete={isPreviewMode ? handlePreviewRequestDelete : requestDeleteProposal} downloadingDeckId={downloadingDeckId} onDownloadDeck={isPreviewMode ? handlePreviewDownloadDeck : handleDownloadDeck} onCreateNew={isPreviewMode ? handleStartPreviewProposal : handleStartProposal} proposalPendingDelete={proposalPendingDelete} onDeleteDialogChange={handleDeleteDialogChange} onConfirmDelete={handleConfirmDeleteProposal} activeDeckStage={activeDeckStage} onCloseWizard={handleCloseWizard} summary={summary} presentationDeck={presentationDeck} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} onResumeSubmission={handleContinueEditingInModal} onRegenerate={handleRegenerate} onRecheckDeck={handleRecheckDeck} steps={steps} currentStep={currentStep} autosaveStatus={autosaveStatus} stepContent={stepContent} onBack={handleBack} onNext={handleNext} onGoToStep={goToStep} validationMessages={Object.values(validationErrors)}/>
     </PageSkeletonBoundary>);
 }

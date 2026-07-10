@@ -66,12 +66,15 @@ export default function ProposalDeckPage() {
         };
     })();
     const artifactUrls = useProposalArtifactUrls(!isPreviewMode ? workspaceId : null, proposalId ?? null);
-    const { pdfUrl: pdfViewerUrl, pptUrl: pptxViewerUrl } = resolveProposalDeckUrls({
+    const resolvedDeckUrls = resolveProposalDeckUrls({
         artifactUrls,
         pdfUrl: proposal?.pdfUrl,
         pptUrl: proposal?.pptUrl,
         presentationDeck: proposal?.presentationDeck,
     });
+    const pdfViewerUrl = isPreviewMode ? null : resolvedDeckUrls.pdfUrl;
+    const pptxViewerUrl = isPreviewMode ? null : resolvedDeckUrls.pptUrl;
+    const previewDeckInstructions = isPreviewMode ? proposal?.presentationDeck?.instructions ?? null : null;
     const refreshPptxUrl = useCallback(async (): Promise<string | null> => {
         if (!workspaceId || !proposalId || !pptxViewerUrl) return null;
         try {
@@ -166,7 +169,7 @@ export default function ProposalDeckPage() {
                                     ) : null}
                                 </div>
 
-                                <DeckPageViewerSection pdfUrl={pdfViewerUrl} pptxUrl={pptxViewerUrl} proposalDisplayName={proposalDisplayName} refreshPptxUrl={refreshPptxUrl} />
+                                <DeckPageViewerSection pdfUrl={pdfViewerUrl} pptxUrl={pptxViewerUrl} proposalDisplayName={proposalDisplayName} refreshPptxUrl={refreshPptxUrl} previewInstructions={previewDeckInstructions}/>
                             </CardContent>
                         </Card>
                     ) : null}

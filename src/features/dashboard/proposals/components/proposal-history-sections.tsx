@@ -3,6 +3,7 @@ import { type ReactNode, useCallback } from 'react';
 import { Clock, Download, ExternalLink, FileText, Layout, LoaderCircle, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, } from 'lucide-react';
 import { Link } from '@/shared/ui/link';
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
+import { withPreviewModeSearchParamIfEnabled, isPreviewModeEnabled } from '@/lib/preview-data';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
@@ -144,7 +145,7 @@ export function ProposalHistoryRow({ canManage = true, deletingProposalId, onDow
 
           {presentationUrl ? (<>
               <Button asChild size="sm" variant="outline" className="h-9 rounded-full px-3">
-                <Link href={`/dashboard/proposals/${proposal.id}/deck`} transitionTypes={['nav-forward']}>
+                <Link href={withPreviewModeSearchParamIfEnabled(`/dashboard/proposals/${proposal.id}/deck`, isPreviewModeEnabled())} transitionTypes={['nav-forward']}>
                   <ExternalLink className="mr-1.5 size-3.5" aria-hidden/>
                   Preview
                 </Link>

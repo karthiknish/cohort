@@ -170,7 +170,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 setIsPresentationReady(true);
                 setFormState(createInitialProposalFormState(), { resetHistory: true });
                 setCurrentStep(0);
-                setDraftId(null);
+                setDraftId(previewSimulation.draftId);
                 setAutosaveStatus('idle');
                 notifyInfo({
                     title: 'Preview proposal ready',

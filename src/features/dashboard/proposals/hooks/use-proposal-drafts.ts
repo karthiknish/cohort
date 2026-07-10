@@ -185,9 +185,17 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     const onPresentationDeckChangeRef = useRef(onPresentationDeckChange);
     const onAiSuggestionsChangeRef = useRef(onAiSuggestionsChange);
     const onLastSubmissionSnapshotChangeRef = useRef(onLastSubmissionSnapshotChange);
+    const formStateRef = useRef(formState);
+    const currentStepRef = useRef(currentStep);
     useEffect(() => {
         draftIdRef.current = draftId;
     }, [draftId]);
+    useEffect(() => {
+        formStateRef.current = formState;
+    }, [formState]);
+    useEffect(() => {
+        currentStepRef.current = currentStep;
+    }, [currentStep]);
     useEffect(() => {
         onFormStateChangeRef.current = onFormStateChange;
         onStepChangeRef.current = onStepChange;
@@ -510,21 +518,32 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                         return;
                     }
                     const draft = allProposals.find((proposal) => proposal.status === 'draft') ?? allProposals[0];
+                    const localSnapshotKey = buildSnapshotKey({
+                        form: formStateRef.current,
+                        step: currentStepRef.current,
+                        clientId: selectedClientId,
+                    });
+                    const hasUnsavedLocalEdits = lastSavedSnapshotRef.current !== null &&
+                        localSnapshotKey !== lastSavedSnapshotRef.current;
+                    const activeDraftId = draftIdRef.current;
                     if (draft) {
                         resolvedDraftId = draft.id;
-                        const mergedForm = mergeProposalForm(draft.formData as Partial<ProposalFormData>);
-                        const targetStep = Math.min(draft.stepProgress ?? 0, steps.length - 1);
-                        onFormStateChangeRef.current(mergedForm, { resetHistory: true });
-                        onStepChangeRef.current(targetStep);
-                        onSubmittedChangeRef.current(draft.status === 'ready');
-                        onPresentationDeckChangeRef.current(draft.presentationDeck ? { ...draft.presentationDeck, storageUrl: draft.presentationDeck.storageUrl ?? draft.pptUrl ?? null } : null);
-                        onAiSuggestionsChangeRef.current(draft.aiSuggestions ?? null);
-                        onLastSubmissionSnapshotChangeRef.current(null);
-                        markSnapshotSaved(buildSnapshotKey({
-                            form: mergedForm,
-                            step: targetStep,
-                            clientId: draft.clientId ?? selectedClientId,
-                        }));
+                        const shouldPreserveLocalForm = hasUnsavedLocalEdits || Boolean(activeDraftId);
+                        if (!shouldPreserveLocalForm) {
+                            const mergedForm = mergeProposalForm(draft.formData as Partial<ProposalFormData>);
+                            const targetStep = Math.min(draft.stepProgress ?? 0, steps.length - 1);
+                            onFormStateChangeRef.current(mergedForm, { resetHistory: true });
+                            onStepChangeRef.current(targetStep);
+                            onSubmittedChangeRef.current(draft.status === 'ready');
+                            onPresentationDeckChangeRef.current(draft.presentationDeck ? { ...draft.presentationDeck, storageUrl: draft.presentationDeck.storageUrl ?? draft.pptUrl ?? null } : null);
+                            onAiSuggestionsChangeRef.current(draft.aiSuggestions ?? null);
+                            onLastSubmissionSnapshotChangeRef.current(null);
+                            markSnapshotSaved(buildSnapshotKey({
+                                form: mergedForm,
+                                step: targetStep,
+                                clientId: draft.clientId ?? selectedClientId,
+                            }));
+                        }
                     }
                     else {
                         const initialForm = createInitialProposalFormState();

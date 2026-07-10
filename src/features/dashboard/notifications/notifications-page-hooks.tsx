@@ -97,7 +97,10 @@ export function useNotificationsPage() {
     const liveNotifications = notificationsData?.pages.flatMap((page) => page.notifications ?? []) ?? [];
     const notifications = (() => {
         let items = isPreviewMode ? previewNotifications : liveNotifications;
-        if (activeFilter === 'mentions') {
+        if (activeFilter === 'unread') {
+            items = items.filter((n: WorkspaceNotification) => !n.read);
+        }
+        else if (activeFilter === 'mentions') {
             items = items.filter((n: WorkspaceNotification) => n.kind === 'collaboration.mention' || n.kind === 'task.mention');
         }
         else if (activeFilter === 'tasks') {
@@ -238,7 +241,8 @@ export function useNotificationsPage() {
         }
         void updateNotificationStatus(allIds, 'dismiss', `${allIds.length} notifications`);
     };
-    const unreadCount = notifications.filter((item) => !item.read).length;
+    const allNotifications = isPreviewMode ? previewNotifications : liveNotifications;
+    const unreadCount = allNotifications.filter((item) => !item.read).length;
     const handleSelectToggle = (id: string) => {
         setSelectedIds((current) => {
             const next = new Set(current);

@@ -172,7 +172,7 @@ function WhatsNextRow({ item }: {
 function TabButton({ active, label, onClick, }: {
     active: boolean;
     label: string;
-    onClick: () => void;
+    onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
     return (<button type="button" onClick={onClick} className={cn('rounded-md px-3 py-1.5 text-sm font-medium transition-colors', active ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground')}>
       {label}
@@ -213,14 +213,22 @@ export function ForYouWhatsNext() {
     const loading = tab === 'tasks' ? loadingTasks : loadingUpdates;
     const selectTasksTab = () => setTab('tasks');
     const selectUpdatesTab = () => setTab('updates');
+    const handleTasksTabClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        selectTasksTab();
+    };
+    const handleUpdatesTabClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        selectUpdatesTab();
+    };
     return (<section aria-labelledby="for-you-whats-next-heading">
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 id="for-you-whats-next-heading" className="text-base font-semibold text-foreground">
           What&apos;s next
         </h2>
         <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1">
-          <TabButton active={tab === 'tasks'} label="Tasks" onClick={selectTasksTab}/>
-          <TabButton active={tab === 'updates'} label="Updates" onClick={selectUpdatesTab}/>
+          <TabButton active={tab === 'tasks'} label="Tasks" onClick={handleTasksTabClick}/>
+          <TabButton active={tab === 'updates'} label="Updates" onClick={handleUpdatesTabClick}/>
         </div>
       </div>
 
