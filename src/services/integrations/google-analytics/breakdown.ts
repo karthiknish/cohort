@@ -42,12 +42,14 @@ async function runBreakdownReport(options: {
             body: JSON.stringify({
                 dateRanges: [{ startDate: `${Math.max(options.days, 1)}daysAgo`, endDate: 'today' }],
                 dimensions: [{ name: 'date' }, { name: config.gaDimension }],
+                // purchaseRevenue is incompatible with session-scoped attribution
+                // dimensions (sessionDefaultChannelGroup, sessionSource) in the GA4
+                // Data API. totalRevenue already includes purchase revenue.
                 metrics: [
                     { name: 'totalUsers' },
                     { name: 'sessions' },
                     { name: 'conversions' },
                     { name: 'totalRevenue' },
-                    { name: 'purchaseRevenue' },
                 ],
                 limit: 10000,
                 offset,
@@ -74,9 +76,7 @@ async function runBreakdownReport(options: {
             const users = Number(metricValues[0]?.value ?? 0);
             const sessions = Number(metricValues[1]?.value ?? 0);
             const conversions = Number(metricValues[2]?.value ?? 0);
-            const totalRevenue = Number(metricValues[3]?.value ?? 0);
-            const purchaseRevenue = Number(metricValues[4]?.value ?? 0);
-            const revenue = Math.max(totalRevenue, purchaseRevenue);
+            const revenue = Number(metricValues[3]?.value ?? 0);
             const date = formatGaDate(rawDate);
             if (!date)
                 return [];
