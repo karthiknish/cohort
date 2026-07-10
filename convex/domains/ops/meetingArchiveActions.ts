@@ -36,7 +36,7 @@ export const archiveNotes = internalAction({
 
     const slug = slugifyMeetingTitle(meeting.title)
     const key = buildNotesObjectKey(args.workspaceId, args.legacyId)
-    const pdfBuffer = buildMeetingNotesPdfArrayBuffer({
+    const pdfBuffer = await buildMeetingNotesPdfArrayBuffer({
       meetingTitle: meeting.title,
       content: summary,
     })
