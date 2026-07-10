@@ -43,7 +43,7 @@ export function integrationAlertTemplate(params: IntegrationAlertTemplateParams)
         </div>
 
         <div style="text-align: center; margin-top: 32px;">
-            <a href="https://cohorts.app/dashboard/settings/integrations" class="button" style="padding: 14px 28px;">
+            <a href="https://cohorts.app/dashboard/ads" class="button" style="padding: 14px 28px;">
                 Reconnect ${providerName}
             </a>
         </div>

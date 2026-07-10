@@ -61,6 +61,8 @@ export function shouldBypassAuthForDemo(pathname: string): boolean {
     isScreenRecordingAuthBypassEnabled() &&
     (pathname === '/dashboard' ||
       pathname.startsWith('/dashboard/') ||
-      pathname.startsWith('/for-you'))
+      pathname.startsWith('/for-you') ||
+      pathname === '/settings' ||
+      pathname.startsWith('/settings/'))
   )
 }

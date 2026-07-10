@@ -56,12 +56,14 @@ import { Route as AuthedAdminIssuesRouteImport } from './routes/_authed/admin/is
 import { Route as AuthedAdminHealthRouteImport } from './routes/_authed/admin/health'
 import { Route as AuthedAdminFeaturesRouteImport } from './routes/_authed/admin/features'
 import { Route as AuthedAdminClientsRouteImport } from './routes/_authed/admin/clients'
+import { Route as AuthedDashboardSettingsIndexRouteImport } from './routes/_authed/dashboard/settings/index'
 import { Route as AuthedDashboardProposalsIndexRouteImport } from './routes/_authed/dashboard/proposals/index'
 import { Route as AuthedDashboardAdsIndexRouteImport } from './routes/_authed/dashboard/ads/index'
 import { Route as ApiMeetingsLivekitTokenRouteImport } from './routes/api/meetings/livekit/token'
 import { Route as ApiIntegrationsGoogleWorkspaceEventsRouteImport } from './routes/api/integrations/google-workspace/events'
 import { Route as ApiIntegrationsEmailSendRouteImport } from './routes/api/integrations/email/send'
 import { Route as ApiAnalyticsGoogleAnalyticsSyncRouteImport } from './routes/api/analytics/google-analytics/sync'
+import { Route as AuthedDashboardSettingsIntegrationsRouteImport } from './routes/_authed/dashboard/settings/integrations'
 import { Route as AuthedDashboardProposalsViewerRouteImport } from './routes/_authed/dashboard/proposals/viewer'
 import { Route as AuthedDashboardProposalsAnalyticsRouteImport } from './routes/_authed/dashboard/proposals/analytics'
 import { Route as ApiIntegrationsTiktokOauthUrlRouteImport } from './routes/api/integrations/tiktok/oauth/url'
@@ -319,6 +321,12 @@ const AuthedAdminClientsRoute = AuthedAdminClientsRouteImport.update({
   path: '/clients',
   getParentRoute: () => AuthedAdminRoute,
 } as any)
+const AuthedDashboardSettingsIndexRoute =
+  AuthedDashboardSettingsIndexRouteImport.update({
+    id: '/settings/',
+    path: '/settings/',
+    getParentRoute: () => AuthedDashboardRoute,
+  } as any)
 const AuthedDashboardProposalsIndexRoute =
   AuthedDashboardProposalsIndexRouteImport.update({
     id: '/proposals/',
@@ -352,6 +360,12 @@ const ApiAnalyticsGoogleAnalyticsSyncRoute =
     id: '/api/analytics/google-analytics/sync',
     path: '/api/analytics/google-analytics/sync',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthedDashboardSettingsIntegrationsRoute =
+  AuthedDashboardSettingsIntegrationsRouteImport.update({
+    id: '/settings/integrations',
+    path: '/settings/integrations',
+    getParentRoute: () => AuthedDashboardRoute,
   } as any)
 const AuthedDashboardProposalsViewerRoute =
   AuthedDashboardProposalsViewerRouteImport.update({
@@ -508,12 +522,14 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof AuthedDashboardIndexRoute
   '/dashboard/proposals/analytics': typeof AuthedDashboardProposalsAnalyticsRoute
   '/dashboard/proposals/viewer': typeof AuthedDashboardProposalsViewerRoute
+  '/dashboard/settings/integrations': typeof AuthedDashboardSettingsIntegrationsRoute
   '/api/analytics/google-analytics/sync': typeof ApiAnalyticsGoogleAnalyticsSyncRoute
   '/api/integrations/email/send': typeof ApiIntegrationsEmailSendRoute
   '/api/integrations/google-workspace/events': typeof ApiIntegrationsGoogleWorkspaceEventsRoute
   '/api/meetings/livekit/token': typeof ApiMeetingsLivekitTokenRoute
   '/dashboard/ads/': typeof AuthedDashboardAdsIndexRoute
   '/dashboard/proposals/': typeof AuthedDashboardProposalsIndexRoute
+  '/dashboard/settings/': typeof AuthedDashboardSettingsIndexRoute
   '/dashboard/proposals/$proposalId/deck': typeof AuthedDashboardProposalsProposalIdDeckRoute
   '/api/integrations/google-analytics/oauth/callback': typeof ApiIntegrationsGoogleAnalyticsOauthCallbackRoute
   '/api/integrations/google-analytics/oauth/start': typeof ApiIntegrationsGoogleAnalyticsOauthStartRoute
@@ -576,12 +592,14 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthedDashboardIndexRoute
   '/dashboard/proposals/analytics': typeof AuthedDashboardProposalsAnalyticsRoute
   '/dashboard/proposals/viewer': typeof AuthedDashboardProposalsViewerRoute
+  '/dashboard/settings/integrations': typeof AuthedDashboardSettingsIntegrationsRoute
   '/api/analytics/google-analytics/sync': typeof ApiAnalyticsGoogleAnalyticsSyncRoute
   '/api/integrations/email/send': typeof ApiIntegrationsEmailSendRoute
   '/api/integrations/google-workspace/events': typeof ApiIntegrationsGoogleWorkspaceEventsRoute
   '/api/meetings/livekit/token': typeof ApiMeetingsLivekitTokenRoute
   '/dashboard/ads': typeof AuthedDashboardAdsIndexRoute
   '/dashboard/proposals': typeof AuthedDashboardProposalsIndexRoute
+  '/dashboard/settings': typeof AuthedDashboardSettingsIndexRoute
   '/dashboard/proposals/$proposalId/deck': typeof AuthedDashboardProposalsProposalIdDeckRoute
   '/api/integrations/google-analytics/oauth/callback': typeof ApiIntegrationsGoogleAnalyticsOauthCallbackRoute
   '/api/integrations/google-analytics/oauth/start': typeof ApiIntegrationsGoogleAnalyticsOauthStartRoute
@@ -649,12 +667,14 @@ export interface FileRoutesById {
   '/_authed/dashboard/': typeof AuthedDashboardIndexRoute
   '/_authed/dashboard/proposals/analytics': typeof AuthedDashboardProposalsAnalyticsRoute
   '/_authed/dashboard/proposals/viewer': typeof AuthedDashboardProposalsViewerRoute
+  '/_authed/dashboard/settings/integrations': typeof AuthedDashboardSettingsIntegrationsRoute
   '/api/analytics/google-analytics/sync': typeof ApiAnalyticsGoogleAnalyticsSyncRoute
   '/api/integrations/email/send': typeof ApiIntegrationsEmailSendRoute
   '/api/integrations/google-workspace/events': typeof ApiIntegrationsGoogleWorkspaceEventsRoute
   '/api/meetings/livekit/token': typeof ApiMeetingsLivekitTokenRoute
   '/_authed/dashboard/ads/': typeof AuthedDashboardAdsIndexRoute
   '/_authed/dashboard/proposals/': typeof AuthedDashboardProposalsIndexRoute
+  '/_authed/dashboard/settings/': typeof AuthedDashboardSettingsIndexRoute
   '/_authed/dashboard/proposals/$proposalId/deck': typeof AuthedDashboardProposalsProposalIdDeckRoute
   '/api/integrations/google-analytics/oauth/callback': typeof ApiIntegrationsGoogleAnalyticsOauthCallbackRoute
   '/api/integrations/google-analytics/oauth/start': typeof ApiIntegrationsGoogleAnalyticsOauthStartRoute
@@ -722,12 +742,14 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/dashboard/proposals/analytics'
     | '/dashboard/proposals/viewer'
+    | '/dashboard/settings/integrations'
     | '/api/analytics/google-analytics/sync'
     | '/api/integrations/email/send'
     | '/api/integrations/google-workspace/events'
     | '/api/meetings/livekit/token'
     | '/dashboard/ads/'
     | '/dashboard/proposals/'
+    | '/dashboard/settings/'
     | '/dashboard/proposals/$proposalId/deck'
     | '/api/integrations/google-analytics/oauth/callback'
     | '/api/integrations/google-analytics/oauth/start'
@@ -790,12 +812,14 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/dashboard/proposals/analytics'
     | '/dashboard/proposals/viewer'
+    | '/dashboard/settings/integrations'
     | '/api/analytics/google-analytics/sync'
     | '/api/integrations/email/send'
     | '/api/integrations/google-workspace/events'
     | '/api/meetings/livekit/token'
     | '/dashboard/ads'
     | '/dashboard/proposals'
+    | '/dashboard/settings'
     | '/dashboard/proposals/$proposalId/deck'
     | '/api/integrations/google-analytics/oauth/callback'
     | '/api/integrations/google-analytics/oauth/start'
@@ -862,12 +886,14 @@ export interface FileRouteTypes {
     | '/_authed/dashboard/'
     | '/_authed/dashboard/proposals/analytics'
     | '/_authed/dashboard/proposals/viewer'
+    | '/_authed/dashboard/settings/integrations'
     | '/api/analytics/google-analytics/sync'
     | '/api/integrations/email/send'
     | '/api/integrations/google-workspace/events'
     | '/api/meetings/livekit/token'
     | '/_authed/dashboard/ads/'
     | '/_authed/dashboard/proposals/'
+    | '/_authed/dashboard/settings/'
     | '/_authed/dashboard/proposals/$proposalId/deck'
     | '/api/integrations/google-analytics/oauth/callback'
     | '/api/integrations/google-analytics/oauth/start'
@@ -1258,6 +1284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAdminClientsRouteImport
       parentRoute: typeof AuthedAdminRoute
     }
+    '/_authed/dashboard/settings/': {
+      id: '/_authed/dashboard/settings/'
+      path: '/settings'
+      fullPath: '/dashboard/settings/'
+      preLoaderRoute: typeof AuthedDashboardSettingsIndexRouteImport
+      parentRoute: typeof AuthedDashboardRoute
+    }
     '/_authed/dashboard/proposals/': {
       id: '/_authed/dashboard/proposals/'
       path: '/proposals'
@@ -1299,6 +1332,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/analytics/google-analytics/sync'
       preLoaderRoute: typeof ApiAnalyticsGoogleAnalyticsSyncRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authed/dashboard/settings/integrations': {
+      id: '/_authed/dashboard/settings/integrations'
+      path: '/settings/integrations'
+      fullPath: '/dashboard/settings/integrations'
+      preLoaderRoute: typeof AuthedDashboardSettingsIntegrationsRouteImport
+      parentRoute: typeof AuthedDashboardRoute
     }
     '/_authed/dashboard/proposals/viewer': {
       id: '/_authed/dashboard/proposals/viewer'
@@ -1473,8 +1513,10 @@ interface AuthedDashboardRouteChildren {
   AuthedDashboardIndexRoute: typeof AuthedDashboardIndexRoute
   AuthedDashboardProposalsAnalyticsRoute: typeof AuthedDashboardProposalsAnalyticsRoute
   AuthedDashboardProposalsViewerRoute: typeof AuthedDashboardProposalsViewerRoute
+  AuthedDashboardSettingsIntegrationsRoute: typeof AuthedDashboardSettingsIntegrationsRoute
   AuthedDashboardAdsIndexRoute: typeof AuthedDashboardAdsIndexRoute
   AuthedDashboardProposalsIndexRoute: typeof AuthedDashboardProposalsIndexRoute
+  AuthedDashboardSettingsIndexRoute: typeof AuthedDashboardSettingsIndexRoute
   AuthedDashboardProposalsProposalIdDeckRoute: typeof AuthedDashboardProposalsProposalIdDeckRoute
   AuthedDashboardAdsCampaignsProviderIdCampaignIdRoute: typeof AuthedDashboardAdsCampaignsProviderIdCampaignIdRouteWithChildren
 }
@@ -1492,8 +1534,11 @@ const AuthedDashboardRouteChildren: AuthedDashboardRouteChildren = {
   AuthedDashboardProposalsAnalyticsRoute:
     AuthedDashboardProposalsAnalyticsRoute,
   AuthedDashboardProposalsViewerRoute: AuthedDashboardProposalsViewerRoute,
+  AuthedDashboardSettingsIntegrationsRoute:
+    AuthedDashboardSettingsIntegrationsRoute,
   AuthedDashboardAdsIndexRoute: AuthedDashboardAdsIndexRoute,
   AuthedDashboardProposalsIndexRoute: AuthedDashboardProposalsIndexRoute,
+  AuthedDashboardSettingsIndexRoute: AuthedDashboardSettingsIndexRoute,
   AuthedDashboardProposalsProposalIdDeckRoute:
     AuthedDashboardProposalsProposalIdDeckRoute,
   AuthedDashboardAdsCampaignsProviderIdCampaignIdRoute:
