@@ -7,6 +7,8 @@ export interface UsePptViewerOptions {
     url: string;
     /** Optional callback to fetch a fresh signed URL when the current one expires (503). */
     refreshUrl?: () => Promise<string | null>;
+    /** When true, uses a shorter viewport height for in-page deck cards. */
+    embedded?: boolean;
 }
 
 export type PptThumbnailMount = {
@@ -15,6 +17,7 @@ export type PptThumbnailMount = {
 };
 
 export interface UsePptViewerReturn {
+    frameRef: React.RefObject<HTMLDivElement | null>;
     containerRef: React.RefObject<HTMLDivElement | null>;
     slideCount: number;
     currentSlide: number;
@@ -109,7 +112,50 @@ async function fetchPresentation(
     throw lastError ?? new Error('Failed to fetch presentation after retries');
 }
 
-export function usePptViewer({ url, refreshUrl }: UsePptViewerOptions): UsePptViewerReturn {
+function getSlideFrameMaxHeight(embedded: boolean): number {
+    return embedded
+        ? Math.min(window.innerHeight * 0.55, 480)
+        : Math.min(window.innerHeight * 0.65, 560);
+}
+
+/** Size the visible slide frame from deck aspect ratio so slides stay inside the viewport. */
+function syncSlideFrameSize(
+    frameEl: HTMLElement,
+    viewer: PptxViewer,
+    embedded: boolean,
+): void {
+    const maxHeightPx = getSlideFrameMaxHeight(embedded);
+    const slideWidth = viewer.slideWidth;
+    const slideHeight = viewer.slideHeight;
+    if (slideWidth <= 0 || slideHeight <= 0) {
+        return;
+    }
+
+    const slideAspect = slideHeight / slideWidth;
+
+    // Use getBoundingClientRect for the actual rendered size of the parent,
+    // rather than clientWidth which can return unconstrained values in flex
+    // layouts where the parent is a flex row wrapping the frame itself.
+    const parentRect = frameEl.parentElement?.getBoundingClientRect();
+    const parentWidth = parentRect?.width ?? frameEl.clientWidth;
+    const maxWidthPx = Math.min(parentWidth, window.innerWidth - 48);
+
+    let width = maxWidthPx;
+    let height = width * slideAspect;
+    if (height > maxHeightPx) {
+        height = maxHeightPx;
+        width = height / slideAspect;
+    }
+
+    // Clamp width to parent so the frame never extends past its container
+    const constrainedWidth = Math.min(width, parentWidth);
+
+    frameEl.style.width = `${Math.round(constrainedWidth)}px`;
+    frameEl.style.height = `${Math.round(height)}px`;
+}
+
+export function usePptViewer({ url, refreshUrl, embedded = false }: UsePptViewerOptions): UsePptViewerReturn {
+    const frameRef = useRef<HTMLDivElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const viewerRef = useRef<PptxViewer | null>(null);
     const refreshUrlRef = useRef(refreshUrl);
@@ -139,12 +185,12 @@ export function usePptViewer({ url, refreshUrl }: UsePptViewerOptions): UsePptVi
             const arrayBuffer = await fetchPresentation(url, refreshUrlRef.current);
             if (loadRequestRef.current !== requestId) return; // superseded
 
-            // The page layout container can be wider than the viewport (max-w-[1600px]).
-            // Cap the viewer width to the viewport so slides scale to fit the visible area
-            // instead of being scaled up to match the oversized container.
             const containerEl = containerRef.current;
-            const availableWidth = Math.min(containerEl.clientWidth, window.innerWidth);
-            containerEl.style.maxWidth = `${availableWidth}px`;
+            const frameEl = frameRef.current;
+            const parentWidth = frameEl?.parentElement?.clientWidth
+                ?? containerEl.parentElement?.clientWidth
+                ?? containerEl.clientWidth;
+            const availableWidth = Math.min(parentWidth, window.innerWidth - 48);
 
             const viewer = await PptxViewer.open(arrayBuffer, containerEl, {
                 renderMode: 'slide',
@@ -161,6 +207,11 @@ export function usePptViewer({ url, refreshUrl }: UsePptViewerOptions): UsePptVi
                 return;
             }
 
+            if (frameEl) {
+                syncSlideFrameSize(frameEl, viewer, embedded);
+            }
+            await viewer.setFitMode('contain');
+
             viewerRef.current = viewer;
             setSlideCount(viewer.slideCount);
             setCurrentSlide(0);
@@ -170,26 +221,38 @@ export function usePptViewer({ url, refreshUrl }: UsePptViewerOptions): UsePptVi
             setError(asErrorMessage(err));
             setIsLoading(false);
         }
-    }, [url]);
+    }, [url, embedded]);
 
     useEffect(() => {
         void loadPresentation();
     }, [loadPresentation]);
 
-    // Re-fit the viewer when the window is resized
+    // Re-fit the viewer when the window or slide frame is resized
     useEffect(() => {
         const onResize = () => {
             const viewer = viewerRef.current;
-            const containerEl = containerRef.current;
-            if (!viewer || !containerEl) return;
-            const availableWidth = Math.min(containerEl.clientWidth, window.innerWidth);
+            const frameEl = frameRef.current;
+            if (!viewer || !frameEl) {
+                return;
+            }
+            syncSlideFrameSize(frameEl, viewer, embedded);
             void viewer.setFitMode('contain');
-            // The viewer reads container width on fit; cap it for oversized layouts
-            containerEl.style.maxWidth = `${availableWidth}px`;
         };
         window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-    }, []);
+        const resizeTarget = frameRef.current?.parentElement;
+        const observer = resizeTarget
+            ? new ResizeObserver(() => {
+                onResize();
+            })
+            : null;
+        if (resizeTarget && observer) {
+            observer.observe(resizeTarget);
+        }
+        return () => {
+            window.removeEventListener('resize', onResize);
+            observer?.disconnect();
+        };
+    }, [embedded]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -260,6 +323,7 @@ export function usePptViewer({ url, refreshUrl }: UsePptViewerOptions): UsePptVi
     }, [handlePrevSlide, handleNextSlide, goToSlide, slideCount, isFullscreen]);
 
     return {
+        frameRef,
         containerRef,
         slideCount,
         currentSlide,
