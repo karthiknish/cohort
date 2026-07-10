@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { ProposalMetricsGrid, ProposalMetricsLoadingGrid, } from './proposal-metrics-sections';
 import { logError } from '@/lib/convex-errors';
 import type { ProposalDraft } from '@/types/proposals';
+import { formatPipelineValue, parseProposalPipelineValue } from '../utils/pipeline-value';
 import type { ProposalMetricStat } from './proposal-metrics-sections';
 interface ProposalMetricsProps {
     proposals: ProposalDraft[];
@@ -52,39 +53,11 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
             const total = validProposals.length;
             const ready = validProposals.filter((p) => p.status === 'ready').length;
             const sent = validProposals.filter((p) => p.status === 'sent').length;
-            // Estimate total value from proposalSize strings (e.g., "$10k - $25k")
+            // Sum upper-bound values from proposalSize (e.g. "£5,000 – £10,000" or "$10k - $25k")
             let totalValue = 0;
             for (const p of validProposals) {
-                try {
-                    const sizeStr = p?.formData?.value?.proposalSize;
-                    if (typeof sizeStr !== 'string' || !sizeStr)
-                        continue;
-                    const upperValueMatch = sizeStr.match(/\$(\d+)(?:k|m)?/g);
-                    if (upperValueMatch && upperValueMatch.length > 0) {
-                        const values = upperValueMatch.map((v) => {
-                            const num = parseInt(v.replace(/[^0-9]/g, ''), 10);
-                            if (v.toLowerCase().includes('m'))
-                                return num * 1000000;
-                            if (v.toLowerCase().includes('k'))
-                                return num * 1000;
-                            return num;
-                        });
-                        totalValue += Math.max(...values);
-                    }
-                }
-                catch {
-                    // Skip this proposal if there is an issue
-                }
+                totalValue += parseProposalPipelineValue(p?.formData?.value?.proposalSize);
             }
-            const formatValue = (val: number) => {
-                if (typeof val !== 'number' || Number.isNaN(val))
-                    return '$0';
-                if (val >= 1000000)
-                    return `$${(val / 1000000).toFixed(1)}m`;
-                if (val >= 1000)
-                    return `$${(val / 1000).toFixed(0)}k`;
-                return `$${val}`;
-            };
             return [
                 {
                     label: 'Total Proposals',
@@ -109,7 +82,7 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
                 },
                 {
                     label: 'Pipeline Value',
-                    value: formatValue(totalValue),
+                    value: formatPipelineValue(totalValue),
                     description: 'Estimated total',
                     color: 'text-info',
                     bg: 'bg-info/10',
