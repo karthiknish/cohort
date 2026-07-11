@@ -20,6 +20,7 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
     const [copied, setCopied] = useState(false);
     const [emailInput, setEmailInput] = useState('');
     const [sharedWith, setSharedWith] = useState<string[]>(task.sharedWith ?? []);
+    const sharedWithSet = new Set(sharedWith);
     const taskUrl = typeof window !== 'undefined'
         ? `${window.location.origin}${window.location.pathname}?taskId=${task.id}`
         : '';
@@ -42,7 +43,7 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
             });
             return;
         }
-        if (sharedWith.includes(email)) {
+        if (sharedWithSet.has(email)) {
             notifyFailure({
                 title: 'Already shared',
                 message: 'This person already has access',

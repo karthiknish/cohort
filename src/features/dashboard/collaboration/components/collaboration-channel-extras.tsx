@@ -27,6 +27,9 @@ export function useCollaborationChannelExtras({ channel, channelMessages, channe
         id: entry.id,
         name: entry.name,
         type: entry.type,
+        isCustom: entry.isCustom,
+        clientId: entry.clientId,
+        projectId: entry.projectId,
     }));
     const handleExportChannel = () => {
         if (!channel || channelMessages.length === 0) {
@@ -97,7 +100,7 @@ export function useCollaborationChannelExtras({ channel, channelMessages, channe
         projectName: channel?.name || '',
     });
     const taskModal = (<TaskCreationModal isOpen={taskModalOpen} onClose={handleTaskModalClose} onTaskCreated={handleTaskCreated} initialData={taskCreationInitialData}/>);
-    const forwardDialog = (<MessageForwardDialog open={forwardDialogOpen} onOpenChange={setForwardDialogOpen} message={forwardSourceMessage} channels={forwardChannelOptions} workspaceId={workspaceId} userId={currentUserId} onForward={handleForwardComplete}/>);
+    const forwardDialog = (<MessageForwardDialog open={forwardDialogOpen} onOpenChange={setForwardDialogOpen} message={forwardSourceMessage} channels={forwardChannelOptions} currentChannelId={channel?.id ?? null} workspaceId={workspaceId} userId={currentUserId} onForward={handleForwardComplete}/>);
     return {
         handleCreateTask,
         handleExportChannel,

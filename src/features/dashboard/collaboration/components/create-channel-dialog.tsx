@@ -136,6 +136,7 @@ export function CreateChannelDialog({ workspaceId, userId, teamMembers = EMPTY_T
     const handleMemberToggle = (memberId: string) => {
         dispatch({ type: 'toggleMember', memberId });
     };
+    const selectedMemberIdsSet = new Set(selectedMemberIds);
     const handleOpenChange = (nextOpen: boolean) => {
         if (!nextOpen && isCreating) {
             return;
@@ -274,7 +275,7 @@ export function CreateChannelDialog({ workspaceId, userId, teamMembers = EMPTY_T
                 No workspace members available.
               </div>) : (<div className="max-h-80 space-y-2 overflow-y-auto pr-1">
                 {sortedMembers.map((member) => {
-                const checked = selectedMemberIds.includes(member.id);
+                const checked = selectedMemberIdsSet.has(member.id);
                 return (<ChannelMemberOptionRow key={member.id} checked={checked} disabled={isCreating} member={member} onToggle={handleMemberToggle}/>);
             })}
               </div>)}

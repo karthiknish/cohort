@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronsUpDown, FolderKanban, Search } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
@@ -23,6 +23,13 @@ export type TaskProjectPickerProps = {
 export function TaskProjectPicker({ value, projectName, options, loading = false, disabled = false, placeholder = 'Search projects…', onChange, }: TaskProjectPickerProps) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (open) {
+            inputRef.current?.focus();
+        }
+    }, [open]);
 
     const filtered = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -47,7 +54,7 @@ export function TaskProjectPicker({ value, projectName, options, loading = false
 
     return (<Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" aria-expanded={open} className={cn('w-full justify-between font-normal', !displayLabel && 'text-muted-foreground')} disabled={disabled}>
+        <Button type="button" variant="outline" role="combobox" aria-expanded={open} aria-controls="project-picker-popover" className={cn('w-full justify-between font-normal', !displayLabel && 'text-muted-foreground')} disabled={disabled}>
           <span className="flex min-w-0 items-center gap-2">
             <FolderKanban className="size-4 shrink-0 text-muted-foreground" aria-hidden/>
             {displayLabel ? (<span className="truncate">{displayLabel}</span>) : (<span>{placeholder}</span>)}
@@ -55,10 +62,10 @@ export function TaskProjectPicker({ value, projectName, options, loading = false
           <ChevronsUpDown className="size-4 shrink-0 opacity-50" aria-hidden/>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[16rem] p-0" align="start">
+      <PopoverContent id="project-picker-popover" className="w-[var(--radix-popover-trigger-width)] min-w-[16rem] p-0" align="start">
         <div className="flex items-center gap-2 border-b px-3 py-2">
           <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden/>
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search projects…" className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" aria-label="Search projects" autoFocus/>
+          <input ref={inputRef} type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search projects…" className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" aria-label="Search projects"/>
         </div>
         <div className="max-h-60 overflow-y-auto py-1">
           {loading ? (<p className="px-3 py-4 text-center text-sm text-muted-foreground">Loading projects…</p>) : filtered.length === 0 ? (<p className="px-3 py-4 text-center text-sm text-muted-foreground">

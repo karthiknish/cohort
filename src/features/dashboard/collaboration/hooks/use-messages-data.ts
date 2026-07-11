@@ -135,14 +135,14 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
     useEffect(() => {
         setChannelListRetryNonce(0);
     }, [selectedChannelId]);
-    const setMessageSearchQuery = (value: string) => {
+    const setMessageSearchQuery = useCallback((value: string) => {
         if (!selectedChannelId)
             return;
         setMessageSearchByChannelId((prev) => ({
             ...prev,
             [selectedChannelId]: value,
         }));
-    };
+    }, [selectedChannelId]);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
     const previewReplyTimersRef = useRef<number[]>([]);
     const lastRealtimeErrorToastKeyRef = useRef<string | null>(null);
@@ -152,7 +152,7 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
             userId: String(currentUserId),
         }
         : 'skip');
-    const previewMessagesByChannel = (() => {
+    const previewMessagesByChannel = useMemo(() => {
         if (!isPreviewMode || channels.length === 0) {
             return {} as MessagesByChannelState;
         }
@@ -161,14 +161,14 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
             next[channel.id] = getPreviewCollaborationMessages(channel.type, channel.clientId ?? null, channel.projectId ?? null, currentUserId);
         }
         return next;
-    })();
-    const resolvedMessagesByChannel = (() => {
+    }, [isPreviewMode, channels, currentUserId]);
+    const resolvedMessagesByChannel = useMemo(() => {
         if (!isPreviewMode) {
             return messagesByChannel;
         }
         return { ...previewMessagesByChannel, ...messagesByChannel };
-    })();
-    const resolvedNextCursorByChannel = (() => {
+    }, [isPreviewMode, previewMessagesByChannel, messagesByChannel]);
+    const resolvedNextCursorByChannel = useMemo(() => {
         if (!isPreviewMode) {
             return nextCursorByChannel;
         }
@@ -177,9 +177,11 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
             next[channel.id] = null;
         }
         return next;
-    })();
-    const channelMessages = (selectedChannel ? resolvedMessagesByChannel[selectedChannel.id] ?? [] : []);
-    const threadRootIdsForUnread = (() => {
+    }, [isPreviewMode, nextCursorByChannel, channels]);
+    const channelMessages = useMemo(() => {
+        return selectedChannel ? (resolvedMessagesByChannel[selectedChannel.id] ?? []) : [];
+    }, [selectedChannel, resolvedMessagesByChannel]);
+    const threadRootIdsForUnread = useMemo(() => {
         const ids = new Set<string>();
         for (const message of channelMessages) {
             if (message.parentMessageId)
@@ -192,7 +194,7 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
             }
         }
         return Array.from(ids).slice(0, 200);
-    })();
+    }, [channelMessages]);
     const selectedChannelIdArg = selectedChannel?.isCustom ? selectedChannel.id : null;
     const threadUnreadCountsResult = useQuery(collaborationApi.getThreadUnreadCounts, !isPreviewMode && workspaceId && currentUserId && selectedChannel && threadRootIdsForUnread.length > 0
         ? {
@@ -223,7 +225,7 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
             replyTimersRef.current = [];
         };
     }, []);
-    const participantNameMap = new Map(channelParticipants.map((participant) => [participant.name.toLowerCase(), participant]));
+    const participantNameMap = useMemo(() => new Map(channelParticipants.map((participant) => [participant.name.toLowerCase(), participant])), [channelParticipants]);
     const { normalizedMessageSearch, visibleMessages, searchingMessages, searchHighlights, searchError, retrySearch, } = useChannelMessageSearch({
         convex,
         workspaceId,
@@ -235,7 +237,7 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
     });
     const isSearchActive = Boolean(normalizedMessageSearch);
     const activeMessagesError = isSearchActive ? searchError : messagesError;
-    const retryMessagesError = () => {
+    const retryMessagesError = useCallback(() => {
         if (isSearchActive) {
             retrySearch();
             return;
@@ -247,8 +249,8 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
             setChannelMessagesState((prev) => ({ ...prev, messagesError: null }));
         }
         setChannelListRetryNonce((n) => n + 1);
-    };
-    const channelUnreadCounts = (() => {
+    }, [isSearchActive, retrySearch, selectedChannel]);
+    const channelUnreadCounts = useMemo(() => {
         if (isPreviewMode) {
             return Object.fromEntries(channels.map((channel) => {
                 const unreadCount = (resolvedMessagesByChannel[channel.id] ?? []).filter((message) => {
@@ -274,8 +276,8 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
             channelId,
             Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0,
         ]));
-    })();
-    const threadUnreadCountsByRootId = (() => {
+    }, [isPreviewMode, channels, resolvedMessagesByChannel, currentUserId, unreadCountsResult]);
+    const threadUnreadCountsByRootId = useMemo(() => {
         const source = (threadUnreadCountsResult as {
             countsByThreadRootId?: Record<string, number>;
         } | null)?.countsByThreadRootId;
@@ -286,8 +288,8 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
             threadRootId,
             Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0,
         ]));
-    })();
-    const channelSummaries = (() => {
+    }, [threadUnreadCountsResult]);
+    const channelSummaries = useMemo(() => {
         const result = new Map<string, ChannelSummary>();
         Object.entries(resolvedMessagesByChannel).forEach(([channelId, list]) => {
             if (list && list.length > 0) {
@@ -301,21 +303,21 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
             }
         });
         return result;
-    })();
+    }, [resolvedMessagesByChannel]);
     const isCurrentChannelLoading = selectedChannel ? loadingChannelId === selectedChannel.id : false;
     const loadingMore = selectedChannel ? loadingMoreChannelId === selectedChannel.id : false;
     const canLoadMore = selectedChannel ? Boolean(resolvedNextCursorByChannel[selectedChannel.id]) : false;
-    const resolveSenderDetails = () => {
+    const resolveSenderDetails = useCallback(() => {
         const participant = participantNameMap.get(fallbackDisplayName.toLowerCase());
         return { senderName: fallbackDisplayName, senderRole: participant?.role ?? fallbackRole };
-    };
+    }, [participantNameMap, fallbackDisplayName, fallbackRole]);
     const { stopTyping, notifyTyping, handleComposerFocus, handleComposerBlur, } = useTyping({
         workspaceId,
         selectedChannel,
         resolveSenderDetails,
     });
     const { threadMessagesByRootId, threadNextCursorByRootId, threadLoadingByRootId, threadErrorsByRootId, loadThreadReplies, loadMoreThreadReplies, clearThreadReplies, addThreadReplyToState, mutateThreadMessageById, } = useThreads({ workspaceId, currentUserId });
-    const mutateChannelMessages = (channelId: string, updater: (messages: CollaborationMessage[]) => CollaborationMessage[]) => {
+    const mutateChannelMessages = useCallback((channelId: string, updater: (messages: CollaborationMessage[]) => CollaborationMessage[]) => {
         setMessagesByChannel((prev) => {
             const current = prev[channelId] ?? [];
             const next = updater(current);
@@ -323,7 +325,7 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
                 return prev;
             return { ...prev, [channelId]: next };
         });
-    };
+    }, []);
     const { messageUpdatingId, messageDeletingId, reactionUpdatingByMessage, handleEditMessage: handleEditMessageBase, handleDeleteMessage: handleDeleteMessageBase, handleToggleReaction: handleToggleReactionBase, } = useMessageActions({
         workspaceId,
         userId: currentUserId,
@@ -405,15 +407,15 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
         workspaceId,
         selectedChannel,
     });
-    const handleEditMessage = async (channelId: string, messageId: string, nextContent: string) => {
+    const handleEditMessage = useCallback(async (channelId: string, messageId: string, nextContent: string) => {
         await handleEditMessageBase(channelId, messageId, nextContent);
-    };
-    const handleDeleteMessage = async (channelId: string, messageId: string) => {
+    }, [handleEditMessageBase]);
+    const handleDeleteMessage = useCallback(async (channelId: string, messageId: string) => {
         await handleDeleteMessageBase(channelId, messageId);
-    };
-    const handleToggleReaction = async (channelId: string, messageId: string, emoji: string) => {
+    }, [handleDeleteMessageBase]);
+    const handleToggleReaction = useCallback(async (channelId: string, messageId: string, emoji: string) => {
         await handleToggleReactionBase(channelId, messageId, emoji);
-    };
+    }, [handleToggleReactionBase]);
     const { markChannelRead, markChannelReadPending, markThreadAsRead } = useChannelReadReceipts({
         workspaceId,
         currentUserId,
@@ -458,13 +460,13 @@ export function useMessagesData({ workspaceId, currentUserId, selectedChannel, c
         mutateChannelMessages,
         setNextCursorByChannel,
     });
-    const setMessageInput = (value: string) => {
+    const setMessageInput = useCallback((value: string) => {
         if (!selectedChannelId)
             return;
         setDraftByChannelId((prev) => ({ ...prev, [selectedChannelId]: value }));
         if (value.trim().length > 0)
             notifyTyping();
-    };
+    }, [selectedChannelId, notifyTyping]);
     return useMemo(() => ({
         channelMessages,
         visibleMessages,

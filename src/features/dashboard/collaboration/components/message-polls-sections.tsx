@@ -8,6 +8,7 @@ import { DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigg
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Progress } from '@/shared/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { ClientFormattedDate } from '@/shared/components/client-formatted-date';
 import { cn } from '@/lib/utils';
 import type { MessagePoll, PollOption } from './message-polls';
@@ -180,11 +181,19 @@ export function CreatePollFormFields({ onAddOption, onOptionChange, onQuestionCh
       </div>
     </div>);
 }
-export function CreatePollSettings({ anonymous, multipleChoice, onAnonymousChange, onMultipleChoiceChange, }: {
+export const POLL_END_TIME_OPTIONS = [
+    { value: '', label: 'No expiration', ms: 0 },
+    { value: '1h', label: '1 hour', ms: 60 * 60 * 1000 },
+    { value: '1d', label: '1 day', ms: 24 * 60 * 60 * 1000 },
+    { value: '1w', label: '1 week', ms: 7 * 24 * 60 * 60 * 1000 },
+];
+export function CreatePollSettings({ endTimeOption, anonymous, multipleChoice, onAnonymousChange, onMultipleChoiceChange, onEndTimeChange, }: {
+    endTimeOption: string;
     anonymous: boolean;
     multipleChoice: boolean;
     onAnonymousChange: (value: boolean) => void;
     onMultipleChoiceChange: (value: boolean) => void;
+    onEndTimeChange: (value: string) => void;
 }) {
     const handleAnonymousChange = (checked: boolean | 'indeterminate') => {
         onAnonymousChange(checked === true);
@@ -192,7 +201,10 @@ export function CreatePollSettings({ anonymous, multipleChoice, onAnonymousChang
     const handleMultipleChoiceChange = (checked: boolean | 'indeterminate') => {
         onMultipleChoiceChange(checked === true);
     };
-    return (<div className="space-y-3">
+    const handleEndTimeChange = (value: string) => {
+        onEndTimeChange(value);
+    };
+    return (<div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <Label>Allow multiple selections</Label>
@@ -207,6 +219,20 @@ export function CreatePollSettings({ anonymous, multipleChoice, onAnonymousChang
           <p className="text-xs text-muted-foreground">Hide who voted for each option</p>
         </div>
         <Checkbox checked={anonymous} onCheckedChange={handleAnonymousChange}/>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="endTime">Expiration</Label>
+        <Select value={endTimeOption} onValueChange={handleEndTimeChange}>
+          <SelectTrigger id="endTime" className="w-full">
+            <SelectValue placeholder="Select expiration"/>
+          </SelectTrigger>
+          <SelectContent>
+            {POLL_END_TIME_OPTIONS.map((option) => (<SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>))}
+          </SelectContent>
+        </Select>
       </div>
     </div>);
 }

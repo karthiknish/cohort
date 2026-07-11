@@ -15,7 +15,7 @@ export function collaborationToUnifiedMessage(msg: CollaborationMessage): Unifie
             url: a.url,
             name: a.name,
             mimeType: a.type ?? undefined,
-            size: a.size ? parseInt(a.size, 10) : undefined,
+            size: a.size || undefined,
         })) ?? undefined,
         sharedTo: msg.sharedTo ?? undefined,
         mentions: msg.mentions ?? undefined,

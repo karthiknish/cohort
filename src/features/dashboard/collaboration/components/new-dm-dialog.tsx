@@ -53,7 +53,8 @@ export function NewDMDialog({ open, onOpenChange, onUserSelect, workspaceId, cur
                 return true;
             const query = searchQuery.toLowerCase();
             return (member.name?.toLowerCase().includes(query) ||
-                member.email?.toLowerCase().includes(query));
+                member.email?.toLowerCase().includes(query) ||
+                member.role?.toLowerCase().includes(query));
         });
     })();
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,7 +97,7 @@ export function NewDMDialog({ open, onOpenChange, onUserSelect, workspaceId, cur
 
         <div className="relative mt-2">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/>
-          <Input value={searchQuery} onChange={handleSearchChange} placeholder="Search teammates…" className="pl-9"/>
+          <Input value={searchQuery} onChange={handleSearchChange} placeholder="Search by name, email, or role…" className="pl-9"/>
         </div>
 
         <ScrollArea className="h-[300px] mt-4">

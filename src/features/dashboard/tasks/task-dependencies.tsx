@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { Link2, Unlink, Plus, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
@@ -48,7 +48,7 @@ function DependencyLink({ task, type, taskId, onRemove, readonly }: {
       <Badge variant="outline" className={cn('text-[10px] shrink-0', DEPENDENCY_TYPE_COLORS[type])}>
         {DEPENDENCY_TYPE_LABELS[type]}
       </Badge>
-      {!readonly && onRemove && (<button type="button" data-task-id={taskId} onClick={handleRemove} className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive motion-chromatic">
+      {!readonly && onRemove && (<button type="button" aria-label="Remove dependency" data-task-id={taskId} onClick={handleRemove} className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive motion-chromatic">
           <Unlink className="size-3"/>
         </button>)}
     </div>);
@@ -74,9 +74,16 @@ export function TaskDependencyManager({ task, allTasks, onUpdateDependencies, re
     const handleUnlinkTaskClick = (taskId: string) => {
         onUpdateDependencies((task.dependencies || []).filter((dependency) => dependency.taskId !== taskId));
     };
+    const allTasksById = useMemo(() => {
+        const map = new Map<string, TaskRecord>();
+        for (const t of allTasks) {
+            map.set(t.id, t);
+        }
+        return map;
+    }, [allTasks]);
     // Get linked tasks
     const linkedTasks = (task.dependencies || []).flatMap((dep) => {
-        const linkedTask = allTasks.find(t => t.id === dep.taskId);
+        const linkedTask = allTasksById.get(dep.taskId);
         return linkedTask ? [{ ...dep, task: linkedTask }] : [];
     });
     // Available tasks to link (exclude current task and already linked)
@@ -90,7 +97,7 @@ export function TaskDependencyManager({ task, allTasks, onUpdateDependencies, re
     // Check for circular dependencies
     const hasCircularDependency = (task.dependencies || []).some((dep) => {
         if (dep.type === 'parent' || dep.type === 'child') {
-            const linkedTask = allTasks.find(t => t.id === dep.taskId);
+            const linkedTask = allTasksById.get(dep.taskId);
             return linkedTask?.parentId === task.id;
         }
         return false;

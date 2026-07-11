@@ -53,10 +53,11 @@ function getTagDotColor(tag: string): string {
 export function TagManagement({ availableTags, selectedTags, onTagsChange, onTagCreate, className, }: TagManagementProps) {
     const [open, setOpen] = useState(false);
     const [newTagInput, setNewTagInput] = useState('');
+    const selectedTagsSet = new Set(selectedTags);
     // Sort tags: selected first, then alphabetically
     const sortedAvailableTags = availableTags.toSorted((a, b) => {
-        const aSelected = selectedTags.includes(a);
-        const bSelected = selectedTags.includes(b);
+        const aSelected = selectedTagsSet.has(a);
+        const bSelected = selectedTagsSet.has(b);
         if (aSelected && !bSelected)
             return -1;
         if (!aSelected && bSelected)
@@ -64,7 +65,7 @@ export function TagManagement({ availableTags, selectedTags, onTagsChange, onTag
         return a.localeCompare(b);
     });
     const handleToggleTag = (tag: string) => {
-        const isSelected = selectedTags.includes(tag);
+        const isSelected = selectedTagsSet.has(tag);
         if (isSelected) {
             onTagsChange(selectedTags.filter((t) => t !== tag));
         }
@@ -83,7 +84,7 @@ export function TagManagement({ availableTags, selectedTags, onTagsChange, onTag
         if (onTagCreate && !availableTags.includes(trimmed)) {
             onTagCreate(trimmed);
         }
-        if (!selectedTags.includes(trimmed)) {
+        if (!selectedTagsSet.has(trimmed)) {
             onTagsChange([...selectedTags, trimmed]);
         }
         setNewTagInput('');
@@ -122,7 +123,7 @@ export function TagManagement({ availableTags, selectedTags, onTagsChange, onTag
             {/* New tag input */}
             <div className="flex gap-2">
               <Input placeholder="New tag…" value={newTagInput} onChange={handleNewTagInputChange} onKeyDown={handleKeyDown} className="h-8 text-sm"/>
-              <Button size="sm" onClick={handleAddNewTag} disabled={!newTagInput.trim()} className="h-8 px-2">
+              <Button size="sm" onClick={handleAddNewTag} disabled={!newTagInput.trim()} className="h-8 px-2" aria-label="Add new tag">
                 <Plus className="size-4"/>
               </Button>
             </div>
@@ -136,7 +137,7 @@ export function TagManagement({ availableTags, selectedTags, onTagsChange, onTag
                 <div className="space-y-1 pr-2">
                   {sortedAvailableTags.length === 0 ? (<p className="text-xs text-muted-foreground text-center py-4">
                       No tags yet. Create one above!
-                    </p>) : (sortedAvailableTags.map((tag) => (<AvailableTagButton key={tag} tag={tag} selected={selectedTags.includes(tag)} onToggle={handleToggleTag}/>)))}
+                    </p>) : (sortedAvailableTags.map((tag) => (<AvailableTagButton key={tag} tag={tag} selected={selectedTagsSet.has(tag)} onToggle={handleToggleTag}/>)))}
                 </div>
               </ScrollArea>
             </div>
@@ -178,7 +179,7 @@ function SelectedTagBadge({ tag, onRemove, }: {
     return (<Badge className={cn('gap-1 pr-1 motion-chromatic hover:pr-2', getTagColor(tag))}>
       <Hash className="size-2.5"/>
       {tag}
-      <button type="button" onClick={handleRemove} className="ml-0.5 rounded-full p-0.5 hover:bg-foreground/10">
+      <button type="button" aria-label={`Remove tag ${tag}`} onClick={handleRemove} className="ml-0.5 rounded-full p-0.5 hover:bg-foreground/10">
         <X className="size-3"/>
       </button>
     </Badge>);

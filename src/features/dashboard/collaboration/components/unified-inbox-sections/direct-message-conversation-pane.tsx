@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePrevious } from '@/shared/hooks/use-previous';
 import type { ReactNode } from 'react';
-import { AlertCircle, Hash, Inbox, MessageCircle, Plus, Search, Sparkles } from 'lucide-react';
+import { AlertCircle, Hash, Inbox, Info, MessageCircle, Plus, Search } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
@@ -21,6 +21,7 @@ import type { DirectConversation, DirectMessage } from '../../hooks/use-direct-m
 import { directMessageToCollaborationMessage } from '../../lib/direct-message-collaboration';
 import type { PendingAttachment, ReactionPendingState, SendMessageOptions, ThreadCursorsState, ThreadErrorsState, ThreadLoadingState, ThreadMessagesState } from '../../hooks/types';
 import { useChannelPresence } from '../../hooks/use-channel-presence';
+import { usePreview } from '@/shared/contexts/preview-context';
 import type { Channel } from '../../types';
 import { buildCollaborationChannelShareUrl, buildCollaborationDmShareUrl, CHANNEL_TYPE_COLORS, CHAT_CONVERSATION_ROW_CLASS, CHAT_LIST_PREVIEW_CLASS, formatConversationSnippet, } from '../../utils';
 import { collaborationToUnifiedMessage } from '../message-list-utils';
@@ -31,6 +32,7 @@ import type { DirectMessageConversationPaneProps } from './direct-message-conver
 import { directMessageToUnifiedMessage } from './unified-inbox-dm-utils';
 export type { DirectMessageConversationPaneProps } from './direct-message-conversation-pane-types';
 export function DirectMessageConversationPane({ mentionParticipants, currentUserId, dmDeleteMessage, dmEditMessage, dmHasMoreMessages, dmIsLoadingMessages, dmIsLoadingMore, dmIsSending, dmLoadMoreMessages, dmMessageInput, dmMessageSearchQuery, dmMessagesForPane, dmMuteConversation, dmSearchHighlights, dmSearchingMessages, dmToggleReaction, handleSendDirectMessage, isDmSearchActive, onAddAttachments, onArchiveConversation, onBackToInbox, onDmMessageSearchChange, onRemoveAttachment, pendingAttachments, selectedDM, setActiveDmMessageInput, uploading, onStartNewDM, messagesError, onRetryMessages, onShareToPlatform, onComposerFocus, onComposerBlur, typingIndicatorText, onCreateTask, currentUserRole, workspaceId, deepLinkMessageId, onClearDeepLink, }: DirectMessageConversationPaneProps) {
+    const { isPreviewMode } = usePreview();
     const handleDmSend = async () => {
         const content = dmMessageInput.trim();
         if (!content && pendingAttachments.length === 0) {
@@ -71,12 +73,23 @@ export function DirectMessageConversationPane({ mentionParticipants, currentUser
         onBack: onBackToInbox,
     });
     const dmStatusBanner = (() => {
-        if (!messagesError) {
+        const errorBanner = messagesError ? (<div className="mx-4 mt-4">
+        <MessagesErrorState error={messagesError} onRetry={onRetryMessages} isRetrying={dmSearchingMessages && isDmSearchActive}/>
+      </div>) : null;
+        const previewBanner = isPreviewMode ? (<Alert className="mx-4 mt-4 border-primary/20 bg-primary/5 text-primary">
+        <Info className="size-4"/>
+        <AlertTitle>Preview mode</AlertTitle>
+        <AlertDescription>
+          Live presence, typing, and real-time updates are not available in the sample workspace.
+        </AlertDescription>
+      </Alert>) : null;
+        if (!errorBanner && !previewBanner) {
             return null;
         }
-        return (<div className="mx-4 mt-4">
-        <MessagesErrorState error={messagesError} onRetry={onRetryMessages} isRetrying={dmSearchingMessages && isDmSearchActive}/>
-      </div>);
+        return (<>
+        {previewBanner}
+        {errorBanner}
+      </>);
     })();
     const dmListState = ({
         loading: dmIsLoadingMessages || (isDmSearchActive && dmSearchingMessages),

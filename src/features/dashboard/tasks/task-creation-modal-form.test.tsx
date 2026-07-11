@@ -1,6 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { TaskCreationModalFormFields } from './task-creation-modal-form';
+vi.mock('../shared/hooks/use-ai-generate', () => ({
+    useAiGenerate: () => ({ generate: vi.fn(), isGenerating: false }),
+}));
 const EMPTY_FILE_INPUT_REF = { current: null };
 describe('TaskCreationModalFormFields', () => {
     it('renders modal form sections and summaries', () => {

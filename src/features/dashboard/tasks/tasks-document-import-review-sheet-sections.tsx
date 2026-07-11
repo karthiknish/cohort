@@ -101,7 +101,7 @@ export function ImportReviewTaskRow({ task, index, mentionableUsers, onUpdateTas
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor={`import-priority-${task.localId}`}>Priority</Label>
-          <select id={`import-priority-${task.localId}`} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={task.priority} onChange={handlePriorityChange}>
+          <select id={`import-priority-${task.localId}`} aria-label="Priority" className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={task.priority} onChange={handlePriorityChange}>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>

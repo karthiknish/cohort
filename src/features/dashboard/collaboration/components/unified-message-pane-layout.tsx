@@ -75,9 +75,8 @@ type UnifiedMessagePaneConversationLayoutProps = {
     typingIndicator?: string;
     uploadingAttachments: boolean;
     onCreatePoll?: (poll: Omit<MessagePoll, 'id' | 'createdAt'>) => Promise<void>;
-    workspaceId?: string | null;
 };
-export function UnifiedMessagePaneConversationLayout({ activeDeletingMessageId, confirmingDeleteMessageId, currentUserId, currentUserRole, editingMessageId, effectiveFocusMessageId, effectiveFocusThreadId, emptyState, fileInputRef, handleAttachmentInputChange, handleCancelDelete, handleComposerBlurInternal, handleComposerDragOver, handleComposerDrop, handleComposerFocusInternal, handleComposerPaste, handleConfirmDelete, handleReaction, handleSend, listState, composerState, searchState, header, messageInput, messageListRenderers, messageSearchQuery, messageUpdatingId, messages, onAddAttachments, onDeleteMessage, onLoadMore, onMessageInputChange, onMessageSearchChange, onRefresh, onRemoveAttachment, onReply, replyingToMessage, onCancelReply, participants, pendingAttachments, placeholder, reactionPendingByMessage, statusBanner, typingIndicator, onCreatePoll, workspaceId, }: UnifiedMessagePaneConversationLayoutProps) {
+export function UnifiedMessagePaneConversationLayout({ activeDeletingMessageId, confirmingDeleteMessageId, currentUserId, currentUserRole, editingMessageId, effectiveFocusMessageId, effectiveFocusThreadId, emptyState, fileInputRef, handleAttachmentInputChange, handleCancelDelete, handleComposerBlurInternal, handleComposerDragOver, handleComposerDrop, handleComposerFocusInternal, handleComposerPaste, handleConfirmDelete, handleReaction, handleSend, listState, composerState, searchState, header, messageInput, messageListRenderers, messageSearchQuery, messageUpdatingId, messages, onAddAttachments, onDeleteMessage, onLoadMore, onMessageInputChange, onMessageSearchChange, onRefresh, onRemoveAttachment, onReply, replyingToMessage, onCancelReply, participants, pendingAttachments, placeholder, reactionPendingByMessage, statusBanner, typingIndicator, onCreatePoll, }: UnifiedMessagePaneConversationLayoutProps) {
     const { loading: isLoading, loadingMore: isLoadingMore, hasMore } = listState;
     const { focused: isComposerFocused, sending: isSending, pendingAttachments: hasPendingAttachments, uploadingAttachments, } = composerState;
     const { canSearch: canSearchMessages, active: isMessageSearchActive } = searchState;
@@ -85,7 +84,7 @@ export function UnifiedMessagePaneConversationLayout({ activeDeletingMessageId, 
         if (header.type !== 'channel' || !onCreatePoll) {
             return null;
         }
-        return (<QuickPollButton workspaceId={workspaceId ?? null} userId={currentUserId} onCreate={onCreatePoll}/>);
+        return (<QuickPollButton userId={currentUserId} onCreate={onCreatePoll}/>);
     })();
     const handleAttachClick = useUnifiedMessagePaneAttachHandler({ fileInputRef });
     const handleConfirmDeleteChange = (open: boolean) => {

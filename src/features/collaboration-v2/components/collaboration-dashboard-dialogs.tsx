@@ -22,6 +22,7 @@ export type CollaborationDashboardDialogsProps = {
   forwardingMessage: CollaborationMessage | null;
   setForwardingMessage: (message: CollaborationMessage | null) => void;
   channels: Channel[];
+  currentChannelId: string | null;
   taskModal: React.ReactNode;
   channelExtrasForwardDialog: React.ReactNode;
 };
@@ -36,6 +37,7 @@ export function CollaborationDashboardDialogs({
   forwardingMessage,
   setForwardingMessage,
   channels,
+  currentChannelId,
   taskModal,
   channelExtrasForwardDialog,
 }: CollaborationDashboardDialogsProps) {
@@ -56,7 +58,11 @@ export function CollaborationDashboardDialogs({
           id: c.id,
           name: c.name,
           type: c.type,
+          clientId: c.clientId,
+          projectId: c.projectId,
+          isCustom: c.isCustom,
         }))}
+        currentChannelId={currentChannelId}
         workspaceId={workspaceId}
         userId={currentUserId}
         open={forwardingMessage !== null}

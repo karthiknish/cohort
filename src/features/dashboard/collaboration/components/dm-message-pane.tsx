@@ -24,7 +24,7 @@ function toUnifiedMessage(msg: DirectMessage): UnifiedMessage {
             url: a.url,
             name: a.name,
             mimeType: a.type ?? undefined,
-            size: a.size ? parseInt(a.size, 10) : undefined,
+            size: a.size || undefined,
         })) ?? undefined,
         sharedTo: msg.sharedTo ?? undefined,
     };

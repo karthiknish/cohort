@@ -212,7 +212,7 @@ function TaskCardActionsMenu({ task, onEdit, onDelete, onQuickStatusChange, onCl
     const handleShareClick = () => {
         onShare?.(task);
     };
-    return (<div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+    return (<div className="shrink-0">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="size-8 rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground" aria-label="Task actions" onClick={(e) => e.stopPropagation()}>

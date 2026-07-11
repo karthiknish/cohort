@@ -16,7 +16,7 @@ export function directMessageToUnifiedMessage(message: DirectMessage) {
             url: attachment.url,
             name: attachment.name,
             mimeType: attachment.type ?? undefined,
-            size: attachment.size ? parseInt(attachment.size, 10) : undefined,
+            size: attachment.size || undefined,
         })) ?? undefined,
         sharedTo: message.sharedTo ?? undefined,
         readBy: message.readBy ?? undefined,

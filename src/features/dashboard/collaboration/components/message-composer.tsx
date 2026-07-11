@@ -1,12 +1,11 @@
 'use client';
 import { useCallback } from 'react';
 import type { ChangeEvent, RefObject, ClipboardEvent } from 'react';
-import { FileText, Image as ImageIcon, LoaderCircle, Reply, Send, Sparkles, X } from 'lucide-react';
+import { FileText, Image as ImageIcon, LoaderCircle, Reply, Send, X } from 'lucide-react';
 import { listItemEnterClass } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator';
 import { Button } from '@/shared/ui/button';
-import { notifyInfo } from '@/lib/notifications';
 import type { ClientTeamMember } from '@/types/clients';
 import type { CollaborationMessage } from '@/types/collaboration';
 import type { Channel } from '../types';
@@ -117,10 +116,6 @@ export function MessageComposer({ channel, messageInput, onMessageInputChange, o
             <RichComposer value={messageInput} onChange={onMessageInputChange} onSend={onSend} disabled={!channel || sending} onFocus={onComposerFocus} onBlur={onComposerBlur} onDrop={onComposerDrop} onDragOver={onComposerDragOver} onPaste={onComposerPaste} participants={channelParticipants} onAttachClick={handleAttachClick} hasAttachments={pendingAttachments.length > 0}/>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button variant="outline" onClick={() => notifyInfo({ title: 'AI Reply', message: 'AI will draft a reply based on the conversation context. Coming soon.' })} disabled={!channel || sending} className="inline-flex h-8 items-center gap-2 text-xs motion-chromatic duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none">
-              <Sparkles className="size-3.5"/>
-              <span className="hidden sm:inline">AI Reply</span>
-            </Button>
             <Button onClick={onSend} disabled={isSendDisabled} className="inline-flex h-8 items-center gap-2 text-xs motion-chromatic duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none">
               {sending ? (<LoaderCircle className="size-3.5 animate-spin"/>) : (<Send className="size-3.5"/>)}
               Send Message

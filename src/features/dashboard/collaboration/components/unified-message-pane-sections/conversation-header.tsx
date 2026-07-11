@@ -1,8 +1,8 @@
 'use client';
 import { ClientFormattedDate } from '@/shared/components/client-formatted-date';
-import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
+import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { createElement, useCallback, useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type ReactNode, type RefObject, } from 'react';
-import { Archive, ArchiveRestore, Bell, BellOff, ArrowLeft, Check, CheckCheck, Hash, Info, Link2, Forward, ListTodo, Search, Sparkles, X, LoaderCircle, Mail, MoreVertical, Pencil, Plus, Reply, Send, Share2, Trash2, } from 'lucide-react';
+import { Archive, ArchiveRestore, Bell, BellOff, ArrowLeft, Check, CheckCheck, Hash, Info, Link2, Forward, ListTodo, Search, X, LoaderCircle, Mail, MoreVertical, Pencil, Plus, Reply, Send, Share2, Trash2, } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
@@ -132,25 +132,12 @@ export function UnifiedConversationHeader({ header, canSearchMessages = false, m
                 name: member.name,
                 avatarUrl: member.avatarUrl,
                 role: member.role ?? undefined,
-                status: 'online',
+                status: member.online ? 'online' : 'offline',
             }))} maxVisible={6}/>) : null}
           </div>
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-          <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => notifyInfo({ title: 'AI Summarize', message: 'This feature will summarize the recent conversation. Coming soon.' })} aria-label="Summarize conversation with AI">
-                  <Sparkles className="size-3.5"/>
-                  <span className="hidden sm:inline">Summarize</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Summarize recent messages with AI</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           {canSearchMessages && onToggleMessageSearch ? (<TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>

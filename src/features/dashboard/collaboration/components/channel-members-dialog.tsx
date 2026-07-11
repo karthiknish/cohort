@@ -125,6 +125,7 @@ function ChannelMembersDialogForm({ channel, teamMembers, onOpenChange, onSave, 
         });
     };
     const memberToggleHandlers = Object.fromEntries(sortedMembers.map((member) => [member.id, () => handleMemberToggle(member.id)])) as Record<string, () => void>;
+    const selectedMemberIdsSet = new Set(selectedMemberIds);
     const handleDelete = () => {
         if (!channel.isCustom || !onDelete) {
             return;
@@ -195,7 +196,7 @@ function ChannelMembersDialogForm({ channel, teamMembers, onOpenChange, onSave, 
 
             <div className="max-h-96 space-y-2 overflow-y-auto rounded-2xl border border-border/70 bg-background/80 p-2">
               {sortedMembers.map((member) => {
-            const checked = selectedMemberIds.includes(member.id);
+            const checked = selectedMemberIdsSet.has(member.id);
             return (<button key={member.id} type="button" onClick={memberToggleHandlers[member.id]} className="flex w-full cursor-pointer items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-muted/40">
                     <Checkbox checked={checked} className="mt-0.5 pointer-events-none" aria-label={`Toggle access for ${member.name}`}/>
                     <div className="min-w-0">

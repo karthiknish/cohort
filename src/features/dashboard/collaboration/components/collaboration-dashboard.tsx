@@ -22,6 +22,7 @@ import type { UnifiedMessage } from './message-list-types';
 import { useCollaborationExternalNotify } from '../hooks/use-collaboration-external-notify';
 import { useCrossChannelCollaborationSearch } from '../hooks/use-cross-channel-collaboration-search';
 import { useCollaborationChannelExtras } from './collaboration-channel-extras';
+import { buildCollaborationChannelShareUrl, buildCollaborationDmShareUrl } from '../lib/utils';
 
 type Context = CollaborationDashboardContextValue;
 
@@ -271,12 +272,14 @@ function CollaborationInboxSection({ context }: { context: Context }) {
   const handleShareToPlatform = async (message: UnifiedMessage, platform: 'email') => {
     if (platform !== 'email' || !workspaceId) return;
     const channelMessage = collab.channelMessages.find((entry) => entry.id === message.id);
-    if (channelMessage) {
-      await sendCollaborationEmailCopy(channelMessage, workspaceId);
+    if (channelMessage && collab.selectedChannel) {
+      const conversationUrl = buildCollaborationChannelShareUrl(collab.selectedChannel, message.id, message.threadRootId ?? null);
+      await sendCollaborationEmailCopy(channelMessage, workspaceId, conversationUrl);
       return;
     }
     const dmMessage = context.dm.messages.find((entry) => entry.legacyId === message.id);
     if (!dmMessage) return;
+    const conversationUrl = buildCollaborationDmShareUrl(dmMessage.conversationLegacyId ?? dmMessage.legacyId, dmMessage.legacyId, message.threadRootId ?? null);
     await sendCollaborationEmailCopy({
       id: dmMessage.legacyId,
       channelType: 'team',
@@ -292,7 +295,7 @@ function CollaborationInboxSection({ context }: { context: Context }) {
       deletedAt: dmMessage.deletedAtMs ? new Date(dmMessage.deletedAtMs).toISOString() : null,
       deletedBy: dmMessage.deletedBy ?? null,
       isDeleted: Boolean(dmMessage.deleted),
-    }, workspaceId);
+    }, workspaceId, conversationUrl);
   };
 
   const mentionParticipants = useMemo(() => {

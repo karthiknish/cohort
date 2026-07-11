@@ -12,7 +12,6 @@ import { buildProjectRoute, buildProjectTasksRoute } from '@/lib/project-routes'
 import { cn } from '@/lib/utils';
 import type { TaskPriority, TaskRecord, TaskStatus } from '@/types/tasks';
 import { TASK_STATUSES } from '@/types/tasks';
-import { TaskCommentsPanel } from './task-comments';
 import { TASKS_THEME } from './tasks-theme';
 import { useTaskAssigneeList } from './task-participants-context';
 import { formatDate, formatPriorityLabel, formatStatusLabel, formatTimeSpent, STATUS_ICONS, taskInfoPanelClasses, taskPillColors, taskViewPriorityPill, taskViewStatusPill, type TaskParticipant, } from './task-types';
@@ -206,19 +205,13 @@ export function TaskViewDetailsTab({ task }: {
       </ScrollArea>
     </TabsContent>);
 }
-export function TaskViewCommentsTab({ onCommentCountChange, participants, taskId, userId, userName, userRole, workspaceId, }: {
-    onCommentCountChange: (count: number) => void;
-    participants: TaskParticipant[];
-    taskId: string;
-    userId: string | null;
-    userName: string | null;
-    userRole: string | null;
-    workspaceId: string | null;
+export function TaskViewCommentsTab({ commentsPanel }: {
+    commentsPanel: React.ReactNode;
 }) {
     return (<TabsContent value="comments" className="mt-0 flex h-full min-h-0 flex-col overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
       <ScrollArea className="h-full max-h-[min(52vh,32rem)]">
         <div className={cn(TASKS_THEME.viewDialog.scroll, 'space-y-4')}>
-          <TaskCommentsPanel taskId={taskId} workspaceId={workspaceId} userId={userId} userName={userName} userRole={userRole} participants={participants} onCommentCountChange={onCommentCountChange}/>
+          {commentsPanel}
         </div>
       </ScrollArea>
     </TabsContent>);

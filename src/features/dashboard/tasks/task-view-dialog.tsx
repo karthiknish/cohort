@@ -1,10 +1,11 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { TaskRecord, TaskStatus } from '@/types/tasks';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Tabs } from '@/shared/ui/tabs';
 import { TASKS_THEME } from './tasks-theme';
 import type { TaskParticipant } from './task-types';
+import { useTaskCommentsPanel } from './use-task-comments-panel';
 import { TaskViewCommentsTab, TaskViewDetailsTab, TaskViewDialogFooter, TaskViewDialogHeader, TaskViewDialogTabsList, } from './task-view-dialog-sections';
 type TaskViewDialogProps = {
     task: TaskRecord | null;
@@ -23,32 +24,24 @@ type TaskViewDialogProps = {
 const EMPTY_PARTICIPANTS: TaskParticipant[] = [];
 export function TaskViewDialog({ task, open, onOpenChange, onEdit, onDelete, onQuickStatusChange, initialTab = 'details', workspaceId = null, userId = null, userName = null, userRole = null, participants = EMPTY_PARTICIPANTS, }: TaskViewDialogProps) {
     const [activeTab, setActiveTab] = useState<'details' | 'comments'>('details');
-    const [commentCountState, setCommentCountState] = useState<{
-        taskId: string;
-        sourceCount: number;
-        count: number;
-    } | null>(null);
     const taskId = task?.id ?? '';
-    const sourceCommentCount = task?.commentCount ?? 0;
-    const liveCommentCount = commentCountState?.taskId === taskId && commentCountState.sourceCount === sourceCommentCount
-        ? commentCountState.count
-        : sourceCommentCount;
+    const { view: commentsPanel, commentCount, loading: commentsLoading } = useTaskCommentsPanel({
+        taskId,
+        workspaceId,
+        userId,
+        userName,
+        userRole,
+        participants,
+    });
+    const liveCommentCount = commentsLoading ? (task?.commentCount ?? 0) : commentCount;
     const handleDialogOpenChange = (nextOpen: boolean) => {
         if (nextOpen) {
             setActiveTab(initialTab);
         }
         else {
-            setCommentCountState(null);
             setActiveTab('details');
         }
         onOpenChange(nextOpen);
-    };
-    const handleCommentCountChange = (count: number) => {
-        setCommentCountState({
-            taskId,
-            sourceCount: sourceCommentCount,
-            count,
-        });
     };
     const handleFooterClose = () => {
         onOpenChange(false);
@@ -92,7 +85,7 @@ export function TaskViewDialog({ task, open, onOpenChange, onEdit, onDelete, onQ
 
           <div className={TASKS_THEME.viewDialog.body}>
             <TaskViewDetailsTab task={task}/>
-            <TaskViewCommentsTab onCommentCountChange={handleCommentCountChange} participants={participants} taskId={task.id} userId={userId} userName={userName} userRole={userRole} workspaceId={workspaceId}/>
+            <TaskViewCommentsTab commentsPanel={commentsPanel}/>
           </div>
         </Tabs>
 

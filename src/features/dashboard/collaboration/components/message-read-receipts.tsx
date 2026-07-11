@@ -105,6 +105,8 @@ export function ReadReceiptDetail({ message, channelMembers, className, }: {
 }) {
     const readBy = message.readBy ?? [];
     const deliveredTo = message.deliveredTo ?? [];
+    const readBySet = new Set(readBy);
+    const membersById = new Map(channelMembers?.map((m) => [m.id, m]) ?? []);
     if (readBy.length === 0 && deliveredTo.length === 0) {
         return (<div className={cn('text-xs text-muted-foreground', className)}>
         Not yet delivered to anyone
@@ -117,7 +119,7 @@ export function ReadReceiptDetail({ message, channelMembers, className, }: {
           </p>
           <div className="flex flex-wrap gap-1">
             {readBy.map((userId) => {
-                const member = channelMembers?.find((m) => m.id === userId);
+                const member = membersById.get(userId);
                 return (<span key={userId} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-accent/10 text-primary text-xs">
                   {member?.name || userId}
                 </span>);
@@ -130,9 +132,9 @@ export function ReadReceiptDetail({ message, channelMembers, className, }: {
           </p>
           <div className="flex flex-wrap gap-1">
             {deliveredTo.flatMap((userId) => {
-                if (readBy.includes(userId))
+                if (readBySet.has(userId))
                     return [];
-                const member = channelMembers?.find((m) => m.id === userId);
+                const member = membersById.get(userId);
                 return [(<span key={userId} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-muted-foreground text-xs">
                   {member?.name || userId}
                 </span>)];

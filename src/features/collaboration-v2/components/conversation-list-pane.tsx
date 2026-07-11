@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 import { Hash, Inbox, MessageCircle, Plus, Search } from 'lucide-react';
 import { CreateChannelDialog } from '@/features/dashboard/collaboration/components/create-channel-dialog';
 import { Badge } from '@/shared/ui/badge';
@@ -78,6 +78,7 @@ export function ConversationListPane({
 }: ConversationListPaneProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const selectInboxItem = useEffectEvent(onSelectItem);
   useEffect(() => {
     const onGlobalKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -96,16 +97,16 @@ export function ConversationListPane({
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         const nextIndex = selectedIndex < filteredItems.length - 1 ? selectedIndex + 1 : 0;
-        onSelectItem(filteredItems[nextIndex]!);
+        selectInboxItem(filteredItems[nextIndex]!);
       } else if (event.key === 'ArrowUp') {
         event.preventDefault();
         const nextIndex = selectedIndex > 0 ? selectedIndex - 1 : filteredItems.length - 1;
-        onSelectItem(filteredItems[nextIndex]!);
+        selectInboxItem(filteredItems[nextIndex]!);
       }
     };
     window.addEventListener('keydown', onGlobalKeyDown);
     return () => window.removeEventListener('keydown', onGlobalKeyDown);
-  }, [filteredItems, selectedKey, onSelectItem]);
+  }, [filteredItems, selectedKey]);
 
   const showRecentLabel = sourceFilter === 'all' && !searchQuery.trim();
 
@@ -179,14 +180,14 @@ export function ConversationListPane({
 
         <Tabs value={sourceFilter} onValueChange={(value) => onSourceFilterChange(value as SourceFilter)}>
           <TabsList className="flex h-auto w-full flex-wrap gap-0.5 bg-muted/50 p-1">
-            <TabsTrigger value="all" className="flex-1 text-xs data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:shadow-sm">
-              All <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px] data-[active]:bg-primary-foreground/20 data-[active]:text-primary-foreground">{channelCount + dmCount}</Badge>
+            <TabsTrigger value="all" className="group flex-1 text-xs data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:shadow-sm">
+              All <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px] group-data-[active]:bg-primary-foreground/20 group-data-[active]:text-primary-foreground">{channelCount + dmCount}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="channel" className="flex-1 text-xs data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:shadow-sm">
+            <TabsTrigger value="channel" className="group flex-1 text-xs data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:shadow-sm">
               <Hash className="mr-0.5 size-3" />
               {channelCount}
             </TabsTrigger>
-            <TabsTrigger value="direct_message" className="flex-1 text-xs data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:shadow-sm">
+            <TabsTrigger value="direct_message" className="group flex-1 text-xs data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:shadow-sm">
               <MessageCircle className="mr-0.5 size-3" />
               {dmCount}
             </TabsTrigger>

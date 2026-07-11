@@ -18,9 +18,7 @@ function collaborationMessageToUnified(message: CollaborationMessage): UnifiedMe
             url: attachment.url,
             name: attachment.name,
             mimeType: attachment.type ?? undefined,
-            size: attachment.size != null && attachment.size !== ''
-                ? Number(attachment.size)
-                : undefined,
+            size: attachment.size || undefined,
         })),
         sharedTo: message.sharedTo,
         mentions: message.mentions,

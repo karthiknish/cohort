@@ -6,5 +6,4 @@ export type TaskCommentsPanelProps = {
     userName: string | null;
     userRole: string | null;
     participants: TaskParticipant[];
-    onCommentCountChange?: (count: number) => void;
 };

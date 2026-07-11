@@ -91,8 +91,7 @@ export function TasksPageWorkspace({ filters, rawSearchQuery, onSearchChange, pr
     onToggleTaskSelection: (taskId: string, checked: boolean) => void;
 }) {
     const handleFilterStatusChange = (status: string) => filters.handleStatusChange(status as TaskStatus | 'all');
-    return (<>
-      <Tabs defaultValue="all-tasks" value={filters.activeTab} onValueChange={filters.setActiveTab} className="space-y-0">
+    return (<Tabs defaultValue="all-tasks" value={filters.activeTab} onValueChange={filters.setActiveTab} className="space-y-0">
         <Card className={cn(TASKS_THEME.workspace, 'rounded-2xl ring-1 ring-border/40')}>
           <CardHeader className={cn(TASKS_THEME.rail, 'sticky top-0 z-10 space-y-0 backdrop-blur-md')}>
             <div className="flex items-center gap-2">
@@ -127,6 +126,5 @@ export function TasksPageWorkspace({ filters, rawSearchQuery, onSearchChange, pr
             </CardContent>
           </div>
         </Card>
-      </Tabs>
-    </>);
+      </Tabs>);
 }

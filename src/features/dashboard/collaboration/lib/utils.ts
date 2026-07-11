@@ -197,7 +197,7 @@ export type CollaborationShareChannelInput = {
 /**
  * Builds a collaboration URL that opens this channel when shared (uses dashboard URL params).
  */
-export function buildCollaborationChannelShareUrl(channel: CollaborationShareChannelInput): string {
+export function buildCollaborationChannelShareUrl(channel: CollaborationShareChannelInput, messageId?: string | null, threadId?: string | null): string {
     if (typeof window === 'undefined')
         return '';
     const url = new URL(window.location.href);
@@ -212,14 +212,23 @@ export function buildCollaborationChannelShareUrl(channel: CollaborationShareCha
     if (channel.type === 'project' && channel.projectId) {
         url.searchParams.set('projectId', channel.projectId);
     }
+    else {
+        url.searchParams.delete('projectId');
+    }
     url.searchParams.delete('messageId');
     url.searchParams.delete('threadId');
+    if (messageId) {
+        url.searchParams.set('messageId', messageId);
+    }
+    if (threadId) {
+        url.searchParams.set('threadId', threadId);
+    }
     return url.toString();
 }
 /**
  * Builds a collaboration URL that opens a direct message conversation when shared.
  */
-export function buildCollaborationDmShareUrl(conversationLegacyId: string): string {
+export function buildCollaborationDmShareUrl(conversationLegacyId: string, messageId?: string | null, threadId?: string | null): string {
     if (typeof window === 'undefined')
         return '';
     const url = new URL(window.location.href);
@@ -228,6 +237,12 @@ export function buildCollaborationDmShareUrl(conversationLegacyId: string): stri
     url.searchParams.delete('channelType');
     url.searchParams.delete('messageId');
     url.searchParams.delete('threadId');
+    if (messageId) {
+        url.searchParams.set('messageId', messageId);
+    }
+    if (threadId) {
+        url.searchParams.set('threadId', threadId);
+    }
     return url.toString();
 }
 export { formatConversationSnippet, CHAT_CONVERSATION_ROW_CLASS, CHAT_LIST_PREVIEW_CLASS, CHAT_MARKDOWN_CLASS, CHAT_MESSAGE_BODY_CLASS } from './chat-text';

@@ -2,10 +2,11 @@
 import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { createElement, useReducer, useState, useCallback, useMemo } from 'react';
+import { useAuth } from '@/shared/contexts/auth-context';
 import { Dialog, DialogContent, DialogTrigger, } from '@/shared/ui/dialog';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { cn } from '@/lib/utils';
-import { CreatePollDialogFooter, CreatePollDialogHeader, CreatePollDialogTrigger, CreatePollFormFields, CreatePollSettings, PollCardFooterActions, PollCardHeader, PollOptionRow, QuickPollTrigger, } from './message-polls-sections';
+import { CreatePollDialogFooter, CreatePollDialogHeader, CreatePollDialogTrigger, CreatePollFormFields, CreatePollSettings, POLL_END_TIME_OPTIONS, PollCardFooterActions, PollCardHeader, PollOptionRow, QuickPollTrigger, } from './message-polls-sections';
 const CREATE_POLL_DEFAULT_TRIGGER = <CreatePollDialogTrigger />;
 export interface PollOption {
     id: string;
@@ -157,7 +158,6 @@ export function PollCard({ poll, userId, onVote, onEndPoll, canVote = true, canE
     </div>);
 }
 interface CreatePollDialogProps {
-    workspaceId: string | null;
     userId: string | null;
     onCreate?: (poll: Omit<MessagePoll, 'id' | 'createdAt'>) => Promise<void>;
     trigger?: React.ReactNode;
@@ -170,6 +170,8 @@ type CreatePollFormState = {
     }>;
     multipleChoice: boolean;
     anonymous: boolean;
+    endTime: string | null;
+    endTimeOption: string;
 };
 type CreatePollFormAction = {
     type: 'reset';
@@ -191,6 +193,10 @@ type CreatePollFormAction = {
 } | {
     type: 'setAnonymous';
     value: boolean;
+} | {
+    type: 'setEndTime';
+    value: string | null;
+    option: string;
 };
 function createInitialPollFormState(): CreatePollFormState {
     return {
@@ -201,6 +207,8 @@ function createInitialPollFormState(): CreatePollFormState {
         ],
         multipleChoice: false,
         anonymous: false,
+        endTime: null,
+        endTimeOption: '',
     };
 }
 function createPollFormReducer(state: CreatePollFormState, action: CreatePollFormAction): CreatePollFormState {
@@ -227,6 +235,8 @@ function createPollFormReducer(state: CreatePollFormState, action: CreatePollFor
             return { ...state, multipleChoice: action.value };
         case 'setAnonymous':
             return { ...state, anonymous: action.value };
+        case 'setEndTime':
+            return { ...state, endTime: action.value, endTimeOption: action.option };
         default:
             return state;
     }
@@ -234,11 +244,12 @@ function createPollFormReducer(state: CreatePollFormState, action: CreatePollFor
 /**
  * Dialog for creating a new poll
  */
-export function CreatePollDialog({ workspaceId, userId, onCreate, trigger, }: CreatePollDialogProps) {
+export function CreatePollDialog({ userId, onCreate, trigger, }: CreatePollDialogProps) {
+    const { user } = useAuth();
     const [open, setOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [formState, dispatch] = useReducer(createPollFormReducer, undefined, createInitialPollFormState);
-    const { question, options, multipleChoice, anonymous } = formState;
+    const { question, options, multipleChoice, anonymous, endTime, endTimeOption } = formState;
     const handleAddOption = () => {
         dispatch({ type: 'addOption' });
     };
@@ -257,14 +268,22 @@ export function CreatePollDialog({ workspaceId, userId, onCreate, trigger, }: Cr
     const handleAnonymousChange = (value: boolean) => {
         dispatch({ type: 'setAnonymous', value });
     };
+    const handleEndTimeChange = (value: string) => {
+        const option = POLL_END_TIME_OPTIONS.find((o) => o.value === value);
+        if (!option || option.ms === 0) {
+            dispatch({ type: 'setEndTime', value: null, option: '' });
+            return;
+        }
+        dispatch({ type: 'setEndTime', value: new Date(Date.now() + option.ms).toISOString(), option: value });
+    };
     const resetForm = () => {
         dispatch({ type: 'reset' });
     };
     const handleCreate = async () => {
-        if (!workspaceId || !userId) {
+        if (!userId) {
             notifyFailure({
                 title: 'Authentication required',
-                message: 'Authentication required',
+                message: 'Please sign in to create a poll.',
             });
             return;
         }
@@ -289,14 +308,15 @@ export function CreatePollDialog({ workspaceId, userId, onCreate, trigger, }: Cr
             return;
         }
         setIsCreating(true);
+        const createdByName = user?.name?.trim() || user?.email?.trim() || 'You';
         const newPoll: Omit<MessagePoll, 'id' | 'createdAt'> = {
             question: trimmedQuestion,
             options: validOptions.map((opt) => ({ ...opt, voters: [] })),
             multipleChoice,
             anonymous,
             createdBy: userId,
-            createdByName: 'You', // Would be populated from user context
-            endTime: null,
+            createdByName,
+            endTime,
         };
         await Promise.resolve(onCreate?.(newPoll))
             .then(() => {
@@ -328,7 +348,7 @@ export function CreatePollDialog({ workspaceId, userId, onCreate, trigger, }: Cr
       <DialogContent className="sm:max-w-md">
         <CreatePollDialogHeader />
         <CreatePollFormFields onAddOption={handleAddOption} onOptionChange={handleOptionChange} onQuestionChange={handleQuestionChange} onRemoveOption={handleRemoveOption} options={options} question={question}/>
-        <CreatePollSettings anonymous={anonymous} multipleChoice={multipleChoice} onAnonymousChange={handleAnonymousChange} onMultipleChoiceChange={handleMultipleChoiceChange}/>
+        <CreatePollSettings anonymous={anonymous} multipleChoice={multipleChoice} endTimeOption={endTimeOption} onAnonymousChange={handleAnonymousChange} onMultipleChoiceChange={handleMultipleChoiceChange} onEndTimeChange={handleEndTimeChange}/>
         <CreatePollDialogFooter isCreating={isCreating} onCancel={handleCancelCreate} onCreate={handleCreate} question={question}/>
       </DialogContent>
     </Dialog>);

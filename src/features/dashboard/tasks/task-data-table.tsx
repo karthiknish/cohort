@@ -82,9 +82,7 @@ function TaskSelectCell({ row }: CellContext<TaskRecord, unknown>) {
     };
     if (!onSelectToggle)
         return null;
-    return (<div className="flex justify-center" onPointerDown={stopRowActivation} onClick={stopRowActivation}>
-      <Checkbox checked={selectedTaskIds?.has(task.id) ?? false} onCheckedChange={handleChange} aria-label={`Select ${task.title}`} className="size-4 rounded border-border"/>
-    </div>);
+    return (<Checkbox checked={selectedTaskIds?.has(task.id) ?? false} onCheckedChange={handleChange} aria-label={`Select ${task.title}`} className="size-4 rounded border-border" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}/>);
 }
 function TaskKeyHeader({ column }: HeaderContext<TaskRecord, unknown>) {
     return <DataTableColumnHeader column={column} title="Key"/>;
@@ -290,7 +288,7 @@ export type TaskDataTableProps = {
 export function TaskDataTable({ tasks, pendingStatusUpdates, onOpen, onEdit, onDelete, onQuickStatusChange, selectedTaskIds, onSelectToggle, loading = false, className, }: TaskDataTableProps) {
     const showSelection = Boolean(onSelectToggle);
     const columns = createTaskColumns(showSelection);
-    const actions = ({
+    const actions = useMemo(() => ({
         pendingStatusUpdates,
         selectedTaskIds,
         onOpen,
@@ -298,7 +296,7 @@ export function TaskDataTable({ tasks, pendingStatusUpdates, onOpen, onEdit, onD
         onDelete,
         onQuickStatusChange,
         onSelectToggle,
-    });
+    }), [pendingStatusUpdates, selectedTaskIds, onOpen, onEdit, onDelete, onQuickStatusChange, onSelectToggle]);
     const rowClassName = (task: TaskRecord) => cn(pendingStatusUpdates.has(task.id) && 'pointer-events-none opacity-60', selectedTaskIds?.has(task.id) && 'bg-primary/4', task.status === 'completed' && 'opacity-90');
     const getRowId = (task: TaskRecord) => task.id;
     const handleRowClick = (task: TaskRecord) => {

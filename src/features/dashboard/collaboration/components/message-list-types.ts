@@ -17,7 +17,7 @@ export interface UnifiedMessage {
         url: string;
         name?: string;
         mimeType?: string;
-        size?: number;
+        size?: string;
     }>;
     sharedTo?: string[];
     mentions?: CollaborationMention[];

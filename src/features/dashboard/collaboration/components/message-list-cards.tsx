@@ -7,17 +7,13 @@ import { CHAT_MESSAGE_BODY_CLASS } from '../lib/chat-text';
 import type { MessageListRenderers } from './message-list-render-context';
 import type { UnifiedMessage } from './message-list-types';
 import { MessageContentBody, MessageReactionPickerActions, MessageReactionRow } from './message-list-reactions';
+import { ClientFormattedDate } from '@/shared/components/client-formatted-date';
 
 export type ChannelMessagePendingState = {
     deleting: boolean;
     editing: boolean;
     updating: boolean;
 };
-
-function formatTime(ms: number): string {
-    const date = new Date(ms);
-    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-}
 
 function getInitials(name: string): string {
     return name
@@ -62,7 +58,7 @@ export function ChannelMessageCard({ currentUserId, highlighted, pending, localR
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{message.senderName}</span>
           {message.senderRole ? <span className="text-xs text-muted-foreground">({message.senderRole})</span> : null}
-          <span className="text-xs text-muted-foreground">{formatTime(message.createdAtMs)}</span>
+          <ClientFormattedDate value={message.createdAtMs} formatStr="h:mm a" className="text-xs text-muted-foreground" fallback="" />
           {message.edited && !message.deleted ? <span className="text-xs text-muted-foreground">(edited)</span> : null}
         </div>
 
@@ -114,7 +110,7 @@ export function DirectMessageCard({ currentUserId, isDeleting, isEditing, localR
         </div>
 
         <div className={cn('mt-1 flex items-center gap-1', isOwn && 'justify-end')}>
-          <span className="text-[10px] text-muted-foreground">{formatTime(message.createdAtMs)}</span>
+          <ClientFormattedDate value={message.createdAtMs} formatStr="h:mm a" className="text-[10px] text-muted-foreground" fallback="" />
           {message.edited && !message.deleted ? <span className="text-[10px] text-muted-foreground">(edited)</span> : null}
         </div>
 
@@ -127,8 +123,8 @@ export function DirectMessageCard({ currentUserId, isDeleting, isEditing, localR
         {renderers.renderMessageExtras?.(message)}
         {renderers.renderMessageFooter?.(message)}
 
-        {!isEditing && !message.deleted ? (<div className={cn('mt-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100', isOwn && 'justify-end')}>
-            <MessageReactionPickerActions actions={renderers.renderMessageActions?.(message)} align="start" message={message} onReact={onReact}/>
+        {!isEditing && !message.deleted ? (<div className={cn('mt-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 max-sm:opacity-100', isOwn && 'justify-end')}>
+            <MessageReactionPickerActions actions={renderers.renderMessageActions?.(message)} align={isOwn ? 'end' : 'start'} alwaysVisible message={message} onReact={onReact}/>
           </div>) : null}
       </div>
 

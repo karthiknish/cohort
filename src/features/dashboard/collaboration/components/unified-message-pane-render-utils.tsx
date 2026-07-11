@@ -21,7 +21,7 @@ export function renderMessageAttachmentsContent(message: UnifiedMessage) {
         name: attachment.name ?? 'File',
         url: attachment.url,
         type: attachment.mimeType ?? null,
-        size: attachment.size ? String(attachment.size) : null,
+        size: attachment.size ?? null,
     }));
     return <MessageAttachments attachments={attachments}/>;
 }

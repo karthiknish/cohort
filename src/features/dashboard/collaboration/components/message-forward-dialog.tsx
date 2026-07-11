@@ -18,10 +18,14 @@ interface ChannelOption {
     id: string;
     name: string;
     type: CollaborationChannelType;
+    isCustom?: boolean;
+    clientId: string | null;
+    projectId: string | null;
 }
 interface MessageForwardDialogProps {
     message: CollaborationMessage | null;
     channels: ChannelOption[];
+    currentChannelId: string | null;
     workspaceId: string | null;
     userId: string | null;
     open: boolean;
@@ -31,7 +35,7 @@ interface MessageForwardDialogProps {
 /**
  * Dialog for forwarding a message to another channel
  */
-export function MessageForwardDialog({ message, channels, workspaceId, userId, open, onOpenChange, onForward, }: MessageForwardDialogProps) {
+export function MessageForwardDialog({ message, channels, currentChannelId, workspaceId, userId, open, onOpenChange, onForward, }: MessageForwardDialogProps) {
     const createMessage = useMutation(collaborationApi.createMessage);
     const [selectedChannelId, setSelectedChannelId] = useState<string>('');
     const [forwardMessage, setForwardMessage] = useState('');
@@ -61,11 +65,12 @@ export function MessageForwardDialog({ message, channels, workspaceId, userId, o
         await createMessage({
             workspaceId: String(workspaceId),
             legacyId: newMessageId,
+            channelId: selectedChannel.isCustom ? selectedChannel.id : null,
             channelType: selectedChannel.type,
-            clientId: selectedChannel.type === 'client' ? selectedChannel.id : null,
-            projectId: selectedChannel.type === 'project' ? selectedChannel.id : null,
+            clientId: selectedChannel.type === 'client' ? selectedChannel.clientId : null,
+            projectId: selectedChannel.type === 'project' ? selectedChannel.projectId : null,
             senderId: String(userId),
-            senderName: 'You', // Would be populated from user context
+            senderName: 'You', // Will be overridden by backend if user name is present
             senderRole: null,
             content: forwardedContent,
             format: 'markdown',
@@ -118,7 +123,9 @@ export function MessageForwardDialog({ message, channels, workspaceId, userId, o
     if (!message)
         return null;
     // Filter out current channel from options
-    const availableChannels = channels.filter((c) => c.id !== `${message.channelType}-${message.clientId || message.projectId || 'general'}`);
+    const availableChannels = currentChannelId
+        ? channels.filter((c) => c.id !== currentChannelId)
+        : channels;
     return (<Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

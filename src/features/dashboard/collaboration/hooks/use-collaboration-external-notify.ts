@@ -10,7 +10,7 @@ import type { CollaborationMessage } from '@/types/collaboration';
 export function useCollaborationExternalNotify() {
     const convex = useConvex();
     const updateSharedTo = useMutation(collaborationApi.updateSharedTo);
-    const sendCollaborationEmailCopy = async (message: CollaborationMessage, workspaceId: string) => {
+    const sendCollaborationEmailCopy = async (message: CollaborationMessage, workspaceId: string, conversationUrl?: string) => {
         try {
             const rawPrefs = await convex.query(api.settings.getMyNotificationPreferences, {});
             if (!rawPrefs)
@@ -27,7 +27,9 @@ export function useCollaborationExternalNotify() {
                         text: message.content,
                         metadata: {
                             senderName: message.senderName,
-                            conversationUrl: `${window.location.origin}/dashboard/collaboration`,
+                            conversationUrl: conversationUrl && conversationUrl.startsWith('http')
+                                ? conversationUrl
+                                : `${window.location.origin}/dashboard/collaboration`,
                         },
                     }),
                 });

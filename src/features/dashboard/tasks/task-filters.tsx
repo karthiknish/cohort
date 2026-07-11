@@ -6,9 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
 import { Popover, PopoverContent, PopoverTrigger, } from '@/shared/ui/popover';
 import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts';
-import { SORT_OPTIONS } from './task-types';
-import { formatPriorityLabel } from './task-types';
-import type { SortField, SortDirection } from './task-types';
+import { SORT_OPTIONS, formatPriorityLabel, type SortField, type SortDirection } from './task-types';
 import { TASKS_THEME } from './tasks-theme';
 import type { TaskPriority } from '@/types/tasks';
 export type TaskFiltersProps = {

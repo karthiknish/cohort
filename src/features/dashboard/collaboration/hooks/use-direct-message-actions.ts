@@ -6,6 +6,8 @@ import { usePreview } from '@/shared/contexts/preview-context';
 import { api } from '@/lib/convex-api';
 import { logError } from '@/lib/convex-errors';
 import { getPreviewDirectAutoReply } from '@/lib/preview-data';
+import { COLLABORATION_REACTION_SET } from '@/constants/collaboration-reactions';
+import { notifyFailure } from '@/lib/notifications';
 import type { DirectConversation, DirectMessage } from '@/types/collaboration';
 import { formatConversationSnippet } from '../lib/chat-text';
 import type { UseDirectMessagesOptions } from './use-direct-messages';
@@ -320,6 +322,13 @@ export function useDirectMessageActions(options: UseDirectMessageActionsOptions)
         }
     };
     const toggleReaction = async (messageLegacyId: string, emoji: string) => {
+        if (!COLLABORATION_REACTION_SET.has(emoji)) {
+            notifyFailure({
+                title: 'Reaction unavailable',
+                message: 'That emoji is not supported for reactions.',
+            });
+            return;
+        }
         if (isPreviewMode) {
             const reactionUserId = currentUserId ?? 'preview-current-user';
             setPreviewMessagesByConversation((prev) => {

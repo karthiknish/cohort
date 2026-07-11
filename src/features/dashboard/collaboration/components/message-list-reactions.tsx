@@ -1,11 +1,12 @@
 'use client';
 import type { ComponentType, MouseEvent, ReactNode } from 'react';
+import { useState } from 'react';
 import { LoaderCircle, Smile } from 'lucide-react';
-import EmojiPicker, { Theme, type EmojiClickData } from '@/shared/ui/emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { Button } from '@/shared/ui/button';
 import { chromaticTransitionClass } from '@/lib/motion';
 import { cn } from '@/lib/utils';
+import { COLLABORATION_REACTIONS } from '@/constants/collaboration-reactions';
 import { CHAT_MESSAGE_BODY_CLASS } from '../lib/chat-text';
 import type { UnifiedMessage } from './message-list-types';
 
@@ -46,18 +47,24 @@ export function MessageReactionPickerActions({ actions, align = 'start', alwaysV
     message: UnifiedMessage;
     onReact: (messageId: string, emoji: string) => void;
 }) {
-    const handleEmojiClick = (emojiData: EmojiClickData) => {
-        onReact(message.id, emojiData.emoji);
+    const [open, setOpen] = useState(false);
+    const handleEmojiClick = (emoji: string) => () => {
+        setOpen(false);
+        onReact(message.id, emoji);
     };
     return (<div className={cn('flex gap-1 transition-opacity shrink-0', alwaysVisible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100')}>
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon" className="size-6" disabled={disabled} aria-label="Add reaction">
             <Smile className="size-3"/>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align={align}>
-          <EmojiPicker onEmojiClick={handleEmojiClick} theme={Theme.LIGHT} width={300} height={350}/>
+        <PopoverContent className="w-auto p-2" align={align}>
+          <div className="flex gap-1">
+            {COLLABORATION_REACTIONS.map((emoji) => (<Button key={emoji} type="button" variant="ghost" size="sm" className="size-8 text-base" disabled={disabled} aria-label={`React with ${emoji}`} onClick={handleEmojiClick(emoji)}>
+                {emoji}
+              </Button>))}
+          </div>
         </PopoverContent>
       </Popover>
 

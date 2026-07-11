@@ -1,8 +1,9 @@
 "use client";
 import { useCallback, useMemo, type SyntheticEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Image as ImageIcon, LoaderCircle } from "lucide-react";
+import { AlertCircle, ExternalLink, Image as ImageIcon, LoaderCircle } from "lucide-react";
 import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
 import { LazyImage } from "@/shared/ui/lazy-image";
 import { cn } from "@/lib/utils";
 interface LinkPreviewCardProps {
@@ -24,16 +25,17 @@ const fetchLinkPreview = async (requestUrl: string): Promise<LinkPreviewResponse
         body: JSON.stringify({ url: requestUrl }),
     });
     if (!response.ok) {
-        throw new Error("Failed to fetch link preview");
+        throw new Error(`Preview failed (${response.status})`);
     }
     return response.json();
 };
 export function LinkPreviewCard({ url }: LinkPreviewCardProps) {
-    const { data, error, isLoading } = useQuery<LinkPreviewResponse, Error>({
+    const { data, error, isLoading, refetch } = useQuery<LinkPreviewResponse, Error>({
         queryKey: ["link-preview", url],
         queryFn: () => fetchLinkPreview(url),
         refetchOnWindowFocus: false,
-        retry: false,
+        retry: 2,
+        retryDelay: 1000,
         staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     });
     const parsedUrl = (() => {
@@ -68,7 +70,15 @@ export function LinkPreviewCard({ url }: LinkPreviewCardProps) {
             </a>
             {domain ? <p className="text-xs text-muted-foreground">{domain}</p> : null}
           </div>
-          {isLoading ? (<p className="text-xs text-muted-foreground">Fetching preview…</p>) : error ? (<p className="text-xs text-muted-foreground">Preview unavailable</p>) : description ? (<p className="line-clamp-2 text-xs text-muted-foreground">{description}</p>) : null}
+          {isLoading ? (<p className="text-xs text-muted-foreground">Fetching preview…</p>) : error ? (<div className="space-y-1">
+              <p className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="size-3.5"/>
+                <span className="line-clamp-1">{error.message}</span>
+              </p>
+              <Button type="button" variant="ghost" size="sm" className="h-6 text-xs" onClick={() => refetch()}>
+                Retry
+              </Button>
+            </div>) : description ? (<p className="line-clamp-2 text-xs text-muted-foreground">{description}</p>) : null}
         </div>
         <div className="flex h-24 flex-shrink-0 items-start">
           <a href={url} target="_blank" rel="noreferrer noopener" className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition hover:text-primary" aria-label="Open link">

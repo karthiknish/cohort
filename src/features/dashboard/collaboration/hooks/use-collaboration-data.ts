@@ -204,6 +204,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
         channels,
         filteredChannels,
         searchQuery,
+        setSearchQuery,
         selectedChannel,
         selectChannel,
         messages,

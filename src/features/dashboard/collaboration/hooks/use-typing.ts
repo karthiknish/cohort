@@ -74,7 +74,7 @@ export function useTyping({ workspaceId, selectedChannel = null, conversationLeg
     const lastTypingUpdateRef = useRef(0);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const setTyping = useMutation(collaborationApi.setTyping);
-    const sendTypingUpdate = async (isTyping: boolean) => {
+    const sendTypingUpdate = useEffectEvent(async (isTyping: boolean) => {
         if (isPreviewMode) {
             return;
         }
@@ -96,7 +96,7 @@ export function useTyping({ workspaceId, selectedChannel = null, conversationLeg
         catch (error) {
             logError(error, 'useTyping:sendTypingUpdate');
         }
-    };
+    });
     const stopTyping = useEffectEvent(() => {
         if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
@@ -109,7 +109,7 @@ export function useTyping({ workspaceId, selectedChannel = null, conversationLeg
         lastTypingUpdateRef.current = 0;
         void sendTypingUpdate(false);
     });
-    const notifyTyping = () => {
+    const notifyTyping = useEffectEvent(() => {
         if (!composerFocusedRef.current || !typingTargetId) {
             return;
         }
@@ -127,14 +127,14 @@ export function useTyping({ workspaceId, selectedChannel = null, conversationLeg
             lastTypingUpdateRef.current = 0;
             void sendTypingUpdate(false);
         }, TYPING_TIMEOUT_MS);
-    };
-    const handleComposerFocus = () => {
+    });
+    const handleComposerFocus = useEffectEvent(() => {
         composerFocusedRef.current = true;
-    };
-    const handleComposerBlur = () => {
+    });
+    const handleComposerBlur = useEffectEvent(() => {
         composerFocusedRef.current = false;
         stopTyping();
-    };
+    });
     useEffect(() => {
         if (typingTargetId === null) {
             return () => {

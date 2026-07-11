@@ -97,7 +97,7 @@ describe('task view dialog sections', () => {
         expect(markup).not.toContain('TIME SPENT');
     });
     it('renders the comments tab', () => {
-        const markup = renderToStaticMarkup(<TaskViewCommentsTab onCommentCountChange={vi.fn()} participants={[]} taskId="task-1" userId={null} userName={null} userRole={null} workspaceId={null}/>);
+        const markup = renderToStaticMarkup(<TaskViewCommentsTab commentsPanel={<div>TaskCommentsPanel</div>}/>);
         expect(markup).toContain('TaskCommentsPanel');
     });
     it('renders empty attachments as plain text', () => {

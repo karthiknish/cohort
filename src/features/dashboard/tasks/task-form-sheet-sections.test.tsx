@@ -2,6 +2,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { TaskFormState } from './task-types';
 import { TaskSheetAttachmentsSection, TaskSheetFields } from './task-form-sheet-sections';
+vi.mock('../shared/hooks/use-ai-generate', () => ({
+    useAiGenerate: () => ({ generate: vi.fn(), isGenerating: false }),
+}));
 vi.mock('@/shared/ui/mention-input', () => ({
     MentionInput: () => <div data-mention-input="true">Mention input</div>,
 }));

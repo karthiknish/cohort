@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { useImperativeHandle, type RefObject } from 'react';
 
 vi.mock('convex/react', () => ({
   useMutation: () => vi.fn(),
@@ -51,18 +52,19 @@ vi.mock('../hooks/use-direct-messages', () => ({
 
 import { useCollaborationDashboard } from './collaboration-dashboard-provider';
 
-let captured: ReturnType<typeof useCollaborationDashboard> | null = null;
-function Harness() {
-  captured = useCollaborationDashboard();
+function Harness({ ref }: { ref: RefObject<ReturnType<typeof useCollaborationDashboard> | null> }) {
+  const value = useCollaborationDashboard();
+  useImperativeHandle(ref, () => value);
   return null;
 }
 
 describe('useCollaborationDashboard', () => {
   it('returns a context value with expected shape', () => {
-    renderToStaticMarkup(<Harness />);
-    expect(captured).toBeDefined();
-    expect(captured!.currentUserId).toBe('admin-1');
-    expect(captured!.isAdmin).toBe(true);
-    expect(captured!.workspaceId).toBe('workspace-1');
+    const ref = { current: null as ReturnType<typeof useCollaborationDashboard> | null };
+    renderToStaticMarkup(<Harness ref={ref} />);
+    expect(ref.current).toBeDefined();
+    expect(ref.current!.currentUserId).toBe('admin-1');
+    expect(ref.current!.isAdmin).toBe(true);
+    expect(ref.current!.workspaceId).toBe('workspace-1');
   });
 });

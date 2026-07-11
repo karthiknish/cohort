@@ -125,14 +125,14 @@ export function ConversationListPane({ channelCount, dmCount, filteredItems, isL
 
         <Tabs value={sourceFilter} onValueChange={handleSourceFilterChange}>
           <TabsList className="flex h-auto w-full flex-wrap gap-0.5 bg-muted/50 p-1">
-            <TabsTrigger value="all" className="flex-1 text-xs data-[state=active]:shadow-sm">
-              All <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{channelCount + dmCount}</Badge>
+            <TabsTrigger value="all" className="group flex-1 text-xs data-[active]:shadow-sm">
+              All <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px] group-data-[active]:bg-primary-foreground/20 group-data-[active]:text-primary-foreground">{channelCount + dmCount}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="channel" className="flex-1 text-xs data-[state=active]:shadow-sm">
+            <TabsTrigger value="channel" className="group flex-1 text-xs data-[active]:shadow-sm">
               <Hash className="mr-0.5 size-3"/>
               {channelCount}
             </TabsTrigger>
-            <TabsTrigger value="direct_message" className="flex-1 text-xs data-[state=active]:shadow-sm">
+            <TabsTrigger value="direct_message" className="group flex-1 text-xs data-[active]:shadow-sm">
               <MessageCircle className="mr-0.5 size-3"/>
               {dmCount}
             </TabsTrigger>

@@ -353,7 +353,7 @@ export function QuickSearchInput({ onSearch, placeholder = 'Search messages...',
     return (<form onSubmit={handleSubmit} className={cn('relative', className)}>
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"/>
       <Input placeholder={placeholder} value={value} onChange={onQuickSearchChange} className="pl-9"/>
-      {value && (<button type="button" onClick={handleClear} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+      {value && (<button type="button" aria-label="Clear search" onClick={handleClear} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
           <X className="size-4"/>
         </button>)}
     </form>);

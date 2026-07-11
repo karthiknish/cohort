@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePrevious } from '@/shared/hooks/use-previous';
 import type { ReactNode } from 'react';
-import { AlertCircle, Hash, Inbox, MessageCircle, Plus, Search, Sparkles } from 'lucide-react';
+import { AlertCircle, Hash, Inbox, Info, MessageCircle, Plus, Search } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
@@ -21,6 +21,7 @@ import type { DirectConversation, DirectMessage } from '../../hooks/use-direct-m
 import { directMessageToCollaborationMessage } from '../../lib/direct-message-collaboration';
 import type { PendingAttachment, ReactionPendingState, SendMessageOptions, ThreadCursorsState, ThreadErrorsState, ThreadLoadingState, ThreadMessagesState } from '../../hooks/types';
 import { useChannelPresence } from '../../hooks/use-channel-presence';
+import { usePreview } from '@/shared/contexts/preview-context';
 import type { Channel } from '../../types';
 import { buildCollaborationChannelShareUrl, buildCollaborationDmShareUrl, CHANNEL_TYPE_COLORS, CHAT_CONVERSATION_ROW_CLASS, CHAT_LIST_PREVIEW_CLASS, formatConversationSnippet, } from '../../utils';
 import { collaborationToUnifiedMessage } from '../message-list-utils';
@@ -59,6 +60,7 @@ function ChannelConversationPaneInner({ listState, searchState, composerState, c
     const { canLoadMore, loading: isCurrentChannelLoading, loadingMore } = listState;
     const { active: isChannelSearchActive, searching: searchingMessages } = searchState;
     const { sending, uploading } = composerState;
+    const { isPreviewMode } = usePreview();
     const [replyingToMessage, setReplyingToMessage] = useState<CollaborationMessage | null>(null);
     const threadMessagesById = (() => {
         const byId = new Map<string, CollaborationMessage>();
@@ -157,10 +159,18 @@ function ChannelConversationPaneInner({ listState, searchState, composerState, c
         const errorBanner = messagesError ? (<div className="mx-4 mt-4">
         <MessagesErrorState error={messagesError} onRetry={onRetryMessages} isRetrying={searchingMessages && isChannelSearchActive}/>
       </div>) : null;
-        if (!missingDeepLinkBanner && !errorBanner) {
+        const previewBanner = isPreviewMode ? (<Alert className="mx-4 mt-4 border-primary/20 bg-primary/5 text-primary">
+        <Info className="size-4"/>
+        <AlertTitle>Preview mode</AlertTitle>
+        <AlertDescription>
+          Live presence, typing, and real-time updates are not available in the sample workspace.
+        </AlertDescription>
+      </Alert>) : null;
+        if (!missingDeepLinkBanner && !errorBanner && !previewBanner) {
             return null;
         }
         return (<>
+        {previewBanner}
         {missingDeepLinkBanner}
         {errorBanner}
       </>);

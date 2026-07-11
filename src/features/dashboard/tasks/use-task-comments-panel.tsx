@@ -1,6 +1,6 @@
 'use client';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useMemo, useReducer, useRef } from 'react';
 import { useConvex, useMutation, useQuery } from 'convex/react';
 import { notifySuccess } from '@/lib/notifications';
 import { filesApi } from '@/lib/convex-api';
@@ -155,10 +155,10 @@ export function taskCommentsPanelReducer(state: TaskCommentsPanelState, action: 
     }
 }
 export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
-    const { taskId, workspaceId, userId, userName, userRole, participants, onCommentCountChange, } = props;
+    const { taskId, workspaceId, userId, userName, userRole, participants, } = props;
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const convex = useConvex();
-    const convexEnabled = isConvexRealtimeEnabled() && Boolean(workspaceId);
+    const convexEnabled = isConvexRealtimeEnabled() && Boolean(workspaceId) && Boolean(taskId);
     const convexRows = useQuery(generatedApi.taskComments.listForTask, convexEnabled
         ? {
             workspaceId: String(workspaceId),
@@ -238,13 +238,7 @@ export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
         });
     })();
     const loading = convexEnabled && convexRows === undefined;
-    const previousCommentCountRef = useRef(comments.length);
-    useEffect(() => {
-        if (onCommentCountChange && previousCommentCountRef.current !== comments.length) {
-            previousCommentCountRef.current = comments.length;
-            onCommentCountChange(comments.length);
-        }
-    }, [comments.length, onCommentCountChange]);
+    const commentCount = comments.length;
     const activeReplyTo = (() => {
         if (!replyTo)
             return null;
@@ -453,9 +447,9 @@ export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
         dispatch({ type: 'setDeleteTarget', deleteTarget: comment });
     };
     const threadList = (<TaskCommentsThreadList loading={loading} roots={threaded.roots} repliesByParent={threaded.repliesByParent} replyToId={activeReplyTo?.id ?? null} editingCommentId={activeEditingCommentId} deletingCommentId={deletingCommentId} canManageComment={canManageComment} onStartReply={handleStartReply} onStartEdit={handleStartEdit} onRequestDelete={handleRequestDelete}/>);
-    return (<>
+    const view = (<>
       <div className="space-y-6">
-        <TaskCommentsSummaryHeader commentsCount={comments.length} replyCount={threaded.replyCount} replyTo={activeReplyTo} editingCommentId={activeEditingCommentId}/>
+        <TaskCommentsSummaryHeader commentsCount={commentCount} replyCount={threaded.replyCount} replyTo={activeReplyTo} editingCommentId={activeEditingCommentId}/>
         {threadList}
         <div className="border-t border-border pt-6">
           <TaskCommentsComposerSection fileInputRef={fileInputRef} replyTo={activeReplyTo} editingCommentId={activeEditingCommentId} composerTitle={composerTitle} composerDescription={composerDescription} composerPlaceholder={composerPlaceholder} pendingAttachments={pendingAttachments} uploading={uploading} isSubmitting={isSubmitting} composerValue={composerValue} composerParticipants={composerParticipants} onReset={resetComposer} onAddAttachments={handleAddAttachments} onRemovePendingAttachment={handleRemovePendingAttachment} onAttachClick={handleAttachClick} onComposerChange={handleComposerChange} onSubmit={handleSubmit}/>
@@ -464,4 +458,5 @@ export function useTaskCommentsPanel(props: TaskCommentsPanelProps) {
 
       <TaskCommentsDeleteDialog deleteTarget={deleteTarget} deletingCommentId={deletingCommentId} onClose={handleCloseDeleteDialog} onConfirm={handleConfirmDelete}/>
     </>);
+    return { view, comments, commentCount, loading };
 }

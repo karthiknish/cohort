@@ -473,6 +473,7 @@ export function CollaborationDashboardV2() {
       if (draftKey) clearDraft(draftKey);
       if (isThreadReply) setReplyingToMessage(null);
       void stopTyping();
+      setSending(false);
     } catch (error) {
       logError(error, 'collaboration-dashboard-v2:handleSendMessage');
       reportConvexFailure({
@@ -481,7 +482,6 @@ export function CollaborationDashboardV2() {
         title: 'Message not sent',
         fallbackMessage: 'Could not send your message. Please try again.',
       });
-    } finally {
       setSending(false);
     }
   }, [
@@ -900,6 +900,7 @@ export function CollaborationDashboardV2() {
         forwardingMessage={forwardingMessage}
         setForwardingMessage={setForwardingMessage}
         channels={channels}
+        currentChannelId={effectiveSelectedChannel?.id ?? null}
         taskModal={taskModal}
         channelExtrasForwardDialog={channelExtrasForwardDialog}
       />

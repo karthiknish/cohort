@@ -11,25 +11,7 @@ import { MotionPressable } from '@/shared/ui/motion-primitives';
 import { cn } from '@/lib/utils';
 import { CHAT_CONVERSATION_ROW_CLASS, CHAT_LIST_PREVIEW_CLASS, formatConversationSnippet } from '../utils';
 import type { DirectConversation } from '../hooks/use-direct-messages';
-function formatRelativeTime(ms: number | null | undefined): string {
-    if (!ms)
-        return '';
-    const date = new Date(ms);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffMins < 1)
-        return 'now';
-    if (diffMins < 60)
-        return `${diffMins}m`;
-    if (diffHours < 24)
-        return `${diffHours}h`;
-    if (diffDays < 7)
-        return `${diffDays}d`;
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
+import { ClientRelativeTime } from '@/shared/components/client-relative-time';
 function getInitials(name: string): string {
     return name
         .split(' ')
@@ -112,9 +94,7 @@ export function DMSidebar({ conversations, selectedConversation, onSelectConvers
                       <span className={cn('truncate text-sm', hasUnread ? 'font-semibold' : 'font-medium', isSelected ? 'text-primary' : 'text-foreground')}>
                         {conversation.otherParticipantName}
                       </span>
-                      {conversation.lastMessageAtMs && (<span className="text-[10px] text-muted-foreground shrink-0">
-                          {formatRelativeTime(conversation.lastMessageAtMs)}
-                        </span>)}
+                      {conversation.lastMessageAtMs && (<ClientRelativeTime value={conversation.lastMessageAtMs} className="text-[10px] text-muted-foreground shrink-0" />)}
                     </div>
                     <div className="flex items-center gap-1 mt-0.5">
                       {conversation.isArchived && (<Archive className="size-3 text-muted-foreground shrink-0"/>)}

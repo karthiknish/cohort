@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, type ChangeEvent, type RefObject } from 'react';
-import { formatDistanceToNowStrict } from 'date-fns';
 import { LoaderCircle, MoreHorizontal, Paperclip, Pencil, Reply, Send, Trash2, X } from 'lucide-react';
+import { ClientRelativeTime } from '@/shared/components/client-relative-time';
 import { MessageAttachments } from '@/features/dashboard/collaboration/components/message-attachments';
 import { PendingAttachmentsList } from '@/features/dashboard/collaboration/components/message-composer';
 import { MessageContent } from '@/features/dashboard/collaboration/components/message-content';
@@ -24,14 +24,6 @@ function getInitials(name: string | null | undefined): string {
     if (parts.length === 0)
         return 'TC';
     return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('');
-}
-function formatCommentTimestamp(comment: TaskComment): string {
-    const source = comment.updatedAt ?? comment.createdAt;
-    if (!source)
-        return '';
-    const date = new Date(source);
-    const relative = formatDistanceToNowStrict(date, { addSuffix: true });
-    return comment.isEdited ? `${relative} · edited` : relative;
 }
 function sortCommentsChronologically(items: TaskComment[]): TaskComment[] {
     return items.toSorted((a, b) => {
@@ -84,7 +76,7 @@ function TaskCommentThreadItem({ comment, depth = 0, repliesByParent, replyToId,
                       {comment.authorRole}
                     </span>) : null}
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{formatCommentTimestamp(comment)}</p>
+                <p className="mt-1 text-xs text-muted-foreground"><ClientRelativeTime value={comment.updatedAt ?? comment.createdAt}>{(label) => comment.isEdited ? `${label} · edited` : label}</ClientRelativeTime></p>
               </div>
 
               <div className="flex items-center gap-1">

@@ -50,6 +50,7 @@ type TaskSheetFieldsProps = {
     projectOptionsLoading?: boolean;
     allowProjectSelection?: boolean;
 };
+const EMPTY_PROJECT_OPTIONS: TaskProjectOption[] = [];
 function PrioritySelectItem({ value }: {
     value: TaskPriority;
 }) {
@@ -58,7 +59,7 @@ function PrioritySelectItem({ value }: {
       {formatPriorityLabel(value)}
     </span>);
 }
-export function TaskSheetFields({ ids, formState, setFormState, disabled, mentionableUsers, titlePlaceholder, clientPlaceholder, projectPlaceholder, clientHelpText, projectHelpText, dueDateLayout = 'full', showStatus = true, projectOptions = [], projectOptionsLoading = false, allowProjectSelection = false, }: TaskSheetFieldsProps) {
+export function TaskSheetFields({ ids, formState, setFormState, disabled, mentionableUsers, titlePlaceholder, clientPlaceholder, projectPlaceholder, clientHelpText, projectHelpText, dueDateLayout = 'full', showStatus = true, projectOptions = EMPTY_PROJECT_OPTIONS, projectOptionsLoading = false, allowProjectSelection = false, }: TaskSheetFieldsProps) {
     const { generate, isGenerating } = useAiGenerate('task');
     const handleDueDateSelect = (date: Date | undefined) => {
         setFormState((prev) => ({

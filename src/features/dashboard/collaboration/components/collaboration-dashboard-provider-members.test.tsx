@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useImperativeHandle, type RefObject } from 'react';
 
 const useQueryMock = vi.fn();
 vi.mock('convex/react', () => ({
@@ -57,9 +58,9 @@ vi.mock('../hooks/use-direct-messages', () => ({
 
 import { useCollaborationDashboard } from './collaboration-dashboard-provider';
 
-let captured: ReturnType<typeof useCollaborationDashboard> | null = null;
-function Harness() {
-  captured = useCollaborationDashboard();
+function Harness({ ref }: { ref: RefObject<ReturnType<typeof useCollaborationDashboard> | null> }) {
+  const value = useCollaborationDashboard();
+  useImperativeHandle(ref, () => value);
   return null;
 }
 
@@ -78,8 +79,9 @@ describe('useCollaborationDashboard workspace members', () => {
   });
 
   it('loads admin channel member options from workspace members instead of all users', () => {
-    renderToStaticMarkup(<Harness />);
-    const names = captured!.workspaceMembers.map((m) => m.name);
+    const ref = { current: null as ReturnType<typeof useCollaborationDashboard> | null };
+    renderToStaticMarkup(<Harness ref={ref} />);
+    const names = ref.current!.workspaceMembers.map((m) => m.name);
     expect(names).toContain('Alex Johnson');
     expect(names).toContain('Jordan Lee');
     expect(useQueryMock).toHaveBeenCalledWith('users.listWorkspaceMembers', {

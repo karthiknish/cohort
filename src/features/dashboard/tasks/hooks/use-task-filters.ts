@@ -9,6 +9,7 @@ import type { SortField, SortDirection, TaskParticipant } from '../task-types';
 import type { TaskListFiltersInput } from './task-list-filters';
 const TASK_VIEW_MODE_STORAGE_KEY = 'dashboard:tasks:view-mode';
 const TASK_VIEW_MODE_URL_PARAM = 'view';
+const STATUS_ORDER: Record<TaskStatus, number> = Object.fromEntries(TASK_STATUSES.map((status, index) => [status, index])) as Record<TaskStatus, number>;
 function getInitialTaskViewMode(): 'list' | 'grid' | 'board' {
     if (typeof window === 'undefined') {
         return 'list';
@@ -247,7 +248,7 @@ export function useTaskFilters({ tasks, userId, userName, participants = [], sel
                     comparison = a.title.localeCompare(b.title);
                     break;
                 case 'status':
-                    comparison = TASK_STATUSES.indexOf(a.status) - TASK_STATUSES.indexOf(b.status);
+                    comparison = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
                     break;
                 case 'priority':
                     comparison = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
@@ -306,8 +307,9 @@ export function useTaskFilters({ tasks, userId, userName, participants = [], sel
         });
         return Array.from(options).toSorted((a, b) => a.localeCompare(b));
     })();
+    const assigneeOptionsSet = new Set(assigneeOptions);
     const effectiveSelectedAssignee = (() => {
-        if (selectedAssignee !== 'all' && !assigneeOptions.includes(selectedAssignee)) {
+        if (selectedAssignee !== 'all' && !assigneeOptionsSet.has(selectedAssignee)) {
             return 'all';
         }
         return selectedAssignee;
