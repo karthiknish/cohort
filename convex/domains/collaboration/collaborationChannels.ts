@@ -7,6 +7,7 @@ import {
   type AuthenticatedMutationCtx,
   type AuthenticatedQueryCtx,
 } from '../../functions'
+import { loadWorkspaceUsers } from '../platform/users'
 
 type CollaborationChannelCtx = AuthenticatedQueryCtx | AuthenticatedMutationCtx
 
@@ -45,19 +46,6 @@ function normalizeName(value: string) {
 
 function toNameLower(value: string) {
   return normalizeName(value).toLowerCase()
-}
-
-async function loadWorkspaceUsers(ctx: CollaborationChannelCtx, workspaceId: string) {
-  const [membersByAgency, agencyAdmin] = await Promise.all([
-    ctx.db.query('users').withIndex('by_agencyId', (q) => q.eq('agencyId', workspaceId)).take(1000),
-    ctx.db.query('users').withIndex('by_legacyId', (q) => q.eq('legacyId', workspaceId)).unique(),
-  ])
-
-  const combined = agencyAdmin
-    ? [agencyAdmin, ...membersByAgency.filter((row) => row.legacyId !== agencyAdmin.legacyId)]
-    : membersByAgency
-
-  return combined.filter((row) => row.status !== 'disabled' && row.status !== 'suspended')
 }
 
 async function buildMemberSummaries(

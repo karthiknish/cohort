@@ -182,7 +182,14 @@ export const sendMessage = zWorkspaceMutation({
 
     const legacyId = generateLegacyId()
     const now = Date.now()
-    const snippet = args.content.length > 100 ? args.content.substring(0, 97) + '...' : args.content
+    const snippet = (() => {
+      const text = args.content.trim()
+      if (text) return text.length > 100 ? text.substring(0, 97) + '...' : text
+      const attachments = args.attachments ?? []
+      if (attachments.length === 0) return ''
+      if (attachments.length === 1) return `Sent ${attachments[0]?.name ?? 'an attachment'}`
+      return `Sent ${attachments.length} attachments`
+    })()
 
     const messageId = await ctx.db.insert('directMessages', {
       workspaceId: args.workspaceId,

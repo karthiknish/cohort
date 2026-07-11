@@ -10,6 +10,8 @@ import {
   zRateLimitedAuthenticatedMutation,
   zRateLimitedIdentityMutation,
   zWorkspaceQuery,
+  type AuthenticatedQueryCtx,
+  type AuthenticatedMutationCtx,
 } from '../../functions'
 import * as z from 'zod'
 import { Errors } from '../../errors'
@@ -106,7 +108,28 @@ function serializeDirectoryUser(row: {
     role: row.role ?? undefined,
   }
 }
- 
+
+type WorkspaceUserCtx = AuthenticatedQueryCtx | AuthenticatedMutationCtx
+
+export async function loadWorkspaceUsers(ctx: WorkspaceUserCtx, workspaceId: string) {
+  const [membersByAgency, agencyAdmin] = await Promise.all([
+    ctx.db.query('users').withIndex('by_agencyId', (q) => q.eq('agencyId', workspaceId)).take(1000),
+    ctx.db.query('users').withIndex('by_legacyId', (q) => q.eq('legacyId', workspaceId)).unique(),
+  ])
+
+  const combined = agencyAdmin
+    ? [agencyAdmin, ...membersByAgency.filter((r) => r.legacyId !== agencyAdmin.legacyId)]
+    : membersByAgency
+
+  const workspaceUsers = combined.filter((row) => row.status !== 'disabled' && row.status !== 'suspended')
+
+  const hasOtherMembers = workspaceUsers.some((row) => row.legacyId !== ctx.user.legacyId)
+  if (hasOtherMembers) return workspaceUsers
+
+  const fallbackRows = await ctx.db.query('users').take(1000)
+  return fallbackRows.filter((row) => row.status !== 'disabled' && row.status !== 'suspended')
+}
+
 const userZ = z.object({
   legacyId: z.string(),
   email: z.string().nullable(),
@@ -186,29 +209,12 @@ export const listWorkspaceMembers = zWorkspaceQuery({
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 200, 1), 500)
 
-    // Query users who are part of this workspace:
-    // 1. Users whose agencyId matches the workspaceId (team members)
-    // 2. Users whose legacyId matches the workspaceId (agency admin/owner)
-    const [membersByAgency, agencyAdmin] = await Promise.all([
-      ctx.db
-        .query('users')
-        .withIndex('by_agencyId', (q) => q.eq('agencyId', args.workspaceId))
-        .take(limit),
-      ctx.db
-        .query('users')
-        .withIndex('by_legacyId', (q) => q.eq('legacyId', args.workspaceId))
-        .unique(),
-    ])
+    const workspaceUsers = await loadWorkspaceUsers(ctx, args.workspaceId)
 
-    const allRows = agencyAdmin
-      ? [agencyAdmin, ...membersByAgency.filter((r) => r.legacyId !== agencyAdmin.legacyId)]
-      : membersByAgency
-
-    return allRows.slice(0, limit).flatMap((row) =>
-      row.status !== 'disabled' && row.status !== 'suspended'
-        ? [serializeDirectoryUser(row)]
-        : [],
-    )
+    return workspaceUsers
+      .filter((row) => row.legacyId !== ctx.user.legacyId)
+      .slice(0, limit)
+      .map((row) => serializeDirectoryUser(row))
   },
 })
 
