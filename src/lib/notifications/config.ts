@@ -1,5 +1,5 @@
 // Notification configuration and utility functions
-import { calculateBackoffDelay as calculateBackoffDelayLib, fetchWithTimeout as fetchWithTimeoutLib, parseRetryAfterMs, sleep } from '@/lib/retry-utils';
+import { fetchWithTimeout as fetchWithTimeoutLib, parseRetryAfterMs, sleep } from '@/lib/retry-utils';
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
@@ -11,21 +11,16 @@ export const RETRY_CONFIG = {
     maxDelayMs: 30000,
     requestTimeoutMs: 10000,
 } as const;
+export const BACKOFF_RETRY_CONFIG = {
+    maxRetries: RETRY_CONFIG.maxRetries,
+    baseDelayMs: RETRY_CONFIG.baseDelayMs,
+    maxDelayMs: RETRY_CONFIG.maxDelayMs,
+    jitterFactor: 1,
+} as const;
 // =============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
 export { sleep };
-/**
- * Calculate exponential backoff delay with decorrelated jitter
- */
-export function calculateBackoffDelay(attempt: number): number {
-    return calculateBackoffDelayLib(attempt, {
-        maxRetries: RETRY_CONFIG.maxRetries,
-        baseDelayMs: RETRY_CONFIG.baseDelayMs,
-        maxDelayMs: RETRY_CONFIG.maxDelayMs,
-        jitterFactor: 1,
-    });
-}
 /**
  * Parse Retry-After header value
  */

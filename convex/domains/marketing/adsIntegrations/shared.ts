@@ -4,6 +4,7 @@ import { v } from 'convex/values'
 import { z } from 'zod/v4'
 import { Errors, withErrorHandling } from '../../../errors'
 import { validateGoogleAdsDeveloperToken } from '@/services/integrations/google-ads/types'
+import { normalizeClientId } from '@/lib/normalizeClientId'
 import {
   authenticatedMutation,
   authenticatedQuery,
@@ -15,14 +16,10 @@ import {
   zWorkspaceQueryActive,
 } from '../../../functions'
 
+export { normalizeClientId }
+
 export function nowMs() {
   return Date.now()
-}
-
-export function normalizeClientId(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
 }
 
 export function assertCronKey(_ctx: { auth: { getUserIdentity: () => Promise<unknown> } }, args: { cronKey?: string | null }) {

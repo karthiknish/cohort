@@ -1,17 +1,9 @@
 import type { ActionCtx } from '../_generated/server'
 import { Errors } from '../errors'
+import { normalizeClientId } from '@/lib/normalizeClientId'
+import { isTokenExpiringSoon } from './isTokenExpiringSoon'
 
-export function normalizeClientId(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
-
-export function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
-  if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
-  const fiveMinutes = 5 * 60 * 1000
-  return expiresAtMs - Date.now() <= fiveMinutes
-}
+export { normalizeClientId }
 
 type FacebookIntegration = {
   accessToken?: string | null

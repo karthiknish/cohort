@@ -5,12 +5,7 @@ import { internal } from '/_generated/api'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from '../../../errors'
 import { requireWorkspaceActionAccess } from '../../../functions'
-
-function normalizeClientId(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
+import { normalizeClientId } from '@/lib/normalizeClientId'
 
 export const discoverPages = action({
   args: {

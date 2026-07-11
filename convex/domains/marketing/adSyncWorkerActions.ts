@@ -10,12 +10,8 @@ import { resolveMetricCurrency } from '@/domain/ads/money'
 import { normalizeSurfaceId } from '@/domain/ads/provider'
 import type { CanonicalAdsProviderId } from '@/domain/ads/provider'
 import { resolveTikTokAccessToken } from '../../lib/tiktokAdsAccess'
-
-function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
-  if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
-  const fiveMinutes = 5 * 60 * 1000
-  return expiresAtMs - Date.now() <= fiveMinutes
-}
+import { normalizeClientId } from '@/lib/normalizeClientId'
+import { isTokenExpiringSoon } from '../../lib/isTokenExpiringSoon'
 
 function firstEnvValue(keys: readonly string[]): string | null {
   for (const key of keys) {
@@ -73,12 +69,6 @@ async function refreshGoogleAnalyticsAccessTokenInline(options: {
     )
   }
   return payload.access_token
-}
-
-function normalizeClientId(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
 }
 
 type SyncRawPayload =

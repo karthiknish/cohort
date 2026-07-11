@@ -4,6 +4,7 @@ import { createConvexAdminClient } from '@/lib/convex-admin';
 import type { AuthResult } from '@/lib/server-auth';
 import { resolveWorkspaceIdForUser } from '@/lib/workspace';
 import { logger } from '@/lib/logger';
+import { normalizeClientId } from '@/lib/normalizeClientId';
 import type { AdIntegration, NormalizedMetric, SyncJob } from '@/types/integrations';
 type TimestampInput = Date | string | number | unknown | null | undefined;
 function toMillis(value: TimestampInput): number | null {
@@ -58,12 +59,6 @@ function getConvexClientForUser(userId: string): ConvexHttpClient | null {
         isCron: false,
     };
     return createConvexAdminClient({ auth });
-}
-function normalizeClientId(value: unknown): string | null {
-    if (typeof value !== 'string')
-        return null;
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
 }
 function shouldUseConvexAds(): boolean {
     return Boolean(process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL);

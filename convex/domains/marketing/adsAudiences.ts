@@ -6,23 +6,13 @@ import { v } from 'convex/values'
 import { Errors, withErrorHandling } from '../../errors'
 import { resolveLinkedInAccessToken } from '../../lib/linkedinAdsAccess'
 import { resolveTikTokAccessToken } from '../../lib/tiktokAdsAccess'
+import { normalizeClientId } from '@/lib/normalizeClientId'
+import { isTokenExpiringSoon } from '../../lib/isTokenExpiringSoon'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
     throw Errors.auth.unauthorized()
   }
-}
-
-function normalizeClientId(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
-
-function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
-  if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
-  const fiveMinutes = 5 * 60 * 1000
-  return expiresAtMs - Date.now() <= fiveMinutes
 }
 
 export const createAudience = action({

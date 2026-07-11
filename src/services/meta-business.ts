@@ -24,9 +24,6 @@ const OAUTH_RETRY_CONFIG = {
     maxDelayMs: 5000,
     jitterFactor: 0.2,
 };
-function calculateBackoffDelay(attempt: number): number {
-    return calculateBackoffDelayLib(attempt, OAUTH_RETRY_CONFIG);
-}
 type MetaOAuthStatePayload = Omit<MetaOAuthContext, 'createdAt'> & {
     createdAt?: number;
 };
@@ -142,7 +139,7 @@ export async function completeMetaOAuthFlow(options: {
                     errorMessage: errorMessage.substring(0, 200)
                 });
                 if (isRetryable && attempt < OAUTH_RETRY_CONFIG.maxRetries - 1) {
-                    const delayMs = calculateBackoffDelay(attempt);
+                    const delayMs = calculateBackoffDelayLib(attempt, OAUTH_RETRY_CONFIG);
                     logger.info('[Meta OAuth Flow] Retrying long-lived token exchange', { userId, delayMs });
                     await sleep(delayMs);
                     return attemptExchange(attempt + 1);
@@ -173,7 +170,7 @@ export async function completeMetaOAuthFlow(options: {
                 isRetryable,
             });
             if (isRetryable && attempt < OAUTH_RETRY_CONFIG.maxRetries - 1) {
-                const delayMs = calculateBackoffDelay(attempt);
+                const delayMs = calculateBackoffDelayLib(attempt, OAUTH_RETRY_CONFIG);
                 await sleep(delayMs);
                 return attemptExchange(attempt + 1);
             }

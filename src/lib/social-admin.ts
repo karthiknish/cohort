@@ -4,6 +4,7 @@ import type { AuthResult } from '@/lib/server-auth';
 import { resolveWorkspaceIdForUser } from '@/lib/workspace';
 import { logger } from '@/lib/logger';
 import { SOCIAL_META_SCOPES } from '@/services/facebook-oauth';
+import { normalizeClientId } from '@/lib/normalizeClientId';
 type TimestampInput = Date | string | number | unknown | null | undefined;
 function toMillis(value: TimestampInput): number | null {
     if (value === null || value === undefined)
@@ -20,12 +21,6 @@ function toMillis(value: TimestampInput): number | null {
         return Number.isNaN(parsed) ? null : parsed;
     }
     return null;
-}
-function normalizeClientId(value: unknown): string | null {
-    if (typeof value !== 'string')
-        return null;
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
 }
 function getConvexClientForUser(userId: string): ConvexHttpClient | null {
     const auth: AuthResult = {

@@ -6,24 +6,11 @@ import type { GoogleCreative } from '../../../../src/services/integrations/googl
 import type { TikTokCreative } from '../../../../src/services/integrations/tiktok-ads'
 import type { LinkedInAd, LinkedInCreative } from '../../../../src/services/integrations/linkedin-ads'
 import type { MetaCreative } from '../../../../src/services/integrations/meta-ads'
+import { normalizeClientId } from '@/lib/normalizeClientId'
+import { isTokenExpiringSoon } from '../../../lib/isTokenExpiringSoon'
+import { requireIdentity } from '../../../lib/functions/auth'
 
-export function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
-
-export function normalizeClientId(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
-
-export function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
-  if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
-  const fiveMinutes = 5 * 60 * 1000
-  return expiresAtMs - Date.now() <= fiveMinutes
-}
+export { normalizeClientId, isTokenExpiringSoon, requireIdentity }
 
 export function sanitizeIdempotencyToken(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, '_')

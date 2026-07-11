@@ -8,7 +8,8 @@ import type { ProjectRecord } from '@/types/projects';
 import type { WorkspaceNotificationRole } from '@/types/notifications';
 import { asErrorMessage } from '@/lib/convex-errors';
 import { logger } from '@/lib/logger';
-import { RETRY_CONFIG, sleep, calculateBackoffDelay } from './config';
+import { calculateBackoffDelay } from '@/lib/retry-utils';
+import { RETRY_CONFIG, sleep, BACKOFF_RETRY_CONFIG } from './config';
 import type { WorkspaceNotificationInput, WorkspaceNotificationRecipients } from './types';
 // Lazy-init Convex client with admin auth
 let _convexClient: ConvexHttpClient | null = null;
@@ -130,7 +131,7 @@ async function createWorkspaceNotification(input: WorkspaceNotificationInput): P
             // Retry on transient errors
             if (attempt < RETRY_CONFIG.maxRetries - 1) {
                 logger.warn(`[notifications] Convex write failed, retrying...`, { error: asErrorMessage(error) });
-                await sleep(calculateBackoffDelay(attempt));
+                await sleep(calculateBackoffDelay(attempt, BACKOFF_RETRY_CONFIG));
                 return attemptCreate(attempt + 1);
             }
         }

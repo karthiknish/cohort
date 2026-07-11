@@ -12,20 +12,13 @@ const TOKEN_REFRESH_CONFIG = {
     maxRetries: 3,
     baseDelayMs: 1000,
     maxDelayMs: 10000,
+    jitterFactor: 0.3,
 };
 function computeExpiry(expiresInSeconds?: number): Date | null {
     if (!expiresInSeconds || !Number.isFinite(expiresInSeconds)) {
         return null;
     }
     return new Date(Date.now() + expiresInSeconds * 1000 - 30 * 1000);
-}
-function calculateBackoffDelay(attempt: number): number {
-    return calculateBackoffDelayLib(attempt, {
-        maxRetries: TOKEN_REFRESH_CONFIG.maxRetries,
-        baseDelayMs: TOKEN_REFRESH_CONFIG.baseDelayMs,
-        maxDelayMs: TOKEN_REFRESH_CONFIG.maxDelayMs,
-        jitterFactor: 0.3,
-    });
 }
 export async function refreshLinkedInAccessToken({ userId, clientId }: RefreshParams): Promise<string> {
     const integration = await getAdIntegration({ userId, providerId: 'linkedin', clientId });
@@ -73,7 +66,7 @@ export async function refreshLinkedInAccessToken({ userId, clientId }: RefreshPa
                 if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
                     logger.warn(`[LinkedIn Token Refresh] Attempt ${attempt + 1} failed (${response.status}), retrying...`, { userId });
                     lastError = new IntegrationTokenError(`Failed to refresh LinkedIn token (${response.status}): ${errorMessage}`, 'linkedin', userId, { isRetryable: true, httpStatus: response.status });
-                    await sleep(calculateBackoffDelay(attempt));
+                    await sleep(calculateBackoffDelayLib(attempt, TOKEN_REFRESH_CONFIG));
                     return attemptRefresh(attempt + 1);
                 }
                 if (parsedError.error === 'invalid_grant' || parsedError.error === 'invalid_request') {
@@ -110,7 +103,7 @@ export async function refreshLinkedInAccessToken({ userId, clientId }: RefreshPa
             lastError = error instanceof Error ? error : new Error(asErrorMessage(error));
             if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
                 logger.warn(`[LinkedIn Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, { message: lastError.message });
-                await sleep(calculateBackoffDelay(attempt));
+                await sleep(calculateBackoffDelayLib(attempt, TOKEN_REFRESH_CONFIG));
                 return attemptRefresh(attempt + 1);
             }
         }

@@ -2,12 +2,7 @@ import { internalMutation, mutation } from '../../../_generated/server'
 import { v } from 'convex/values'
 import { Errors } from '../../../errors'
 import { requireWorkspaceAccess } from '../../../functions'
-
-function normalizeClientId(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
+import { normalizeClientId } from '@/lib/normalizeClientId'
 
 function nowMs() {
   return Date.now()

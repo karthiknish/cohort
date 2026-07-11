@@ -5,6 +5,7 @@ import { internal } from '/_generated/api'
 import { v } from 'convex/values'
 
 import { Errors, withErrorHandling } from '../../errors'
+import { normalizeClientId } from '@/lib/normalizeClientId'
 
 /** Avoid TS2589 when the generated `internal` union grows large. */
 function internalRef<T>(ref: T): T {
@@ -14,12 +15,6 @@ function internalRef<T>(ref: T): T {
 /** Submodule paths on generated API; `any` avoids TS2589 + strict indexed access. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const socialInternal = internal as any
-
-function normalizeClientId(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
 
 function normalizeRawPayload(value: unknown): string | number | boolean | null | undefined {
   if (value === null || value === undefined) return null

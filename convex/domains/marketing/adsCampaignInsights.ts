@@ -11,17 +11,13 @@ import { metaAdsClient } from '@/services/integrations/shared/base-client'
 import { Errors, withErrorHandling } from '../../errors'
 import { resolveGoogleAdsDeveloperToken } from './adsIntegrations/shared'
 import type { PlatformInsightResult } from '@/services/integrations/shared/insights-types'
+import { normalizeClientId } from '@/lib/normalizeClientId'
+import { isTokenExpiringSoon } from '../../lib/isTokenExpiringSoon'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
     throw Errors.auth.unauthorized()
   }
-}
-
-function normalizeClientId(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
 }
 
 function todayIsoDate(): string {
@@ -32,12 +28,6 @@ function daysAgoIsoDate(daysAgo: number): string {
   const d = new Date()
   d.setDate(d.getDate() - daysAgo)
   return d.toISOString().split('T')[0]!
-}
-
-function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
-  if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
-  const fiveMinutes = 5 * 60 * 1000
-  return expiresAtMs - Date.now() <= fiveMinutes
 }
 
 type SeriesRow = {

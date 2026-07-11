@@ -7,7 +7,8 @@ import { cache } from 'react';
 import * as Brevo from '@getbrevo/brevo';
 import { ConvexHttpClient } from 'convex/browser';
 import { internal } from '/_generated/api';
-import { RETRY_CONFIG, sleep, calculateBackoffDelay } from './config';
+import { calculateBackoffDelay } from '@/lib/retry-utils';
+import { RETRY_CONFIG, sleep, BACKOFF_RETRY_CONFIG } from './config';
 import { integrationAlertTemplate } from './email-templates/integration-alert';
 import { meetingCancelledTemplate } from './email-templates/meeting-cancelled';
 import { meetingRescheduledTemplate } from './email-templates/meeting-rescheduled';
@@ -169,7 +170,7 @@ export async function sendTransactionalEmail(options: BrevoSendOptions): Promise
             const retryable = statusCode === 429 || (statusCode && statusCode >= 500);
             if (retryable && attempt < RETRY_CONFIG.maxRetries - 1) {
                 logger.warn(`[brevo] send failed (${statusCode}), retrying...`);
-                await sleep(calculateBackoffDelay(attempt));
+                await sleep(calculateBackoffDelay(attempt, BACKOFF_RETRY_CONFIG));
                 return attemptSend(attempt + 1);
             }
         }

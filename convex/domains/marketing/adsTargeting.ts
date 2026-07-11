@@ -10,23 +10,13 @@ import type { GoogleAudienceTargeting } from '@/services/integrations/google-ads
 import type { TikTokAudienceTargeting } from '@/services/integrations/tiktok-ads/types'
 import type { LinkedInAudienceTargeting } from '@/services/integrations/linkedin-ads/types'
 import type { MetaAudienceTargeting } from '@/services/integrations/meta-ads/types'
+import { normalizeClientId } from '@/lib/normalizeClientId'
+import { isTokenExpiringSoon } from '../../lib/isTokenExpiringSoon'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
     throw Errors.auth.unauthorized()
   }
-}
-
-function normalizeClientId(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
-
-function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
-  if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
-  const fiveMinutes = 5 * 60 * 1000
-  return expiresAtMs - Date.now() <= fiveMinutes
 }
 
 export type NormalizedTargeting = {

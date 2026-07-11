@@ -23,6 +23,7 @@ const TOKEN_REFRESH_CONFIG = {
     maxRetries: 3,
     baseDelayMs: 1000,
     maxDelayMs: 10000,
+    jitterFactor: 0.3,
 };
 // TTL for stale promise cleanup (5 minutes)
 const PROMISE_TTL_MS = 5 * 60 * 1000;
@@ -47,14 +48,6 @@ function computeExpiry(expiresInSeconds?: number): Date | null {
     // Subtract 30 seconds buffer to ensure we refresh before actual expiry
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000 - 30 * 1000);
     return expiresAt;
-}
-function calculateBackoffDelay(attempt: number): number {
-    return calculateBackoffDelayLib(attempt, {
-        maxRetries: TOKEN_REFRESH_CONFIG.maxRetries,
-        baseDelayMs: TOKEN_REFRESH_CONFIG.baseDelayMs,
-        maxDelayMs: TOKEN_REFRESH_CONFIG.maxDelayMs,
-        jitterFactor: 0.3,
-    });
 }
 type AnyTimestamp = {
     toMillis: () => number;
@@ -151,7 +144,7 @@ export async function refreshTikTokAccessToken({ userId, clientId }: RefreshPara
                 if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
                     // Check for Retry-After header
                     const retryAfter = response.headers.get('Retry-After');
-                    let delayMs = calculateBackoffDelay(attempt);
+                    let delayMs = calculateBackoffDelayLib(attempt, TOKEN_REFRESH_CONFIG);
                     if (retryAfter) {
                         const retryAfterSeconds = parseInt(retryAfter, 10);
                         if (!isNaN(retryAfterSeconds)) {
@@ -184,7 +177,7 @@ export async function refreshTikTokAccessToken({ userId, clientId }: RefreshPara
                 const isRetryableCode = payload.code === 40100;
                 if (isRetryableCode && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
                     logger.warn(`[TikTok Token Refresh] TikTok error code ${payload.code} on attempt ${attempt + 1}, retrying...`);
-                    await sleep(calculateBackoffDelay(attempt));
+                    await sleep(calculateBackoffDelayLib(attempt, TOKEN_REFRESH_CONFIG));
                     continue;
                 }
                 throw new IntegrationTokenError(payload.message || `TikTok refresh token response returned code ${payload.code}`, 'tiktok', userId, { isRetryable: false });
@@ -215,7 +208,7 @@ export async function refreshTikTokAccessToken({ userId, clientId }: RefreshPara
             lastError = error instanceof Error ? error : new Error(asErrorMessage(error));
             if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
                 logger.warn(`[TikTok Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, { message: lastError.message });
-                await sleep(calculateBackoffDelay(attempt));
+                await sleep(calculateBackoffDelayLib(attempt, TOKEN_REFRESH_CONFIG));
                 continue;
             }
         }
@@ -357,7 +350,7 @@ export async function refreshLinkedInAccessToken({ userId, clientId }: RefreshPa
                 if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
                     logger.warn(`[LinkedIn Token Refresh] Attempt ${attempt + 1} failed (${response.status}), retrying...`, { userId });
                     lastError = new IntegrationTokenError(`Failed to refresh LinkedIn token (${response.status}): ${errorMessage}`, 'linkedin', userId, { isRetryable: true, httpStatus: response.status });
-                    await sleep(calculateBackoffDelay(attempt));
+                    await sleep(calculateBackoffDelayLib(attempt, TOKEN_REFRESH_CONFIG));
                     return attemptRefresh(attempt + 1);
                 }
                 // Check for invalid_grant (token revoked or expired)
@@ -397,7 +390,7 @@ export async function refreshLinkedInAccessToken({ userId, clientId }: RefreshPa
             lastError = error instanceof Error ? error : new Error(asErrorMessage(error));
             if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
                 logger.warn(`[LinkedIn Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, { message: lastError.message });
-                await sleep(calculateBackoffDelay(attempt));
+                await sleep(calculateBackoffDelayLib(attempt, TOKEN_REFRESH_CONFIG));
                 return attemptRefresh(attempt + 1);
             }
         }

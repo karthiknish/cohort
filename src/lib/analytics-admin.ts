@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 import type { AuthResult } from '@/lib/server-auth';
 import type { AdIntegration } from '@/types/integrations';
 import { resolveWorkspaceIdForUser } from '@/lib/workspace';
+import { normalizeClientId } from '@/lib/normalizeClientId';
 type TimestampInput = Date | string | number | unknown | null | undefined;
 function toMillis(value: TimestampInput): number | null {
     if (value == null)
@@ -34,9 +35,6 @@ function toMillis(value: TimestampInput): number | null {
 function getConvexClientForUser(userId: string): ConvexHttpClient | null {
     const auth: AuthResult = { uid: userId, email: null, name: null, claims: { provider: 'convex' }, isCron: false };
     return createConvexAdminClient({ auth });
-}
-function normalizeClientId(value: unknown): string | null {
-    return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 async function executeMutation(convex: ConvexHttpClient, name: string, args: Record<string, unknown>) {
     return await convex.mutation(name as unknown as FunctionReference<'mutation'>, args);

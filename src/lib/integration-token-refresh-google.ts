@@ -13,6 +13,7 @@ const TOKEN_REFRESH_CONFIG = {
     maxRetries: 3,
     baseDelayMs: 1000,
     maxDelayMs: 10000,
+    jitterFactor: 0.3,
 };
 function readEnvValue(key: string): string | null {
     const value = process.env[key];
@@ -52,14 +53,6 @@ function computeExpiry(expiresInSeconds?: number): Date | null {
         return null;
     }
     return new Date(Date.now() + expiresInSeconds * 1000 - 30 * 1000);
-}
-function calculateBackoffDelay(attempt: number): number {
-    return calculateBackoffDelayLib(attempt, {
-        maxRetries: TOKEN_REFRESH_CONFIG.maxRetries,
-        baseDelayMs: TOKEN_REFRESH_CONFIG.baseDelayMs,
-        maxDelayMs: TOKEN_REFRESH_CONFIG.maxDelayMs,
-        jitterFactor: 0.3,
-    });
 }
 function resolveGoogleProvider(providerId?: 'google' | 'google-analytics'): 'google' | 'google-analytics' {
     return providerId === 'google-analytics' ? 'google-analytics' : 'google';
@@ -115,7 +108,7 @@ export async function refreshGoogleAccessToken({ userId, clientId, providerId }:
                 if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
                     logger.warn(`[Google Token Refresh] Attempt ${attempt + 1} failed (${response.status}), retrying...`, { userId });
                     lastError = new IntegrationTokenError(`Failed to refresh ${providerName} token (${response.status}): ${errorMessage}`, resolvedProviderId, userId, { isRetryable: true, httpStatus: response.status });
-                    await sleep(calculateBackoffDelay(attempt));
+                    await sleep(calculateBackoffDelayLib(attempt, TOKEN_REFRESH_CONFIG));
                     return attemptRefresh(attempt + 1);
                 }
                 if (parsedError.error === 'invalid_grant') {
@@ -166,7 +159,7 @@ export async function refreshGoogleAccessToken({ userId, clientId, providerId }:
             lastError = error instanceof Error ? error : new Error(asErrorMessage(error));
             if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
                 logger.warn(`[Google Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, { message: lastError.message });
-                await sleep(calculateBackoffDelay(attempt));
+                await sleep(calculateBackoffDelayLib(attempt, TOKEN_REFRESH_CONFIG));
                 return attemptRefresh(attempt + 1);
             }
         }

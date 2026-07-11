@@ -2,12 +2,7 @@ import { internalQuery } from '../../../_generated/server'
 import { v } from 'convex/values'
 import { z } from 'zod/v4'
 import { zWorkspaceQuery } from '../../../functions'
-
-function normalizeClientId(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
+import { normalizeClientId } from '@/lib/normalizeClientId'
 
 const socialIntegrationStatusZ = z.object({
   connected: z.boolean(),

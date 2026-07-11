@@ -1,8 +1,9 @@
 // Webhook notification functions (Email)
 import { asErrorMessage } from '@/lib/convex-errors';
 import { logger } from '@/lib/logger';
+import { calculateBackoffDelay } from '@/lib/retry-utils';
 import { NotificationError, NOTIFICATION_ERROR_CODES } from './errors';
-import { EMAIL_WEBHOOK_URL, RETRY_CONFIG, sleep, calculateBackoffDelay, parseRetryAfter, fetchWithTimeout, } from './config';
+import { EMAIL_WEBHOOK_URL, RETRY_CONFIG, sleep, parseRetryAfter, fetchWithTimeout, BACKOFF_RETRY_CONFIG, } from './config';
 import type { ContactPayload } from './types';
 // =============================================================================
 // EMAIL WEBHOOK
@@ -28,7 +29,7 @@ export async function notifyContactEmail(payload: ContactPayload): Promise<void>
             // Check for rate limiting
             if (response.status === 429) {
                 const retryAfter = parseRetryAfter(response.headers.get('Retry-After'));
-                const delayMs = retryAfter ?? calculateBackoffDelay(attempt);
+                const delayMs = retryAfter ?? calculateBackoffDelay(attempt, BACKOFF_RETRY_CONFIG);
                 if (attempt < RETRY_CONFIG.maxRetries - 1) {
                     logger.warn(`[notifications] email webhook rate limited, retrying in ${delayMs}ms...`);
                     await sleep(delayMs);
@@ -38,7 +39,7 @@ export async function notifyContactEmail(payload: ContactPayload): Promise<void>
             // Retry on server errors
             if (response.status >= 500 && attempt < RETRY_CONFIG.maxRetries - 1) {
                 logger.warn(`[notifications] email webhook failed (${response.status}), retrying...`);
-                await sleep(calculateBackoffDelay(attempt));
+                await sleep(calculateBackoffDelay(attempt, BACKOFF_RETRY_CONFIG));
                 return attemptNotify(attempt + 1);
             }
             const errorText = await response.text().catch(() => 'Unknown error');
@@ -58,7 +59,7 @@ export async function notifyContactEmail(payload: ContactPayload): Promise<void>
             if (attempt < RETRY_CONFIG.maxRetries - 1) {
                 const isAbortError = lastError.name === 'AbortError';
                 logger.warn(`[notifications] email webhook ${isAbortError ? 'timed out' : 'network error'}, retrying...`);
-                await sleep(calculateBackoffDelay(attempt));
+                await sleep(calculateBackoffDelay(attempt, BACKOFF_RETRY_CONFIG));
                 return attemptNotify(attempt + 1);
             }
         }

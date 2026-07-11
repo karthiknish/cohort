@@ -11,20 +11,13 @@ const TOKEN_REFRESH_CONFIG = {
     maxRetries: 3,
     baseDelayMs: 1000,
     maxDelayMs: 10000,
+    jitterFactor: 0.3,
 };
 function computeExpiry(expiresInSeconds?: number): Date | null {
     if (!expiresInSeconds || !Number.isFinite(expiresInSeconds)) {
         return null;
     }
     return new Date(Date.now() + expiresInSeconds * 1000 - 30 * 1000);
-}
-function calculateBackoffDelay(attempt: number): number {
-    return calculateBackoffDelayLib(attempt, {
-        maxRetries: TOKEN_REFRESH_CONFIG.maxRetries,
-        baseDelayMs: TOKEN_REFRESH_CONFIG.baseDelayMs,
-        maxDelayMs: TOKEN_REFRESH_CONFIG.maxDelayMs,
-        jitterFactor: 0.3,
-    });
 }
 export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams): Promise<string> {
     logger.info('[Meta Token Refresh] Starting token refresh', { userId, clientId, apiVersion: META_API_VERSION });
@@ -67,7 +60,7 @@ export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams
                 const isRetryable = response.status >= 500 || response.status === 429;
                 if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
                     lastError = new IntegrationTokenError(`Failed to refresh Meta Ads token (${response.status}): ${errorMessage}`, 'facebook', userId, { isRetryable: true, httpStatus: response.status });
-                    await sleep(calculateBackoffDelay(attempt));
+                    await sleep(calculateBackoffDelayLib(attempt, TOKEN_REFRESH_CONFIG));
                     return attemptRefresh(attempt + 1);
                 }
                 throw new IntegrationTokenError(`Failed to refresh Meta Ads token (${response.status}): ${errorMessage}`, 'facebook', userId, { isRetryable: false, httpStatus: response.status });
@@ -95,7 +88,7 @@ export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams
             }
             lastError = error instanceof Error ? error : new Error('Unknown error');
             if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
-                await sleep(calculateBackoffDelay(attempt));
+                await sleep(calculateBackoffDelayLib(attempt, TOKEN_REFRESH_CONFIG));
                 return attemptRefresh(attempt + 1);
             }
         }
