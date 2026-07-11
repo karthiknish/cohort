@@ -154,7 +154,14 @@ function isProjectStatus(value: unknown): value is ProjectStatus {
 function normalizeTaskStatus(value: string | undefined): TaskStatus | null {
     if (typeof value !== 'string')
         return null;
-    return (TASK_STATUSES as readonly string[]).includes(value) ? (value as TaskStatus) : null;
+    const normalized = value
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z-]/g, '');
+    if ((TASK_STATUSES as readonly string[]).includes(normalized)) {
+        return normalized as TaskStatus;
+    }
+    return null;
 }
 function formatCompactNumber(value: number): string {
     return EN_US_COMPACT_NUMBER_FORMATTER.format(value);
@@ -175,13 +182,13 @@ export function useDashboardOverviewPage() {
     const analyticsStatus = useQuery(analyticsIntegrationsApi.getGoogleAnalyticsStatus, !isPreviewMode && canQueryConvex && workspaceId
         ? { workspaceId, clientId: selectedClientId ?? null }
         : 'skip') as AnalyticsStatusRow | null | undefined;
-    const projectRows = useQuery(projectsApi.list, !isPreviewMode && canQueryConvex && workspaceId
+    const projectRowsResponse = useQuery(projectsApi.list, !isPreviewMode && canQueryConvex && workspaceId
         ? {
             workspaceId,
             ...(selectedClientId ? { clientId: selectedClientId } : {}),
             limit: 200,
         }
-        : 'skip') as ProjectRow[] | undefined;
+        : 'skip') as { items: ProjectRow[]; nextCursor?: unknown } | undefined;
     const dashboardErrors = [metricsError, tasksError, proposalsError].filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
     const clientName = selectedClient?.name ?? 'Workspace';
     const teamMembersCount = selectedClient?.teamMembers.length ?? 0;
@@ -215,7 +222,10 @@ export function useDashboardOverviewPage() {
         if (isPreviewMode) {
             return getPreviewProjects(selectedClientId ?? null);
         }
-        return Array.isArray(projectRows) ? projectRows : [];
+        const items = projectRowsResponse && typeof projectRowsResponse === 'object' && Array.isArray((projectRowsResponse as { items?: unknown }).items)
+            ? (projectRowsResponse as { items: ProjectRow[] }).items
+            : [];
+        return items;
     })();
     const clientStats = (() => {
         const activeProjects = projects.filter((project) => isProjectStatus(project.status) && project.status === 'active').length;
@@ -291,7 +301,7 @@ export function useDashboardOverviewPage() {
         },
     ];
     const statsLoading = metricsLoading || tasksLoading;
-    const clientStatsLoading = tasksLoading || proposalsLoading || (!isPreviewMode && canQueryConvex && projectRows === undefined);
+    const clientStatsLoading = tasksLoading || proposalsLoading || (!isPreviewMode && canQueryConvex && projectRowsResponse === undefined);
     const analyticsLoading = metricsLoading && analyticsMetrics.length === 0;
     const adsLoading = metricsLoading && adMetrics.length === 0;
     const hasChartData = chartMetrics.length > 0;
