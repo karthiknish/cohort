@@ -97,12 +97,12 @@ function highlightChildren(children: ReactNode, terms?: string[]) {
 }
 function createMarkdownComponents(highlightTerms?: string[]): Components {
     return {
-        p: ({ children }) => (<div className="leading-relaxed text-sm text-foreground [&:not(:first-child)]:mt-2">{highlightChildren(children, highlightTerms)}</div>),
-        strong: ({ children }) => <strong className="font-semibold text-foreground">{highlightChildren(children, highlightTerms)}</strong>,
-        em: ({ children }) => <em className="italic text-foreground">{highlightChildren(children, highlightTerms)}</em>,
-        ul: ({ children }) => <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-foreground">{children}</ul>,
-        ol: ({ children }) => <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-foreground">{children}</ol>,
-        li: ({ children }) => <li>{highlightChildren(children, highlightTerms)}</li>,
+        p: ({ children }) => (<div className="leading-relaxed text-sm text-current [&:not(:first-child)]:mt-2">{highlightChildren(children, highlightTerms)}</div>),
+        strong: ({ children }) => <strong className="font-semibold text-current">{highlightChildren(children, highlightTerms)}</strong>,
+        em: ({ children }) => <em className="italic text-current">{highlightChildren(children, highlightTerms)}</em>,
+        ul: ({ children }) => <ul className="mt-2 list-disc list-outside space-y-1 pl-5 text-sm text-current">{children}</ul>,
+        ol: ({ children }) => <ol className="mt-2 list-decimal list-outside space-y-1 pl-5 text-sm text-current">{children}</ol>,
+        li: ({ children }) => <li className="text-current">{highlightChildren(children, highlightTerms)}</li>,
         blockquote: ({ children }) => (<blockquote className="rounded-md bg-gradient-to-r from-primary/5 to-muted/20 px-3 py-1.5 text-sm italic text-muted-foreground ring-1 ring-primary/10">{highlightChildren(children, highlightTerms)}</blockquote>),
         code: ({ inline, className, children }: CodeProps) => {
             const language = extractLanguage(className);
@@ -147,15 +147,15 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
         thead: ({ children }) => (<thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">{children}</thead>),
         tbody: ({ children }) => <tbody className="divide-y divide-muted/40">{children}</tbody>,
         th: ({ children }) => <th className="px-3 py-2 font-medium">{children}</th>,
-        td: ({ children }) => <td className="px-3 py-2 align-top text-foreground">{children}</td>,
+        td: ({ children }) => <td className="px-3 py-2 align-top text-current">{children}</td>,
         // Horizontal rule
         hr: () => <hr className="my-4 border-muted/60"/>,
         // Headings in messages
-        h1: ({ children }) => <h1 className="mt-4 mb-2 text-lg text-foreground">{children}</h1>,
-        h2: ({ children }) => <h2 className="mt-3 mb-2 text-base text-foreground">{children}</h2>,
-        h3: ({ children }) => <h3 className="mt-3 mb-1 text-sm text-foreground">{children}</h3>,
-        h4: ({ children }) => <h4 className="mt-2 mb-1 text-sm text-foreground">{children}</h4>,
-        h5: ({ children }) => <h5 className="mt-2 mb-1 text-sm font-medium text-foreground">{children}</h5>,
+        h1: ({ children }) => <h1 className="mt-4 mb-2 text-lg text-current">{children}</h1>,
+        h2: ({ children }) => <h2 className="mt-3 mb-2 text-base text-current">{children}</h2>,
+        h3: ({ children }) => <h3 className="mt-3 mb-1 text-sm text-current">{children}</h3>,
+        h4: ({ children }) => <h4 className="mt-2 mb-1 text-sm text-current">{children}</h4>,
+        h5: ({ children }) => <h5 className="mt-2 mb-1 text-sm font-medium text-current">{children}</h5>,
         h6: ({ children }) => <h6 className="mt-2 mb-1 text-sm font-medium text-muted-foreground">{children}</h6>,
         // Strikethrough
         del: ({ children }) => <del className="line-through text-muted-foreground">{children}</del>,
