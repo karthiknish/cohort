@@ -2,7 +2,7 @@
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { Fragment, memo, useMemo, useState, useCallback, Children } from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Check, Copy } from "lucide-react";
@@ -103,13 +103,13 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
         ul: ({ children }) => <ul className="mt-2 list-disc list-outside space-y-1 pl-5 text-sm text-current">{children}</ul>,
         ol: ({ children }) => <ol className="mt-2 list-decimal list-outside space-y-1 pl-5 text-sm text-current">{children}</ol>,
         li: ({ children }) => <li className="text-current">{highlightChildren(children, highlightTerms)}</li>,
-        blockquote: ({ children }) => (<blockquote className="rounded-md bg-gradient-to-r from-primary/5 to-muted/20 px-3 py-1.5 text-sm italic text-muted-foreground ring-1 ring-primary/10">{highlightChildren(children, highlightTerms)}</blockquote>),
+        blockquote: ({ children }) => (<blockquote className="rounded-r-md border-l-2 border-current/30 bg-current/10 px-3 py-1.5 text-sm italic text-current">{highlightChildren(children, highlightTerms)}</blockquote>),
         code: ({ inline, className, children }: CodeProps) => {
             const language = extractLanguage(className);
             const normalizedLang = normalizeLanguage(language);
             const codeString = String(children).replace(/\n$/, "");
             if (inline || !codeString.includes('\n')) {
-                return (<code className={cn("rounded border border-muted/60 bg-muted px-1.5 py-0.5 text-[13px] font-mono text-primary/90", className)}>
+                return (<code className={cn("rounded border border-current/30 bg-current/10 px-1.5 py-0.5 text-[13px] font-mono text-current", className)}>
             {children}
           </code>);
             }
@@ -128,7 +128,7 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
             if (!href)
                 return <span>{children}</span>;
             if (href.startsWith(MENTION_PROTOCOL)) {
-                return (<span className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-xs font-medium leading-none text-primary">
+                return (<span className="inline-flex items-center rounded-full border border-current/30 bg-current/10 px-2 py-0.5 text-xs font-medium leading-none text-current">
             {children}
           </span>);
             }
@@ -179,8 +179,14 @@ function RawMessageContent({ content, mentions, highlightTerms }: MessageContent
     if (!markdown) {
         return null;
     }
+    const chatUrlTransform = (url: string) => {
+        if (url.startsWith(MENTION_PROTOCOL)) {
+            return url;
+        }
+        return defaultUrlTransform(url);
+    };
     return (<div className={cn(CHAT_MESSAGE_BODY_CLASS, 'space-y-2')}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} className={CHAT_MARKDOWN_CLASS} skipHtml>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} className={CHAT_MARKDOWN_CLASS} skipHtml urlTransform={chatUrlTransform}>
         {markdown}
       </ReactMarkdown>
       {mentionBadges.length > 0 && (<div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

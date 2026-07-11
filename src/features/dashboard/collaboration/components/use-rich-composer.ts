@@ -140,11 +140,16 @@ export function useRichComposer({ value, onChange, onSend, disabled = false, par
                     };
                 }
                 case 'blockquote': {
-                    const lines = (selectedText || 'Quoted text').split('\n');
+                    const placeholder = selectedText || 'Quoted text';
+                    const lines = placeholder.split('\n');
                     const prefixed = lines.map((line) => (line ? `> ${line}` : '> ')).join('\n');
                     const nextValue = current.slice(0, selectionStart) + prefixed + current.slice(selectionEnd);
-                    const nextEnd = selectionStart + prefixed.length;
-                    return { nextValue, nextSelectionStart: selectionStart, nextSelectionEnd: nextEnd };
+                    if (noSelection) {
+                        const startInside = selectionStart + 2;
+                        const endInside = startInside + placeholder.length;
+                        return { nextValue, nextSelectionStart: startInside, nextSelectionEnd: endInside };
+                    }
+                    return { nextValue, nextSelectionStart: selectionStart, nextSelectionEnd: selectionStart + prefixed.length };
                 }
                 case 'code': {
                     if (selectedText.includes('\n')) {
@@ -277,6 +282,49 @@ export function useRichComposer({ value, onChange, onSend, disabled = false, par
                 event.preventDefault();
                 resetMentionState();
                 return;
+            }
+        }
+        if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey) {
+            const key = event.key.toLowerCase();
+            if (key === 'b' || key === 'i') {
+                event.preventDefault();
+                handleFormattingAction(key === 'b' ? 'bold' : 'italic');
+                return;
+            }
+        }
+        if (event.key === 'Enter' && event.shiftKey) {
+            const textarea = textareaRef.current;
+            if (textarea) {
+                const { selectionStart, selectionEnd } = textarea;
+                const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+                const lineEndIndex = value.indexOf('\n', selectionEnd);
+                const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
+                const line = value.slice(lineStart, lineEnd);
+                const unorderedMatch = line.match(/^(\s*)([-*+]) (.*)$/);
+                const orderedMatch = line.match(/^(\s*)(\d+)\. (.*)$/);
+                const quoteMatch = line.match(/^(\s*)> ?(.*)$/);
+                let prefix: string | null = null;
+                if (unorderedMatch) {
+                    prefix = `${unorderedMatch[1]}${unorderedMatch[2]} `;
+                } else if (orderedMatch) {
+                    prefix = `${orderedMatch[1]}${Number(orderedMatch[2]) + 1}. `;
+                } else if (quoteMatch) {
+                    prefix = `${quoteMatch[1]}> `;
+                }
+                if (prefix) {
+                    event.preventDefault();
+                    const before = value.slice(0, selectionEnd);
+                    const after = value.slice(selectionEnd);
+                    const newValue = `${before}\n${prefix}${after}`;
+                    const newCursor = before.length + 1 + prefix.length;
+                    onChange(newValue);
+                    requestAnimationFrame(() => {
+                        textarea.focus();
+                        textarea.setSelectionRange(newCursor, newCursor);
+                    });
+                    resetMentionState();
+                    return;
+                }
             }
         }
         if (event.key === 'Enter' && !event.shiftKey) {

@@ -6,25 +6,29 @@ import { Button } from '@/shared/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { Textarea } from '@/shared/ui/textarea';
 import { VoiceInputButton } from '@/shared/ui/voice-input';
+import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
+import { Badge } from '@/shared/ui/badge';
 import { cn } from '@/lib/utils';
 import type { ClientTeamMember } from '@/types/clients';
+import { getInitials } from '../lib/utils';
 type FormattingAction = 'bold' | 'italic' | 'blockquote' | 'code' | 'unordered-list' | 'ordered-list';
 type ComposerButtonProps = {
     icon: ComponentType<{
         className?: string;
     }>;
     label: string;
+    title?: string;
     onClick: () => void;
     disabled?: boolean;
 };
-function ComposerButton({ icon: Icon, label, onClick, disabled }: ComposerButtonProps) {
+function ComposerButton({ icon: Icon, label, title, onClick, disabled }: ComposerButtonProps) {
     const onComposerAction = () => {
         if (disabled)
             return;
         onClick();
     };
-    return (<Button type="button" size="icon" variant="ghost" onClick={onComposerAction} disabled={disabled} className="size-7 hover:bg-background/50" aria-label={label}>
-      <Icon className="size-3.5"/>
+    return (<Button type="button" size="icon" variant="ghost" onClick={onComposerAction} disabled={disabled} className="size-7 hover:bg-muted/80 active:bg-muted/60" aria-label={label} title={title ?? label}>
+      <Icon className="size-4"/>
       <span className="sr-only">{label}</span>
     </Button>);
 }
@@ -37,9 +41,17 @@ function RichComposerMentionOption({ isActive, mentionClick, mentionMouseDown, p
     const onMentionParticipant = () => {
         mentionClick(participant);
     };
-    return (<button key={participant.name} type="button" onMouseDown={mentionMouseDown} onClick={onMentionParticipant} className={cn('flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-sm transition', isActive ? 'bg-accent/10 text-primary' : 'hover:bg-muted')}>
-      <span className="truncate">{participant.name}</span>
-      {participant.role ? <span className="text-xs text-muted-foreground">{participant.role}</span> : null}
+    return (<button key={participant.name} type="button" onMouseDown={mentionMouseDown} onClick={onMentionParticipant} className={cn('flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition', isActive ? 'bg-accent/10 text-primary' : 'hover:bg-muted')}>
+      <Avatar className="size-7 shrink-0 ring-1 ring-border/50">
+        <AvatarFallback className="bg-accent/10 text-[10px] font-medium text-primary">
+          {getInitials(participant.name)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <span className="block truncate">{participant.name}</span>
+        {participant.role ? <span className="block truncate text-xs text-muted-foreground">{participant.role}</span> : null}
+      </div>
+      {isActive ? <Badge variant="secondary" className="shrink-0 text-[10px]">↵</Badge> : null}
     </button>);
 }
 export function RichComposerToolbar({ disabled, emojiPickerOpen, hasAttachments, onAction, onAttachClick, onEmojiClick, onInsertMention, onOpenEmojiChange, onVoiceTranscript, }: {
@@ -54,8 +66,8 @@ export function RichComposerToolbar({ disabled, emojiPickerOpen, hasAttachments,
     onVoiceTranscript: (transcript: string) => void;
 }) {
     return (<div className="flex flex-wrap items-center gap-0.5 rounded-t-lg border-b border-muted/40 bg-muted/10 px-2 py-1.5">
-      <ComposerButton icon={Bold} label="Bold" onClick={() => onAction('bold')} disabled={disabled}/>
-      <ComposerButton icon={Italic} label="Italic" onClick={() => onAction('italic')} disabled={disabled}/>
+      <ComposerButton icon={Bold} label="Bold" title="Bold (Ctrl+B)" onClick={() => onAction('bold')} disabled={disabled}/>
+      <ComposerButton icon={Italic} label="Italic" title="Italic (Ctrl+I)" onClick={() => onAction('italic')} disabled={disabled}/>
       <ComposerButton icon={Quote} label="Quote" onClick={() => onAction('blockquote')} disabled={disabled}/>
       <ComposerButton icon={Code} label="Code" onClick={() => onAction('code')} disabled={disabled}/>
       <ComposerButton icon={List} label="Bulleted list" onClick={() => onAction('unordered-list')} disabled={disabled}/>
@@ -114,17 +126,35 @@ export function RichComposerMentionMenu({ highlightedMention, mentionQuery, ment
     onMentionClick: (participant: ClientTeamMember) => void;
     onMentionMouseDown: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
-    return (<ul className="absolute bottom-2 left-2 z-20 w-64 list-none rounded-md border border-muted/60 bg-popover p-1 shadow-lg" aria-label="Mention teammate suggestions">
-      <li className="list-none px-2 py-1 text-xs font-medium uppercase text-muted-foreground">Mention teammate</li>
-      <li className="list-none max-h-52 overflow-y-auto">
-        {mentionResults.length > 0 ? mentionResults.map((participant, index) => {
-            const isActive = index === highlightedMention;
-            return (<li key={participant.name} className="list-none">
-              <RichComposerMentionOption isActive={isActive} mentionClick={onMentionClick} mentionMouseDown={onMentionMouseDown} participant={participant}/>
-            </li>);
-        }) : (<div className="px-2 py-3 text-sm text-muted-foreground" aria-live="polite">
-            No teammates match {mentionQuery.trim() ? `“${mentionQuery.trim()}”` : 'your search'}.
-          </div>)}
-      </li>
-    </ul>);
+    return (
+        <div
+            className="absolute bottom-full left-2 z-50 mb-2 w-64 overflow-hidden rounded-lg border border-muted/60 bg-popover p-1 shadow-lg"
+            role="listbox"
+            aria-label="Mention teammate suggestions"
+        >
+            <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Mention teammate
+            </div>
+            <div className="max-h-52 overflow-y-auto">
+                {mentionResults.length > 0 ? (
+                    mentionResults.map((participant, index) => {
+                        const isActive = index === highlightedMention;
+                        return (
+                            <RichComposerMentionOption
+                                key={participant.name}
+                                isActive={isActive}
+                                mentionClick={onMentionClick}
+                                mentionMouseDown={onMentionMouseDown}
+                                participant={participant}
+                            />
+                        );
+                    })
+                ) : (
+                    <div className="px-2 py-3 text-sm text-muted-foreground" aria-live="polite">
+                        No teammates match {mentionQuery.trim() ? `“${mentionQuery.trim()}”` : 'your search'}.
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 }

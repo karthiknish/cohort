@@ -14,7 +14,7 @@ function MarkdownPreviewLink(props: AnchorHTMLAttributes<HTMLAnchorElement>) {
 }
 function MarkdownPreviewCode({ className, children, ...props }: ComponentPropsWithoutRef<'code'>) {
     if (!className) {
-        return (<code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono" {...props}>
+        return (<code className="rounded border border-current/30 bg-current/10 px-1.5 py-0.5 text-xs font-mono text-current" {...props}>
         {children}
       </code>);
     }
@@ -22,9 +22,15 @@ function MarkdownPreviewCode({ className, children, ...props }: ComponentPropsWi
       {children}
     </code>);
 }
+function MarkdownPreviewBlockquote({ children }: ComponentPropsWithoutRef<'blockquote'>) {
+    return (<blockquote className="rounded-r-md border-l-2 border-current/30 bg-current/10 px-3 py-1.5 text-sm italic text-current">
+      {children}
+    </blockquote>);
+}
 const MARKDOWN_PREVIEW_COMPONENTS = {
     a: MarkdownPreviewLink,
     code: MarkdownPreviewCode,
+    blockquote: MarkdownPreviewBlockquote,
 };
 function MarkdownToolbarActionButton({ insert, title, icon, onInsert, }: {
     insert: string;

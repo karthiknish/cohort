@@ -14,6 +14,8 @@ const markdown = `Here's a list:
 
 A paragraph after.`;
 
+const mentionMarkdown = `Hi [@Alice Smith](mention://alice%20smith), check this out.`;
+
 describe('MessageContent', () => {
     it('renders unordered and ordered lists with marker classes', () => {
         const markup = renderToStaticMarkup(<MessageContent content={markdown} />);
@@ -27,7 +29,14 @@ describe('MessageContent', () => {
 
     it('inherits text color via text-current so lists match bubble color in DM and channel messages', () => {
         const markup = renderToStaticMarkup(<MessageContent content={markdown} />);
-        expect(markup).not.toContain('text-foreground');
+        expect(markup).toContain('text-current');
+    });
+
+    it('highlights mentions using currentColor so they remain visible in any bubble', () => {
+        const markup = renderToStaticMarkup(<MessageContent content={mentionMarkdown} />);
+        expect(markup).toContain('@Alice Smith');
+        expect(markup).toContain('border-current/30');
+        expect(markup).toContain('bg-current/10');
         expect(markup).toContain('text-current');
     });
 });
