@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import type { MessagePaneHeaderInfo } from '@/features/dashboard/collaboration/components/unified-message-pane-types';
+import { useChannelPresence } from '@/features/dashboard/collaboration/hooks/use-channel-presence';
 import { collectSharedFiles } from '@/features/dashboard/collaboration/lib/utils';
 import type { Channel } from '../types';
 import type { CollaborationMessage, DirectConversation } from '@/types/collaboration';
@@ -49,7 +50,18 @@ export function useCollaborationHeaderInfo({
   archiveConversation,
   muteConversation,
 }: BuildHeaderInfoArgs) {
+  const presenceMembers = useChannelPresence({
+    workspaceId,
+    userId: currentUserId,
+    selectedChannel: effectiveSelectedChannel,
+    conversationLegacyId: selectedDM?.legacyId ?? null,
+  });
+
   return useMemo<MessagePaneHeaderInfo | null>(() => {
+    const otherPresenceMembers = presenceMembers
+      ? presenceMembers.filter((member) => member.id !== currentUserId)
+      : presenceMembers;
+
     if (effectiveSelectedChannel) {
       const channel = effectiveSelectedChannel;
       const sharedFiles = collectSharedFiles(
@@ -71,6 +83,7 @@ export function useCollaborationHeaderInfo({
         onMarkChannelRead: handleMarkChannelRead,
         onExport: handleExportChannel,
         onBack: () => urlState.setChannelId(null),
+        presenceMembers: otherPresenceMembers,
         channelInfo:
           workspaceId != null
             ? {
@@ -99,6 +112,7 @@ export function useCollaborationHeaderInfo({
         role: dm.otherParticipantRole ?? null,
         isArchived: dm.isArchived,
         isMuted: dm.isMuted,
+        presenceMembers: otherPresenceMembers,
         onArchive: async (archived: boolean) => {
           if (!workspaceId) return;
           await archiveConversation({
@@ -131,6 +145,7 @@ export function useCollaborationHeaderInfo({
     workspaceId,
     currentUserId,
     currentUserRole,
+    presenceMembers,
     archiveConversation,
     muteConversation,
   ]);
