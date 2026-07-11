@@ -8,9 +8,9 @@ const VIDEO_NAME_REGEX = /\.(mp4|mov|webm|ogg|avi|mkv|m4v|wmv|flv)(\?.*)?$/i;
 const AUDIO_NAME_REGEX = /\.(mp3|wav|m4a|aac|ogg|flac|opus|mka|wma)(\?.*)?$/i;
 
 export function getAttachmentKind(attachment: ChatMediaAttachment): AttachmentKind {
-    const type = (attachment.type || '').toLowerCase();
+    const type = (attachment.type || '').toLowerCase().trim();
     const url = attachment.url || '';
-    const name = attachment.name.toLowerCase();
+    const name = (attachment.name || '').toLowerCase().trim();
     if (isLikelyImageUrl(url) || type.startsWith('image/') || IMAGE_NAME_REGEX.test(name))
         return 'image';
     if (type.startsWith('video/') || VIDEO_NAME_REGEX.test(url) || VIDEO_NAME_REGEX.test(name))

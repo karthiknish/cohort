@@ -102,7 +102,7 @@ export function useUnifiedMessagePaneRenderers({ activeDeletingMessageId, channe
             onEndPoll,
         });
     };
-    const renderMessageAttachments = (message: UnifiedMessage) => renderMessageAttachmentsContent(message);
+    const renderMessageAttachments = (message: UnifiedMessage) => renderMessageAttachmentsContent(message, headerType === 'dm');
     const renderDeletedInfo = (message: UnifiedMessage) => renderDeletedMessageInfo(message, deletedInfoByMessage);
     const renderEditForm = (message: UnifiedMessage) => renderMessageEditForm(message, editingMessageId, editingValue, setEditingValue, handleConfirmEdit, handleCancelEdit, messageUpdatingId === message.id, editingPreview);
     const renderThreadSection = (message: UnifiedMessage) => {

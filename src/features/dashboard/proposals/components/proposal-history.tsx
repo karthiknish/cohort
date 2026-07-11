@@ -138,7 +138,7 @@ function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, 
             </div>
           </div>
       </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
         <ProposalHistoryHeader isLoading={isLoading} isRefreshing={isRefreshing} onRefresh={onRefresh} proposalCount={proposals.length}/>
         {queryError ? (<Alert variant="destructive">
             <CircleAlert className="size-4"/>

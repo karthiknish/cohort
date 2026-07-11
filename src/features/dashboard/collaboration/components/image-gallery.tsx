@@ -1,5 +1,5 @@
 'use client';
-import { Download, Image as ImageIcon, ZoomIn } from 'lucide-react';
+import { Download, Image as ImageIcon, LoaderCircle, ZoomIn } from 'lucide-react';
 import { useState, type MouseEvent } from 'react';
 import { Button } from '@/shared/ui/button';
 import { LazyImage } from '@/shared/ui/lazy-image';
@@ -15,6 +15,8 @@ interface ImageGalleryProps {
     className?: string;
     /** Flat mode removes card chrome for surfaces like the channel info dialog */
     flat?: boolean;
+    /** Compact mode constrains image sizes for DM bubbles */
+    compact?: boolean;
 }
 
 function PreviewTile({
@@ -34,6 +36,8 @@ function PreviewTile({
     overlayCount?: number;
     flat?: boolean;
 }) {
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
     const handlePreview = (event: MouseEvent<HTMLButtonElement>) => {
         const index = Number(event.currentTarget.dataset.previewIndex);
         onPreview(index);
@@ -53,28 +57,47 @@ function PreviewTile({
             aria-label={`Preview image ${image.name}`}
         >
             <div className={cn('relative overflow-hidden', aspectClassName)}>
+                {isLoading && !hasError ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/20">
+                        <LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-hidden />
+                    </div>
+                ) : null}
+                {hasError ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-muted/30 text-muted-foreground">
+                        <ImageIcon className="size-6" aria-hidden />
+                        <span className="px-2 text-center text-[10px] leading-tight">{image.name}</span>
+                    </div>
+                ) : null}
                 <LazyImage
                     src={image.url}
                     alt={image.name}
                     className="size-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105"
+                    onLoad={() => setIsLoading(false)}
+                    onError={() => {
+                        setIsLoading(false);
+                        setHasError(true);
+                    }}
+                    fallback={null}
                 />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                    {typeof overlayCount === 'number' ? (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-2xl font-bold text-viewer-chrome">
-                            +{overlayCount}
-                        </div>
-                    ) : (
-                        <div className="rounded-full bg-black/60 p-2 text-viewer-chrome opacity-0 transition-opacity group-hover:opacity-100">
-                            <ZoomIn className="size-4" />
-                        </div>
-                    )}
-                </div>
+                {!hasError ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                        {typeof overlayCount === 'number' ? (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-2xl font-bold text-viewer-chrome">
+                                +{overlayCount}
+                            </div>
+                        ) : (
+                            <div className="rounded-full bg-black/60 p-2 text-viewer-chrome opacity-0 transition-opacity group-hover:opacity-100">
+                                <ZoomIn className="size-4" />
+                            </div>
+                        )}
+                    </div>
+                ) : null}
             </div>
         </button>
     );
 }
 
-export function ImageGallery({ images, className, flat = false }: ImageGalleryProps) {
+export function ImageGallery({ images, className, flat = false, compact = false }: ImageGalleryProps) {
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewIndex, setPreviewIndex] = useState(0);
     const handleImageClick = (index: number) => {
@@ -94,7 +117,8 @@ export function ImageGallery({ images, className, flat = false }: ImageGalleryPr
             <>
                 <figure
                     className={cn(
-                        'my-2 max-w-xl overflow-hidden rounded-lg',
+                        'my-2 overflow-hidden rounded-lg',
+                        compact ? 'max-w-xs' : 'max-w-xl',
                         flat ? 'border-0 bg-transparent' : 'border border-muted/60 bg-muted/10',
                         className,
                     )}
@@ -150,7 +174,7 @@ export function ImageGallery({ images, className, flat = false }: ImageGalleryPr
     if (images.length === 2) {
         return (
             <>
-                <div className={cn('grid max-w-xl grid-cols-2 gap-2', className)}>
+                <div className={cn('grid grid-cols-2 gap-2', compact ? 'max-w-xs' : 'max-w-xl', className)}>
                     {images.map((image, index) => (
                         <PreviewTile
                             key={image.url}
@@ -171,7 +195,7 @@ export function ImageGallery({ images, className, flat = false }: ImageGalleryPr
         if (!firstImage) return null;
         return (
             <>
-                <div className={cn('grid max-w-xl grid-cols-2 gap-2', className)}>
+                <div className={cn('grid grid-cols-2 gap-2', compact ? 'max-w-xs' : 'max-w-xl', className)}>
                     <PreviewTile
                         image={firstImage}
                         previewIndex={0}
@@ -199,7 +223,7 @@ export function ImageGallery({ images, className, flat = false }: ImageGalleryPr
     const remainingCount = images.length - 4;
     return (
         <>
-            <div className={cn('grid max-w-xl grid-cols-2 gap-2', className)}>
+            <div className={cn('grid grid-cols-2 gap-2', compact ? 'max-w-xs' : 'max-w-xl', className)}>
                 {displayImages.map((image, index) => (
                     <PreviewTile
                         key={image.url}

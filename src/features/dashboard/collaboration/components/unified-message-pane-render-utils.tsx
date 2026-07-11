@@ -14,7 +14,7 @@ export function getSharePlatformLabel(platform: 'email'): string {
         return 'Email';
     return platform;
 }
-export function renderMessageAttachmentsContent(message: UnifiedMessage) {
+export function renderMessageAttachmentsContent(message: UnifiedMessage, compact?: boolean) {
     if (!message.attachments || message.attachments.length === 0)
         return null;
     const attachments: CollaborationAttachment[] = message.attachments.map((attachment) => ({
@@ -23,7 +23,7 @@ export function renderMessageAttachmentsContent(message: UnifiedMessage) {
         type: attachment.mimeType ?? null,
         size: attachment.size ?? null,
     }));
-    return <MessageAttachments attachments={attachments}/>;
+    return <MessageAttachments attachments={attachments} compact={compact}/>;
 }
 type RenderMessageContentOptions = {
     message: UnifiedMessage;

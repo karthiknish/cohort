@@ -89,6 +89,23 @@ export function useImagePreviewModal({ images, initialIndex = 0, isOpen, onClose
             handleZoomIn();
         }
     };
+    const handleWheel = useCallback((e: React.WheelEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.deltaY < 0) {
+            dispatch({ type: 'zoomIn' });
+        } else {
+            dispatch({ type: 'zoomOut' });
+        }
+    }, []);
+    const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (zoom > 1) {
+            dispatch({ type: 'resetView' });
+        } else {
+            dispatch({ type: 'setZoom', value: 2 });
+        }
+    }, [zoom]);
     const imageStyle = ({
         transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
     });
@@ -145,6 +162,8 @@ export function useImagePreviewModal({ images, initialIndex = 0, isOpen, onClose
         handleImageClick,
         handleSelectThumbnail,
         handleClose,
+        handleWheel,
+        handleDoubleClick,
     };
 }
 export type UseImagePreviewModalReturn = ReturnType<typeof useImagePreviewModal>;

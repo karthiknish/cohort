@@ -501,6 +501,7 @@ export function ChatMediaGallery({
                         size: a.size ?? undefined,
                     }))}
                     flat={flat}
+                    compact={compact}
                 />
             ) : null}
 
