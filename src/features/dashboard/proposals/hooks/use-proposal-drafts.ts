@@ -178,6 +178,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     const [isHydrated, setIsHydrated] = useState(false);
     const draftIdRef = useRef<string | null>(draftId);
     const wizardRef = useRef<HTMLDivElement | null>(null);
+    const isSavingRef = useRef(false);
     const lastBootstrapKeyRef = useRef<string | null>(null);
     const lastSavedSnapshotRef = useRef<string | null>(null);
     const [lastSavedSnapshotKey, setLastSavedSnapshotKey] = useState<string | null>(null);
@@ -301,10 +302,15 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         if (isPreviewMode || !hasPersistableData || !selectedClientId) {
             return;
         }
+        if (isSavingRef.current) {
+            return;
+        }
+        isSavingRef.current = true;
         let activeDraftId = draftIdRef.current;
         if (!activeDraftId) {
             activeDraftId = await ensureDraftId();
             if (!activeDraftId) {
+                isSavingRef.current = false;
                 return;
             }
         }
@@ -344,6 +350,9 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                     message: message,
                 });
             }
+        }
+        finally {
+            isSavingRef.current = false;
         }
     });
     const handleCreateNewProposal = async () => {

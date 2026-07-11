@@ -211,6 +211,8 @@ async function fetchChartImage(
     height: number,
     backgroundColor: string,
 ): Promise<string | null> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
         const params = new URLSearchParams();
         params.set('c', JSON.stringify(config));
@@ -220,7 +222,7 @@ async function fetchChartImage(
         params.set('devicePixelRatio', '2');
 
         const url = `${QUICKCHART_URL}?${params.toString()}`;
-        const resp = await fetch(url);
+        const resp = await fetch(url, { signal: controller.signal });
 
         if (!resp.ok) {
             logger.warn(`[QuickChart] Failed`, { status: resp.status, statusText: resp.statusText });
@@ -239,5 +241,7 @@ async function fetchChartImage(
     } catch (err) {
         logger.warn('[QuickChart] Error', { error: asErrorMessage(err) });
         return null;
+    } finally {
+        clearTimeout(timeoutId);
     }
 }

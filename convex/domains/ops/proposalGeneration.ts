@@ -127,6 +127,7 @@ export const generateFromProposal = zWorkspaceAction({
           creditsRemaining: null,
           externalDeckId: null,
         },
+        generationStartedAtMs: now,
         updatedAtMs: now,
         lastAutosaveAtMs: now,
       })
@@ -148,6 +149,32 @@ export const generateFromProposal = zWorkspaceAction({
 
       // Get the R2 URL for the stored PPTX
       const pptxUrl = await r2.getUrl(toR2ObjectKey(pptStorageId))
+
+      // Checkpoint: persist PPTX URL immediately so it's available even if PDF generation fails
+      await ctx.runMutation(api.proposals.update, {
+        workspaceId: args.workspaceId,
+        legacyId: args.legacyId,
+        pptUrl: pptxUrl,
+        pptStorageId,
+        presentationDeck: {
+          generationId: pptStorageId,
+          status: 'processing',
+          instructions,
+          webUrl: null,
+          shareUrl: null,
+          pptxUrl,
+          pdfUrl: null,
+          generatedFiles: [{ fileType: 'pptx', fileUrl: pptxUrl }],
+          storageUrl: pptxUrl,
+          pdfStorageUrl: null,
+          warnings: [],
+          creditsDeducted: null,
+          creditsRemaining: null,
+          externalDeckId: null,
+        },
+        updatedAtMs: Date.now(),
+        lastAutosaveAtMs: Date.now(),
+      })
 
       // Generate PDF separately using jsPDF (only when the user opted in via the form)
       // Non-fatal — PPTX is still served if PDF generation fails.
@@ -246,31 +273,38 @@ export const generateFromProposal = zWorkspaceAction({
     } catch (error) {
       markGenerationComplete(args.workspaceId, args.legacyId)
 
-      // Update proposal with failure status
-      await ctx.runMutation(api.proposals.update, {
-        workspaceId: args.workspaceId,
-        legacyId: args.legacyId,
-        status: 'failed',
-        presentationDeck: {
-          generationId: null,
+      const errorMessage = asErrorMessage(error)
+
+      // Update proposal with failure status — retry if the update itself fails
+      try {
+        await ctx.runMutation(api.proposals.update, {
+          workspaceId: args.workspaceId,
+          legacyId: args.legacyId,
           status: 'failed',
-          instructions: '',
-          webUrl: null,
-          shareUrl: null,
-          pptxUrl: null,
-          pdfUrl: null,
-          generatedFiles: [],
-          storageUrl: null,
-          pdfStorageUrl: null,
-          warnings: ['Deck generation failed. Please try again.'],
-          error: asErrorMessage(error),
-          creditsDeducted: null,
-          creditsRemaining: null,
-          externalDeckId: null,
-        },
-        updatedAtMs: Date.now(),
-        lastAutosaveAtMs: Date.now(),
-      }).catch(() => {})
+          presentationDeck: {
+            generationId: null,
+            status: 'failed',
+            instructions: '',
+            webUrl: null,
+            shareUrl: null,
+            pptxUrl: null,
+            pdfUrl: null,
+            generatedFiles: [],
+            storageUrl: null,
+            pdfStorageUrl: null,
+            warnings: ['Deck generation failed. Please try again.'],
+            error: errorMessage,
+            creditsDeducted: null,
+            creditsRemaining: null,
+            externalDeckId: null,
+          },
+          updatedAtMs: Date.now(),
+          lastAutosaveAtMs: Date.now(),
+        })
+      } catch (updateError) {
+        // If we can't update the status, the cron job will recover it
+        console.error('[proposalGeneration] Failed to mark proposal as failed:', updateError, 'Original error:', errorMessage)
+      }
 
       throw error
     }

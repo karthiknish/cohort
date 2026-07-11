@@ -14,6 +14,8 @@
  */
 
 import type { ProposalFormData } from '@/lib/proposals';
+import { asErrorMessage } from '@/lib/convex-errors';
+import { logger } from '@/lib/logger';
 import { prefetchSlideImages } from '../pexels-images';
 import { SLIDE_W, SLIDE_H } from './constants';
 import { addTitleSlide, addContentSlide } from './content-slides';
@@ -57,6 +59,10 @@ export async function generateProposalPptx(
     const structure = buildDeckStructure(formData, instructions);
     const { sections, aiSlides, hasBudget, hasServices, totalSlides } = structure;
 
+    if (!instructions || !instructions.trim()) {
+        throw new Error('Cannot generate PPTX: AI instructions are empty');
+    }
+
     // Pre-fetch images from Pexels in parallel using shared topic list
     const slideTopics = buildSlideTopics(structure);
     const slideImages = await prefetchSlideImages(slideTopics);
@@ -65,18 +71,26 @@ export async function generateProposalPptx(
     let currentSlideNum = 0;
 
     // 1. Title slide
-    addTitleSlide(pptx, formData, slideImages[imageIdx] ?? null);
+    try {
+        addTitleSlide(pptx, formData, slideImages[imageIdx] ?? null);
+    } catch (err) {
+        logger.warn('[PPTX] Failed to add title slide', { error: asErrorMessage(err) });
+    }
     imageIdx++;
     currentSlideNum++;
 
     // 2. Table of Contents (no image needed)
-    addTocSlide(
-        pptx,
-        sections.map((s) => ({ title: s.title, description: s.description })),
-        companyName,
-        currentSlideNum + 1,
-        totalSlides,
-    );
+    try {
+        addTocSlide(
+            pptx,
+            sections.map((s) => ({ title: s.title, description: s.description })),
+            companyName,
+            currentSlideNum + 1,
+            totalSlides,
+        );
+    } catch (err) {
+        logger.warn('[PPTX] Failed to add TOC slide', { error: asErrorMessage(err) });
+    }
     currentSlideNum++;
 
     // 3. Content sections — each starts with a divider, followed by its slides
@@ -86,53 +100,81 @@ export async function generateProposalPptx(
 
         // Section divider
         currentSlideNum++;
-        addSectionDivider(
-            pptx,
-            secIdx + 1,
-            section.title,
-            section.description,
-            currentSlideNum,
-            totalSlides,
-            companyName,
-            slideImages[imageIdx] ?? null,
-        );
+        try {
+            addSectionDivider(
+                pptx,
+                secIdx + 1,
+                section.title,
+                section.description,
+                currentSlideNum,
+                totalSlides,
+                companyName,
+                slideImages[imageIdx] ?? null,
+            );
+        } catch (err) {
+            logger.warn('[PPTX] Failed to add section divider', { error: asErrorMessage(err), slideNum: currentSlideNum });
+        }
         imageIdx++;
 
         // Content slides for this section
         if (section.slideIndices.length > 0) {
             for (const localIdx of section.slideIndices) {
-                const slideContent = aiSlides[localIdx]!;
+                const slideContent = aiSlides[localIdx];
+                if (!slideContent) {
+                    logger.warn('[PPTX] Missing AI slide content at index ' + localIdx);
+                    continue;
+                }
                 currentSlideNum++;
                 const image = slideImages[imageIdx] ?? null;
                 imageIdx++;
-                addContentSlide(
-                    pptx,
-                    slideContent.title,
-                    slideContent.bullets,
-                    formData,
-                    companyName,
-                    currentSlideNum,
-                    totalSlides,
-                    image,
-                    aiSlideIdx,
-                    slideContent,
-                );
+                try {
+                    addContentSlide(
+                        pptx,
+                        slideContent.title,
+                        slideContent.bullets,
+                        formData,
+                        companyName,
+                        currentSlideNum,
+                        totalSlides,
+                        image,
+                        aiSlideIdx,
+                        slideContent,
+                    );
+                } catch (err) {
+                    logger.warn('[PPTX] Failed to add content slide', { error: asErrorMessage(err), slideNum: currentSlideNum });
+                }
                 aiSlideIdx++;
             }
         } else if (hasServices && section.title.includes('Scope')) {
             currentSlideNum++;
-            addServicesTableSlide(pptx, formData, companyName, currentSlideNum, totalSlides);
+            try {
+                addServicesTableSlide(pptx, formData, companyName, currentSlideNum, totalSlides);
+            } catch (err) {
+                logger.warn('[PPTX] Failed to add services table slide', { error: asErrorMessage(err), slideNum: currentSlideNum });
+            }
         } else if (hasBudget && section.title.includes('Budget')) {
             currentSlideNum++;
-            await addBudgetAllocationSlide(pptx, formData, companyName, currentSlideNum, totalSlides);
+            try {
+                await addBudgetAllocationSlide(pptx, formData, companyName, currentSlideNum, totalSlides);
+            } catch (err) {
+                logger.warn('[PPTX] Failed to add budget allocation slide', { error: asErrorMessage(err), slideNum: currentSlideNum });
+            }
             currentSlideNum++;
-            await addRoiProjectionSlide(pptx, formData, companyName, currentSlideNum, totalSlides);
+            try {
+                await addRoiProjectionSlide(pptx, formData, companyName, currentSlideNum, totalSlides);
+            } catch (err) {
+                logger.warn('[PPTX] Failed to add ROI projection slide', { error: asErrorMessage(err), slideNum: currentSlideNum });
+            }
         }
     }
 
     // 4. Closing slide
     currentSlideNum++;
-    addClosingSlide(pptx, formData, slideImages[imageIdx] ?? null);
+    try {
+        addClosingSlide(pptx, formData, slideImages[imageIdx] ?? null);
+    } catch (err) {
+        logger.warn('[PPTX] Failed to add closing slide', { error: asErrorMessage(err) });
+    }
 
     // Render to ArrayBuffer
     const result = await pptx.write({ outputType: 'arraybuffer' });

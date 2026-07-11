@@ -225,7 +225,7 @@ export const proposalOperationHandlers: Record<string, OperationHandler> = {
       agentConversationId: string
       lastAgentInteractionAtMs: number
       formData?: JsonRecord
-      status?: string
+      status?: 'draft' | 'in_progress' | 'ready' | 'partial_success' | 'failed' | 'sent'
       stepProgress?: number
       clientId?: string | null
       clientName?: string | null

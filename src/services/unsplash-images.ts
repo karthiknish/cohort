@@ -67,6 +67,8 @@ export async function searchUnsplashImages(query: string, perPage = 8): Promise<
         return searchCache.get(query)!;
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
         const params = new URLSearchParams({
             query,
@@ -79,6 +81,7 @@ export async function searchUnsplashImages(query: string, perPage = 8): Promise<
                 Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}`,
                 'Accept-Version': 'v1',
             },
+            signal: controller.signal,
         });
 
         if (!resp.ok) {
@@ -94,11 +97,13 @@ export async function searchUnsplashImages(query: string, perPage = 8): Promise<
 
         const images: PexelsImage[] = [];
         for (const photo of sorted.slice(0, perPage)) {
+            const imgController = new AbortController();
+            const imgTimeoutId = setTimeout(() => imgController.abort(), 30000);
             try {
                 // Use "full" URL with custom params for high quality at reasonable size.
                 // raw URL allows custom params: w, h, q, fm, fit, crop.
                 const imgUrl = `${photo.urls.raw}&w=1600&q=80&fm=jpg&fit=crop`;
-                const imgResp = await fetch(imgUrl);
+                const imgResp = await fetch(imgUrl, { signal: imgController.signal });
                 if (!imgResp.ok) continue;
 
                 const arrayBuffer = await imgResp.arrayBuffer();
@@ -118,14 +123,23 @@ export async function searchUnsplashImages(query: string, perPage = 8): Promise<
                 });
             } catch (err) {
                 logger.warn(`[Unsplash] Failed to fetch image ${photo.id}`, { error: asErrorMessage(err) });
+            } finally {
+                clearTimeout(imgTimeoutId);
             }
         }
 
+        if (searchCache.size > 50) {
+            // Evict oldest entry
+            const firstKey = searchCache.keys().next().value;
+            if (firstKey) searchCache.delete(firstKey);
+        }
         searchCache.set(query, images);
         return images;
     } catch (err) {
         logger.warn(`[Unsplash] Search error for "${query}"`, { error: asErrorMessage(err) });
         return [];
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 

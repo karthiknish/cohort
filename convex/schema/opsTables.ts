@@ -26,6 +26,8 @@ export const opsTables = {
     clientId: v.union(v.string(), v.null()),
     clientName: v.union(v.string(), v.null()),
     presentationDeck: v.union(jsonRecordValidator, v.null()),
+    generationStartedAtMs: v.optional(v.union(v.number(), v.null())),
+    retryCount: v.optional(v.union(v.number(), v.null())),
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
     lastAutosaveAtMs: v.number(),

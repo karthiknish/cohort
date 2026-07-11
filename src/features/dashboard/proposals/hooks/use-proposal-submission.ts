@@ -131,6 +131,10 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
     useEffect(() => {
         submittedRef.current = submitted;
     }, [submitted]);
+    const isMountedRef = useRef(true);
+    useEffect(() => {
+        return () => { isMountedRef.current = false; };
+    }, []);
     const activeProposalIdForDeck = lastSubmissionSnapshot?.draftId ?? draftId;
     const artifactUrls = useProposalArtifactUrls(!isPreviewMode ? workspaceId : null, activeProposalIdForDeck ?? null);
     const { pptUrl: deckDownloadUrl } = resolveProposalDeckUrls({
@@ -238,6 +242,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             const maxAttempts = 75; // 75 attempts × 4 seconds = 5 minutes
             const pollIntervalMs = 4000;
             const pollAiStatus = async (attempt: number): Promise<void> => {
+                if (!isMountedRef.current) return;
                 const latest = await refreshProposalDraft(activeDraftId, {
                     workspaceId: workspaceId ?? '',
                     convexToken: (await getIdToken()) ?? '',
@@ -249,6 +254,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 }
                 if (attempt < maxAttempts - 1) {
                     await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+                    if (!isMountedRef.current) return;
                     return pollAiStatus(attempt + 1);
                 }
             };
@@ -280,6 +286,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 const maxAttempts = 30; // Poll for up to ~60 seconds
                 const pollInterval = 2000; // 2 seconds between attempts
                 const pollDeckUrl = async (attempt: number): Promise<void> => {
+                    if (!isMountedRef.current) return;
                     if (attempt > 0) {
                         await new Promise((resolve) => setTimeout(resolve, pollInterval));
                     }
@@ -503,6 +510,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             const maxPollAttempts = 30;
             const pollInterval = 3000;
             const pollRecheckDeck = async (attempt: number): Promise<void> => {
+                if (!isMountedRef.current) return;
                 const currentProposal = await refreshProposalDraft(proposalId, {
                     workspaceId: workspaceId ?? '',
                     convexToken: (await getIdToken()) ?? '',
@@ -543,6 +551,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 }
                 if (attempt < maxPollAttempts - 1) {
                     await new Promise((resolve) => setTimeout(resolve, pollInterval));
+                    if (!isMountedRef.current) return;
                     return pollRecheckDeck(attempt + 1);
                 }
                 notifySuccess({

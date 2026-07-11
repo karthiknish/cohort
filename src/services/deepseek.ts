@@ -95,24 +95,31 @@ export class DeepSeekAIService {
                 body.max_tokens = options.maxOutputTokens;
             }
 
-            const response = await fetch(DEEPSEEK_BASE_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                },
-                body: JSON.stringify(body),
-            });
-            if (!response.ok) {
-                const details = await response.text();
-                throw new Error(`DeepSeek API error ${response.status}: ${details}`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+            try {
+                const response = await fetch(DEEPSEEK_BASE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`,
+                    },
+                    body: JSON.stringify(body),
+                    signal: controller.signal,
+                });
+                if (!response.ok) {
+                    const details = await response.text();
+                    throw new Error(`DeepSeek API error ${response.status}: ${details}`);
+                }
+                const data = await response.json();
+                const text = this.extractTextFromResponse(data);
+                if (!text) {
+                    throw new Error('DeepSeek API returned an empty response');
+                }
+                return text;
+            } finally {
+                clearTimeout(timeoutId);
             }
-            const data = await response.json();
-            const text = this.extractTextFromResponse(data);
-            if (!text) {
-                throw new Error('DeepSeek API returned an empty response');
-            }
-            return text;
         }
         catch (error) {
             logError(error, 'DeepSeek API error');

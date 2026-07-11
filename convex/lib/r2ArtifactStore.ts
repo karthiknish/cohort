@@ -29,13 +29,24 @@ export async function storeR2Artifact({
   downloadFilename,
 }: StoreR2ArtifactArgs): Promise<string> {
   const blob = body instanceof Blob ? body : new Blob([body], { type: contentType })
-
-  await r2.store(ctx as unknown as R2StoreCtx, blob, {
-    key,
-    type: contentType,
-    disposition: `attachment; filename="${downloadFilename}"`,
-    cacheControl: PRIVATE_CACHE,
-  })
-
-  return asR2ObjectRef(key)
+  const maxAttempts = 3
+  let lastError: unknown
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      await r2.store(ctx as unknown as R2StoreCtx, blob, {
+        key,
+        type: contentType,
+        disposition: `attachment; filename="${downloadFilename}"`,
+        cacheControl: PRIVATE_CACHE,
+      })
+      return asR2ObjectRef(key)
+    } catch (err) {
+      lastError = err
+      if (attempt < maxAttempts - 1) {
+        const delayMs = Math.pow(2, attempt) * 1000
+        await new Promise(resolve => setTimeout(resolve, delayMs))
+      }
+    }
+  }
+  throw lastError
 }

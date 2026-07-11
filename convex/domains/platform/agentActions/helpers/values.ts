@@ -99,10 +99,12 @@ function normalizeReportPeriod(value: unknown): ReportPeriod {
   return 'weekly'
 }
 
-function normalizeProposalStatus(value: unknown): string | null {
+type ProposalStatus = 'draft' | 'in_progress' | 'ready' | 'partial_success' | 'failed' | 'sent'
+
+function normalizeProposalStatus(value: unknown): ProposalStatus | null {
   const normalized = asNonEmptyString(value)?.toLowerCase()
   if (!normalized) return null
-  return PROPOSAL_STATUSES.has(normalized) ? normalized : null
+  return PROPOSAL_STATUSES.has(normalized) ? (normalized as ProposalStatus) : null
 }
 
 function normalizeCampaignAction(value: unknown): 'enable' | 'pause' | 'updateBudget' | 'updateBidding' | 'remove' | null {

@@ -97,10 +97,13 @@ export async function searchImages(query: string, perPage = 8): Promise<PexelsIm
         return searchCache.get(query)!;
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
         const url = `${PEXELS_SEARCH_URL}?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=landscape&size=large`;
         const resp = await fetch(url, {
             headers: { Authorization: PEXELS_API_KEY },
+            signal: controller.signal,
         });
 
         if (!resp.ok) {
@@ -116,10 +119,12 @@ export async function searchImages(query: string, perPage = 8): Promise<PexelsIm
 
         const images: PexelsImage[] = [];
         for (const photo of sorted.slice(0, perPage)) {
+            const imgController = new AbortController();
+            const imgTimeoutId = setTimeout(() => imgController.abort(), 30000);
             try {
                 // Use large2x for best quality (1880px wide)
                 const imgUrl = photo.src.large2x || photo.src.large || photo.src.landscape;
-                const imgResp = await fetch(imgUrl);
+                const imgResp = await fetch(imgUrl, { signal: imgController.signal });
                 if (!imgResp.ok) continue;
 
                 const arrayBuffer = await imgResp.arrayBuffer();
@@ -139,14 +144,23 @@ export async function searchImages(query: string, perPage = 8): Promise<PexelsIm
                 });
             } catch (err) {
                 logger.warn(`[Pexels] Failed to fetch image ${photo.id}`, { error: asErrorMessage(err) });
+            } finally {
+                clearTimeout(imgTimeoutId);
             }
         }
 
+        if (searchCache.size > 50) {
+            // Evict oldest entry
+            const firstKey = searchCache.keys().next().value;
+            if (firstKey) searchCache.delete(firstKey);
+        }
         searchCache.set(query, images);
         return images;
     } catch (err) {
         logger.warn(`[Pexels] Search error for "${query}"`, { error: asErrorMessage(err) });
         return [];
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 

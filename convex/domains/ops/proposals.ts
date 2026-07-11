@@ -7,6 +7,8 @@ import {
 import { internalMutation } from '../../_generated/server'
 import { v } from 'convex/values'
 import { z } from 'zod/v4'
+import { r2 } from '../../r2'
+import { isR2ObjectRef, toR2ObjectKey } from '../../lib/fileStorage'
 
 function assertCanManageProposals(ctx: { user: { role: string | null } }) {
   const role = ctx.user.role
@@ -28,6 +30,9 @@ const jsonScalarZ = z.union([z.string(), z.number(), z.boolean(), z.null()])
 const jsonLayer1Z = z.union([jsonScalarZ, z.array(jsonScalarZ), z.record(z.string(), jsonScalarZ)])
 const jsonLayer2Z = z.union([jsonLayer1Z, z.array(jsonLayer1Z), z.record(z.string(), jsonLayer1Z)])
 const jsonRecordZ = z.record(z.string(), jsonLayer2Z)
+
+const proposalStatusZ = z.enum(['draft', 'in_progress', 'ready', 'partial_success', 'failed', 'sent'])
+const STUCK_RECOVERY_THRESHOLD_MS = 10 * 60 * 1000
  
 const proposalZ = z.object({
   legacyId: z.string(),
@@ -46,6 +51,8 @@ const proposalZ = z.object({
   clientId: z.string().nullable(),
   clientName: z.string().nullable(),
   presentationDeck: jsonRecordZ.nullable(),
+  generationStartedAtMs: z.number().nullable().optional(),
+  retryCount: z.number().nullable().optional(),
   createdAtMs: z.number(),
   updatedAtMs: z.number(),
   lastAutosaveAtMs: z.number().nullable(),
@@ -79,6 +86,8 @@ export const getByLegacyId = zWorkspaceQuery({
       clientId: row.clientId,
       clientName: row.clientName,
       presentationDeck: row.presentationDeck,
+      generationStartedAtMs: row.generationStartedAtMs ?? null,
+      retryCount: row.retryCount ?? null,
       createdAtMs: row.createdAtMs,
       updatedAtMs: row.updatedAtMs,
       lastAutosaveAtMs: row.lastAutosaveAtMs,
@@ -147,6 +156,8 @@ export const list = zWorkspaceQuery({
       clientId: row.clientId,
       clientName: row.clientName,
       presentationDeck: row.presentationDeck,
+      generationStartedAtMs: row.generationStartedAtMs ?? null,
+      retryCount: row.retryCount ?? null,
       createdAtMs: row.createdAtMs,
       updatedAtMs: row.updatedAtMs,
       lastAutosaveAtMs: row.lastAutosaveAtMs,
@@ -171,7 +182,7 @@ export const create = zWorkspaceMutation({
   args: {
     workspaceId: z.string(),
     ownerId: z.string().nullable(),
-    status: z.string(),
+    status: proposalStatusZ,
     stepProgress: z.number(),
     formData: jsonRecordZ,
     clientId: z.string().nullable(),
@@ -213,6 +224,8 @@ export const create = zWorkspaceMutation({
       agentConversationId: args.agentConversationId ?? null,
       lastAgentInteractionAtMs: args.lastAgentInteractionAtMs ?? null,
       presentationDeck: null,
+      generationStartedAtMs: null,
+      retryCount: 0,
       createdAtMs: timestamp,
       updatedAtMs: timestamp,
       lastAutosaveAtMs: timestamp,
@@ -226,7 +239,7 @@ export const update = zWorkspaceMutation({
   args: {
     workspaceId: z.string(),
     legacyId: z.string(),
-    status: z.string().optional(),
+    status: proposalStatusZ.optional(),
     stepProgress: z.number().optional(),
     formData: jsonRecordZ.optional(),
     clientId: z.string().nullable().optional(),
@@ -240,6 +253,8 @@ export const update = zWorkspaceMutation({
     presentationDeck: jsonRecordZ.nullable().optional(),
     agentConversationId: z.string().nullable().optional(),
     lastAgentInteractionAtMs: z.number().nullable().optional(),
+    generationStartedAtMs: z.number().nullable().optional(),
+    retryCount: z.number().nullable().optional(),
     updatedAtMs: z.number(),
     lastAutosaveAtMs: z.number(),
   },
@@ -275,6 +290,8 @@ export const update = zWorkspaceMutation({
     if (args.agentConversationId !== undefined) patch.agentConversationId = args.agentConversationId
     if (args.lastAgentInteractionAtMs !== undefined)
       patch.lastAgentInteractionAtMs = args.lastAgentInteractionAtMs
+    if (args.generationStartedAtMs !== undefined) patch.generationStartedAtMs = args.generationStartedAtMs
+    if (args.retryCount !== undefined) patch.retryCount = args.retryCount
 
     await ctx.db.patch(existing._id, patch)
     return { ok: true }
@@ -310,6 +327,21 @@ export const remove = zWorkspaceMutation({
       })
     }
 
+    // Clean up R2 artifacts (PPTX and PDF)
+    const storageIdsToDelete = [
+      existing.pptStorageId,
+      existing.pdfStorageId,
+    ].filter((id): id is string => typeof id === 'string' && isR2ObjectRef(id))
+
+    for (const storageId of storageIdsToDelete) {
+      try {
+        const key = toR2ObjectKey(storageId)
+        await r2.deleteObject(ctx, key)
+      } catch {
+        // R2 deletion is best-effort — don't block proposal deletion on storage errors
+      }
+    }
+
     await ctx.db.delete(existing._id)
     return { ok: true }
   },
@@ -343,5 +375,45 @@ export const fixOrphanedClientId = internalMutation({
       }
     }
     return { fixed }
+  },
+})
+
+/**
+ * Cron-triggered: recover proposals stuck in 'in_progress' for more than 10 minutes.
+ * Marks them as 'failed' with an error message so users can re-trigger generation.
+ */
+export const recoverStuckGenerations = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now()
+    const stuckProposals = await ctx.db
+      .query('proposals')
+      .filter((q) =>
+        q.and(
+          q.eq(q.field('status'), 'in_progress'),
+          q.lt(q.field('updatedAtMs'), now - STUCK_RECOVERY_THRESHOLD_MS),
+        ),
+      )
+      .collect()
+
+    let recovered = 0
+    for (const p of stuckProposals) {
+      const deck = p.presentationDeck && typeof p.presentationDeck === 'object'
+        ? { ...(p.presentationDeck as Record<string, unknown>) }
+        : {}
+
+      await ctx.db.patch(p._id, {
+        status: 'failed',
+        presentationDeck: {
+          ...deck,
+          status: 'failed',
+          error: 'Generation timed out — the proposal was stuck in progress for more than 10 minutes. Please try regenerating.',
+          warnings: ['Generation timed out. Please try regenerating.'],
+        },
+        updatedAtMs: now,
+      })
+      recovered++
+    }
+    return { recovered }
   },
 })
