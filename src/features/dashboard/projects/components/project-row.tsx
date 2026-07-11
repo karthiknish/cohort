@@ -11,11 +11,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { buildProjectTasksRoute } from '@/lib/project-routes';
 import { listItemEnterClass } from '@/lib/motion';
 import { cn } from '@/lib/utils';
-import { formatRelativeTime } from '../../collaboration/utils';
+import { ClientRelativeTime } from '@/shared/components/client-relative-time';
 import { ProjectActionsMenu } from './project-actions-menu';
 import { ProjectTaskProgress } from './project-task-progress';
 import { formatDateShort } from '@/lib/dates';
-import { STATUS_CLASSES, STATUS_ICONS, formatStatusLabel, formatDateRange, isProjectOverdue, STATUS_ACCENT_COLORS, } from './utils';
+import { STATUS_CLASSES, STATUS_ICONS, formatStatusLabel, formatDateRange, isProjectOverdue, STATUS_DOT_STYLES, } from './utils';
+
 export interface ProjectRowProps {
     project: ProjectRecord;
     onDelete: (project: ProjectRecord) => void;
@@ -23,6 +24,7 @@ export interface ProjectRowProps {
     onUpdateStatus: (project: ProjectRecord, status: ProjectStatus) => void;
     isPendingUpdate?: boolean;
 }
+
 function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPendingUpdate }: ProjectRowProps) {
     const tasksHref = buildProjectTasksRoute({
         projectId: project.id,
@@ -32,13 +34,10 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
     });
     const StatusIcon = STATUS_ICONS[project.status];
     const overdue = isProjectOverdue(project);
-    const handleEdit = () => onEdit(project);
-    const statusAccentStyles = Object.fromEntries(Object.entries(STATUS_ACCENT_COLORS).map(([status, backgroundColor]) => [status, { backgroundColor }])) as Record<ProjectStatus, {
-        backgroundColor: string;
-    }>;
-    const statusUpdateHandlers = Object.fromEntries(PROJECT_STATUSES.flatMap((status) => status !== project.status
+    const handleEdit = useCallback(() => onEdit(project), [onEdit, project]);
+    const statusUpdateHandlers = useMemo(() => Object.fromEntries(PROJECT_STATUSES.flatMap((status) => status !== project.status
         ? [[status, () => onUpdateStatus(project, status)] as const]
-        : [])) as Partial<Record<ProjectStatus, () => void>>;
+        : [])) as Partial<Record<ProjectStatus, () => void>>, [onUpdateStatus, project]);
     return (<ViewTransition>
       <article className={cn('group relative overflow-hidden rounded-xl border border-border/60 bg-card p-5 shadow-sm ring-1 ring-border/30 sm:p-6', listItemEnterClass, 'transition-[border-color,box-shadow,background-color] hover:border-primary/20 hover:bg-muted/15 hover:shadow-md', isPendingUpdate && 'pointer-events-none opacity-75')}>
         <div className={cn('absolute bottom-0 left-0 top-0 w-1 rounded-l-xl', project.status === 'active'
@@ -75,7 +74,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
                   </div>
                   {PROJECT_STATUSES.flatMap((status) => status !== project.status
             ? [(<DropdownMenuItem key={status} onClick={statusUpdateHandlers[status]} className="gap-2">
-                      <div className="size-2 rounded-full" style={statusAccentStyles[status]}/>
+                      <div className="size-2 rounded-full" style={STATUS_DOT_STYLES[status]}/>
                       <span>{formatStatusLabel(status)}</span>
                     </DropdownMenuItem>)]
             : [])}
@@ -104,7 +103,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <MessageSquare className="size-3.5"/>
-                {project.recentActivityAt ? `Active ${formatRelativeTime(project.recentActivityAt)}` : 'No recent chat'}
+                {project.recentActivityAt ? <ClientRelativeTime value={project.recentActivityAt}>{(label) => `Active ${label}`}</ClientRelativeTime> : 'No recent chat'}
               </span>
             </div>
 
@@ -138,4 +137,4 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
       </article>
     </ViewTransition>);
 }
-export const ProjectRow = Object.assign(ProjectRowComponent, { displayName: 'ProjectRow' });
+export const ProjectRow = Object.assign(memo(ProjectRowComponent), { displayName: 'ProjectRow' });

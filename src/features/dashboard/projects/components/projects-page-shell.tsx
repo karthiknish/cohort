@@ -30,6 +30,7 @@ import { SummaryCard } from './summary-card';
 import { ViewModeSelector } from './view-mode-selector';
 import type { StatusFilter } from './utils';
 import { useProjectsPageContext } from './projects-page-provider';
+
 export function ProjectsPageShell() {
     const { initialLoading, handleProjectCreated } = useProjectsPageContext();
     const { user } = useAuth();
@@ -64,11 +65,12 @@ export function ProjectsPageShell() {
       </PageSkeletonBoundary>
     </TooltipProvider>);
 }
+
 function ProjectsHeaderSection() {
     const { handleProjectCreated, handleRefreshProjects, loading, portfolioLabel, projects, setViewMode, viewMode, } = useProjectsPageContext();
-    const handleRefreshProjectsClick = () => {
+    const handleRefreshProjectsClick = useCallback(() => {
         void handleRefreshProjects();
-    };
+    }, [handleRefreshProjects]);
     return (<DashboardPageHero>
       <div className="min-w-0 space-y-2">
         <div className="flex items-center gap-3">
@@ -129,6 +131,7 @@ function ProjectsHeaderSection() {
       </div>
     </DashboardPageHero>);
 }
+
 function ProjectsDialogs() {
     const { deleteDialogOpen, deleting, editDialogOpen, handleDeleteProject, handleProjectUpdated, projectToDelete, projectToEdit, setDeleteDialogOpen, setEditDialogOpen, } = useProjectsPageContext();
     return (<>
@@ -157,16 +160,17 @@ function ProjectsDialogs() {
       </AlertDialog>
     </>);
 }
+
 function ProjectsSummarySection() {
     const { completionRate, openTaskTotal, projects, setStatusFilterAndReset, statusCounts, statusFilter, taskTotal, } = useProjectsPageContext();
-    const completionStyle = ({ width: `${completionRate}%` });
-    const filterByStatus = (value: StatusFilter) => setStatusFilterAndReset(value);
-    const handleFilterAll = () => {
+    const completionStyle = useMemo(() => ({ width: `${completionRate}%` }), [completionRate]);
+    const filterByStatus = useCallback((value: StatusFilter) => setStatusFilterAndReset(value), [setStatusFilterAndReset]);
+    const handleFilterAll = useCallback(() => {
         filterByStatus('all');
-    };
-    const handleFilterActive = () => {
+    }, [filterByStatus]);
+    const handleFilterActive = useCallback(() => {
         filterByStatus('active');
-    };
+    }, [filterByStatus]);
     return (<section className="space-y-4" aria-label="Portfolio summary">
       <div className={PROJECTS_THEME.summaryStrip}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -193,17 +197,18 @@ function ProjectsSummarySection() {
       <ProjectStatusPills statusFilter={statusFilter} statusCounts={statusCounts} totalCount={projects.length} onStatusChange={filterByStatus}/>
     </section>);
 }
+
 function ProjectsBacklogSection() {
     const { activeFilterLabels, clearFocusedProject, clearAllFilters, error, focusedProject, focusedProjectRecord, focusedProjectTasksHref, handleMilestoneCreated, handleLoadMore, handleRefreshProjects, handleUpdateStatus, hasActiveFilters, hasMoreProjects, hasVisibleProjects, debouncedSearchQuery, initialLoading, loadMilestones, loading, loadingMore, milestonesByProject, milestonesError, milestonesLoading, openDeleteDialog, openEditDialog, pendingStatusUpdates, projects, searchInput, setSearchInput, setSortField, sortDirection, sortField, sortedProjects, toggleSortDirection, viewMode, } = useProjectsPageContext();
-    const handleMilestoneRefresh = () => {
+    const handleMilestoneRefresh = useCallback(() => {
         void loadMilestones(projects.map((project) => project.id));
-    };
-    const handleRefreshProjectsClick = () => {
+    }, [loadMilestones, projects]);
+    const handleRefreshProjectsClick = useCallback(() => {
         void handleRefreshProjects();
-    };
-    const handleSearchClear = () => {
+    }, [handleRefreshProjects]);
+    const handleSearchClear = useCallback(() => {
         setSearchInput('');
-    };
+    }, [setSearchInput]);
     return (<section className={PROJECTS_THEME.workspace} aria-label="Project backlog">
       <div className={PROJECTS_THEME.workspaceRail}>
         <div className="min-w-0 space-y-0.5">

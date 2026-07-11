@@ -12,7 +12,7 @@ interface ProjectFiltersProps {
     onToggleSortDirection: () => void;
 }
 export function ProjectFilters({ sortField, sortDirection, onSortFieldChange, onToggleSortDirection, }: ProjectFiltersProps) {
-    const handleSortFieldChange = (value: string) => onSortFieldChange(value as SortField);
+    const handleSortFieldChange = useCallback((value: string) => onSortFieldChange(value as SortField), [onSortFieldChange]);
     return (<div className="flex shrink-0 items-center gap-1.5">
       <Select value={sortField} onValueChange={handleSortFieldChange}>
         <SelectTrigger className="h-9 w-[9.5rem] border-border/60 bg-background text-xs shadow-sm" aria-label="Sort by">

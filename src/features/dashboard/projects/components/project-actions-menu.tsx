@@ -8,7 +8,8 @@ import type { ProjectRecord, ProjectStatus } from '@/types/projects';
 import { PROJECT_STATUSES } from '@/types/projects';
 import { Button } from '@/shared/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
-import { STATUS_ACCENT_COLORS, formatStatusLabel } from './utils';
+import { STATUS_DOT_STYLES, formatStatusLabel } from './utils';
+
 export type ProjectActionsMenuProps = {
     project: ProjectRecord;
     onEdit: (project: ProjectRecord) => void;
@@ -18,6 +19,7 @@ export type ProjectActionsMenuProps = {
     align?: 'start' | 'end';
     showEditItem?: boolean;
 };
+
 export function ProjectActionsMenu({ project, onEdit, onDelete, onUpdateStatus, triggerClassName, align = 'end', showEditItem = true, }: ProjectActionsMenuProps) {
     const tasksHref = buildProjectTasksRoute({
         projectId: project.id,
@@ -33,14 +35,11 @@ export function ProjectActionsMenu({ project, onEdit, onDelete, onUpdateStatus, 
         action: 'create',
     });
     const collaborationHref = `/dashboard/collaboration?${new URLSearchParams({ projectId: project.id }).toString()}`;
-    const handleEdit = () => onEdit(project);
-    const handleDelete = () => onDelete(project);
-    const statusAccentStyles = Object.fromEntries(Object.entries(STATUS_ACCENT_COLORS).map(([status, backgroundColor]) => [status, { backgroundColor }])) as Record<ProjectStatus, {
-        backgroundColor: string;
-    }>;
-    const statusUpdateHandlers = Object.fromEntries(PROJECT_STATUSES.flatMap((status) => status !== project.status
+    const handleEdit = useCallback(() => onEdit(project), [onEdit, project]);
+    const handleDelete = useCallback(() => onDelete(project), [onDelete, project]);
+    const statusUpdateHandlers = useMemo(() => Object.fromEntries(PROJECT_STATUSES.flatMap((status) => status !== project.status
         ? [[status, () => onUpdateStatus(project, status)] as const]
-        : [])) as Partial<Record<ProjectStatus, () => void>>;
+        : [])) as Partial<Record<ProjectStatus, () => void>>, [onUpdateStatus, project]);
     return (<DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className={cn('size-8 text-muted-foreground/60 hover:text-foreground', triggerClassName)} aria-label={`Actions for ${project.name}`}>
@@ -78,7 +77,7 @@ export function ProjectActionsMenu({ project, onEdit, onDelete, onUpdateStatus, 
         </div>
         {PROJECT_STATUSES.flatMap((status) => status !== project.status
             ? [(<DropdownMenuItem key={status} onClick={statusUpdateHandlers[status]} className="gap-2">
-            <div className="size-2 rounded-full" style={statusAccentStyles[status]}/>
+            <div className="size-2 rounded-full" style={STATUS_DOT_STYLES[status]}/>
             <span>{formatStatusLabel(status)}</span>
           </DropdownMenuItem>)]
             : [])}

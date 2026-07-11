@@ -1,18 +1,20 @@
 'use client';
 import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useMutation } from 'convex/react';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { notifyInfo, notifySuccess } from '@/lib/notifications';
 import { projectsApi } from '@/lib/convex-api';
 import { emitDashboardRefresh } from '@/lib/refresh-bus';
 import type { ProjectRecord, ProjectStatus } from '@/types/projects';
 import { formatStatusLabel } from '../components/utils';
+
 export type UseProjectsMutationsArgs = {
     workspaceId: string | null;
     userId: string | undefined;
     isPreviewMode: boolean;
     setProjects: React.Dispatch<React.SetStateAction<ProjectRecord[]>>;
 };
+
 export function useProjectsMutations({ workspaceId, userId, isPreviewMode, setProjects, }: UseProjectsMutationsArgs) {
     const softDeleteProject = useMutation(projectsApi.softDelete);
     const updateProject = useMutation(projectsApi.update);
@@ -22,21 +24,28 @@ export function useProjectsMutations({ workspaceId, userId, isPreviewMode, setPr
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [projectToEdit, setProjectToEdit] = useState<ProjectRecord | null>(null);
     const [pendingStatusUpdates, setPendingStatusUpdates] = useState<Set<string>>(new Set());
-    const handleProjectCreated = (project: ProjectRecord) => {
+    const pendingStatusUpdatesRef = useRef(pendingStatusUpdates);
+    pendingStatusUpdatesRef.current = pendingStatusUpdates;
+
+    const handleProjectCreated = useCallback((project: ProjectRecord) => {
         setProjects((previous) => [project, ...previous]);
-    };
-    const handleProjectUpdated = (updatedProject: ProjectRecord) => {
+    }, [setProjects]);
+
+    const handleProjectUpdated = useCallback((updatedProject: ProjectRecord) => {
         setProjects((previous) => previous.map((project) => (project.id === updatedProject.id ? updatedProject : project)));
-    };
-    const openEditDialog = (project: ProjectRecord) => {
+    }, [setProjects]);
+
+    const openEditDialog = useCallback((project: ProjectRecord) => {
         setProjectToEdit(project);
         setEditDialogOpen(true);
-    };
-    const openDeleteDialog = (project: ProjectRecord) => {
+    }, [setProjectToEdit, setEditDialogOpen]);
+
+    const openDeleteDialog = useCallback((project: ProjectRecord) => {
         setProjectToDelete(project);
         setDeleteDialogOpen(true);
-    };
-    const handleDeleteProject = async () => {
+    }, [setProjectToDelete, setDeleteDialogOpen]);
+
+    const handleDeleteProject = useCallback(async () => {
         if (!projectToDelete) {
             return;
         }
@@ -79,8 +88,9 @@ export function useProjectsMutations({ workspaceId, userId, isPreviewMode, setPr
             setDeleteDialogOpen(false);
             setProjectToDelete(null);
         }
-    };
-    const handleUpdateStatus = async (project: ProjectRecord, newStatus: ProjectStatus) => {
+    }, [projectToDelete, isPreviewMode, userId, workspaceId, softDeleteProject, setProjects, setDeleting, setDeleteDialogOpen, setProjectToDelete]);
+
+    const handleUpdateStatus = useCallback(async (project: ProjectRecord, newStatus: ProjectStatus) => {
         if (isPreviewMode) {
             setProjects((previous) => previous.map((current) => (current.id === project.id ? { ...current, status: newStatus } : current)));
             notifyInfo({
@@ -92,7 +102,7 @@ export function useProjectsMutations({ workspaceId, userId, isPreviewMode, setPr
         if (!userId || !workspaceId) {
             return;
         }
-        if (pendingStatusUpdates.has(project.id)) {
+        if (pendingStatusUpdatesRef.current.has(project.id)) {
             return;
         }
         const previousStatus = project.status;
@@ -127,8 +137,9 @@ export function useProjectsMutations({ workspaceId, userId, isPreviewMode, setPr
                 return next;
             });
         }
-    };
-    return {
+    }, [isPreviewMode, userId, workspaceId, updateProject, setProjects, setPendingStatusUpdates, pendingStatusUpdatesRef]);
+
+    return useMemo(() => ({
         deleteDialogOpen,
         setDeleteDialogOpen,
         projectToDelete,
@@ -143,5 +154,20 @@ export function useProjectsMutations({ workspaceId, userId, isPreviewMode, setPr
         handleUpdateStatus,
         openDeleteDialog,
         openEditDialog,
-    };
+    }), [
+        deleteDialogOpen,
+        setDeleteDialogOpen,
+        projectToDelete,
+        deleting,
+        editDialogOpen,
+        setEditDialogOpen,
+        projectToEdit,
+        pendingStatusUpdates,
+        handleProjectCreated,
+        handleProjectUpdated,
+        handleDeleteProject,
+        handleUpdateStatus,
+        openDeleteDialog,
+        openEditDialog,
+    ]);
 }

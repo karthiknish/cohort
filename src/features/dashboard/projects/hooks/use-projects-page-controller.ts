@@ -14,6 +14,9 @@ import { PROJECT_STATUSES, type ProjectStatus } from '@/types/projects';
 import { useProjectsData } from './use-projects-data';
 import { useProjectsMilestones } from './use-projects-milestones';
 import { useProjectsMutations } from './use-projects-mutations';
+
+const STATUS_ORDER = new Map<ProjectStatus, number>(PROJECT_STATUSES.map((status, index) => [status, index]));
+
 export function useProjectsPageController() {
     const searchParams = useUrlSearchParams();
     const router = useRouter();
@@ -22,13 +25,19 @@ export function useProjectsPageController() {
     const { selectedClient, selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
     const workspaceId = user?.agencyId ?? null;
+
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [searchInput, setSearchInput] = useState('');
     const [viewMode, setViewModeState] = useState<ViewMode>(() => loadStoredViewMode());
     const [sortField, setSortField] = useState<SortField>('updatedAt');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const debouncedQuery = useDebouncedValue(searchInput, 350);
-    const focusedProject = ({ id: searchParams.get('projectId'), name: searchParams.get('projectName') });
+
+    const focusedProject = useMemo(() => ({
+        id: searchParams.get('projectId'),
+        name: searchParams.get('projectName'),
+    }), [searchParams]);
+
     const { projects, setProjects, loading, loadingMore, error, hasMoreProjects, handleLoadMore, handleRefresh: resetProjectsPagination, } = useProjectsData({
         workspaceId,
         userId: user?.id,
@@ -37,6 +46,7 @@ export function useProjectsPageController() {
         statusFilter,
         debouncedSearchQuery: debouncedQuery,
     });
+
     const { milestonesByProject, milestonesLoading, milestonesError, loadMilestones, handleMilestoneCreated, } = useProjectsMilestones({
         workspaceId,
         userId: user?.id,
@@ -45,18 +55,21 @@ export function useProjectsPageController() {
         viewMode,
         projects,
     });
+
     const mutations = useProjectsMutations({
         workspaceId,
         userId: user?.id,
         isPreviewMode,
         setProjects,
     });
-    const setViewMode = (mode: ViewMode) => {
+
+    const setViewMode = useCallback((mode: ViewMode) => {
         setViewModeState(mode);
         if (typeof window !== 'undefined') {
             window.localStorage.setItem(PROJECTS_VIEW_MODE_STORAGE_KEY, mode);
         }
-    };
+    }, [setViewModeState]);
+
     useKeyboardShortcut({
         combo: 'mod+f',
         callback: () => {
@@ -69,58 +82,63 @@ export function useProjectsPageController() {
             document.getElementById('create-project-trigger')?.click();
         },
     });
-    const focusedProjects = (() => {
+
+    const focusedProjects = useMemo(() => {
         if (!focusedProject.id && !focusedProject.name) {
             return projects;
         }
         return projects.filter((project) => projectMatchesContext(project, focusedProject.id, focusedProject.name));
-    })();
-    const sortedProjects = (() => {
+    }, [projects, focusedProject]);
+
+    const sortedProjects = useMemo(() => {
         const sorted = [...focusedProjects];
         sorted.sort((left, right) => {
             let comparison = 0;
             switch (sortField) {
+                case 'status':
+                    comparison = (STATUS_ORDER.get(left.status) ?? 0) - (STATUS_ORDER.get(right.status) ?? 0);
+                    break;
                 case 'name':
                     comparison = left.name.localeCompare(right.name);
-                    break;
-                case 'status':
-                    comparison = PROJECT_STATUSES.indexOf(left.status) - PROJECT_STATUSES.indexOf(right.status);
                     break;
                 case 'taskCount':
                     comparison = left.taskCount - right.taskCount;
                     break;
                 case 'createdAt':
-                    comparison =
-                        new Date(left.createdAt ?? 0).getTime() - new Date(right.createdAt ?? 0).getTime();
+                    comparison = (new Date(left.createdAt ?? 0).getTime()) - (new Date(right.createdAt ?? 0).getTime());
                     break;
                 default:
-                    comparison =
-                        new Date(left.updatedAt ?? 0).getTime() - new Date(right.updatedAt ?? 0).getTime();
+                    comparison = (new Date(left.updatedAt ?? 0).getTime()) - (new Date(right.updatedAt ?? 0).getTime());
                     break;
             }
             return sortDirection === 'desc' ? -comparison : comparison;
         });
         return sorted;
-    })();
-    const statusCounts = projects.reduce<Record<ProjectStatus, number>>((accumulator, project) => {
+    }, [focusedProjects, sortField, sortDirection]);
+
+    const statusCounts = useMemo(() => projects.reduce<Record<ProjectStatus, number>>((accumulator, project) => {
         accumulator[project.status] = (accumulator[project.status] ?? 0) + 1;
         return accumulator;
-    }, { planning: 0, active: 0, on_hold: 0, completed: 0 });
-    const openTaskTotal = projects.reduce((total, project) => total + project.openTaskCount, 0);
-    const taskTotal = projects.reduce((total, project) => total + project.taskCount, 0);
-    const completionRate = (() => {
+    }, { planning: 0, active: 0, on_hold: 0, completed: 0 }), [projects]);
+
+    const openTaskTotal = useMemo(() => projects.reduce((total, project) => total + project.openTaskCount, 0), [projects]);
+    const taskTotal = useMemo(() => projects.reduce((total, project) => total + project.taskCount, 0), [projects]);
+    const completionRate = useMemo(() => {
         if (projects.length === 0) {
             return 0;
         }
         return Math.round((statusCounts.completed / projects.length) * 100);
-    })();
+    }, [projects, statusCounts]);
+
     const initialLoading = loading && projects.length === 0;
-    const hasActiveFilters = statusFilter !== 'all' ||
+    const hasActiveFilters = useMemo(() => statusFilter !== 'all' ||
         debouncedQuery.trim().length > 0 ||
-        Boolean(focusedProject.id || focusedProject.name);
+        Boolean(focusedProject.id || focusedProject.name), [statusFilter, debouncedQuery, focusedProject]);
     const hasVisibleProjects = sortedProjects.length > 0;
-    const focusedProjectRecord = projects.find((project) => projectMatchesContext(project, focusedProject.id, focusedProject.name)) ?? null;
-    const focusedProjectTasksHref = focusedProjectRecord?.id
+
+    const focusedProjectRecord = useMemo(() => projects.find((project) => projectMatchesContext(project, focusedProject.id, focusedProject.name)) ?? null, [projects, focusedProject]);
+
+    const focusedProjectTasksHref = useMemo(() => focusedProjectRecord?.id
         ? buildProjectTasksRoute({
             projectId: focusedProjectRecord.id,
             projectName: focusedProjectRecord.name,
@@ -129,35 +147,41 @@ export function useProjectsPageController() {
         })
         : focusedProject.id
             ? buildProjectTasksRoute({ projectId: focusedProject.id, projectName: focusedProject.name })
-            : null;
-    const portfolioLabel = selectedClient?.name ? `${selectedClient.name} workspace` : 'all workspaces';
-    const clearFocusedProject = () => {
+            : null, [focusedProjectRecord, focusedProject]);
+
+    const portfolioLabel = useMemo(() => selectedClient?.name ? `${selectedClient.name} workspace` : 'all workspaces', [selectedClient]);
+
+    const clearFocusedProject = useCallback(() => {
         const params = new URLSearchParams(searchParams.toString());
         params.delete('projectId');
         params.delete('projectName');
         const next = params.toString();
         router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
-    };
-    const toggleSortDirection = () => {
+    }, [searchParams, pathname, router]);
+
+    const toggleSortDirection = useCallback(() => {
         setSortDirection((previous) => (previous === 'asc' ? 'desc' : 'asc'));
-    };
-    const clearAllFilters = () => {
+    }, [setSortDirection]);
+
+    const clearAllFilters = useCallback(() => {
         setSearchInput('');
         setStatusFilter('all');
         setSortField('updatedAt');
         setSortDirection('desc');
         clearFocusedProject();
-    };
-    const setStatusFilterAndReset = (value: StatusFilter) => {
+    }, [clearFocusedProject, setSearchInput, setStatusFilter, setSortField, setSortDirection]);
+
+    const setStatusFilterAndReset = useCallback((value: StatusFilter) => {
         setStatusFilter(value);
-    };
-    const activeFilterLabels = (() => {
+    }, [setStatusFilter]);
+
+    const activeFilterLabels = useMemo(() => {
         const labels: string[] = [];
         if (statusFilter !== 'all') {
             labels.push(formatStatusLabel(statusFilter));
         }
         if (debouncedQuery.trim()) {
-            labels.push(`Search: “${debouncedQuery.trim()}”`);
+            labels.push(`Search: "${debouncedQuery.trim()}"`);
         }
         if (focusedProject.id || focusedProject.name) {
             labels.push('Linked project');
@@ -167,14 +191,16 @@ export function useProjectsPageController() {
             labels.push(`Sort: ${sortLabel} (${sortDirection === 'asc' ? 'asc' : 'desc'})`);
         }
         return labels;
-    })();
-    const handleRefreshProjects = () => {
+    }, [statusFilter, debouncedQuery, focusedProject, sortField, sortDirection]);
+
+    const handleRefreshProjects = useCallback(() => {
         resetProjectsPagination();
         notifySuccess({
             title: 'Projects refreshed',
             message: 'Fetching the latest project list.',
         });
-    };
+    }, [resetProjectsPagination]);
+
     return useMemo(() => ({
         activeFilterLabels,
         clearAllFilters,

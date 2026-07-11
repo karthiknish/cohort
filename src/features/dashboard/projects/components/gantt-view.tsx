@@ -19,12 +19,12 @@ export interface GanttViewProps {
     onMilestoneCreated: (milestone: MilestoneRecord) => void;
 }
 export function GanttView({ projects, milestones, loading, error, onRefresh, onMilestoneCreated }: GanttViewProps) {
-    const allMilestones = Object.values(milestones).flat();
-    const { start, end } = computeTimelineRange(projects, allMilestones);
+    const allMilestones = useMemo(() => Object.values(milestones).flat(), [milestones]);
+    const { start, end } = useMemo(() => computeTimelineRange(projects, allMilestones), [projects, allMilestones]);
     const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
     const dayWidth = 18;
-    const timelineWidth = Math.max(totalDays * dayWidth, 640);
-    const timelineStyle = ({ width: timelineWidth });
+    const timelineWidth = useMemo(() => Math.max(totalDays * dayWidth, 640), [totalDays]);
+    const timelineStyle = useMemo(() => ({ width: timelineWidth }), [timelineWidth]);
     const loadingSlots = ['loading-1', 'loading-2', 'loading-3', 'loading-4', 'loading-5'];
     if (loading) {
         return (<div className="space-y-3">

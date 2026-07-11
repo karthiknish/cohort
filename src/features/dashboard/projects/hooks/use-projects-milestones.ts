@@ -8,6 +8,7 @@ import type { MilestoneRecord } from '@/types/milestones';
 import type { ProjectRecord } from '@/types/projects';
 import type { ViewMode } from '../components/utils';
 import { mapMilestoneRecord } from './map-project-record';
+
 export type UseProjectsMilestonesArgs = {
     workspaceId: string | null;
     userId: string | undefined;
@@ -16,6 +17,7 @@ export type UseProjectsMilestonesArgs = {
     viewMode: ViewMode;
     projects: ProjectRecord[];
 };
+
 function reconcileMilestonePatches(patches: Record<string, MilestoneRecord[]>, syncedMilestones: Record<string, MilestoneRecord[]>, projectIds: string[]): Record<string, MilestoneRecord[]> {
     if (Object.keys(patches).length === 0) {
         return patches;
@@ -43,6 +45,7 @@ function reconcileMilestonePatches(patches: Record<string, MilestoneRecord[]>, s
     }
     return changed ? next : patches;
 }
+
 export function useProjectsMilestones({ workspaceId, userId, isPreviewMode, selectedClientId, viewMode, projects, }: UseProjectsMilestonesArgs) {
     const [milestonePatches, setMilestonePatches] = useState<Record<string, MilestoneRecord[]>>({});
     const [milestonesRefreshKey, setMilestonesRefreshKey] = useState(0);
@@ -103,7 +106,7 @@ export function useProjectsMilestones({ workspaceId, userId, isPreviewMode, sele
     }, [viewMode, syncedMilestones, milestonePatches]);
     const milestonesLoading = viewMode === 'gantt' && milestonesQueryEnabled && milestonesRealtime === undefined;
     const milestonesError = viewMode === 'gantt' ? milestonesQueryError : null;
-    const loadMilestones = async (_targetProjectIds: string[]) => {
+    const loadMilestones = useCallback(async (_targetProjectIds: string[]) => {
         if (viewMode !== 'gantt') {
             return;
         }
@@ -111,8 +114,8 @@ export function useProjectsMilestones({ workspaceId, userId, isPreviewMode, sele
         if (!isPreviewMode) {
             setMilestonesRefreshKey((previous) => previous + 1);
         }
-    };
-    const handleMilestoneCreated = (milestone: MilestoneRecord) => {
+    }, [viewMode, isPreviewMode, setMilestonePatches, setMilestonesRefreshKey]);
+    const handleMilestoneCreated = useCallback((milestone: MilestoneRecord) => {
         setMilestonePatches((previous) => {
             const existing = previous[milestone.projectId] ?? [];
             if (existing.some((entry) => entry.id === milestone.id)) {
@@ -120,12 +123,12 @@ export function useProjectsMilestones({ workspaceId, userId, isPreviewMode, sele
             }
             return { ...previous, [milestone.projectId]: [...existing, milestone] };
         });
-    };
-    return {
+    }, [setMilestonePatches]);
+    return useMemo(() => ({
         milestonesByProject,
         milestonesLoading,
         milestonesError,
         loadMilestones,
         handleMilestoneCreated,
-    };
+    }), [milestonesByProject, milestonesLoading, milestonesError, loadMilestones, handleMilestoneCreated]);
 }

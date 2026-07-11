@@ -88,13 +88,13 @@ export function useAccumulatedCursorPages<TItem, TCursor>({ scopeKey, queryData,
     }, [mergePages]);
     const mergedItems = useMemo(() => mergePagesRef.current(firstPageItems, olderItems), [firstPageItems, olderItems]);
     const isInitialLoading = enabled && queryData === undefined && loadCursor === null;
-    const loadMore = () => {
+    const loadMore = useCallback(() => {
         if (!enabled || !nextPageCursor || isLoadingMore || isInitialLoading) {
             return;
         }
         setIsLoadingMore(true);
         setLoadCursor(nextPageCursor);
-    };
+    }, [enabled, nextPageCursor, isLoadingMore, isInitialLoading]);
     return {
         mergedItems,
         nextCursor: nextPageCursor,

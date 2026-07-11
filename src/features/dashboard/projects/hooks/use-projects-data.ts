@@ -10,6 +10,7 @@ import type { StatusFilter } from '../components/utils';
 import { mergeProjectTaskCounts } from '../components/utils';
 import { mapProjectRecord } from './map-project-record';
 import { mergeProjectPages, parsePaginatedProjectsQuery, PROJECTS_PAGE_SIZE, type ProjectPageCursor, } from './use-projects-pagination';
+
 export type UseProjectsDataArgs = {
     workspaceId: string | null;
     userId: string | undefined;
@@ -18,26 +19,27 @@ export type UseProjectsDataArgs = {
     statusFilter: StatusFilter;
     debouncedSearchQuery: string;
 };
+
 export function useProjectsData({ workspaceId, userId, isPreviewMode, selectedClientId, statusFilter, debouncedSearchQuery, }: UseProjectsDataArgs) {
     const [projects, setProjects] = useState<ProjectRecord[]>([]);
     const [loadCursor, setLoadCursor] = useState<ProjectPageCursor | null>(null);
     const searchQuery = debouncedSearchQuery.trim();
-    const paginationScopeKey = [
+    const paginationScopeKey = useMemo(() => [
         workspaceId ?? '',
         selectedClientId ?? '',
         statusFilter,
         searchQuery,
         isPreviewMode ? 'preview' : 'live',
-    ].join('|');
+    ].join('|'), [workspaceId, selectedClientId, statusFilter, searchQuery, isPreviewMode]);
     const queryEnabled = !isPreviewMode && Boolean(workspaceId && userId);
-    const listArgs = ({
+    const listArgs = useMemo(() => ({
         workspaceId: workspaceId!,
         limit: PROJECTS_PAGE_SIZE,
         cursor: loadCursor,
         clientId: selectedClientId ?? undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
         searchQuery: searchQuery || undefined,
-    });
+    }), [workspaceId, loadCursor, selectedClientId, statusFilter, searchQuery]);
     const projectsRealtime = useQuery(projectsApi.list, queryEnabled ? listArgs : 'skip');
     const projectsQueryError = useConvexQueryError({
         data: projectsRealtime,
@@ -63,7 +65,7 @@ export function useProjectsData({ workspaceId, userId, isPreviewMode, selectedCl
         },
         mergePages: mergeProjectPages,
     });
-    const loadedProjectIds = paginatedProjects.map((project) => project.id);
+    const loadedProjectIds = useMemo(() => paginatedProjects.map((project) => project.id), [paginatedProjects]);
     const taskCountsRealtime = useQuery(tasksApi.summarizeCountsByProject, queryEnabled && loadedProjectIds.length > 0
         ? {
             workspaceId: workspaceId!,
@@ -76,7 +78,7 @@ export function useProjectsData({ workspaceId, userId, isPreviewMode, selectedCl
         skipped: !queryEnabled || loadedProjectIds.length === 0,
         fallbackMessage: 'Unable to load task counts.',
     });
-    const projectsWithTaskCounts = (() => {
+    const projectsWithTaskCounts = useMemo(() => {
         if (isPreviewMode) {
             let previewProjects = getPreviewProjects(selectedClientId ?? null);
             if (statusFilter !== 'all') {
@@ -97,17 +99,17 @@ export function useProjectsData({ workspaceId, userId, isPreviewMode, selectedCl
             }>)
             : {};
         return paginatedProjects.map((project) => mergeProjectTaskCounts(project, counts));
-    })();
+    }, [isPreviewMode, selectedClientId, statusFilter, searchQuery, paginatedProjects, taskCountsRealtime]);
     useEffect(() => {
         setProjects(projectsWithTaskCounts);
     }, [projectsWithTaskCounts]);
     const loading = queryEnabled && projectsInitialLoading;
     const loadingMore = projectsLoadingMore;
     const error = projectsQueryError ?? taskCountsQueryError ?? null;
-    const handleRefresh = () => {
+    const handleRefresh = useCallback(() => {
         resetProjectPagination();
-    };
-    return {
+    }, [resetProjectPagination]);
+    return useMemo(() => ({
         projects,
         setProjects,
         loading,
@@ -117,5 +119,5 @@ export function useProjectsData({ workspaceId, userId, isPreviewMode, selectedCl
         handleLoadMore: loadMoreProjects,
         handleRefresh,
         resetPagination: resetProjectPagination,
-    };
+    }), [projects, setProjects, loading, loadingMore, error, projectsNextCursor, loadMoreProjects, handleRefresh, resetProjectPagination]);
 }

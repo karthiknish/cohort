@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, } from '@/shared/ui/tooltip';
 import { buildProjectTasksRoute } from '@/lib/project-routes';
 import { clickableCardClass, listItemEnterClass } from '@/lib/motion';
 import { cn } from '@/lib/utils';
-import { formatRelativeTime } from '../../collaboration/utils';
+import { ClientRelativeTime } from '@/shared/components/client-relative-time';
 import { ProjectActionsMenu } from './project-actions-menu';
 import { ProjectTaskProgress } from './project-task-progress';
 import { STATUS_CLASSES, STATUS_ICONS, formatStatusLabel, formatDateRange, isProjectOverdue } from './utils';
@@ -97,7 +97,7 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <MessageSquare className="size-3.5"/>
-                {project.recentActivityAt ? formatRelativeTime(project.recentActivityAt) : 'No recent chat'}
+                {project.recentActivityAt ? <ClientRelativeTime value={project.recentActivityAt} /> : 'No recent chat'}
               </span>
             </div>) : null}
 
@@ -125,4 +125,4 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
       </article>
     </ViewTransition>);
 }
-export const ProjectCard = Object.assign(ProjectCardComponent, { displayName: 'ProjectCard' });
+export const ProjectCard = Object.assign(memo(ProjectCardComponent), { displayName: 'ProjectCard' });

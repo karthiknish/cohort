@@ -33,9 +33,9 @@ export type ProjectsListStateProps = {
     onLoadMore: () => void;
 };
 export function ProjectsListState({ error, hasActiveFilters, hasVisibleProjects, initialLoading, loading, onClearAllFilters, onDelete, onEdit, onRefresh, onSearchClear, onUpdateStatus, pendingStatusUpdates, projects, searchInput, sortedProjects, viewMode, onClearFocusAndFilters, hasMoreProjects, loadingMore, onLoadMore, }: ProjectsListStateProps) {
-    const openCreateProject = () => {
+    const openCreateProject = useCallback(() => {
         document.getElementById('create-project-trigger')?.click();
-    };
+    }, []);
     if (initialLoading) {
         return (<div className="space-y-3 py-2">
         {['project-skeleton-1', 'project-skeleton-2', 'project-skeleton-3', 'project-skeleton-4'].map((key) => (<Skeleton key={key} className="h-28 w-full rounded-xl"/>))}
