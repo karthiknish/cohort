@@ -4,7 +4,7 @@ import { GripVertical, ListTodo, LoaderCircle, RefreshCw, TriangleAlert } from '
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { LiveRegion } from '@/shared/ui/live-region';
-import { ScrollArea, ScrollBar } from '@/shared/ui/scroll-area';
+import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { TaskRecord, TaskStatus } from '@/types/tasks';
@@ -184,8 +184,8 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
     };
     if (initialLoading) {
         const columnSkeletonKeys = ['todo', 'in-progress', 'review', 'completed'] as const;
-        return (<div className="flex gap-4 overflow-x-auto px-4 pb-4 h-[calc(100vh-18rem)] min-h-[24rem]">
-        {columnSkeletonKeys.map((columnKey) => (<div key={columnKey} className="flex h-full min-h-0 w-[min(100%,280px)] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 p-3 sm:w-[280px]">
+        return (<div className="flex gap-3 px-4 pb-4 h-[calc(100vh-18rem)] min-h-[24rem]">
+        {columnSkeletonKeys.map((columnKey) => (<div key={columnKey} className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 p-3">
             <Skeleton className="mb-3 h-8 w-full rounded-lg"/>
             <Skeleton className="mb-3 h-28 w-full rounded-xl"/>
             <Skeleton className="h-28 w-full rounded-xl"/>
@@ -242,12 +242,9 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
         </div>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1 w-full">
-        <div className="flex h-full w-max gap-4 pb-4 pr-2">
+      <div className="flex min-h-0 flex-1 gap-3 pb-2">
           {columns.map((column) => (<KanbanColumn key={column.status} bulkActive={bulkActive} column={column} dragOverStatus={dragOverStatus} draggedTask={draggedTask} handleDragEnd={handleDragEnd} handleDragLeave={handleDragLeave} handleDragOver={handleDragOver} handleDrop={handleDrop} handleDragStart={handleDragStart} keyboardInstructionsId={keyboardInstructionsId} onKeyboardMoveTask={handleKeyboardMoveTask} handleViewTask={handleViewTask} onClone={onClone} onDelete={onDelete} onEdit={onEdit} onQuickStatusChange={onQuickStatusChange} onShare={onShare} onToggleTaskSelection={onToggleTaskSelection} pendingStatusUpdates={pendingStatusUpdates} searchQuery={searchQuery} selectedTaskIds={selectedTaskIds}/>))}
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      </div>
 
       {hasMore ? (<div className="flex justify-center pt-2">
           <Button variant="ghost" className="h-10 gap-2 rounded-xl px-6 font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground" onClick={onLoadMore} disabled={loadingMore || loading}>
@@ -290,7 +287,7 @@ function KanbanColumn({ bulkActive, column, dragOverStatus, draggedTask, handleD
     const isDraggingFrom = draggedTask?.sourceStatus === column.status;
     const handleColumnDragOver = (event: React.DragEvent<HTMLDivElement>) => handleDragOver(event, column.status);
     const handleColumnDrop = (event: React.DragEvent<HTMLDivElement>) => handleDrop(event, column.status);
-    return (<section aria-label={`${column.label} task lane`} className={cn('flex h-full min-h-0 w-[min(100%,280px)] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 shadow-sm transition-colors sm:w-[280px]', isDragTarget && 'border-primary/30 bg-primary/5 ring-1 ring-primary/15', isDraggingFrom && !isDragTarget && 'opacity-60')} onDragOver={handleColumnDragOver} onDragLeave={handleDragLeave} onDrop={handleColumnDrop}>
+    return (<section aria-label={`${column.label} task lane`} className={cn('flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 shadow-sm transition-colors', isDragTarget && 'border-primary/30 bg-primary/5 ring-1 ring-primary/15', isDraggingFrom && !isDragTarget && 'opacity-60')} onDragOver={handleColumnDragOver} onDragLeave={handleDragLeave} onDrop={handleColumnDrop}>
       <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-card/80 px-3.5 py-3 backdrop-blur-sm">
         <div className="flex min-w-0 items-center gap-2">
           <div className={cn('size-2 shrink-0 rounded-full', statusLaneColors[column.status])} aria-hidden/>
