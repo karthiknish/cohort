@@ -51,14 +51,14 @@ const proposalZ = z.object({
 
 export const getByLegacyId = zWorkspaceQuery({
   args: { workspaceId: z.string(), legacyId: z.string() },
-  returns: proposalZ,
+  returns: proposalZ.nullable(),
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query('proposals')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) throw Errors.resource.notFound('Proposal', args.legacyId)
+    if (!row) return null
 
     return {
       legacyId: row.legacyId,
