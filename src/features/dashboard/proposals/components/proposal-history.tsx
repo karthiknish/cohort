@@ -9,6 +9,7 @@ import { MotionCard } from '@/shared/ui/motion-primitives';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { Button } from '@/shared/ui/button';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Skeleton } from '@/shared/ui/skeleton';
 import type { ProposalDraft } from '@/types/proposals';
 import { ProposalHistoryEmptyState, ProposalHistoryHeader, ProposalHistoryRow, } from './proposal-history-sections';
 
@@ -60,6 +61,7 @@ export type ProposalHistoryWorkflowState = {
     loading: boolean;
     generating: boolean;
     creating: boolean;
+    refreshing?: boolean;
 };
 interface ProposalHistoryProps {
     proposals: ProposalDraft[];
@@ -76,7 +78,7 @@ interface ProposalHistoryProps {
     onCreateNew: () => void;
 }
 function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, deletingProposalId, queryError, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, }: ProposalHistoryProps) {
-    const { loading: isLoading, generating: isGenerating, creating: isCreating } = workflow;
+    const { loading: isLoading, generating: isGenerating, creating: isCreating, refreshing: isRefreshing } = workflow;
     const { canCreate, canManage = true } = capabilities;
     const emptyStateActions = ({
         canCreate,
@@ -131,19 +133,27 @@ function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, 
             <div className="min-w-0 space-y-1">
               <CardTitle className="text-lg font-semibold tracking-tight">Proposal history</CardTitle>
               <CardDescription className="text-sm leading-relaxed">
-                Drafts, generated decks, and sent proposals for this client - resume work or open materials in one place.
+                Drafts, generated decks, and sent proposals in this workspace - resume work or open materials in one place.
               </CardDescription>
             </div>
           </div>
       </CardHeader>
         <CardContent className="space-y-4">
-        <ProposalHistoryHeader isLoading={isLoading} onRefresh={onRefresh} proposalCount={proposals.length}/>
+        <ProposalHistoryHeader isLoading={isLoading} isRefreshing={isRefreshing} onRefresh={onRefresh} proposalCount={proposals.length}/>
         {queryError ? (<Alert variant="destructive">
             <CircleAlert className="size-4"/>
             <AlertDescription>{queryError}</AlertDescription>
           </Alert>) : null}
-        {proposals.length === 0 && !isLoading ? (<ProposalHistoryEmptyState actions={emptyStateActions} onCreateNew={onCreateNew}/>) : (<>
-            <FadeInStagger className="divide-y divide-border/60">
+        {isLoading && proposals.length === 0 ? (<div className="space-y-1">
+            {[0, 1, 2].map((i) => (<div key={i} className="flex items-center gap-4 px-1 py-4 sm:px-2">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40"/>
+                  <Skeleton className="h-3 w-56"/>
+                </div>
+                <Skeleton className="h-9 w-28 rounded-full"/>
+              </div>))}
+          </div>) : proposals.length === 0 && !isLoading ? (<ProposalHistoryEmptyState actions={emptyStateActions} onCreateNew={onCreateNew}/>) : (<>
+            <FadeInStagger className="space-y-1">
               {pagedRows.map((row) => (<FadeInItem key={row.proposal.id} y={8}>
                     <ProposalHistoryRow canManage={canManage} deletingProposalId={deletingProposalId} onDownloadDeck={onDownloadDeck} onRequestDelete={onRequestDelete} onResume={onResume} row={row}/>
                   </FadeInItem>))}

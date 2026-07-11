@@ -89,8 +89,8 @@ export function ImagePreviewModalDialog({ currentImage, hasMultipleImages, norma
         </>)}
 
       {/* Image */}
-      <button type="button" className="flex size-full items-center justify-center overflow-hidden p-16" onClick={handleStopPropagation} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onKeyDown={handleImageAreaKeyDown} aria-label={`Preview image ${currentImage.name}`}>
-        <LazyImage src={currentImage.url} alt={currentImage.name} className={cn("max-h-full max-w-full object-contain transition-transform duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] motion-reduce:transition-none", zoom > 1 ? "cursor-grab" : "cursor-zoom-in", isDragging && "cursor-grabbing")} style={imageStyle} onClick={handleImageClick} draggable={false}/>
+      <button type="button" className="relative flex size-full items-center justify-center overflow-hidden p-16" onClick={handleStopPropagation} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onKeyDown={handleImageAreaKeyDown} aria-label={`Preview image ${currentImage.name}`}>
+        <LazyImage src={currentImage.url} alt={currentImage.name} className={cn("max-h-full max-w-full object-contain transition-transform duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] motion-reduce:transition-none", zoom > 1 ? "cursor-grab" : "cursor-zoom-in", isDragging && "cursor-grabbing")} style={{ objectFit: 'contain', ...imageStyle }} onClick={handleImageClick} draggable={false}/>
       </button>
 
       {/* Thumbnails */}

@@ -28,6 +28,8 @@ import { FadeIn } from '@/shared/ui/animate-in';
 import { Button } from '@/shared/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle, } from '@/shared/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
+import { DashboardSkeleton } from './components/dashboard-skeleton';
 export function DashboardOverviewSpendRevenueChart({ chartMetrics, metricsLoading, displayCurrency, }: {
     chartMetrics: ReturnType<typeof buildChartData>;
     metricsLoading: boolean;
@@ -364,6 +366,7 @@ export type DashboardOverviewLoadingFlags = {
     statsLoading: boolean;
 };
 export type DashboardOverviewPageViewProps = {
+    isInitialLoading: boolean;
     clientName: string;
     isClientScoped: boolean;
     teamMembersCount: number;
@@ -383,7 +386,7 @@ export type DashboardOverviewPageViewProps = {
     analyticsMetricsList: DashboardSnapshotMetric[];
     displayStats: SummaryStat[];
 };
-export function DashboardOverviewPageView({ clientName, isClientScoped, teamMembersCount, accountManager, availability, loading, onRefresh, dashboardErrors, clientStats, chartMetrics, displayCurrency, adsMetricsList, analyticsMetricsList, displayStats, }: DashboardOverviewPageViewProps) {
+export function DashboardOverviewPageView({ isInitialLoading, clientName, isClientScoped, teamMembersCount, accountManager, availability, loading, onRefresh, dashboardErrors, clientStats, chartMetrics, displayCurrency, adsMetricsList, analyticsMetricsList, displayStats, }: DashboardOverviewPageViewProps) {
     const { hasLiveMetrics, hasChartData, hasAdsData, hasAnalyticsData, } = availability;
     const { isRefreshing, clientStatsLoading, metricsLoading, adsLoading, analyticsLoading, statsLoading, } = loading;
     return (<div className="space-y-8">
@@ -391,16 +394,18 @@ export function DashboardOverviewPageView({ clientName, isClientScoped, teamMemb
 
       <DashboardOverviewErrorsAlert errors={dashboardErrors} isRefreshing={isRefreshing} onRetry={onRefresh}/>
 
-      <FadeIn>
-        <DashboardDailySnapshotCard openTasks={clientStats.openTasks} pendingProposals={clientStats.pendingProposals} activeProjects={clientStats.activeProjects} loading={clientStatsLoading}/>
-      </FadeIn>
-
-      <DashboardOverviewPerformanceSection hasChartData={hasChartData} hasAdsData={hasAdsData} hasAnalyticsData={hasAnalyticsData} metricsLoading={metricsLoading} chartMetrics={chartMetrics} displayCurrency={displayCurrency} adsMetricsList={adsMetricsList} analyticsMetricsList={analyticsMetricsList} adsLoading={adsLoading} analyticsLoading={analyticsLoading}/>
-
       <FadeIn id="tour-quick-actions">
         <QuickActions compact/>
       </FadeIn>
 
-      <DashboardOverviewSummarySection displayStats={displayStats} statsLoading={statsLoading}/>
+      <PageSkeletonBoundary loading={isInitialLoading} loadingContent={<DashboardSkeleton />}>
+        <FadeIn>
+          <DashboardDailySnapshotCard openTasks={clientStats.openTasks} pendingProposals={clientStats.pendingProposals} activeProjects={clientStats.activeProjects} loading={clientStatsLoading}/>
+        </FadeIn>
+
+        <DashboardOverviewPerformanceSection hasChartData={hasChartData} hasAdsData={hasAdsData} hasAnalyticsData={hasAnalyticsData} metricsLoading={metricsLoading} chartMetrics={chartMetrics} displayCurrency={displayCurrency} adsMetricsList={adsMetricsList} analyticsMetricsList={analyticsMetricsList} adsLoading={adsLoading} analyticsLoading={analyticsLoading}/>
+
+        <DashboardOverviewSummarySection displayStats={displayStats} statsLoading={statsLoading}/>
+      </PageSkeletonBoundary>
     </div>);
 }

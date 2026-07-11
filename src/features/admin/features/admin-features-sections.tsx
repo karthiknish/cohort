@@ -8,6 +8,7 @@ import type { FeatureItem, FeatureStatus } from '@/types/features';
 import { AdminPageShell } from '../components/admin-page-shell';
 import { AdminActionErrorAlert } from '../components/admin-action-error-alert';
 import { AdminQueryErrorAlert } from '../components/admin-query-error-alert';
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { FeatureKanbanBoard } from './components/feature-kanban-board';
 import { FeatureFormDialog } from './components/feature-form-dialog';
 import type { FeatureSubmitData } from './admin-features-types';
@@ -23,7 +24,11 @@ export function AdminFeaturesToolbarActions({ refreshing, onRefresh, }: {
 }
 export function AdminFeaturesLoadingShell() {
     return (<AdminPageShell title="Feature planning" description="Loading the platform backlog…">
-      <div className="grid gap-4 lg:grid-cols-4">
+      <AdminFeaturesKanbanSkeleton />
+    </AdminPageShell>);
+}
+export function AdminFeaturesKanbanSkeleton() {
+    return (<div className="grid gap-4 lg:grid-cols-4">
         {['skeleton-a', 'skeleton-b', 'skeleton-c', 'skeleton-d'].map((key) => (<div key={key} className="space-y-3 rounded-lg border border-border/60 bg-card/50 p-4">
             <Skeleton className="h-4 w-24"/>
             <div className="space-y-2">
@@ -32,8 +37,7 @@ export function AdminFeaturesLoadingShell() {
               <Skeleton className="h-16 w-full rounded-md"/>
             </div>
           </div>))}
-      </div>
-    </AdminPageShell>);
+      </div>);
 }
 type AdminFeaturesDeleteDialogProps = {
     open: boolean;
@@ -64,6 +68,7 @@ export function AdminFeaturesDeleteDialog({ open, featureToDelete, isDeleting, o
 }
 type AdminFeaturesPageContentProps = {
     isPreviewMode: boolean;
+    loading: boolean;
     features: FeatureItem[];
     featuresQueryError: string | null;
     actionError: string | null;
@@ -85,7 +90,7 @@ type AdminFeaturesPageContentProps = {
     onMoveFeature: (featureId: string, newStatus: FeatureStatus) => void;
     onSubmitFeature: (data: FeatureSubmitData) => Promise<void>;
 };
-export function AdminFeaturesPageContent({ isPreviewMode, features, featuresQueryError, actionError, clearActionError, refreshing, formDialogOpen, editingFeature, defaultStatus, deleteConfirmOpen, featureToDelete, isDeleting, onRefresh, onAddFeature, onEditFeature, onDeleteFeature, onFormDialogOpenChange, onDeleteConfirmOpenChange, onConfirmDelete, onMoveFeature, onSubmitFeature, }: AdminFeaturesPageContentProps) {
+export function AdminFeaturesPageContent({ isPreviewMode, loading, features, featuresQueryError, actionError, clearActionError, refreshing, formDialogOpen, editingFeature, defaultStatus, deleteConfirmOpen, featureToDelete, isDeleting, onRefresh, onAddFeature, onEditFeature, onDeleteFeature, onFormDialogOpenChange, onDeleteConfirmOpenChange, onConfirmDelete, onMoveFeature, onSubmitFeature, }: AdminFeaturesPageContentProps) {
     const toolbarActions = <AdminFeaturesToolbarActions refreshing={refreshing} onRefresh={onRefresh}/>;
     return (<>
       <AdminActionErrorAlert error={actionError} onDismiss={clearActionError}/>
@@ -102,7 +107,9 @@ export function AdminFeaturesPageContent({ isPreviewMode, features, featuresQuer
           <span>Drag cards between columns or open a card to edit details.</span>
         </div>
 
-        <FeatureKanbanBoard features={features} onAddFeature={onAddFeature} onEditFeature={onEditFeature} onDeleteFeature={onDeleteFeature} onMoveFeature={onMoveFeature}/>
+        <PageSkeletonBoundary loading={loading && features.length === 0} loadingContent={<AdminFeaturesKanbanSkeleton />}>
+          <FeatureKanbanBoard features={features} onAddFeature={onAddFeature} onEditFeature={onEditFeature} onDeleteFeature={onDeleteFeature} onMoveFeature={onMoveFeature}/>
+        </PageSkeletonBoundary>
       </AdminPageShell>
 
       <FeatureFormDialog open={formDialogOpen} onOpenChange={onFormDialogOpenChange} feature={editingFeature} defaultStatus={defaultStatus} onSubmit={onSubmitFeature}/>

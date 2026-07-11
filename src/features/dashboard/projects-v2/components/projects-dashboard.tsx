@@ -46,7 +46,6 @@ import { useMilestoneMutations } from '../hooks/use-milestone-mutations';
 
 export function ProjectsDashboard() {
   const {
-    initialLoading,
     handleProjectCreated,
   } = useProjectsPageContext();
   const { user } = useAuth();
@@ -72,37 +71,35 @@ export function ProjectsDashboard() {
 
   return (
     <TooltipProvider>
-      <PageSkeletonBoundary loading={initialLoading} loadingContent={<ProjectsPageSkeleton />}>
-        <div
-          className={cn(DASHBOARD_THEME.layout.container, PROJECTS_THEME.page)}
-          {...documentImport.importDragHandlers}
-        >
-          <ProjectsDocumentImportOverlay
-            phase={documentImport.phase}
-            statusMessage={documentImport.statusMessage}
-            errorMessage={documentImport.errorMessage}
-            visible={documentImport.overlayVisible}
-            onCancel={documentImport.handleCancel}
-          />
+      <div
+        className={cn(DASHBOARD_THEME.layout.container, PROJECTS_THEME.page)}
+        {...documentImport.importDragHandlers}
+      >
+        <ProjectsDocumentImportOverlay
+          phase={documentImport.phase}
+          statusMessage={documentImport.statusMessage}
+          errorMessage={documentImport.errorMessage}
+          visible={documentImport.overlayVisible}
+          onCancel={documentImport.handleCancel}
+        />
 
-          <ProjectsDocumentImportReviewSheet
-            open={documentImport.reviewOpen}
-            documentSummary={documentImport.documentSummary}
-            proposedProjects={documentImport.proposedProjects}
-            clients={clients}
-            preferredClientName={selectedClient?.name ?? null}
-            onUpdateProject={documentImport.updateProposedProject}
-            onConfirm={documentImport.handleConfirmReview}
-            onDiscard={documentImport.handleDismissReview}
-          />
+        <ProjectsDocumentImportReviewSheet
+          open={documentImport.reviewOpen}
+          documentSummary={documentImport.documentSummary}
+          proposedProjects={documentImport.proposedProjects}
+          clients={clients}
+          preferredClientName={selectedClient?.name ?? null}
+          onUpdateProject={documentImport.updateProposedProject}
+          onConfirm={documentImport.handleConfirmReview}
+          onDiscard={documentImport.handleDismissReview}
+        />
 
-          <ProjectsHeaderSection />
-          <ProjectsDialogs />
-          <ProjectsSummarySection />
-          <ProjectsBacklogSection />
-          <ProjectsDetailDrawerSection />
-        </div>
-      </PageSkeletonBoundary>
+        <ProjectsHeaderSection />
+        <ProjectsDialogs />
+        <ProjectsSummarySection />
+        <ProjectsBacklogSection />
+        <ProjectsDetailDrawerSection />
+      </div>
     </TooltipProvider>
   );
 }
@@ -459,37 +456,39 @@ function ProjectsBacklogSection() {
       </div>
 
       <CardContent className={cn(PROJECTS_THEME.content, 'pt-0 pb-0', viewMode === 'list' && 'bg-muted/[0.15]')}>
-        <ProjectsListState
-          error={error}
-          hasActiveFilters={hasActiveFilters}
-          hasVisibleProjects={hasVisibleProjects}
-          initialLoading={initialLoading}
-          loading={loading}
-          onClearAllFilters={clearAllFilters}
-          onDelete={openDeleteDialog}
-          onEdit={openEditDialog}
-          hasMoreProjects={hasMoreProjects}
-          loadingMore={loadingMore}
-          onLoadMore={handleLoadMore}
-          onRefresh={handleRefreshProjectsClick}
-          onSearchClear={handleSearchClear}
-          onUpdateStatus={handleUpdateStatus}
-          onViewDetails={(project) => openDrawer(project.id)}
-          pendingStatusUpdates={pendingStatusUpdates}
-          projects={projects}
-          searchInput={searchInput}
-          sortedProjects={sortedProjects}
-          viewMode={viewMode}
-          onClearFocusAndFilters={clearAllFilters}
-          milestonesByProject={milestonesByProject}
-          milestonesLoading={milestonesLoading}
-          milestonesError={milestonesError}
-          onMilestoneRefresh={handleMilestoneRefresh}
-          onMilestoneCreated={handleMilestoneCreated}
-          onMilestoneUpdated={handleMilestoneCreated}
-          onMoveMilestone={moveMilestone}
-          onUpdateMilestone={updateMilestoneDetails}
-        />
+        <PageSkeletonBoundary loading={initialLoading} loadingContent={<ProjectsPageSkeleton />}>
+          <ProjectsListState
+            error={error}
+            hasActiveFilters={hasActiveFilters}
+            hasVisibleProjects={hasVisibleProjects}
+            initialLoading={initialLoading}
+            loading={loading}
+            onClearAllFilters={clearAllFilters}
+            onDelete={openDeleteDialog}
+            onEdit={openEditDialog}
+            hasMoreProjects={hasMoreProjects}
+            loadingMore={loadingMore}
+            onLoadMore={handleLoadMore}
+            onRefresh={handleRefreshProjectsClick}
+            onSearchClear={handleSearchClear}
+            onUpdateStatus={handleUpdateStatus}
+            onViewDetails={(project) => openDrawer(project.id)}
+            pendingStatusUpdates={pendingStatusUpdates}
+            projects={projects}
+            searchInput={searchInput}
+            sortedProjects={sortedProjects}
+            viewMode={viewMode}
+            onClearFocusAndFilters={clearAllFilters}
+            milestonesByProject={milestonesByProject}
+            milestonesLoading={milestonesLoading}
+            milestonesError={milestonesError}
+            onMilestoneRefresh={handleMilestoneRefresh}
+            onMilestoneCreated={handleMilestoneCreated}
+            onMilestoneUpdated={handleMilestoneCreated}
+            onMoveMilestone={moveMilestone}
+            onUpdateMilestone={updateMilestoneDetails}
+          />
+        </PageSkeletonBoundary>
       </CardContent>
     </Card>
   );

@@ -519,7 +519,6 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     });
     return (<TooltipProvider>
       <TaskParticipantsProvider participants={taskParticipants}>
-      <PageSkeletonBoundary loading={initialLoading} loadingContent={<TasksPageSkeleton />} className="flex flex-col flex-1 min-h-0">
       <div className={cn(DASHBOARD_THEME.layout.container, TASKS_THEME.page, 'relative flex flex-col flex-1 min-h-0')} {...documentImport.importDragHandlers}>
         <TasksDocumentImportOverlay phase={documentImport.phase} statusMessage={documentImport.statusMessage} errorMessage={documentImport.errorMessage} visible={documentImport.overlayVisible} onCancel={documentImport.handleCancel}/>
 
@@ -558,7 +557,9 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
               {filters.viewMode !== 'board' && (<TaskBulkToolbar selectedCount={selectedTasks.length} totalVisible={visibleTasks.length} hasSelection={hasSelection} bulkActive={bulkState.active} bulkLabel={bulkState.label} bulkProgress={bulkState.progress} onSelectAll={handleSelectAllVisible} onClearSelection={handleClearSelection} onSelectHighPriority={handleSelectHighPriority} onSelectDueSoon={handleSelectDueSoon} highPriorityCount={highPriorityCount} dueSoonCount={dueSoonCount} onBulkStatusChange={handleBulkStatusChange} onBulkAssign={handleBulkAssign} onBulkDueDate={handleBulkDueDate} onBulkDelete={handleBulkDeleteAction}/>)}
 
               <div className={cn(TASKS_THEME.content, 'p-0', filters.viewMode === 'list' && 'bg-muted/[0.18] flex-1 overflow-y-auto pb-24', filters.viewMode === 'board' && 'min-h-0 flex-1 overflow-hidden')}>
+              <PageSkeletonBoundary loading={initialLoading} loadingContent={<TasksPageSkeleton />} className="flex flex-col flex-1 min-h-0">
               {filters.viewMode === 'board' ? (<TaskBoardErrorBoundary onSwitchToList={() => filters.setViewMode('list')}><TaskKanban tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={form.handleEditOpen} onDelete={form.handleDeleteClick} onQuickStatusChange={handleQuickStatusChange} onRefresh={handleRefresh} loadingMore={loadingMore} hasMore={Boolean(nextCursor)} onLoadMore={handleLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={handleClearListFilters} onEmptyCreateTask={handleNewTaskClick} workspaceId={user?.agencyId ?? null} userId={user?.id ?? null} userName={user?.name ?? null} userRole={user?.role ?? null} participants={taskParticipants}/></TaskBoardErrorBoundary>) : (<TaskList tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={form.handleEditOpen} onDelete={form.handleDeleteClick} onQuickStatusChange={handleQuickStatusChange} onRefresh={handleRefresh} loadingMore={loadingMore} hasMore={Boolean(nextCursor)} onLoadMore={handleLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={handleClearListFilters} onEmptyCreateTask={handleNewTaskClick} selectedTaskIds={selectedTaskIds} onToggleTaskSelection={handleToggleTaskSelection} workspaceId={user?.agencyId ?? null} userId={user?.id ?? null} userName={user?.name ?? null} userRole={user?.role ?? null} participants={taskParticipants}/>)}
+              </PageSkeletonBoundary>
               </div>
             </div>
           </div>
@@ -575,7 +576,6 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
 
 
       </div>
-      </PageSkeletonBoundary>
       </TaskParticipantsProvider>
     </TooltipProvider>);
 }

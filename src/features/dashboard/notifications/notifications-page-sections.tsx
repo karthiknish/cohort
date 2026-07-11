@@ -229,7 +229,7 @@ export function NotificationsFeedList({ page, }: {
     page: ReturnType<typeof useNotificationsPage>;
 }) {
     const { ackInFlight, activeFilter, error, handleDismiss, handleLoadMore, handleMarkAsRead, handleOpenNotification, handleSelectToggle, loading, loadingMore, nextCursor, notificationScrollRef, notifications, notificationVirtualizer, selectedIds, shouldVirtualizeNotifications, virtualContainerStyle, } = page;
-    if (loading) {
+    if (loading && notifications.length === 0) {
         return <NotificationsLoadingSkeleton />;
     }
     if (notifications.length === 0 && !error) {
@@ -287,8 +287,7 @@ export function NotificationsFeedFooter({ loading, loadingMore, nextCursor, noti
 }
 export function NotificationsPageContent() {
     const page = useNotificationsPage();
-    return (<PageSkeletonBoundary loading={page.loading} loadingContent={<NotificationsLoadingSkeleton />}>
-    <div className={DASHBOARD_THEME.layout.container}>
+    return (<div className={DASHBOARD_THEME.layout.container}>
       <LiveRegion message={page.notificationAnnouncement}/>
 
       <FadeIn>
@@ -306,8 +305,7 @@ export function NotificationsPageContent() {
         </TabsContent>
       </Tabs>
       </FadeIn>
-    </div>
-    </PageSkeletonBoundary>);
+    </div>);
 }
 export function NotificationsFilterPanel({ page, }: {
     page: ReturnType<typeof useNotificationsPage>;
@@ -325,7 +323,9 @@ export function NotificationsFilterPanel({ page, }: {
       </CardHeader>
       <CardContent>
         <NotificationsBulkSelectionBar selectedCount={selectedIds.size} ackInFlight={page.ackInFlight} onBulkMarkRead={page.handleBulkMarkRead} onBulkDismiss={page.handleBulkDismiss} onClearSelection={page.handleClearSelection}/>
-        <NotificationsFeedList page={page}/>
+        <PageSkeletonBoundary loading={page.loading && notifications.length === 0} loadingContent={<NotificationsLoadingSkeleton />}>
+          <NotificationsFeedList page={page}/>
+        </PageSkeletonBoundary>
       </CardContent>
     </Card>);
 }

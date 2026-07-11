@@ -32,7 +32,7 @@ import type { StatusFilter } from './utils';
 import { useProjectsPageContext } from './projects-page-provider';
 
 export function ProjectsPageShell() {
-    const { initialLoading, handleProjectCreated } = useProjectsPageContext();
+    const { handleProjectCreated } = useProjectsPageContext();
     const { user } = useAuth();
     const { clients, selectedClient, selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
@@ -52,18 +52,16 @@ export function ProjectsPageShell() {
         onProjectCreated: handleProjectCreated,
     });
     return (<TooltipProvider>
-      <PageSkeletonBoundary loading={initialLoading} loadingContent={<ProjectsPageSkeleton />}>
-        <div className={cn(DASHBOARD_THEME.layout.container, PROJECTS_THEME.page)} {...documentImport.importDragHandlers}>
-          <ProjectsDocumentImportOverlay phase={documentImport.phase} statusMessage={documentImport.statusMessage} errorMessage={documentImport.errorMessage} visible={documentImport.overlayVisible} onCancel={documentImport.handleCancel}/>
+      <div className={cn(DASHBOARD_THEME.layout.container, PROJECTS_THEME.page)} {...documentImport.importDragHandlers}>
+        <ProjectsDocumentImportOverlay phase={documentImport.phase} statusMessage={documentImport.statusMessage} errorMessage={documentImport.errorMessage} visible={documentImport.overlayVisible} onCancel={documentImport.handleCancel}/>
 
-          <ProjectsDocumentImportReviewSheet open={documentImport.reviewOpen} documentSummary={documentImport.documentSummary} proposedProjects={documentImport.proposedProjects} clients={clients} preferredClientName={selectedClient?.name ?? null} onUpdateProject={documentImport.updateProposedProject} onConfirm={documentImport.handleConfirmReview} onDiscard={documentImport.handleDismissReview}/>
+        <ProjectsDocumentImportReviewSheet open={documentImport.reviewOpen} documentSummary={documentImport.documentSummary} proposedProjects={documentImport.proposedProjects} clients={clients} preferredClientName={selectedClient?.name ?? null} onUpdateProject={documentImport.updateProposedProject} onConfirm={documentImport.handleConfirmReview} onDiscard={documentImport.handleDismissReview}/>
 
-          <ProjectsHeaderSection />
-          <ProjectsDialogs />
-          <ProjectsSummarySection />
-          <ProjectsBacklogSection />
-        </div>
-      </PageSkeletonBoundary>
+        <ProjectsHeaderSection />
+        <ProjectsDialogs />
+        <ProjectsSummarySection />
+        <ProjectsBacklogSection />
+      </div>
     </TooltipProvider>);
 }
 
@@ -263,7 +261,9 @@ function ProjectsBacklogSection() {
       </div>
 
       <div className={cn(PROJECTS_THEME.content, viewMode === 'list' && 'bg-muted/[0.15]')}>
+        <PageSkeletonBoundary loading={initialLoading} loadingContent={<ProjectsPageSkeleton />}>
         {viewMode === 'gantt' ? (<GanttView projects={sortedProjects} milestones={milestonesByProject} loading={milestonesLoading} error={milestonesError} onRefresh={handleMilestoneRefresh} onMilestoneCreated={handleMilestoneCreated}/>) : (<ProjectsListState error={error} hasActiveFilters={hasActiveFilters} hasVisibleProjects={hasVisibleProjects} initialLoading={initialLoading} loading={loading} onClearAllFilters={clearAllFilters} onDelete={openDeleteDialog} onEdit={openEditDialog} hasMoreProjects={hasMoreProjects} loadingMore={loadingMore} onLoadMore={handleLoadMore} onRefresh={handleRefreshProjectsClick} onSearchClear={handleSearchClear} onUpdateStatus={handleUpdateStatus} pendingStatusUpdates={pendingStatusUpdates} projects={projects} searchInput={searchInput} sortedProjects={sortedProjects} viewMode={viewMode} onClearFocusAndFilters={clearAllFilters}/>)}
+        </PageSkeletonBoundary>
       </div>
     </section>);
 }

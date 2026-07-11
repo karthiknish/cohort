@@ -6,17 +6,6 @@ export function CampaignInsightsPageSkeleton() {
     const chartSlots = ['chart-1', 'chart-2'];
     const rowSlots = ['row-1', 'row-2', 'row-3', 'row-4'];
     return (<div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-56"/>
-          <Skeleton className="h-4 w-72"/>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-10 w-44 rounded-md"/>
-          <Skeleton className="h-10 w-28 rounded-md"/>
-        </div>
-      </div>
-
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metricSlots.map((slot) => (<Card key={slot} className="border-muted/60 bg-background">
             <CardContent className="space-y-3 p-5">

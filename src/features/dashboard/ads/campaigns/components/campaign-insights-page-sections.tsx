@@ -133,13 +133,14 @@ export function CampaignInsightsPageBody({ page, }: {
 export { ADS_PAGE_THEME };
 export function CampaignInsightsPageContent() {
     const page = useCampaignInsightsPage();
-    return (<PageSkeletonBoundary loading={page.campaignLoading} loadingContent={<CampaignInsightsPageSkeleton />}>
-    <div className={ADS_PAGE_THEME.innerContainer}>
+    const initialLoading = page.campaignLoading && !page.campaign;
+    return (<div className={ADS_PAGE_THEME.innerContainer}>
       <CampaignHeader campaign={page.campaign} loading={page.campaignLoading} dateRange={page.dateRange} onDateRangeChange={page.handleDateRangeChange} onRefresh={page.loadInsights} refreshing={page.insightsLoading} onCampaignUpdated={page.loadCampaign}/>
 
       {page.campaignError && !page.isPreviewMode ? (<CampaignInsightsErrorBanner message={page.campaignError} onRetry={page.handleRetryCampaign}/>) : null}
 
-      <CampaignInsightsPageBody page={page}/>
-    </div>
-    </PageSkeletonBoundary>);
+      <PageSkeletonBoundary loading={initialLoading} loadingContent={<CampaignInsightsPageSkeleton />}>
+        <CampaignInsightsPageBody page={page}/>
+      </PageSkeletonBoundary>
+    </div>);
 }

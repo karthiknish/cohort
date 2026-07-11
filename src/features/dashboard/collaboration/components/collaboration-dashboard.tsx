@@ -173,15 +173,15 @@ export function CollaborationDashboard() {
   const { collab } = context;
 
   return (
-    <PageSkeletonBoundary loading={collab.isBootstrapping} loadingContent={<CollaborationSkeleton />}>
-      <div className={DASHBOARD_THEME.layout.container}>
-        <CollaborationHeaderSection context={context} />
+    <div className={DASHBOARD_THEME.layout.container}>
+      <CollaborationHeaderSection context={context} />
+      <PageSkeletonBoundary loading={collab.isBootstrapping} loadingContent={<CollaborationSkeleton />}>
         <CollaborationProjectBanner context={context} />
         <CollaborationUrlWarnings context={context} />
         <CollaborationInboxSection context={context} />
         <ChannelMembersDialogSection context={context} />
-      </div>
-    </PageSkeletonBoundary>
+      </PageSkeletonBoundary>
+    </div>
   );
 }
 

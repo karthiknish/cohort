@@ -10,7 +10,7 @@ import { Button } from '@/shared/ui/button';
 import { getPreviewAdminDashboardData } from '@/lib/preview-data';
 import { cn } from '@/lib/utils';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
-import { AdminHomePageSkeleton } from '@/features/admin/components/admin-home-page-skeleton';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { AdminPageShell } from '../components/admin-page-shell';
 const adminLinks = [
     { title: 'Team', href: '/admin/team', icon: Users, description: 'Members and roles' },
@@ -62,32 +62,47 @@ export default function AdminPage() {
       </div>);
     }
     const firstName = (user?.name ?? 'Admin').split(' ')[0];
-    return (<PageSkeletonBoundary loading={statsLoading} loadingContent={<AdminHomePageSkeleton />}>
-    <AdminPageShell title="Admin" description={`${firstName}, pick a section below.`} isPreviewMode={isPreviewMode} actions={ADMIN_WORKSPACE_LINK_ACTION} className="mx-auto max-w-lg space-y-6" headerClassName="border-0 pb-0">
-      <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-        <div>
-          <dt className="sr-only">Users</dt>
-          <dd>
-            <span className="font-medium text-foreground">
-              {statsLoading ? '—' : stats.totalUsers}
-            </span>{' '}
-            users
-            {!statsLoading && stats.totalUsers > stats.activeUsers ? (<span className="text-muted-foreground/80">
+    const statsSkeleton = (<dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+      <div>
+        <dt className="sr-only">Users</dt>
+        <dd>
+          <Skeleton className="inline-block h-4 w-24"/>
+        </dd>
+      </div>
+      <div>
+        <dt className="sr-only">Clients</dt>
+        <dd>
+          <Skeleton className="inline-block h-4 w-24"/>
+        </dd>
+      </div>
+    </dl>);
+    return (<AdminPageShell title="Admin" description={`${firstName}, pick a section below.`} isPreviewMode={isPreviewMode} actions={ADMIN_WORKSPACE_LINK_ACTION} className="mx-auto max-w-lg space-y-6" headerClassName="border-0 pb-0">
+      <PageSkeletonBoundary loading={statsLoading && stats.totalUsers === 0 && stats.totalClients === 0} loadingContent={statsSkeleton}>
+        <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+          <div>
+            <dt className="sr-only">Users</dt>
+            <dd>
+              <span className="font-medium text-foreground">
+                {statsLoading ? '—' : stats.totalUsers}
+              </span>{' '}
+              users
+              {!statsLoading && stats.totalUsers > stats.activeUsers ? (<span className="text-muted-foreground/80">
                 {' '}
                 · {stats.totalUsers - stats.activeUsers} pending
               </span>) : null}
-          </dd>
-        </div>
-        <div>
-          <dt className="sr-only">Clients</dt>
-          <dd>
-            <span className="font-medium text-foreground">
-              {statsLoading ? '—' : stats.totalClients}
-            </span>{' '}
-            clients
-          </dd>
-        </div>
-      </dl>
+            </dd>
+          </div>
+          <div>
+            <dt className="sr-only">Clients</dt>
+            <dd>
+              <span className="font-medium text-foreground">
+                {statsLoading ? '—' : stats.totalClients}
+              </span>{' '}
+              clients
+            </dd>
+          </div>
+        </dl>
+      </PageSkeletonBoundary>
 
       <nav aria-label="Admin sections" className="divide-y divide-border rounded-lg border border-border">
         {adminLinks.map(({ title, href, icon: Icon, description }) => (<Link key={href} href={href} className={cn('flex items-center gap-4 px-4 py-3.5 transition-colors', 'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2')}>
@@ -99,6 +114,5 @@ export default function AdminPage() {
             <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden/>
           </Link>))}
       </nav>
-    </AdminPageShell>
-    </PageSkeletonBoundary>);
+    </AdminPageShell>);
 }

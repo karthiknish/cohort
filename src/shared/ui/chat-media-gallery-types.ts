@@ -4,4 +4,4 @@ export type ChatMediaAttachment = {
     type?: string | null;
     size?: string | null;
 };
-export type AttachmentKind = 'image' | 'video' | 'pdf' | 'audio' | 'spreadsheet' | 'archive' | 'file';
+export type AttachmentKind = 'image' | 'video' | 'pdf' | 'audio' | 'spreadsheet' | 'archive' | 'text' | 'file';

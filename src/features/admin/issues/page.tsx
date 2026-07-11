@@ -5,7 +5,7 @@ import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { AdminActionErrorAlert } from '../components/admin-action-error-alert';
 import { AdminQueryErrorAlert } from '../components/admin-query-error-alert';
 import { useCallback, useMemo, useReducer } from 'react';
-import { AlertCircle, CheckCircle2, Clock, LoaderCircle, RefreshCw, Search, Trash2, } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, RefreshCw, Search, Trash2, } from 'lucide-react';
 import { format } from 'date-fns';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '/_generated/api';
@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { Input } from '@/shared/ui/input';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/shared/ui/select';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, } from '@/shared/ui/table';
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
@@ -21,7 +22,6 @@ import { getPreviewAdminProblemReports } from '@/lib/preview-data';
 import { cn } from '@/lib/utils';
 import { filterProblemReports, formatProblemReportDate, getProblemReportSeverityDisplay, getProblemReportStatusDisplay, type ProblemReport, } from '../lib/problem-reports';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
-import { AdminTablePageSkeleton } from '@/features/admin/components/admin-table-page-skeleton';
 import { AdminPageShell } from '../components/admin-page-shell';
 function AdminIssuesToolbarActions({ loading, onRefresh, }: {
     loading: boolean;
@@ -264,8 +264,15 @@ export default function AdminIssuesPage() {
         statusFilter,
     });
     const issuesToolbarActions = <AdminIssuesToolbarActions loading={loading} onRefresh={handleRefresh}/>;
-    return (<PageSkeletonBoundary loading={loading && resolvedReports.length === 0} loadingContent={<AdminTablePageSkeleton />}>
-    <AdminPageShell title="Reported issues" description="Review, triage, and resolve user-submitted problem reports from across the product." isPreviewMode={isPreviewMode} actions={issuesToolbarActions}>
+    const reportsTableSkeleton = (<div className="space-y-2">
+      {['report-skeleton-a', 'report-skeleton-b', 'report-skeleton-c', 'report-skeleton-d', 'report-skeleton-e'].map((key) => (<div key={key} className="flex items-center gap-4 rounded-md border border-border/60 p-4">
+          <Skeleton className="h-4 w-48"/>
+          <Skeleton className="h-4 w-24"/>
+          <Skeleton className="h-4 w-20"/>
+          <Skeleton className="ml-auto h-8 w-20 rounded-md"/>
+        </div>))}
+    </div>);
+    return (<AdminPageShell title="Reported issues" description="Review, triage, and resolve user-submitted problem reports from across the product." isPreviewMode={isPreviewMode} actions={issuesToolbarActions}>
       <Card className="border-border/80 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
@@ -289,10 +296,8 @@ export default function AdminIssuesPage() {
         <CardContent className="space-y-4">
           <AdminQueryErrorAlert error={reportsQueryError} title="Unable to load reports"/>
           <AdminActionErrorAlert error={actionError} onDismiss={clearActionError}/>
-          {loading && resolvedReports.length === 0 ? (<output className="flex flex-col items-center justify-center py-12 text-muted-foreground" aria-live="polite" aria-busy="true">
-              <LoaderCircle className="mb-4 size-8 animate-spin" aria-hidden/>
-              <p>Loading reports…</p>
-            </output>) : filteredReports.length === 0 ? (<div className="flex flex-col items-center justify-center py-12 text-muted-foreground border rounded-lg border-dashed">
+          <PageSkeletonBoundary loading={loading && resolvedReports.length === 0} loadingContent={reportsTableSkeleton}>
+            {filteredReports.length === 0 ? (<div className="flex flex-col items-center justify-center py-12 text-muted-foreground border rounded-lg border-dashed">
               <AlertCircle className="mb-4 size-8 opacity-20"/>
               <p>
                 {reportsQueryError
@@ -317,10 +322,10 @@ export default function AdminIssuesPage() {
                 </TableBody>
               </Table>
             </div>)}
+          </PageSkeletonBoundary>
         </CardContent>
       </Card>
 
       <ConfirmDialog open={Boolean(deleteTarget)} onOpenChange={handleDeleteDialogOpenChange} title="Delete reported issue" description={deleteTarget ? `Delete “${deleteTarget.title}”? This action cannot be undone.` : 'This action cannot be undone.'} confirmLabel="Delete report" cancelLabel="Cancel" variant="destructive" isLoading={deletingId === deleteTarget?.id} onConfirm={handleDelete} onCancel={handleCancelDelete}/>
-    </AdminPageShell>
-    </PageSkeletonBoundary>);
+    </AdminPageShell>);
 }

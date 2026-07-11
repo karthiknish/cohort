@@ -236,36 +236,15 @@ export function SystemHealthView() {
     const okCount = Object.values(checks).filter((c) => c.status === 'ok').length;
     const warningCount = Object.values(checks).filter((c) => c.status === 'warning').length;
     const totalCount = Object.keys(checks).length;
-    const healthLoadingContent = (<div className="space-y-8">
-      <div className="space-y-4 border-b border-border/60 pb-8">
-        <Skeleton className="h-3 w-28"/>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <Skeleton className="size-12 shrink-0 rounded-full"/>
-            <div className="space-y-2">
-              <Skeleton className="h-6 w-48"/>
-              <Skeleton className="h-4 w-72 max-w-full"/>
-            </div>
-          </div>
-          <Skeleton className="h-9 w-28 shrink-0"/>
-        </div>
-      </div>
-      <div>
-        <Skeleton className="mb-4 h-3 w-24"/>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {['m-a', 'm-b', 'm-c'].map((key) => (<div key={key} className="space-y-3 rounded-lg border border-border/60 bg-card/50 p-4">
-              <Skeleton className="h-4 w-28"/>
-              <Skeleton className="h-9 w-20"/>
-              <Skeleton className="h-3 w-full"/>
-            </div>))}
-        </div>
-      </div>
-      <div>
-        <Skeleton className="mb-4 h-3 w-32"/>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {['c-a', 'c-b', 'c-c', 'c-d', 'c-e', 'c-f'].map((key) => (<Skeleton key={key} className="h-36 w-full rounded-lg"/>))}
-        </div>
-      </div>
+    const overviewCardsSkeleton = (<div className="grid gap-4 sm:grid-cols-3">
+      {['m-a', 'm-b', 'm-c'].map((key) => (<div key={key} className="space-y-3 rounded-lg border border-border/60 bg-card/50 p-4">
+          <Skeleton className="h-4 w-28"/>
+          <Skeleton className="h-9 w-20"/>
+          <Skeleton className="h-3 w-full"/>
+        </div>))}
+    </div>);
+    const integrationsCardsSkeleton = (<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {['c-a', 'c-b', 'c-c', 'c-d', 'c-e', 'c-f'].map((key) => (<Skeleton key={key} className="h-36 w-full rounded-lg"/>))}
     </div>);
     if (resolvedError && !resolvedData) {
         return (<Card className="border-destructive/30 bg-destructive/4 shadow-sm">
@@ -285,8 +264,7 @@ export function SystemHealthView() {
         </CardContent>
       </Card>);
     }
-    return (<PageSkeletonBoundary loading={loading && !resolvedData} loadingContent={healthLoadingContent}>
-    <div className="space-y-10">
+    return (<div className="space-y-10">
       {isPreviewMode ? (<div className="rounded-lg border border-dashed border-border/80 bg-muted/30 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
           Preview mode uses sample health data. Deployed checks load automatically when preview is off.
         </div>) : null}
@@ -325,49 +303,53 @@ export function SystemHealthView() {
 
       <div className="space-y-4">
         <SectionLabel>Overview</SectionLabel>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="border-border/80 bg-card shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Response time</CardTitle>
-              <Activity className="size-4 text-muted-foreground" aria-hidden/>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold tabular-nums tracking-tight">{resolvedData?.responseTime ?? 0}ms</div>
-              <p className="text-xs leading-relaxed text-muted-foreground">Full health check roundtrip</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border/80 bg-card shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Uptime</CardTitle>
-              <Clock className="size-4 text-muted-foreground" aria-hidden/>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold tracking-tight">{resolvedData ? formatUptime(resolvedData.uptime) : '0m'}</div>
-              <p className="text-xs leading-relaxed text-muted-foreground">Server process duration</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border/80 bg-card shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Version</CardTitle>
-              <Package className="size-4 text-muted-foreground" aria-hidden/>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold tracking-tight">v{resolvedData?.version ?? '0.0.0'}</div>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {process.env.NODE_ENV === 'production' ? 'Production build' : 'Development build'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <PageSkeletonBoundary loading={loading && !resolvedData} loadingContent={overviewCardsSkeleton}>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card className="border-border/80 bg-card shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Response time</CardTitle>
+                <Activity className="size-4 text-muted-foreground" aria-hidden/>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold tabular-nums tracking-tight">{resolvedData?.responseTime ?? 0}ms</div>
+                <p className="text-xs leading-relaxed text-muted-foreground">Full health check roundtrip</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border/80 bg-card shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Uptime</CardTitle>
+                <Clock className="size-4 text-muted-foreground" aria-hidden/>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold tracking-tight">{resolvedData ? formatUptime(resolvedData.uptime) : '0m'}</div>
+                <p className="text-xs leading-relaxed text-muted-foreground">Server process duration</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border/80 bg-card shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between gap-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Version</CardTitle>
+                <Package className="size-4 text-muted-foreground" aria-hidden/>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold tracking-tight">v{resolvedData?.version ?? '0.0.0'}</div>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {process.env.NODE_ENV === 'production' ? 'Production build' : 'Development build'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </PageSkeletonBoundary>
       </div>
 
       <div className="space-y-4">
         <SectionLabel>Integrations</SectionLabel>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {resolvedData
-            ? Object.entries(checks).map(([name, check]) => (<ServiceHealthCard key={name} name={name} check={check} isExpanded={expandedServices.has(name)} onToggleExpand={toggleExpand}/>))
-            : null}
-        </div>
+        <PageSkeletonBoundary loading={loading && !resolvedData} loadingContent={integrationsCardsSkeleton}>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {resolvedData
+              ? Object.entries(checks).map(([name, check]) => (<ServiceHealthCard key={name} name={name} check={check} isExpanded={expandedServices.has(name)} onToggleExpand={toggleExpand}/>))
+              : null}
+          </div>
+        </PageSkeletonBoundary>
       </div>
 
       {resolvedError && resolvedData ? (<Card className="border-warning/35 bg-warning/6 shadow-sm">
@@ -379,6 +361,5 @@ export function SystemHealthView() {
             </p>
           </CardContent>
         </Card>) : null}
-    </div>
-    </PageSkeletonBoundary>);
+    </div>);
 }

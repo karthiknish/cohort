@@ -4,7 +4,7 @@ import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { useState, useCallback, useRef, useEffect, useEffectEvent, useReducer } from 'react';
 import { useClientContext } from '@/shared/contexts/client-context';
 import { useAuth } from '@/shared/contexts/auth-context';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useConvex } from 'convex/react';
 import { proposalsApi } from '@/lib/convex-api';
 import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals';
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals';
@@ -50,6 +50,7 @@ export interface UseProposalDraftsReturn {
     draftId: string | null;
     proposals: ProposalDraft[];
     isLoadingProposals: boolean;
+    isRefreshingProposals: boolean;
     isCreatingDraft: boolean;
     isBootstrapping: boolean;
     proposalsQueryError: string | null;
@@ -119,13 +120,14 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     const { isPreviewMode, formState, currentStep, hasPersistableData, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange, steps, } = options;
     const { user, isSyncing, authError } = useAuth();
     const { selectedClient, selectedClientId } = useClientContext();
+    const convex = useConvex();
     const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
     const canQuery = Boolean(workspaceId && !isSyncing && !authError);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const convexProposals = useQuery(proposalsApi.list, isPreviewMode || !canQuery
         ? 'skip'
         : {
             workspaceId: workspaceId!,
-            clientId: selectedClientId ?? undefined,
             limit: 100,
         });
     const proposalsQueryError = useConvexQueryError({
@@ -222,7 +224,21 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         clientId: selectedClientId,
     });
     const refreshProposals = async () => {
-        // Proposals are realtime via Convex; keep this for callers.
+        if (!workspaceId) {
+            return proposals;
+        }
+        setIsRefreshing(true);
+        try {
+            await convex.query(proposalsApi.list, {
+                workspaceId,
+                limit: 100,
+            });
+        } catch (error) {
+            logError(error, 'useProposalDrafts:refreshProposals');
+        } finally {
+            // Brief delay so the spinner is visible even on instant responses
+            setTimeout(() => setIsRefreshing(false), 400);
+        }
         return proposals;
     };
     const ensureDraftId = async () => {
@@ -611,6 +627,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         draftId,
         proposals,
         isLoadingProposals,
+        isRefreshingProposals: isRefreshing,
         isCreatingDraft,
         isBootstrapping,
         proposalsQueryError,

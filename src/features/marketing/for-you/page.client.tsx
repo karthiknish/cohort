@@ -29,14 +29,14 @@ export default function ForYouPage() {
             (!!user?.id && !canQueryConvex) ||
             (canQueryConvex &&
                 (clientsLoading || rawTasks === undefined || liveNotifications === undefined)));
-    return (<PageSkeletonBoundary loading={isInitialLoading} loadingContent={forYouLoadingContent}>
-      <PageMotionShell reveal={false} className="w-full">
-        <main id="for-you-page" className="w-full">
-          <ForYouGreeting />
+    return (<PageMotionShell reveal={false} className="w-full">
+      <main id="for-you-page" className="w-full">
+        <ForYouGreeting />
+        <ForYouQuickLinks />
+        <PageSkeletonBoundary loading={isInitialLoading} loadingContent={forYouLoadingContent}>
           <ForYouClients />
-          <ForYouQuickLinks />
           <ForYouWhatsNext />
-        </main>
-      </PageMotionShell>
-    </PageSkeletonBoundary>);
+        </PageSkeletonBoundary>
+      </main>
+    </PageMotionShell>);
 }

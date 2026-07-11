@@ -158,7 +158,7 @@ export function ProposalAnalyticsCard() {
         : (byClientRes as {
             byClient?: ProposalAnalyticsByClient[];
         } | undefined)?.byClient ?? [];
-    const loading = isPreviewMode ? false : summaryRes === undefined || timeSeriesRes === undefined || byClientRes === undefined;
+    const loading = isPreviewMode ? false : !summary && timeSeries.length === 0 && byClient.length === 0;
     const handleRefresh = () => {
         notifyInfo({
             title: isPreviewMode ? 'Preview data refreshed' : 'Refreshing…',
@@ -179,23 +179,23 @@ export function ProposalAnalyticsCard() {
             points: timeSeries.slice(-14), // Last 14 days for chart
         };
     })();
-    return (<PageSkeletonBoundary loading={loading} loadingContent={<ProposalAnalyticsLoadingCard />}>
-    <div className="space-y-6">
+    return (<div className="space-y-6">
       <ProposalAnalyticsHeader loading={loading} onRefresh={handleRefresh} onTimeRangeChange={setTimeRange} timeRange={timeRange}/>
 
-      {analyticsQueryError ? (<Alert variant="destructive"><AlertDescription>{analyticsQueryError}</AlertDescription></Alert>) : null}
+      <PageSkeletonBoundary loading={loading} loadingContent={<ProposalAnalyticsLoadingCard />}>
+        {analyticsQueryError ? (<Alert variant="destructive"><AlertDescription>{analyticsQueryError}</AlertDescription></Alert>) : null}
 
-      {summary ? <ProposalAnalyticsSummaryGrid summary={summary} formatDuration={formatDuration}/> : null}
+        {summary ? <ProposalAnalyticsSummaryGrid summary={summary} formatDuration={formatDuration}/> : null}
 
-      {summary ? <ProposalAnalyticsSuccessRates summary={summary} formatDuration={formatDuration} formatPercentage={formatPercentage}/> : null}
+        {summary ? <ProposalAnalyticsSuccessRates summary={summary} formatDuration={formatDuration} formatPercentage={formatPercentage}/> : null}
 
-      {chartData && chartData.points.length > 0 ? <ProposalAnalyticsActivityChart chartData={chartData}/> : null}
+        {chartData && chartData.points.length > 0 ? <ProposalAnalyticsActivityChart chartData={chartData}/> : null}
 
-      {byClient.length > 0 ? <ProposalAnalyticsByClientCard byClient={byClient}/> : null}
+        {byClient.length > 0 ? <ProposalAnalyticsByClientCard byClient={byClient}/> : null}
 
-      {summary && summary.totalDrafts === 0 ? <ProposalAnalyticsEmptyState /> : null}
-    </div>
-    </PageSkeletonBoundary>);
+        {summary && summary.totalDrafts === 0 ? <ProposalAnalyticsEmptyState /> : null}
+      </PageSkeletonBoundary>
+    </div>);
 }
 function isoDateDaysAgo(daysAgo: number): string {
     const now = typeof window === 'undefined' ? new Date('2024-01-15T12:00:00.000Z') : new Date();

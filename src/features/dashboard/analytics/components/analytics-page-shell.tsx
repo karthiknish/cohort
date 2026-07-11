@@ -37,17 +37,17 @@ const AnalyticsCharts = dynamic(() => import('./analytics-charts').then((mod) =>
 });
 export function AnalyticsPageShell() {
     const { initialMetricsLoading } = useAnalyticsPageContext();
-    return (<PageSkeletonBoundary loading={initialMetricsLoading} loadingContent={<AnalyticsPageSkeleton />}>
-      <div className={DASHBOARD_THEME.layout.container}>
-        <div className="space-y-8 pb-10">
-          <AnalyticsHeaderSection />
-          <GoogleAnalyticsConnectionSection />
-          <AnalyticsDialogs />
-          <AnalyticsErrorAlert />
+    return (<div className={DASHBOARD_THEME.layout.container}>
+      <div className="space-y-8 pb-10">
+        <AnalyticsHeaderSection />
+        <GoogleAnalyticsConnectionSection />
+        <AnalyticsDialogs />
+        <AnalyticsErrorAlert />
+        <PageSkeletonBoundary loading={initialMetricsLoading} loadingContent={<AnalyticsPageSkeleton />}>
           <AnalyticsBodySection />
-        </div>
+        </PageSkeletonBoundary>
       </div>
-    </PageSkeletonBoundary>);
+    </div>);
 }
 function AnalyticsHeaderSection() {
     const { dateRange, handleDateRangeChange } = useAnalyticsPageContext();

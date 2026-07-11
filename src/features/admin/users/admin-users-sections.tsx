@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { formatRelativeTime } from '@/lib/dates';
 import { cn } from '@/lib/utils';
@@ -18,6 +19,7 @@ import { ADMIN_USER_ROLES, type AdminUserRecord, type AdminUserRole } from '@/ty
 import { AdminActionErrorAlert } from '../components/admin-action-error-alert';
 import { AdminQueryErrorAlert } from '../components/admin-query-error-alert';
 import { AdminPageShell } from '../components/admin-page-shell';
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { INVITATION_STATUSES, ROLE_ASSIGNABLE, STATUS_OPTIONS, invitationStatusLabel, roleLabel, statusLabel, type AdminInvitationRecord, type InvitationLifecycleStatus, } from './admin-users-types';
 export function AdminUsersSignInRequired() {
     return (<div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
@@ -306,6 +308,14 @@ type AdminUsersDirectorySectionProps = {
     onLoadMore: () => void;
 };
 export function AdminUsersDirectorySection({ loading, listQueryError, actionError, clearActionError, searchTerm, statusFilter, roleFilter, filteredUsers, savingId, paginatedStatus, loadingMore, onSearchChange, onStatusFilterChange, onRoleFilterChange, onRoleChange, onApprovalToggle, onViewDetails, onRevokeAccess, onLoadMore, }: AdminUsersDirectorySectionProps) {
+    const usersTableSkeleton = (<div className="space-y-3">
+      {['user-skeleton-a', 'user-skeleton-b', 'user-skeleton-c', 'user-skeleton-d', 'user-skeleton-e'].map((key) => (<div key={key} className="flex items-center gap-4 rounded-md border border-muted/40 px-3 py-3">
+          <Skeleton className="size-9 rounded-full"/>
+          <Skeleton className="h-4 w-40"/>
+          <Skeleton className="h-8 w-28 rounded-md"/>
+          <Skeleton className="ml-auto h-8 w-20 rounded-md"/>
+        </div>))}
+    </div>);
     return (<Card className="border-muted/60 bg-background">
       <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
@@ -337,55 +347,57 @@ export function AdminUsersDirectorySection({ loading, listQueryError, actionErro
           </Select>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <AdminQueryErrorAlert error={listQueryError} title="Unable to load workspace data"/>
-        <AdminActionErrorAlert error={actionError} onDismiss={clearActionError}/>
+      <PageSkeletonBoundary loading={loading && filteredUsers.length === 0} loadingContent={usersTableSkeleton}>
+        <CardContent className="space-y-4">
+          <AdminQueryErrorAlert error={listQueryError} title="Unable to load workspace data"/>
+          <AdminActionErrorAlert error={actionError} onDismiss={clearActionError}/>
 
-        {/* Mobile card layout */}
-        <div className="space-y-3 lg:hidden">
-          {filteredUsers.length === 0 ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">
-              {loading ? 'Loading users…' : listQueryError ? listQueryError : 'No users match the current filters.'}
-            </div>
-          ) : filteredUsers.map((record) => (
-            <UserCard key={record.id} record={record} savingId={savingId} onRoleChange={onRoleChange} onApprovalToggle={onApprovalToggle} onViewDetails={onViewDetails} onRevokeAccess={onRevokeAccess}/>
-          ))}
-        </div>
+          {/* Mobile card layout */}
+          <div className="space-y-3 lg:hidden">
+            {filteredUsers.length === 0 ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                {loading ? 'Loading users…' : listQueryError ? listQueryError : 'No users match the current filters.'}
+              </div>
+            ) : filteredUsers.map((record) => (
+              <UserCard key={record.id} record={record} savingId={savingId} onRoleChange={onRoleChange} onApprovalToggle={onApprovalToggle} onViewDetails={onViewDetails} onRevokeAccess={onRevokeAccess}/>
+            ))}
+          </div>
 
-        {/* Desktop table layout */}
-        <div className="hidden overflow-x-auto rounded-md border border-muted/40 lg:block">
-          <table className="min-w-full table-fixed text-left text-sm">
-            <caption className="sr-only">Workspace users, roles, and approval status</caption>
-            <thead>
-              <tr className="border-b border-muted/40">
-                <th scope="col" className="w-72 py-2 px-3 font-medium">User</th>
-                <th scope="col" className="w-32 py-2 px-3 font-medium">Role</th>
-                <th scope="col" className="w-32 py-2 px-3 text-center font-medium">Approved</th>
-                <th scope="col" className="w-32 py-2 px-3 font-medium">Status</th>
-                <th scope="col" className="py-2 px-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.length === 0 ? (<tr>
-                  <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                    {loading
-                ? 'Loading users…'
-                : listQueryError
-                    ? listQueryError
-                    : 'No users match the current filters.'}
-                  </td>
-                </tr>) : (filteredUsers.map((record) => (<UserRow key={record.id} record={record} savingId={savingId} onRoleChange={onRoleChange} onApprovalToggle={onApprovalToggle} onViewDetails={onViewDetails} onRevokeAccess={onRevokeAccess}/>)))}
-            </tbody>
-          </table>
-        </div>
+          {/* Desktop table layout */}
+          <div className="hidden overflow-x-auto rounded-md border border-muted/40 lg:block">
+            <table className="min-w-full table-fixed text-left text-sm">
+              <caption className="sr-only">Workspace users, roles, and approval status</caption>
+              <thead>
+                <tr className="border-b border-muted/40">
+                  <th scope="col" className="w-72 py-2 px-3 font-medium">User</th>
+                  <th scope="col" className="w-32 py-2 px-3 font-medium">Role</th>
+                  <th scope="col" className="w-32 py-2 px-3 text-center font-medium">Approved</th>
+                  <th scope="col" className="w-32 py-2 px-3 font-medium">Status</th>
+                  <th scope="col" className="py-2 px-3 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.length === 0 ? (<tr>
+                    <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                      {loading
+                  ? 'Loading users…'
+                  : listQueryError
+                      ? listQueryError
+                      : 'No users match the current filters.'}
+                    </td>
+                  </tr>) : (filteredUsers.map((record) => (<UserRow key={record.id} record={record} savingId={savingId} onRoleChange={onRoleChange} onApprovalToggle={onApprovalToggle} onViewDetails={onViewDetails} onRevokeAccess={onRevokeAccess}/>)))}
+              </tbody>
+            </table>
+          </div>
 
-        {paginatedStatus === 'CanLoadMore' ? (<div className="mt-6 flex justify-center">
-            <Button type="button" variant="outline" onClick={onLoadMore} disabled={loadingMore} className="inline-flex items-center gap-2">
-              {loadingMore ? <RefreshCw className="size-4 animate-spin"/> : <RefreshCw className="size-4"/>}
-              {loadingMore ? 'Loading…' : 'Load more'}
-            </Button>
-          </div>) : null}
-      </CardContent>
+          {paginatedStatus === 'CanLoadMore' ? (<div className="mt-6 flex justify-center">
+              <Button type="button" variant="outline" onClick={onLoadMore} disabled={loadingMore} className="inline-flex items-center gap-2">
+                {loadingMore ? <RefreshCw className="size-4 animate-spin"/> : <RefreshCw className="size-4"/>}
+                {loadingMore ? 'Loading…' : 'Load more'}
+              </Button>
+            </div>) : null}
+        </CardContent>
+      </PageSkeletonBoundary>
     </Card>);
 }
 type AdminUsersInvitationsSectionProps = {

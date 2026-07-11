@@ -141,7 +141,6 @@ export default function AdsPage() {
     }, [connections.connectionErrors, metrics.loadMoreError, metrics.metricError, suppressMetricsErrors]);
     const isInitialLoading = metrics.initialMetricsLoading && !connections.integrationStatuses;
     return (<PageMotionShell reveal={false}>
-    <PageSkeletonBoundary loading={isInitialLoading} loadingContent={<AdsSkeleton />}>
       <div className={DASHBOARD_THEME.layout.container}>
         <div className="space-y-6 pb-10">
           <FadeIn>
@@ -150,11 +149,12 @@ export default function AdsPage() {
 
           <QueryErrorAlert error={connections.connectionsQueryError} title="Unable to load ad connections"/>
 
-          <AdsPageLayout setup={setupSection} analytics={analyticsSection} advancedAnalytics={advancedAnalyticsSection} showSetup={!isPreviewMode} connectedAccountCount={connectedAccountCount} hasPendingSetup={hasPendingSetup}/>
+          <PageSkeletonBoundary loading={isInitialLoading} loadingContent={<AdsSkeleton />}>
+            <AdsPageLayout setup={setupSection} analytics={analyticsSection} advancedAnalytics={advancedAnalyticsSection} showSetup={!isPreviewMode} connectedAccountCount={connectedAccountCount} hasPendingSetup={hasPendingSetup}/>
+          </PageSkeletonBoundary>
         </div>
       </div>
 
       {!isPreviewMode ? (<GoogleSetupDialog open={connections.googleSetupDialogOpen} onOpenChange={connections.setGoogleSetupDialogOpen} setupMessage={connections.googleSetupMessage} accountOptions={connections.googleAccountOptions} selectedAccountId={connections.selectedGoogleAccountId} onAccountSelectionChange={connections.setSelectedGoogleAccountId} loadingAccounts={connections.loadingGoogleAccountOptions} initializing={connections.initializingGoogle} onReloadAccounts={handleReloadGoogleAccounts} onInitialize={handleInitializeGoogle}/>) : null}
-    </PageSkeletonBoundary>
     </PageMotionShell>);
 }

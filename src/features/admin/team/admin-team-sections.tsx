@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { formatDateWithTime } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import type { AdminUserRecord } from '@/types/admin';
@@ -16,6 +17,7 @@ import type { ChangeEvent, FormEvent } from 'react';
 import { AdminActionErrorAlert } from '../components/admin-action-error-alert';
 import { AdminQueryErrorAlert } from '../components/admin-query-error-alert';
 import { AdminPageShell } from '../components/admin-page-shell';
+import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import type { buildClientAllocationSummary } from '../lib/client-allocation';
 import { ROLE_OPTIONS, STATUS_OPTIONS, statusActionLabel, statusToVariant, type UserStatus, } from './admin-team-types';
 function ActionIcon({ status }: {
@@ -181,6 +183,14 @@ type AdminTeamDirectorySectionProps = {
     createStatusActionHandler: (record: AdminUserRecord) => () => void;
 };
 export function AdminTeamDirectorySection({ loading, internalUsers, filteredUsers, hasActiveFilters, workspaceQueryError, actionError, clearActionError, searchTerm, statusFilter, roleFilter, savingId, allocationSummary, paginatedStatus, loadingMore, onSearchChange, onStatusFilterChange, onRoleFilterChange, onOpenInviteDialog, onClearFilters, onLoadMore, createRoleChangeHandler, createAdminToggleHandler, createStatusActionHandler, }: AdminTeamDirectorySectionProps) {
+    const teamListSkeleton = (<div className="space-y-3">
+      {['team-skeleton-a', 'team-skeleton-b', 'team-skeleton-c', 'team-skeleton-d', 'team-skeleton-e'].map((key) => (<div key={key} className="flex items-center gap-4 rounded-md border border-muted/40 px-3 py-3">
+          <Skeleton className="size-9 rounded-full"/>
+          <Skeleton className="h-4 w-40"/>
+          <Skeleton className="h-8 w-28 rounded-md"/>
+          <Skeleton className="ml-auto h-8 w-24 rounded-md"/>
+        </div>))}
+    </div>);
     return (<div className="space-y-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
@@ -217,6 +227,7 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
           </Select>
         </div>
       </div>
+      <PageSkeletonBoundary loading={loading && internalUsers.length === 0} loadingContent={teamListSkeleton}>
       <div className="space-y-4">
         <AdminQueryErrorAlert error={workspaceQueryError} title="Unable to load workspace data"/>
         <AdminActionErrorAlert error={actionError} onDismiss={clearActionError}/>
@@ -376,6 +387,7 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
             </Button>
           </div>) : null}
       </div>
+      </PageSkeletonBoundary>
     </div>);
 }
 type AdminTeamPageContentProps = {

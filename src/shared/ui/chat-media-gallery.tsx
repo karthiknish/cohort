@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
     Download,
     ExternalLink,
@@ -11,17 +11,21 @@ import {
     ImageIcon,
     Music2,
     MonitorPlay,
+    Code2,
+    LoaderCircle,
 } from 'lucide-react';
 import { ImageGallery } from '@/features/dashboard/collaboration/components/image-gallery';
 import { highlightText, hasHighlightTerms } from '@/features/dashboard/collaboration/components/search-highlighter';
 import { isLikelyImageUrl } from '@/features/dashboard/collaboration/utils';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
+import { CodeSyntaxHighlighter } from '@/shared/ui/code-syntax-highlighter';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { ScrollArea } from '@/shared/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import type { AttachmentKind, ChatMediaAttachment } from './chat-media-gallery-types';
 export type { AttachmentKind, ChatMediaAttachment } from './chat-media-gallery-types';
-import { getAttachmentKind } from './chat-media-gallery-utils';
+import { getAttachmentKind, getSyntaxLanguage } from './chat-media-gallery-utils';
 
 export type ChatMediaGalleryProps = {
     attachments: ChatMediaAttachment[];
@@ -54,6 +58,8 @@ export function AttachmentKindIcon({ kind, className }: { kind: AttachmentKind; 
             return <FileSpreadsheet className={iconClass} aria-hidden />;
         case 'archive':
             return <FileArchive className={iconClass} aria-hidden />;
+        case 'text':
+            return <Code2 className={iconClass} aria-hidden />;
         default:
             return <File className={iconClass} aria-hidden />;
     }
@@ -66,6 +72,7 @@ const KIND_SURFACE: Record<AttachmentKind, string> = {
     audio: 'bg-warning/10 text-warning ring-warning/15',
     spreadsheet: 'bg-success/10 text-success ring-success/15',
     archive: 'bg-muted text-foreground/70 ring-border/50',
+    text: 'bg-secondary text-secondary-foreground ring-border/50',
     file: 'bg-primary/10 text-primary ring-primary/15',
 };
 
@@ -82,6 +89,7 @@ function MediaTile({
     kind,
     highlightTerms,
     onOpenPdf,
+    onOpenText,
     compact,
     flat,
 }: {
@@ -89,11 +97,15 @@ function MediaTile({
     kind: AttachmentKind;
     highlightTerms?: string[];
     onOpenPdf?: (attachment: ChatMediaAttachment) => void;
+    onOpenText?: (attachment: ChatMediaAttachment) => void;
     compact?: boolean;
     flat?: boolean;
 }) {
     const handleOpenPdf = () => {
         onOpenPdf?.(attachment);
+    };
+    const handleOpenText = () => {
+        onOpenText?.(attachment);
     };
 
     if (kind === 'video') {
@@ -133,6 +145,47 @@ function MediaTile({
                 >
                     <track kind="captions" label={`${attachment.name} captions`} />
                 </video>
+            </div>
+        );
+    }
+
+    if (kind === 'audio') {
+        return (
+            <div className={cn('space-y-2', compact && 'max-w-md')}>
+                <div className="flex items-center justify-between gap-2 py-2 text-sm">
+                    <div className="flex min-w-0 items-center gap-2 text-sm">
+                        <span
+                            className={cn(
+                                'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                                flat ? 'ring-0' : 'ring-1',
+                                KIND_SURFACE.audio,
+                            )}
+                        >
+                            <AttachmentKindIcon kind="audio" className={flat ? 'size-4' : 'size-5'} />
+                        </span>
+                        <AttachmentName name={attachment.name} highlightTerms={highlightTerms} />
+                        {attachment.size ? (
+                            <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                {attachment.size}
+                            </Badge>
+                        ) : null}
+                    </div>
+                    <Button asChild variant="ghost" size="sm" className="h-8 shrink-0 gap-1 rounded-lg">
+                        <a href={attachment.url} target="_blank" rel="noopener noreferrer" download>
+                            <Download className="size-3.5" aria-hidden />
+                            <span className="sr-only">Download</span>
+                        </a>
+                    </Button>
+                </div>
+                <audio
+                    src={attachment.url}
+                    controls
+                    aria-label={attachment.name || 'Audio attachment'}
+                    className="w-full"
+                    preload="metadata"
+                >
+                    <track kind="captions" label={`${attachment.name} captions`} />
+                </audio>
             </div>
         );
     }
@@ -188,6 +241,57 @@ function MediaTile({
         );
     }
 
+    if (kind === 'text') {
+        return (
+            <div
+                className={cn(
+                    'group flex items-center gap-3 rounded-lg py-2 transition-colors hover:bg-muted/40 motion-reduce:transition-none',
+                    compact && 'max-w-md',
+                )}
+            >
+                <span
+                    className={cn(
+                        'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                        flat ? 'ring-0' : 'ring-1',
+                        KIND_SURFACE.text,
+                    )}
+                >
+                    <AttachmentKindIcon kind="text" className={flat ? 'size-4' : 'size-5'} />
+                </span>
+                <div className="min-w-0 flex-1">
+                    <AttachmentName name={attachment.name} highlightTerms={highlightTerms} />
+                    <p className="text-xs text-muted-foreground">
+                        {attachment.size ? `${attachment.size} · ` : ''}Text file
+                    </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                    {onOpenText ? (
+                        <Button
+                            type="button"
+                            variant={flat ? 'ghost' : 'outline'}
+                            size="sm"
+                            className="h-8 gap-1 rounded-lg"
+                            onClick={handleOpenText}
+                        >
+                            <Code2 className="size-3.5" aria-hidden />
+                            Preview
+                        </Button>
+                    ) : null}
+                    <Button asChild variant="ghost" size="icon" className="size-8 rounded-lg">
+                        <a
+                            href={attachment.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Open ${attachment.name}`}
+                        >
+                            <ExternalLink className="size-4" />
+                        </a>
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <a
             href={attachment.url}
@@ -219,6 +323,102 @@ function MediaTile({
     );
 }
 
+function TextPreviewDialog({
+    attachment,
+    onOpenChange,
+}: {
+    attachment: ChatMediaAttachment | null;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const [content, setContent] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchContent = useCallback(async (url: string) => {
+        setLoading(true);
+        setError(null);
+        setContent(null);
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to load (${response.status} ${response.statusText})`);
+            }
+            const text = await response.text();
+            // Cap at 500KB to avoid freezing the browser with huge files
+            const truncated = text.length > 512_000;
+            const displayText = truncated ? text.slice(0, 512_000) : text;
+            setContent(displayText);
+            if (truncated) {
+                setError('File truncated — showing first 512KB. Download for full content.');
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load text content.');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (attachment?.url) {
+            void fetchContent(attachment.url);
+        } else {
+            setContent(null);
+            setError(null);
+            setLoading(false);
+        }
+    }, [attachment?.url, fetchContent]);
+
+    const language = attachment ? getSyntaxLanguage(attachment) : 'text';
+
+    return (
+        <Dialog open={Boolean(attachment)} onOpenChange={onOpenChange}>
+            <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col gap-0 overflow-hidden p-0">
+                <DialogHeader className="border-b border-border/50 px-5 py-4">
+                    <DialogTitle className="truncate pr-8">{attachment?.name ?? 'Text preview'}</DialogTitle>
+                    <DialogDescription>
+                        Inline text preview{language !== 'text' ? ` · ${language}` : ''} · open in a new tab for full controls.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex min-h-0 flex-1 flex-col">
+                    <ScrollArea className="min-h-[60vh] flex-1 border-b border-border/50 bg-muted/10">
+                        {loading ? (
+                            <div className="flex h-full min-h-[40vh] items-center justify-center gap-2 text-sm text-muted-foreground">
+                                <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                                Loading preview…
+                            </div>
+                        ) : error && !content ? (
+                            <div className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center text-sm text-destructive">
+                                {error}
+                            </div>
+                        ) : content != null ? (
+                            <CodeSyntaxHighlighter language={language} code={content} />
+                        ) : null}
+                    </ScrollArea>
+                    {error && content != null ? (
+                        <p className="border-b border-border/50 px-4 py-2 text-xs text-muted-foreground">{error}</p>
+                    ) : null}
+                    <div className="flex justify-end gap-2 px-4 py-3">
+                        <Button asChild variant="outline" size="sm" className="rounded-lg">
+                            <a href={attachment?.url} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="mr-1.5 size-3.5" aria-hidden />
+                                Open in tab
+                            </a>
+                        </Button>
+                        {attachment ? (
+                            <Button asChild variant="ghost" size="sm" className="rounded-lg">
+                                <a href={attachment.url} download={attachment.name}>
+                                    <Download className="mr-1.5 size-3.5" aria-hidden />
+                                    Download
+                                </a>
+                            </Button>
+                        ) : null}
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export function ChatMediaGallery({
     attachments,
     highlightTerms,
@@ -229,7 +429,9 @@ export function ChatMediaGallery({
     const grouped = (() => {
         const images: ChatMediaAttachment[] = [];
         const videos: ChatMediaAttachment[] = [];
+        const audios: ChatMediaAttachment[] = [];
         const pdfs: ChatMediaAttachment[] = [];
+        const texts: ChatMediaAttachment[] = [];
         const other: ChatMediaAttachment[] = [];
         const unavailable: ChatMediaAttachment[] = [];
         for (const attachment of attachments) {
@@ -240,10 +442,12 @@ export function ChatMediaGallery({
             const kind = getAttachmentKind(attachment);
             if (kind === 'image') images.push(attachment);
             else if (kind === 'video') videos.push(attachment);
+            else if (kind === 'audio') audios.push(attachment);
             else if (kind === 'pdf') pdfs.push(attachment);
+            else if (kind === 'text') texts.push(attachment);
             else other.push(attachment);
         }
-        return { images, videos, pdfs, other, unavailable };
+        return { images, videos, audios, pdfs, texts, other, unavailable };
     })();
     const downloadable = attachments.filter((a) => hasUsableAttachmentUrl(a.url));
     const handleDownloadAll = () => {
@@ -258,8 +462,12 @@ export function ChatMediaGallery({
         });
     };
     const [activePdf, setActivePdf] = useState<ChatMediaAttachment | null>(null);
+    const [activeText, setActiveText] = useState<ChatMediaAttachment | null>(null);
     const handlePdfDialogOpenChange = (open: boolean) => {
         if (!open) setActivePdf(null);
+    };
+    const handleTextDialogOpenChange = (open: boolean) => {
+        if (!open) setActiveText(null);
     };
 
     if (!attachments.length) return null;
@@ -307,6 +515,17 @@ export function ChatMediaGallery({
                 />
             ))}
 
+            {grouped.audios.map((attachment) => (
+                <MediaTile
+                    key={`${attachment.url}-audio`}
+                    attachment={attachment}
+                    kind="audio"
+                    highlightTerms={highlightTerms}
+                    compact={compact}
+                    flat={flat}
+                />
+            ))}
+
             {grouped.pdfs.map((attachment) => (
                 <MediaTile
                     key={`${attachment.url}-pdf`}
@@ -314,6 +533,18 @@ export function ChatMediaGallery({
                     kind="pdf"
                     highlightTerms={highlightTerms}
                     onOpenPdf={setActivePdf}
+                    compact={compact}
+                    flat={flat}
+                />
+            ))}
+
+            {grouped.texts.map((attachment) => (
+                <MediaTile
+                    key={`${attachment.url}-text`}
+                    attachment={attachment}
+                    kind="text"
+                    highlightTerms={highlightTerms}
+                    onOpenText={setActiveText}
                     compact={compact}
                     flat={flat}
                 />
@@ -374,7 +605,7 @@ export function ChatMediaGallery({
                             <iframe
                                 src={activePdf.url}
                                 title={activePdf.name}
-                                sandbox=""
+                                sandbox="allow-scripts allow-same-origin"
                                 className="min-h-[60vh] w-full flex-1 bg-muted/20"
                             />
                             <div className="flex justify-end gap-2 border-t border-border/50 px-4 py-3">
@@ -389,6 +620,8 @@ export function ChatMediaGallery({
                     ) : null}
                 </DialogContent>
             </Dialog>
+
+            <TextPreviewDialog attachment={activeText} onOpenChange={handleTextDialogOpenChange} />
         </div>
     );
 }

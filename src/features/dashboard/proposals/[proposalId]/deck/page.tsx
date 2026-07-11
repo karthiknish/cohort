@@ -107,26 +107,26 @@ export default function ProposalDeckPage() {
 
     return (
         <DirectionalPageTransition>
-            <PageSkeletonBoundary loading={isLoading} loadingContent={LOADING_FALLBACK}>
-                <div className="space-y-6">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="space-y-2">
-                            <BackLink label="Back to proposals" href="/dashboard/proposals" transitionTypes={['nav-back']} />
-                            {proposal ? (
-                                <ViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" default="none">
-                                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">{proposalDisplayName}</h1>
-                                </ViewTransition>
-                            ) : null}
-                        </div>
+            <div className="space-y-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-2">
+                        <BackLink label="Back to proposals" href="/dashboard/proposals" transitionTypes={['nav-back']} />
                         {proposal ? (
-                            <ViewTransition name={`proposal-status-${proposal.id}`} share="morph" default="none">
-                                <Badge variant={proposal.status === 'ready' ? 'default' : 'outline'} className="uppercase tracking-wide">
-                                    {proposal.status}
-                                </Badge>
+                            <ViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" default="none">
+                                <h1 className="text-2xl font-semibold tracking-tight text-foreground">{proposalDisplayName}</h1>
                             </ViewTransition>
                         ) : null}
                     </div>
+                    {proposal ? (
+                        <ViewTransition name={`proposal-status-${proposal.id}`} share="morph" default="none">
+                            <Badge variant={proposal.status === 'ready' ? 'default' : 'outline'} className="uppercase tracking-wide">
+                                {proposal.status}
+                            </Badge>
+                        </ViewTransition>
+                    ) : null}
+                </div>
 
+                <PageSkeletonBoundary loading={isLoading} loadingContent={LOADING_FALLBACK}>
                     {error ? (
                         <Card className="border-destructive/40 bg-destructive/5">
                             <CardHeader>
@@ -181,8 +181,8 @@ export default function ProposalDeckPage() {
                             </CardContent>
                         </Card>
                     ) : null}
-                </div>
-            </PageSkeletonBoundary>
+                </PageSkeletonBoundary>
+            </div>
         </DirectionalPageTransition>
     );
 }

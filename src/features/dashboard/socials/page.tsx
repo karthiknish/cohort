@@ -30,7 +30,7 @@ export default function SocialsPage() {
     const setupComplete = connections.status?.setupComplete ?? false;
     const effectiveConnected = connected || isPreviewMode;
     const effectiveSetupComplete = setupComplete || isPreviewMode;
-    const initialLoading = isPreviewMode ? false : connections.statusLoading;
+    const initialLoading = isPreviewMode ? false : connections.statusLoading && !connections.status;
     const handleRequestSync = () => {
         void connections.handleRequestSync();
     };
@@ -73,9 +73,9 @@ export default function SocialsPage() {
     </Tabs>
     </div>);
     return (<PageMotionShell reveal={false} className={cn(DASHBOARD_THEME.layout.container, 'pb-10')}>
-      <PageSkeletonBoundary loading={initialLoading} loadingContent={<SocialsPageLoadingFallback />}>
-        <SocialsHeader selectedClientName={selectedClient?.name ?? null} dateRange={dateRange} onDateRangeChange={setDateRange} metricsReady={effectiveConnected && effectiveSetupComplete}/>
+      <SocialsHeader selectedClientName={selectedClient?.name ?? null} dateRange={dateRange} onDateRangeChange={setDateRange} metricsReady={effectiveConnected && effectiveSetupComplete}/>
 
+      <PageSkeletonBoundary loading={initialLoading} loadingContent={<SocialsPageLoadingFallback />}>
         <SocialsPageLayout showSetup={!isPreviewMode} connected={effectiveConnected} setupComplete={effectiveSetupComplete} setup={setupSection} performance={performanceSection}/>
       </PageSkeletonBoundary>
     </PageMotionShell>);

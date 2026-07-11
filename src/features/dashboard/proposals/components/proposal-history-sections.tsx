@@ -30,20 +30,22 @@ function formatProposalUpdatedAt(updatedAt: string | null | undefined): string {
         return 'Recently updated';
     return formatRelativeTime(date);
 }
-export function ProposalHistoryHeader({ isLoading, onRefresh, proposalCount, }: {
+export function ProposalHistoryHeader({ isLoading, isRefreshing, onRefresh, proposalCount, }: {
     isLoading: boolean;
+    isRefreshing?: boolean;
     onRefresh: () => void;
     proposalCount: number;
 }) {
-    return (<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/15 px-3 py-2.5">
+    const showSpinner = isLoading || isRefreshing;
+    return (<div className="flex flex-wrap items-center justify-between gap-3 px-1 py-2">
       <div className="min-w-0">
         <p className="text-sm font-medium text-foreground">
-          {isLoading ? 'Refreshing…' : `${proposalCount} ${proposalCount === 1 ? 'proposal' : 'proposals'}`}
+          {showSpinner ? 'Refreshing…' : `${proposalCount} ${proposalCount === 1 ? 'proposal' : 'proposals'}`}
         </p>
-        {!isLoading && proposalCount > 0 ? (<p className="text-xs text-muted-foreground">For the active client workspace</p>) : null}
+        {!showSpinner && proposalCount > 0 ? (<p className="text-xs text-muted-foreground">In this workspace</p>) : null}
       </div>
-      <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading} className="h-8 shrink-0 gap-1.5 rounded-full px-3">
-        <RefreshCw className={cn('size-3.5', isLoading && 'animate-spin')} aria-hidden/>
+      <Button variant="outline" size="sm" onClick={onRefresh} disabled={showSpinner} className="h-8 shrink-0 gap-1.5 rounded-full px-3">
+        <RefreshCw className={cn('size-3.5', showSpinner && 'animate-spin')} aria-hidden/>
         Refresh
       </Button>
     </div>);
