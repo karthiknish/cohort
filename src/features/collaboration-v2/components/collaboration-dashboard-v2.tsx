@@ -811,7 +811,7 @@ export function CollaborationDashboardV2() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-full min-h-0 w-full flex-col lg:flex-row">
+    <div className="flex min-h-0 w-full flex-col lg:flex-row lg:h-[calc(100vh-12rem)] lg:min-h-[28rem]">
       <ConversationListPane
         channelCount={channels.length}
         dmCount={dmConversations.length}

@@ -184,7 +184,7 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
     };
     if (initialLoading) {
         const columnSkeletonKeys = ['todo', 'in-progress', 'review', 'completed'] as const;
-        return (<div className="flex h-full gap-4 overflow-x-auto px-4 pb-4">
+        return (<div className="flex gap-4 overflow-x-auto px-4 pb-4 h-[calc(100vh-18rem)] min-h-[24rem]">
         {columnSkeletonKeys.map((columnKey) => (<div key={columnKey} className="flex h-full min-h-0 w-[min(100%,280px)] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 p-3 sm:w-[280px]">
             <Skeleton className="mb-3 h-8 w-full rounded-lg"/>
             <Skeleton className="mb-3 h-28 w-full rounded-xl"/>
@@ -193,7 +193,7 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
       </div>);
     }
     if (error) {
-        return (<div className="flex h-full items-center justify-center rounded-xl border border-destructive/20 bg-destructive/5 p-8 text-center">
+        return (<div className="flex items-center justify-center rounded-xl border border-destructive/20 bg-destructive/5 p-8 text-center h-[calc(100vh-18rem)] min-h-[24rem]">
         <div>
           <TriangleAlert className="mx-auto size-12 text-destructive"/>
           <h3 className="mt-4 text-lg font-semibold text-destructive">Unable to load board</h3>
@@ -206,7 +206,7 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
       </div>);
     }
     if (tasks.length === 0) {
-        return (<div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/20 p-10 text-center sm:p-12">
+        return (<div className="flex items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/20 p-10 text-center sm:p-12 h-[calc(100vh-18rem)] min-h-[24rem]">
         <div>
           <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-background shadow-sm ring-1 ring-border/60">
             <ListTodo className="size-8 text-muted-foreground" aria-hidden/>
@@ -228,7 +228,7 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
         </div>
       </div>);
     }
-    return (<div className="flex flex-col flex-1 min-h-0 gap-3 px-4 pb-4 pt-2">
+    return (<div className="flex flex-col gap-3 px-4 pb-4 pt-2 h-[calc(100vh-18rem)] min-h-[24rem]">
       <LiveRegion message={boardAnnouncement}/>
       <p id={keyboardInstructionsId} className="sr-only">
         Use Alt plus Left Arrow or Alt plus Right Arrow on a focused task card to move it between workflow columns. You can also drag and drop tasks with a pointer.

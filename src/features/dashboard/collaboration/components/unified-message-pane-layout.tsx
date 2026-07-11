@@ -95,7 +95,7 @@ export function UnifiedMessagePaneConversationLayout({ activeDeletingMessageId, 
     const resolvedEmptyState = resolveUnifiedMessagePaneEmptyState(isMessageSearchActive, emptyState);
     const messageSearchKey = header.conversationKey ?? header.type;
     return (<UnifiedMessagePaneMessageSearchBindings key={messageSearchKey} canSearchMessages={canSearchMessages} conversationKey={header.conversationKey} headerType={header.type} messageSearchQuery={messageSearchQuery} messageSearchActive={isMessageSearchActive} resultCount={messages.length} onMessageSearchChange={onMessageSearchChange}>
-      {(messageSearch: UnifiedMessagePaneMessageSearchApi) => (<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-muted/40 bg-background/50 shadow-sm max-lg:min-h-[min(72dvh,640px)] lg:h-[640px]">
+      {(messageSearch: UnifiedMessagePaneMessageSearchApi) => (<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-muted/40 bg-background/50 shadow-sm max-lg:min-h-[min(72dvh,640px)] lg:h-full">
       <UnifiedMessagePaneShimmerBackdrop />
 
       <UnifiedMessagePaneConversationHeaderSection header={header} canSearchMessages={canSearchMessages} messageSearchOpen={messageSearch.messageSearchOpen} onToggleMessageSearch={canSearchMessages && onMessageSearchChange ? messageSearch.handleToggleMessageSearch : undefined} statusBanner={statusBanner} searchBar={messageSearch.searchBar}/>
