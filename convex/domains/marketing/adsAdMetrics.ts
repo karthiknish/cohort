@@ -11,6 +11,7 @@ import type { LinkedInCreativeMetric } from '@/services/integrations/linkedin-ad
 import type { MetaAdMetric } from '@/services/integrations/meta-ads'
 import { Errors, withErrorHandling } from '../../errors'
 import { requireWorkspaceActionAccess } from '../../functions'
+import { resolveLinkedInAccessToken } from '../../lib/linkedinAdsAccess'
 
 function normalizeClientId(value: string | null | undefined): string | null {
   if (typeof value !== 'string') return null
@@ -198,7 +199,7 @@ export const listAdMetrics = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+    if (args.providerId !== 'linkedin' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       throw Errors.integration.expired(args.providerId)
     }
 
@@ -261,8 +262,10 @@ export const listAdMetrics = action({
         throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
       }
 
+      const linkedInAccessToken = await resolveLinkedInAccessToken(args.workspaceId, integration, clientId)
+
       const linkedInMetrics = await fetchLinkedInCreativeMetrics({
-        accessToken: integration.accessToken,
+        accessToken: linkedInAccessToken,
         accountId,
         campaignId: args.campaignId,
         timeframeDays,

@@ -81,6 +81,7 @@ export default function AdsPage() {
         connections.googleNeedsAccountSelection,
         connections.metaNeedsAccountSelection,
         connections.tiktokNeedsAccountSelection,
+        connections.linkedinNeedsAccountSelection,
     ].filter(Boolean).length;
     const hasPendingSetup = pendingSetupCount > 0;
     const hasSuccessfulSync = connections.automationStatuses.some((s) => s.status === 'success');
@@ -89,6 +90,9 @@ export default function AdsPage() {
     };
     const handleInitializeTikTok = () => {
         void connections.initializeTikTokIntegration();
+    };
+    const handleInitializeLinkedIn = () => {
+        void connections.initializeLinkedInIntegration(undefined, connections.selectedLinkedInAccountId || null);
     };
     const handleLoadMoreMetrics = () => {
         void metrics.handleLoadMore();
@@ -117,7 +121,7 @@ export default function AdsPage() {
         hasSuccessfulSync,
         hasPendingSetup,
     });
-    const setupSection = (<AdsPageSetupSection flags={setupFlags} connectedAccountCount={connectedAccountCount} connections={connections} metrics={metrics} dateRange={metrics.dateRange} openGoogleCampaignSetup={openGoogleCampaignSetup} handleInitializeMeta={handleInitializeMeta} handleInitializeTikTok={handleInitializeTikTok}/>);
+    const setupSection = (<AdsPageSetupSection flags={setupFlags} connectedAccountCount={connectedAccountCount} connections={connections} metrics={metrics} dateRange={metrics.dateRange} openGoogleCampaignSetup={openGoogleCampaignSetup} handleInitializeMeta={handleInitializeMeta} handleInitializeTikTok={handleInitializeTikTok} handleInitializeLinkedIn={handleInitializeLinkedIn}/>);
     const analyticsSection = (<AdsPageAnalyticsSection metrics={metrics} algorithmicInsights={algorithmicInsights} activeCurrency={activeCurrency} connectedProviderIds={connectedProviderIds} connectedAccountCount={connectedAccountCount} hasSuccessfulSync={hasSuccessfulSync} suppressMetricsErrors={suppressMetricsErrors} dateRange={metrics.dateRange} providerCurrencyMap={providerCurrencyMap}/>);
     const advancedAnalyticsSection = (<AdsPageAdvancedAnalyticsSection metrics={metrics} derivedMetrics={derivedMetrics} formulaEditor={formulaEditor} comparison={comparison} activeCurrency={activeCurrency} suppressMetricsErrors={suppressMetricsErrors} handleLoadMoreMetrics={handleLoadMoreMetrics} providerCurrencyMap={providerCurrencyMap} automationStatuses={connections.automationStatuses} connectedAccountCount={connectedAccountCount} showWorkflow={showWorkflow}/>);
     useEffect(() => {

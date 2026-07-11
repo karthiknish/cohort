@@ -9,13 +9,16 @@ import { PROVIDER_IDS, SUCCESS_MESSAGES, TOAST_TITLES } from '../components/cons
 type UseAdsOauthCallbackArgs = {
     googleNeedsAccountSelection: boolean;
     metaNeedsAccountSelection: boolean;
+    linkedinNeedsAccountSelection: boolean;
     googleAccountOptionsLength: number;
     metaAccountOptionsLength: number;
+    linkedinAccountOptionsLength: number;
     loadingGoogleAccountOptions: boolean;
     loadingMetaAccountOptions: boolean;
+    loadingLinkedInAccountOptions: boolean;
     loadGoogleAdAccounts: (clientIdOverride?: string | null) => Promise<unknown>;
     loadMetaAdAccounts: (clientIdOverride?: string | null) => Promise<unknown>;
-    initializeLinkedInIntegration: () => Promise<unknown>;
+    loadLinkedInAdAccounts: (clientIdOverride?: string | null) => Promise<unknown>;
     initializeTikTokIntegration: (clientIdOverride?: string | null) => Promise<void>;
     setGoogleSetupUi: Dispatch<SetStateAction<{
         message: string | null;
@@ -23,10 +26,11 @@ type UseAdsOauthCallbackArgs = {
     }>>;
     setGoogleSetupMessage: (message: string | null) => void;
     setMetaSetupMessage: (message: string | null) => void;
+    setLinkedinSetupMessage: (message: string | null) => void;
     setConnectionErrors: Dispatch<SetStateAction<Record<string, string>>>;
     triggerRefresh: () => void;
 };
-export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAccountSelection, googleAccountOptionsLength, metaAccountOptionsLength, loadingGoogleAccountOptions, loadingMetaAccountOptions, loadGoogleAdAccounts, loadMetaAdAccounts, initializeLinkedInIntegration, initializeTikTokIntegration, setGoogleSetupUi, setGoogleSetupMessage, setMetaSetupMessage, setConnectionErrors, triggerRefresh, }: UseAdsOauthCallbackArgs) {
+export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAccountSelection, linkedinNeedsAccountSelection, googleAccountOptionsLength, metaAccountOptionsLength, linkedinAccountOptionsLength, loadingGoogleAccountOptions, loadingMetaAccountOptions, loadingLinkedInAccountOptions, loadGoogleAdAccounts, loadMetaAdAccounts, loadLinkedInAdAccounts, initializeTikTokIntegration, setGoogleSetupUi, setGoogleSetupMessage, setMetaSetupMessage, setLinkedinSetupMessage, setConnectionErrors, triggerRefresh, }: UseAdsOauthCallbackArgs) {
     const { replace } = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -86,18 +90,23 @@ export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAcco
                 return;
             }
             if (providerId === PROVIDER_IDS.LINKEDIN) {
-                void initializeLinkedInIntegration()
-                    .then(async () => {
-                    notifySuccess({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, message: 'Syncing your ad data.' });
+                setLinkedinSetupMessage(null);
+                notifySuccess({
+                    title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED,
+                    message: 'LinkedIn connected. Select an ad account to finish setup.',
+                });
+                void loadLinkedInAdAccounts(oauthClientId)
+                    .then(() => {
                     triggerRefresh();
                 })
-                    .catch((err) => {
+                    .catch((error) => {
                     reportConvexFailure({
-                        error: err,
+                        error,
                         context: 'useAdsConnections:oauthSuccess:linkedin',
                         title: TOAST_TITLES.CONNECTION_FAILED,
-                        fallbackMessage: 'Unable to connect LinkedIn Ads.',
+                        fallbackMessage: 'Unable to load LinkedIn ad accounts.',
                     });
+                    setLinkedinSetupMessage(convexErrorMessage(error, 'Unable to load LinkedIn ad accounts.'));
                 });
                 return;
             }
@@ -184,5 +193,23 @@ export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAcco
         metaAccountOptionsLength,
         metaNeedsAccountSelection,
         setMetaSetupMessage,
+    ]);
+    useEffect(() => {
+        if (!linkedinNeedsAccountSelection) {
+            return;
+        }
+        if (loadingLinkedInAccountOptions || linkedinAccountOptionsLength > 0) {
+            return;
+        }
+        void loadLinkedInAdAccounts().catch((error) => {
+            logError(error, 'useAdsConnections:autoLoadLinkedInAccounts');
+            setLinkedinSetupMessage(asErrorMessage(error));
+        });
+    }, [
+        linkedinAccountOptionsLength,
+        linkedinNeedsAccountSelection,
+        loadLinkedInAdAccounts,
+        loadingLinkedInAccountOptions,
+        setLinkedinSetupMessage,
     ]);
 }

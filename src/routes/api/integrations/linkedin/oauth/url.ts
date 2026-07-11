@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { createLinkedInOAuthState, buildLinkedInOAuthUrl } from '@/services/linkedin-oauth'
 import { ServiceUnavailableError, UnauthorizedError, BadRequestError } from '@/lib/api-errors'
 import { isValidRedirectUrl } from '@/lib/utils'
+import { generateCodeVerifier } from '@/lib/crypto'
 
 const querySchema = z.object({
   redirect: z.string().optional(),
@@ -27,8 +28,9 @@ const handlers = adaptApiHandler(
       typeof query.clientId === 'string' && query.clientId.trim().length > 0
         ? query.clientId.trim()
         : null
-    const statePayload = createLinkedInOAuthState({ state: auth.uid, redirect, clientId: integrationClientId })
-    const loginUrl = buildLinkedInOAuthUrl({ clientId: linkedInClientId, redirectUri, state: statePayload })
+    const codeVerifier = generateCodeVerifier()
+    const statePayload = createLinkedInOAuthState({ state: auth.uid, redirect, clientId: integrationClientId, codeVerifier })
+    const loginUrl = buildLinkedInOAuthUrl({ clientId: linkedInClientId, redirectUri, state: statePayload, codeVerifier })
     return { url: loginUrl }
   },
 )

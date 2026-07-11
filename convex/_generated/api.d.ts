@@ -256,6 +256,7 @@ import type * as lib_functions_response from "../lib/functions/response.js";
 import type * as lib_functions_softDeleteDb from "../lib/functions/softDeleteDb.js";
 import type * as lib_functions_types from "../lib/functions/types.js";
 import type * as lib_functions_zodWrappers from "../lib/functions/zodWrappers.js";
+import type * as lib_linkedinAdsAccess from "../lib/linkedinAdsAccess.js";
 import type * as lib_metaAudienceHash from "../lib/metaAudienceHash.js";
 import type * as lib_metaCapiUserData from "../lib/metaCapiUserData.js";
 import type * as lib_metaSha256 from "../lib/metaSha256.js";
@@ -566,6 +567,7 @@ declare const fullApi: ApiFromModules<{
   "lib/functions/softDeleteDb": typeof lib_functions_softDeleteDb;
   "lib/functions/types": typeof lib_functions_types;
   "lib/functions/zodWrappers": typeof lib_functions_zodWrappers;
+  "lib/linkedinAdsAccess": typeof lib_linkedinAdsAccess;
   "lib/metaAudienceHash": typeof lib_metaAudienceHash;
   "lib/metaCapiUserData": typeof lib_metaCapiUserData;
   "lib/metaSha256": typeof lib_metaSha256;

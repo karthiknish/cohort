@@ -10,6 +10,7 @@ import { Progress } from '@/shared/ui/progress';
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme';
 import { cn } from '@/lib/utils';
 import { PROVIDER_INFO, PROVIDER_IDS } from '@/features/dashboard/ads/components/constants';
+import type { LinkedInAdAccountOption } from '../hooks/ads-connections-types';
 type MetaAccountOption = {
     id: string;
     name: string;
@@ -36,6 +37,15 @@ export type AdSetupPanelProps = {
     tiktokNeedsAccountSelection: boolean;
     initializingTikTok: boolean;
     onInitializeTikTok: () => void;
+    linkedinSetupMessage: string | null;
+    linkedinNeedsAccountSelection: boolean;
+    initializingLinkedIn: boolean;
+    onInitializeLinkedIn: () => void;
+    linkedinAccountOptions: LinkedInAdAccountOption[];
+    selectedLinkedInAccountId: string;
+    onLinkedInAccountSelectionChange: (accountId: string) => void;
+    loadingLinkedInAccountOptions: boolean;
+    onReloadLinkedInAccountOptions: () => void;
     initializingGoogle?: boolean;
 };
 function SetupTaskRow({ children, done, title, description, }: {
@@ -57,18 +67,21 @@ function SetupTaskRow({ children, done, title, description, }: {
       {children ? <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">{children}</div> : null}
     </div>);
 }
-export function AdSetupPanel({ connectedCount, totalProviders, googleNeedsAccountSelection, googleSetupMessage, onOpenGoogleSetup, metaSetupMessage, metaNeedsAccountSelection, initializingMeta, onInitializeMeta, metaAccountOptions, selectedMetaAccountId, onMetaAccountSelectionChange, loadingMetaAccountOptions, onReloadMetaAccountOptions, tiktokSetupMessage, tiktokNeedsAccountSelection, initializingTikTok, onInitializeTikTok, initializingGoogle = false, }: AdSetupPanelProps) {
+export function AdSetupPanel({ connectedCount, totalProviders, googleNeedsAccountSelection, googleSetupMessage, onOpenGoogleSetup, metaSetupMessage, metaNeedsAccountSelection, initializingMeta, onInitializeMeta, metaAccountOptions, selectedMetaAccountId, onMetaAccountSelectionChange, loadingMetaAccountOptions, onReloadMetaAccountOptions, tiktokSetupMessage, tiktokNeedsAccountSelection, initializingTikTok, onInitializeTikTok, linkedinSetupMessage, linkedinNeedsAccountSelection, initializingLinkedIn, onInitializeLinkedIn, linkedinAccountOptions, selectedLinkedInAccountId, onLinkedInAccountSelectionChange, loadingLinkedInAccountOptions, onReloadLinkedInAccountOptions, initializingGoogle = false, }: AdSetupPanelProps) {
     const pendingTasks = [
         googleNeedsAccountSelection,
         metaNeedsAccountSelection,
         tiktokNeedsAccountSelection,
+        linkedinNeedsAccountSelection,
     ].filter(Boolean).length;
     const hasSetupWork = pendingTasks > 0 ||
         Boolean(googleSetupMessage) ||
         Boolean(metaSetupMessage) ||
         Boolean(tiktokSetupMessage) ||
+        Boolean(linkedinSetupMessage) ||
         initializingMeta ||
         initializingTikTok ||
+        initializingLinkedIn ||
         initializingGoogle;
     if (!hasSetupWork && connectedCount >= totalProviders) {
         return null;
@@ -101,7 +114,7 @@ export function AdSetupPanel({ connectedCount, totalProviders, googleNeedsAccoun
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {(initializingMeta || initializingTikTok || initializingGoogle) && !googleNeedsAccountSelection && !metaNeedsAccountSelection && !tiktokNeedsAccountSelection ? (<Alert className="border-accent/40 bg-accent/5">
+        {(initializingMeta || initializingTikTok || initializingLinkedIn || initializingGoogle) && !googleNeedsAccountSelection && !metaNeedsAccountSelection && !tiktokNeedsAccountSelection && !linkedinNeedsAccountSelection ? (<Alert className="border-accent/40 bg-accent/5">
             <Loader2 className="size-4 animate-spin text-primary"/>
             <AlertTitle className="text-sm font-semibold">Completing setup…</AlertTitle>
             <AlertDescription className="text-xs text-muted-foreground">
@@ -185,6 +198,49 @@ export function AdSetupPanel({ connectedCount, totalProviders, googleNeedsAccoun
                 </>) : ('Finish setup')}
             </Button>
           </SetupTaskRow>) : null}
+
+        {linkedinSetupMessage ? (<Alert variant="destructive">
+            <AlertTriangle className="size-4"/>
+            <AlertTitle className="text-sm">LinkedIn Ads setup issue</AlertTitle>
+            <AlertDescription className="text-xs">{linkedinSetupMessage}</AlertDescription>
+            <Button size="sm" variant="outline" className="mt-2" onClick={onInitializeLinkedIn}>
+              Try again
+            </Button>
+          </Alert>) : null}
+
+        {linkedinNeedsAccountSelection && !linkedinSetupMessage ? (<SetupTaskRow done={false} title="Select your LinkedIn ad account" description="OAuth succeeded — pick which ad account to sync into this workspace.">
+            <>
+              <select
+                className="h-9 w-full min-w-[12rem] rounded-md border border-input bg-transparent px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:max-w-xs"
+                value={selectedLinkedInAccountId || ''}
+                onChange={(e) => onLinkedInAccountSelectionChange(e.target.value)}
+                disabled={loadingLinkedInAccountOptions || initializingLinkedIn || linkedinAccountOptions.length === 0}
+                aria-label="LinkedIn ad account"
+              >
+                <option value="" disabled>
+                  {loadingLinkedInAccountOptions ? 'Loading accounts…' : 'LinkedIn ad account'}
+                </option>
+                {linkedinAccountOptions.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+                <Button size="sm" variant="outline" onClick={onReloadLinkedInAccountOptions} disabled={loadingLinkedInAccountOptions || initializingLinkedIn}>
+                  Reload
+                </Button>
+                <Button size="sm" onClick={onInitializeLinkedIn} disabled={initializingLinkedIn || loadingLinkedInAccountOptions || !selectedLinkedInAccountId}>
+                  {initializingLinkedIn ? (<>
+                      <Loader2 className="mr-2 size-3 animate-spin"/>
+                      Finishing…
+                    </>) : ('Finish setup')}
+                </Button>
+            </>
+          </SetupTaskRow>) : null}
+
+        {!loadingLinkedInAccountOptions && linkedinNeedsAccountSelection && linkedinAccountOptions.length === 0 && !linkedinSetupMessage ? (<p className="text-xs text-warning">
+            No LinkedIn ad accounts found. Confirm your LinkedIn Ads access, then reload accounts.
+          </p>) : null}
 
         {connectedCount === 0 ? (<p className="text-xs text-muted-foreground">
             Tip: connect Google, Meta, LinkedIn, and TikTok from the cards below. Each uses a secure

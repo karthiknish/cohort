@@ -4,6 +4,7 @@ import { action } from '../../../_generated/server'
 import { api, internal } from '/_generated/api'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from '../../../errors'
+import { resolveLinkedInAccessToken } from '../../../lib/linkedinAdsAccess'
 
 import {
   isTokenExpiringSoon,
@@ -52,7 +53,7 @@ export const listCreatives = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+    if (args.providerId !== 'linkedin' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       throw Errors.integration.expired(args.providerId)
     }
 
@@ -109,10 +110,12 @@ export const listCreatives = action({
         throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
       }
 
+      const linkedInAccessToken = await resolveLinkedInAccessToken(args.workspaceId, integration, clientId)
+
       // Legacy route used ads when campaignId is specified; keep same semantics.
       if (args.campaignId) {
         const ads = await fetchLinkedInAds({
-          accessToken: integration.accessToken,
+          accessToken: linkedInAccessToken,
           accountId,
           campaignId: args.campaignId,
         })
@@ -120,7 +123,7 @@ export const listCreatives = action({
       }
 
       const creatives = await fetchLinkedInCreatives({
-        accessToken: integration.accessToken,
+        accessToken: linkedInAccessToken,
         accountId,
         campaignId: args.campaignId,
       })

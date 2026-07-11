@@ -389,15 +389,28 @@ export const processClaimedJob = internalAction({
             throw Errors.integration.notConfigured('LinkedIn', 'Account not configured')
           }
 
+          const { refreshLinkedInAccessToken } = await import('@/lib/integration-token-refresh-linkedin')
+          let linkedInAccessToken = integration.accessToken
           if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-            throw Errors.integration.expired('LinkedIn')
+            linkedInAccessToken = await refreshLinkedInAccessToken({
+              userId: args.workspaceId,
+              clientId,
+            })
           }
 
           const { fetchLinkedInAdsMetrics } = await import('@/services/integrations/linkedin-ads')
           metrics = await fetchLinkedInAdsMetrics({
-            accessToken: integration.accessToken,
+            accessToken: linkedInAccessToken,
             accountId,
             timeframeDays: args.timeframeDays,
+            refreshAccessToken: async () => {
+              const refreshed = await refreshLinkedInAccessToken({
+                userId: args.workspaceId,
+                clientId,
+              })
+              linkedInAccessToken = refreshed
+              return refreshed
+            },
           })
           break
         }

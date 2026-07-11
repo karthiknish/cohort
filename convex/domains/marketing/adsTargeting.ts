@@ -4,6 +4,7 @@ import { action } from '../../_generated/server'
 import { internal } from '/_generated/api'
 import { v } from 'convex/values'
 import { ErrorCode, Errors, isAppError, withErrorHandling } from '../../errors'
+import { resolveLinkedInAccessToken } from '../../lib/linkedinAdsAccess'
 import type { GoogleAudienceTargeting } from '@/services/integrations/google-ads/types'
 import type { TikTokAudienceTargeting } from '@/services/integrations/tiktok-ads/types'
 import type { LinkedInAudienceTargeting } from '@/services/integrations/linkedin-ads/types'
@@ -266,7 +267,7 @@ export const getTargeting = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+    if (args.providerId !== 'linkedin' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       throw Errors.integration.expired(args.providerId)
     }
 
@@ -313,15 +314,16 @@ export const getTargeting = action({
     } else if (args.providerId === 'linkedin') {
       const { fetchLinkedInAudienceTargeting } = await import('@/services/integrations/linkedin-ads')
 
-      const accessToken = integration.accessToken
       const accountId = integration.accountId
 
-      if (!accessToken || !accountId) {
+      if (!accountId) {
         throw Errors.integration.notConfigured('LinkedIn', 'Credentials not configured')
       }
 
+      const linkedInAccessToken = await resolveLinkedInAccessToken(args.workspaceId, integration, clientId)
+
       const linkedInTargeting = await fetchLinkedInAudienceTargeting({
-        accessToken,
+        accessToken: linkedInAccessToken,
         accountId,
         campaignId: args.campaignId,
       })

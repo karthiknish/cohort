@@ -363,6 +363,24 @@ export const linkedinAdsClient = new IntegrationApiClient({
     platform: 'linkedin',
     baseUrl: 'https://api.linkedin.com/v2',
     defaultTimeoutMs: DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS,
+    isSuccess: (response, payload) => {
+        if (!response.ok) {
+            return false;
+        }
+        if (payload !== null && typeof payload === 'object') {
+            const data = payload as {
+                status?: number;
+                serviceErrorCode?: number;
+            };
+            if (typeof data.status === 'number' && data.status >= 400) {
+                return false;
+            }
+            if (typeof data.serviceErrorCode === 'number' && data.serviceErrorCode >= 400) {
+                return false;
+            }
+        }
+        return true;
+    },
 });
 // Re-export utilities
 export { calculateBackoffDelay, isRetryableStatus, parseRetryAfterMs, DEFAULT_RETRY_CONFIG };

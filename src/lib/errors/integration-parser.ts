@@ -120,14 +120,19 @@ function extractLinkedInPayload(payload: unknown): ParsedPayload {
     if (payload == null) {
         return { message: 'LinkedIn API error' };
     }
+    if (typeof payload === 'string') {
+        return { message: payload.slice(0, 200) || 'LinkedIn API error' };
+    }
     const data = payload as {
         message?: string;
         code?: string;
         status?: number;
+        serviceErrorCode?: number;
     };
     return {
         message: data.message ?? 'LinkedIn API error',
-        code: data.code ?? data.status,
+        code: data.serviceErrorCode ?? data.status ?? data.code,
+        status: data.status ? String(data.status) : undefined,
     };
 }
 function extractTikTokPayload(payload: unknown): ParsedPayload {
@@ -170,10 +175,11 @@ function classifyGoogleError(code?: number | string, status?: string, httpStatus
     return google;
 }
 function classifyLinkedInError(code?: number | string, httpStatus?: number): Classification {
-    const numCode = typeof code === 'number' ? code : parseInt(String(code), 10) || httpStatus || 0;
-    const isAuthError = LINKEDIN_AUTH_CODES.includes(numCode);
-    const isRateLimitError = LINKEDIN_RATE_LIMIT_CODES.includes(numCode);
-    const isRetryable = isRateLimitError || LINKEDIN_RETRYABLE_CODES.includes(numCode);
+    const parsedCode = typeof code === 'number' ? code : parseInt(String(code), 10);
+    const numCode = parsedCode || httpStatus || 0;
+    const isAuthError = LINKEDIN_AUTH_CODES.includes(numCode) || LINKEDIN_AUTH_CODES.includes(httpStatus || 0);
+    const isRateLimitError = LINKEDIN_RATE_LIMIT_CODES.includes(numCode) || LINKEDIN_RATE_LIMIT_CODES.includes(httpStatus || 0);
+    const isRetryable = isRateLimitError || LINKEDIN_RETRYABLE_CODES.includes(numCode) || LINKEDIN_RETRYABLE_CODES.includes(httpStatus || 0);
     return { isAuthError, isRateLimitError, isRetryable };
 }
 function classifyTikTokError(code?: number | string): Classification {

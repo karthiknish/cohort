@@ -3,9 +3,8 @@
 // =============================================================================
 import { asErrorMessage } from '@/lib/convex-errors';
 import { normalizeCurrency, coerceNumber, buildTimeRange, formatDate, DEFAULT_RETRY_CONFIG, } from './client';
-import { parseJsonBodySafely } from '@/lib/response-json';
 import { linkedinAdsClient } from '@/services/integrations/shared/base-client';
-import type { LinkedInAdsOptions, LinkedInAdAccount, LinkedInAnalyticsRow, LinkedInApiErrorResponse, NormalizedMetric, } from './types';
+import type { LinkedInAdsOptions, LinkedInAdAccount, LinkedInAnalyticsRow, NormalizedMetric, } from './types';
 // =============================================================================
 // FETCH LINKEDIN AD ACCOUNTS
 // =============================================================================
@@ -129,46 +128,26 @@ export async function checkLinkedInIntegrationHealth(options: {
 }> {
     const { accessToken, accountId } = options;
     try {
-        const profileUrl = 'https://api.linkedin.com/v2/me';
-        const profileResponse = await fetch(profileUrl, {
+        await linkedinAdsClient.executeRequest<unknown>({
+            url: '/me',
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${accessToken}`,
             },
+            operation: 'healthProfile',
+            maxRetries: 1,
         });
-        if (!profileResponse.ok) {
-            const errorData = await parseJsonBodySafely<LinkedInApiErrorResponse>(profileResponse, {
-                context: 'LinkedIn Ads health profile error',
-                allowEmpty: true,
-            });
-            return {
-                healthy: false,
-                tokenValid: false,
-                accountAccessible: false,
-                error: errorData?.message ?? 'Token validation failed',
-            };
-        }
         if (accountId) {
-            const accountUrl = `https://api.linkedin.com/v2/adAccountsV2/urn:li:sponsoredAccount:${accountId}`;
-            const accountResponse = await fetch(accountUrl, {
+            await linkedinAdsClient.executeRequest<unknown>({
+                url: `/adAccountsV2/urn:li:sponsoredAccount:${accountId}`,
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
                     'X-Restli-Protocol-Version': '2.0.0',
                 },
+                operation: 'healthAccount',
+                maxRetries: 1,
             });
-            if (!accountResponse.ok) {
-                const errorData = await parseJsonBodySafely<LinkedInApiErrorResponse>(accountResponse, {
-                    context: 'LinkedIn Ads health account error',
-                    allowEmpty: true,
-                });
-                return {
-                    healthy: false,
-                    tokenValid: true,
-                    accountAccessible: false,
-                    error: errorData?.message ?? 'Ad account not accessible',
-                };
-            }
         }
         return {
             healthy: true,
@@ -177,11 +156,13 @@ export async function checkLinkedInIntegrationHealth(options: {
         };
     }
     catch (error) {
+        const errorMessage = asErrorMessage(error, 'Health check failed');
+        const tokenValid = !/unauthorized|forbidden|invalid|missing|token/i.test(errorMessage);
         return {
             healthy: false,
-            tokenValid: false,
+            tokenValid,
             accountAccessible: false,
-            error: asErrorMessage(error, 'Health check failed'),
+            error: errorMessage,
         };
     }
 }

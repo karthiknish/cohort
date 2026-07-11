@@ -9,11 +9,13 @@ import {
   normalizeClientId,
   normalizeGoogleAdsAccountId,
   normalizeMetaAccountId,
+  normalizeLinkedInAccountId,
   nowMs,
   resolveGoogleAdsDeveloperToken,
   v,
   withErrorHandling,
 } from './shared'
+import { resolveLinkedInAccessToken } from '../../../lib/linkedinAdsAccess'
 
 async function enqueueInitialSyncAndRun(
   ctx: ActionCtx,
@@ -161,16 +163,25 @@ export const initializeAdAccount = action({
 
       const { fetchLinkedInAdAccounts } = await import('@/services/integrations/linkedin-ads')
 
-      const accounts = await fetchLinkedInAdAccounts({ accessToken: integration.accessToken })
+      const linkedInAccessToken = await resolveLinkedInAccessToken(args.workspaceId, integration, clientId)
+      const accounts = await fetchLinkedInAdAccounts({ accessToken: linkedInAccessToken })
       if (!accounts.length) {
         throw Errors.integration.notConfigured('LinkedIn', 'No ad accounts available')
       }
 
-      const firstAccount = accounts[0]
-      if (!firstAccount) {
+      const selectedAccountId = normalizeLinkedInAccountId(args.accountId ?? null)
+      const selectedAccount = selectedAccountId
+        ? accounts.find((account) => account.id === selectedAccountId) ?? null
+        : null
+
+      if (selectedAccountId && !selectedAccount) {
+        throw Errors.validation.invalidInput('Selected LinkedIn ad account is not available for this integration token')
+      }
+
+      const preferredAccount = selectedAccount ?? accounts.find((account) => account.status?.toUpperCase() === 'ACTIVE') ?? accounts[0]
+      if (!preferredAccount) {
         throw Errors.integration.notConfigured('LinkedIn', 'No ad accounts available')
       }
-      const preferredAccount = accounts.find((account) => account.status?.toUpperCase() === 'ACTIVE') ?? firstAccount
 
       await ctx.runMutation(internal.adsIntegrations.updateIntegrationCredentialsInternal, {
         workspaceId: args.workspaceId,

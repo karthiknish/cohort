@@ -6,11 +6,13 @@ import {
   Errors,
   action,
   normalizeClientId,
+  normalizeLinkedInAccountId,
   requireWorkspaceActionAccess,
   resolveGoogleAdsDeveloperToken,
   v,
   withErrorHandling,
 } from './shared'
+import { resolveLinkedInAccessToken } from '../../../lib/linkedinAdsAccess'
 
 export const listMetaAdAccounts = action({
   args: {
@@ -118,5 +120,41 @@ export const listGoogleAnalyticsProperties = action({
       resourceName: property.resourceName,
     }))
   }, 'adsIntegrations:listGoogleAnalyticsProperties', { maxRetries: 3 }),
+})
+
+export const listLinkedInAdAccounts = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.literal('linkedin'),
+    clientId: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => withErrorHandling(async () => {
+    await requireWorkspaceActionAccess(ctx, args.workspaceId)
+
+    const clientId = normalizeClientId(args.clientId ?? null)
+
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId,
+    })
+
+    if (!integration.accessToken) {
+      throw Errors.integration.missingToken('LinkedIn')
+    }
+
+    const linkedInAccessToken = await resolveLinkedInAccessToken(args.workspaceId, integration, clientId)
+
+    const { fetchLinkedInAdAccounts } = await import('@/services/integrations/linkedin-ads')
+    const accounts = await fetchLinkedInAdAccounts({ accessToken: linkedInAccessToken })
+
+    return accounts.map((account) => ({
+      id: normalizeLinkedInAccountId(account.id) ?? account.id,
+      name: account.name,
+      currency: account.currency ?? null,
+      status: account.status ?? null,
+      isActive: account.status?.toUpperCase() === 'ACTIVE',
+    }))
+  }, 'adsIntegrations:listLinkedInAdAccounts', { maxRetries: 3 }),
 })
 

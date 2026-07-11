@@ -12,7 +12,7 @@ import { buildAdPlatforms, buildIntegrationStatusMap, deriveConnectedProviders, 
 import { useAdsConnectionActions } from './use-ads-connection-actions';
 import { useAdsOauthCallback } from './use-ads-oauth-callback';
 import { useAdsProviderSetup } from './use-ads-provider-setup';
-export type { DisconnectOptions, GoogleAdAccountOption, IntegrationStatusInfo, MetaAdAccountOption, UseAdsConnectionsOptions, UseAdsConnectionsReturn, } from './ads-connections-types';
+export type { DisconnectOptions, GoogleAdAccountOption, IntegrationStatusInfo, MetaAdAccountOption, LinkedInAdAccountOption, UseAdsConnectionsOptions, UseAdsConnectionsReturn, } from './ads-connections-types';
 export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAdsConnectionsReturn {
     void options.onRefresh;
     const { user } = useAuth();
@@ -54,9 +54,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     const metaStatus = automationStatuses.find((s) => s.providerId === PROVIDER_IDS.FACEBOOK);
     const googleStatus = automationStatuses.find((s) => s.providerId === PROVIDER_IDS.GOOGLE);
     const tiktokStatus = automationStatuses.find((s) => s.providerId === PROVIDER_IDS.TIKTOK);
+    const linkedinStatus = automationStatuses.find((s) => s.providerId === PROVIDER_IDS.LINKEDIN);
     const metaNeedsAccountSelection = providerNeedsAccountSelection(metaStatus);
     const googleNeedsAccountSelection = providerNeedsAccountSelection(googleStatus);
     const tiktokNeedsAccountSelection = providerNeedsAccountSelection(tiktokStatus);
+    const linkedinNeedsAccountSelection = providerNeedsAccountSelection(linkedinStatus);
     const googleSetupDialogOpen = setup.googleSetupUi.dialogOpen || googleNeedsAccountSelection;
     const connectedProvidersFromStatuses = deriveConnectedProviders(mappedStatuses?.statuses);
     const connectedProviders = ({ ...connectedProvidersFromStatuses, ...connectedProviderOverrides });
@@ -64,17 +66,21 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     useAdsOauthCallback({
         googleNeedsAccountSelection,
         metaNeedsAccountSelection,
+        linkedinNeedsAccountSelection,
         googleAccountOptionsLength: setup.googleAccountOptions.length,
         metaAccountOptionsLength: setup.metaAccountOptions.length,
+        linkedinAccountOptionsLength: setup.linkedinAccountOptions.length,
         loadingGoogleAccountOptions: setup.loadingGoogleAccountOptions,
         loadingMetaAccountOptions: setup.loadingMetaAccountOptions,
+        loadingLinkedInAccountOptions: setup.loadingLinkedInAccountOptions,
         loadGoogleAdAccounts: setup.loadGoogleAdAccounts,
         loadMetaAdAccounts: setup.loadMetaAdAccounts,
-        initializeLinkedInIntegration: setup.initializeLinkedInIntegration,
+        loadLinkedInAdAccounts: setup.loadLinkedInAdAccounts,
         initializeTikTokIntegration: setup.initializeTikTokIntegration,
         setGoogleSetupUi: setup.setGoogleSetupUi,
         setGoogleSetupMessage: setup.setGoogleSetupMessage,
         setMetaSetupMessage: setup.setMetaSetupMessage,
+        setLinkedinSetupMessage: setup.setLinkedinSetupMessage,
         setConnectionErrors,
         triggerRefresh,
     });
@@ -104,12 +110,15 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         googleSetupMessage: setup.googleSetupMessage,
         metaSetupMessage: setup.metaSetupMessage,
         tiktokSetupMessage: setup.tiktokSetupMessage,
+        linkedinSetupMessage: setup.linkedinSetupMessage,
         initializingGoogle: setup.initializingGoogle,
         initializingMeta: setup.initializingMeta,
         initializingTikTok: setup.initializingTikTok,
+        initializingLinkedIn: setup.initializingLinkedIn,
         googleNeedsAccountSelection,
         metaNeedsAccountSelection,
         tiktokNeedsAccountSelection,
+        linkedinNeedsAccountSelection,
         googleAccountOptions: setup.googleAccountOptions,
         selectedGoogleAccountId: setup.selectedGoogleAccountId,
         setSelectedGoogleAccountId: setup.setSelectedGoogleAccountId,
@@ -120,6 +129,10 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         selectedMetaAccountId: setup.selectedMetaAccountId,
         setSelectedMetaAccountId: setup.setSelectedMetaAccountId,
         loadingMetaAccountOptions: setup.loadingMetaAccountOptions,
+        linkedinAccountOptions: setup.linkedinAccountOptions,
+        selectedLinkedInAccountId: setup.selectedLinkedInAccountId,
+        setSelectedLinkedInAccountId: setup.setSelectedLinkedInAccountId,
+        loadingLinkedInAccountOptions: setup.loadingLinkedInAccountOptions,
         handleConnect: actions.handleConnect,
         handleDisconnect: actions.handleDisconnect,
         handleOauthRedirect: actions.handleOauthRedirect,
@@ -127,8 +140,10 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         initializeGoogleIntegration: setup.initializeGoogleIntegration,
         initializeMetaIntegration: setup.initializeMetaIntegration,
         initializeTikTokIntegration: setup.initializeTikTokIntegration,
+        initializeLinkedInIntegration: setup.initializeLinkedInIntegration,
         reloadGoogleAccountOptions: setup.loadGoogleAdAccounts,
         reloadMetaAccountOptions: setup.loadMetaAdAccounts,
+        reloadLinkedInAccountOptions: setup.loadLinkedInAdAccounts,
         adPlatforms,
         triggerRefresh,
         refreshTick,

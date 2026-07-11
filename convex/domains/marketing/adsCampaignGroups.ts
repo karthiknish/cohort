@@ -5,6 +5,7 @@ import { v } from 'convex/values'
 import { internal } from '/_generated/api'
 import { Errors, withErrorHandling } from '../../errors'
 import { requireWorkspaceActionAccess } from '../../functions'
+import { resolveLinkedInAccessToken } from '../../lib/linkedinAdsAccess'
 import type { LinkedInCampaignGroup } from '@/services/integrations/linkedin-ads'
 
 function normalizeClientId(value: string | null | undefined): string | null {
@@ -48,14 +49,12 @@ export const listCampaignGroups = action({
       throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
     }
 
-    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-      throw Errors.integration.expired('LinkedIn')
-    }
+    const linkedInAccessToken = await resolveLinkedInAccessToken(args.workspaceId, integration, clientId)
 
     const { listLinkedInCampaignGroups } = await import('@/services/integrations/linkedin-ads')
 
     const groups = await listLinkedInCampaignGroups({
-      accessToken: integration.accessToken,
+      accessToken: linkedInAccessToken,
       accountId: integration.accountId,
     })
 
@@ -94,9 +93,7 @@ export const updateCampaignGroup = action({
       throw Errors.integration.missingToken('LinkedIn')
     }
 
-    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-      throw Errors.integration.expired('LinkedIn')
-    }
+    const linkedInAccessToken = await resolveLinkedInAccessToken(args.workspaceId, integration, clientId)
 
     const { updateLinkedInCampaignGroupBudget, updateLinkedInCampaignGroupStatus } = await import(
       '@/services/integrations/linkedin-ads'
@@ -104,13 +101,13 @@ export const updateCampaignGroup = action({
 
     if (args.action === 'enable' || args.action === 'pause') {
       await updateLinkedInCampaignGroupStatus({
-        accessToken: integration.accessToken,
+        accessToken: linkedInAccessToken,
         campaignGroupId: args.campaignGroupId,
         status: args.action === 'enable' ? 'ACTIVE' : 'PAUSED',
       })
     } else if (args.action === 'updateBudget' && args.budget !== undefined) {
       await updateLinkedInCampaignGroupBudget({
-        accessToken: integration.accessToken,
+        accessToken: linkedInAccessToken,
         campaignGroupId: args.campaignGroupId,
         totalBudget: args.budget,
       })

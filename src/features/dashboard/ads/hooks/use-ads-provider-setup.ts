@@ -5,7 +5,7 @@ import { adsIntegrationsApi } from '@/lib/convex-api';
 import { convexErrorMessage, reportConvexFailure } from '@/lib/handle-convex-error';
 import { notifySuccess } from '@/lib/notifications';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES, TOAST_TITLES, } from '../components/constants';
-import type { GoogleAdAccountOption, MetaAdAccountOption, } from './ads-connections-types';
+import type { GoogleAdAccountOption, MetaAdAccountOption, LinkedInAdAccountOption, } from './ads-connections-types';
 type UseAdsProviderSetupArgs = {
     workspaceId: string | null;
     selectedClientId: string | null;
@@ -15,6 +15,7 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
     const initializeAdAccount = useAction(adsIntegrationsApi.initializeAdAccount);
     const listGoogleAdAccounts = useAction(adsIntegrationsApi.listGoogleAdAccounts);
     const listMetaAdAccounts = useAction(adsIntegrationsApi.listMetaAdAccounts);
+    const listLinkedInAdAccounts = useAction(adsIntegrationsApi.listLinkedInAdAccounts);
     const [googleSetupUi, setGoogleSetupUi] = useState({
         message: null as string | null,
         dialogOpen: false,
@@ -28,21 +29,28 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
     };
     const [metaSetupMessage, setMetaSetupMessage] = useState<string | null>(null);
     const [tiktokSetupMessage, setTiktokSetupMessage] = useState<string | null>(null);
+    const [linkedinSetupMessage, setLinkedinSetupMessage] = useState<string | null>(null);
     const [initializingGoogle, setInitializingGoogle] = useState(false);
     const [initializingMeta, setInitializingMeta] = useState(false);
     const [initializingTikTok, setInitializingTikTok] = useState(false);
+    const [initializingLinkedIn, setInitializingLinkedIn] = useState(false);
     const [googleAccountOptions, setGoogleAccountOptions] = useState<GoogleAdAccountOption[]>([]);
     const [selectedGoogleAccountId, setSelectedGoogleAccountId] = useState('');
     const [loadingGoogleAccountOptions, setLoadingGoogleAccountOptions] = useState(false);
     const [metaAccountOptions, setMetaAccountOptions] = useState<MetaAdAccountOption[]>([]);
     const [selectedMetaAccountId, setSelectedMetaAccountId] = useState('');
     const [loadingMetaAccountOptions, setLoadingMetaAccountOptions] = useState(false);
+    const [linkedinAccountOptions, setLinkedinAccountOptions] = useState<LinkedInAdAccountOption[]>([]);
+    const [selectedLinkedInAccountId, setSelectedLinkedInAccountId] = useState('');
+    const [loadingLinkedInAccountOptions, setLoadingLinkedInAccountOptions] = useState(false);
     useEffect(() => {
         setGoogleAccountOptions([]);
         setSelectedGoogleAccountId('');
         setGoogleSetupDialogOpen(false);
         setMetaAccountOptions([]);
         setSelectedMetaAccountId('');
+        setLinkedinAccountOptions([]);
+        setSelectedLinkedInAccountId('');
     }, [selectedClientId]);
     const loadGoogleAdAccounts = async (clientIdOverride?: string | null) => {
         if (!workspaceId) {
@@ -106,6 +114,37 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
             setLoadingMetaAccountOptions(false);
         }
     };
+    const loadLinkedInAdAccounts = async (clientIdOverride?: string | null) => {
+        if (!workspaceId) {
+            throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED);
+        }
+        setLoadingLinkedInAccountOptions(true);
+        try {
+            const payload = (await listLinkedInAdAccounts({
+                workspaceId,
+                providerId: 'linkedin',
+                clientId: clientIdOverride ?? selectedClientId ?? null,
+            })) as LinkedInAdAccountOption[];
+            const options = Array.isArray(payload) ? payload : [];
+            setLinkedinAccountOptions(options);
+            setSelectedLinkedInAccountId((currentValue) => {
+                if (currentValue && options.some((option) => option.id === currentValue)) {
+                    return currentValue;
+                }
+                const defaultOption = options.find((option) => option.isActive) ?? options[0];
+                return defaultOption?.id ?? '';
+            });
+            return options;
+        }
+        catch (error) {
+            setLinkedinAccountOptions([]);
+            setSelectedLinkedInAccountId('');
+            throw error;
+        }
+        finally {
+            setLoadingLinkedInAccountOptions(false);
+        }
+    };
     const initializeGoogleIntegration = async (clientIdOverride?: string | null, accountIdOverride?: string | null) => {
         setGoogleSetupMessage(null);
         setInitializingGoogle(true);
@@ -149,15 +188,53 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
             setInitializingGoogle(false);
         }
     };
-    const initializeLinkedInIntegration = async () => {
-        if (!workspaceId) {
-            throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED);
+    const initializeLinkedInIntegration = async (clientIdOverride?: string | null, accountIdOverride?: string | null) => {
+        setLinkedinSetupMessage(null);
+        setInitializingLinkedIn(true);
+        try {
+            if (!workspaceId) {
+                throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED);
+            }
+            let accountId = (accountIdOverride ?? selectedLinkedInAccountId).trim();
+            if (!accountId) {
+                const availableAccounts = await loadLinkedInAdAccounts(clientIdOverride);
+                const defaultAccount = availableAccounts.find((option) => option.isActive) ?? availableAccounts[0];
+                if (!defaultAccount) {
+                    throw new Error('No LinkedIn ad accounts are available for this integration token.');
+                }
+                accountId = defaultAccount.id;
+                setSelectedLinkedInAccountId(defaultAccount.id);
+            }
+            const payload = (await initializeAdAccount({
+                workspaceId,
+                providerId: 'linkedin',
+                clientId: clientIdOverride ?? selectedClientId ?? null,
+                accountId,
+            })) as {
+                accountName?: string;
+            };
+            notifySuccess({
+                title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED,
+                message: payload?.accountName
+                    ? `Syncing data from ${payload.accountName}.`
+                    : 'LinkedIn ad account linked successfully.',
+            });
+            setLinkedinAccountOptions([]);
+            setSelectedLinkedInAccountId('');
+            triggerRefresh();
         }
-        return await initializeAdAccount({
-            workspaceId,
-            providerId: 'linkedin',
-            clientId: selectedClientId ?? null,
-        });
+        catch (error: unknown) {
+            reportConvexFailure({
+                error,
+                context: 'useAdsConnections:initializeLinkedInIntegration',
+                title: TOAST_TITLES.CONNECTION_FAILED,
+                fallbackMessage: 'Unable to connect LinkedIn Ads.',
+            });
+            setLinkedinSetupMessage(convexErrorMessage(error, 'Unable to connect LinkedIn Ads.'));
+        }
+        finally {
+            setInitializingLinkedIn(false);
+        }
     };
     const initializeMetaIntegration = async (clientIdOverride?: string | null, accountIdOverride?: string | null) => {
         setMetaSetupMessage(null);
@@ -252,9 +329,12 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
         setMetaSetupMessage,
         tiktokSetupMessage,
         setTiktokSetupMessage,
+        linkedinSetupMessage,
+        setLinkedinSetupMessage,
         initializingGoogle,
         initializingMeta,
         initializingTikTok,
+        initializingLinkedIn,
         googleAccountOptions,
         selectedGoogleAccountId,
         setSelectedGoogleAccountId,
@@ -263,8 +343,13 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
         selectedMetaAccountId,
         setSelectedMetaAccountId,
         loadingMetaAccountOptions,
+        linkedinAccountOptions,
+        selectedLinkedInAccountId,
+        setSelectedLinkedInAccountId,
+        loadingLinkedInAccountOptions,
         loadGoogleAdAccounts,
         loadMetaAdAccounts,
+        loadLinkedInAdAccounts,
         initializeGoogleIntegration,
         initializeLinkedInIntegration,
         initializeMetaIntegration,

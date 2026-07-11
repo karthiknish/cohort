@@ -1,6 +1,5 @@
-import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto';
-import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/ads-admin';
-import { fetchLinkedInAdAccounts } from '@/services/integrations/linkedin-ads';
+import { decrypt, encrypt, generateCodeChallenge, generateCodeVerifier } from '@/lib/crypto';
+import { persistIntegrationTokens } from '@/lib/ads-admin';
 import { logger } from '@/lib/logger';
 import { asErrorMessage } from '@/lib/convex-errors';
 // =============================================================================
@@ -29,12 +28,14 @@ interface BuildLinkedInAuthUrlOptions {
     redirectUri: string;
     state?: string;
     scopes?: string[];
+    codeVerifier?: string;
 }
 interface ExchangeCodeOptions {
     clientId: string;
     clientSecret: string;
     redirectUri: string;
     code: string;
+    codeVerifier?: string;
 }
 interface LinkedInTokenResponse {
     access_token: string;
@@ -116,7 +117,7 @@ export function validateLinkedInOAuthState(state: string): LinkedInOAuthContext 
 // URL BUILDING
 // =============================================================================
 export function buildLinkedInOAuthUrl(options: BuildLinkedInAuthUrlOptions): string {
-    const { clientId, redirectUri, state, scopes = LINKEDIN_ADS_SCOPES, } = options;
+    const { clientId, redirectUri, state, scopes = LINKEDIN_ADS_SCOPES, codeVerifier, } = options;
     if (!clientId) {
         throw new Error('LinkedIn client ID is required');
     }
@@ -132,13 +133,17 @@ export function buildLinkedInOAuthUrl(options: BuildLinkedInAuthUrlOptions): str
     if (state) {
         params.set('state', state);
     }
+    if (codeVerifier) {
+        params.set('code_challenge', generateCodeChallenge(codeVerifier));
+        params.set('code_challenge_method', 'S256');
+    }
     return `${LINKEDIN_AUTH_ENDPOINT}?${params.toString()}`;
 }
 // =============================================================================
 // TOKEN EXCHANGE
 // =============================================================================
 export async function exchangeLinkedInCodeForTokens(options: ExchangeCodeOptions): Promise<LinkedInTokenResponse> {
-    const { clientId, clientSecret, redirectUri, code } = options;
+    const { clientId, clientSecret, redirectUri, code, codeVerifier } = options;
     if (!clientId || !clientSecret) {
         throw new LinkedInTokenExchangeError({
             message: 'LinkedIn OAuth credentials are required',
@@ -156,6 +161,9 @@ export async function exchangeLinkedInCodeForTokens(options: ExchangeCodeOptions
         client_secret: clientSecret,
         redirect_uri: redirectUri,
     });
+    if (codeVerifier) {
+        body.set('code_verifier', codeVerifier);
+    }
     let response: Response;
     try {
         response = await fetch(LINKEDIN_TOKEN_ENDPOINT, {
@@ -206,8 +214,9 @@ export async function completeLinkedInOAuthFlow(options: {
     userId: string;
     clientId?: string | null;
     redirectUri: string;
+    codeVerifier?: string;
 }): Promise<void> {
-    const { code, userId, clientId: integrationClientId, redirectUri } = options;
+    const { code, userId, clientId: integrationClientId, redirectUri, codeVerifier } = options;
     const linkedInClientId = process.env.LINKEDIN_CLIENT_ID;
     const linkedInClientSecret = process.env.LINKEDIN_CLIENT_SECRET;
     if (!linkedInClientId || !linkedInClientSecret) {
@@ -221,6 +230,7 @@ export async function completeLinkedInOAuthFlow(options: {
             clientSecret: linkedInClientSecret,
             redirectUri,
             code,
+            codeVerifier,
         });
     }
     catch (error) {
@@ -239,18 +249,8 @@ export async function completeLinkedInOAuthFlow(options: {
     const refreshTokenExpiresAt = tokenResponse.refresh_token_expires_in
         ? new Date(Date.now() + tokenResponse.refresh_token_expires_in * 1000)
         : null;
-    // Persist the tokens
-    let accountId: string | null = null;
-    let accountName: string | null = null;
-    try {
-        const accounts = await fetchLinkedInAdAccounts({ accessToken: tokenResponse.access_token });
-        const preferredAccount = accounts.find((account) => account.status?.toUpperCase() === 'ACTIVE') ?? accounts[0];
-        accountId = preferredAccount?.id ?? null;
-        accountName = preferredAccount?.name ?? null;
-    }
-    catch (error) {
-        logger.warn('[LinkedIn OAuth] Failed to resolve account name during OAuth completion', { error: asErrorMessage(error) });
-    }
+    // Persist the tokens. Account selection is handled separately so the user can
+    // choose which ad account to sync rather than auto-selecting the first one.
     await persistIntegrationTokens({
         userId,
         providerId: 'linkedin',
@@ -258,17 +258,8 @@ export async function completeLinkedInOAuthFlow(options: {
         accessToken: tokenResponse.access_token,
         refreshToken: tokenResponse.refresh_token ?? null,
         scopes: LINKEDIN_ADS_SCOPES,
-        accountId,
-        accountName,
         accessTokenExpiresAt: expiresAt,
         refreshTokenExpiresAt: refreshTokenExpiresAt,
     });
     console.log(`[LinkedIn OAuth] Successfully persisted integration for user ${userId}`);
-    // Enqueue initial sync job
-    await enqueueSyncJob({
-        userId,
-        providerId: 'linkedin',
-        jobType: 'initial-backfill',
-        clientId: integrationClientId ?? null,
-    });
 }

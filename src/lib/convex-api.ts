@@ -82,6 +82,7 @@ export const adsIntegrationsApi = {
     listGoogleAdAccounts: looseApi.adsIntegrations.listGoogleAdAccounts,
     listGoogleAnalyticsProperties: looseApi.adsIntegrations.listGoogleAnalyticsProperties,
     listMetaAdAccounts: looseApi.adsIntegrations.listMetaAdAccounts,
+    listLinkedInAdAccounts: looseApi.adsIntegrations.listLinkedInAdAccounts,
     updateAutomationSettings: looseApi.adsIntegrations.updateAutomationSettings,
     requestManualSync: looseApi.adsIntegrations.requestManualSync,
     runManualSync: looseApi.adSyncWorkerActions.runManualSync,

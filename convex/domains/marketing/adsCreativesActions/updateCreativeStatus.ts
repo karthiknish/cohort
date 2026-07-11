@@ -5,6 +5,7 @@ import { api, internal } from '/_generated/api'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from '../../../errors'
 
+import { resolveLinkedInAccessToken } from '../../../lib/linkedinAdsAccess'
 import { isTokenExpiringSoon, normalizeClientId, requireIdentity } from './shared'
 
 export const updateCreativeStatus = action({
@@ -39,7 +40,7 @@ export const updateCreativeStatus = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+    if (args.providerId !== 'linkedin' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       throw Errors.integration.expired(args.providerId)
     }
 
@@ -102,10 +103,12 @@ export const updateCreativeStatus = action({
         throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
       }
 
+      const linkedInAccessToken = await resolveLinkedInAccessToken(args.workspaceId, integration, clientId)
+
       const linkedinStatus = status === 'ACTIVE' || status === 'ENABLE' || status === 'ENABLED' ? 'ACTIVE' : 'PAUSED'
 
       await updateLinkedInAdStatus({
-        accessToken: integration.accessToken,
+        accessToken: linkedInAccessToken,
         creativeId: args.creativeId,
         status: linkedinStatus as 'ACTIVE' | 'PAUSED',
       })

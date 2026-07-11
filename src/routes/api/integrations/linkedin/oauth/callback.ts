@@ -47,7 +47,7 @@ const handlers = adaptApiHandler(
       if (!context.state) {
         return redirectResponse(`${appUrl}/dashboard/ads?oauth_error=invalid_state&provider=linkedin`)
       }
-      await completeLinkedInOAuthFlow({ code, userId: context.state, redirectUri, clientId: context.clientId ?? null })
+      await completeLinkedInOAuthFlow({ code, userId: context.state, redirectUri, clientId: context.clientId ?? null, codeVerifier: context.codeVerifier ?? undefined })
       let redirectTarget = context.redirect ?? `${appUrl}/dashboard/ads`
       const url = new URL(redirectTarget, appUrl)
       url.searchParams.set('oauth_success', 'true')

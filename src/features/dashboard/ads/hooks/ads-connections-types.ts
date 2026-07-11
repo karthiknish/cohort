@@ -32,6 +32,13 @@ export type GoogleAdAccountOption = {
     loginCustomerId: string | null;
     managerCustomerId: string | null;
 };
+export type LinkedInAdAccountOption = {
+    id: string;
+    name: string;
+    currency: string | null;
+    status: string | null;
+    isActive: boolean;
+};
 export type DisconnectOptions = {
     clearHistoricalData?: boolean;
 };
@@ -59,12 +66,15 @@ export interface UseAdsConnectionsReturn {
     googleSetupMessage: string | null;
     metaSetupMessage: string | null;
     tiktokSetupMessage: string | null;
+    linkedinSetupMessage: string | null;
     initializingGoogle: boolean;
     initializingMeta: boolean;
     initializingTikTok: boolean;
+    initializingLinkedIn: boolean;
     googleNeedsAccountSelection: boolean;
     metaNeedsAccountSelection: boolean;
     tiktokNeedsAccountSelection: boolean;
+    linkedinNeedsAccountSelection: boolean;
     googleAccountOptions: GoogleAdAccountOption[];
     selectedGoogleAccountId: string;
     setSelectedGoogleAccountId: (accountId: string) => void;
@@ -75,6 +85,10 @@ export interface UseAdsConnectionsReturn {
     selectedMetaAccountId: string;
     setSelectedMetaAccountId: (accountId: string) => void;
     loadingMetaAccountOptions: boolean;
+    linkedinAccountOptions: LinkedInAdAccountOption[];
+    selectedLinkedInAccountId: string;
+    setSelectedLinkedInAccountId: (accountId: string) => void;
+    loadingLinkedInAccountOptions: boolean;
     handleConnect: (providerId: string, action: () => Promise<void>) => Promise<void>;
     handleDisconnect: (providerId: string, options?: DisconnectOptions) => Promise<void>;
     handleOauthRedirect: (providerId: string) => Promise<void>;
@@ -82,8 +96,10 @@ export interface UseAdsConnectionsReturn {
     initializeGoogleIntegration: (clientIdOverride?: string | null, accountIdOverride?: string | null) => Promise<void>;
     initializeMetaIntegration: (clientIdOverride?: string | null, accountIdOverride?: string | null) => Promise<void>;
     initializeTikTokIntegration: (clientIdOverride?: string | null) => Promise<void>;
+    initializeLinkedInIntegration: (clientIdOverride?: string | null, accountIdOverride?: string | null) => Promise<void>;
     reloadGoogleAccountOptions: (clientIdOverride?: string | null) => Promise<GoogleAdAccountOption[]>;
     reloadMetaAccountOptions: (clientIdOverride?: string | null) => Promise<MetaAdAccountOption[]>;
+    reloadLinkedInAccountOptions: (clientIdOverride?: string | null) => Promise<LinkedInAdAccountOption[]>;
     adPlatforms: AdPlatform[];
     triggerRefresh: () => void;
     refreshTick: number;

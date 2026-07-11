@@ -4,6 +4,7 @@ import { action } from '../../_generated/server'
 import { internal } from '../../_generated/api'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from '../../errors'
+import { resolveLinkedInAccessToken } from '../../lib/linkedinAdsAccess'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -68,7 +69,7 @@ export const createAudience = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+    if (args.providerId !== 'linkedin' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       throw Errors.integration.expired(args.providerId)
     }
 
@@ -116,8 +117,10 @@ export const createAudience = action({
         throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn account id not configured')
       }
 
+      const linkedInAccessToken = await resolveLinkedInAccessToken(args.workspaceId, integration, clientId)
+
       result = await createLinkedInAudience({
-        accessToken: integration.accessToken,
+        accessToken: linkedInAccessToken,
         accountId,
         name: args.name,
         description: args.description,
