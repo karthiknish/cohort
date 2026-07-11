@@ -1,6 +1,7 @@
 import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { useCallback, useRef, useState } from 'react';
 import { useAuth } from '@/shared/contexts/auth-context';
+import { useClientContext } from '@/shared/contexts/client-context';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { trackDeckGenerationCompleted, trackDeckGenerationFailed, trackDeckGenerationStarted, } from '@/services/proposal-analytics';
 import { refreshProposalDraft } from '@/services/proposals';
@@ -23,7 +24,8 @@ export interface UseDeckPreparationReturn {
 export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckPreparationReturn {
     const { refreshProposals, setProposals, } = options;
     const { user, getIdToken } = useAuth();
-    const workspaceId = user?.agencyId ?? null;
+    const { selectedClient } = useClientContext();
+    const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
     const [downloadingDeckId, setDownloadingDeckId] = useState<string | null>(null);
     const [deckProgressStage, setDeckProgressStage] = useState<DeckProgressStage | null>(null);
     const pendingDeckWindowRef = useRef<Window | null>(null);

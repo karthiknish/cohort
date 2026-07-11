@@ -149,9 +149,9 @@ function editProjectReducer(state: EditProjectState, action: EditProjectAction):
 }
 export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdated }: EditProjectDialogProps) {
     const { user } = useAuth();
-    const workspaceId = user?.agencyId ?? null;
+    const { clients, selectedClient } = useClientContext();
+    const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
     const updateProject = useMutation(projectsApi.update);
-    const { clients } = useClientContext();
     const [state, dispatch] = useReducer(editProjectReducer, INITIAL_EDIT_PROJECT_STATE);
     const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
     const { loading, error, name, description, status, clientId, startDate, endDate, tags, tagInput, validationErrors, } = state;

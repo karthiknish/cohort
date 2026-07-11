@@ -119,7 +119,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     const { isPreviewMode, formState, currentStep, hasPersistableData, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange, steps, } = options;
     const { user, isSyncing, authError } = useAuth();
     const { selectedClient, selectedClientId } = useClientContext();
-    const workspaceId = user?.agencyId ?? null;
+    const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
     const canQuery = Boolean(workspaceId && selectedClientId && !isSyncing && !authError);
     const convexProposals = useQuery(proposalsApi.list, isPreviewMode || !canQuery
         ? 'skip'

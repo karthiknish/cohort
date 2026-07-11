@@ -36,15 +36,16 @@ export function ProjectsPageShell() {
     const { user } = useAuth();
     const { clients, selectedClient, selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
+    const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
     const documentImport = useProjectsDocumentImport({
-        workspaceId: user?.agencyId ?? null,
+        workspaceId,
         ownerId: user?.id,
         clients,
         preferredClientId: selectedClientId,
         preferredClientName: selectedClient?.name ?? null,
         disabledReason: isPreviewMode
             ? 'Document import is unavailable in preview mode.'
-            : !user?.agencyId || !user?.id
+            : !workspaceId || !user?.id
                 ? 'Sign in to import projects from documents.'
                 : null,
         isPreviewMode,

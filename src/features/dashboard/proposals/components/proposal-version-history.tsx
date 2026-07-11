@@ -7,6 +7,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { Dialog } from '@/shared/ui/dialog';
 import { DropdownMenu } from '@/shared/ui/dropdown-menu';
 import { useAuth } from '@/shared/contexts/auth-context';
+import { useClientContext } from '@/shared/contexts/client-context';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
 import { proposalVersionsApi } from '@/lib/convex-api';
 import type { ProposalFormData } from '@/lib/proposals';
@@ -79,7 +80,8 @@ function proposalVersionHistoryReducer(state: ProposalVersionHistoryState, actio
 }
 export function ProposalVersionHistory({ proposalId, currentFormData, onVersionRestored, disabled = false, }: ProposalVersionHistoryProps) {
     const { user } = useAuth();
-    const workspaceId = user?.agencyId ?? null;
+    const { selectedClient } = useClientContext();
+    const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
     const rows = useQuery(proposalVersionsApi.list, workspaceId && proposalId ? { workspaceId, proposalLegacyId: proposalId, limit: 50 } : 'skip');
     const versionsQueryError = useConvexQueryError({
         data: rows,

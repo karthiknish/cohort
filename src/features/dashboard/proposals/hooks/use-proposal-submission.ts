@@ -110,7 +110,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
     const { user, getIdToken, isSyncing, authError } = useAuth();
     const { selectedClient, selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
-    const workspaceId = user?.agencyId ?? null;
+    const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
     const convexUpdateProposal = useMutation(proposalsApi.update);
     const generateProposalDeck = useAction(proposalGenerationApi.generateFromProposal);
     const canQuery = Boolean(workspaceId && draftId && !isSyncing && !authError && !isPreviewMode && !isPreviewLegacyId(draftId));

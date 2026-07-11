@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { notifyInfo } from '@/lib/notifications';
 import { useAuth } from '@/shared/contexts/auth-context';
+import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { proposalAnalyticsApi } from '@/lib/convex-api';
 import { getPreviewProposals } from '@/lib/preview-data';
@@ -53,8 +54,9 @@ function formatPercentage(value: number): string {
 }
 export function ProposalAnalyticsCard() {
     const { user } = useAuth();
+    const { selectedClient } = useClientContext();
     const { isPreviewMode } = usePreview();
-    const workspaceId = user?.agencyId ?? null;
+    const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
     const [timeRange, setTimeRange] = useState<TimeRange>('30d');
     const dateRange = getDateRange(timeRange);
     const startDateMs = (() => {

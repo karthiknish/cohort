@@ -11,6 +11,7 @@ import { SvglPdfIcon } from '@/shared/components/svgl-brand-logo';
 import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals';
 import { mergeProposalForm } from '@/lib/proposals';
 import { useAuth } from '@/shared/contexts/auth-context';
+import { useClientContext } from '@/shared/contexts/client-context';
 import { usePreview } from '@/shared/contexts/preview-context';
 import { useConvex, useQuery } from 'convex/react';
 import { proposalsApi, proposalArchivesApi } from '@/lib/convex-api';
@@ -34,8 +35,9 @@ export default function ProposalDeckPage() {
     const params = useParams() as { proposalId: string };
     const proposalId = params?.proposalId;
     const { user } = useAuth();
+    const { selectedClient } = useClientContext();
     const { isPreviewMode } = usePreview();
-    const workspaceId = user?.agencyId ?? null;
+    const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
     const convex = useConvex();
     const isPreviewProposal = isPreviewMode || (proposalId ? isPreviewLegacyId(proposalId) : false);
     const proposalRow = useQuery(proposalsApi.getByLegacyId, !isPreviewProposal && workspaceId && proposalId ? { workspaceId, legacyId: proposalId } : 'skip');

@@ -119,9 +119,9 @@ function formatStatusLabel(value: ProjectStatus): string {
 }
 export function CreateProjectSheet({ onProjectCreated, trigger }: CreateProjectSheetProps) {
     const { user } = useAuth();
-    const workspaceId = user?.agencyId ?? null;
+    const { clients, selectedClient, selectedClientId } = useClientContext();
+    const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
     const createProject = useMutation(projectsApi.create);
-    const { clients, selectedClientId } = useClientContext();
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [nameError, setNameError] = useState<string | null>(null);

@@ -124,13 +124,14 @@ function safeEvaluate(formula: string, inputs: Record<string, number>): number |
 export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseFormulaEditorReturn {
     const { isPreviewMode = false } = options;
     const { user } = useAuth();
-    const { selectedClientId } = useClientContext();
+    const { selectedClient } = useClientContext();
+    const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const formulasResult = useQuery(customFormulasApi.listByWorkspace, !isPreviewMode && selectedClientId ? { workspaceId: selectedClientId } : 'skip');
+    const formulasResult = useQuery(customFormulasApi.listByWorkspace, !isPreviewMode && workspaceId ? { workspaceId } : 'skip');
     const formulasQueryError = useConvexQueryError({
         data: formulasResult,
-        skipped: isPreviewMode || !selectedClientId,
+        skipped: isPreviewMode || !workspaceId,
         fallbackMessage: 'Unable to load custom formulas.',
     });
     const createFormulaMutation = useMutation(customFormulasApi.create);
@@ -158,7 +159,7 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
     };
     // Create a new formula
     const handleCreateFormula = async (input: CreateCustomFormulaInput): Promise<CustomFormula | null> => {
-        if (!selectedClientId || !user?.id) {
+        if (!workspaceId || !user?.id) {
             notifyFailure({
                 title: 'Error',
                 message: 'Not authenticated',
@@ -177,7 +178,7 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
         const legacyId = `formula_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         try {
             await createFormulaMutation({
-                workspaceId: selectedClientId,
+                workspaceId,
                 legacyId,
                 name: input.name,
                 description: input.description ?? null,
@@ -202,7 +203,7 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
     };
     // Update an existing formula
     const handleUpdateFormula = async (input: UpdateCustomFormulaInput): Promise<void> => {
-        if (!selectedClientId)
+        if (!workspaceId)
             return;
         // Validate if formula is being updated
         if (input.formula) {
@@ -217,7 +218,7 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
         }
         try {
             await updateFormulaMutation({
-                workspaceId: selectedClientId,
+                workspaceId,
                 legacyId: input.formulaId,
                 name: input.name,
                 description: input.description,
@@ -239,10 +240,10 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
     };
     // Delete a formula
     const handleDeleteFormula = async (formulaId: string): Promise<void> => {
-        if (!selectedClientId)
+        if (!workspaceId)
             return;
         try {
-            await removeFormulaMutation({ workspaceId: selectedClientId, legacyId: formulaId });
+            await removeFormulaMutation({ workspaceId, legacyId: formulaId });
             notifySuccess({ message: 'Formula Deleted' });
         }
         catch (err) {

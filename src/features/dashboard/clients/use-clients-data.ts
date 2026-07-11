@@ -15,7 +15,7 @@ function toStatus(row: QueryRow): string | null {
 }
 export function useClientsData(selectedClient: ClientRecord | null, isPreviewMode: boolean) {
     const { user } = useAuth();
-    const workspaceId = user?.agencyId ?? null;
+    const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
     // Real-time queries
     const proposalsRealtime = useQuery(proposalsApi.list, workspaceId && selectedClient ? { workspaceId, clientId: selectedClient.id, limit: 100 } : 'skip') as QueryRow[] | undefined;
     const tasksRealtime = useQuery(tasksApi.listByClient, !isPreviewMode && workspaceId && selectedClient
@@ -25,7 +25,7 @@ export function useClientsData(selectedClient: ClientRecord | null, isPreviewMod
         ? { workspaceId, clientId: selectedClient.id, limit: 200 }
         : 'skip') as QueryRow[] | undefined;
     // Formulas connectivity check
-    const formulasConnectivity = useQuery(customFormulasApi.listByWorkspace, !isPreviewMode && selectedClient ? { workspaceId: selectedClient.id, activeOnly: true } : 'skip') as QueryRow[] | undefined;
+    const formulasConnectivity = useQuery(customFormulasApi.listByWorkspace, !isPreviewMode && workspaceId && selectedClient ? { workspaceId, activeOnly: true } : 'skip') as QueryRow[] | undefined;
     const { adStatusLoading, adAccountsConnected } = (() => {
         if (isPreviewMode) {
             return { adStatusLoading: false, adAccountsConnected: true as boolean | null };
