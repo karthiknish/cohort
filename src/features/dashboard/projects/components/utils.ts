@@ -1,8 +1,7 @@
 import { CircleCheck, FolderKanban, TriangleAlert } from 'lucide-react';
 import { SEMANTIC_COLORS } from '@/lib/colors';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
-import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates';
-import { calculateBackoffDelay as calculateBackoffDelayLib } from '@/lib/retry-utils';
+import { formatDateShort } from '@/lib/dates';
 import { PROJECT_STATUSES, type ProjectRecord, type ProjectStatus } from '@/types/projects';
 export type StatusFilter = 'all' | ProjectStatus;
 export type SortField = 'updatedAt' | 'createdAt' | 'name' | 'status' | 'taskCount';
@@ -44,29 +43,6 @@ export const SORT_OPTIONS: {
     { value: 'status', label: 'Status' },
     { value: 'taskCount', label: 'Task count' },
 ];
-export const RETRY_CONFIG = {
-    maxRetries: 3,
-    baseDelayMs: 1000,
-    maxDelayMs: 10000,
-};
-export function calculateBackoffDelay(attempt: number): number {
-    return calculateBackoffDelayLib(attempt, {
-        maxRetries: RETRY_CONFIG.maxRetries,
-        baseDelayMs: RETRY_CONFIG.baseDelayMs,
-        maxDelayMs: RETRY_CONFIG.maxDelayMs,
-        jitterFactor: 0.3,
-    });
-}
-export function isNetworkError(error: unknown): boolean {
-    if (error instanceof TypeError) {
-        const message = error.message.toLowerCase();
-        return message.includes('fetch');
-    }
-    const message = asErrorMessage(error).toLowerCase();
-    return message.includes('network') ||
-        message.includes('failed to fetch') ||
-        message.includes('connection');
-}
 export function formatStatusLabel(status: ProjectStatus | StatusFilter): string {
     if (status === 'all') {
         return 'All statuses';
@@ -86,12 +62,9 @@ export function formatTaskSummary(open: number, total: number): string {
     }
     return `${open} of ${total} open`;
 }
-export function formatDate(value: string | null): string {
-    return formatDateLib(value, DATE_FORMATS.SHORT, undefined, '—');
-}
 export function formatDateRange(start: string | null, end: string | null): string {
-    const startLabel = formatDate(start);
-    const endLabel = formatDate(end);
+    const startLabel = formatDateShort(start);
+    const endLabel = formatDateShort(end);
     if (startLabel === '—' && endLabel === '—') {
         return 'Timeline TBA';
     }

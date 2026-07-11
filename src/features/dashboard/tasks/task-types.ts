@@ -1,6 +1,6 @@
 import { Archive, CheckCircle2, Circle, CirclePlay, Eye, type LucideIcon } from 'lucide-react';
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates';
-import { calculateBackoffDelay as calculateBackoffDelayLib, sleep as sleepLib } from '@/lib/retry-utils';
+import { sleep as sleepLib } from '@/lib/retry-utils';
 import type { RecurrenceRule, TaskPriority, TaskRecord, TaskStatus } from '@/types/tasks';
 // Retry configuration for network resilience
 export const RETRY_CONFIG = {
@@ -308,23 +308,6 @@ export function formatAssigneeList(assignees: string[], participants: TaskPartic
 }
 // Utility functions
 export const sleep = sleepLib;
-export function calculateBackoffDelay(attempt: number): number {
-    return calculateBackoffDelayLib(attempt, {
-        maxRetries: RETRY_CONFIG.maxRetries,
-        baseDelayMs: RETRY_CONFIG.baseDelayMs,
-        maxDelayMs: RETRY_CONFIG.maxDelayMs,
-        jitterFactor: 0.3,
-    });
-}
-export function isNetworkError(error: unknown): boolean {
-    if (error instanceof TypeError && error.message.includes('fetch'))
-        return true;
-    if (error instanceof Error) {
-        const msg = error.message.toLowerCase();
-        return msg.includes('network') || msg.includes('timeout') || msg.includes('aborted');
-    }
-    return false;
-}
 export function formatDate(value: string | null | undefined): string {
     if (!value)
         return 'No due date';

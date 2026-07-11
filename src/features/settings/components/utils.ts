@@ -1,11 +1,4 @@
 // Settings page utility functions
-import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates';
-/**
- * Format a date string for display.
- */
-export function formatDate(value: string | null | undefined): string {
-    return formatDateLib(value, DATE_FORMATS.SHORT, undefined, 'Date unavailable');
-}
 /**
  * Compute avatar initials from a name or email.
  */

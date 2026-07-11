@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates';
+import { formatDateWithTime } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import type { AdminUserRecord } from '@/types/admin';
 import type { ChangeEvent, FormEvent } from 'react';
@@ -18,9 +18,6 @@ import { AdminQueryErrorAlert } from '../components/admin-query-error-alert';
 import { AdminPageShell } from '../components/admin-page-shell';
 import type { buildClientAllocationSummary } from '../lib/client-allocation';
 import { ROLE_OPTIONS, STATUS_OPTIONS, statusActionLabel, statusToVariant, type UserStatus, } from './admin-team-types';
-function formatDate(value: string | null): string {
-    return formatDateLib(value, DATE_FORMATS.WITH_TIME, undefined, '—');
-}
 function ActionIcon({ status }: {
     status: UserStatus;
 }) {
@@ -272,8 +269,8 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <div><span className="font-medium text-foreground/70">Joined:</span> {formatDate(record.createdAt)}</div>
-                  <div><span className="font-medium text-foreground/70">Last active:</span> {formatDate(record.lastLoginAt)}</div>
+                  <div><span className="font-medium text-foreground/70">Joined:</span> {formatDateWithTime(record.createdAt)}</div>
+                  <div><span className="font-medium text-foreground/70">Last active:</span> {formatDateWithTime(record.lastLoginAt)}</div>
                   <div className="col-span-2"><span className="font-medium text-foreground/70">Clients:</span> {allocation.totalClientNames.length > 0 ? `${allocation.totalClientNames.length} (Owner ${allocation.managedClientNames.length} · Support ${allocation.supportingClientNames.length})` : 'Unassigned'}</div>
                 </div>
                 <Button type="button" variant={record.status === 'active' ? 'destructive' : 'outline'} size="sm" onClick={createStatusActionHandler(record)} disabled={savingId === record.id} className="w-full inline-flex items-center justify-center gap-2">
@@ -350,7 +347,7 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
                         </Badge>
                       </td>
                       <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
-                        {formatDate(record.createdAt)}
+                        {formatDateWithTime(record.createdAt)}
                       </td>
                       <td className="py-3 pr-3 align-middle">
                         {allocation.totalClientNames.length > 0 ? (<div className="space-y-1">
@@ -363,7 +360,7 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
                           </div>) : (<span className="text-xs text-muted-foreground">Unassigned</span>)}
                       </td>
                       <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
-                        {formatDate(record.lastLoginAt)}
+                        {formatDateWithTime(record.lastLoginAt)}
                       </td>
                       <td className="py-3 align-middle text-right">
                         <Button type="button" variant={record.status === 'active' ? 'destructive' : 'outline'} size="sm" onClick={createStatusActionHandler(record)} disabled={savingId === record.id} className="inline-flex items-center gap-2">

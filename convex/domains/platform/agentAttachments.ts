@@ -4,16 +4,11 @@ import { v } from 'convex/values'
 import { extractText, getDocumentProxy } from 'unpdf'
 import { action } from '../../_generated/server'
 import { Errors, withErrorHandling } from '../../errors'
+import { requireIdentity } from '../../lib/functions/auth'
 
 // Convex v.string() args are capped at 1 MiB UTF-8; base64 adds ~33% overhead.
 export const MAX_PDF_BYTES = 750 * 1024
 const MAX_EXTRACTED_CHARS = 12_000
-
-function requireIdentity(identity: { subject: string } | null): asserts identity is { subject: string } {
-  if (!identity?.subject) {
-    throw Errors.auth.unauthorized()
-  }
-}
 
 function looksLikePdf(buffer: Buffer): boolean {
   return buffer.length >= 5 && buffer.subarray(0, 5).toString('ascii') === '%PDF-'

@@ -14,7 +14,8 @@ import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '../../collaboration/utils';
 import { ProjectActionsMenu } from './project-actions-menu';
 import { ProjectTaskProgress } from './project-task-progress';
-import { STATUS_CLASSES, STATUS_ICONS, formatStatusLabel, formatDate, formatDateRange, isProjectOverdue, STATUS_ACCENT_COLORS, } from './utils';
+import { formatDateShort } from '@/lib/dates';
+import { STATUS_CLASSES, STATUS_ICONS, formatStatusLabel, formatDateRange, isProjectOverdue, STATUS_ACCENT_COLORS, } from './utils';
 export interface ProjectRowProps {
     project: ProjectRecord;
     onDelete: (project: ProjectRecord) => void;
@@ -117,8 +118,8 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
 
           <div className="flex shrink-0 flex-col items-end gap-3">
             <div className="text-right text-[11px] text-muted-foreground tabular-nums">
-              <p>Created {formatDate(project.createdAt)}</p>
-              <p>Updated {formatDate(project.updatedAt)}</p>
+              <p>Created {formatDateShort(project.createdAt)}</p>
+              <p>Updated {formatDateShort(project.updatedAt)}</p>
             </div>
             <div className="flex flex-wrap justify-end gap-2">
               <Button size="sm" variant="outline" className="h-8 gap-2 text-xs" onClick={handleEdit}>

@@ -1,8 +1,10 @@
 import { CircleCheck, FolderKanban, TriangleAlert } from 'lucide-react';
 import { SEMANTIC_COLORS } from '@/lib/colors';
-import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates';
+import { formatDateShort } from '@/lib/dates';
 import { PROJECT_STATUSES, type ProjectRecord, type ProjectStatus } from '@/types/projects';
 import type { StatusFilter } from '../types';
+
+export const formatDate = formatDateShort;
 
 export const STATUS_CLASSES: Record<ProjectStatus, string> = {
   planning: 'bg-muted/50 text-muted-foreground border-muted/40',
@@ -54,13 +56,9 @@ export function formatTaskSummary(open: number, total: number): string {
   return `${open} of ${total} open`;
 }
 
-export function formatDate(value: string | null): string {
-  return formatDateLib(value, DATE_FORMATS.SHORT, undefined, '—');
-}
-
 export function formatDateRange(start: string | null, end: string | null): string {
-  const startLabel = formatDate(start);
-  const endLabel = formatDate(end);
+  const startLabel = formatDateShort(start);
+  const endLabel = formatDateShort(end);
   if (startLabel === '—' && endLabel === '—') return 'Timeline TBA';
   if (startLabel !== '—' && endLabel === '—') return `Started ${startLabel}`;
   if (startLabel === '—' && endLabel !== '—') return `Due ${endLabel}`;

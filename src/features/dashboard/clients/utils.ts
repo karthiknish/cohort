@@ -1,10 +1,7 @@
 // =============================================================================
 // CLIENTS PAGE - Utility Functions
 // =============================================================================
-import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates';
-export function formatDate(value: string | null): string {
-    return formatDateLib(value, DATE_FORMATS.SHORT, undefined, '—');
-}
+export { formatDateShort as formatDate } from '@/lib/dates';
 export function getRelativeTimeString(date: Date): string {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();

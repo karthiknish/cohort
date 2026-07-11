@@ -3,6 +3,7 @@ import { v } from 'convex/values'
 import { buildRoutesForPrompt } from '@/domain/agent/navigation-intents'
 import { deepseekAI } from '../../../../src/services/deepseek'
 import { Errors } from '../../../errors'
+import { requireIdentity } from '../../../lib/functions/auth'
 
 import type { ParsedAgentResponse } from './types'
 
@@ -129,12 +130,6 @@ Use **navigate** with an exact \`route\` when the user only wants a screen opene
 - **Checklists / intake** → \`/dashboard/projects\`
 - **Team management** (workspace staff, invites) → \`/admin/team\`
 `
-}
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
 }
 
 const agentRequestContext = v.object({

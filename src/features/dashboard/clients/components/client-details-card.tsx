@@ -1,15 +1,12 @@
 'use client';
 import { Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, } from '@/shared/ui/card';
-import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates';
+import { formatDateShort } from '@/lib/dates';
 interface ClientDetailsCardProps {
     teamMembersCount: number;
     clientIndex: number;
     totalClients: number;
     createdAt: string | null;
-}
-function formatDate(value: string | null): string {
-    return formatDateLib(value, DATE_FORMATS.SHORT, undefined, '—');
 }
 export function ClientDetailsCard({ teamMembersCount, clientIndex, totalClients, createdAt, }: ClientDetailsCardProps) {
     return (<Card className="overflow-hidden border-muted/40 bg-card shadow-sm motion-chromatic hover:shadow-md">
@@ -50,7 +47,7 @@ export function ClientDetailsCard({ teamMembersCount, clientIndex, totalClients,
              </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Registration</p>
-              <p className="mt-0.5 text-xs font-black text-foreground">{formatDate(createdAt)}</p>
+              <p className="mt-0.5 text-xs font-black text-foreground">{formatDateShort(createdAt)}</p>
             </div>
           </div>)}
       </CardContent>

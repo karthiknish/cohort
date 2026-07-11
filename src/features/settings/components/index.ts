@@ -2,7 +2,7 @@
 // Types
 export type { NotificationPreferencesResponse, } from './types';
 // Utils
-export { formatDate, getAvatarInitials, } from './utils';
+export { getAvatarInitials } from './utils';
 // Profile tab components
 export { ProfileCard } from './profile-card';
 export { NotificationPreferencesPanel } from './notification-preferences-panel';

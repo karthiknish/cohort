@@ -2,12 +2,7 @@ import { action, internalMutation } from '../../_generated/server'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from '../../errors'
 import { api, internal } from '/_generated/api'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+import { requireIdentity } from '../../lib/functions/auth'
 
 export const exportUserData = action({
   args: {},

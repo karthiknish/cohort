@@ -77,6 +77,14 @@ export function toUtcTime(date: Date | string | number, timeZone = DEFAULT_TIMEZ
 /**
  * Standard date formats for the application.
  */
+export function formatDateShort(date: Date | string | number | null | undefined, fallback = '—'): string {
+    return formatDate(date, DATE_FORMATS.SHORT, undefined, fallback);
+}
+
+export function formatDateWithTime(date: Date | string | number | null | undefined, fallback = '—'): string {
+    return formatDate(date, DATE_FORMATS.WITH_TIME, undefined, fallback);
+}
+
 export const DATE_FORMATS = {
     SHORT: 'MMM d, yyyy',
     LONG: 'MMMM d, yyyy',

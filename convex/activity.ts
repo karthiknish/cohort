@@ -1,14 +1,10 @@
 import type { QueryCtx } from './_generated/server'
-import { Errors } from './errors'
 import {
   zAuthenticatedQuery,
 } from './functions'
 import { matchesNotificationRecipient } from './notificationTargeting'
 import { z } from 'zod/v4'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw Errors.auth.unauthorized()
-}
+import { requireIdentity } from './lib/functions/auth'
 
 type ActivityType =
   | 'task_activity'

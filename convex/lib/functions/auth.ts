@@ -6,6 +6,14 @@ import type { AuthenticatedQueryCtx, AuthenticatedMutationCtx, AuthenticatedActi
 
 export type { AuthenticatedQueryCtx, AuthenticatedMutationCtx, AuthenticatedActionCtx } from './types'
 
+export function requireIdentity(identity: { subject: string } | null): asserts identity is { subject: string }
+export function requireIdentity(identity: unknown): asserts identity
+export function requireIdentity(identity: unknown): asserts identity {
+  if (!identity) {
+    throw Errors.auth.unauthorized()
+  }
+}
+
 function assertUserIsActive(user: Doc<'users'>) {
   if (user.status === 'active') {
     return

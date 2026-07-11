@@ -4,6 +4,7 @@ import { action, type ActionCtx } from '../../_generated/server'
 import { api } from '../../_generated/api'
 import { v } from 'convex/values'
 import { loadStoredObjectBlob } from '../../lib/fileStorage'
+import { requireIdentity } from '../../lib/functions/auth'
 
 import { deepseekAI, type DeepSeekRequestPart } from '../../../src/services/deepseek'
 import { enforceDeepSeekActionRateLimit } from '../../deepseekRateLimit'
@@ -48,12 +49,6 @@ export type ProposedImportProject = {
   tags: string[]
   suggestions: string[]
   sourceExcerpt: string | null
-}
-
-function requireIdentity(identity: { subject: string } | null): asserts identity is { subject: string } {
-  if (!identity?.subject) {
-    throw Errors.auth.unauthorized()
-  }
 }
 
 function buildProjectExtractionRules(clientNames: string[]): string {
