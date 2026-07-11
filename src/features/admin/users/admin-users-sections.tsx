@@ -42,7 +42,7 @@ function UserRow({ record, savingId, onRoleChange, onApprovalToggle, onViewDetai
     const handleViewDetails = () => onViewDetails(record);
     const handleRevokeAccess = () => onRevokeAccess(record);
     return (<tr className="border-b border-muted/20">
-      <th scope="row" className="py-3 pr-3 text-left font-normal">
+      <th scope="row" className="py-3 px-3 text-left font-normal">
         <div className="flex items-center gap-3">
           <div className="flex flex-col">
             <span className="font-medium">{record.name}</span>
@@ -50,7 +50,7 @@ function UserRow({ record, savingId, onRoleChange, onApprovalToggle, onViewDetai
           </div>
         </div>
       </th>
-      <td className="py-3 pr-3">
+      <td className="py-3 px-3">
         <Select value={record.role} onValueChange={handleRoleChange} disabled={savingId === record.id}>
           <SelectTrigger className="w-32">
             <SelectValue />
@@ -62,18 +62,15 @@ function UserRow({ record, savingId, onRoleChange, onApprovalToggle, onViewDetai
           </SelectContent>
         </Select>
       </td>
-      <td className="py-3 pr-3 text-center">
+      <td className="py-3 px-3 text-center">
         <Checkbox checked={record.status === 'active'} onCheckedChange={handleApprovalToggle} disabled={savingId === record.id}/>
       </td>
-      <td className="py-3 pr-3">
+      <td className="py-3 px-3">
         <Badge variant={record.status === 'active' ? 'default' : 'secondary'}>
           {record.status}
         </Badge>
       </td>
-      <td className="py-3 pr-3 text-sm text-muted-foreground">
-        {record.lastLoginAt ? formatRelativeTime(record.lastLoginAt) : 'Never'}
-      </td>
-      <td className="py-3 text-right">
+      <td className="py-3 px-3 text-right">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="ghost" size="sm" aria-label={`Actions for ${record.name}`}>
@@ -129,9 +126,7 @@ function UserCard({ record, savingId, onRoleChange, onApprovalToggle, onViewDeta
                     Active
                 </span>
             </div>
-            <div className="text-xs text-muted-foreground">
-                Last active: {record.lastLoginAt ? formatRelativeTime(record.lastLoginAt) : 'Never'}
-            </div>
+
             <div className="flex gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={handleViewDetails} className="flex-1">
                     View details
@@ -153,16 +148,16 @@ function InvitationRow({ invitation, invitationActionKey, onResend, onRevoke, }:
     const handleResend = () => onResend(invitation);
     const handleRevoke = () => onRevoke(invitation);
     return (<tr className="border-b border-muted/20">
-      <th scope="row" className="py-3 pr-3 text-left font-normal">
+      <th scope="row" className="py-3 px-3 text-left font-normal">
         <div className="flex flex-col">
           <span className="font-medium">{invitation.name || invitation.email}</span>
           {invitation.name && <span className="text-xs text-muted-foreground">{invitation.email}</span>}
         </div>
       </th>
-      <td className="py-3 pr-3">
+      <td className="py-3 px-3">
         <Badge variant="outline">{invitation.role}</Badge>
       </td>
-      <td className="py-3 pr-3">
+      <td className="py-3 px-3">
         <Badge variant={invitation.effectiveStatus === 'accepted'
             ? 'default'
             : invitation.effectiveStatus === 'expired'
@@ -173,13 +168,13 @@ function InvitationRow({ invitation, invitationActionKey, onResend, onRevoke, }:
           {invitation.effectiveStatus}
         </Badge>
       </td>
-      <td className="py-3 pr-3 text-sm text-muted-foreground">
+      <td className="py-3 px-3 text-sm text-muted-foreground">
         {formatRelativeTime(invitation.createdAtMs)}
       </td>
-      <td className="py-3 pr-3 text-sm text-muted-foreground">
+      <td className="py-3 px-3 text-sm text-muted-foreground">
         {formatRelativeTime(invitation.expiresAtMs)}
       </td>
-      <td className="py-3 pr-3 text-sm text-muted-foreground">
+      <td className="py-3 px-3 text-sm text-muted-foreground">
         {invitation.invitedByName || invitation.invitedBy}
       </td>
       <td className="py-3 text-right">
@@ -363,17 +358,16 @@ export function AdminUsersDirectorySection({ loading, listQueryError, actionErro
             <caption className="sr-only">Workspace users, roles, and approval status</caption>
             <thead>
               <tr className="border-b border-muted/40">
-                <th scope="col" className="w-72 py-2 pr-3 font-medium">User</th>
-                <th scope="col" className="w-32 py-2 pr-3 font-medium">Role</th>
-                <th scope="col" className="w-32 py-2 pr-3 text-center font-medium">Approved</th>
-                <th scope="col" className="w-32 py-2 pr-3 font-medium">Status</th>
-                <th scope="col" className="w-40 py-2 pr-3 font-medium">Last active</th>
-                <th scope="col" className="py-2 text-right font-medium">Actions</th>
+                <th scope="col" className="w-72 py-2 px-3 font-medium">User</th>
+                <th scope="col" className="w-32 py-2 px-3 font-medium">Role</th>
+                <th scope="col" className="w-32 py-2 px-3 text-center font-medium">Approved</th>
+                <th scope="col" className="w-32 py-2 px-3 font-medium">Status</th>
+                <th scope="col" className="py-2 px-3 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (<tr>
-                  <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
                     {loading
                 ? 'Loading users…'
                 : listQueryError
@@ -443,12 +437,12 @@ export function AdminUsersInvitationsSection({ invitationSearchTerm, invitationS
             <caption className="sr-only">Invitation lifecycle by status</caption>
             <thead>
               <tr className="border-b border-muted/40">
-                <th scope="col" className="w-64 py-2 pr-3 font-medium">Invitee</th>
-                <th scope="col" className="w-28 py-2 pr-3 font-medium">Role</th>
-                <th scope="col" className="w-28 py-2 pr-3 font-medium">Status</th>
-                <th scope="col" className="w-36 py-2 pr-3 font-medium">Sent</th>
-                <th scope="col" className="w-36 py-2 pr-3 font-medium">Expires</th>
-                <th scope="col" className="w-44 py-2 pr-3 font-medium">Invited by</th>
+                <th scope="col" className="w-64 py-2 px-3 font-medium">Invitee</th>
+                <th scope="col" className="w-28 py-2 px-3 font-medium">Role</th>
+                <th scope="col" className="w-28 py-2 px-3 font-medium">Status</th>
+                <th scope="col" className="w-36 py-2 px-3 font-medium">Sent</th>
+                <th scope="col" className="w-36 py-2 px-3 font-medium">Expires</th>
+                <th scope="col" className="w-44 py-2 px-3 font-medium">Invited by</th>
                 <th scope="col" className="py-2 text-right font-medium">Actions</th>
               </tr>
             </thead>

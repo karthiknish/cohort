@@ -12,11 +12,7 @@ vi.mock('next/link', () => ({
 vi.mock('./task-view-dialog', () => ({
     TaskViewDialog: () => null,
 }));
-vi.mock('./task-card', () => ({
-    TaskCard: ({ task }: {
-        task: TaskRecord;
-    }) => <div>TaskCard:{task.title}</div>,
-}));
+
 vi.mock('./task-data-table', () => ({
     TaskDataTable: ({ tasks }: {
         tasks: TaskRecord[];
@@ -52,13 +48,12 @@ const baseProps = {
     showEmptyStateFiltered: false,
 };
 describe('TaskList', () => {
-    it('renders semantic open buttons instead of wrapper role buttons in both views', () => {
-        const markup = renderToStaticMarkup(<>
-        <TaskList {...baseProps} viewMode="grid"/>
-        <TaskList {...baseProps} viewMode="list"/>
-      </>);
-        expect(markup).toContain('TaskCard:Review launch brief');
+    it('renders the list view with TaskDataTable', () => {
+        const markup = renderToStaticMarkup(<TaskList {...baseProps}/>);
         expect(markup).toContain('TaskDataTable:Review launch brief');
+    });
+    it('does not use role="button" wrappers', () => {
+        const markup = renderToStaticMarkup(<TaskList {...baseProps}/>);
         expect(markup).not.toContain('role="button"');
     });
 });

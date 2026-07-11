@@ -24,8 +24,8 @@ export function TasksPageWorkspace({ filters, rawSearchQuery, onSearchChange, pr
     filters: {
         activeTab: string;
         setActiveTab: (value: string) => void;
-        viewMode: 'list' | 'grid' | 'board';
-        setViewMode: (mode: 'list' | 'grid' | 'board') => void;
+        viewMode: 'list' | 'board';
+        setViewMode: (mode: 'list' | 'board') => void;
         selectedStatus: TaskStatus | 'all';
         handleStatusChange: (status: TaskStatus | 'all') => void;
         selectedAssignee: string;
@@ -91,9 +91,9 @@ export function TasksPageWorkspace({ filters, rawSearchQuery, onSearchChange, pr
     onToggleTaskSelection: (taskId: string, checked: boolean) => void;
 }) {
     const handleFilterStatusChange = (status: string) => filters.handleStatusChange(status as TaskStatus | 'all');
-    return (<Tabs defaultValue="all-tasks" value={filters.activeTab} onValueChange={filters.setActiveTab} className="space-y-0">
-        <Card className={cn(TASKS_THEME.workspace, 'rounded-2xl ring-1 ring-border/40')}>
-          <CardHeader className={cn(TASKS_THEME.rail, 'sticky top-0 z-10 space-y-0 backdrop-blur-md')}>
+    return (<Tabs defaultValue="all-tasks" value={filters.activeTab} onValueChange={filters.setActiveTab} className="space-y-0 flex flex-col flex-1 min-h-0">
+        <Card className={cn(TASKS_THEME.workspace, 'flex flex-col flex-1 min-h-0 overflow-hidden rounded-2xl ring-1 ring-border/40')}>
+          <CardHeader className={cn(TASKS_THEME.rail, 'sticky top-0 z-10 shrink-0 space-y-0 backdrop-blur-md')}>
             <div className="flex items-center gap-2">
               <TabsList className={TASKS_THEME.tabList}>
                 <TabsTrigger value="all-tasks" className={TASKS_THEME.tabTrigger}>
@@ -114,15 +114,15 @@ export function TasksPageWorkspace({ filters, rawSearchQuery, onSearchChange, pr
             </CardAction>
           </CardHeader>
 
-          <div>
+          <div className="flex flex-col flex-1 min-h-0">
             <TaskFilters searchQuery={rawSearchQuery} onSearchChange={onSearchChange} selectedStatus={filters.selectedStatus} onStatusChange={handleFilterStatusChange} selectedAssignee={filters.selectedAssignee} onAssigneeChange={filters.handleAssigneeChange} assigneeOptions={filters.assigneeOptions} showAssigneeFilter={filters.activeTab === 'all-tasks'} selectedPriority={filters.selectedPriority} onPriorityChange={(value) => filters.setSelectedPriority(value as 'all' | TaskPriority)} sortField={filters.sortField} onSortFieldChange={filters.setSortField} sortDirection={filters.sortDirection} onSortDirectionToggle={filters.toggleSortDirection} hasActiveFilters={filters.hasActiveFilters} activeFilterCount={filters.activeFilterCount} onClearFilters={onClearListFilters}/>
 
             <ProjectFilterBanner projectId={projectFilter.id} projectName={projectFilter.name} onClear={onClearProjectFilter}/>
 
             {filters.viewMode !== 'board' ? (<TaskBulkToolbar selectedCount={selectedTasks.length} totalVisible={visibleTasks.length} hasSelection={hasSelection} bulkActive={bulkState.active} bulkLabel={bulkState.label} bulkProgress={bulkState.progress} onSelectAll={onSelectAllVisible} onClearSelection={onClearSelection} onSelectHighPriority={onSelectHighPriority} onSelectDueSoon={onSelectDueSoon} onBulkStatusChange={onBulkStatusChange} onBulkAssign={onBulkAssign} onBulkDueDate={onBulkDueDate} onBulkDelete={onBulkDelete}/>) : null}
 
-            <CardContent className={cn(TASKS_THEME.content, 'p-0 pb-24', filters.viewMode === 'list' && TASKS_THEME.contentList)}>
-              {filters.viewMode === 'board' ? (<TaskBoardErrorBoundary onSwitchToList={() => filters.setViewMode('list')}><TaskKanban tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} onRefresh={onRefresh} loadingMore={loadingMore} hasMore={hasMore} onLoadMore={onLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={onClearListFilters} onEmptyCreateTask={onNewTaskClick} workspaceId={workspaceId} userId={userId} userName={userName} userRole={userRole} participants={participants}/></TaskBoardErrorBoundary>) : (<TaskList tasks={filters.sortedTasks} viewMode={filters.viewMode} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} onRefresh={onRefresh} loadingMore={loadingMore} hasMore={hasMore} onLoadMore={onLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={onClearListFilters} onEmptyCreateTask={onNewTaskClick} selectedTaskIds={selectedTaskIds} onToggleTaskSelection={onToggleTaskSelection} workspaceId={workspaceId} userId={userId} userName={userName} userRole={userRole} participants={participants}/>)}
+            <CardContent className={cn(TASKS_THEME.content, 'p-0', filters.viewMode === 'list' && 'bg-muted/[0.18] flex-1 overflow-y-auto pb-24', filters.viewMode === 'board' && 'min-h-0 flex-1 overflow-hidden')}>
+              {filters.viewMode === 'board' ? (<TaskBoardErrorBoundary onSwitchToList={() => filters.setViewMode('list')}><TaskKanban tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} onRefresh={onRefresh} loadingMore={loadingMore} hasMore={hasMore} onLoadMore={onLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={onClearListFilters} onEmptyCreateTask={onNewTaskClick} workspaceId={workspaceId} userId={userId} userName={userName} userRole={userRole} participants={participants}/></TaskBoardErrorBoundary>) : (<TaskList tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} onRefresh={onRefresh} loadingMore={loadingMore} hasMore={hasMore} onLoadMore={onLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={onClearListFilters} onEmptyCreateTask={onNewTaskClick} selectedTaskIds={selectedTaskIds} onToggleTaskSelection={onToggleTaskSelection} workspaceId={workspaceId} userId={userId} userName={userName} userRole={userRole} participants={participants}/>)}
             </CardContent>
           </div>
         </Card>

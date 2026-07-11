@@ -8,7 +8,6 @@ import type { TaskParticipant } from './task-types';
 const EMPTY_TASK_PARTICIPANTS: TaskParticipant[] = [];
 export type TaskListProps = {
     tasks: TaskRecord[];
-    viewMode: 'grid' | 'list';
     loading: boolean;
     initialLoading: boolean;
     error: string | null;
@@ -32,7 +31,7 @@ export type TaskListProps = {
     userRole?: string | null;
     participants?: TaskParticipant[];
 };
-export function TaskList({ tasks, viewMode, loading, initialLoading, error, pendingStatusUpdates, onEdit, onDelete, onQuickStatusChange, onRefresh, loadingMore, hasMore, onLoadMore, emptyStateMessage, showEmptyStateFiltered, onEmptyClearFilters, onEmptyCreateTask, selectedTaskIds, onToggleTaskSelection, workspaceId = null, userId = null, userName = null, userRole = null, participants = EMPTY_TASK_PARTICIPANTS, }: TaskListProps) {
+export function TaskList({ tasks, loading, initialLoading, error, pendingStatusUpdates, onEdit, onDelete, onQuickStatusChange, onRefresh, loadingMore, hasMore, onLoadMore, emptyStateMessage, showEmptyStateFiltered, onEmptyClearFilters, onEmptyCreateTask, selectedTaskIds, onToggleTaskSelection, workspaceId = null, userId = null, userName = null, userRole = null, participants = EMPTY_TASK_PARTICIPANTS, }: TaskListProps) {
     'use no memo';
     const [viewingTask, setViewingTask] = useState<TaskRecord | null>(null);
     const openTask = (task: TaskRecord) => {
@@ -43,20 +42,20 @@ export function TaskList({ tasks, viewMode, loading, initialLoading, error, pend
             setViewingTask(null);
         }
     };
-    const isGrid = viewMode === 'grid';
+    const handleToggleTaskSelection = useCallback((taskId: string, checked: boolean) => {
+        onToggleTaskSelection?.(taskId, checked);
+    }, [onToggleTaskSelection]);
     return (<>
-      <div className={isGrid
-            ? 'grid auto-rows-fr gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
-            : 'min-h-[12rem] px-1 pb-1'}>
-        {initialLoading ? <TaskListLoadingState viewMode={viewMode}/> : null}
-        {!loading && error ? (<TaskListErrorState error={error} loading={loading} onRefresh={onRefresh} viewMode={viewMode}/>) : null}
+      <div className="min-h-[12rem] px-1 pb-1">
+        {initialLoading ? <TaskListLoadingState /> : null}
+        {!loading && error ? (<TaskListErrorState error={error} loading={loading} onRefresh={onRefresh}/>) : null}
 
-        {!loading && !error && tasks.length === 0 ? (<TaskListEmptyState emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showEmptyStateFiltered} viewMode={viewMode} onClearFilters={onEmptyClearFilters} onCreateTask={onEmptyCreateTask}/>) : null}
+        {!loading && !error && tasks.length === 0 ? (<TaskListEmptyState emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showEmptyStateFiltered} onClearFilters={onEmptyClearFilters} onCreateTask={onEmptyCreateTask}/>) : null}
 
-        {!loading && !error && tasks.length > 0 ? (<TaskListItems tasks={tasks} viewMode={viewMode} pendingStatusUpdates={pendingStatusUpdates} onOpen={openTask} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} selectedTaskIds={selectedTaskIds} onSelectToggle={onToggleTaskSelection}/>) : null}
+        {!loading && !error && tasks.length > 0 ? (<TaskListItems tasks={tasks} pendingStatusUpdates={pendingStatusUpdates} onOpen={openTask} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} selectedTaskIds={selectedTaskIds} onSelectToggle={handleToggleTaskSelection}/>) : null}
       </div>
 
-      {!initialLoading && !error && hasMore ? (<TaskListLoadMore loadingMore={loadingMore} onLoadMore={onLoadMore} viewMode={viewMode}/>) : null}
+      {!initialLoading && !error && hasMore ? (<TaskListLoadMore loadingMore={loadingMore} onLoadMore={onLoadMore}/>) : null}
 
       <TaskViewDialog open={Boolean(viewingTask)} onOpenChange={handleTaskViewDialogOpenChange} task={viewingTask} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} workspaceId={workspaceId} userId={userId} userName={userName} userRole={userRole} participants={participants}/>
     </>);

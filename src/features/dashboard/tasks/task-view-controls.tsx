@@ -1,12 +1,12 @@
 'use client';
-import { Download, List, LayoutGrid, LoaderCircle, Columns3 } from 'lucide-react';
+import { Download, List, LoaderCircle, Columns3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { TASKS_THEME } from './tasks-theme';
 export type TaskViewControlsProps = {
-    viewMode: 'list' | 'grid' | 'board';
-    onViewModeChange: (mode: 'list' | 'grid' | 'board') => void;
+    viewMode: 'list' | 'board';
+    onViewModeChange: (mode: 'list' | 'board') => void;
     onExport: () => void;
     canExport: boolean;
     isExporting?: boolean;
@@ -14,7 +14,6 @@ export type TaskViewControlsProps = {
 };
 const VIEW_OPTIONS = [
     { mode: 'list' as const, label: 'List', icon: List },
-    { mode: 'grid' as const, label: 'Grid', icon: LayoutGrid },
     { mode: 'board' as const, label: 'Board', icon: Columns3 },
 ];
 export function TaskViewControls({ viewMode, onViewModeChange, onExport, canExport, isExporting = false, exportDisabledReason, }: TaskViewControlsProps) {
@@ -36,10 +35,10 @@ export function TaskViewControls({ viewMode, onViewModeChange, onExport, canExpo
     </div>);
 }
 function ViewToggleButton({ mode, active, label, onViewModeChange, icon: Icon, }: {
-    mode: 'list' | 'grid' | 'board';
+    mode: 'list' | 'board';
     active: boolean;
     label: string;
-    onViewModeChange: (mode: 'list' | 'grid' | 'board') => void;
+    onViewModeChange: (mode: 'list' | 'board') => void;
     icon: typeof List;
 }) {
     const onSelectTaskViewMode = () => {

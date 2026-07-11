@@ -519,17 +519,19 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     });
     return (<TooltipProvider>
       <TaskParticipantsProvider participants={taskParticipants}>
-      <PageSkeletonBoundary loading={initialLoading} loadingContent={<TasksPageSkeleton />}>
-      <div className={cn(DASHBOARD_THEME.layout.container, TASKS_THEME.page, 'relative')} {...documentImport.importDragHandlers}>
+      <PageSkeletonBoundary loading={initialLoading} loadingContent={<TasksPageSkeleton />} className="flex flex-col flex-1 min-h-0">
+      <div className={cn(DASHBOARD_THEME.layout.container, TASKS_THEME.page, 'relative flex flex-col flex-1 min-h-0')} {...documentImport.importDragHandlers}>
         <TasksDocumentImportOverlay phase={documentImport.phase} statusMessage={documentImport.statusMessage} errorMessage={documentImport.errorMessage} visible={documentImport.overlayVisible} onCancel={documentImport.handleCancel}/>
 
         <TasksDocumentImportReviewSheet open={documentImport.reviewOpen} documentSummary={documentImport.documentSummary} proposedTasks={documentImport.proposedTasks} participants={taskParticipants} attachSourceDocuments={documentImport.attachSourceDocuments} onAttachSourceDocumentsChange={documentImport.setAttachSourceDocuments} onUpdateTask={documentImport.updateProposedTask} onConfirm={documentImport.handleConfirmReview} onDiscard={documentImport.handleDismissReview}/>
 
-        <TasksHeader loading={loading} retryCount={retryCount} onRefresh={handleRefresh} onNewTaskClick={handleNewTaskClick} scopeLabel={scopeLabel} scopeHelper={scopeHelper} newTaskDisabledReason={newTaskDisabledReason}/>
+        <div className="shrink-0">
+          <TasksHeader loading={loading} retryCount={retryCount} onRefresh={handleRefresh} onNewTaskClick={handleNewTaskClick} scopeLabel={scopeLabel} scopeHelper={scopeHelper} newTaskDisabledReason={newTaskDisabledReason}/>
+        </div>
 
-        <Tabs defaultValue="all-tasks" value={filters.activeTab} onValueChange={filters.setActiveTab} className="space-y-0">
-          <div className={TASKS_THEME.workspace}>
-            <div className={cn(TASKS_THEME.rail, 'sticky top-0 z-10 backdrop-blur-md')}>
+        <Tabs defaultValue="all-tasks" value={filters.activeTab} onValueChange={filters.setActiveTab} className="space-y-0 flex flex-col flex-1 min-h-0">
+          <div className={cn(TASKS_THEME.workspace, 'flex flex-col flex-1 min-h-0 overflow-hidden rounded-2xl ring-1 ring-border/40')}>
+            <div className={cn(TASKS_THEME.rail, 'sticky top-0 z-10 shrink-0 backdrop-blur-md')}>
               <div className="flex items-center gap-2">
                 <TabsList className={TASKS_THEME.tabList}>
                   <TabsTrigger value="all-tasks" className={TASKS_THEME.tabTrigger}>
@@ -548,15 +550,15 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
               <TaskViewControls viewMode={filters.viewMode} onViewModeChange={filters.setViewMode} onExport={handleExport} canExport={filters.sortedTasks.length > 0} isExporting={isExporting} exportDisabledReason={filters.sortedTasks.length === 0 ? 'No tasks to export' : undefined}/>
             </div>
 
-            <div>
+            <div className="flex flex-col flex-1 min-h-0">
               <TaskFilters searchQuery={rawSearchQuery} onSearchChange={setRawSearchQuery} selectedStatus={filters.selectedStatus} onStatusChange={filters.handleStatusChange} selectedAssignee={filters.selectedAssignee} onAssigneeChange={filters.handleAssigneeChange} assigneeOptions={filters.assigneeOptions} showAssigneeFilter={filters.activeTab === 'all-tasks'} selectedPriority={selectedPriority} onPriorityChange={handlePriorityChange} sortField={filters.sortField} onSortFieldChange={filters.setSortField} sortDirection={filters.sortDirection} onSortDirectionToggle={filters.toggleSortDirection} hasActiveFilters={filters.hasActiveFilters} activeFilterCount={filters.activeFilterCount} onClearFilters={handleClearListFilters}/>
 
               <ProjectFilterBanner projectId={projectFilter.id} projectName={projectFilter.name} onClear={clearProjectFilter}/>
 
               {filters.viewMode !== 'board' && (<TaskBulkToolbar selectedCount={selectedTasks.length} totalVisible={visibleTasks.length} hasSelection={hasSelection} bulkActive={bulkState.active} bulkLabel={bulkState.label} bulkProgress={bulkState.progress} onSelectAll={handleSelectAllVisible} onClearSelection={handleClearSelection} onSelectHighPriority={handleSelectHighPriority} onSelectDueSoon={handleSelectDueSoon} highPriorityCount={highPriorityCount} dueSoonCount={dueSoonCount} onBulkStatusChange={handleBulkStatusChange} onBulkAssign={handleBulkAssign} onBulkDueDate={handleBulkDueDate} onBulkDelete={handleBulkDeleteAction}/>)}
 
-              <div className={cn(TASKS_THEME.content, filters.viewMode === 'list' && TASKS_THEME.contentList)}>
-              {filters.viewMode === 'board' ? (<TaskBoardErrorBoundary onSwitchToList={() => filters.setViewMode('list')}><TaskKanban tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={form.handleEditOpen} onDelete={form.handleDeleteClick} onQuickStatusChange={handleQuickStatusChange} onRefresh={handleRefresh} loadingMore={loadingMore} hasMore={Boolean(nextCursor)} onLoadMore={handleLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={handleClearListFilters} onEmptyCreateTask={handleNewTaskClick} workspaceId={user?.agencyId ?? null} userId={user?.id ?? null} userName={user?.name ?? null} userRole={user?.role ?? null} participants={taskParticipants}/></TaskBoardErrorBoundary>) : (<TaskList tasks={filters.sortedTasks} viewMode={filters.viewMode} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={form.handleEditOpen} onDelete={form.handleDeleteClick} onQuickStatusChange={handleQuickStatusChange} onRefresh={handleRefresh} loadingMore={loadingMore} hasMore={Boolean(nextCursor)} onLoadMore={handleLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={handleClearListFilters} onEmptyCreateTask={handleNewTaskClick} selectedTaskIds={selectedTaskIds} onToggleTaskSelection={handleToggleTaskSelection} workspaceId={user?.agencyId ?? null} userId={user?.id ?? null} userName={user?.name ?? null} userRole={user?.role ?? null} participants={taskParticipants}/>)}
+              <div className={cn(TASKS_THEME.content, 'p-0', filters.viewMode === 'list' && 'bg-muted/[0.18] flex-1 overflow-y-auto pb-24', filters.viewMode === 'board' && 'min-h-0 flex-1 overflow-hidden')}>
+              {filters.viewMode === 'board' ? (<TaskBoardErrorBoundary onSwitchToList={() => filters.setViewMode('list')}><TaskKanban tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={form.handleEditOpen} onDelete={form.handleDeleteClick} onQuickStatusChange={handleQuickStatusChange} onRefresh={handleRefresh} loadingMore={loadingMore} hasMore={Boolean(nextCursor)} onLoadMore={handleLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={handleClearListFilters} onEmptyCreateTask={handleNewTaskClick} workspaceId={user?.agencyId ?? null} userId={user?.id ?? null} userName={user?.name ?? null} userRole={user?.role ?? null} participants={taskParticipants}/></TaskBoardErrorBoundary>) : (<TaskList tasks={filters.sortedTasks} loading={loading} initialLoading={initialLoading} error={displayError} pendingStatusUpdates={pendingStatusUpdates} onEdit={form.handleEditOpen} onDelete={form.handleDeleteClick} onQuickStatusChange={handleQuickStatusChange} onRefresh={handleRefresh} loadingMore={loadingMore} hasMore={Boolean(nextCursor)} onLoadMore={handleLoadMore} emptyStateMessage={emptyStateMessage} showEmptyStateFiltered={showFilteredEmpty} onEmptyClearFilters={handleClearListFilters} onEmptyCreateTask={handleNewTaskClick} selectedTaskIds={selectedTaskIds} onToggleTaskSelection={handleToggleTaskSelection} workspaceId={user?.agencyId ?? null} userId={user?.id ?? null} userName={user?.name ?? null} userRole={user?.role ?? null} participants={taskParticipants}/>)}
               </div>
             </div>
           </div>

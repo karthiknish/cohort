@@ -16,7 +16,7 @@ function TasksPageContent(props: TasksPageClientProps) {
 }
 const TASKS_PAGE_FALLBACK = <TasksPageSkeleton />;
 export default function TasksPageClient(props: TasksPageClientProps) {
-    return (<PageMotionShell reveal={false}>
+    return (<PageMotionShell reveal={false} className="flex flex-col flex-1 min-h-0 gap-6">
       <Suspense fallback={TASKS_PAGE_FALLBACK}>
         <TasksPageContent {...props}/>
       </Suspense>

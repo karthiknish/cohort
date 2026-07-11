@@ -184,8 +184,8 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
     };
     if (initialLoading) {
         const columnSkeletonKeys = ['todo', 'in-progress', 'review', 'completed'] as const;
-        return (<div className="flex gap-4 overflow-x-auto px-4 pb-4">
-        {columnSkeletonKeys.map((columnKey) => (<div key={columnKey} className="flex min-h-[min(68vh,560px)] w-[min(100%,280px)] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 p-3 sm:w-[280px]">
+        return (<div className="flex h-full gap-4 overflow-x-auto px-4 pb-4">
+        {columnSkeletonKeys.map((columnKey) => (<div key={columnKey} className="flex h-full min-h-0 w-[min(100%,280px)] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 p-3 sm:w-[280px]">
             <Skeleton className="mb-3 h-8 w-full rounded-lg"/>
             <Skeleton className="mb-3 h-28 w-full rounded-xl"/>
             <Skeleton className="h-28 w-full rounded-xl"/>
@@ -193,38 +193,42 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
       </div>);
     }
     if (error) {
-        return (<div className="rounded-xl border border-destructive/20 bg-destructive/5 p-8 text-center">
-        <TriangleAlert className="mx-auto size-12 text-destructive"/>
-        <h3 className="mt-4 text-lg font-semibold text-destructive">Unable to load board</h3>
-        <p className="mt-1 text-sm text-destructive/80">{error}</p>
-        <Button variant="outline" size="sm" className="mt-6 border-destructive/20 hover:bg-destructive/10" onClick={onRefresh}>
-          <RefreshCw className="mr-2 size-4"/>
-          Try Again
-        </Button>
+        return (<div className="flex h-full items-center justify-center rounded-xl border border-destructive/20 bg-destructive/5 p-8 text-center">
+        <div>
+          <TriangleAlert className="mx-auto size-12 text-destructive"/>
+          <h3 className="mt-4 text-lg font-semibold text-destructive">Unable to load board</h3>
+          <p className="mt-1 text-sm text-destructive/80">{error}</p>
+          <Button variant="outline" size="sm" className="mt-6 border-destructive/20 hover:bg-destructive/10" onClick={onRefresh}>
+            <RefreshCw className="mr-2 size-4"/>
+            Try Again
+          </Button>
+        </div>
       </div>);
     }
     if (tasks.length === 0) {
-        return (<div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-10 text-center sm:p-12">
-        <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-background shadow-sm ring-1 ring-border/60">
-          <ListTodo className="size-8 text-muted-foreground" aria-hidden/>
-        </div>
-        <h3 className="mt-4 text-xl font-semibold tracking-tight text-foreground">No tasks on the board</h3>
-        <p className="mx-auto mt-2 max-w-sm text-pretty text-sm leading-relaxed text-muted-foreground">
-          {showEmptyStateFiltered
-                ? 'Nothing matches these filters. Clear them or switch to list view for bulk actions.'
-                : emptyStateMessage}
-        </p>
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-          {showEmptyStateFiltered && onEmptyClearFilters ? (<Button type="button" size="sm" onClick={onEmptyClearFilters}>
-              Clear filters
-            </Button>) : null}
-          {!showEmptyStateFiltered && onEmptyCreateTask ? (<Button type="button" size="sm" onClick={onEmptyCreateTask}>
-              Create task
-            </Button>) : null}
+        return (<div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/20 p-10 text-center sm:p-12">
+        <div>
+          <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-background shadow-sm ring-1 ring-border/60">
+            <ListTodo className="size-8 text-muted-foreground" aria-hidden/>
+          </div>
+          <h3 className="mt-4 text-xl font-semibold tracking-tight text-foreground">No tasks on the board</h3>
+          <p className="mx-auto mt-2 max-w-sm text-pretty text-sm leading-relaxed text-muted-foreground">
+            {showEmptyStateFiltered
+                  ? 'Nothing matches these filters. Clear them or switch to list view for bulk actions.'
+                  : emptyStateMessage}
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            {showEmptyStateFiltered && onEmptyClearFilters ? (<Button type="button" size="sm" onClick={onEmptyClearFilters}>
+                Clear filters
+              </Button>) : null}
+            {!showEmptyStateFiltered && onEmptyCreateTask ? (<Button type="button" size="sm" onClick={onEmptyCreateTask}>
+                Create task
+              </Button>) : null}
+          </div>
         </div>
       </div>);
     }
-    return (<div className="space-y-3 px-4 pb-4 pt-2">
+    return (<div className="flex flex-col flex-1 min-h-0 gap-3 px-4 pb-4 pt-2">
       <LiveRegion message={boardAnnouncement}/>
       <p id={keyboardInstructionsId} className="sr-only">
         Use Alt plus Left Arrow or Alt plus Right Arrow on a focused task card to move it between workflow columns. You can also drag and drop tasks with a pointer.
@@ -238,8 +242,8 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
         </div>
       </div>
 
-      <ScrollArea className="w-full">
-        <div className="flex w-max gap-4 pb-4 pr-2 min-h-[min(72vh,640px)]">
+      <ScrollArea className="min-h-0 flex-1 w-full">
+        <div className="flex h-full w-max gap-4 pb-4 pr-2">
           {columns.map((column) => (<KanbanColumn key={column.status} bulkActive={bulkActive} column={column} dragOverStatus={dragOverStatus} draggedTask={draggedTask} handleDragEnd={handleDragEnd} handleDragLeave={handleDragLeave} handleDragOver={handleDragOver} handleDrop={handleDrop} handleDragStart={handleDragStart} keyboardInstructionsId={keyboardInstructionsId} onKeyboardMoveTask={handleKeyboardMoveTask} handleViewTask={handleViewTask} onClone={onClone} onDelete={onDelete} onEdit={onEdit} onQuickStatusChange={onQuickStatusChange} onShare={onShare} onToggleTaskSelection={onToggleTaskSelection} pendingStatusUpdates={pendingStatusUpdates} searchQuery={searchQuery} selectedTaskIds={selectedTaskIds}/>))}
         </div>
         <ScrollBar orientation="horizontal" />
@@ -286,7 +290,7 @@ function KanbanColumn({ bulkActive, column, dragOverStatus, draggedTask, handleD
     const isDraggingFrom = draggedTask?.sourceStatus === column.status;
     const handleColumnDragOver = (event: React.DragEvent<HTMLDivElement>) => handleDragOver(event, column.status);
     const handleColumnDrop = (event: React.DragEvent<HTMLDivElement>) => handleDrop(event, column.status);
-    return (<section aria-label={`${column.label} task lane`} className={cn('flex min-h-[min(68vh,560px)] w-[min(100%,280px)] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 shadow-sm transition-colors sm:w-[280px]', isDragTarget && 'border-primary/30 bg-primary/5 ring-1 ring-primary/15', isDraggingFrom && !isDragTarget && 'opacity-60')} onDragOver={handleColumnDragOver} onDragLeave={handleDragLeave} onDrop={handleColumnDrop}>
+    return (<section aria-label={`${column.label} task lane`} className={cn('flex h-full min-h-0 w-[min(100%,280px)] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 shadow-sm transition-colors sm:w-[280px]', isDragTarget && 'border-primary/30 bg-primary/5 ring-1 ring-primary/15', isDraggingFrom && !isDragTarget && 'opacity-60')} onDragOver={handleColumnDragOver} onDragLeave={handleDragLeave} onDrop={handleColumnDrop}>
       <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-card/80 px-3.5 py-3 backdrop-blur-sm">
         <div className="flex min-w-0 items-center gap-2">
           <div className={cn('size-2 shrink-0 rounded-full', statusLaneColors[column.status])} aria-hidden/>
@@ -296,7 +300,7 @@ function KanbanColumn({ bulkActive, column, dragOverStatus, draggedTask, handleD
           {column.items.length}
         </Badge>
       </div>
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 flex-1 w-full">
         <ul className="list-none space-y-3 p-3">
           {column.items.length === 0 ? (<li className={cn('list-none flex min-h-[7.5rem] flex-col items-center justify-center rounded-lg border border-dashed border-border/70 bg-card/60 p-4 text-center transition-colors', isDragTarget && 'border-primary/35 bg-primary/5')}>
               {draggedTask ? (<>

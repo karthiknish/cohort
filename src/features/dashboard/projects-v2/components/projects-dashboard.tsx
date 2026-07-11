@@ -458,7 +458,7 @@ function ProjectsBacklogSection() {
         ) : null}
       </div>
 
-      <CardContent className={cn(PROJECTS_THEME.content, 'p-0', viewMode === 'list' && 'bg-muted/[0.15]')}>
+      <CardContent className={cn(PROJECTS_THEME.content, 'pt-0 pb-0', viewMode === 'list' && 'bg-muted/[0.15]')}>
         <ProjectsListState
           error={error}
           hasActiveFilters={hasActiveFilters}

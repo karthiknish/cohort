@@ -10,7 +10,7 @@ import type { TaskListFiltersInput } from './task-list-filters';
 const TASK_VIEW_MODE_STORAGE_KEY = 'dashboard:tasks:view-mode';
 const TASK_VIEW_MODE_URL_PARAM = 'view';
 const STATUS_ORDER: Record<TaskStatus, number> = Object.fromEntries(TASK_STATUSES.map((status, index) => [status, index])) as Record<TaskStatus, number>;
-function getInitialTaskViewMode(): 'list' | 'grid' | 'board' {
+function getInitialTaskViewMode(): 'list' | 'board' {
     if (typeof window === 'undefined') {
         return 'list';
     }
@@ -18,7 +18,7 @@ function getInitialTaskViewMode(): 'list' | 'grid' | 'board' {
     try {
         const urlParams = new URLSearchParams(window.location.search);
         const fromUrl = urlParams.get(TASK_VIEW_MODE_URL_PARAM);
-        if (fromUrl === 'list' || fromUrl === 'grid' || fromUrl === 'board') {
+        if (fromUrl === 'list' || fromUrl === 'board') {
             return fromUrl;
         }
     }
@@ -26,7 +26,7 @@ function getInitialTaskViewMode(): 'list' | 'grid' | 'board' {
         // ignore
     }
     const persisted = window.localStorage.getItem(TASK_VIEW_MODE_STORAGE_KEY);
-    if (persisted === 'list' || persisted === 'grid' || persisted === 'board') {
+    if (persisted === 'list' || persisted === 'board') {
         return persisted;
     }
     return 'list';
@@ -74,8 +74,8 @@ export type UseTaskFiltersReturn = {
     sortDirection: SortDirection;
     toggleSortDirection: () => void;
     // View state
-    viewMode: 'list' | 'grid' | 'board';
-    setViewMode: React.Dispatch<React.SetStateAction<'list' | 'grid' | 'board'>>;
+    viewMode: 'list' | 'board';
+    setViewMode: React.Dispatch<React.SetStateAction<'list' | 'board'>>;
     // Computed values
     tasksForClient: TaskRecord[];
     projectScopedTasks: TaskRecord[];
@@ -110,11 +110,11 @@ export function useTaskFilters({ tasks, userId, userName, participants = [], sel
     const [activeTabInternal, setActiveTabInternal] = useState('all-tasks');
     const [sortField, setSortField] = useState<SortField>('updatedAt');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-    const [viewMode, setViewModeState] = useState<'list' | 'grid' | 'board'>(() => getInitialTaskViewMode());
+    const [viewMode, setViewModeState] = useState<'list' | 'board'>(() => getInitialTaskViewMode());
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useUrlSearchParams();
-    const setViewMode = useCallback((next: 'list' | 'grid' | 'board') => {
+    const setViewMode = useCallback((next: 'list' | 'board') => {
         setViewModeState(next);
         try {
             window.localStorage.setItem(TASK_VIEW_MODE_STORAGE_KEY, next);
@@ -330,7 +330,7 @@ export function useTaskFilters({ tasks, userId, userName, participants = [], sel
         sortDirection,
         toggleSortDirection,
         viewMode,
-        setViewMode: setViewMode as React.Dispatch<React.SetStateAction<'list' | 'grid' | 'board'>>,
+        setViewMode: setViewMode as React.Dispatch<React.SetStateAction<'list' | 'board'>>,
         tasksForClient,
         projectScopedTasks,
         filteredTasks,

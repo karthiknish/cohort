@@ -270,7 +270,6 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
                 </div>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <div><span className="font-medium text-foreground/70">Joined:</span> {formatDateWithTime(record.createdAt)}</div>
-                  <div><span className="font-medium text-foreground/70">Last active:</span> {formatDateWithTime(record.lastLoginAt)}</div>
                   <div className="col-span-2"><span className="font-medium text-foreground/70">Clients:</span> {allocation.totalClientNames.length > 0 ? `${allocation.totalClientNames.length} (Owner ${allocation.managedClientNames.length} · Support ${allocation.supportingClientNames.length})` : 'Unassigned'}</div>
                 </div>
                 <Button type="button" variant={record.status === 'active' ? 'destructive' : 'outline'} size="sm" onClick={createStatusActionHandler(record)} disabled={savingId === record.id} className="w-full inline-flex items-center justify-center gap-2">
@@ -288,19 +287,18 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
             <caption className="sr-only">Team members, roles, and client allocation</caption>
             <thead>
               <tr className="border-b border-muted/40">
-                <th scope="col" className="w-64 py-2 pr-3 font-medium">Team member</th>
-                <th scope="col" className="w-32 py-2 pr-3 font-medium">Role</th>
-                <th scope="col" className="w-24 py-2 pr-3 text-center font-medium">Admin</th>
-                <th scope="col" className="w-32 py-2 pr-3 font-medium">Status</th>
-                <th scope="col" className="w-40 py-2 pr-3 font-medium">Joined</th>
-                <th scope="col" className="w-40 py-2 pr-3 font-medium">Client allocation</th>
-                <th scope="col" className="w-40 py-2 pr-3 font-medium">Last active</th>
-                <th scope="col" className="py-2 text-right font-medium">Actions</th>
+                <th scope="col" className="w-64 py-2 px-3 font-medium">Team member</th>
+                <th scope="col" className="w-32 py-2 px-3 font-medium">Role</th>
+                <th scope="col" className="w-24 py-2 px-3 text-center font-medium">Admin</th>
+                <th scope="col" className="w-32 py-2 px-3 font-medium">Status</th>
+                <th scope="col" className="w-40 py-2 px-3 font-medium">Joined</th>
+                <th scope="col" className="w-40 py-2 px-3 font-medium">Client allocation</th>
+                <th scope="col" className="py-2 px-3 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (<tr>
-                  <td colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                     {loading ? ('Loading team…') : workspaceQueryError && internalUsers.length === 0 ? (workspaceQueryError) : !loading && internalUsers.length === 0 ? (<span className="inline-flex flex-col items-center gap-3">
                         <span>No internal teammates in this workspace yet.</span>
                         <Button type="button" size="sm" variant="outline" onClick={onOpenInviteDialog}>
@@ -321,12 +319,12 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
                 totalClientNames: [],
             };
             return (<tr key={record.id} className="border-b border-muted/30">
-                      <th scope="row" className="py-3 pr-3 text-left font-normal">
+                      <th scope="row" className="py-3 px-3 text-left font-normal">
                         <div className="font-medium text-foreground">{record.name}</div>
                         <div className="text-xs text-muted-foreground">{record.email || 'No email on file'}</div>
                         {record.agencyId && (<div className="text-xs text-muted-foreground">Agency: {record.agencyId}</div>)}
                       </th>
-                      <td className="py-3 pr-3 align-middle">
+                      <td className="py-3 px-3 align-middle">
                         <Select value={record.role} onValueChange={createRoleChangeHandler(record.id)} disabled={savingId === record.id}>
                           <SelectTrigger>
                             <SelectValue />
@@ -338,18 +336,18 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="py-3 pr-3 text-center align-middle">
+                      <td className="py-3 px-3 text-center align-middle">
                         <Checkbox checked={record.role === 'admin'} onChange={createAdminToggleHandler(record)} disabled={savingId === record.id} aria-label={`Toggle admin role for ${record.name}`}/>
                       </td>
-                      <td className="py-3 pr-3 align-middle">
+                      <td className="py-3 px-3 align-middle">
                         <Badge variant={statusToVariant(record.status)} className="capitalize">
                           {record.status.replace(/_/g, ' ')}
                         </Badge>
                       </td>
-                      <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
+                      <td className="py-3 px-3 align-middle text-xs text-muted-foreground">
                         {formatDateWithTime(record.createdAt)}
                       </td>
-                      <td className="py-3 pr-3 align-middle">
+                      <td className="py-3 px-3 align-middle">
                         {allocation.totalClientNames.length > 0 ? (<div className="space-y-1">
                             <div className="text-sm font-medium text-foreground">
                               {allocation.totalClientNames.length} client{allocation.totalClientNames.length === 1 ? '' : 's'}
@@ -359,10 +357,7 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
                             </div>
                           </div>) : (<span className="text-xs text-muted-foreground">Unassigned</span>)}
                       </td>
-                      <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
-                        {formatDateWithTime(record.lastLoginAt)}
-                      </td>
-                      <td className="py-3 align-middle text-right">
+                      <td className="py-3 px-3 align-middle text-right">
                         <Button type="button" variant={record.status === 'active' ? 'destructive' : 'outline'} size="sm" onClick={createStatusActionHandler(record)} disabled={savingId === record.id} className="inline-flex items-center gap-2">
                           {savingId === record.id ? (<LoaderCircle className="size-4 animate-spin"/>) : (<ActionIcon status={record.status}/>)}
                           {statusActionLabel(record.status)}
