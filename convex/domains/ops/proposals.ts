@@ -4,6 +4,8 @@ import {
   zWorkspaceQuery,
   zWorkspaceMutation,
 } from '../../functions'
+import { internalMutation } from '../../_generated/server'
+import { v } from 'convex/values'
 import { z } from 'zod/v4'
 
 function assertCanManageProposals(ctx: { user: { role: string | null } }) {
@@ -310,5 +312,36 @@ export const remove = zWorkspaceMutation({
 
     await ctx.db.delete(existing._id)
     return { ok: true }
+  },
+})
+
+/**
+ * One-time fix: clear clientId/clientName on proposals whose clientId
+ * does not match any client in the same workspace.
+ * Called via `npx convex run internal.proposals.fixOrphanedClientId --prod`.
+ */
+export const fixOrphanedClientId = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const allProposals = await ctx.db.query('proposals').collect()
+    const allClients = await ctx.db.query('clients').collect()
+
+    const validClientIdsByWorkspace = new Map<string, Set<string>>()
+    for (const c of allClients) {
+      const set = validClientIdsByWorkspace.get(c.workspaceId) ?? new Set()
+      set.add(c.legacyId)
+      validClientIdsByWorkspace.set(c.workspaceId, set)
+    }
+
+    let fixed = 0
+    for (const p of allProposals) {
+      if (p.clientId === null) continue
+      const valid = validClientIdsByWorkspace.get(p.workspaceId)
+      if (!valid || !valid.has(p.clientId)) {
+        await ctx.db.patch(p._id, { clientId: null, clientName: null })
+        fixed++
+      }
+    }
+    return { fixed }
   },
 })

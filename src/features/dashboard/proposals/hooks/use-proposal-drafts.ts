@@ -120,7 +120,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     const { user, isSyncing, authError } = useAuth();
     const { selectedClient, selectedClientId } = useClientContext();
     const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
-    const canQuery = Boolean(workspaceId && selectedClientId && !isSyncing && !authError);
+    const canQuery = Boolean(workspaceId && !isSyncing && !authError);
     const convexProposals = useQuery(proposalsApi.list, isPreviewMode || !canQuery
         ? 'skip'
         : {
@@ -137,7 +137,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     const convexUpdateProposal = useMutation(proposalsApi.update);
     const convexRemoveProposal = useMutation(proposalsApi.remove);
     const proposals: ProposalDraft[] = (() => {
-        if (!workspaceId || !selectedClientId)
+        if (!workspaceId)
             return [];
         const rows = Array.isArray(convexProposals) ? (convexProposals as ProposalRow[]) : [];
         return rows.map((row) => ({
@@ -215,7 +215,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         lastSavedSnapshotRef.current = snapshotKey;
         setLastSavedSnapshotKey(snapshotKey);
     };
-    const isLoadingProposals = Boolean(selectedClientId && workspaceId && convexProposals === undefined);
+    const isLoadingProposals = Boolean(workspaceId && convexProposals === undefined);
     const currentSnapshotKey = buildSnapshotKey({
         form: formState,
         step: currentStep,
