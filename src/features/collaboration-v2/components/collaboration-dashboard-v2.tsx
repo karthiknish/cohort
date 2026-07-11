@@ -41,8 +41,6 @@ import { useChannelUnreadCounts, useMarkChannelAsRead } from '../api/use-read-re
 import { useTypingParticipants, useSetTyping } from '../api/use-typing';
 import { useMarkThreadAsRead } from '../api/use-thread-replies';
 import { useSearchChannelMessages } from '../api/use-search';
-import { useCrossChannelCollaborationSearch } from '@/features/dashboard/collaboration/hooks/use-cross-channel-collaboration-search';
-import { CrossChannelSearch } from '@/features/dashboard/collaboration/components/cross-channel-search';
 import { useCollaborationChannelExtras } from '@/features/dashboard/collaboration/components/collaboration-channel-extras';
 import { useCollaborationExternalNotify } from '@/features/dashboard/collaboration/hooks/use-collaboration-external-notify';
 import { useTyping } from '@/features/dashboard/collaboration/hooks/use-typing';
@@ -187,9 +185,6 @@ export function CollaborationDashboardV2() {
     effectiveSelectedChannel,
     messageSearchQuery,
   );
-
-  // ─── Cross-channel search (hook only — handler wired after select handler) ──
-  const searchAcrossChannels = useCrossChannelCollaborationSearch(workspaceId, channels);
 
   // ─── Drafts ───────────────────────────────────────────────────────────────
   const { getDraft, setDraft, clearDraft } = useMessageDrafts();
@@ -367,19 +362,6 @@ export function CollaborationDashboardV2() {
     : selectedConversationLegacyId
       ? `dm:${selectedConversationLegacyId}`
       : null;
-
-  // ─── Cross-channel search result click ─────────────────────────────────────
-  const handleSearchResultClick = useCallback(
-    (messageId: string, channelId: string, threadRootId?: string | null) => {
-      const channel = channels.find((c) => c.id === channelId);
-      if (channel) {
-        urlState.setChannelId(channel.id);
-        selectChannel(channel.id);
-      }
-      urlState.setDeepLinkMessage(messageId, threadRootId ?? null);
-    },
-    [channels, urlState, selectChannel],
-  );
 
   // ─── Send message handler ─────────────────────────────────────────────────
   const handleSendMessage = useCallback(async (options?: SendMessageOptions) => {
@@ -835,14 +817,6 @@ export function CollaborationDashboardV2() {
                 onCreate: handleCreateChannel,
               }
             : undefined
-        }
-        crossChannelSearchSlot={
-          currentUserRole !== 'client' ? (
-            <CrossChannelSearch
-              onSearch={searchAcrossChannels}
-              onResultClick={handleSearchResultClick}
-            />
-          ) : null
         }
       />
 

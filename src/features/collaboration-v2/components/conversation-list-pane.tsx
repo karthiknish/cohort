@@ -55,7 +55,6 @@ export type ConversationListPaneProps = {
       memberIds: string[];
     }) => Promise<void> | void;
   };
-  crossChannelSearchSlot?: React.ReactNode;
   className?: string;
 };
 
@@ -73,7 +72,6 @@ export function ConversationListPane({
   totalUnread,
   onNewDM,
   createChannelProps,
-  crossChannelSearchSlot,
   className,
 }: ConversationListPaneProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -173,10 +171,6 @@ export function ConversationListPane({
             ⌘/Ctrl K
           </span>
         </div>
-
-        {crossChannelSearchSlot ? (
-          <div className="px-1">{crossChannelSearchSlot}</div>
-        ) : null}
 
         <Tabs value={sourceFilter} onValueChange={(value) => onSourceFilterChange(value as SourceFilter)}>
           <TabsList className="flex h-auto w-full flex-wrap gap-0.5 bg-muted/50 p-1">
