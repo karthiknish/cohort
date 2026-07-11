@@ -1,8 +1,7 @@
 'use client';
 import { Download, Image as ImageIcon, LoaderCircle, ZoomIn } from 'lucide-react';
-import { useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Button } from '@/shared/ui/button';
-import { LazyImage } from '@/shared/ui/lazy-image';
 import { cn } from '@/lib/utils';
 import { ImagePreviewModal } from './image-preview-modal';
 
@@ -38,6 +37,19 @@ function PreviewTile({
 }) {
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
+    const imgRef = useRef<HTMLImageElement>(null);
+    useEffect(() => {
+        setIsLoading(true);
+        setHasError(false);
+        const img = imgRef.current;
+        if (img && img.complete) {
+            if (img.naturalWidth === 0) {
+                setHasError(true);
+            } else {
+                setIsLoading(false);
+            }
+        }
+    }, [image.url]);
     const handlePreview = (event: MouseEvent<HTMLButtonElement>) => {
         const index = Number(event.currentTarget.dataset.previewIndex);
         onPreview(index);
@@ -57,28 +69,32 @@ function PreviewTile({
             aria-label={`Preview image ${image.name}`}
         >
             <div className={cn('relative overflow-hidden', aspectClassName)}>
-                {isLoading && !hasError ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-muted/20">
-                        <LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-hidden />
-                    </div>
-                ) : null}
-                {hasError ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-muted/30 text-muted-foreground">
-                        <ImageIcon className="size-6" aria-hidden />
-                        <span className="px-2 text-center text-[10px] leading-tight">{image.name}</span>
-                    </div>
-                ) : null}
-                <LazyImage
+                <img
+                    ref={imgRef}
                     src={image.url}
                     alt={image.name}
-                    className="size-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105"
+                    className={cn(
+                        'size-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105',
+                        isLoading && 'opacity-0',
+                    )}
                     onLoad={() => setIsLoading(false)}
                     onError={() => {
                         setIsLoading(false);
                         setHasError(true);
                     }}
-                    fallback={null}
+                    draggable={false}
                 />
+                {isLoading && !hasError ? (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted/20">
+                        <LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-hidden />
+                    </div>
+                ) : null}
+                {hasError ? (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 bg-muted/30 text-muted-foreground">
+                        <ImageIcon className="size-6" aria-hidden />
+                        <span className="px-2 text-center text-[10px] leading-tight">{image.name}</span>
+                    </div>
+                ) : null}
                 {!hasError ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                         {typeof overlayCount === 'number' ? (
@@ -118,7 +134,7 @@ export function ImageGallery({ images, className, flat = false, compact = false 
                 <figure
                     className={cn(
                         'my-2 overflow-hidden rounded-lg',
-                        compact ? 'max-w-xs' : 'max-w-xl',
+                        compact ? 'w-full max-w-xs' : 'max-w-xl',
                         flat ? 'border-0 bg-transparent' : 'border border-muted/60 bg-muted/10',
                         className,
                     )}
@@ -174,7 +190,7 @@ export function ImageGallery({ images, className, flat = false, compact = false 
     if (images.length === 2) {
         return (
             <>
-                <div className={cn('grid grid-cols-2 gap-2', compact ? 'max-w-xs' : 'max-w-xl', className)}>
+                <div className={cn('grid grid-cols-2 gap-2', compact ? 'w-full max-w-xs' : 'max-w-xl', className)}>
                     {images.map((image, index) => (
                         <PreviewTile
                             key={image.url}
@@ -195,7 +211,7 @@ export function ImageGallery({ images, className, flat = false, compact = false 
         if (!firstImage) return null;
         return (
             <>
-                <div className={cn('grid grid-cols-2 gap-2', compact ? 'max-w-xs' : 'max-w-xl', className)}>
+                <div className={cn('grid grid-cols-2 gap-2', compact ? 'w-full max-w-xs' : 'max-w-xl', className)}>
                     <PreviewTile
                         image={firstImage}
                         previewIndex={0}
@@ -223,7 +239,7 @@ export function ImageGallery({ images, className, flat = false, compact = false 
     const remainingCount = images.length - 4;
     return (
         <>
-            <div className={cn('grid grid-cols-2 gap-2', compact ? 'max-w-xs' : 'max-w-xl', className)}>
+            <div className={cn('grid grid-cols-2 gap-2', compact ? 'w-full max-w-xs' : 'max-w-xl', className)}>
                 {displayImages.map((image, index) => (
                     <PreviewTile
                         key={image.url}
