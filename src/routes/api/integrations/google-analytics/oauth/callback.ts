@@ -47,7 +47,7 @@ const handlers = adaptApiHandler(
       if (!context.state) {
         return redirectResponse(`${appUrl}/dashboard/analytics?oauth_error=invalid_state&provider=google-analytics`)
       }
-      await completeGoogleAnalyticsOAuthFlow({ code, userId: context.state, redirectUri, clientId: context.clientId ?? null })
+      await completeGoogleAnalyticsOAuthFlow({ code, userId: context.state, redirectUri, clientId: context.clientId ?? null, codeVerifier: context.codeVerifier ?? undefined })
       let redirectTarget = context.redirect ?? `${appUrl}/dashboard/analytics`
       const url = new URL(redirectTarget, appUrl)
       url.searchParams.set('oauth_success', 'true')

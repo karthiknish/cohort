@@ -1,19 +1,13 @@
 // =============================================================================
 // GOOGLE ADS CAMPAIGN CRUD - Campaign listing and mutation operations
 // =============================================================================
-import { googleAdsSearch } from './client';
-import { parseJsonBodySafely } from '@/lib/response-json';
+import { googleAdsSearch, executeGoogleAdsApiRequest, buildGoogleHeaders, DEFAULT_RETRY_CONFIG } from './client';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { GoogleAdsApiError } from './errors';
 import { GOOGLE_API_BASE, } from './types';
-import type { GoogleCampaign, GoogleAdsApiErrorResponse, } from './types';
+import type { GoogleCampaign, GoogleAdsMutateResponse, GoogleAdsResult } from './types';
 import type { CreateGoogleCampaignOptions } from './campaign-modules/types';
 import { getGoogleObjectiveConfig } from './campaign-modules/objectives';
-async function parseGoogleAdsErrorResponse(response: Response, context: string): Promise<GoogleAdsApiErrorResponse | null> {
-    return await parseJsonBodySafely<GoogleAdsApiErrorResponse>(response, {
-        context,
-        allowEmpty: true,
-    });
-}
 // =============================================================================
 // LIST CAMPAIGNS
 // =============================================================================
@@ -185,49 +179,40 @@ export async function createGoogleCampaign(options: CreateGoogleCampaignOptions)
     budgetId?: string;
     error?: string;
 }> {
-    const { accessToken, developerToken, customerId, name, advertisingChannelType, status = 'PAUSED', dailyBudget, loginCustomerId, startDate, endDate, } = options;
+    const { accessToken, developerToken, customerId, name, advertisingChannelType, status = 'PAUSED', dailyBudget, loginCustomerId, startDate, endDate, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, } = options;
     const objectiveConfig = getGoogleObjectiveConfig(options.objective);
     const channelType = advertisingChannelType || objectiveConfig?.advertisingChannelTypes[0] || 'SEARCH';
-    const headers: Record<string, string> = {
-        Authorization: `Bearer ${accessToken}`,
-        'developer-token': developerToken,
-        'Content-Type': 'application/json',
-    };
-    if (loginCustomerId) {
-        headers['login-customer-id'] = loginCustomerId;
-    }
+    const headers = buildGoogleHeaders({ accessToken, developerToken, loginCustomerId, contentType: 'application/json' });
     const budgetAmountMicros = dailyBudget !== undefined
         ? Math.max(Math.round(dailyBudget * 1000000), 1000000)
         : 1000000;
-    const budgetResponse = await fetch(`${GOOGLE_API_BASE}/customers/${customerId}/campaignBudgets:mutate`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-            operations: [{
-                    create: {
-                        name: `${name} Budget`,
-                        amountMicros: budgetAmountMicros.toString(),
-                        deliveryMethod: 'STANDARD',
-                        explicitlyShared: false,
-                    },
-                }],
-        }),
-    });
-    if (!budgetResponse.ok) {
-        const errorData = await parseGoogleAdsErrorResponse(budgetResponse, 'Google Ads budget create error');
-        return {
-            success: false,
-            error: errorData?.error?.message ?? 'Failed to create campaign budget',
-        };
+    let budgetResourceName: string;
+    try {
+        const { payload: budgetPayload } = await executeGoogleAdsApiRequest<GoogleAdsMutateResponse>({
+            url: `${GOOGLE_API_BASE}/customers/${customerId}/campaignBudgets:mutate`,
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                operations: [{
+                        create: {
+                            name: `${name} Budget`,
+                            amountMicros: budgetAmountMicros.toString(),
+                            deliveryMethod: 'STANDARD',
+                            explicitlyShared: false,
+                        },
+                    }],
+            }),
+            operation: 'createGoogleCampaignBudget',
+            maxRetries,
+        });
+        const budgetResourceNameResult = budgetPayload.results?.[0]?.resourceName;
+        if (!budgetResourceNameResult) {
+            return { success: false, error: 'Campaign budget resource was not returned' };
+        }
+        budgetResourceName = budgetResourceNameResult;
     }
-    const budgetPayload = (await budgetResponse.json()) as {
-        results?: Array<{
-            resourceName?: string;
-        }>;
-    };
-    const budgetResourceName = budgetPayload.results?.[0]?.resourceName;
-    if (!budgetResourceName) {
-        return { success: false, error: 'Campaign budget resource was not returned' };
+    catch (error) {
+        return { success: false, error: asErrorMessage(error, 'Failed to create campaign budget') };
     }
     const campaignCreate: Record<string, unknown> = {
         name,
@@ -241,32 +226,27 @@ export async function createGoogleCampaign(options: CreateGoogleCampaignOptions)
         campaignCreate.startDate = startDate.replace(/-/g, '');
     if (endDate)
         campaignCreate.endDate = endDate.replace(/-/g, '');
-    const campaignResponse = await fetch(`${GOOGLE_API_BASE}/customers/${customerId}/campaigns:mutate`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-            operations: [{ create: campaignCreate }],
-        }),
-    });
-    if (!campaignResponse.ok) {
-        const errorData = await parseGoogleAdsErrorResponse(campaignResponse, 'Google Ads campaign create error');
+    try {
+        const { payload: campaignPayload } = await executeGoogleAdsApiRequest<GoogleAdsMutateResponse>({
+            url: `${GOOGLE_API_BASE}/customers/${customerId}/campaigns:mutate`,
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                operations: [{ create: campaignCreate }],
+            }),
+            operation: 'createGoogleCampaign',
+            maxRetries,
+        });
+        const campaignResourceName = campaignPayload.results?.[0]?.resourceName;
         return {
-            success: false,
-            error: errorData?.error?.message ?? 'Failed to create campaign',
+            success: true,
+            campaignId: campaignResourceName?.split('/').pop(),
+            budgetId: budgetResourceName.split('/').pop(),
         };
     }
-    const campaignPayload = (await campaignResponse.json()) as {
-        results?: Array<{
-            resourceName?: string;
-        }>;
-    };
-    const campaignResourceName = campaignPayload.results?.[0]?.resourceName;
-    const campaignId = campaignResourceName?.split('/').pop();
-    return {
-        success: true,
-        campaignId,
-        budgetId: budgetResourceName.split('/').pop(),
-    };
+    catch (error) {
+        return { success: false, error: asErrorMessage(error, 'Failed to create campaign') };
+    }
 }
 // =============================================================================
 // UPDATE CAMPAIGN STATUS
@@ -276,22 +256,14 @@ export async function updateGoogleCampaignStatus(options: {
     developerToken: string;
     customerId: string;
     campaignId: string;
-    status: 'ENABLED' | 'PAUSED';
+    status: 'ENABLED' | 'PAUSED' | 'REMOVED';
     loginCustomerId?: string | null;
+    maxRetries?: number;
 }): Promise<{
     success: boolean;
     message?: string;
 }> {
-    const { accessToken, developerToken, customerId, campaignId, status, loginCustomerId, } = options;
-    const url = `${GOOGLE_API_BASE}/customers/${customerId}/campaigns:mutate`;
-    const headers: Record<string, string> = {
-        Authorization: `Bearer ${accessToken}`,
-        'developer-token': developerToken,
-        'Content-Type': 'application/json',
-    };
-    if (loginCustomerId) {
-        headers['login-customer-id'] = loginCustomerId;
-    }
+    const { accessToken, developerToken, customerId, campaignId, status, loginCustomerId, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, } = options;
     const mutation = {
         operations: [{
                 update: {
@@ -301,19 +273,14 @@ export async function updateGoogleCampaignStatus(options: {
                 updateMask: 'status',
             }],
     };
-    const response = await fetch(url, {
+    await executeGoogleAdsApiRequest<GoogleAdsMutateResponse>({
+        url: `${GOOGLE_API_BASE}/customers/${customerId}/campaigns:mutate`,
         method: 'POST',
-        headers,
+        headers: buildGoogleHeaders({ accessToken, developerToken, loginCustomerId, contentType: 'application/json' }),
         body: JSON.stringify(mutation),
+        operation: 'updateGoogleCampaignStatus',
+        maxRetries,
     });
-    if (!response.ok) {
-        const errorData = await parseGoogleAdsErrorResponse(response, 'Google Ads campaign status mutation error');
-        throw new GoogleAdsApiError({
-            message: errorData?.error?.message ?? 'Campaign update failed',
-            httpStatus: response.status,
-            errorCode: 'MUTATION_ERROR',
-        });
-    }
     return { success: true, message: `Campaign ${status.toLowerCase()}` };
 }
 // =============================================================================
@@ -325,22 +292,14 @@ export async function updateGoogleAdStatus(options: {
     customerId: string;
     adId: string;
     adGroupId: string;
-    status: 'ENABLED' | 'PAUSED';
+    status: 'ENABLED' | 'PAUSED' | 'REMOVED';
     loginCustomerId?: string | null;
+    maxRetries?: number;
 }): Promise<{
     success: boolean;
     message?: string;
 }> {
-    const { accessToken, developerToken, customerId, adId, adGroupId, status, loginCustomerId, } = options;
-    const url = `${GOOGLE_API_BASE}/customers/${customerId}/adGroupAds:mutate`;
-    const headers: Record<string, string> = {
-        Authorization: `Bearer ${accessToken}`,
-        'developer-token': developerToken,
-        'Content-Type': 'application/json',
-    };
-    if (loginCustomerId) {
-        headers['login-customer-id'] = loginCustomerId;
-    }
+    const { accessToken, developerToken, customerId, adId, adGroupId, status, loginCustomerId, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, } = options;
     const mutation = {
         operations: [{
                 update: {
@@ -350,19 +309,14 @@ export async function updateGoogleAdStatus(options: {
                 updateMask: 'status',
             }],
     };
-    const response = await fetch(url, {
+    await executeGoogleAdsApiRequest<GoogleAdsMutateResponse>({
+        url: `${GOOGLE_API_BASE}/customers/${customerId}/adGroupAds:mutate`,
         method: 'POST',
-        headers,
+        headers: buildGoogleHeaders({ accessToken, developerToken, loginCustomerId, contentType: 'application/json' }),
         body: JSON.stringify(mutation),
+        operation: 'updateGoogleAdStatus',
+        maxRetries,
     });
-    if (!response.ok) {
-        const errorData = await parseGoogleAdsErrorResponse(response, 'Google Ads ad status mutation error');
-        throw new GoogleAdsApiError({
-            message: errorData?.error?.message ?? 'Ad update failed',
-            httpStatus: response.status,
-            errorCode: 'MUTATION_ERROR',
-        });
-    }
     return { success: true, message: `Ad ${status.toLowerCase()}` };
 }
 // =============================================================================
@@ -375,19 +329,11 @@ export async function updateGoogleCampaignBudget(options: {
     budgetId: string;
     amountMicros: number;
     loginCustomerId?: string | null;
+    maxRetries?: number;
 }): Promise<{
     success: boolean;
 }> {
-    const { accessToken, developerToken, customerId, budgetId, amountMicros, loginCustomerId, } = options;
-    const url = `${GOOGLE_API_BASE}/customers/${customerId}/campaignBudgets:mutate`;
-    const headers: Record<string, string> = {
-        Authorization: `Bearer ${accessToken}`,
-        'developer-token': developerToken,
-        'Content-Type': 'application/json',
-    };
-    if (loginCustomerId) {
-        headers['login-customer-id'] = loginCustomerId;
-    }
+    const { accessToken, developerToken, customerId, budgetId, amountMicros, loginCustomerId, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, } = options;
     const mutation = {
         operations: [{
                 update: {
@@ -397,19 +343,14 @@ export async function updateGoogleCampaignBudget(options: {
                 updateMask: 'amount_micros',
             }],
     };
-    const response = await fetch(url, {
+    await executeGoogleAdsApiRequest<GoogleAdsMutateResponse>({
+        url: `${GOOGLE_API_BASE}/customers/${customerId}/campaignBudgets:mutate`,
         method: 'POST',
-        headers,
+        headers: buildGoogleHeaders({ accessToken, developerToken, loginCustomerId, contentType: 'application/json' }),
         body: JSON.stringify(mutation),
+        operation: 'updateGoogleCampaignBudget',
+        maxRetries,
     });
-    if (!response.ok) {
-        const errorData = await parseGoogleAdsErrorResponse(response, 'Google Ads budget mutation error');
-        throw new GoogleAdsApiError({
-            message: errorData?.error?.message ?? 'Budget update failed',
-            httpStatus: response.status,
-            errorCode: 'MUTATION_ERROR',
-        });
-    }
     return { success: true };
 }
 // =============================================================================
@@ -432,16 +373,30 @@ export async function getGoogleCampaignBudgetId(options: {
     WHERE campaign.id = ${campaignId}
     LIMIT 1
   `.replace(/\s+/g, ' ').trim();
-    const rows = await googleAdsSearch({
-        accessToken,
-        developerToken,
-        customerId,
-        loginCustomerId,
-        query,
-        pageSize: 1,
-        maxPages: 1,
-        maxRetries,
-    });
+    const runSearch = async (loginId: string | null | undefined): Promise<GoogleAdsResult[]> => {
+        return googleAdsSearch({
+            accessToken,
+            developerToken,
+            customerId,
+            loginCustomerId: loginId,
+            query,
+            pageSize: 1,
+            maxPages: 1,
+            maxRetries,
+        });
+    };
+    let rows: GoogleAdsResult[] = [];
+    try {
+        rows = await runSearch(loginCustomerId);
+    }
+    catch {
+        try {
+            rows = await runSearch(undefined);
+        }
+        catch {
+            return null;
+        }
+    }
     if (rows.length === 0)
         return null;
     const budget = rows[0]!.campaignBudget as {
@@ -459,10 +414,11 @@ export async function updateGoogleCampaignBudgetByCampaign(options: {
     campaignId: string;
     amountMicros: number;
     loginCustomerId?: string | null;
+    maxRetries?: number;
 }): Promise<{
     success: boolean;
 }> {
-    const { accessToken, developerToken, customerId, campaignId, amountMicros, loginCustomerId, } = options;
+    const { accessToken, developerToken, customerId, campaignId, amountMicros, loginCustomerId, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, } = options;
     // First, get the budget ID for this campaign
     const budgetId = await getGoogleCampaignBudgetId({
         accessToken,
@@ -470,6 +426,7 @@ export async function updateGoogleCampaignBudgetByCampaign(options: {
         customerId,
         campaignId,
         loginCustomerId,
+        maxRetries,
     });
     if (!budgetId) {
         throw new GoogleAdsApiError({
@@ -486,6 +443,7 @@ export async function updateGoogleCampaignBudgetByCampaign(options: {
         budgetId,
         amountMicros,
         loginCustomerId,
+        maxRetries,
     });
 }
 // =============================================================================
@@ -499,19 +457,11 @@ export async function updateGoogleCampaignBidding(options: {
     biddingType: string;
     biddingValue: number;
     loginCustomerId?: string | null;
+    maxRetries?: number;
 }): Promise<{
     success: boolean;
 }> {
-    const { accessToken, developerToken, customerId, campaignId, biddingType, biddingValue, loginCustomerId, } = options;
-    const url = `${GOOGLE_API_BASE}/customers/${customerId}/campaigns:mutate`;
-    const headers: Record<string, string> = {
-        Authorization: `Bearer ${accessToken}`,
-        'developer-token': developerToken,
-        'Content-Type': 'application/json',
-    };
-    if (loginCustomerId) {
-        headers['login-customer-id'] = loginCustomerId;
-    }
+    const { accessToken, developerToken, customerId, campaignId, biddingType, biddingValue, loginCustomerId, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, } = options;
     const update: Record<string, unknown> = {
         resourceName: `customers/${customerId}/campaigns/${campaignId}`,
     };
@@ -546,19 +496,14 @@ export async function updateGoogleCampaignBidding(options: {
                 updateMask,
             }],
     };
-    const response = await fetch(url, {
+    await executeGoogleAdsApiRequest<GoogleAdsMutateResponse>({
+        url: `${GOOGLE_API_BASE}/customers/${customerId}/campaigns:mutate`,
         method: 'POST',
-        headers,
+        headers: buildGoogleHeaders({ accessToken, developerToken, loginCustomerId, contentType: 'application/json' }),
         body: JSON.stringify(mutation),
+        operation: 'updateGoogleCampaignBidding',
+        maxRetries,
     });
-    if (!response.ok) {
-        const errorData = await parseGoogleAdsErrorResponse(response, 'Google Ads bidding mutation error');
-        throw new GoogleAdsApiError({
-            message: errorData?.error?.message ?? 'Bidding update failed',
-            httpStatus: response.status,
-            errorCode: 'MUTATION_ERROR',
-        });
-    }
     return { success: true };
 }
 // =============================================================================
@@ -570,13 +515,13 @@ export async function removeGoogleCampaign(options: {
     customerId: string;
     campaignId: string;
     loginCustomerId?: string | null;
+    maxRetries?: number;
 }): Promise<{
     success: boolean;
+    message?: string;
 }> {
     return updateGoogleCampaignStatus({
         ...options,
-        status: 'PAUSED',
-    }) as Promise<{
-        success: boolean;
-    }>;
+        status: 'REMOVED',
+    });
 }

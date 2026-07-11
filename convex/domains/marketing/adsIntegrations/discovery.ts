@@ -80,6 +80,7 @@ export const listGoogleAdAccounts = action({
         name: account.name,
         currencyCode: account.currencyCode ?? null,
         isManager: Boolean(account.manager),
+        isTestAccount: Boolean(account.testAccount),
         loginCustomerId: account.loginCustomerId ?? null,
         managerCustomerId: account.managerCustomerId ?? null,
       }))

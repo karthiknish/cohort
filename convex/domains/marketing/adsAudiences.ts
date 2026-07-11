@@ -142,6 +142,10 @@ export const createAudience = action({
       throw Errors.base.badRequest('Unsupported provider')
     }
 
+    if (!result.success) {
+      throw Errors.integration.error(args.providerId, 'Failed to create audience')
+    }
+
     return {
       success: true,
       message: `Audience "${args.name}" created on ${args.providerId}`,

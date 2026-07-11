@@ -1,4 +1,4 @@
-import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto';
+import { decrypt, encrypt, generateCodeChallenge, generateCodeVerifier } from '@/lib/crypto';
 import { enqueueSyncJob, getAdIntegration, persistIntegrationTokens } from '@/lib/ads-admin';
 import { getGoogleAnalyticsIntegration, persistGoogleAnalyticsTokens } from '@/lib/analytics-admin';
 import { asErrorMessage } from '@/lib/convex-errors';
@@ -113,12 +113,14 @@ interface BuildGoogleAuthUrlOptions {
     scopes?: string[];
     accessType?: 'online' | 'offline';
     prompt?: 'none' | 'consent' | 'select_account';
+    codeVerifier?: string;
 }
 interface ExchangeCodeOptions {
     clientId: string;
     clientSecret: string;
     redirectUri: string;
     code: string;
+    codeVerifier?: string;
 }
 interface GoogleTokenResponse {
     access_token: string;
@@ -201,7 +203,7 @@ export function validateGoogleOAuthState(state: string): GoogleOAuthContext {
 // URL BUILDING
 // =============================================================================
 export function buildGoogleOAuthUrl(options: BuildGoogleAuthUrlOptions): string {
-    const { clientId, redirectUri, state, scopes = GOOGLE_ADS_SCOPES, accessType = 'offline', prompt = 'consent', } = options;
+    const { clientId, redirectUri, state, scopes = GOOGLE_ADS_SCOPES, accessType = 'offline', prompt = 'consent', codeVerifier, } = options;
     if (!clientId) {
         throw new Error('Google client ID is required');
     }
@@ -219,6 +221,10 @@ export function buildGoogleOAuthUrl(options: BuildGoogleAuthUrlOptions): string 
     if (state) {
         params.set('state', state);
     }
+    if (codeVerifier) {
+        params.set('code_challenge', generateCodeChallenge(codeVerifier));
+        params.set('code_challenge_method', 'S256');
+    }
     return `${GOOGLE_AUTH_ENDPOINT}?${params.toString()}`;
 }
 export function buildGoogleAnalyticsOAuthUrl(options: BuildGoogleAuthUrlOptions): string {
@@ -231,7 +237,7 @@ export function buildGoogleAnalyticsOAuthUrl(options: BuildGoogleAuthUrlOptions)
 // TOKEN EXCHANGE
 // =============================================================================
 export async function exchangeGoogleCodeForTokens(options: ExchangeCodeOptions): Promise<GoogleTokenResponse> {
-    const { clientId, clientSecret, redirectUri, code } = options;
+    const { clientId, clientSecret, redirectUri, code, codeVerifier } = options;
     if (!clientId || !clientSecret) {
         throw new GoogleTokenExchangeError({
             message: 'Google OAuth credentials are required',
@@ -249,6 +255,9 @@ export async function exchangeGoogleCodeForTokens(options: ExchangeCodeOptions):
         code,
         grant_type: 'authorization_code',
     });
+    if (codeVerifier) {
+        body.set('code_verifier', codeVerifier);
+    }
     let response: Response;
     try {
         response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
@@ -299,8 +308,9 @@ export async function completeGoogleOAuthFlow(options: {
     userId: string;
     clientId?: string | null;
     redirectUri: string;
+    codeVerifier?: string;
 }): Promise<void> {
-    const { code, userId, clientId: integrationClientId, redirectUri } = options;
+    const { code, userId, clientId: integrationClientId, redirectUri, codeVerifier } = options;
     const { clientId: googleClientId, clientSecret: googleClientSecret } = resolveGoogleAdsOAuthCredentials();
     if (!googleClientId || !googleClientSecret) {
         throw new GoogleOAuthError('Google OAuth credentials are not configured');
@@ -313,6 +323,7 @@ export async function completeGoogleOAuthFlow(options: {
             clientSecret: googleClientSecret,
             redirectUri,
             code,
+            codeVerifier,
         });
     }
     catch (error) {
@@ -366,8 +377,9 @@ export async function completeGoogleAnalyticsOAuthFlow(options: {
     userId: string;
     clientId?: string | null;
     redirectUri: string;
+    codeVerifier?: string;
 }): Promise<void> {
-    const { code, userId, clientId: integrationClientId, redirectUri } = options;
+    const { code, userId, clientId: integrationClientId, redirectUri, codeVerifier } = options;
     const { clientId: googleClientId, clientSecret: googleClientSecret } = resolveGoogleAnalyticsOAuthCredentials();
     if (!googleClientId || !googleClientSecret) {
         throw new GoogleOAuthError('Google Analytics OAuth credentials are not configured');
@@ -379,6 +391,7 @@ export async function completeGoogleAnalyticsOAuthFlow(options: {
             clientSecret: googleClientSecret,
             redirectUri,
             code,
+            codeVerifier,
         });
     }
     catch (error) {

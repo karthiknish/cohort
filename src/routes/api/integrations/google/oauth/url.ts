@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { buildGoogleOAuthUrl, createGoogleOAuthState, resolveGoogleAdsOAuthCredentials, resolveGoogleAdsOAuthRedirectUri } from '@/services/google-oauth'
 import { BadRequestError, ServiceUnavailableError, UnauthorizedError } from '@/lib/api-errors'
 import { isValidRedirectUrl } from '@/lib/utils'
+import { generateCodeVerifier } from '@/lib/crypto'
 
 const querySchema = z.object({
   redirect: z.string().optional(),
@@ -27,8 +28,9 @@ const handlers = adaptApiHandler(
       typeof query.clientId === 'string' && query.clientId.trim().length > 0
         ? query.clientId.trim()
         : null
-    const statePayload = createGoogleOAuthState({ state: auth.uid, redirect, clientId: integrationClientId })
-    const loginUrl = buildGoogleOAuthUrl({ clientId: googleClientId, redirectUri, state: statePayload })
+    const codeVerifier = generateCodeVerifier()
+    const statePayload = createGoogleOAuthState({ state: auth.uid, redirect, clientId: integrationClientId, codeVerifier })
+    const loginUrl = buildGoogleOAuthUrl({ clientId: googleClientId, redirectUri, state: statePayload, codeVerifier })
     return { url: loginUrl }
   },
 )

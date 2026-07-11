@@ -116,6 +116,12 @@ export const initializeAdAccount = action({
         throw Errors.validation.invalidInput('Selected Google Ads account is not available for this integration token')
       }
 
+      if (selectedAccount.manager) {
+        throw Errors.validation.invalidInput(
+          'Manager accounts cannot be selected as the sync target. Choose a client account under the manager.',
+        )
+      }
+
       const accountId = selectedAccount.id
       const loginCustomerId = selectedAccount.loginCustomerId ?? (selectedAccount.manager ? selectedAccount.id : null)
       const managerCustomerId = selectedAccount.managerCustomerId ?? (selectedAccount.manager ? selectedAccount.id : null)

@@ -1,11 +1,10 @@
 // =============================================================================
 // GOOGLE ADS AUDIENCE TARGETING - Fetch and create audience targeting
 // =============================================================================
-import { googleAdsSearch } from './client';
-import { parseJsonBodySafely, parseRequiredJsonBody } from '@/lib/response-json';
+import { googleAdsSearch, executeGoogleAdsApiRequest, buildGoogleHeaders } from './client';
 import { GoogleAdsApiError } from './errors';
 import { GOOGLE_API_BASE, } from './types';
-import type { GoogleAudienceTargeting, GoogleAdsApiErrorResponse, } from './types';
+import type { GoogleAudienceTargeting, GoogleAdsMutateResponse, } from './types';
 type GoogleCriterion = {
     type?: string;
     negative?: boolean;
@@ -295,20 +294,12 @@ export async function createGoogleAudience(options: {
     description?: string;
     segments: string[];
     loginCustomerId?: string | null;
+    maxRetries?: number;
 }): Promise<{
     success: boolean;
     resourceName: string;
 }> {
-    const { accessToken, developerToken, customerId, name, description, loginCustomerId, } = options;
-    const url = `${GOOGLE_API_BASE}/customers/${customerId}/userLists:mutate`;
-    const headers: Record<string, string> = {
-        Authorization: `Bearer ${accessToken}`,
-        'developer-token': developerToken,
-        'Content-Type': 'application/json',
-    };
-    if (loginCustomerId) {
-        headers['login-customer-id'] = loginCustomerId;
-    }
+    const { accessToken, developerToken, customerId, name, description, loginCustomerId, maxRetries = 3, } = options;
     const mutation = {
         operations: [{
                 create: {
@@ -324,31 +315,21 @@ export async function createGoogleAudience(options: {
                 }
             }]
     };
-    const response = await fetch(url, {
+    const { payload } = await executeGoogleAdsApiRequest<GoogleAdsMutateResponse>({
+        url: `${GOOGLE_API_BASE}/customers/${customerId}/userLists:mutate`,
         method: 'POST',
-        headers,
+        headers: buildGoogleHeaders({ accessToken, developerToken, loginCustomerId, contentType: 'application/json' }),
         body: JSON.stringify(mutation),
+        operation: 'createGoogleAudience',
+        maxRetries,
     });
-    if (!response.ok) {
-        const errorData = await parseJsonBodySafely<GoogleAdsApiErrorResponse>(response, {
-            context: 'Google Ads audience creation error',
-            allowEmpty: true,
-        });
+    const resourceName = payload.results?.[0]?.resourceName ?? '';
+    if (!resourceName) {
         throw new GoogleAdsApiError({
-            message: errorData?.error?.message ?? 'Audience creation failed',
-            httpStatus: response.status,
-            errorCode: 'MUTATION_ERROR',
+            message: 'Audience creation succeeded but resource name was not returned',
+            httpStatus: 500,
+            errorCode: 'INTERNAL_ERROR',
         });
     }
-    const result = await parseRequiredJsonBody<{
-        results?: Array<{
-            resourceName?: string;
-        }>;
-    }>(response, {
-        context: 'Google Ads audience creation response',
-    });
-    return {
-        success: true,
-        resourceName: result.results?.[0]?.resourceName ?? ''
-    };
+    return { success: true, resourceName };
 }

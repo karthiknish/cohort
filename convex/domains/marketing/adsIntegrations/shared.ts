@@ -3,6 +3,7 @@ import type { Id } from '/_generated/dataModel'
 import { v } from 'convex/values'
 import { z } from 'zod/v4'
 import { Errors, withErrorHandling } from '../../../errors'
+import { validateGoogleAdsDeveloperToken } from '@/services/integrations/google-ads/types'
 import {
   authenticatedMutation,
   authenticatedQuery,
@@ -50,8 +51,9 @@ export function normalizeMetaAccountId(value: string | null | undefined): string
 
 export function normalizeGoogleAdsAccountId(value: string | null | undefined): string | null {
   if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
+  const digits = value.replace(/\D/g, '')
+  if (digits.length !== 10) return null
+  return digits
 }
 
 export function normalizeGoogleAnalyticsPropertyId(value: string | null | undefined): string | null {
@@ -68,7 +70,12 @@ export function normalizeGoogleAnalyticsPropertyId(value: string | null | undefi
 export function resolveGoogleAdsDeveloperToken(integrationDeveloperToken: string | null | undefined): string {
   const fromIntegration = typeof integrationDeveloperToken === 'string' ? integrationDeveloperToken.trim() : ''
   if (fromIntegration.length > 0) {
-    return fromIntegration
+    try {
+      return validateGoogleAdsDeveloperToken(fromIntegration)
+    }
+    catch {
+      // fallthrough to env
+    }
   }
 
   const fromEnv = typeof process.env.GOOGLE_ADS_DEVELOPER_TOKEN === 'string'
@@ -76,7 +83,7 @@ export function resolveGoogleAdsDeveloperToken(integrationDeveloperToken: string
     : ''
 
   if (fromEnv.length > 0) {
-    return fromEnv
+    return validateGoogleAdsDeveloperToken(fromEnv)
   }
 
   throw Errors.integration.notConfigured(

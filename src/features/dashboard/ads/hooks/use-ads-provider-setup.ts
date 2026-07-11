@@ -58,7 +58,7 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
             const options = Array.isArray(payload) ? payload : [];
             setGoogleAccountOptions(options);
             setSelectedGoogleAccountId((currentValue) => {
-                if (currentValue && options.some((option) => option.id === currentValue)) {
+                if (currentValue && options.some((option) => option.id === currentValue && !option.isManager)) {
                     return currentValue;
                 }
                 const defaultOption = options.find((option) => !option.isManager) ?? options[0];

@@ -26,6 +26,24 @@ export function extractNumber(value: unknown): number | null {
     }
     return null;
 }
+export function buildGoogleHeaders(options: {
+    accessToken: string;
+    developerToken: string;
+    loginCustomerId?: string | null;
+    contentType?: string;
+}): Record<string, string> {
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${options.accessToken}`,
+        'developer-token': options.developerToken,
+    };
+    if (options.contentType) {
+        headers['Content-Type'] = options.contentType;
+    }
+    if (options.loginCustomerId) {
+        headers['login-customer-id'] = options.loginCustomerId;
+    }
+    return headers;
+}
 // =============================================================================
 // EXECUTE GOOGLE ADS API REQUEST WITH RETRY LOGIC
 // =============================================================================
@@ -40,7 +58,8 @@ interface ExecuteRequestOptions {
         retry: boolean;
         newToken?: string;
     }>;
-    onRateLimitHit?: (retryAfterMs: number) => void;
+    onRateLimitHit?: (retryAfterMs: number, details?: import('@/lib/retry-utils').RateLimitDetails) => void;
+    onRateLimitTelemetry?: (details: import('@/lib/retry-utils').RateLimitDetails) => void;
 }
 export async function executeGoogleAdsApiRequest<T>(options: ExecuteRequestOptions): Promise<{
     response: Response;
@@ -64,9 +83,10 @@ export async function googleAdsSearch(options: {
         retry: boolean;
         newToken?: string;
     }>;
-    onRateLimitHit?: (retryAfterMs: number) => void;
+    onRateLimitHit?: (retryAfterMs: number, details?: import('@/lib/retry-utils').RateLimitDetails) => void;
+    onRateLimitTelemetry?: (details: import('@/lib/retry-utils').RateLimitDetails) => void;
 }): Promise<GoogleAdsResult[]> {
-    const { accessToken, developerToken, customerId, query, loginCustomerId, pageSize = 1000, maxPages = 1, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, onAuthError, onRateLimitHit, } = options;
+    const { accessToken, developerToken, customerId, query, loginCustomerId, pageSize = 1000, maxPages = 1, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, onAuthError, onRateLimitHit, onRateLimitTelemetry, } = options;
     let currentAccessToken = accessToken;
     const fetchPage = async (page: number, pageToken?: string): Promise<GoogleAdsResult[]> => {
         const url = `${GOOGLE_API_BASE}/customers/${customerId}/googleAds:search`;
@@ -102,6 +122,7 @@ export async function googleAdsSearch(options: {
                 return { retry: false };
             },
             onRateLimitHit,
+            onRateLimitTelemetry,
         });
         const pageResults = Array.isArray(payload.results) ? payload.results : [];
         const nextPageToken = payload.nextPageToken ?? undefined;

@@ -3,6 +3,7 @@ import { adaptApiHandler } from '@/lib/api-handler-start'
 import { z } from 'zod'
 import { BadRequestError, ServiceUnavailableError, UnauthorizedError } from '@/lib/api-errors'
 import { isValidRedirectUrl } from '@/lib/utils'
+import { generateCodeVerifier } from '@/lib/crypto'
 import { buildGoogleAnalyticsOAuthUrl, createGoogleOAuthState, resolveGoogleAnalyticsOAuthCredentials, resolveGoogleAnalyticsOAuthRedirectUri } from '@/services/google-oauth'
 
 const querySchema = z.object({
@@ -27,8 +28,9 @@ const handlers = adaptApiHandler(
       typeof query.clientId === 'string' && query.clientId.trim().length > 0
         ? query.clientId.trim()
         : null
-    const state = createGoogleOAuthState({ state: auth.uid, redirect, clientId: integrationClientId })
-    const url = buildGoogleAnalyticsOAuthUrl({ clientId: googleClientId, redirectUri, state })
+    const codeVerifier = generateCodeVerifier()
+    const state = createGoogleOAuthState({ state: auth.uid, redirect, clientId: integrationClientId, codeVerifier })
+    const url = buildGoogleAnalyticsOAuthUrl({ clientId: googleClientId, redirectUri, state, codeVerifier })
     return { url }
   },
 )

@@ -338,6 +338,14 @@ export const googleAdsClient = new IntegrationApiClient({
     platform: 'google',
     baseUrl: GOOGLE_API_BASE,
     defaultTimeoutMs: DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS,
+    isSuccess: (response, payload) => {
+        if (!response.ok)
+            return false;
+        const data = payload as {
+            partialFailureError?: unknown;
+        } | null | undefined;
+        return data == null || data.partialFailureError == null;
+    },
 });
 export const tiktokAdsClient = new IntegrationApiClient({
     platform: 'tiktok',

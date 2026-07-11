@@ -10,6 +10,7 @@ type GoogleAdAccountOption = {
     name: string;
     currencyCode: string | null;
     isManager: boolean;
+    isTestAccount: boolean;
     loginCustomerId: string | null;
     managerCustomerId: string | null;
 };
@@ -27,6 +28,8 @@ type GoogleSetupDialogProps = {
 };
 export function GoogleSetupDialog({ open, onOpenChange, setupMessage, accountOptions, selectedAccountId, onAccountSelectionChange, loadingAccounts, initializing, onReloadAccounts, onInitialize, }: GoogleSetupDialogProps) {
     const noAccounts = !loadingAccounts && accountOptions.length === 0;
+    const selectedAccount = accountOptions.find((account) => account.id === selectedAccountId);
+    const canInitialize = selectedAccount != null && !selectedAccount.isManager;
     return (<Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -57,8 +60,10 @@ export function GoogleSetupDialog({ open, onOpenChange, setupMessage, accountOpt
                 <SelectValue placeholder={loadingAccounts ? 'Loading accounts…' : 'Select Google Ads account'}/>
               </SelectTrigger>
               <SelectContent>
-                {accountOptions.map((account) => (<SelectItem key={account.id} value={account.id}>
-                    {account.name}{account.isManager ? ' (Manager)' : ''}
+                {accountOptions.map((account) => (<SelectItem key={account.id} value={account.id} disabled={account.isManager}>
+                    {account.name}
+                    {account.isTestAccount ? ' (Test)' : ''}
+                    {account.isManager ? ' (Manager)' : ''}
                   </SelectItem>))}
               </SelectContent>
             </Select>
@@ -75,7 +80,7 @@ export function GoogleSetupDialog({ open, onOpenChange, setupMessage, accountOpt
                 Loading…
               </>) : ('Reload accounts')}
           </Button>
-          <Button type="button" onClick={onInitialize} disabled={initializing || loadingAccounts || !selectedAccountId}>
+          <Button type="button" onClick={onInitialize} disabled={initializing || loadingAccounts || !canInitialize}>
             {initializing ? (<>
                 <Loader2 className="mr-2 size-4 animate-spin"/>
                 Finishing…

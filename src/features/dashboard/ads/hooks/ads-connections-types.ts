@@ -28,6 +28,7 @@ export type GoogleAdAccountOption = {
     name: string;
     currencyCode: string | null;
     isManager: boolean;
+    isTestAccount: boolean;
     loginCustomerId: string | null;
     managerCustomerId: string | null;
 };

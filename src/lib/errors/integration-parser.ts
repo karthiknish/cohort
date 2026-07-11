@@ -5,6 +5,7 @@
 import { logger } from '@/lib/logger';
 import { META_AUTH_CODE_VALUES, META_RATE_LIMIT_CODE_VALUES, META_RETRYABLE_CODE_VALUES, type MetaErrorCode } from '@/services/integrations/meta-ads/types';
 import { parseMetaRateLimitHeaders } from '@/services/integrations/meta-ads/rate-limit-headers';
+import { extractGoogleAdsErrorPayload, classifyGoogleAdsError, parseGoogleAdsRateLimitHeaders } from '@/services/integrations/google-ads/error-parser';
 import { UnifiedError, type IntegrationPlatform } from './unified-error';
 // =============================================================================
 // PLATFORM ERROR CODE MAPS
@@ -12,9 +13,6 @@ import { UnifiedError, type IntegrationPlatform } from './unified-error';
 const META_AUTH_CODES = META_AUTH_CODE_VALUES;
 const META_RATE_LIMIT_CODES = META_RATE_LIMIT_CODE_VALUES;
 const META_RETRYABLE_CODES = META_RETRYABLE_CODE_VALUES;
-const GOOGLE_AUTH_ERRORS = ['AUTHENTICATION_ERROR', 'AUTHORIZATION_ERROR'];
-const GOOGLE_RATE_LIMIT_ERRORS = ['QUOTA_ERROR', 'RATE_LIMIT_ERROR'];
-const GOOGLE_RETRYABLE_ERRORS = ['INTERNAL_ERROR', 'TRANSIENT_ERROR'];
 const LINKEDIN_AUTH_CODES = [401, 403];
 const LINKEDIN_RATE_LIMIT_CODES = [429];
 const LINKEDIN_RETRYABLE_CODES = [500, 502, 503, 504];
@@ -27,9 +25,11 @@ const TIKTOK_RETRYABLE_CODES = [50000, 50001];
 interface ParsedPayload {
     message: string;
     code?: number | string;
+    status?: string;
     subcode?: number;
     type?: string;
     traceId?: string;
+    requestId?: string;
 }
 type UnknownRecord = Record<string, unknown>;
 function asRecord(value: unknown): UnknownRecord | null {
@@ -107,33 +107,13 @@ function extractMetaPayload(payload: unknown): ParsedPayload {
     return { message: `Meta API error (Payload: ${rawPayload})` };
 }
 function extractGooglePayload(payload: unknown): ParsedPayload {
-    if (payload == null) {
-        return { message: 'Google API error' };
-    }
-    const data = payload as {
-        error?: {
-            message?: string;
-            status?: string;
-            code?: number;
-            errors?: Array<{
-                message?: string;
-                domain?: string;
-                reason?: string;
-            }>;
-            details?: Array<{
-                reason?: string;
-            }>;
-        } | null;
-    };
-    const error = data?.error;
-    if (error == null) {
-        return { message: 'Google API error' };
-    }
-    const legacy = error.errors?.[0];
-    const detailReason = error.details?.find((d) => typeof d.reason === 'string')?.reason;
+    const parsed = extractGoogleAdsErrorPayload(payload);
     return {
-        message: error.message ?? legacy?.message ?? 'Google API error',
-        code: detailReason ?? error.status ?? legacy?.reason ?? legacy?.domain,
+        message: parsed.message,
+        code: parsed.code,
+        status: parsed.status,
+        traceId: parsed.requestId,
+        requestId: parsed.requestId,
     };
 }
 function extractLinkedInPayload(payload: unknown): ParsedPayload {
@@ -181,16 +161,13 @@ function classifyMetaError(code?: number | string): Classification {
     const isRetryable = isRateLimitError || (typedCode !== undefined && !isAuthError && META_RETRYABLE_CODES.includes(typedCode));
     return { isAuthError, isRateLimitError, isRetryable };
 }
-function classifyGoogleError(code?: number | string): Classification {
-    const strCode = String(code ?? '').toUpperCase();
-    const isAuthError = GOOGLE_AUTH_ERRORS.some((c) => strCode.includes(c)) ||
-        strCode.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT') ||
-        strCode.includes('PERMISSION_DENIED');
-    const isRateLimitError = GOOGLE_RATE_LIMIT_ERRORS.some((c) => strCode.includes(c)) ||
-        strCode.includes('RESOURCE_EXHAUSTED') ||
-        strCode.includes('RATE_LIMIT');
-    const isRetryable = isRateLimitError || GOOGLE_RETRYABLE_ERRORS.some((c) => strCode.includes(c));
-    return { isAuthError, isRateLimitError, isRetryable };
+function classifyGoogleError(code?: number | string, status?: string, httpStatus?: number): Classification {
+    const google = classifyGoogleAdsError(
+        typeof code === 'string' ? code : undefined,
+        status,
+        httpStatus ?? 0,
+    );
+    return google;
 }
 function classifyLinkedInError(code?: number | string, httpStatus?: number): Classification {
     const numCode = typeof code === 'number' ? code : parseInt(String(code), 10) || httpStatus || 0;
@@ -232,7 +209,7 @@ export function parseIntegrationError(response: Response, payload: unknown, plat
             break;
         case 'google':
             parsed = extractGooglePayload(payload);
-            classification = classifyGoogleError(parsed.code);
+            classification = classifyGoogleError(parsed.code, parsed.status, httpStatus);
             break;
         case 'linkedin':
             parsed = extractLinkedInPayload(payload);
@@ -247,7 +224,11 @@ export function parseIntegrationError(response: Response, payload: unknown, plat
             classification = { isAuthError: false, isRateLimitError: false, isRetryable: false };
     }
     // Extract retry-after / platform-specific rate-limit headers
-    let rateLimitDetails = platform === 'meta' ? parseMetaRateLimitHeaders(response.headers) : undefined;
+    let rateLimitDetails = platform === 'meta'
+        ? parseMetaRateLimitHeaders(response.headers)
+        : platform === 'google'
+            ? parseGoogleAdsRateLimitHeaders(response.headers)
+            : undefined;
     let retryAfterMs = rateLimitDetails?.retryAfterMs;
     if (retryAfterMs === undefined) {
         const retryAfterHeader = response.headers.get('retry-after');
@@ -261,6 +242,10 @@ export function parseIntegrationError(response: Response, payload: unknown, plat
     if (retryAfterMs === undefined && classification.isRateLimitError) {
         retryAfterMs = 60000; // Default 1 minute for rate limits
     }
+    const details: Record<string, string[]> = {};
+    if (parsed.traceId) details.traceId = [parsed.traceId];
+    if (parsed.requestId) details.requestId = [parsed.requestId];
+    if (parsed.code !== undefined) details.errorCode = [String(parsed.code)];
     return new UnifiedError({
         message: parsed.message,
         status: httpStatus,
@@ -271,7 +256,7 @@ export function parseIntegrationError(response: Response, payload: unknown, plat
         isRateLimitError: classification.isRateLimitError,
         retryAfterMs,
         rateLimitDetails,
-        details: parsed.traceId ? { traceId: [parsed.traceId] } : undefined,
+        details: Object.keys(details).length > 0 ? details : undefined,
     });
 }
 /**

@@ -1,11 +1,10 @@
 // =============================================================================
 // GOOGLE ADS METRICS - Fetching ad metrics from Google Ads API
 // =============================================================================
-import { googleAdsSearch, normalizeCost, DEFAULT_RETRY_CONFIG } from './client';
-import { parseJsonBodySafely } from '@/lib/response-json';
+import { googleAdsSearch, normalizeCost, DEFAULT_RETRY_CONFIG, executeGoogleAdsApiRequest, buildGoogleHeaders } from './client';
 import { asErrorMessage } from '@/lib/convex-errors';
 import { logger } from '@/lib/logger';
-import { GOOGLE_API_BASE, } from './types';
+import { GOOGLE_API_BASE, validateGoogleAdsDeveloperToken } from './types';
 import type { GoogleAdsOptions, GoogleAdsResult, NormalizedMetric, CustomerSummary, GoogleAdAccount, GoogleAccessibleCustomersResponse, } from './types';
 // =============================================================================
 // MAIN API: FETCH GOOGLE ADS METRICS
@@ -31,13 +30,10 @@ function buildGaqlQuery(timeframeDays: number): string {
 }
 function resolveDeveloperToken(token?: string | null): string {
     const resolved = token ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
-    if (!resolved) {
-        throw new Error('Google Ads developer token is required via integration data or GOOGLE_ADS_DEVELOPER_TOKEN env');
-    }
-    return resolved;
+    return validateGoogleAdsDeveloperToken(resolved);
 }
 export async function fetchGoogleAdsMetrics(options: GoogleAdsOptions): Promise<NormalizedMetric[]> {
-    const { accessToken, developerToken, customerId, loginCustomerId, managerCustomerId, timeframeDays, pageSize = 1000, maxPages = 5, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, refreshAccessToken, onRateLimitHit, onTokenRefresh, } = options;
+    const { accessToken, developerToken, customerId, loginCustomerId, managerCustomerId, timeframeDays, pageSize = 1000, maxPages = 10, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, refreshAccessToken, onRateLimitHit, onRateLimitTelemetry, onTokenRefresh, } = options;
     const resolvedDeveloperToken = resolveDeveloperToken(developerToken);
     const query = buildGaqlQuery(timeframeDays);
     const effectiveLoginCustomerId = loginCustomerId ?? managerCustomerId ?? null;
@@ -62,6 +58,7 @@ export async function fetchGoogleAdsMetrics(options: GoogleAdsOptions): Promise<
             return { retry: false };
         },
         onRateLimitHit,
+        onRateLimitTelemetry,
     });
     const metrics: NormalizedMetric[] = rows.map((row) => {
         const segments = row?.segments ?? {};
@@ -106,7 +103,8 @@ async function fetchCustomerSummary(options: {
       customer.id,
       customer.descriptive_name,
       customer.currency_code,
-      customer.manager
+      customer.manager,
+      customer.test_account
     FROM customer
     LIMIT 1
   `
@@ -150,6 +148,7 @@ async function fetchCustomerSummary(options: {
             name: `Customer ${customerId}`,
             currencyCode: null,
             manager: false,
+            testAccount: false,
         };
     }
     return {
@@ -157,6 +156,7 @@ async function fetchCustomerSummary(options: {
         name: customer.descriptiveName ?? `Customer ${customer.id ?? customerId}`,
         currencyCode: customer.currencyCode ?? null,
         manager: Boolean(customer.manager),
+        testAccount: Boolean(customer.testAccount),
     };
 }
 async function fetchManagerClients(options: {
@@ -172,6 +172,7 @@ async function fetchManagerClients(options: {
       customer_client.descriptive_name,
       customer_client.currency_code,
       customer_client.manager,
+      customer_client.test_account,
       customer_client.level
     FROM customer_client
     WHERE customer_client.hidden = FALSE
@@ -202,6 +203,7 @@ async function fetchManagerClients(options: {
                 name: customerClient?.descriptiveName ?? `Customer ${clientId}`,
                 currencyCode: customerClient?.currencyCode ?? null,
                 manager,
+                testAccount: Boolean(customerClient?.testAccount),
                 loginCustomerId: managerId,
                 managerCustomerId: managerId,
             });
@@ -221,17 +223,13 @@ export async function fetchGoogleAdAccounts(options: {
     const { accessToken, developerToken, maxRetries = 2 } = options;
     const resolvedDeveloperToken = resolveDeveloperToken(developerToken);
     const listUrl = `${GOOGLE_API_BASE}/customers:listAccessibleCustomers`;
-    const listResponse = await fetch(listUrl, {
+    const { payload: listData } = await executeGoogleAdsApiRequest<GoogleAccessibleCustomersResponse>({
+        url: listUrl,
         method: 'GET',
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'developer-token': resolvedDeveloperToken,
-        },
+        headers: buildGoogleHeaders({ accessToken, developerToken: resolvedDeveloperToken }),
+        operation: 'listAccessibleCustomers',
+        maxRetries,
     });
-    if (!listResponse.ok) {
-        throw new Error(`Failed to list accessible customers: ${listResponse.status}`);
-    }
-    const listData = (await listResponse.json()) as GoogleAccessibleCustomersResponse;
     const resourceNames = listData.resourceNames ?? [];
     const customerIds = resourceNames
         .flatMap((r) => {
@@ -264,6 +262,7 @@ export async function fetchGoogleAdAccounts(options: {
                     name: summary.name,
                     currencyCode: summary.currencyCode,
                     manager: true,
+                    testAccount: summary.testAccount,
                     loginCustomerId: null,
                     managerCustomerId: null,
                 },
@@ -275,6 +274,7 @@ export async function fetchGoogleAdAccounts(options: {
                 name: summary.name,
                 currencyCode: summary.currencyCode,
                 manager: false,
+                testAccount: summary.testAccount,
                 loginCustomerId: null,
                 managerCustomerId: null,
             },
@@ -290,6 +290,7 @@ export async function checkGoogleAdsIntegrationHealth(options: {
     developerToken?: string | null;
     customerId?: string;
     loginCustomerId?: string | null;
+    maxRetries?: number;
 }): Promise<{
     healthy: boolean;
     tokenValid: boolean;
@@ -297,67 +298,52 @@ export async function checkGoogleAdsIntegrationHealth(options: {
     accountAccessible: boolean;
     error?: string;
 }> {
-    const { accessToken, developerToken, customerId, loginCustomerId } = options;
+    const { accessToken, developerToken, customerId, loginCustomerId, maxRetries = 2 } = options;
     try {
         const resolvedDeveloperToken = resolveDeveloperToken(developerToken);
         const listUrl = `${GOOGLE_API_BASE}/customers:listAccessibleCustomers`;
-        const listResponse = await fetch(listUrl, {
-            method: 'GET',
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-                'developer-token': resolvedDeveloperToken,
-            },
-        });
-        if (!listResponse.ok) {
-            const errorData = await parseJsonBodySafely<{
-                error?: {
-                    message?: string;
-                };
-            }>(listResponse, {
-                context: 'Google Ads health accessible customers error',
-                allowEmpty: true,
+        try {
+            await executeGoogleAdsApiRequest<GoogleAccessibleCustomersResponse>({
+                url: listUrl,
+                method: 'GET',
+                headers: buildGoogleHeaders({ accessToken, developerToken: resolvedDeveloperToken }),
+                operation: 'checkGoogleAdsIntegrationHealth:accessibleCustomers',
+                maxRetries,
             });
-            const isDeveloperTokenError = listResponse.status === 401 &&
-                (errorData?.error?.message?.toLowerCase().includes('developer') ?? false);
+        }
+        catch (error) {
+            const unified = error as { status?: number; message?: string };
+            const isDeveloperTokenError = unified.status === 401 &&
+                (unified.message?.toLowerCase().includes('developer') ?? false);
             return {
                 healthy: false,
                 tokenValid: !isDeveloperTokenError,
                 developerTokenValid: !isDeveloperTokenError,
                 accountAccessible: false,
-                error: errorData?.error?.message ?? 'Token validation failed',
+                error: asErrorMessage(error, 'Token validation failed'),
             };
         }
         if (customerId) {
             const query = 'SELECT customer.id FROM customer LIMIT 1';
-            const searchHeaders: Record<string, string> = {
-                Authorization: `Bearer ${accessToken}`,
-                'developer-token': resolvedDeveloperToken,
-                'Content-Type': 'application/json',
-            };
-            if (loginCustomerId) {
-                searchHeaders['login-customer-id'] = loginCustomerId;
-            }
-            const searchUrl = `${GOOGLE_API_BASE}/customers/${customerId}/googleAds:search`;
-            const searchResponse = await fetch(searchUrl, {
-                method: 'POST',
-                headers: searchHeaders,
-                body: JSON.stringify({ query, pageSize: 1 }),
-            });
-            if (!searchResponse.ok) {
-                const errorData = await parseJsonBodySafely<{
-                    error?: {
-                        message?: string;
-                    };
-                }>(searchResponse, {
-                    context: 'Google Ads health account search error',
-                    allowEmpty: true,
+            try {
+                await googleAdsSearch({
+                    accessToken,
+                    developerToken: resolvedDeveloperToken,
+                    customerId,
+                    loginCustomerId,
+                    query,
+                    pageSize: 1,
+                    maxPages: 1,
+                    maxRetries,
                 });
+            }
+            catch (error) {
                 return {
                     healthy: false,
                     tokenValid: true,
                     developerTokenValid: true,
                     accountAccessible: false,
-                    error: errorData?.error?.message ?? 'Account not accessible',
+                    error: asErrorMessage(error, 'Account not accessible'),
                 };
             }
         }

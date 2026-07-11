@@ -2,8 +2,22 @@
 // GOOGLE ADS API TYPES
 // =============================================================================
 import type { NormalizedMetric } from '@/types/integrations';
+import type { RateLimitDetails } from '@/lib/retry-utils';
 export const GOOGLE_API_VERSION = 'v24';
 export const GOOGLE_API_BASE = `https://googleads.googleapis.com/${GOOGLE_API_VERSION}`;
+
+const DEVELOPER_TOKEN_PATTERN = /^[A-Za-z0-9_-]{22}$/;
+
+export function validateGoogleAdsDeveloperToken(value: string | null | undefined): string {
+    const token = typeof value === 'string' ? value.trim() : '';
+    if (token.length === 0) {
+        throw new Error('Google Ads developer token is missing');
+    }
+    if (!DEVELOPER_TOKEN_PATTERN.test(token)) {
+        throw new Error(`Google Ads developer token must be a 22-character alphanumeric string (got ${token.length} characters)`);
+    }
+    return token;
+}
 // =============================================================================
 // v22.0 NEW TYPES
 // =============================================================================
@@ -109,6 +123,10 @@ export interface GoogleAdsErrorDetail {
         }>;
     };
 }
+export interface GoogleAdsFailure {
+    errors?: GoogleAdsErrorDetail[];
+    requestId?: string;
+}
 export interface GoogleAdsApiErrorResponse {
     error?: {
         code?: number;
@@ -116,10 +134,14 @@ export interface GoogleAdsApiErrorResponse {
         status?: string;
         details?: Array<{
             '@type'?: string;
-            errors?: GoogleAdsErrorDetail[];
-            requestId?: string;
-        }>;
+        } & GoogleAdsFailure>;
     };
+}
+export interface GoogleAdsMutateResponse {
+    results?: Array<{
+        resourceName?: string;
+    }>;
+    partialFailureError?: GoogleAdsFailure;
 }
 // =============================================================================
 // API TYPES
@@ -135,7 +157,8 @@ export interface GoogleAdsOptions {
     maxPages?: number;
     maxRetries?: number;
     refreshAccessToken?: () => Promise<string>;
-    onRateLimitHit?: (retryAfterMs: number) => void;
+    onRateLimitHit?: (retryAfterMs: number, details?: RateLimitDetails) => void;
+    onRateLimitTelemetry?: (details: RateLimitDetails) => void;
     onTokenRefresh?: () => void;
 }
 export type { RetryConfig } from '../shared/retry';
@@ -223,12 +246,14 @@ export type GoogleAdsResult = {
         descriptiveName?: string;
         currencyCode?: string;
         manager?: boolean;
+        testAccount?: boolean;
     };
     customerClient?: {
         clientCustomer?: string;
         descriptiveName?: string;
         currencyCode?: string;
         manager?: boolean;
+        testAccount?: boolean;
     };
     [key: string]: unknown;
 };
@@ -242,12 +267,14 @@ export type CustomerSummary = {
     name: string;
     currencyCode?: string | null;
     manager: boolean;
+    testAccount?: boolean;
 };
 export type GoogleAdAccount = {
     id: string;
     name: string;
     currencyCode?: string | null;
     manager: boolean;
+    testAccount?: boolean;
     loginCustomerId?: string | null;
     managerCustomerId?: string | null;
 };

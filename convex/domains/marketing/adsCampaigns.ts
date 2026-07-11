@@ -359,7 +359,7 @@ export const updateCampaign = action({
       const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
 
       if (args.action === 'enable' || args.action === 'pause') {
-        await updateGoogleCampaignStatus({
+        const result = await updateGoogleCampaignStatus({
           accessToken,
           developerToken,
           customerId,
@@ -367,8 +367,9 @@ export const updateCampaign = action({
           status: args.action === 'enable' ? 'ENABLED' : 'PAUSED',
           loginCustomerId: integration.loginCustomerId,
         })
+        if (!result.success) throw Errors.integration.error('google', result.message ?? 'Failed to update campaign status')
       } else if (args.action === 'updateBudget' && args.budget !== undefined) {
-        await updateGoogleCampaignBudgetByCampaign({
+        const result = await updateGoogleCampaignBudgetByCampaign({
           accessToken,
           developerToken,
           customerId,
@@ -376,8 +377,9 @@ export const updateCampaign = action({
           amountMicros: Math.round(args.budget * 1_000_000),
           loginCustomerId: integration.loginCustomerId,
         })
+        if (!result.success) throw Errors.integration.error('google', 'Failed to update campaign budget')
       } else if (args.action === 'updateBidding' && args.biddingType) {
-        await updateGoogleCampaignBidding({
+        const result = await updateGoogleCampaignBidding({
           accessToken,
           developerToken,
           customerId,
@@ -386,14 +388,16 @@ export const updateCampaign = action({
           biddingValue: args.biddingValue ?? 0,
           loginCustomerId: integration.loginCustomerId,
         })
+        if (!result.success) throw Errors.integration.error('google', 'Failed to update campaign bidding')
       } else if (args.action === 'remove') {
-        await removeGoogleCampaign({
+        const result = await removeGoogleCampaign({
           accessToken,
           developerToken,
           customerId,
           campaignId: args.campaignId,
           loginCustomerId: integration.loginCustomerId,
         })
+        if (!result.success) throw Errors.integration.error('google', result.message ?? 'Failed to remove campaign')
       }
 
       return { success: true, campaignId: args.campaignId, action: args.action }
