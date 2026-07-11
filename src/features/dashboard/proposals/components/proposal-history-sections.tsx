@@ -109,10 +109,10 @@ export function ProposalHistoryRow({ canManage = true, deletingProposalId, onDow
     };
     const updatedLabel = formatProposalUpdatedAt(proposal.updatedAt);
     const isDeleting = deletingProposalId === proposal.id;
-    return (<article className={cn('group relative overflow-hidden rounded-2xl border bg-card transition-[border-color,box-shadow]', 'hover:border-primary/20 hover:shadow-md', isActiveDraft && 'border-primary/30 bg-primary/[0.03] ring-1 ring-primary/15')}>
-      {isActiveDraft ? (<div className="absolute inset-y-0 left-0 w-1 bg-primary" aria-hidden/>) : null}
+    return (<article className={cn('group relative transition-colors', 'hover:bg-muted/20', isActiveDraft && 'bg-primary/[0.03]')}>
+      {isActiveDraft ? (<div className="absolute inset-y-0 left-0 w-0.5 bg-primary" aria-hidden/>) : null}
 
-      <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
+      <div className="flex flex-col gap-4 px-1 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-2">
         <div className="min-w-0 space-y-2 pl-0.5">
           <div className="flex flex-wrap items-center gap-2">
             <ViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" default="none">

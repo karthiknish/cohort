@@ -1,15 +1,18 @@
 'use client';
-import { memo, useMemo } from 'react';
-import { CircleAlert, History } from 'lucide-react';
+import { memo, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, CircleAlert, History } from 'lucide-react';
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
 import { cn } from '@/lib/utils';
 import { FadeIn, FadeInStagger } from '@/shared/ui/animate-in';
 import { FadeInItem } from '@/shared/ui/fade-in-item';
 import { MotionCard } from '@/shared/ui/motion-primitives';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
+import { Button } from '@/shared/ui/button';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import type { ProposalDraft } from '@/types/proposals';
 import { ProposalHistoryEmptyState, ProposalHistoryHeader, ProposalHistoryRow, } from './proposal-history-sections';
+
+const PROPOSAL_HISTORY_PAGE_SIZE = 8;
 function extractAiSummary(insights: unknown, depth = 0): string | null {
     if (!insights || depth > 4) {
         return null;
@@ -81,7 +84,7 @@ function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, 
         creating: isCreating,
         generating: isGenerating,
     });
-    const rows = proposals.map((proposal) => {
+    const allRows = useMemo(() => proposals.map((proposal) => {
         const isActiveDraft = proposal.id === draftId;
         const presentationUrl = proposal.pptUrl ?? proposal.presentationDeck?.storageUrl ?? proposal.presentationDeck?.pptxUrl ?? null;
         const pdfUrl = proposal.pdfUrl ?? proposal.presentationDeck?.pdfUrl ?? proposal.presentationDeck?.pdfStorageUrl ?? null;
@@ -106,7 +109,18 @@ function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, 
             resumeDisabled: proposal.status !== 'ready' && isGenerationInFlight,
             resumeLabel,
         };
-    });
+    }), [proposals, draftId, isGenerating, downloadingDeckId]);
+    const totalPages = Math.max(1, Math.ceil(allRows.length / PROPOSAL_HISTORY_PAGE_SIZE));
+    const [pageIndex, setPageIndex] = useState(0);
+    const clampedPageIndex = Math.min(pageIndex, totalPages - 1);
+    const pagedRows = useMemo(() => {
+        const start = clampedPageIndex * PROPOSAL_HISTORY_PAGE_SIZE;
+        return allRows.slice(start, start + PROPOSAL_HISTORY_PAGE_SIZE);
+    }, [allRows, clampedPageIndex]);
+    const canPrev = clampedPageIndex > 0;
+    const canNext = clampedPageIndex < totalPages - 1;
+    const handlePrev = () => canPrev && setPageIndex(clampedPageIndex - 1);
+    const handleNext = () => canNext && setPageIndex(clampedPageIndex + 1);
     return (<FadeIn>
       <MotionCard className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden')}>
         <CardHeader className={DASHBOARD_THEME.cards.header}>
@@ -128,11 +142,28 @@ function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, 
             <CircleAlert className="size-4"/>
             <AlertDescription>{queryError}</AlertDescription>
           </Alert>) : null}
-        <FadeInStagger className="space-y-3">
-          {proposals.length === 0 && !isLoading ? (<ProposalHistoryEmptyState actions={emptyStateActions} onCreateNew={onCreateNew}/>) : (rows.map((row) => (<FadeInItem key={row.proposal.id} y={14}>
-                <ProposalHistoryRow canManage={canManage} deletingProposalId={deletingProposalId} onDownloadDeck={onDownloadDeck} onRequestDelete={onRequestDelete} onResume={onResume} row={row}/>
-              </FadeInItem>)))}
-        </FadeInStagger>
+        {proposals.length === 0 && !isLoading ? (<ProposalHistoryEmptyState actions={emptyStateActions} onCreateNew={onCreateNew}/>) : (<>
+            <FadeInStagger className="divide-y divide-border/60">
+              {pagedRows.map((row) => (<FadeInItem key={row.proposal.id} y={8}>
+                    <ProposalHistoryRow canManage={canManage} deletingProposalId={deletingProposalId} onDownloadDeck={onDownloadDeck} onRequestDelete={onRequestDelete} onResume={onResume} row={row}/>
+                  </FadeInItem>))}
+            </FadeInStagger>
+            {totalPages > 1 ? (<div className="flex items-center justify-between gap-3 pt-1">
+                <p className="text-xs text-muted-foreground">
+                  Page {clampedPageIndex + 1} of {totalPages} · {allRows.length} {allRows.length === 1 ? 'proposal' : 'proposals'}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-full px-3" onClick={handlePrev} disabled={!canPrev}>
+                    <ChevronLeft className="size-3.5"/>
+                    Prev
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-full px-3" onClick={handleNext} disabled={!canNext}>
+                    Next
+                    <ChevronRight className="size-3.5"/>
+                  </Button>
+                </div>
+              </div>) : null}
+          </>)}
       </CardContent>
       </MotionCard>
     </FadeIn>);
