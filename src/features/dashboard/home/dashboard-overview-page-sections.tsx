@@ -171,20 +171,20 @@ export function useDashboardOverviewPage() {
     const { selectedClient, selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
     const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
-    const workspaceId = getWorkspaceId(user);
-    const canQueryConvex = Boolean(workspaceId) && Boolean(user?.id) && isAuthenticated && !convexAuthLoading;
-    const { metrics, metricsLoading, metricsError, rawTasks, taskSummary, tasksLoading, tasksError, proposals, proposalsLoading, proposalsError, handleRefresh, isRefreshing, } = useDashboardData({ selectedClientId });
+    const effectiveWorkspaceId = selectedClient?.workspaceId ?? getWorkspaceId(user);
+    const canQueryConvex = Boolean(effectiveWorkspaceId) && Boolean(user?.id) && isAuthenticated && !convexAuthLoading;
+    const { metrics, metricsLoading, metricsError, rawTasks, taskSummary, tasksLoading, tasksError, proposals, proposalsLoading, proposalsError, handleRefresh, isRefreshing, } = useDashboardData({ selectedClientId, selectedClientWorkspaceId: effectiveWorkspaceId });
     const { orderedStats, displayCurrency } = useDashboardStats({
         metrics,
         taskSummary,
         userRole: user?.role ?? null,
     });
-    const analyticsStatus = useQuery(analyticsIntegrationsApi.getGoogleAnalyticsStatus, !isPreviewMode && canQueryConvex && workspaceId
-        ? { workspaceId, clientId: selectedClientId ?? null }
+    const analyticsStatus = useQuery(analyticsIntegrationsApi.getGoogleAnalyticsStatus, !isPreviewMode && canQueryConvex && effectiveWorkspaceId
+        ? { workspaceId: effectiveWorkspaceId, clientId: selectedClientId ?? null }
         : 'skip') as AnalyticsStatusRow | null | undefined;
-    const projectRowsResponse = useQuery(projectsApi.list, !isPreviewMode && canQueryConvex && workspaceId
+    const projectRowsResponse = useQuery(projectsApi.list, !isPreviewMode && canQueryConvex && effectiveWorkspaceId
         ? {
-            workspaceId,
+            workspaceId: effectiveWorkspaceId,
             ...(selectedClientId ? { clientId: selectedClientId } : {}),
             limit: 200,
         }

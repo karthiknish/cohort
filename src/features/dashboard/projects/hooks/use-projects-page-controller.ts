@@ -24,7 +24,7 @@ export function useProjectsPageController() {
     const { user } = useAuth();
     const { selectedClient, selectedClientId } = useClientContext();
     const { isPreviewMode } = usePreview();
-    const workspaceId = user?.agencyId ?? null;
+    const workspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
 
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [searchInput, setSearchInput] = useState('');

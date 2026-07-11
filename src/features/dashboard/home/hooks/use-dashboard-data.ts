@@ -16,6 +16,7 @@ import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-qu
 import { getWorkspaceId } from '@/lib/utils';
 export interface UseDashboardDataOptions {
     selectedClientId: string | null;
+    selectedClientWorkspaceId?: string | null;
     preferPreviewData?: boolean;
 }
 export interface UseDashboardDataReturn {
@@ -39,10 +40,10 @@ export interface UseDashboardDataReturn {
     isRefreshing: boolean;
 }
 export function useDashboardData(options: UseDashboardDataOptions): UseDashboardDataReturn {
-    const { selectedClientId, preferPreviewData = false } = options;
+    const { selectedClientId, selectedClientWorkspaceId, preferPreviewData = false } = options;
     const { user } = useAuth();
     const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexLoading } = useConvexAuth();
-    const workspaceId = getWorkspaceId(user);
+    const workspaceId = selectedClientWorkspaceId ?? getWorkspaceId(user);
     const { isPreviewMode } = usePreview();
     const usePreviewData = isPreviewMode || preferPreviewData;
     // Don't run Convex queries until Convex auth is ready
