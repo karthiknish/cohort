@@ -1,5 +1,5 @@
 'use client';
-import { createContext, use, useCallback, useMemo, type MouseEvent } from 'react';
+import { createContext, use, useMemo } from 'react';
 import { ArrowDown, ArrowUp, LoaderCircle, Minus, MoreHorizontal, Pencil, Trash2, } from 'lucide-react';
 import type { CellContext, ColumnDef, HeaderContext } from '@tanstack/react-table';
 import type { TaskRecord, TaskStatus, TaskPriority } from '@/types/tasks';
@@ -30,9 +30,7 @@ function useTaskDataTableActions() {
     }
     return context;
 }
-function stopRowActivation(event: MouseEvent) {
-    event.stopPropagation();
-}
+
 function assigneeInitials(name: string): string {
     const parts = name.trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0)
@@ -82,7 +80,7 @@ function TaskSelectCell({ row }: CellContext<TaskRecord, unknown>) {
     };
     if (!onSelectToggle)
         return null;
-    return (<Checkbox checked={selectedTaskIds?.has(task.id) ?? false} onCheckedChange={handleChange} aria-label={`Select ${task.title}`} className="size-4 rounded border-border" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}/>);
+    return (<Checkbox checked={selectedTaskIds?.has(task.id) ?? false} onCheckedChange={handleChange} aria-label={`Select ${task.title}`} className="size-4 rounded border-border"/>);
 }
 function TaskKeyHeader({ column }: HeaderContext<TaskRecord, unknown>) {
     return <DataTableColumnHeader column={column} title="Key"/>;
@@ -94,15 +92,18 @@ function TaskSummaryHeader({ column }: HeaderContext<TaskRecord, unknown>) {
     return <DataTableColumnHeader column={column} title="Summary"/>;
 }
 function TaskSummaryCell({ row }: CellContext<TaskRecord, unknown>) {
-    const { pendingStatusUpdates } = useTaskDataTableActions();
+    const { pendingStatusUpdates, onOpen } = useTaskDataTableActions();
     const task = row.original;
     const isPending = pendingStatusUpdates.has(task.id);
-    return (<div className="flex min-w-0 items-center gap-2">
+    const handleClick = () => {
+        onOpen(task);
+    };
+    return (<button type="button" className="flex min-w-0 items-center gap-2 text-left" onClick={handleClick} aria-label={`View task ${task.title}`}>
       <span className={cn('truncate font-medium text-foreground', task.status === 'completed' && 'text-muted-foreground line-through decoration-border')}>
         {task.title}
       </span>
       {isPending ? (<LoaderCircle className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden/>) : null}
-    </div>);
+    </button>);
 }
 function TaskStatusHeader({ column }: HeaderContext<TaskRecord, unknown>) {
     return <DataTableColumnHeader column={column} title="Status"/>;
@@ -177,7 +178,7 @@ function TaskActionsCell({ row }: CellContext<TaskRecord, unknown>) {
     const handleDelete = () => {
         onDelete(task);
     };
-    return (<div className="flex justify-end" onPointerDown={stopRowActivation}>
+    return (<div className="flex justify-end">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="size-7 text-muted-foreground" aria-label={`Actions for ${task.title}`}>
@@ -299,10 +300,7 @@ export function TaskDataTable({ tasks, pendingStatusUpdates, onOpen, onEdit, onD
     }), [pendingStatusUpdates, selectedTaskIds, onOpen, onEdit, onDelete, onQuickStatusChange, onSelectToggle]);
     const rowClassName = (task: TaskRecord) => cn(pendingStatusUpdates.has(task.id) && 'pointer-events-none opacity-60', selectedTaskIds?.has(task.id) && 'bg-primary/4', task.status === 'completed' && 'opacity-90');
     const getRowId = (task: TaskRecord) => task.id;
-    const handleRowClick = (task: TaskRecord) => {
-        onOpen(task);
-    };
     return (<TaskDataTableActionsContext value={actions}>
-      <DataTable className={cn('rounded-none border-0 shadow-none', className)} columns={columns} data={tasks} getRowId={getRowId} loading={loading} loadingRows={5} onRowClick={handleRowClick} rowClassName={rowClassName} showPagination={false} stickyHeader/>
+      <DataTable className={cn('rounded-none border-0 shadow-none', className)} columns={columns} data={tasks} getRowId={getRowId} loading={loading} loadingRows={5} rowClassName={rowClassName} showPagination={false} stickyHeader/>
     </TaskDataTableActionsContext>);
 }

@@ -99,7 +99,7 @@ function ProjectCardComponent({
           aria-hidden
         />
 
-        <div className="space-y-3">
+        <div className="space-y-3 px-2">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -204,7 +204,7 @@ function ProjectCardComponent({
         </div>
 
         <div
-          className={cn('flex items-center gap-2 border-t border-muted/30', compact ? 'mt-3 pt-3' : 'mt-4 pt-4')}
+          className={cn('flex items-center gap-2 border-t border-muted/30 px-2', compact ? 'mt-3 pt-3' : 'mt-4 pt-4')}
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
           role="group"

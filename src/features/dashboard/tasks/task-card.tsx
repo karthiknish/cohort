@@ -1,11 +1,9 @@
 'use client';
-import { memo, useCallback, useMemo } from 'react';
+import { memo } from 'react';
 import { ViewTransition } from '@/shared/ui/view-transition';
 import type { TaskRecord, TaskStatus } from '@/types/tasks';
 import { clickableCardClass, listItemEnterClass } from '@/lib/motion';
 import { cn } from '@/lib/utils';
-// oxlint-disable jsx-a11y/prefer-tag-over-role
-// This card wraps focusable children (menu, badges), so a semantic <button> is not allowed. role="button" is used for the clickable board area.
 import { TaskCardCompactMeta, TaskCardHeaderSection, TaskCardOverdueBanner, TaskCardPriorityBadge, TaskCardStatusBadge, } from './task-card-sections';
 import { isDueSoon, isOverdue, priorityAccentColors } from './task-types';
 const TASK_CARD_MENU_VISIBILITY = {
@@ -83,20 +81,8 @@ function TaskCardComponent({ task, variant = 'grid', isPendingUpdate, onOpen, on
         contextPills: !isBoard,
         indicators: !isBoard,
     });
-    const isClickable = isBoard && Boolean(onOpen);
-    const handleCardClick = useCallback(() => {
-        if (isClickable && onOpen) {
-            onOpen(task);
-        }
-    }, [isClickable, onOpen, task]);
-    const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleCardClick();
-        }
-    };
     return (<ViewTransition>
-      <div className={cn('group relative flex h-full flex-col overflow-hidden border border-border/70 bg-card shadow-sm transition-[border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] hover:border-primary/25 hover:shadow-md', listItemEnterClass, clickableCardClass, isBoard ? 'cursor-pointer rounded-xl p-3.5' : 'rounded-2xl p-4 sm:p-5', isPendingUpdate && 'pointer-events-none opacity-75', selected && 'border-primary/30 ring-2 ring-primary/15', overdue && 'border-destructive/25', dueSoon && !overdue && 'border-warning/25', task.parentId && !isBoard && 'ml-4')} onClick={isClickable ? handleCardClick : undefined} onKeyDown={isClickable ? handleCardKeyDown : undefined} role="button" tabIndex={isClickable ? 0 : undefined} aria-label={isClickable ? `View task ${task.title}` : undefined}>
+      <div className={cn('group relative flex h-full flex-col overflow-hidden border border-border/70 bg-card shadow-sm transition-[border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] hover:border-primary/25 hover:shadow-md', listItemEnterClass, clickableCardClass, isBoard ? 'rounded-xl p-3.5' : 'rounded-2xl p-4 sm:p-5', isPendingUpdate && 'pointer-events-none opacity-75', selected && 'border-primary/30 ring-2 ring-primary/15', overdue && 'border-destructive/25', dueSoon && !overdue && 'border-warning/25', task.parentId && !isBoard && 'ml-4')}>
         {!isBoard ? (<div className={cn('absolute left-0 top-0 bottom-0 w-1 rounded-l-[1.25rem] opacity-80', priorityAccentColors[task.priority])}/>) : null}
 
         {overdue ? <TaskCardOverdueBanner /> : null}

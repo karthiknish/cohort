@@ -95,7 +95,7 @@ function ProjectRowComponent({
           aria-hidden
         />
 
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-5 px-2 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-lg font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors">

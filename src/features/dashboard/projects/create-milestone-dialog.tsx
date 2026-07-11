@@ -158,6 +158,13 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
             });
             return;
         }
+        if (!startDate) {
+            notifyFailure({
+                title: 'Start date required',
+                message: 'A milestone needs a start date to appear on the timeline.',
+            });
+            return;
+        }
         setLoading(true);
         if (!user?.agencyId) {
             notifyFailure({
@@ -299,7 +306,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
             <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !projectId || !title.trim()}>
+            <Button type="submit" disabled={loading || !projectId || !title.trim() || !startDate}>
               {loading && <LoaderCircle className="mr-2 size-4 animate-spin"/>}
               Add milestone
             </Button>

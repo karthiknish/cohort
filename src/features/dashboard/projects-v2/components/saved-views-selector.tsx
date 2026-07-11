@@ -124,7 +124,7 @@ export function SavedViewsSelector({
           size="sm"
           className="h-9 gap-1.5 border-border/60 shadow-sm"
           onClick={handleStartNaming}
-          aria-label="Save current view"
+          aria-label="Save view"
         >
           <BookmarkPlus className="size-4" />
           <span className="hidden md:inline">Save view</span>
@@ -139,7 +139,7 @@ export function SavedViewsSelector({
               variant="outline"
               size="sm"
               className="h-9 gap-1.5 border-border/60 shadow-sm"
-              aria-label="Load saved view"
+              aria-label="Views"
             >
               <Bookmark className="size-4" />
               <span className="hidden md:inline">Views</span>

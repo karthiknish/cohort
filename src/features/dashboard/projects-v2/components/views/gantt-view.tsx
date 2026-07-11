@@ -1,22 +1,25 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { FolderKanban, Plus, RefreshCw, TriangleAlert, ZoomIn, ZoomOut } from 'lucide-react';
+import { FolderKanban, Pencil, Plus, RefreshCw, TriangleAlert, ZoomIn, ZoomOut } from 'lucide-react';
 import type { ProjectRecord } from '@/types/projects';
 import type { MilestoneRecord, MilestoneStatus } from '@/types/milestones';
 import { MILESTONE_STATUSES } from '@/types/milestones';
 import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { cn } from '@/lib/utils';
 import { CreateMilestoneDialog } from '@/features/dashboard/projects/create-milestone-dialog';
 import { EditMilestoneDialog } from '../edit-milestone-dialog';
 import {
+  computeTimelineRange,
   milestoneStatusColor,
   parseDate,
 } from '../../utils/project-formatters';
 import {
-  GanttFeature,
+  type GanttFeature,
   GanttFeatureList,
+  GanttFeatureListGroup,
   GanttFeatureRow,
   GanttHeader,
   GanttProvider,
@@ -100,13 +103,27 @@ export function GanttView({
   onMoveMilestone,
   onUpdateMilestone,
 }: GanttViewProps) {
-  const allMilestones = Object.values(milestones).flat();
   const loadingSlots = ['loading-1', 'loading-2', 'loading-3', 'loading-4', 'loading-5'];
 
   const [editingMilestone, setEditingMilestone] = useState<MilestoneRecord | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [range, setRange] = useState<Range>('monthly');
+
+  const allMilestones = useMemo(() => Object.values(milestones).flat(), [milestones]);
+  const datedMilestones = useMemo(
+    () => allMilestones.filter((m) => parseDate(m.startDate) !== null),
+    [allMilestones],
+  );
+  const undatedMilestones = useMemo(
+    () => allMilestones.filter((m) => parseDate(m.startDate) === null),
+    [allMilestones],
+  );
+
+  const timelineRange = useMemo(
+    () => computeTimelineRange(projects, allMilestones),
+    [projects, allMilestones],
+  );
 
   const milestoneById = useMemo(() => {
     const map = new Map<string, MilestoneRecord>();
@@ -115,6 +132,12 @@ export function GanttView({
     }
     return map;
   }, [milestones]);
+
+  const projectById = useMemo(() => {
+    const map = new Map<string, ProjectRecord>();
+    for (const p of projects) map.set(p.id, p);
+    return map;
+  }, [projects]);
 
   const handleFeatureClick = (featureId: string) => {
     if (featureId.startsWith('project-bar-')) return;
@@ -144,6 +167,11 @@ export function GanttView({
     },
   ) => {
     await onUpdateMilestone(milestone, patch);
+  };
+
+  const handleEditUndatedMilestone = (milestone: MilestoneRecord) => {
+    setEditingMilestone(milestone);
+    setEditDialogOpen(true);
   };
 
   if (loading) {
@@ -187,7 +215,12 @@ export function GanttView({
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
         <span>
           Showing {projects.length} project{projects.length !== 1 ? 's' : ''} with {allMilestones.length}{' '}
-          milestones
+          milestone{allMilestones.length !== 1 ? 's' : ''}
+          {undatedMilestones.length > 0 && (
+            <span className="ml-1 text-warning">
+              ({undatedMilestones.length} without {undatedMilestones.length === 1 ? 'a date' : 'dates'})
+            </span>
+          )}
         </span>
         <div className="flex items-center gap-2 text-xs">
           {MILESTONE_STATUSES.map((status) => (
@@ -252,7 +285,13 @@ export function GanttView({
       </div>
 
       <div className="h-[70vh] overflow-hidden rounded-md border">
-        <GanttProvider range={range} zoom={zoom}>
+        <GanttProvider
+          key={`gantt-${timelineRange.start.getTime()}-${timelineRange.end.getTime()}`}
+          range={range}
+          zoom={zoom}
+          startDate={timelineRange.start}
+          endDate={timelineRange.end}
+        >
           <GanttSidebar>
             {projects.map((project) => {
               const projectMilestones = milestones[project.id] ?? [];
@@ -272,8 +311,15 @@ export function GanttView({
                       />
                     ))
                   ) : (
-                    <div className="flex items-center justify-between p-2.5 text-xs text-muted-foreground">
-                      <span>No milestones</span>
+                    <div
+                      className="flex items-center justify-between px-2.5 text-xs text-muted-foreground"
+                      style={{ height: 'var(--gantt-row-height)' }}
+                    >
+                      <span>
+                        {projectMilestones.length > 0
+                          ? 'No milestones with dates'
+                          : 'No milestones'}
+                      </span>
                       <CreateMilestoneDialog
                         projects={[project]}
                         defaultProjectId={project.id}
@@ -302,29 +348,31 @@ export function GanttView({
                   .filter((f): f is GanttFeature => f !== null);
                 const features = projectBar ? [projectBar, ...milestoneFeatures] : milestoneFeatures;
                 return (
-                  <GanttFeatureRow key={project.id} features={features} onMove={handleMove}>
-                    {(feature) => {
-                      const isProjectBar = feature.id.startsWith('project-bar-');
-                      return (
-                        <button
-                          type="button"
-                          className={cn(
-                            'flex w-full items-center gap-2 text-left',
-                            isProjectBar && 'font-semibold text-primary',
-                          )}
-                          onClick={() => handleFeatureClick(feature.id)}
-                        >
-                          <div
-                            className={cn('shrink-0 rounded-full', isProjectBar ? 'size-2.5' : 'size-2')}
-                            style={{ backgroundColor: feature.status.color }}
-                          />
-                          <p className="flex-1 truncate text-xs font-medium">
-                            {isProjectBar ? 'Project span' : feature.name}
-                          </p>
-                        </button>
-                      );
-                    }}
-                  </GanttFeatureRow>
+                  <GanttFeatureListGroup key={project.id}>
+                    <GanttFeatureRow features={features} onMove={handleMove}>
+                      {(feature) => {
+                        const isProjectBar = feature.id.startsWith('project-bar-');
+                        return (
+                          <button
+                            type="button"
+                            className={cn(
+                              'flex w-full items-center gap-2 text-left',
+                              isProjectBar && 'font-semibold text-primary',
+                            )}
+                            onClick={() => handleFeatureClick(feature.id)}
+                          >
+                            <div
+                              className={cn('shrink-0 rounded-full', isProjectBar ? 'size-2.5' : 'size-2')}
+                              style={{ backgroundColor: feature.status.color }}
+                            />
+                            <p className="flex-1 truncate text-xs font-medium">
+                              {isProjectBar ? 'Project span' : feature.name}
+                            </p>
+                          </button>
+                        );
+                      }}
+                    </GanttFeatureRow>
+                  </GanttFeatureListGroup>
                 );
               })}
             </GanttFeatureList>
@@ -339,6 +387,46 @@ export function GanttView({
         onOpenChange={setEditDialogOpen}
         onSave={handleSaveEdit}
       />
+
+      {undatedMilestones.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">
+              Milestones without dates
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Add a start date to these milestones so they appear on the timeline.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {undatedMilestones.map((milestone) => {
+              const project = projectById.get(milestone.projectId);
+              return (
+                <div
+                  key={milestone.id}
+                  className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{milestone.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {project?.name ?? 'Unknown project'}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    aria-label={`Edit ${milestone.title}`}
+                    onClick={() => handleEditUndatedMilestone(milestone)}
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

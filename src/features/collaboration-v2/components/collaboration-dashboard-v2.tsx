@@ -791,6 +791,8 @@ export function CollaborationDashboardV2() {
     urlState,
     selectedDM,
     workspaceId,
+    currentUserId,
+    currentUserRole,
     archiveConversation,
     muteConversation,
   });

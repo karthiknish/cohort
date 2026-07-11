@@ -72,8 +72,9 @@ export function EditMilestoneDialog({
   const canSave = useMemo(() => {
     if (!milestone) return false;
     if (!title.trim()) return false;
+    if (!startDate) return false;
     return true;
-  }, [milestone, title]);
+  }, [milestone, title, startDate]);
 
   const handleSave = async () => {
     if (!milestone || !canSave) return;
@@ -87,9 +88,10 @@ export function EditMilestoneDialog({
         endDateMs: endDate ? endDate.getTime() : null,
       });
       onOpenChange(false);
-    } finally {
-      setSaving(false);
+    } catch {
+      // Errors are reported by the parent mutation; just keep dialog open
     }
+    setSaving(false);
   };
 
   return (

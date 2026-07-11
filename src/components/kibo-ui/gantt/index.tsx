@@ -207,6 +207,29 @@ const createInitialTimelineData = (today: Date) => {
   return data;
 };
 
+const createTimelineDataForRange = (startDate: Date, endDate: Date) => {
+  const data: TimelineData = [];
+  const startYear = startDate.getFullYear();
+  const endYear = endDate.getFullYear();
+
+  for (let year = startYear - 1; year <= endYear + 1; year++) {
+    data.push({ year, quarters: new Array(4).fill(null) });
+  }
+
+  for (const yearObj of data) {
+    yearObj.quarters = new Array(4).fill(null).map((_, quarterIndex) => ({
+      months: new Array(3).fill(null).map((_, monthIndex) => {
+        const month = quarterIndex * 3 + monthIndex;
+        return {
+          days: getDaysInMonth(new Date(yearObj.year, month, 1)),
+        };
+      }),
+    }));
+  }
+
+  return data;
+};
+
 const getOffset = (
   date: Date,
   timelineStartDate: Date,
@@ -1007,37 +1030,14 @@ export const GanttFeatureRow: FC<GanttFeatureRowProps> = ({
   children,
   className,
 }) => {
-  // Sort features by start date to handle potential overlaps
-  const sortedFeatures = [...features].sort(
-    (a, b) => a.startAt.getTime() - b.startAt.getTime()
-  );
+  // Render each feature on its own sub-row so the timeline bars align 1:1
+  // with the sidebar items (project bar first, then milestones in order).
+  const featureWithPositions = features.map((feature, index) => ({
+    ...feature,
+    subRow: index,
+  }));
 
-  // Calculate sub-row positions for overlapping features using a proper algorithm
-  const featureWithPositions = [];
-  const subRowEndTimes: Date[] = []; // Track when each sub-row becomes free
-
-  for (const feature of sortedFeatures) {
-    let subRow = 0;
-
-    // Find the first sub-row that's free (doesn't overlap)
-    while (
-      subRow < subRowEndTimes.length &&
-      (subRowEndTimes[subRow] ?? Infinity) > feature.startAt
-    ) {
-      subRow++;
-    }
-
-    // Update the end time for this sub-row
-    if (subRow === subRowEndTimes.length) {
-      subRowEndTimes.push(feature.endAt);
-    } else {
-      subRowEndTimes[subRow] = feature.endAt;
-    }
-
-    featureWithPositions.push({ ...feature, subRow });
-  }
-
-  const maxSubRows = Math.max(1, subRowEndTimes.length);
+  const maxSubRows = Math.max(1, features.length);
   const subRowHeight = 36; // Base row height
 
   return (
@@ -1165,6 +1165,8 @@ export type GanttProviderProps = {
   range?: Range;
   zoom?: number;
   onAddItem?: (date: Date) => void;
+  startDate?: Date;
+  endDate?: Date;
   children: ReactNode;
   className?: string;
 };
@@ -1173,13 +1175,22 @@ export const GanttProvider: FC<GanttProviderProps> = ({
   zoom = 100,
   range = "monthly",
   onAddItem,
+  startDate,
+  endDate,
   children,
   className,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const initialTimelineData = useMemo(() => {
+    if (startDate && endDate) {
+      return createTimelineDataForRange(startDate, endDate);
+    }
+    return createInitialTimelineData(new Date());
+  }, [startDate, endDate]);
   const [timelineData, setTimelineData] = useState<TimelineData>(
-    createInitialTimelineData(new Date())
+    initialTimelineData
   );
+
   const [, setScrollX] = useGanttScrollX();
   const [sidebarWidth, setSidebarWidth] = useState(0);
 

@@ -2,15 +2,17 @@
 
 import { useMemo } from 'react';
 import type { MessagePaneHeaderInfo } from '@/features/dashboard/collaboration/components/unified-message-pane-types';
+import { collectSharedFiles } from '@/features/dashboard/collaboration/lib/utils';
 import type { Channel } from '../types';
 import type { CollaborationMessage, DirectConversation } from '@/types/collaboration';
+import type { ClientTeamMember } from '@/types/clients';
 import type { useCollaborationUrlState } from '../hooks/use-collaboration-url-state';
 
 type UrlState = ReturnType<typeof useCollaborationUrlState>;
 
 export type BuildHeaderInfoArgs = {
   effectiveSelectedChannel: Channel | null;
-  channelParticipants: Array<{ name: string; role?: string }>;
+  channelParticipants: ClientTeamMember[];
   channelMessages: CollaborationMessage[];
   channelUnreadCounts: Record<string, number>;
   handleMarkChannelRead: () => Promise<void>;
@@ -18,6 +20,8 @@ export type BuildHeaderInfoArgs = {
   urlState: UrlState;
   selectedDM: DirectConversation | null;
   workspaceId: string | null;
+  currentUserId: string | null;
+  currentUserRole: string | null;
   archiveConversation: (args: {
     workspaceId: string;
     conversationLegacyId: string;
@@ -40,12 +44,22 @@ export function useCollaborationHeaderInfo({
   urlState,
   selectedDM,
   workspaceId,
+  currentUserId,
+  currentUserRole,
   archiveConversation,
   muteConversation,
 }: BuildHeaderInfoArgs) {
   return useMemo<MessagePaneHeaderInfo | null>(() => {
     if (effectiveSelectedChannel) {
       const channel = effectiveSelectedChannel;
+      const sharedFiles = collectSharedFiles(
+        channelMessages.flatMap((message) =>
+          !message.isDeleted && message.attachments && message.attachments.length > 0
+            ? [message.attachments]
+            : []
+        )
+      );
+      const isAdmin = currentUserRole === 'admin';
       return {
         conversationKey: `channel:${channel.id}`,
         name: channel.name,
@@ -57,6 +71,23 @@ export function useCollaborationHeaderInfo({
         onMarkChannelRead: handleMarkChannelRead,
         onExport: handleExportChannel,
         onBack: () => urlState.setChannelId(null),
+        channelInfo:
+          workspaceId != null
+            ? {
+                channel,
+                channelMessages,
+                channelParticipants,
+                currentUserId,
+                sharedFiles,
+                workspaceId,
+                isAdmin,
+                canManageMembers: false,
+                onManageMembers: undefined,
+                onPinnedMessageClick: (messageId: string) => {
+                  urlState.setDeepLinkMessage(messageId, null);
+                },
+              }
+            : undefined,
       };
     }
     if (selectedDM) {
@@ -98,6 +129,8 @@ export function useCollaborationHeaderInfo({
     urlState,
     selectedDM,
     workspaceId,
+    currentUserId,
+    currentUserRole,
     archiveConversation,
     muteConversation,
   ]);

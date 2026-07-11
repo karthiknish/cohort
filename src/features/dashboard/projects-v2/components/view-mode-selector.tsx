@@ -38,7 +38,7 @@ export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) 
           variant="outline"
           size="sm"
           className="h-9 gap-2 border-border/60 shadow-sm"
-          aria-label="Select view mode"
+          aria-label={current.label}
         >
           <CurrentIcon className="size-4" aria-hidden />
           <span className="hidden sm:inline">{current.label}</span>
