@@ -39,7 +39,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
         ? [[status, () => onUpdateStatus(project, status)] as const]
         : [])) as Partial<Record<ProjectStatus, () => void>>, [onUpdateStatus, project]);
     return (<ViewTransition>
-      <article className={cn('group relative overflow-hidden rounded-xl border border-border/60 bg-card p-5 shadow-sm ring-1 ring-border/30 sm:p-6', listItemEnterClass, 'transition-[border-color,box-shadow,background-color] hover:border-primary/20 hover:bg-muted/15 hover:shadow-md', isPendingUpdate && 'pointer-events-none opacity-75')}>
+      <article className={cn('group relative overflow-hidden rounded-xl border border-border/60 bg-card p-5 shadow-sm ring-1 ring-border/30 sm:p-6', listItemEnterClass, 'transition-[border-color,box-shadow,background-color] hover:border-primary/20 hover:bg-muted/30 hover:shadow-md', isPendingUpdate && 'pointer-events-none opacity-75')}>
         <div className={cn('absolute bottom-0 left-0 top-0 w-1 rounded-l-xl', project.status === 'active'
             ? 'bg-success'
             : project.status === 'planning'
@@ -59,7 +59,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
                 </Badge>) : null}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Badge variant="outline" className={cn(STATUS_CLASSES[project.status], 'h-6 cursor-pointer gap-1.5 border px-2 py-0 hover:opacity-90')}>
+                  <Badge variant="outline" className={cn(STATUS_CLASSES[project.status], 'h-6 cursor-pointer gap-1.5 border px-2 py-0 hover:brightness-95')}>
                     {isPendingUpdate ? (<LoaderCircle className="size-3 animate-spin"/>) : (<StatusIcon className="size-3"/>)}
                     <span className="text-[10px] font-bold uppercase tracking-wider leading-none">
                       {formatStatusLabel(project.status)}

@@ -84,7 +84,7 @@ function ProblemReportRow({ deletingId, onDeleteTarget, onStatusUpdate, report, 
         <div className="flex items-center gap-2">
           <StatusIcon status={report.status}/>
           <Select value={report.status} onValueChange={handleStatusChange} disabled={updatingId === report.id}>
-            <SelectTrigger className="h-8 w-32.5 border-none bg-transparent p-0 hover:bg-accent focus:ring-0">
+            <SelectTrigger className="h-8 w-32.5 border-none bg-transparent p-0 hover:bg-accent hover:text-accent-foreground focus:ring-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

@@ -82,7 +82,7 @@ function DialogContent({ className, children, ref, onOpenAutoFocus: _oaf, onClos
       >
         {children}
         <DialogPrimitive.Close
-          className={cn('focus-ring absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100', interactiveTransitionClass)}
+          className={cn('focus-ring absolute right-4 top-4 rounded-sm opacity-90 hover:opacity-100', interactiveTransitionClass)}
         >
           <X className="size-4" />
           <span className="sr-only">Close</span>

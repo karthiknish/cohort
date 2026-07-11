@@ -314,7 +314,7 @@ export function CalendarView({
                       type="button"
                       onClick={() => handleEventClick(event.milestone.id)}
                       className={cn(
-                        'flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-[11px] transition-colors hover:bg-secondary',
+                        'flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-[11px] transition-colors hover:bg-secondary hover:text-secondary-foreground',
                         !inMonth && 'opacity-50',
                       )}
                     >

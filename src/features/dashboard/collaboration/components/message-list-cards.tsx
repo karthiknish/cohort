@@ -47,7 +47,7 @@ export function ChannelMessageCard({ currentUserId, highlighted, pending, localR
 }) {
     const { deleting: isDeleting, editing: isEditing, updating: isUpdating } = pending;
     const isPendingThis = localReactionPending?.startsWith(message.id) || reactionPendingByMessage[message.id];
-    return (<div data-message-id={message.id} data-thread-root-id={message.threadRootId ?? message.id} className={cn('group relative flex max-w-full items-start gap-3 overflow-hidden border-b border-muted/20 px-6 py-2.5', listRowEnterAnimationClass, chromaticTransitionClass, !message.deleted && 'hover:bg-muted/5', highlighted && 'rounded-lg bg-accent/10 ring-1 ring-primary/30')}>
+    return (<div data-message-id={message.id} data-thread-root-id={message.threadRootId ?? message.id} className={cn('group relative flex max-w-full items-start gap-3 overflow-hidden border-b border-muted/20 px-6 py-2.5', listRowEnterAnimationClass, chromaticTransitionClass, !message.deleted && 'hover:bg-muted/20', highlighted && 'rounded-lg bg-accent/10 ring-1 ring-primary/30')}>
       {showAvatars ? (<div className="shrink-0 pt-1">
           <Avatar className="size-8">
             <AvatarFallback className="bg-muted text-xs">{getInitials(message.senderName)}</AvatarFallback>

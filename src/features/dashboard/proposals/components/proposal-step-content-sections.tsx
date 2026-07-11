@@ -52,7 +52,7 @@ const startTimelineOptions = ['ASAP', 'Within 1 month', 'Within 3 months', 'Flex
 const proposalValueOptions = ['£2,000 – £5,000', '£5,000 – £10,000', '£10,000+'] as const;
 const engagementOptions = ['One-off project', 'Ongoing monthly support'] as const;
 const animatedStepClassName = ['space-y-6', listItemEnterClass].join(' ');
-const interactiveCardClassName = 'transition-colors hover:bg-muted/5';
+const interactiveCardClassName = 'transition-colors hover:bg-muted/30';
 const LABEL_ICON_CLASS = 'size-4 text-muted-foreground';
 const companyNameLabelPrefix = <Building2 className={LABEL_ICON_CLASS} aria-hidden/>;
 const websiteLabelPrefix = <Globe className={LABEL_ICON_CLASS} aria-hidden/>;
@@ -119,7 +119,7 @@ function MarketingPlatformButton({ platform, isSelected, onToggleArrayValue, }: 
     const onTogglePlatform = () => onToggleArrayValue?.(['marketing', 'platforms'], platform);
     return (<button type="button" onClick={onTogglePlatform} aria-pressed={isSelected} className={cn(`group flex cursor-pointer items-center justify-between rounded-lg border p-3.5 ${interactiveCardClassName}`, isSelected
             ? 'border-primary bg-primary/5'
-            : 'border-border bg-background hover:border-muted-foreground/30')}>
+            : 'border-border bg-background hover:border-muted-foreground/50')}>
       <span className={cn('flex items-center gap-2.5 text-sm font-medium', isSelected ? 'text-primary' : 'text-muted-foreground')}>
         {platformIcon(platform)}
         {platform}
@@ -179,7 +179,7 @@ function GoalOptionButton({ goal, isSelected, onToggleArrayValue, }: {
     const onToggleGoal = () => onToggleArrayValue?.(['goals', 'objectives'], goal);
     return (<button type="button" onClick={onToggleGoal} aria-pressed={isSelected} className={cn(`flex cursor-pointer items-center justify-between rounded-lg border p-3.5 ${interactiveCardClassName}`, isSelected
             ? 'border-primary bg-primary/5'
-            : 'border-border bg-background hover:border-muted-foreground/30')}>
+            : 'border-border bg-background hover:border-muted-foreground/50')}>
       <span className={cn('text-sm font-medium', isSelected ? 'text-primary' : 'text-muted-foreground')}>{goal}</span>
       <SelectionIndicator selected={isSelected}/>
     </button>);
@@ -192,7 +192,7 @@ function ChallengeButton({ challenge, isSelected, onToggleArrayValue, }: {
     const onToggleChallenge = () => onToggleArrayValue?.(['goals', 'challenges'], challenge);
     return (<button type="button" onClick={onToggleChallenge} className={cn('rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors', isSelected
             ? 'border-primary bg-primary text-primary-foreground'
-            : 'border-border bg-background text-muted-foreground hover:border-muted-foreground/30 hover:bg-muted/5')}>
+            : 'border-border bg-background text-muted-foreground hover:border-muted-foreground/50 hover:bg-muted/20')}>
       {challenge}
     </button>);
 }
@@ -227,7 +227,7 @@ function ScopeServiceButton({ service, isSelected, onToggleArrayValue, }: {
     const icon = scopeIcon(service);
     return (<button type="button" className={cn(`group flex cursor-pointer items-center justify-between rounded-lg border p-3.5 ${interactiveCardClassName}`, isSelected
             ? 'border-primary bg-primary/5'
-            : 'border-border bg-background hover:border-muted-foreground/30')} onClick={onToggleService} aria-pressed={isSelected}>
+            : 'border-border bg-background hover:border-muted-foreground/50')} onClick={onToggleService} aria-pressed={isSelected}>
       <div className="flex items-center gap-2.5 space-y-0.5">
         {icon}
         <span className={cn('text-sm font-medium', isSelected ? 'text-primary' : 'text-muted-foreground')}>{service}</span>
@@ -257,7 +257,7 @@ function TimelineOptionButton({ option, isSelected, onUpdateField, }: {
     const onSelectStartTime = () => onUpdateField(['timelines', 'startTime'], option);
     return (<button type="button" onClick={onSelectStartTime} className={cn(`flex items-center justify-between rounded-lg border p-3.5 ${interactiveCardClassName}`, isSelected
             ? 'border-primary bg-primary/5'
-            : 'border-border bg-background hover:border-muted-foreground/30')}>
+            : 'border-border bg-background hover:border-muted-foreground/50')}>
       <span className={cn('text-sm font-medium', isSelected ? 'text-primary' : 'text-muted-foreground')}>{option}</span>
       {isSelected ? <CircleCheck className="size-5 text-primary"/> : null}
     </button>);
@@ -284,7 +284,7 @@ function ProposalValueButton({ option, isSelected, onUpdateField, }: {
     const onSelectProposalSize = () => onUpdateField(['value', 'proposalSize'], option);
     return (<button type="button" onClick={onSelectProposalSize} className={cn('flex flex-col items-center justify-center gap-1.5 rounded-xl border p-5 transition-colors', isSelected
             ? 'border-primary bg-primary/5'
-            : 'border-border bg-background hover:border-muted-foreground/30 hover:bg-muted/5')}>
+            : 'border-border bg-background hover:border-muted-foreground/50 hover:bg-muted/20')}>
       <span className={cn('text-base font-semibold', isSelected ? 'text-primary' : 'text-foreground')}>{option}</span>
       <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Per Month</span>
     </button>);
@@ -297,7 +297,7 @@ function EngagementTypeButton({ option, isSelected, onUpdateField, }: {
     const onSelectEngagementType = () => onUpdateField(['value', 'engagementType'], option);
     return (<button type="button" onClick={onSelectEngagementType} className={cn(`flex items-center justify-between rounded-lg border p-3.5 ${interactiveCardClassName}`, isSelected
             ? 'border-primary bg-primary/5'
-            : 'border-border bg-background hover:border-muted-foreground/30')}>
+            : 'border-border bg-background hover:border-muted-foreground/50')}>
       <span className={cn('text-sm font-medium', isSelected ? 'text-primary' : 'text-muted-foreground')}>{option}</span>
       {isSelected ? <CircleCheck className="size-5 text-primary"/> : null}
     </button>);
@@ -314,7 +314,7 @@ function PresentationThemeButton({ theme, isSelected, onUpdateField, }: {
     const onSelectPresentationTheme = () => onUpdateField(['value', 'presentationTheme'], theme.id);
     return (<button type="button" onClick={onSelectPresentationTheme} className={cn('group relative flex flex-col gap-2 rounded-lg border p-3.5 transition-colors', isSelected
             ? 'border-primary bg-primary/5'
-            : 'border-border bg-background hover:border-muted-foreground/30 hover:bg-muted/5')}>
+            : 'border-border bg-background hover:border-muted-foreground/50 hover:bg-muted/20')}>
       <div className="flex w-full items-center justify-between">
         <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-foreground')}>{theme.name}</span>
         {isSelected ? <CircleCheck className="size-4 text-primary"/> : null}
@@ -347,7 +347,7 @@ export function ProposalValueStepSection({ formState, summary, validationErrors,
       </FieldSection>
 
       <FieldSection title="Export options" className="border-t border-muted/20 pt-4">
-        <label htmlFor="generatePdf" className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-border bg-background p-4 transition-colors hover:border-muted-foreground/30 hover:bg-muted/5">
+        <label htmlFor="generatePdf" className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-border bg-background p-4 transition-colors hover:border-muted-foreground/50 hover:bg-muted/20">
           <div className="flex items-start gap-3">
             <FileText className="mt-0.5 size-5 shrink-0 text-muted-foreground"/>
             <div className="space-y-0.5">

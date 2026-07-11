@@ -25,7 +25,7 @@ const Textarea = ({ className, autoGrow, onChange, ref, ...props }: TextareaProp
         }
         onChange?.(e);
     };
-    return (<textarea ref={handleTextareaRef} className={cn('flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/60', 'focus-ring-subtle focus-visible:border-primary hover:border-muted-foreground/30', 'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-muted/50', 'resize-y', autoGrow && 'resize-none overflow-hidden', interactiveTransitionClass, className)} onChange={onTextareaChange} {...props}/>);
+    return (<textarea ref={handleTextareaRef} className={cn('flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/60', 'focus-ring-subtle focus-visible:border-primary hover:border-muted-foreground/50', 'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-muted/50', 'resize-y', autoGrow && 'resize-none overflow-hidden', interactiveTransitionClass, className)} onChange={onTextareaChange} {...props}/>);
 };
 Textarea.displayName = 'Textarea';
 export { Textarea };

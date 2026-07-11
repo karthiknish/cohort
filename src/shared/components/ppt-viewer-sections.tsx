@@ -215,7 +215,7 @@ function SlideThumbnailButton({
                 'relative h-12 w-20 shrink-0 overflow-hidden rounded-lg border-2 bg-white transition-[border-color,box-shadow,opacity] sm:h-14 sm:w-24',
                 isActive
                     ? 'border-primary shadow-md shadow-primary/20 ring-2 ring-primary/25'
-                    : 'border-transparent opacity-80 hover:border-muted-foreground/30 hover:opacity-100',
+                    : 'border-transparent opacity-80 hover:border-muted-foreground/50 hover:opacity-100',
             )}
         >
             <div

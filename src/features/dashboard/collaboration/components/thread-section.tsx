@@ -42,7 +42,7 @@ export interface ThreadToggleButtonProps {
 }
 export function ThreadToggleButton({ replyCount, unreadCount = 0, lastReplyLabel, isOpen, isLoading, hasRepliesLoaded, onToggle, }: ThreadToggleButtonProps) {
     const prefersReducedMotion = useReducedMotion();
-    return (<MotionPressable className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'inline-flex items-center gap-2 text-xs text-primary transition-colors hover:bg-accent/5 hover:text-primary/90', isOpen && 'bg-accent/5')} onClick={onToggle} disabled={isLoading && !isOpen && !hasRepliesLoaded} aria-expanded={isOpen}>
+    return (<MotionPressable className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'inline-flex items-center gap-2 text-xs text-primary transition-colors hover:bg-accent/10 hover:text-primary', isOpen && 'bg-accent/5')} onClick={onToggle} disabled={isLoading && !isOpen && !hasRepliesLoaded} aria-expanded={isOpen}>
       {isLoading && !isOpen && !hasRepliesLoaded ? (<LoaderCircle className="size-3.5 animate-spin"/>) : (<m.span animate={prefersReducedMotion ? undefined : { rotate: isOpen ? 90 : 0 }} transition={CHEVRON_ROTATE_TRANSITION} className="inline-flex">
           <ChevronRight className="size-3.5"/>
         </m.span>)}

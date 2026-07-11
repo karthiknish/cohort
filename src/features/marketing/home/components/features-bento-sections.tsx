@@ -41,7 +41,7 @@ export function FeaturesBentoCampaignReachCard() {
                 </div>
                 <span className="text-sm">Total impressions</span>
               </div>
-              <span className="rounded-md border bg-background px-2 py-1 text-xs hover:bg-accent">Report</span>
+              <span className="rounded-md border bg-background px-2 py-1 text-xs hover:bg-accent hover:text-accent-foreground">Report</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-2xl font-semibold">2.4M</span>

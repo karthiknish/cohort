@@ -77,7 +77,7 @@ function ProjectRowComponent({
         className={cn(
           'group relative overflow-hidden rounded-xl border border-border/60 bg-card p-5 shadow-sm ring-1 ring-border/30 sm:p-6',
           listItemEnterClass,
-          'transition-[border-color,box-shadow,background-color] hover:border-primary/20 hover:bg-muted/15 hover:shadow-md',
+          'transition-[border-color,box-shadow,background-color] hover:border-primary/20 hover:bg-muted/30 hover:shadow-md',
           isPendingUpdate && 'pointer-events-none opacity-75',
         )}
       >
@@ -112,7 +112,7 @@ function ProjectRowComponent({
                     variant="outline"
                     className={cn(
                       STATUS_CLASSES[project.status],
-                      'h-6 cursor-pointer gap-1.5 border px-2 py-0 hover:opacity-90',
+                      'h-6 cursor-pointer gap-1.5 border px-2 py-0 hover:brightness-95',
                     )}
                   >
                     {isPendingUpdate ? (
