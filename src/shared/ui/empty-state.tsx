@@ -33,9 +33,9 @@ function createNetworkErrorAction(action: EmptyStateProps['action'], onRetry: ()
 export function EmptyState({ className, icon: Icon = Inbox, title, description, action, secondaryAction, variant = 'default', ...props }: EmptyStateProps) {
     const ActionIcon = action?.icon || Plus;
     if (variant === 'inline') {
-        return (<div className={cn('flex items-center gap-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4', className)} {...props}>
+        return (<div className={cn('flex items-center gap-4 rounded-lg border border-dashed border-border/50 bg-muted/30 p-4', className)} {...props}>
         <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
-          <Icon className="size-5 text-muted-foreground"/>
+          <Icon className="size-5 text-foreground/70"/>
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">{title}</p>
@@ -47,7 +47,7 @@ export function EmptyState({ className, icon: Icon = Inbox, title, description, 
           </Button>)}
       </div>);
     }
-    return (<div className={cn('flex flex-col items-center justify-center text-center', emptyStateEnterClass, variant === 'card' && 'rounded-2xl border border-dashed border-muted-foreground/25 bg-muted/5', variant === 'default' ? 'py-12 px-4' : 'p-8', className)} {...props}>
+    return (<div className={cn('flex flex-col items-center justify-center text-center', emptyStateEnterClass, variant === 'card' && 'rounded-2xl border border-dashed border-border/50 bg-muted/20', variant === 'default' ? 'py-12 px-4' : 'p-8', className)} {...props}>
       <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/[0.08] ring-1 ring-primary/15 mb-4 shadow-sm">
         <Icon className="size-7 text-primary"/>
       </div>

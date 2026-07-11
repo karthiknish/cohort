@@ -53,7 +53,7 @@ export function WorkflowCard({ connectedCount = 0, hasSuccessfulSync = false, ha
               <div className="flex items-center gap-2.5">
                 <div className={cn('flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors', done
                     ? 'bg-success text-success-foreground'
-                    : 'bg-muted text-muted-foreground ring-1 ring-border/60')}>
+                    : 'bg-muted text-foreground/70 ring-1 ring-border/60')}>
                   {done ? <Check className="size-4" aria-hidden/> : index + 1}
                 </div>
                 <p className="text-sm font-semibold text-foreground">{step.title}</p>

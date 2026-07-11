@@ -219,7 +219,7 @@ function AdGridItem({ ad, adMetrics, currency, insightKind, maxSpend, onCreative
                 <Play className="size-10"/>
               </div>
             </div>) : (<div className="flex h-full items-center justify-center">
-              <Layers className="size-10 text-muted-foreground/30"/>
+              <Layers className="size-10 text-muted-foreground/50"/>
             </div>)}
 
           {ad.videoUrl && previewImageUrl ? (<div className="absolute inset-0 flex items-center justify-center bg-black/35">

@@ -103,13 +103,13 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
         ul: ({ children }) => <ul className="mt-2 list-disc list-outside space-y-1 pl-5 text-sm text-current">{children}</ul>,
         ol: ({ children }) => <ol className="mt-2 list-decimal list-outside space-y-1 pl-5 text-sm text-current">{children}</ol>,
         li: ({ children }) => <li className="text-current">{highlightChildren(children, highlightTerms)}</li>,
-        blockquote: ({ children }) => (<blockquote className="rounded-r-md border-l-2 border-current/30 bg-current/10 px-3 py-1.5 text-sm italic text-current">{highlightChildren(children, highlightTerms)}</blockquote>),
+        blockquote: ({ children }) => (<blockquote className="rounded-r-md border-l-2 border-current/40 bg-current/15 px-3 py-1.5 text-sm italic text-current">{highlightChildren(children, highlightTerms)}</blockquote>),
         code: ({ inline, className, children }: CodeProps) => {
             const language = extractLanguage(className);
             const normalizedLang = normalizeLanguage(language);
             const codeString = String(children).replace(/\n$/, "");
             if (inline || !codeString.includes('\n')) {
-                return (<code className={cn("rounded border border-current/30 bg-current/10 px-1.5 py-0.5 text-[13px] font-mono text-current", className)}>
+                return (<code className={cn("rounded border border-current/40 bg-current/15 px-1.5 py-0.5 text-[13px] font-mono text-current", className)}>
             {children}
           </code>);
             }
@@ -128,7 +128,7 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
             if (!href)
                 return <span>{children}</span>;
             if (href.startsWith(MENTION_PROTOCOL)) {
-                return (<span className="inline-flex items-center rounded-full border border-current/30 bg-current/10 px-2 py-0.5 text-xs font-medium leading-none text-current">
+                return (<span className="inline-flex items-center rounded-full border border-current/40 bg-current/15 px-2 py-0.5 text-xs font-medium leading-none text-current">
             {children}
           </span>);
             }

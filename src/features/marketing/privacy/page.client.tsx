@@ -85,7 +85,7 @@ export default function PrivacyPage() {
             <div>
               {sections.map((section, index) => (<div key={section.title} className={cn("p-8 transition-colors hover:bg-muted/10 animate-slide-in-from-bottom", index !== sections.length - 1 && "border-b border-border/40")}>
                   <div className="flex flex-col gap-4 sm:flex-row sm:gap-8">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:bg-accent/10 group-hover:text-primary transition-colors">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground/70 group-hover:bg-accent/10 group-hover:text-primary transition-colors">
                       <section.icon className="size-5"/>
                     </div>
                     <div className="space-y-2">

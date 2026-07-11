@@ -63,7 +63,7 @@ function ClientProposalsCardComponent({ proposals, loading }: ClientProposalsCar
                 <div className="space-y-3 flex-1">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Most Recent</p>
                     {proposals.length === 0 ? (<div className="flex flex-col items-center justify-center py-6 text-center border border-dashed rounded-lg bg-muted/5">
-                            <FileText className="size-8 text-muted-foreground/30 mb-2"/>
+                            <FileText className="size-8 text-muted-foreground/50 mb-2"/>
                             <p className="text-sm text-muted-foreground">No proposals found</p>
                         </div>) : (recentProposals.map((proposal) => (<div key={proposal.id} className="group flex flex-col gap-1 p-3 rounded-xl border bg-card hover:border-accent/30 transition-colors shadow-none">
                                 <div className="flex items-center justify-between">

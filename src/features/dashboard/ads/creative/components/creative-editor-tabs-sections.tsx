@@ -301,7 +301,7 @@ export function CreativeEditorInsightsTab({ performanceSummary = null, onRefresh
             </CardHeader>
             <CardContent className="space-y-4">
               {!performanceSummary ? (<div className="p-8 text-center border-2 border-dashed rounded-2xl">
-                  <Zap className="size-10 text-muted-foreground/30 mx-auto mb-3"/>
+                  <Zap className="size-10 text-muted-foreground/50 mx-auto mb-3"/>
                   <p className="text-sm text-muted-foreground">Load performance metrics to generate AI insights.</p>
                   {onRefreshPerformance ? (<Button variant="outline" size="sm" className="mt-4" onClick={onRefreshPerformance}>
                       Fetch Data

@@ -18,7 +18,7 @@ export function CompletedProgressOperationItem({ operation, onDismiss, }: {
     const statusConfig = {
         completed: { icon: '✓', className: 'bg-success text-success-foreground' },
         failed: { icon: '✕', className: 'bg-destructive text-destructive-foreground' },
-        cancelled: { icon: '−', className: 'bg-muted text-muted-foreground' },
+        cancelled: { icon: '−', className: 'bg-muted text-foreground/70' },
     };
     const config = statusConfig[operation.status as keyof typeof statusConfig];
     return (<div className={cn('flex items-center gap-3 p-3 rounded-lg shadow-lg animate-in slide-in-from-top-2', config.className)}>

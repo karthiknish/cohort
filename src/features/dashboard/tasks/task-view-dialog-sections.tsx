@@ -129,7 +129,7 @@ export function TaskViewDialogTabsList({ commentCount }: {
       <TabsTrigger value="comments" className={cn(TASKS_THEME.tabTrigger, TASKS_THEME.viewDialog.tabTrigger, 'gap-1.5')}>
         <MessageCircle className="size-3.5 shrink-0" aria-hidden/>
         Comments
-        <span className={cn('inline-flex min-w-[1.25rem] items-center justify-center rounded-md px-1 text-[10px] font-semibold tabular-nums', commentCount > 0 ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground')}>
+        <span className={cn('inline-flex min-w-[1.25rem] items-center justify-center rounded-md px-1 text-[10px] font-semibold tabular-nums', commentCount > 0 ? 'bg-primary/15 text-primary' : 'bg-muted text-foreground/70')}>
           {commentCount}
         </span>
       </TabsTrigger>

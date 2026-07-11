@@ -64,7 +64,7 @@ export function PreviewWindow({ activeTabId, activeMetricId, surfaceRef, tab, ac
               </button>))}
             <div className="my-1 h-px w-5 bg-border/40" aria-hidden/>
             <div aria-hidden="true">
-              {SIDEBAR_EXTRA.map((item) => (<div key={item.id} className="flex size-9 items-center justify-center rounded-lg text-muted-foreground/25">
+              {SIDEBAR_EXTRA.map((item) => (<div key={item.id} className="flex size-9 items-center justify-center rounded-lg text-muted-foreground/40">
                   <item.Icon className="size-4"/>
                 </div>))}
             </div>

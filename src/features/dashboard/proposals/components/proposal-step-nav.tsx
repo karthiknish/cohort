@@ -69,7 +69,7 @@ function ProposalStepNavItem({ step, index, submitted, currentStep, onGoToStep }
                         'flex size-8 shrink-0 items-center justify-center rounded-md transition-colors',
                         isCurrent && 'bg-primary text-primary-foreground',
                         isComplete && !isCurrent && 'bg-primary/10 text-primary',
-                        !isComplete && !isCurrent && 'bg-muted text-muted-foreground',
+                        !isComplete && !isCurrent && 'bg-muted text-foreground/70',
                     )}
                 >
                     {isComplete && !isCurrent ? (

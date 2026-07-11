@@ -117,7 +117,7 @@ export function TaskArchiveView({ archivedTasks, onRestore, onPermanentlyDelete,
       {/* Archived Tasks List */}
       {archivedTasks.length === 0 ? (<Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Archive className="size-12 text-muted-foreground/20 mb-4"/>
+            <Archive className="size-12 text-muted-foreground/40 mb-4"/>
             <p className="text-muted-foreground">No archived tasks yet</p>
             <p className="text-xs text-muted-foreground/60 mt-1">
               Tasks you archive will appear here

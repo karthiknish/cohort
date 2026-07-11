@@ -65,7 +65,7 @@ const KIND_SURFACE: Record<AttachmentKind, string> = {
     pdf: 'bg-destructive/10 text-destructive ring-destructive/15',
     audio: 'bg-warning/10 text-warning ring-warning/15',
     spreadsheet: 'bg-success/10 text-success ring-success/15',
-    archive: 'bg-muted text-muted-foreground ring-border/50',
+    archive: 'bg-muted text-foreground/70 ring-border/50',
     file: 'bg-primary/10 text-primary ring-primary/15',
 };
 

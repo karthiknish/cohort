@@ -53,7 +53,7 @@ export function WorkspaceSelect({ className, clients, hasClients, selectValue, s
         <SelectContent position="popper" className="z-[3000] min-w-[var(--radix-select-trigger-width)] w-[var(--radix-select-trigger-width)]" sideOffset={4}>
           {clients.map((client) => (<SelectItem key={client.id} value={client.id} hideIndicator className="cursor-pointer rounded-md mx-1 my-0.5 px-3 py-2.5 text-popover-foreground transition-colors hover:bg-muted focus:bg-muted focus:text-foreground data-[highlighted]:bg-muted data-[highlighted]:text-foreground data-[state=checked]:bg-accent/10 data-[state=checked]:font-medium data-[state=checked]:text-foreground">
               <div className="flex items-center gap-3">
-                <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-foreground/70">
                   <Building2 className="size-3"/>
                 </div>
                 <TruncatedTextPreview text={client.name}/>

@@ -433,7 +433,7 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
           <div className={cn('max-w-[90%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed text-primary-foreground shadow-sm', message.lifecycle === 'failed'
                 ? 'bg-destructive/90 ring-1 ring-destructive/30'
                 : 'bg-gradient-to-br from-primary to-primary/90 ring-1 ring-primary/20', message.lifecycle === 'sending' && 'opacity-75')}>
-            <AgentMentionText text={content} mentionLabels={mentionLabels} mentionClassName="bg-primary-foreground/15 text-primary-foreground ring-primary-foreground/20"/>
+            <AgentMentionText text={content} mentionLabels={mentionLabels} mentionClassName="bg-primary-foreground/20 text-primary ring-primary-foreground/30"/>
             {message.mentions && message.mentions.length > 0 ? (<AgentMentionPills mentions={message.mentions}/>) : null}
             {message.attachments && message.attachments.length > 0 ? (<AgentMessageAttachmentChips attachments={message.attachments}/>) : null}
           </div>

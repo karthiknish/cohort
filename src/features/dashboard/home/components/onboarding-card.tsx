@@ -65,7 +65,7 @@ export function OnboardingCard() {
                 <Badge variant="outline" className="text-xs">
                   Step {index + 1}
                 </Badge>
-                <div className="flex size-6 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <div className="flex size-6 items-center justify-center rounded-full bg-muted text-foreground/70">
                   <span className="text-xs font-medium">{index + 1}</span>
                 </div>
               </div>

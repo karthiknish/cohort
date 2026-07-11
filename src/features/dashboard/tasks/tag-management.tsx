@@ -24,8 +24,8 @@ const TAG_STYLES: TagStyle[] = [
     { chip: 'border-transparent bg-accent/10 text-primary', dot: 'bg-primary' },
     { chip: 'border-transparent bg-secondary text-secondary-foreground', dot: 'bg-secondary-foreground' },
     { chip: 'border-transparent bg-accent text-accent-foreground', dot: 'bg-accent-foreground' },
-    { chip: 'border-border bg-background text-foreground', dot: 'bg-foreground' },
-    { chip: 'border-border bg-muted text-muted-foreground', dot: 'bg-muted-foreground' },
+    { chip: 'border-border bg-background text-foreground', dot: 'bg-foreground/60' },
+    { chip: 'border-border bg-muted text-foreground/60', dot: 'bg-foreground/40' },
 ];
 // Get consistent color for a tag based on its name
 function getTagColor(tag: string): string {
@@ -34,7 +34,7 @@ function getTagColor(tag: string): string {
         hash = tag.charCodeAt(i) + ((hash << 5) - hash);
     }
     const style = TAG_STYLES[Math.abs(hash) % TAG_STYLES.length];
-    return style?.chip || 'border-border bg-muted text-muted-foreground';
+    return style?.chip || 'border-border bg-muted text-foreground/60';
 }
 // Get the background color class for a tag (the first part before the space)
 function getTagBgColor(tag: string): string {

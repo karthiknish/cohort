@@ -44,7 +44,7 @@ function AudienceStepButton({ activeTab, index, onSelectStep, step, totalSteps, 
             ? 'bg-primary text-primary-foreground'
             : step.complete
                 ? 'bg-accent/10 text-primary'
-                : 'bg-muted text-muted-foreground')}>
+                : 'bg-muted text-foreground/70')}>
         <span className={cn('flex size-4 items-center justify-center rounded-full text-[10px]', step.complete ? 'bg-accent/20' : 'bg-muted-foreground/20')}>
           {index + 1}
         </span>

@@ -303,7 +303,7 @@ export function useMentionInput({ value, onChange, users, placeholder = 'Type @ 
                         <Avatar className="size-7 shrink-0">
                           {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} className="object-cover"/> : null}
                           <AvatarFallback className="bg-muted">
-                            <User className="size-4 text-muted-foreground"/>
+                            <User className="size-4 text-foreground/70"/>
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">

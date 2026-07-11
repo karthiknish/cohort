@@ -136,7 +136,7 @@ function notificationsToItems(notifications: WorkspaceNotification[]): WhatsNext
             pill: notification.read ? 'READ' : 'NEW',
             pillVariant: notification.read ? 'secondary' : 'default',
             icon: Icon,
-            iconClass: 'bg-muted text-muted-foreground',
+            iconClass: 'bg-muted text-foreground/70',
             sortMs: createdMs || 0,
         };
     });

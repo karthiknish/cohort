@@ -83,7 +83,7 @@ function DeltaPill({ delta, tone }: {
     delta: string;
     tone?: MetricItem['deltaTone'];
 }) {
-    return (<span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums', tone === 'positive' && 'bg-success/12 text-success', tone === 'negative' && 'bg-destructive/12 text-destructive', tone === 'neutral' && 'bg-muted text-muted-foreground')}>
+    return (<span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums', tone === 'positive' && 'bg-success/12 text-success', tone === 'negative' && 'bg-destructive/12 text-destructive', tone === 'neutral' && 'bg-muted text-foreground/70')}>
       {delta}
     </span>);
 }

@@ -26,7 +26,7 @@ export const statusColors: Record<TaskStatus, string> = {
     'in-progress': 'border-info/30 bg-info/15 text-info shadow-sm',
     review: 'border-warning/40 bg-warning/15 text-warning-foreground shadow-sm',
     completed: 'border-success/30 bg-success/15 text-success shadow-sm',
-    archived: 'border-border bg-muted text-muted-foreground shadow-sm',
+    archived: 'border-border bg-muted text-foreground/70 shadow-sm',
 };
 export const statusLaneColors: Record<TaskStatus, string> = {
     todo: 'bg-muted-foreground',
@@ -46,10 +46,10 @@ export const taskViewStatusPill: Record<TaskStatus, string> = {
     'in-progress': 'border-info/30 bg-info/15 text-info',
     review: 'border-warning/40 bg-warning/15 text-warning-foreground',
     completed: 'border-success/30 bg-success/15 text-success',
-    archived: 'border-border bg-muted text-muted-foreground',
+    archived: 'border-border bg-muted text-foreground/70',
 };
 export const taskViewPriorityPill: Record<TaskPriority, string> = {
-    low: 'border-border bg-muted text-muted-foreground',
+    low: 'border-border bg-muted text-foreground/70',
     medium: 'border-violet-300/80 bg-violet-100 text-violet-950',
     high: 'border-amber-300/80 bg-amber-50 text-amber-950',
     urgent: 'border-destructive/40 bg-destructive/15 text-destructive',
@@ -62,9 +62,9 @@ export const priorityAccentColors: Record<TaskPriority, string> = {
 };
 export const taskPillColors = {
     count: 'border-border bg-background text-foreground shadow-sm',
-    client: 'border-border bg-muted text-muted-foreground shadow-sm',
+    client: 'border-border bg-muted text-foreground/70 shadow-sm',
     project: 'border-transparent bg-accent/10 text-primary shadow-sm',
-    neutral: 'border-border bg-muted text-muted-foreground shadow-sm',
+    neutral: 'border-border bg-muted text-foreground/70 shadow-sm',
     subtask: 'border-transparent bg-secondary text-secondary-foreground shadow-sm',
     comments: 'border-transparent bg-accent text-accent-foreground shadow-sm',
     attachments: 'border-border bg-background text-muted-foreground shadow-sm',
@@ -77,7 +77,7 @@ export const taskPillColors = {
 } as const;
 export const taskInfoPanelClasses = {
     base: 'rounded-[1.15rem] border border-border bg-background px-3.5 py-3 shadow-sm',
-    icon: 'flex size-8 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted text-muted-foreground shadow-sm',
+    icon: 'flex size-8 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted text-foreground/70 shadow-sm',
     label: 'text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground',
     value: 'text-sm font-semibold leading-tight text-foreground',
 } as const;
@@ -96,7 +96,7 @@ export const PRIORITY_ORDER: Record<TaskPriority, number> = {
 };
 /** Compact status pills for data-table cells (no heavy border tokens). */
 export const statusTablePillClass: Record<TaskStatus, string> = {
-    todo: 'bg-muted text-muted-foreground',
+    todo: 'bg-muted text-foreground/70',
     'in-progress': 'bg-info/15 text-info',
     review: 'bg-warning/15 text-warning-foreground',
     completed: 'bg-success/15 text-success',

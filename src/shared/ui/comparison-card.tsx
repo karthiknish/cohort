@@ -93,7 +93,7 @@ export function ComparisonCard({ title, description, metrics, isLoading, classNa
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <div className={cn('flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase', change.type === 'up' && 'bg-accent/10 text-primary', change.type === 'down' && 'bg-destructive/10 text-destructive', change.type === 'neutral' && 'bg-muted text-muted-foreground')}>
+                  <div className={cn('flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase', change.type === 'up' && 'bg-accent/10 text-primary', change.type === 'down' && 'bg-destructive/10 text-destructive', change.type === 'neutral' && 'bg-muted text-foreground/70')}>
                     <ChangeIcon className="size-3"/>
                     {change.value.toFixed(1)}%
                   </div>

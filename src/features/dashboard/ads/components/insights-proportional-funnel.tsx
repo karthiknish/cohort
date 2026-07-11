@@ -72,7 +72,7 @@ export function InsightsProportionalFunnel({ stages, className, }: {
             return (<div key={stage.name} className="space-y-2">
               <StageMetrics stage={stage} isLast={index === layoutStages.length - 1}/>
               <TrapezoidSegment stage={stage} nextWidthPct={nextWidth} segmentHeight={segmentHeight}/>
-              {index < layoutStages.length - 1 ? (<ArrowDown className="mx-auto size-3.5 text-muted-foreground/35" aria-hidden/>) : null}
+              {index < layoutStages.length - 1 ? (<ArrowDown className="mx-auto size-3.5 text-muted-foreground/50" aria-hidden/>) : null}
             </div>);
         })}
       </figure>

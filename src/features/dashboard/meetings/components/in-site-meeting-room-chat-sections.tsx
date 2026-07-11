@@ -97,7 +97,7 @@ export function MeetingChatMessageItem({ mentionLabels, localAvatarUrl, message,
             <span>·</span>
             <span>{formatMessageTime(message.timestamp)}</span>
           </div>
-          {content.text ? (<AgentMentionText text={content.text} mentionLabels={mentionLabels} className={cn('whitespace-pre-wrap text-sm leading-6', isLocal ? 'text-primary-foreground' : 'text-foreground')} mentionClassName={cn(isLocal ? 'bg-primary-foreground/15 text-primary-foreground ring-primary-foreground/20' : 'bg-accent/15 text-primary ring-primary/20')}/>) : null}
+          {content.text ? (<AgentMentionText text={content.text} mentionLabels={mentionLabels} className={cn('whitespace-pre-wrap text-sm leading-6', isLocal ? 'text-primary-foreground' : 'text-foreground')} mentionClassName={cn(isLocal ? 'bg-primary-foreground/20 text-primary ring-primary-foreground/30' : 'bg-accent/15 text-primary ring-primary/20')}/>) : null}
           {content.attachments.length > 0 ? (<div className="space-y-2">
               {content.attachments.map((attachment) => (<MeetingChatAttachmentCard key={`${attachment.url}-${attachment.name}`} attachment={attachment} isLocal={isLocal}/>))}
             </div>) : null}

@@ -135,7 +135,7 @@ export function ReadReceiptDetail({ message, channelMembers, className, }: {
                 if (readBySet.has(userId))
                     return [];
                 const member = membersById.get(userId);
-                return [(<span key={userId} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-muted-foreground text-xs">
+                return [(<span key={userId} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-foreground/70 text-xs">
                   {member?.name || userId}
                 </span>)];
             })}

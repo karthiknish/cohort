@@ -29,7 +29,7 @@ const CATEGORY_BADGE: Record<string, string> = {
     tasks: 'border-primary/20 bg-primary/10 text-primary',
     collaboration: 'border-info/25 bg-info/10 text-info',
     ads: 'border-warning/30 bg-warning/10 text-warning-foreground',
-    digest: 'border-border bg-muted text-muted-foreground',
+    digest: 'border-border bg-muted text-foreground/70',
     projects: 'border-primary/15 bg-primary/8 text-primary',
     meetings: 'border-info/20 bg-info/10 text-info',
 };
@@ -61,7 +61,7 @@ export function NotificationItem({ notification, compact = false, selected = fal
     const category = kindToCategory(notification.kind);
     const chipLabel = CATEGORY_CHIP_LABEL[category] ?? 'Update';
     const accentClass = CATEGORY_ACCENT[category] ?? 'border-l-border bg-muted/15';
-    const badgeClass = CATEGORY_BADGE[category] ?? 'border-border bg-muted text-muted-foreground';
+    const badgeClass = CATEGORY_BADGE[category] ?? 'border-border bg-muted text-foreground/70';
     const onOpenNotification = () => {
         onOpen?.(notification);
     };

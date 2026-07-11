@@ -12,7 +12,7 @@ type ChannelAvatarProps = {
 export function ChannelAvatar({ channel, className, fallbackClassName }: ChannelAvatarProps) {
     return (<Avatar className={className}>
       {channel.avatarUrl ? (<AvatarImage src={channel.avatarUrl} alt={channel.name} className="object-cover"/>) : null}
-      <AvatarFallback className={cn('bg-muted text-muted-foreground', fallbackClassName)}>
+      <AvatarFallback className={cn('bg-muted text-foreground/70', fallbackClassName)}>
         <Hash className="size-4" aria-hidden/>
         <span className="sr-only">{getInitials(channel.name)}</span>
       </AvatarFallback>

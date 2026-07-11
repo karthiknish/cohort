@@ -17,7 +17,7 @@ export function StepProgress({ steps, currentStep, className, }: {
                 ? 'bg-primary text-primary-foreground'
                 : idx === currentStep
                     ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
-                    : 'bg-muted text-muted-foreground')}>
+                    : 'bg-muted text-foreground/70')}>
             {idx < currentStep ? '✓' : idx + 1}
           </div>
 
