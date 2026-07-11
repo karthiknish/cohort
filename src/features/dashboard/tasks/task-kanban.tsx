@@ -328,9 +328,6 @@ function KanbanTaskItem({ bulkActive, handleDragEnd, handleDragStart, handleView
     selected: boolean;
     task: TaskRecord;
 }) {
-    const onGripDragStart = (event: React.DragEvent<HTMLButtonElement>) => {
-        handleDragStart(event, task);
-    };
     const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
         if (!event.altKey) {
             return;
@@ -345,8 +342,15 @@ function KanbanTaskItem({ bulkActive, handleDragEnd, handleDragStart, handleView
         }
     };
     const reorderEnabled = !bulkActive && !pending;
-    return (<li className={cn('list-none rounded-xl transition-opacity', isDragging && 'opacity-40')}>
-      {reorderEnabled ? (<button type="button" className="sr-only" aria-label={`Reorder ${task.title}`} aria-describedby={keyboardInstructionsId} aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight" aria-grabbed={isDragging} draggable onDragStart={onGripDragStart} onDragEnd={handleDragEnd} onKeyDown={handleKeyDown}/>) : null}
+    const onItemDragStart = (event: React.DragEvent<HTMLLIElement>) => {
+        if (!reorderEnabled) {
+            event.preventDefault();
+            return;
+        }
+        handleDragStart(event, task);
+    };
+    return (<li className={cn('list-none rounded-xl transition-opacity', isDragging && 'opacity-40', reorderEnabled && 'cursor-grab active:cursor-grabbing')} draggable={reorderEnabled} onDragStart={onItemDragStart} onDragEnd={handleDragEnd}>
+      {reorderEnabled ? (<button type="button" className="sr-only" aria-label={`Reorder ${task.title}`} aria-describedby={keyboardInstructionsId} aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight" aria-grabbed={isDragging} onKeyDown={handleKeyDown}/>) : null}
       <TaskCard task={task} variant="board" isPendingUpdate={pending} onOpen={handleViewTask} onEdit={onEdit} onDelete={onDelete} onQuickStatusChange={onQuickStatusChange} onClone={onClone} onShare={onShare} selected={selected} onSelectToggle={onToggleTaskSelection} searchQuery={searchQuery}/>
     </li>);
 }
