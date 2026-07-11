@@ -464,6 +464,7 @@ export function CollaborationDashboardV2() {
           workspaceId: String(workspaceId),
           conversationLegacyId: selectedConversationLegacyId,
           content,
+          attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
         });
         void markDirectMessageRead({
           workspaceId: String(workspaceId),

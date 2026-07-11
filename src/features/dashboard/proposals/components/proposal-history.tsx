@@ -124,7 +124,7 @@ function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, 
     const handlePrev = () => canPrev && setPageIndex(clampedPageIndex - 1);
     const handleNext = () => canNext && setPageIndex(clampedPageIndex + 1);
     return (<FadeIn>
-      <MotionCard className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden')}>
+      <MotionCard className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden py-6')}>
         <CardHeader className={DASHBOARD_THEME.cards.header}>
           <div className="flex items-start gap-3">
             <div className={cn(DASHBOARD_THEME.icons.container, 'size-10 shrink-0')}>
