@@ -5,9 +5,10 @@
  * integration platform clients (Meta, Google, TikTok, LinkedIn).
  */
 import { parseIntegrationError, type IntegrationPlatform } from '@/lib/errors';
-import { calculateBackoffDelay, composeAbortSignal, DEFAULT_RETRY_CONFIG, isAbortError, isRetryableStatus, isTimeoutError, parseRetryAfterMs, sleepWithSignal, } from '@/lib/retry-utils';
+import { calculateBackoffDelay, composeAbortSignal, DEFAULT_RETRY_CONFIG, isAbortError, isRetryableStatus, isTimeoutError, parseRetryAfterMs, sleepWithSignal, type RateLimitDetails, } from '@/lib/retry-utils';
 import { GOOGLE_API_BASE } from '@/services/integrations/google-ads/types';
 import { META_API_BASE } from '@/services/integrations/meta-ads/constants';
+import { parseMetaRateLimitHeaders } from '@/services/integrations/meta-ads/rate-limit-headers';
 import { logger } from '@/lib/logger';
 const DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS = 45000;
 // =============================================================================
@@ -26,7 +27,8 @@ export interface BaseRequestOptions {
         retry: boolean;
         newToken?: string;
     }>;
-    onRateLimitHit?: (retryAfterMs: number) => void;
+    onRateLimitHit?: (retryAfterMs: number, details?: RateLimitDetails) => void;
+    onRateLimitTelemetry?: (details: RateLimitDetails) => void;
 }
 export interface RequestResult<T> {
     response: Response;
@@ -103,7 +105,7 @@ export class IntegrationApiClient {
      * Execute a request with automatic retry, backoff, and error handling
      */
     async executeRequest<T>(options: BaseRequestOptions): Promise<RequestResult<T>> {
-        const { url, method = 'GET', headers: requestHeaders = {}, body, operation, maxRetries = this.maxRetries, timeoutMs = this.defaultTimeoutMs, signal, onAuthError, onRateLimitHit, } = options;
+        const { url, method = 'GET', headers: requestHeaders = {}, body, operation, maxRetries = this.maxRetries, timeoutMs = this.defaultTimeoutMs, signal, onAuthError, onRateLimitHit, onRateLimitTelemetry, } = options;
         let currentUrl = url.startsWith('http') ? url : `${this.baseUrl}${url}`;
         let currentHeaders = { ...this.defaultHeaders, ...requestHeaders };
         let lastError: Error | null = null;
@@ -189,6 +191,7 @@ export class IntegrationApiClient {
                     duration,
                     statusCode: response.status,
                 });
+                this.emitRateLimitTelemetry(response.headers, onRateLimitTelemetry);
                 return { response, payload };
             }
             // Parse error
@@ -223,9 +226,9 @@ export class IntegrationApiClient {
                 const retryAfterMs = error.retryAfterMs
                     ?? parseRetryAfterMs(response.headers)
                     ?? calculateBackoffDelay(attempt) * 2;
-                onRateLimitHit?.(retryAfterMs);
+                onRateLimitHit?.(retryAfterMs, error.rateLimitDetails);
                 if (attempt < maxRetries - 1) {
-                    logger.warn(`[${platformLabel} API] Rate limited, waiting ${retryAfterMs}ms`);
+                    logger.warn(`[${platformLabel} API] Rate limited, waiting ${retryAfterMs}ms`, { rateLimitDetails: error.rateLimitDetails });
                     await sleepWithSignal(retryAfterMs, signal);
                     continue;
                 }
@@ -275,6 +278,27 @@ export class IntegrationApiClient {
         }
         catch {
             return url;
+        }
+    }
+    /**
+     * Emit rate-limit telemetry for high-usage Meta responses.
+     */
+    private emitRateLimitTelemetry(headers: Headers, onRateLimitTelemetry?: (details: RateLimitDetails) => void): void {
+        if (this.platform !== 'meta')
+            return;
+        const details = parseMetaRateLimitHeaders(headers);
+        if (!details)
+            return;
+        onRateLimitTelemetry?.(details);
+        const utilization = Math.max(
+            details.accountUtilizationPct ?? 0,
+            details.appUtilizationPct ?? 0,
+            details.callCountPct ?? 0,
+            details.totalCpuTimePct ?? 0,
+            details.totalTimePct ?? 0,
+        );
+        if (utilization >= 80) {
+            logger.warn(`[${this.platform.toUpperCase()} API] Rate-limit usage is high`, { utilization, details });
         }
     }
     /**

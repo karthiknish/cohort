@@ -2,7 +2,7 @@
 // CAMPAIGNS CORE - Basic campaign CRUD operations
 // =============================================================================
 import { asErrorMessage } from '@/lib/convex-errors';
-import { appendMetaAuthParams, META_API_BASE, } from '../client';
+import { appendMetaAuthParams, META_API_BASE, sleep, } from '../client';
 import { metaAdsClient } from '@/services/integrations/shared/base-client';
 import { isMutableAdvantageState, type MetaCampaign } from '../types';
 import type { CreateCampaignOptions, UpdateCampaignOptions, UpdateCampaignBiddingOptions, } from './types';
@@ -21,15 +21,13 @@ export async function listMetaCampaigns(options: {
     accessToken: string;
     adAccountId: string;
     statusFilter?: ('ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'IN_PROCESS' | 'WITH_ISSUES')[];
+    maxPages?: number;
     maxRetries?: number;
 }): Promise<MetaCampaign[]> {
-    const { accessToken, adAccountId, statusFilter = [...DEFAULT_META_CAMPAIGN_STATUS_FILTER], maxRetries = 3, } = options;
-    const params = new URLSearchParams({
-        fields: ['id', 'name', 'status', 'effective_status', 'objective', 'daily_budget', 'lifetime_budget', 'start_time', 'stop_time', 'bid_strategy'].join(','),
-        limit: '100',
-    });
-    // Ensure adAccountId has act_ prefix if it's just a number
+    const { accessToken, adAccountId, statusFilter = [...DEFAULT_META_CAMPAIGN_STATUS_FILTER], maxPages = 10, maxRetries = 3, } = options;
+    const fields = ['id', 'name', 'status', 'effective_status', 'objective', 'daily_budget', 'lifetime_budget', 'start_time', 'stop_time', 'bid_strategy'].join(',');
     const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
+    let filteringJson: string | undefined;
     if (statusFilter.length > 0) {
         const filtering = [
             {
@@ -38,40 +36,66 @@ export async function listMetaCampaigns(options: {
                 value: statusFilter,
             },
         ];
-        params.set('filtering', JSON.stringify(filtering));
+        filteringJson = JSON.stringify(filtering);
     }
-    await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET });
-    const url = `${META_API_BASE}/${formattedAccountId}/campaigns?${params.toString()}`;
-    const { payload } = await metaAdsClient.executeRequest<{
-        data?: Array<{
-            id?: string;
-            name?: string;
-            status?: string;
-            effective_status?: string;
-            objective?: string;
-            daily_budget?: string;
-            lifetime_budget?: string;
-            start_time?: string;
-            stop_time?: string;
-            bid_strategy?: string;
-        }>;
-    }>({
-        url,
-        operation: 'listCampaigns',
-        maxRetries,
-    });
-    const campaigns = Array.isArray(payload?.data) ? payload.data : [];
-    return campaigns.map((c) => ({
-        id: c.id ?? '',
-        name: c.name ?? '',
-        status: (c.effective_status ?? c.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
-        objective: c.objective,
-        dailyBudget: c.daily_budget ? parseInt(c.daily_budget, 10) / 100 : undefined,
-        lifetimeBudget: c.lifetime_budget ? parseInt(c.lifetime_budget, 10) / 100 : undefined,
-        startTime: c.start_time,
-        stopTime: c.stop_time,
-        bidStrategy: c.bid_strategy,
-    }));
+
+    const fetchPage = async (page: number, after?: string): Promise<MetaCampaign[]> => {
+        const params = new URLSearchParams({
+            fields,
+            limit: '100',
+        });
+        if (filteringJson) {
+            params.set('filtering', filteringJson);
+        }
+        if (after) {
+            params.set('after', after);
+        }
+        await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET });
+        const url = `${META_API_BASE}/${formattedAccountId}/campaigns?${params.toString()}`;
+        const { payload } = await metaAdsClient.executeRequest<{
+            data?: Array<{
+                id?: string;
+                name?: string;
+                status?: string;
+                effective_status?: string;
+                objective?: string;
+                daily_budget?: string;
+                lifetime_budget?: string;
+                start_time?: string;
+                stop_time?: string;
+                bid_strategy?: string;
+            }>;
+            paging?: {
+                cursors?: {
+                    after?: string;
+                };
+                next?: string;
+            };
+        }>({
+            url,
+            operation: `listCampaigns:page${page}`,
+            maxRetries,
+        });
+        const campaigns = Array.isArray(payload?.data) ? payload.data : [];
+        const mapped = campaigns.map((c) => ({
+            id: c.id ?? '',
+            name: c.name ?? '',
+            status: (c.effective_status ?? c.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
+            objective: c.objective,
+            dailyBudget: c.daily_budget ? parseInt(c.daily_budget, 10) / 100 : undefined,
+            lifetimeBudget: c.lifetime_budget ? parseInt(c.lifetime_budget, 10) / 100 : undefined,
+            startTime: c.start_time,
+            stopTime: c.stop_time,
+            bidStrategy: c.bid_strategy,
+        }));
+        const nextCursor = payload?.paging?.cursors?.after ?? null;
+        if (!nextCursor || page + 1 >= maxPages) {
+            return mapped;
+        }
+        const nextPage = await fetchPage(page + 1, nextCursor);
+        return [...mapped, ...nextPage];
+    };
+    return fetchPage(0);
 }
 // =============================================================================
 // CREATE CAMPAIGN
@@ -151,7 +175,7 @@ export async function createMetaCampaign(options: CreateCampaignOptions): Promis
 export async function updateMetaCampaignStatus(options: {
     accessToken: string;
     campaignId: string;
-    status: 'ACTIVE' | 'PAUSED';
+    status: 'ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'DELETED';
     maxRetries?: number;
 }): Promise<{
     success: boolean;
@@ -272,7 +296,7 @@ export async function removeMetaCampaign(options: {
 }> {
     return updateMetaCampaignStatus({
         ...options,
-        status: 'PAUSED', // Meta doesn't truly delete, we pause instead
+        status: 'ARCHIVED', // Meta doesn't truly delete; archive the campaign
     });
 }
 // =============================================================================
@@ -280,8 +304,12 @@ export async function removeMetaCampaign(options: {
 // =============================================================================
 export async function updateMetaCampaignBidding(options: UpdateCampaignBiddingOptions): Promise<{
     success: boolean;
+    error?: string;
 }> {
-    const { accessToken, campaignId, biddingValue, maxRetries = 3, } = options;
+    const { accessToken, campaignId, biddingType, biddingValue, maxRetries = 3, } = options;
+    if (!biddingType) {
+        return { success: false, error: 'Missing biddingType for campaign bidding update' };
+    }
     // 1. Fetch all ad sets for this campaign
     const params = new URLSearchParams({
         fields: 'id',
@@ -302,11 +330,15 @@ export async function updateMetaCampaignBidding(options: UpdateCampaignBiddingOp
     if (adSets.length === 0) {
         return { success: true }; // No ad sets to update
     }
-    // 2. Update each ad set's bid amount
+    // 2. Update each ad set's bid strategy and amount in small concurrent chunks.
     // Meta uses "bid_amount" in cents (like budgets) if the strategy allows it.
     // Note: Some bidding strategies don't support manual bids.
-    const updateAdSetBid = async (adSet: (typeof adSets)[number]) => {
+    const results: { success: boolean; adSetId?: string; error?: string }[] = [];
+    const chunkSize = 5;
+    const chunkDelayMs = 100;
+    const updateAdSetBid = async (adSet: { id: string }) => {
         const updateParams = new URLSearchParams();
+        updateParams.set('bid_strategy', biddingType);
         updateParams.set('bid_amount', String(Math.round(biddingValue * 100)));
         await appendMetaAuthParams({ params: updateParams, accessToken, appSecret: process.env.META_APP_SECRET });
         const updateUrl = `${META_API_BASE}/${adSet.id}?${updateParams.toString()}`;
@@ -319,11 +351,23 @@ export async function updateMetaCampaignBidding(options: UpdateCampaignBiddingOp
             });
             return { success: true, adSetId: adSet.id };
         }
-        catch {
-            return { success: false, adSetId: adSet.id };
+        catch (error) {
+            return { success: false, adSetId: adSet.id, error: asErrorMessage(error, 'Failed to update ad set bid') };
         }
     };
-    const results = await Promise.all(adSets.map(updateAdSetBid));
-    const allSucceeded = results.every((r) => r.success);
-    return { success: allSucceeded };
+    for (let i = 0; i < adSets.length; i += chunkSize) {
+        const chunk = adSets.slice(i, i + chunkSize);
+        const chunkResults = await Promise.all(chunk.map(updateAdSetBid));
+        results.push(...chunkResults);
+        // Pace chunks to stay well under Meta's ~100 QPS per-ad-account limit.
+        if (i + chunkSize < adSets.length) {
+            await sleep(chunkDelayMs);
+        }
+    }
+    const failed = results.filter((r) => !r.success);
+    if (failed.length === 0) {
+        return { success: true };
+    }
+    const firstError = failed[0]?.error ?? `Failed to update ${failed.length} ad set(s)`;
+    return { success: false, error: firstError };
 }

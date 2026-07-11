@@ -5,7 +5,7 @@ import { cache } from 'react';
 import { asErrorMessage } from '@/lib/convex-errors';
 import { formatDate } from '@/lib/dates';
 import { logger } from '@/lib/logger';
-import { appendMetaAuthParams, buildTimeRange, coerceNumber, DEFAULT_RETRY_CONFIG, META_API_BASE, } from './client';
+import { appendMetaAuthParams, buildTimeRange, chunkDateRange, coerceNumber, DEFAULT_RETRY_CONFIG, META_API_BASE, } from './client';
 import { metaAdsClient } from '@/services/integrations/shared/base-client';
 import type { MetaAdsOptions, MetaAdAccount, MetaInsightsResponse, MetaInsightsRow, MetaPagingState, MetaApiErrorResponse, NormalizedMetric, } from './types';
 // =============================================================================
@@ -143,7 +143,7 @@ function readEnvFlag(value: string | undefined): boolean {
     return v === '1' || v === 'true' || v === 'yes';
 }
 async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<NormalizedMetric[]> {
-    const { accessToken, adAccountId, timeframeDays, maxPages = 10, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, refreshAccessToken, onRateLimitHit, onTokenRefresh, } = options;
+    const { accessToken, adAccountId, timeframeDays, maxPages = 10, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, refreshAccessToken, onRateLimitHit, onRateLimitTelemetry, onTokenRefresh, } = options;
     if (!accessToken)
         throw new Error('Missing Meta access token');
     if (!adAccountId)
@@ -164,17 +164,17 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
             maxRetries,
             refreshAccessToken,
             onRateLimitHit,
+            onRateLimitTelemetry,
             onTokenRefresh,
             maxWaitMs: Number.isFinite(maxWaitParsed) ? maxWaitParsed : undefined,
             pollIntervalMs: Number.isFinite(pollParsed) ? pollParsed : undefined,
         });
         return metaInsightRowsToNormalizedMetrics(adAccountId, rows);
     }
-    const timeRange = buildTimeRange(timeframeDays);
     let activeAccessToken = accessToken;
     let tokenRefreshAttempted = false;
     const appSecret = process.env.META_APP_SECRET;
-    const fetchPage = async (page: number, paging?: MetaPagingState): Promise<NormalizedMetric[]> => {
+    const fetchPage = async (page: number, timeRange: { since: string; until: string }, paging?: MetaPagingState): Promise<NormalizedMetric[]> => {
         const params = new URLSearchParams({
             level: 'campaign',
             fields: [
@@ -213,6 +213,7 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
                 return { retry: false };
             },
             onRateLimitHit,
+            onRateLimitTelemetry,
         });
         const rows: MetaInsightsRow[] = Array.isArray(payload?.data) ? payload.data : [];
         const pageMetrics = metaInsightRowsToNormalizedMetrics(adAccountId, rows);
@@ -222,10 +223,18 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
         if (!nextPaging?.after || page + 1 >= maxPages) {
             return pageMetrics;
         }
-        const nextPageMetrics = await fetchPage(page + 1, nextPaging);
+        const nextPageMetrics = await fetchPage(page + 1, timeRange, nextPaging);
         return [...pageMetrics, ...nextPageMetrics];
     };
-    return fetchPage(0);
+    // Chunk wide windows to avoid Meta's heavy-query throttling and 90-day/13-month limits.
+    const INSIGHTS_CHUNK_DAYS = 90;
+    const chunks = chunkDateRange(timeframeDays, INSIGHTS_CHUNK_DAYS);
+    const allMetrics: NormalizedMetric[] = [];
+    for (const timeRange of chunks) {
+        const chunkMetrics = await fetchPage(0, timeRange);
+        allMetrics.push(...chunkMetrics);
+    }
+    return allMetrics;
 }
 export const fetchMetaAdsMetrics = cache(fetchMetaAdsMetricsInternal);
 // =============================================================================
@@ -242,35 +251,50 @@ export async function checkMetaIntegrationHealth(options: {
 }> {
     const { accessToken, adAccountId } = options;
     try {
-        const userParams = new URLSearchParams({
-            fields: 'id,name',
-            access_token: accessToken,
+        const userResponse = await metaAdsClient.executeRequest<{
+            id?: string;
+            name?: string;
+            error?: {
+                message?: string;
+            };
+        }>({
+            url: '/me?fields=id,name',
+            operation: 'checkMetaUserHealth',
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+            maxRetries: 1,
         });
-        const userUrl = `${META_API_BASE}/me?${userParams.toString()}`;
-        const userResponse = await fetch(userUrl);
-        if (!userResponse.ok) {
-            const errorData = await userResponse.json() as MetaApiErrorResponse;
+        if (userResponse.payload?.error) {
             return {
                 healthy: false,
                 tokenValid: false,
                 accountAccessible: false,
-                error: errorData?.error?.message ?? 'Token validation failed',
+                error: userResponse.payload.error.message ?? 'Token validation failed',
             };
         }
         if (adAccountId) {
-            const accountParams = new URLSearchParams({
-                fields: 'id,account_status',
-                access_token: accessToken,
+            const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
+            const accountResponse = await metaAdsClient.executeRequest<{
+                id?: string;
+                account_status?: number;
+                error?: {
+                    message?: string;
+                };
+            }>({
+                url: `/${formattedAccountId}?fields=id,account_status`,
+                operation: 'checkMetaAccountHealth',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+                maxRetries: 1,
             });
-            const accountUrl = `${META_API_BASE}/${adAccountId}?${accountParams.toString()}`;
-            const accountResponse = await fetch(accountUrl);
-            if (!accountResponse.ok) {
-                const errorData = await accountResponse.json() as MetaApiErrorResponse;
+            if (accountResponse.payload?.error) {
                 return {
                     healthy: false,
                     tokenValid: true,
                     accountAccessible: false,
-                    error: errorData?.error?.message ?? 'Ad account not accessible',
+                    error: accountResponse.payload.error.message ?? 'Ad account not accessible',
                 };
             }
         }

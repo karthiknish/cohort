@@ -1,7 +1,7 @@
 // =============================================================================
 // META ADS API ERRORS
 // =============================================================================
-import { META_ERROR_CODES } from './types';
+import { META_AUTH_CODE_VALUES, META_RATE_LIMIT_CODE_VALUES, META_RETRYABLE_CODE_VALUES } from './types';
 import { IntegrationApiErrorBase } from '../shared/api-error-base';
 // =============================================================================
 // CUSTOM ERROR CLASS
@@ -19,22 +19,9 @@ export class MetaApiError extends IntegrationApiErrorBase {
         fbTraceId?: string;
         retryAfterMs?: number;
     }) {
-        const authCodes: number[] = [
-            META_ERROR_CODES.OAUTH_EXCEPTION,
-            META_ERROR_CODES.ACCESS_TOKEN_EXPIRED,
-            META_ERROR_CODES.PASSWORD_CHANGED,
-        ];
-        const rateLimitCodes: number[] = [
-            META_ERROR_CODES.RATE_LIMIT_EXCEEDED,
-            META_ERROR_CODES.TOO_MANY_CALLS,
-            META_ERROR_CODES.ACCOUNT_RATE_LIMIT,
-            META_ERROR_CODES.TOO_MANY_DATA_REQUESTS,
-        ];
-        const retryableCodes: number[] = [
-            META_ERROR_CODES.TEMPORARY_ERROR,
-            META_ERROR_CODES.SERVICE_UNAVAILABLE,
-            META_ERROR_CODES.UNKNOWN_ERROR,
-        ];
+        const authCodes: number[] = META_AUTH_CODE_VALUES;
+        const rateLimitCodes: number[] = META_RATE_LIMIT_CODE_VALUES;
+        const retryableCodes: number[] = META_RETRYABLE_CODE_VALUES;
         const isAuthError = authCodes.includes(options.code);
         const isRateLimitError = rateLimitCodes.includes(options.code);
         const isRetryable = isRateLimitError || (!isAuthError && retryableCodes.includes(options.code));

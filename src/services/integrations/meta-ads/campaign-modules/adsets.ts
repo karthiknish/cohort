@@ -14,14 +14,12 @@ export async function listMetaAdSets(options: {
     adAccountId: string;
     campaignId?: string;
     statusFilter?: ('ACTIVE' | 'PAUSED' | 'ARCHIVED')[];
+    maxPages?: number;
     maxRetries?: number;
 }): Promise<MetaAdSet[]> {
-    const { accessToken, adAccountId, campaignId, statusFilter = ['ACTIVE', 'PAUSED'], maxRetries = 3, } = options;
-    const params = new URLSearchParams({
-        fields: ['id', 'name', 'campaign_id', 'status', 'effective_status', 'daily_budget', 'lifetime_budget', 'bid_amount', 'optimization_goal', 'targeting'].join(','),
-        limit: '100',
-    });
-    const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
+    const { accessToken, adAccountId, campaignId, statusFilter = ['ACTIVE', 'PAUSED'], maxPages = 10, maxRetries = 3, } = options;
+    const fields = ['id', 'name', 'campaign_id', 'status', 'effective_status', 'daily_budget', 'lifetime_budget', 'bid_amount', 'optimization_goal', 'targeting'].join(',');
+    let filteringJson: string | undefined;
     if (statusFilter.length > 0) {
         const filtering = [
             {
@@ -30,46 +28,71 @@ export async function listMetaAdSets(options: {
                 value: statusFilter,
             },
         ];
-        params.set('filtering', JSON.stringify(filtering));
+        filteringJson = JSON.stringify(filtering);
     }
-    await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET });
-    let url: string;
+
+    const fetchPage = async (page: number, after?: string, baseUrl?: string): Promise<MetaAdSet[]> => {
+        const params = new URLSearchParams({
+            fields,
+            limit: '100',
+        });
+        if (filteringJson) {
+            params.set('filtering', filteringJson);
+        }
+        if (after) {
+            params.set('after', after);
+        }
+        await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET });
+        const listUrl = baseUrl ?? `${META_API_BASE}/${adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`}/adsets?${params.toString()}`;
+        const { payload } = await metaAdsClient.executeRequest<{
+            data?: Array<{
+                id?: string;
+                name?: string;
+                campaign_id?: string;
+                status?: string;
+                effective_status?: string;
+                daily_budget?: string;
+                lifetime_budget?: string;
+                bid_amount?: string;
+                optimization_goal?: string;
+                targeting?: Record<string, unknown>;
+            }>;
+            paging?: {
+                cursors?: {
+                    after?: string;
+                };
+                next?: string;
+            };
+        }>({
+            url: listUrl,
+            operation: `listAdSets:page${page}`,
+            maxRetries,
+        });
+        const adSets = Array.isArray(payload?.data) ? payload.data : [];
+        const mapped = adSets.map((a) => ({
+            id: a.id ?? '',
+            name: a.name ?? '',
+            campaignId: a.campaign_id ?? '',
+            status: (a.effective_status ?? a.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
+            dailyBudget: a.daily_budget ? parseInt(a.daily_budget, 10) / 100 : undefined,
+            lifetimeBudget: a.lifetime_budget ? parseInt(a.lifetime_budget, 10) / 100 : undefined,
+            bidAmount: a.bid_amount ? parseInt(a.bid_amount, 10) / 100 : undefined,
+            optimization_goal: a.optimization_goal,
+            targeting: a.targeting,
+        }));
+        const nextCursor = payload?.paging?.cursors?.after ?? null;
+        if (!nextCursor || page + 1 >= maxPages) {
+            return mapped;
+        }
+        const nextPage = await fetchPage(page + 1, nextCursor);
+        return [...mapped, ...nextPage];
+    };
+
     if (campaignId) {
-        url = `${META_API_BASE}/${campaignId}/adsets?${params.toString()}`;
+        const baseUrl = `${META_API_BASE}/${campaignId}/adsets`;
+        return fetchPage(0, undefined, baseUrl);
     }
-    else {
-        url = `${META_API_BASE}/${formattedAccountId}/adsets?${params.toString()}`;
-    }
-    const { payload } = await metaAdsClient.executeRequest<{
-        data?: Array<{
-            id?: string;
-            name?: string;
-            campaign_id?: string;
-            status?: string;
-            effective_status?: string;
-            daily_budget?: string;
-            lifetime_budget?: string;
-            bid_amount?: string;
-            optimization_goal?: string;
-            targeting?: Record<string, unknown>;
-        }>;
-    }>({
-        url,
-        operation: 'listAdSets',
-        maxRetries,
-    });
-    const adSets = Array.isArray(payload?.data) ? payload.data : [];
-    return adSets.map((a) => ({
-        id: a.id ?? '',
-        name: a.name ?? '',
-        campaignId: a.campaign_id ?? '',
-        status: (a.effective_status ?? a.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
-        dailyBudget: a.daily_budget ? parseInt(a.daily_budget, 10) / 100 : undefined,
-        lifetimeBudget: a.lifetime_budget ? parseInt(a.lifetime_budget, 10) / 100 : undefined,
-        bidAmount: a.bid_amount ? parseInt(a.bid_amount, 10) / 100 : undefined,
-        optimization_goal: a.optimization_goal,
-        targeting: a.targeting,
-    }));
+    return fetchPage(0);
 }
 // =============================================================================
 // CREATE AD SET

@@ -58,7 +58,7 @@ export async function updateMetaAd(options: UpdateAdOptions): Promise<{
     success: boolean;
     error?: string;
 }> {
-    const { accessToken, adId, creativeId, name, maxRetries } = options;
+    const { accessToken, adId, creativeId, name, status, maxRetries } = options;
     const params = new URLSearchParams();
     await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET });
     const bodyData: Record<string, unknown> = {
@@ -67,6 +67,9 @@ export async function updateMetaAd(options: UpdateAdOptions): Promise<{
     };
     if (name !== undefined) {
         bodyData.name = name;
+    }
+    if (status !== undefined) {
+        bodyData.status = status;
     }
     try {
         const { payload } = await metaAdsClient.executeRequest<{

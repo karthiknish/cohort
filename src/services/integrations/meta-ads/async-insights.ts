@@ -5,12 +5,13 @@
 // GET {report_run_id} until Job Completed, then GET {report_run_id}/insights.
 // Sync path remains `fetchMetaAdsMetrics` in metrics.ts; use this for heavy windows
 // or when product wires long-running jobs (Convex cron, etc.).
-import { appendMetaAuthParams, buildTimeRange, DEFAULT_RETRY_CONFIG, META_API_BASE, sleep, } from './client';
-import { metaAdsClient } from '../shared/base-client';
+import { appendMetaAuthParams, buildTimeRange, chunkDateRange, DEFAULT_RETRY_CONFIG, META_API_BASE, sleep, } from './client';
+import { metaAdsClient, type BaseRequestOptions } from '../shared/base-client';
 import type { MetaInsightsResponse, MetaInsightsRow, MetaPagingState } from './types';
 type MetaAsyncInsightsCallbacks = {
     refreshAccessToken?: () => Promise<string>;
-    onRateLimitHit?: (retryAfterMs: number) => void;
+    onRateLimitHit?: BaseRequestOptions['onRateLimitHit'];
+    onRateLimitTelemetry?: BaseRequestOptions['onRateLimitTelemetry'];
     onTokenRefresh?: () => void;
 };
 type MetaAsyncInsightsRequestState = {
@@ -34,7 +35,7 @@ async function executeMetaAsyncInsightsRequest<T>(options: {
     response: Response;
     payload: T;
 }> {
-    const { url, operation, requestState, maxRetries, method, body, refreshAccessToken, onRateLimitHit, onTokenRefresh, } = options;
+    const { url, operation, requestState, maxRetries, method, body, refreshAccessToken, onRateLimitHit, onRateLimitTelemetry, onTokenRefresh, } = options;
     return metaAdsClient.executeRequest<T>({
         url,
         operation,
@@ -52,6 +53,7 @@ async function executeMetaAsyncInsightsRequest<T>(options: {
             return { retry: false };
         },
         onRateLimitHit,
+        onRateLimitTelemetry,
     });
 }
 function formatAdAccountId(adAccountId: string): string {
@@ -88,14 +90,15 @@ const INSIGHT_FIELDS = [
 export type MetaAsyncInsightsJobStatus = 'Job Not Started' | 'Job Running' | 'Job Completed' | 'Job Failed' | 'Job Skipped' | (string & {});
 async function startMetaAccountInsightsReportInternal(options: {
     adAccountId: string;
-    timeframeDays: number;
+    timeframeDays?: number;
+    timeRange?: { since: string; until: string };
     maxRetries?: number;
     requestState: MetaAsyncInsightsRequestState;
 } & MetaAsyncInsightsCallbacks): Promise<{
     reportRunId: string;
 }> {
-    const { adAccountId, timeframeDays, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, requestState, refreshAccessToken, onRateLimitHit, onTokenRefresh, } = options;
-    const timeRange = buildTimeRange(timeframeDays);
+    const { adAccountId, timeframeDays, timeRange: explicitTimeRange, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, requestState, refreshAccessToken, onRateLimitHit, onRateLimitTelemetry, onTokenRefresh, } = options;
+    const timeRange = explicitTimeRange ?? buildTimeRange(timeframeDays ?? 30);
     const params = new URLSearchParams({
         level: 'campaign',
         fields: INSIGHT_FIELDS,
@@ -126,6 +129,7 @@ async function startMetaAccountInsightsReportInternal(options: {
         requestState,
         refreshAccessToken,
         onRateLimitHit,
+        onRateLimitTelemetry,
         onTokenRefresh,
     });
     if (payload?.error) {
@@ -143,7 +147,8 @@ export async function startMetaAccountInsightsReport(options: {
     timeframeDays: number;
     maxRetries?: number;
     refreshAccessToken?: () => Promise<string>;
-    onRateLimitHit?: (retryAfterMs: number) => void;
+    onRateLimitHit?: BaseRequestOptions['onRateLimitHit'];
+    onRateLimitTelemetry?: BaseRequestOptions['onRateLimitTelemetry'];
     onTokenRefresh?: () => void;
 }): Promise<{
     reportRunId: string;
@@ -156,6 +161,7 @@ export async function startMetaAccountInsightsReport(options: {
         requestState,
         refreshAccessToken: options.refreshAccessToken,
         onRateLimitHit: options.onRateLimitHit,
+        onRateLimitTelemetry: options.onRateLimitTelemetry,
         onTokenRefresh: options.onTokenRefresh,
     });
 }
@@ -167,7 +173,7 @@ async function getMetaAsyncInsightsReportStatusInternal(options: {
     status: MetaAsyncInsightsJobStatus;
     percentComplete: number;
 }> {
-    const { reportRunId, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, requestState, refreshAccessToken, onRateLimitHit, onTokenRefresh, } = options;
+    const { reportRunId, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, requestState, refreshAccessToken, onRateLimitHit, onRateLimitTelemetry, onTokenRefresh, } = options;
     const params = new URLSearchParams({
         fields: 'async_status,async_percent_completion,account_id',
     });
@@ -190,6 +196,7 @@ async function getMetaAsyncInsightsReportStatusInternal(options: {
         requestState,
         refreshAccessToken,
         onRateLimitHit,
+        onRateLimitTelemetry,
         onTokenRefresh,
     });
     if (payload?.error) {
@@ -206,7 +213,8 @@ export async function getMetaAsyncInsightsReportStatus(options: {
     reportRunId: string;
     maxRetries?: number;
     refreshAccessToken?: () => Promise<string>;
-    onRateLimitHit?: (retryAfterMs: number) => void;
+    onRateLimitHit?: BaseRequestOptions['onRateLimitHit'];
+    onRateLimitTelemetry?: BaseRequestOptions['onRateLimitTelemetry'];
     onTokenRefresh?: () => void;
 }): Promise<{
     status: MetaAsyncInsightsJobStatus;
@@ -219,6 +227,7 @@ export async function getMetaAsyncInsightsReportStatus(options: {
         requestState,
         refreshAccessToken: options.refreshAccessToken,
         onRateLimitHit: options.onRateLimitHit,
+        onRateLimitTelemetry: options.onRateLimitTelemetry,
         onTokenRefresh: options.onTokenRefresh,
     });
 }
@@ -228,7 +237,7 @@ async function fetchMetaAsyncInsightsReportRowsInternal(options: {
     maxRetries?: number;
     requestState: MetaAsyncInsightsRequestState;
 } & MetaAsyncInsightsCallbacks): Promise<MetaInsightsRow[]> {
-    const { reportRunId, maxPages = 25, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, requestState, refreshAccessToken, onRateLimitHit, onTokenRefresh, } = options;
+    const { reportRunId, maxPages = 25, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries, requestState, refreshAccessToken, onRateLimitHit, onRateLimitTelemetry, onTokenRefresh, } = options;
     const fetchPage = async (page: number, paging?: MetaPagingState): Promise<MetaInsightsRow[]> => {
         const params = new URLSearchParams({ limit: '500' });
         await appendMetaAuthParams({
@@ -247,6 +256,7 @@ async function fetchMetaAsyncInsightsReportRowsInternal(options: {
             requestState,
             refreshAccessToken,
             onRateLimitHit,
+            onRateLimitTelemetry,
             onTokenRefresh,
         });
         const batch = Array.isArray(payload?.data) ? payload.data : [];
@@ -267,7 +277,8 @@ export async function fetchMetaAsyncInsightsReportRows(options: {
     maxPages?: number;
     maxRetries?: number;
     refreshAccessToken?: () => Promise<string>;
-    onRateLimitHit?: (retryAfterMs: number) => void;
+    onRateLimitHit?: BaseRequestOptions['onRateLimitHit'];
+    onRateLimitTelemetry?: BaseRequestOptions['onRateLimitTelemetry'];
     onTokenRefresh?: () => void;
 }): Promise<MetaInsightsRow[]> {
     const requestState = createMetaAsyncInsightsRequestState(options.accessToken);
@@ -278,6 +289,7 @@ export async function fetchMetaAsyncInsightsReportRows(options: {
         requestState,
         refreshAccessToken: options.refreshAccessToken,
         onRateLimitHit: options.onRateLimitHit,
+        onRateLimitTelemetry: options.onRateLimitTelemetry,
         onTokenRefresh: options.onTokenRefresh,
     });
 }
@@ -290,7 +302,7 @@ async function waitForMetaAsyncInsightsReportInternal(options: {
 } & MetaAsyncInsightsCallbacks): Promise<{
     status: MetaAsyncInsightsJobStatus;
 }> {
-    const { reportRunId, maxWaitMs = 180000, pollIntervalMs = 2000, maxRetries, requestState, refreshAccessToken, onRateLimitHit, onTokenRefresh, } = options;
+    const { reportRunId, maxWaitMs = 180000, pollIntervalMs = 2000, maxRetries, requestState, refreshAccessToken, onRateLimitHit, onRateLimitTelemetry, onTokenRefresh, } = options;
     const deadline = Date.now() + maxWaitMs;
     const pollStatus = async (): Promise<{
         status: MetaAsyncInsightsJobStatus;
@@ -301,6 +313,7 @@ async function waitForMetaAsyncInsightsReportInternal(options: {
             requestState,
             refreshAccessToken,
             onRateLimitHit,
+            onRateLimitTelemetry,
             onTokenRefresh,
         });
         if (status === 'Job Completed') {
@@ -324,7 +337,8 @@ export async function waitForMetaAsyncInsightsReport(options: {
     pollIntervalMs?: number;
     maxRetries?: number;
     refreshAccessToken?: () => Promise<string>;
-    onRateLimitHit?: (retryAfterMs: number) => void;
+    onRateLimitHit?: BaseRequestOptions['onRateLimitHit'];
+    onRateLimitTelemetry?: BaseRequestOptions['onRateLimitTelemetry'];
     onTokenRefresh?: () => void;
 }): Promise<{
     status: MetaAsyncInsightsJobStatus;
@@ -338,6 +352,7 @@ export async function waitForMetaAsyncInsightsReport(options: {
         requestState,
         refreshAccessToken: options.refreshAccessToken,
         onRateLimitHit: options.onRateLimitHit,
+        onRateLimitTelemetry: options.onRateLimitTelemetry,
         onTokenRefresh: options.onTokenRefresh,
     });
 }
@@ -354,36 +369,48 @@ export async function runMetaAccountInsightsReportToCompletion(options: {
     maxPages?: number;
     maxRetries?: number;
     refreshAccessToken?: () => Promise<string>;
-    onRateLimitHit?: (retryAfterMs: number) => void;
+    onRateLimitHit?: BaseRequestOptions['onRateLimitHit'];
+    onRateLimitTelemetry?: BaseRequestOptions['onRateLimitTelemetry'];
     onTokenRefresh?: () => void;
 }): Promise<MetaInsightsRow[]> {
     const requestState = createMetaAsyncInsightsRequestState(options.accessToken);
-    const { reportRunId } = await startMetaAccountInsightsReportInternal({
-        adAccountId: options.adAccountId,
-        timeframeDays: options.timeframeDays,
-        maxRetries: options.maxRetries,
-        requestState,
-        refreshAccessToken: options.refreshAccessToken,
-        onRateLimitHit: options.onRateLimitHit,
-        onTokenRefresh: options.onTokenRefresh,
-    });
-    await waitForMetaAsyncInsightsReportInternal({
-        reportRunId,
-        maxWaitMs: options.maxWaitMs,
-        pollIntervalMs: options.pollIntervalMs,
-        maxRetries: options.maxRetries,
-        requestState,
-        refreshAccessToken: options.refreshAccessToken,
-        onRateLimitHit: options.onRateLimitHit,
-        onTokenRefresh: options.onTokenRefresh,
-    });
-    return fetchMetaAsyncInsightsReportRowsInternal({
-        reportRunId,
-        maxPages: options.maxPages,
-        maxRetries: options.maxRetries,
-        requestState,
-        refreshAccessToken: options.refreshAccessToken,
-        onRateLimitHit: options.onRateLimitHit,
-        onTokenRefresh: options.onTokenRefresh,
-    });
+    // Chunk wide windows to avoid Meta's heavy-query throttling and 90-day/13-month limits.
+    const INSIGHTS_CHUNK_DAYS = 90;
+    const chunks = chunkDateRange(options.timeframeDays, INSIGHTS_CHUNK_DAYS);
+    const allRows: MetaInsightsRow[] = [];
+    for (const timeRange of chunks) {
+        const { reportRunId } = await startMetaAccountInsightsReportInternal({
+            adAccountId: options.adAccountId,
+            timeRange,
+            maxRetries: options.maxRetries,
+            requestState,
+            refreshAccessToken: options.refreshAccessToken,
+            onRateLimitHit: options.onRateLimitHit,
+            onRateLimitTelemetry: options.onRateLimitTelemetry,
+            onTokenRefresh: options.onTokenRefresh,
+        });
+        await waitForMetaAsyncInsightsReportInternal({
+            reportRunId,
+            maxWaitMs: options.maxWaitMs,
+            pollIntervalMs: options.pollIntervalMs,
+            maxRetries: options.maxRetries,
+            requestState,
+            refreshAccessToken: options.refreshAccessToken,
+            onRateLimitHit: options.onRateLimitHit,
+            onRateLimitTelemetry: options.onRateLimitTelemetry,
+            onTokenRefresh: options.onTokenRefresh,
+        });
+        const rows = await fetchMetaAsyncInsightsReportRowsInternal({
+            reportRunId,
+            maxPages: options.maxPages,
+            maxRetries: options.maxRetries,
+            requestState,
+            refreshAccessToken: options.refreshAccessToken,
+            onRateLimitHit: options.onRateLimitHit,
+            onRateLimitTelemetry: options.onRateLimitTelemetry,
+            onTokenRefresh: options.onTokenRefresh,
+        });
+        allRows.push(...rows);
+    }
+    return allRows;
 }

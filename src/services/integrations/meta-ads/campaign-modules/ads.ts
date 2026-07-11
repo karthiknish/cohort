@@ -15,6 +15,7 @@ export async function listMetaAds(options: {
     campaignId?: string;
     adSetId?: string;
     statusFilter?: string[];
+    maxPages?: number;
     maxRetries?: number;
 }): Promise<Array<{
     id: string;
@@ -26,75 +27,101 @@ export async function listMetaAds(options: {
     reviewStatus: MetaAdReviewStatus;
     reviewMessages: string[];
 }>> {
-    const { accessToken, adAccountId, campaignId, adSetId, statusFilter = ['ACTIVE', 'PAUSED'], maxRetries = 3, } = options;
-    const params = new URLSearchParams({
-        fields: [
-            'id',
-            'name',
-            'status',
-            'effective_status',
-            'adset_id',
-            'campaign_id',
-            'creative',
-            'ad_review_feedback',
-            'issues_info',
-        ].join(','),
-        limit: '100',
-    });
-    const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
+    const { accessToken, adAccountId, campaignId, adSetId, statusFilter = ['ACTIVE', 'PAUSED'], maxPages = 10, maxRetries = 3, } = options;
+    const fields = [
+        'id',
+        'name',
+        'status',
+        'effective_status',
+        'adset_id',
+        'campaign_id',
+        'creative',
+        'ad_review_feedback',
+        'issues_info',
+    ].join(',');
+    let filteringJson: string | undefined;
     if (statusFilter.length > 0) {
         const filtering = [{
                 field: 'effective_status',
                 operator: 'IN',
                 value: statusFilter,
             }];
-        params.set('filtering', JSON.stringify(filtering));
+        filteringJson = JSON.stringify(filtering);
     }
-    await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET });
-    let url: string;
+
+    let baseUrl: string;
+    const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
     if (campaignId) {
-        url = `${META_API_BASE}/${campaignId}/ads?${params.toString()}`;
+        baseUrl = `${META_API_BASE}/${campaignId}/ads`;
     }
     else if (adSetId) {
-        url = `${META_API_BASE}/${adSetId}/ads?${params.toString()}`;
+        baseUrl = `${META_API_BASE}/${adSetId}/ads`;
     }
     else {
-        url = `${META_API_BASE}/${formattedAccountId}/ads?${params.toString()}`;
+        baseUrl = `${META_API_BASE}/${formattedAccountId}/ads`;
     }
-    const { payload } = await metaAdsClient.executeRequest<{
-        data?: Array<{
-            id?: string;
-            name?: string;
-            status?: string;
-            effective_status?: string;
-            adset_id?: string;
-            campaign_id?: string;
-            creative?: {
+
+    const fetchPage = async (page: number, after?: string): Promise<ReturnType<typeof listMetaAds>> => {
+        const params = new URLSearchParams({
+            fields,
+            limit: '100',
+        });
+        if (filteringJson) {
+            params.set('filtering', filteringJson);
+        }
+        if (after) {
+            params.set('after', after);
+        }
+        await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET });
+        const url = `${baseUrl}?${params.toString()}`;
+        const { payload } = await metaAdsClient.executeRequest<{
+            data?: Array<{
                 id?: string;
+                name?: string;
+                status?: string;
+                effective_status?: string;
+                adset_id?: string;
+                campaign_id?: string;
+                creative?: {
+                    id?: string;
+                };
+                ad_review_feedback?: unknown;
+                issues_info?: unknown;
+            }>;
+            paging?: {
+                cursors?: {
+                    after?: string;
+                };
+                next?: string;
             };
-            ad_review_feedback?: unknown;
-            issues_info?: unknown;
-        }>;
-    }>({
-        url,
-        operation: 'listAds',
-        maxRetries,
-    });
-    const ads = Array.isArray(payload?.data) ? payload.data : [];
-    return ads.map((ad) => {
-        const effectiveStatus = ad.effective_status ?? ad.status ?? 'PAUSED';
-        const review = summarizeMetaAdReview(effectiveStatus, ad.ad_review_feedback, ad.issues_info);
-        return {
-            id: ad.id ?? '',
-            name: ad.name ?? '',
-            status: effectiveStatus as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
-            adSetId: ad.adset_id,
-            campaignId: ad.campaign_id,
-            creativeId: ad.creative?.id,
-            reviewStatus: review.status,
-            reviewMessages: review.messages,
-        };
-    });
+        }>({
+            url,
+            operation: `listAds:page${page}`,
+            maxRetries,
+        });
+        const ads = Array.isArray(payload?.data) ? payload.data : [];
+        const mapped = ads.map((ad) => {
+            const effectiveStatus = ad.effective_status ?? ad.status ?? 'PAUSED';
+            const review = summarizeMetaAdReview(effectiveStatus, ad.ad_review_feedback, ad.issues_info);
+            return {
+                id: ad.id ?? '',
+                name: ad.name ?? '',
+                status: effectiveStatus as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
+                adSetId: ad.adset_id,
+                campaignId: ad.campaign_id,
+                creativeId: ad.creative?.id,
+                reviewStatus: review.status,
+                reviewMessages: review.messages,
+            };
+        });
+        const nextCursor = payload?.paging?.cursors?.after ?? null;
+        if (!nextCursor || page + 1 >= maxPages) {
+            return mapped;
+        }
+        const nextPage = await fetchPage(page + 1, nextCursor);
+        return [...mapped, ...nextPage];
+    };
+    return fetchPage(0);
 }
 // =============================================================================
 // UPDATE AD STATUS

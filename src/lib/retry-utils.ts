@@ -4,6 +4,20 @@ export type RetryConfig = {
     maxDelayMs: number;
     jitterFactor: number;
 };
+
+export type RateLimitDetails = {
+    source?: string;
+    retryAfterMs?: number;
+    accountUtilizationPct?: number;
+    appUtilizationPct?: number;
+    callCountPct?: number;
+    totalCpuTimePct?: number;
+    totalTimePct?: number;
+    estimatedTimeToRegainAccessMinutes?: number;
+    resetTimeSeconds?: number;
+    adsApiAccessTier?: string;
+    reachThrottleInfo?: string;
+};
 export type AbortSignalOptions = {
     signal?: AbortSignal | null;
     timeoutMs?: number;

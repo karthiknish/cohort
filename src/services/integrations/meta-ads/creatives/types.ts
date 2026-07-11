@@ -57,6 +57,8 @@ export interface UpdateAdOptions {
     adId: string;
     creativeId: string;
     name?: string;
+    /** Set to PAUSED during creative edits to avoid serving while in review. */
+    status?: 'ACTIVE' | 'PAUSED';
     maxRetries?: number;
 }
 export interface DeleteAdCreativeOptions {
@@ -96,6 +98,8 @@ export interface RecreateMetaAdCreativeOptions {
     assetFeedSpec?: string | unknown[];
     carouselChildAttachments?: unknown[];
     destinationSpec?: CreateAdCreativeOptions['destinationSpec'];
+    /** Pause the ad after the creative edit to avoid serving while in review. Defaults to PAUSED. */
+    status?: 'ACTIVE' | 'PAUSED';
     maxRetries?: number;
 }
 export interface UploadMediaOptions {

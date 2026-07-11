@@ -3,6 +3,7 @@
  * Base error class that consolidates all error handling patterns
  */
 import { getStatusMessage, isRetryableStatus, isAuthStatus } from './messages';
+import type { RateLimitDetails } from '@/lib/retry-utils';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -16,6 +17,7 @@ export interface UnifiedErrorOptions {
     isAuthError?: boolean;
     isRateLimitError?: boolean;
     retryAfterMs?: number;
+    rateLimitDetails?: RateLimitDetails;
     platform?: IntegrationPlatform;
     cause?: unknown;
 }
@@ -38,6 +40,7 @@ export class UnifiedError extends Error {
     readonly isAuthError: boolean;
     readonly isRateLimitError: boolean;
     readonly retryAfterMs?: number;
+    readonly rateLimitDetails?: RateLimitDetails;
     readonly platform?: IntegrationPlatform;
     constructor(options: UnifiedErrorOptions) {
         super(options.message || getStatusMessage(options.status ?? 500));
@@ -47,6 +50,7 @@ export class UnifiedError extends Error {
         this.details = options.details;
         this.platform = options.platform;
         this.retryAfterMs = options.retryAfterMs;
+        this.rateLimitDetails = options.rateLimitDetails;
         // Auto-detect if not explicitly provided
         this.isRetryable = options.isRetryable ?? isRetryableStatus(this.status);
         this.isAuthError = options.isAuthError ?? isAuthStatus(this.status);
@@ -76,6 +80,7 @@ export class UnifiedError extends Error {
                 isAuthError?: boolean;
                 isRateLimitError?: boolean;
                 retryAfterMs?: number;
+                rateLimitDetails?: RateLimitDetails;
             };
             return new UnifiedError({
                 message: error.message,
@@ -86,6 +91,7 @@ export class UnifiedError extends Error {
                 isAuthError: anyError.isAuthError ?? defaults?.isAuthError,
                 isRateLimitError: anyError.isRateLimitError ?? defaults?.isRateLimitError,
                 retryAfterMs: anyError.retryAfterMs ?? defaults?.retryAfterMs,
+                rateLimitDetails: anyError.rateLimitDetails ?? defaults?.rateLimitDetails,
                 platform: defaults?.platform,
                 cause: error,
             });
@@ -108,6 +114,7 @@ export class UnifiedError extends Error {
             ...(this.platform && { platform: this.platform }),
             ...(this.isRetryable && { isRetryable: this.isRetryable }),
             ...(this.retryAfterMs && { retryAfterMs: this.retryAfterMs }),
+            ...(this.rateLimitDetails && { rateLimitDetails: this.rateLimitDetails }),
         };
     }
 }

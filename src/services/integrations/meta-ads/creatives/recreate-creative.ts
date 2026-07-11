@@ -10,7 +10,7 @@ export async function recreateMetaAdCreativeForEdit(options: RecreateMetaAdCreat
     creativeId: string;
     error?: string;
 }> {
-    const { accessToken, adAccountId, adId, creativeId, name, title, body, description, callToActionType, linkUrl, objectType, imageUrl, imageHash, videoId, pageId, instagramActorId, assetFeedSpec, carouselChildAttachments, destinationSpec, maxRetries, } = options;
+    const { accessToken, adAccountId, adId, creativeId, name, title, body, description, callToActionType, linkUrl, objectType, imageUrl, imageHash, videoId, pageId, instagramActorId, assetFeedSpec, carouselChildAttachments, destinationSpec, status, maxRetries, } = options;
     const normalizedObjectType = normalizeMetaObjectTypeForCreate(objectType);
     const storyContext = await resolveMetaCreativeContextForEdit({
         accessToken,
@@ -74,6 +74,7 @@ export async function recreateMetaAdCreativeForEdit(options: RecreateMetaAdCreat
         adId,
         creativeId: createdCreative.creativeId,
         name,
+        status: status ?? 'PAUSED',
         maxRetries,
     });
     if (updateResult.success) {

@@ -3,13 +3,15 @@
  * Unified error parsing for all ad platform APIs
  */
 import { logger } from '@/lib/logger';
+import { META_AUTH_CODE_VALUES, META_RATE_LIMIT_CODE_VALUES, META_RETRYABLE_CODE_VALUES, type MetaErrorCode } from '@/services/integrations/meta-ads/types';
+import { parseMetaRateLimitHeaders } from '@/services/integrations/meta-ads/rate-limit-headers';
 import { UnifiedError, type IntegrationPlatform } from './unified-error';
 // =============================================================================
 // PLATFORM ERROR CODE MAPS
 // =============================================================================
-const META_AUTH_CODES = [190, 102, 2500];
-const META_RATE_LIMIT_CODES = [4, 17, 32, 613];
-const META_RETRYABLE_CODES = [1, 2, 503];
+const META_AUTH_CODES = META_AUTH_CODE_VALUES;
+const META_RATE_LIMIT_CODES = META_RATE_LIMIT_CODE_VALUES;
+const META_RETRYABLE_CODES = META_RETRYABLE_CODE_VALUES;
 const GOOGLE_AUTH_ERRORS = ['AUTHENTICATION_ERROR', 'AUTHORIZATION_ERROR'];
 const GOOGLE_RATE_LIMIT_ERRORS = ['QUOTA_ERROR', 'RATE_LIMIT_ERROR'];
 const GOOGLE_RETRYABLE_ERRORS = ['INTERNAL_ERROR', 'TRANSIENT_ERROR'];
@@ -173,9 +175,10 @@ interface Classification {
 }
 function classifyMetaError(code?: number | string): Classification {
     const numCode = typeof code === 'number' ? code : parseInt(String(code), 10);
-    const isAuthError = META_AUTH_CODES.includes(numCode);
-    const isRateLimitError = META_RATE_LIMIT_CODES.includes(numCode);
-    const isRetryable = isRateLimitError || (!isAuthError && META_RETRYABLE_CODES.includes(numCode));
+    const typedCode = Number.isFinite(numCode) ? (numCode as MetaErrorCode) : undefined;
+    const isAuthError = typedCode !== undefined && META_AUTH_CODES.includes(typedCode);
+    const isRateLimitError = typedCode !== undefined && META_RATE_LIMIT_CODES.includes(typedCode);
+    const isRetryable = isRateLimitError || (typedCode !== undefined && !isAuthError && META_RETRYABLE_CODES.includes(typedCode));
     return { isAuthError, isRateLimitError, isRetryable };
 }
 function classifyGoogleError(code?: number | string): Classification {
@@ -243,13 +246,21 @@ export function parseIntegrationError(response: Response, payload: unknown, plat
             parsed = { message: 'Unknown integration error' };
             classification = { isAuthError: false, isRateLimitError: false, isRetryable: false };
     }
-    // Extract retry-after header if available
-    const retryAfterHeader = response.headers.get('retry-after');
-    const retryAfterMs = retryAfterHeader
-        ? parseInt(retryAfterHeader, 10) * 1000 || undefined
-        : classification.isRateLimitError
-            ? 60000 // Default 1 minute for rate limits
-            : undefined;
+    // Extract retry-after / platform-specific rate-limit headers
+    let rateLimitDetails = platform === 'meta' ? parseMetaRateLimitHeaders(response.headers) : undefined;
+    let retryAfterMs = rateLimitDetails?.retryAfterMs;
+    if (retryAfterMs === undefined) {
+        const retryAfterHeader = response.headers.get('retry-after');
+        if (retryAfterHeader) {
+            const seconds = parseInt(retryAfterHeader, 10);
+            if (Number.isFinite(seconds) && seconds >= 0) {
+                retryAfterMs = seconds * 1000;
+            }
+        }
+    }
+    if (retryAfterMs === undefined && classification.isRateLimitError) {
+        retryAfterMs = 60000; // Default 1 minute for rate limits
+    }
     return new UnifiedError({
         message: parsed.message,
         status: httpStatus,
@@ -259,6 +270,7 @@ export function parseIntegrationError(response: Response, payload: unknown, plat
         isAuthError: classification.isAuthError,
         isRateLimitError: classification.isRateLimitError,
         retryAfterMs,
+        rateLimitDetails,
         details: parsed.traceId ? { traceId: [parsed.traceId] } : undefined,
     });
 }

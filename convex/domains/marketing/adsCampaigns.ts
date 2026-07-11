@@ -4,7 +4,7 @@ import { action } from '../../_generated/server'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from '../../errors'
 import { requireWorkspaceActionAccess } from '../../functions'
-import { META_API_BASE } from '@/services/integrations/meta-ads/constants'
+import { executeMetaApiRequest } from '@/services/integrations/meta-ads/client'
 import type { GoogleCampaignObjective } from '@/services/integrations/google-ads/campaign-modules/types'
 import { requireFacebookAdAccount, resolveFacebookAccessToken } from '../../lib/facebookAdsAccess'
 
@@ -175,24 +175,25 @@ export const listCampaigns = action({
       requireFacebookAdAccount(integration),
     ])
 
+    const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`
     const [metaCampaigns, accountMeta] = await Promise.all([
       listMetaCampaigns({ accessToken, adAccountId }),
       (async () => {
         try {
-          const res = await fetch(
-            `${META_API_BASE}/${adAccountId}?fields=currency,name,promote_pages{name,picture}&access_token=${accessToken}`
-          )
-          const data =
-            (await res.json().catch(() => ({}))) as {
-              currency?: string
-              name?: string
-              promote_pages?: { data: Array<{ name: string; picture?: { data: { url: string } } }> }
-            }
-
-          const firstPage = data?.promote_pages?.data?.[0]
+          const { payload } = await executeMetaApiRequest<{
+            currency?: string
+            name?: string
+            promote_pages?: { data: Array<{ name: string; picture?: { data: { url: string } } }> }
+          }>({
+            url: `/${formattedAccountId}?fields=currency,name,promote_pages{name,picture}`,
+            accessToken,
+            operation: 'fetchMetaAccountMetadata',
+            maxRetries: 1,
+          })
+          const firstPage = payload?.promote_pages?.data?.[0]
           return {
-            currency: data?.currency ?? integration.currency ?? 'USD',
-            accountName: firstPage?.name || data?.name || integration.providerId,
+            currency: payload?.currency ?? integration.currency ?? 'USD',
+            accountName: firstPage?.name || payload?.name || integration.providerId,
             accountLogoUrl: firstPage?.picture?.data?.url,
           }
         } catch {
@@ -500,30 +501,42 @@ export const updateCampaign = action({
       await import('@/services/integrations/meta-ads')
 
     if (args.action === 'enable' || args.action === 'pause') {
-      await updateMetaCampaignStatus({
+      const result = await updateMetaCampaignStatus({
         accessToken,
         campaignId: args.campaignId,
         status: args.action === 'enable' ? 'ACTIVE' : 'PAUSED',
       })
+      if (!result.success) {
+        throw Errors.integration.error('facebook', `Failed to ${args.action} campaign`)
+      }
     } else if (args.action === 'updateBudget' && args.budget !== undefined) {
       const mode = normalizedBudgetMode
-      await updateMetaCampaignBudget(
+      const result = await updateMetaCampaignBudget(
         mode === 'lifetime'
           ? { accessToken, campaignId: args.campaignId, lifetimeBudget: args.budget }
           : { accessToken, campaignId: args.campaignId, dailyBudget: args.budget }
       )
+      if (!result.success) {
+        throw Errors.integration.error('facebook', 'Failed to update campaign budget')
+      }
     } else if (args.action === 'updateBidding' && args.biddingType) {
-      await updateMetaCampaignBidding({
+      const result = await updateMetaCampaignBidding({
         accessToken,
         campaignId: args.campaignId,
         biddingType: args.biddingType,
         biddingValue: args.biddingValue ?? 0,
       })
+      if (!result.success) {
+        throw Errors.integration.error('facebook', result.error ?? 'Failed to update campaign bidding')
+      }
     } else if (args.action === 'remove') {
-      await removeMetaCampaign({
+      const result = await removeMetaCampaign({
         accessToken,
         campaignId: args.campaignId,
       })
+      if (!result.success) {
+        throw Errors.integration.error('facebook', 'Failed to remove campaign')
+      }
     }
 
     return { success: true, campaignId: args.campaignId, action: args.action }

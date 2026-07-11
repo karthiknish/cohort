@@ -6,40 +6,13 @@ import type { NormalizedMetric } from '@/types/integrations';
 // ERROR CODES
 // Reference: https://developers.facebook.com/docs/marketing-api/error-reference
 // =============================================================================
-export const META_ERROR_CODES = {
-    // OAuth & Authentication
-    OAUTH_EXCEPTION: 190,
-    INVALID_ACCESS_TOKEN: 190,
-    ACCESS_TOKEN_EXPIRED: 463,
-    PASSWORD_CHANGED: 464,
-    // Rate Limiting
-    RATE_LIMIT_EXCEEDED: 4,
-    TOO_MANY_CALLS: 17,
-    USER_RATE_LIMIT: 17,
-    APP_RATE_LIMIT: 4,
-    ACCOUNT_RATE_LIMIT: 32,
-    // Permission Errors
-    PERMISSION_DENIED: 10,
-    PERMISSION_ERROR: 200,
-    UNSUPPORTED_GET_REQUEST: 100,
-    // API Errors
-    UNKNOWN_ERROR: 1,
-    SERVICE_UNAVAILABLE: 2,
-    METHOD_UNKNOWN: 3,
-    APPLICATION_REQUEST_LIMIT: 4,
-    TOO_MANY_DATA_REQUESTS: 613,
-    // Business Errors
-    AD_ACCOUNT_NOT_FOUND: 1487390,
-    AD_ACCOUNT_ACCESS_DENIED: 275,
-    CAMPAIGN_NOT_FOUND: 100,
-    // Transient Errors
-    TEMPORARY_ERROR: 2,
-    ASYNC_JOB_UNKNOWN: 2601,
-} as const;
-export type MetaErrorCode = (typeof META_ERROR_CODES)[keyof typeof META_ERROR_CODES];
+export { META_ERROR_CODES, META_AUTH_CODE_VALUES, META_RATE_LIMIT_CODE_VALUES, META_RETRYABLE_CODE_VALUES } from './meta-error-codes';
+export type { MetaErrorCode } from './meta-error-codes';
 // =============================================================================
 // API TYPES
 // =============================================================================
+import type { RateLimitDetails } from '../shared/retry';
+export type { RateLimitDetails };
 export interface MetaAdsOptions {
     accessToken: string;
     adAccountId: string;
@@ -49,7 +22,8 @@ export interface MetaAdsOptions {
     /** When true, use async insights jobs; when false, force sync. Undefined falls back to env. */
     useAsyncInsights?: boolean;
     refreshAccessToken?: () => Promise<string>;
-    onRateLimitHit?: (retryAfterMs: number) => void;
+    onRateLimitHit?: (retryAfterMs: number, details?: RateLimitDetails) => void;
+    onRateLimitTelemetry?: (details: RateLimitDetails) => void;
     onTokenRefresh?: () => void;
 }
 export type { RetryConfig } from '../shared/retry';
