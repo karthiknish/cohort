@@ -7,12 +7,14 @@ import {
   action,
   normalizeClientId,
   normalizeLinkedInAccountId,
+  normalizeTikTokAccountId,
   requireWorkspaceActionAccess,
   resolveGoogleAdsDeveloperToken,
   v,
   withErrorHandling,
 } from './shared'
 import { resolveLinkedInAccessToken } from '../../../lib/linkedinAdsAccess'
+import { resolveTikTokAccessToken } from '../../../lib/tiktokAdsAccess'
 
 export const listMetaAdAccounts = action({
   args: {
@@ -156,5 +158,41 @@ export const listLinkedInAdAccounts = action({
       isActive: account.status?.toUpperCase() === 'ACTIVE',
     }))
   }, 'adsIntegrations:listLinkedInAdAccounts', { maxRetries: 3 }),
+})
+
+export const listTikTokAdAccounts = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.literal('tiktok'),
+    clientId: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => withErrorHandling(async () => {
+    await requireWorkspaceActionAccess(ctx, args.workspaceId)
+
+    const clientId = normalizeClientId(args.clientId ?? null)
+
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId,
+    })
+
+    if (!integration.accessToken) {
+      throw Errors.integration.missingToken('TikTok')
+    }
+
+    const tiktokAccessToken = await resolveTikTokAccessToken(args.workspaceId, integration, clientId)
+
+    const { fetchTikTokAdAccounts } = await import('@/services/integrations/tiktok-ads')
+    const accounts = await fetchTikTokAdAccounts({ accessToken: tiktokAccessToken })
+
+    return accounts.map((account) => ({
+      id: normalizeTikTokAccountId(account.id) ?? account.id,
+      name: account.name,
+      currency: account.currency ?? null,
+      status: account.status ?? null,
+      isActive: account.status?.toUpperCase() === 'ENABLE',
+    }))
+  }, 'adsIntegrations:listTikTokAdAccounts', { maxRetries: 3 }),
 })
 

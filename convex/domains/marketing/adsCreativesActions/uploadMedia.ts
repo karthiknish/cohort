@@ -32,10 +32,6 @@ export const uploadMedia = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (args.providerId !== 'facebook' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-      throw Errors.integration.expired(args.providerId)
-    }
-
     if (args.providerId === 'facebook') {
       const { uploadMediaToMeta } = await import('@/services/integrations/meta-ads')
 

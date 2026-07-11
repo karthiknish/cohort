@@ -10,12 +10,14 @@ import {
   normalizeGoogleAdsAccountId,
   normalizeMetaAccountId,
   normalizeLinkedInAccountId,
+  normalizeTikTokAccountId,
   nowMs,
   resolveGoogleAdsDeveloperToken,
   v,
   withErrorHandling,
 } from './shared'
 import { resolveLinkedInAccessToken } from '../../../lib/linkedinAdsAccess'
+import { resolveTikTokAccessToken } from '../../../lib/tiktokAdsAccess'
 
 async function enqueueInitialSyncAndRun(
   ctx: ActionCtx,
@@ -264,16 +266,25 @@ export const initializeAdAccount = action({
 
     const { fetchTikTokAdAccounts } = await import('@/services/integrations/tiktok-ads')
 
-    const accounts = await fetchTikTokAdAccounts({ accessToken: integration.accessToken })
+    const tiktokAccessToken = await resolveTikTokAccessToken(args.workspaceId, integration, clientId)
+    const accounts = await fetchTikTokAdAccounts({ accessToken: tiktokAccessToken })
     if (!accounts.length) {
       throw Errors.integration.notConfigured('TikTok', 'No ad accounts available')
     }
 
-    const firstAccount = accounts[0]
-    if (!firstAccount) {
+    const selectedAccountId = normalizeTikTokAccountId(args.accountId ?? null)
+    const selectedAccount = selectedAccountId
+      ? accounts.find((account) => normalizeTikTokAccountId(account.id) === selectedAccountId) ?? null
+      : null
+
+    if (selectedAccountId && !selectedAccount) {
+      throw Errors.validation.invalidInput('Selected TikTok ad account is not available for this integration token')
+    }
+
+    const preferredAccount = selectedAccount ?? accounts.find((account) => account.status?.toUpperCase() === 'ENABLE') ?? accounts[0]
+    if (!preferredAccount) {
       throw Errors.integration.notConfigured('TikTok', 'No ad accounts available')
     }
-    const preferredAccount = accounts.find((account) => account.status?.toUpperCase() === 'ENABLE') ?? firstAccount
 
     await ctx.runMutation(internal.adsIntegrations.updateIntegrationCredentialsInternal, {
       workspaceId: args.workspaceId,

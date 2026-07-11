@@ -8,6 +8,7 @@ import { executeMetaApiRequest } from '@/services/integrations/meta-ads/client'
 import type { GoogleCampaignObjective } from '@/services/integrations/google-ads/campaign-modules/types'
 import { requireFacebookAdAccount, resolveFacebookAccessToken } from '../../lib/facebookAdsAccess'
 import { resolveLinkedInAccessToken } from '../../lib/linkedinAdsAccess'
+import { resolveTikTokAccessToken } from '../../lib/tiktokAdsAccess'
 
 function normalizeClientId(value: string | null | undefined): string | null {
   if (typeof value !== 'string') return null
@@ -73,6 +74,8 @@ export const listCampaigns = action({
       accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
     } else if (args.providerId === 'linkedin' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       accessToken = await resolveLinkedInAccessToken(args.workspaceId, integration, clientId)
+    } else if (args.providerId === 'tiktok' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+      accessToken = await resolveTikTokAccessToken(args.workspaceId, integration, clientId)
     } else if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       throw Errors.integration.expired(args.providerId)
     }
@@ -344,6 +347,8 @@ export const updateCampaign = action({
       accessToken = await resolveFacebookAccessToken(args.workspaceId, integration, clientId)
     } else if (args.providerId === 'linkedin' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       accessToken = await resolveLinkedInAccessToken(args.workspaceId, integration, clientId)
+    } else if (args.providerId === 'tiktok' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+      accessToken = await resolveTikTokAccessToken(args.workspaceId, integration, clientId)
     } else if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       throw Errors.integration.expired(args.providerId)
     }

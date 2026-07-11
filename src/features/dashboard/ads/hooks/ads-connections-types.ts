@@ -39,6 +39,13 @@ export type LinkedInAdAccountOption = {
     status: string | null;
     isActive: boolean;
 };
+export type TikTokAdAccountOption = {
+    id: string;
+    name: string;
+    currency: string | null;
+    status: string | null;
+    isActive: boolean;
+};
 export type DisconnectOptions = {
     clearHistoricalData?: boolean;
 };
@@ -95,11 +102,16 @@ export interface UseAdsConnectionsReturn {
     handleSyncNow: (providerId: string) => Promise<void>;
     initializeGoogleIntegration: (clientIdOverride?: string | null, accountIdOverride?: string | null) => Promise<void>;
     initializeMetaIntegration: (clientIdOverride?: string | null, accountIdOverride?: string | null) => Promise<void>;
-    initializeTikTokIntegration: (clientIdOverride?: string | null) => Promise<void>;
+    initializeTikTokIntegration: (clientIdOverride?: string | null, accountIdOverride?: string | null) => Promise<void>;
     initializeLinkedInIntegration: (clientIdOverride?: string | null, accountIdOverride?: string | null) => Promise<void>;
     reloadGoogleAccountOptions: (clientIdOverride?: string | null) => Promise<GoogleAdAccountOption[]>;
     reloadMetaAccountOptions: (clientIdOverride?: string | null) => Promise<MetaAdAccountOption[]>;
     reloadLinkedInAccountOptions: (clientIdOverride?: string | null) => Promise<LinkedInAdAccountOption[]>;
+    tiktokAccountOptions: TikTokAdAccountOption[];
+    selectedTikTokAccountId: string;
+    setSelectedTikTokAccountId: (accountId: string) => void;
+    loadingTikTokAccountOptions: boolean;
+    reloadTikTokAccountOptions: (clientIdOverride?: string | null) => Promise<TikTokAdAccountOption[]>;
     adPlatforms: AdPlatform[];
     triggerRefresh: () => void;
     refreshTick: number;

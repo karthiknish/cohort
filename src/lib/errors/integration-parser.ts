@@ -16,9 +16,9 @@ const META_RETRYABLE_CODES = META_RETRYABLE_CODE_VALUES;
 const LINKEDIN_AUTH_CODES = [401, 403];
 const LINKEDIN_RATE_LIMIT_CODES = [429];
 const LINKEDIN_RETRYABLE_CODES = [500, 502, 503, 504];
-const TIKTOK_AUTH_CODES = [40001, 40002, 40100];
-const TIKTOK_RATE_LIMIT_CODES = [40029];
-const TIKTOK_RETRYABLE_CODES = [50000, 50001];
+const TIKTOK_AUTH_CODES = [40001, 40002, 40003, 40004];
+const TIKTOK_RATE_LIMIT_CODES = [40029, 40100, 40101, 40102];
+const TIKTOK_RETRYABLE_CODES = [50000, 50001, 50300, 50400];
 // =============================================================================
 // PAYLOAD EXTRACTORS
 // =============================================================================

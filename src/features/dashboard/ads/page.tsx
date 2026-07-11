@@ -89,7 +89,7 @@ export default function AdsPage() {
         void connections.initializeMetaIntegration(undefined, connections.selectedMetaAccountId || null);
     };
     const handleInitializeTikTok = () => {
-        void connections.initializeTikTokIntegration();
+        void connections.initializeTikTokIntegration(undefined, connections.selectedTikTokAccountId || null);
     };
     const handleInitializeLinkedIn = () => {
         void connections.initializeLinkedInIntegration(undefined, connections.selectedLinkedInAccountId || null);

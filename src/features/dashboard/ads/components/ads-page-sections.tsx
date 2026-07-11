@@ -60,13 +60,16 @@ type AdsPageSectionsProps = {
 };
 export function AdsPageSetupSection({ flags, connectedAccountCount, connections, metrics, dateRange, openGoogleCampaignSetup, handleInitializeMeta, handleInitializeTikTok, handleInitializeLinkedIn, }: Pick<AdsPageSectionsProps, 'flags' | 'connectedAccountCount' | 'connections' | 'metrics' | 'dateRange' | 'openGoogleCampaignSetup' | 'handleInitializeMeta' | 'handleInitializeTikTok' | 'handleInitializeLinkedIn'>) {
     const { isPreviewMode, showWorkflow, hasSuccessfulSync, hasPendingSetup } = flags;
-    const { adPlatforms, connectedProviders, connectingProvider, connectionErrors, integrationStatusMap, handleConnect, handleDisconnect, handleOauthRedirect, handleSyncNow, syncingProviders, googleNeedsAccountSelection, metaNeedsAccountSelection, tiktokNeedsAccountSelection, linkedinNeedsAccountSelection, googleSetupMessage, metaSetupMessage, tiktokSetupMessage, linkedinSetupMessage, initializingGoogle, initializingMeta, initializingTikTok, initializingLinkedIn, metaAccountOptions, selectedMetaAccountId, setSelectedMetaAccountId, loadingMetaAccountOptions, reloadMetaAccountOptions, linkedinAccountOptions, selectedLinkedInAccountId, setSelectedLinkedInAccountId, loadingLinkedInAccountOptions, reloadLinkedInAccountOptions, } = connections;
+    const { adPlatforms, connectedProviders, connectingProvider, connectionErrors, integrationStatusMap, handleConnect, handleDisconnect, handleOauthRedirect, handleSyncNow, syncingProviders, googleNeedsAccountSelection, metaNeedsAccountSelection, tiktokNeedsAccountSelection, linkedinNeedsAccountSelection, googleSetupMessage, metaSetupMessage, tiktokSetupMessage, linkedinSetupMessage, initializingGoogle, initializingMeta, initializingTikTok, initializingLinkedIn, metaAccountOptions, selectedMetaAccountId, setSelectedMetaAccountId, loadingMetaAccountOptions, reloadMetaAccountOptions, tiktokAccountOptions, selectedTikTokAccountId, setSelectedTikTokAccountId, loadingTikTokAccountOptions, reloadTikTokAccountOptions, linkedinAccountOptions, selectedLinkedInAccountId, setSelectedLinkedInAccountId, loadingLinkedInAccountOptions, reloadLinkedInAccountOptions, } = connections;
     const { handleManualRefresh } = metrics;
     const handleReloadMetaAccountOptions = () => {
         void reloadMetaAccountOptions();
     };
     const handleReloadLinkedInAccountOptions = () => {
         void reloadLinkedInAccountOptions();
+    };
+    const handleReloadTikTokAccountOptions = () => {
+        void reloadTikTokAccountOptions();
     };
     const pendingSetupCount = [
         googleNeedsAccountSelection,
@@ -88,7 +91,7 @@ export function AdsPageSetupSection({ flags, connectedAccountCount, connections,
       </FadeIn>
 
       <FadeIn>
-        <AdSetupPanel connectedCount={connectedAccountCount} totalProviders={adPlatforms.length} googleNeedsAccountSelection={googleNeedsAccountSelection} googleSetupMessage={googleSetupMessage} onOpenGoogleSetup={openGoogleCampaignSetup} metaSetupMessage={metaSetupMessage} metaNeedsAccountSelection={metaNeedsAccountSelection} initializingMeta={initializingMeta} onInitializeMeta={handleInitializeMeta} metaAccountOptions={metaAccountOptions} selectedMetaAccountId={selectedMetaAccountId} onMetaAccountSelectionChange={setSelectedMetaAccountId} loadingMetaAccountOptions={loadingMetaAccountOptions} onReloadMetaAccountOptions={handleReloadMetaAccountOptions} tiktokSetupMessage={tiktokSetupMessage} tiktokNeedsAccountSelection={tiktokNeedsAccountSelection} initializingTikTok={initializingTikTok} onInitializeTikTok={handleInitializeTikTok} linkedinSetupMessage={linkedinSetupMessage} linkedinNeedsAccountSelection={linkedinNeedsAccountSelection} initializingLinkedIn={initializingLinkedIn} onInitializeLinkedIn={handleInitializeLinkedIn} linkedinAccountOptions={linkedinAccountOptions} selectedLinkedInAccountId={selectedLinkedInAccountId} onLinkedInAccountSelectionChange={setSelectedLinkedInAccountId} loadingLinkedInAccountOptions={loadingLinkedInAccountOptions} onReloadLinkedInAccountOptions={handleReloadLinkedInAccountOptions} initializingGoogle={initializingGoogle}/>
+        <AdSetupPanel connectedCount={connectedAccountCount} totalProviders={adPlatforms.length} googleNeedsAccountSelection={googleNeedsAccountSelection} googleSetupMessage={googleSetupMessage} onOpenGoogleSetup={openGoogleCampaignSetup} metaSetupMessage={metaSetupMessage} metaNeedsAccountSelection={metaNeedsAccountSelection} initializingMeta={initializingMeta} onInitializeMeta={handleInitializeMeta} metaAccountOptions={metaAccountOptions} selectedMetaAccountId={selectedMetaAccountId} onMetaAccountSelectionChange={setSelectedMetaAccountId} loadingMetaAccountOptions={loadingMetaAccountOptions} onReloadMetaAccountOptions={handleReloadMetaAccountOptions} tiktokSetupMessage={tiktokSetupMessage} tiktokNeedsAccountSelection={tiktokNeedsAccountSelection} initializingTikTok={initializingTikTok} onInitializeTikTok={handleInitializeTikTok} tiktokAccountOptions={tiktokAccountOptions} selectedTikTokAccountId={selectedTikTokAccountId} onTikTokAccountSelectionChange={setSelectedTikTokAccountId} loadingTikTokAccountOptions={loadingTikTokAccountOptions} onReloadTikTokAccountOptions={handleReloadTikTokAccountOptions} linkedinSetupMessage={linkedinSetupMessage} linkedinNeedsAccountSelection={linkedinNeedsAccountSelection} initializingLinkedIn={initializingLinkedIn} onInitializeLinkedIn={handleInitializeLinkedIn} linkedinAccountOptions={linkedinAccountOptions} selectedLinkedInAccountId={selectedLinkedInAccountId} onLinkedInAccountSelectionChange={setSelectedLinkedInAccountId} loadingLinkedInAccountOptions={loadingLinkedInAccountOptions} onReloadLinkedInAccountOptions={handleReloadLinkedInAccountOptions} initializingGoogle={initializingGoogle}/>
       </FadeIn>
 
       {connectedAccountCount > 0 ? (<FadeIn>
@@ -113,7 +116,7 @@ export function AdsPageSetupSection({ flags, connectedAccountCount, connections,
                             : platform.id === 'facebook'
                                 ? 'Select a Meta ad account'
                                 : platform.id === 'tiktok'
-                                    ? 'Finish TikTok account setup'
+                                    ? 'Select a TikTok ad account'
                                     : platform.id === 'linkedin'
                                         ? 'Select a LinkedIn ad account'
                                         : undefined} setupDescription={platform.id === 'google'

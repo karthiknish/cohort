@@ -88,7 +88,7 @@ export const createCreative = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+    if (args.providerId === 'facebook' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
       throw Errors.integration.expired(args.providerId)
     }
 

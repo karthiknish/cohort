@@ -9,6 +9,7 @@ import { Errors, asErrorMessage, isAppError, withErrorHandling } from '../../err
 import { resolveMetricCurrency } from '@/domain/ads/money'
 import { normalizeSurfaceId } from '@/domain/ads/provider'
 import type { CanonicalAdsProviderId } from '@/domain/ads/provider'
+import { resolveTikTokAccessToken } from '../../lib/tiktokAdsAccess'
 
 function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
   if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
@@ -420,15 +421,19 @@ export const processClaimedJob = internalAction({
             throw Errors.integration.notConfigured('TikTok', 'Account not configured')
           }
 
-          if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-            throw Errors.integration.expired('TikTok')
-          }
-
           const { fetchTikTokAdsMetrics } = await import('@/services/integrations/tiktok-ads')
+          const { refreshTikTokAccessToken } = await import('@/lib/integration-token-refresh')
+
+          let tiktokAccessToken = await resolveTikTokAccessToken(args.workspaceId, integration, clientId)
           metrics = await fetchTikTokAdsMetrics({
-            accessToken: integration.accessToken,
+            accessToken: tiktokAccessToken,
             advertiserId,
             timeframeDays: args.timeframeDays,
+            refreshAccessToken: async () => {
+              const refreshed = await refreshTikTokAccessToken({ userId: args.workspaceId, clientId })
+              tiktokAccessToken = refreshed
+              return refreshed
+            },
           })
           break
         }

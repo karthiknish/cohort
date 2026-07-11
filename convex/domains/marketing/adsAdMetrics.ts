@@ -12,6 +12,7 @@ import type { MetaAdMetric } from '@/services/integrations/meta-ads'
 import { Errors, withErrorHandling } from '../../errors'
 import { requireWorkspaceActionAccess } from '../../functions'
 import { resolveLinkedInAccessToken } from '../../lib/linkedinAdsAccess'
+import { resolveTikTokAccessToken } from '../../lib/tiktokAdsAccess'
 
 function normalizeClientId(value: string | null | undefined): string | null {
   if (typeof value !== 'string') return null
@@ -199,7 +200,11 @@ export const listAdMetrics = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (args.providerId !== 'linkedin' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+    if (
+      args.providerId !== 'linkedin' &&
+      args.providerId !== 'tiktok' &&
+      isTokenExpiringSoon(integration.accessTokenExpiresAtMs)
+    ) {
       throw Errors.integration.expired(args.providerId)
     }
 
@@ -246,8 +251,10 @@ export const listAdMetrics = action({
         throw Errors.integration.notConfigured('TikTok', 'TikTok credentials not configured')
       }
 
+      const tiktokAccessToken = await resolveTikTokAccessToken(args.workspaceId, integration, clientId)
+
       const tiktokMetrics = await fetchTikTokAdMetrics({
-        accessToken: integration.accessToken,
+        accessToken: tiktokAccessToken,
         advertiserId,
         campaignId: args.campaignId,
         timeframeDays,

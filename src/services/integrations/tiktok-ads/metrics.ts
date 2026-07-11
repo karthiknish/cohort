@@ -3,7 +3,6 @@
 // =============================================================================
 import { asErrorMessage } from '@/lib/convex-errors';
 import { formatDate } from '@/lib/dates';
-import { parseJsonBodySafely, parseRequiredJsonBody } from '@/lib/response-json';
 import { coerceNumber, DEFAULT_RETRY_CONFIG } from './client';
 import { tiktokAdsClient } from '@/services/integrations/shared/base-client';
 import type { TikTokMetricsOptions, TikTokAdAccount, TikTokReportResponse, TikTokApiErrorResponse, NormalizedMetric, } from './types';
@@ -173,86 +172,75 @@ export async function checkTikTokIntegrationHealth(options: {
 }> {
     const { accessToken, advertiserId } = options;
     try {
-        const userUrl = 'https://business-api.tiktok.com/open_api/v1.3/user/info/';
-        const userResponse = await fetch(userUrl, {
+        const { payload: userPayload } = await tiktokAdsClient.executeRequest<TikTokApiErrorResponse>({
+            url: 'https://business-api.tiktok.com/open_api/v1.3/user/info/',
             method: 'GET',
             headers: {
                 'Access-Token': accessToken,
             },
+            operation: 'checkTikTokIntegrationHealth:userInfo',
         });
-        if (!userResponse.ok) {
-            const errorData = await parseJsonBodySafely<TikTokApiErrorResponse>(userResponse, {
-                context: 'TikTok Ads health user info error',
-                allowEmpty: true,
-            });
+
+        if (userPayload.code && userPayload.code !== 0) {
             return {
                 healthy: false,
                 tokenValid: false,
                 accountAccessible: false,
-                error: errorData?.message ?? 'Token validation failed',
+                error: userPayload.message ?? `Token validation failed with code ${userPayload.code}`,
             };
         }
-        const userData = await parseRequiredJsonBody<TikTokApiErrorResponse>(userResponse, {
-            context: 'TikTok Ads health user info response',
-        });
-        if (userData.code && userData.code !== 0) {
-            return {
-                healthy: false,
-                tokenValid: false,
-                accountAccessible: false,
-                error: userData.message ?? `Token validation failed with code ${userData.code}`,
-            };
-        }
+
         if (advertiserId) {
-            const accountResponse = await fetch('https://business-api.tiktok.com/open_api/v1.3/advertiser/info/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Token': accessToken,
-                },
-                body: JSON.stringify({
-                    advertiser_ids: [advertiserId],
-                }),
-            });
-            if (!accountResponse.ok) {
-                const errorData = await parseJsonBodySafely<TikTokApiErrorResponse>(accountResponse, {
-                    context: 'TikTok Ads health advertiser error',
-                    allowEmpty: true,
+            try {
+                const { payload: accountPayload } = await tiktokAdsClient.executeRequest<{
+                    code?: number;
+                    message?: string;
+                    data?: {
+                        list?: Array<{
+                            advertiser_id?: string;
+                        }>;
+                    };
+                }>({
+                    url: 'https://business-api.tiktok.com/open_api/v1.3/advertiser/info/',
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Access-Token': accessToken,
+                    },
+                    body: JSON.stringify({
+                        advertiser_ids: [advertiserId],
+                    }),
+                    operation: 'checkTikTokIntegrationHealth:advertiserInfo',
                 });
+
+                if (accountPayload.code && accountPayload.code !== 0) {
+                    return {
+                        healthy: false,
+                        tokenValid: true,
+                        accountAccessible: false,
+                        error: accountPayload.message ?? `Advertiser check failed with code ${accountPayload.code}`,
+                    };
+                }
+
+                const list = accountPayload.data?.list ?? [];
+                if (!list.some(a => a.advertiser_id === advertiserId)) {
+                    return {
+                        healthy: false,
+                        tokenValid: true,
+                        accountAccessible: false,
+                        error: 'Advertiser not found in accessible accounts',
+                    };
+                }
+            } catch (error) {
                 return {
                     healthy: false,
                     tokenValid: true,
                     accountAccessible: false,
-                    error: errorData?.message ?? 'Advertiser not accessible',
-                };
-            }
-            const accountData = await parseRequiredJsonBody<TikTokApiErrorResponse & {
-                data?: {
-                    list?: Array<{
-                        advertiser_id?: string;
-                    }>;
-                };
-            }>(accountResponse, {
-                context: 'TikTok Ads health advertiser response',
-            });
-            if (accountData.code && accountData.code !== 0) {
-                return {
-                    healthy: false,
-                    tokenValid: true,
-                    accountAccessible: false,
-                    error: accountData.message ?? `Advertiser check failed with code ${accountData.code}`,
-                };
-            }
-            const list = accountData.data?.list ?? [];
-            if (!list.some(a => a.advertiser_id === advertiserId)) {
-                return {
-                    healthy: false,
-                    tokenValid: true,
-                    accountAccessible: false,
-                    error: 'Advertiser not found in accessible accounts',
+                    error: asErrorMessage(error, 'Advertiser not accessible'),
                 };
             }
         }
+
         return {
             healthy: true,
             tokenValid: true,

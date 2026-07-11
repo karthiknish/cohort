@@ -1,14 +1,10 @@
-import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto';
-import { enqueueSyncJob, persistIntegrationTokens } from '@/lib/ads-admin';
-import { logger } from '@/lib/logger';
-import { fetchTikTokAdAccounts } from '@/services/integrations/tiktok-ads';
-import type { TikTokAdAccount } from '@/services/integrations/tiktok-ads';
+import { decrypt, encrypt } from '@/lib/crypto';
+import { persistIntegrationTokens } from '@/lib/ads-admin';
 const STATE_TTL_MS = 5 * 60 * 1000;
 interface TikTokOAuthContext {
     state: string;
     clientId?: string | null;
     redirect?: string;
-    codeVerifier?: string;
     createdAt: number;
 }
 type TikTokStatePayload = Omit<TikTokOAuthContext, 'createdAt'> & {
@@ -17,7 +13,6 @@ type TikTokStatePayload = Omit<TikTokOAuthContext, 'createdAt'> & {
 export function createTikTokOAuthState(payload: TikTokStatePayload): string {
     const data: TikTokOAuthContext = {
         ...payload,
-        codeVerifier: payload.codeVerifier ?? generateCodeVerifier(),
         createdAt: payload.createdAt ?? Date.now(),
     };
     return encodeURIComponent(encrypt(JSON.stringify(data)));
@@ -48,7 +43,6 @@ export interface TikTokTokenExchangeResult {
     expiresIn?: number | null;
     refreshTokenExpiresIn?: number | null;
     scopes?: string[];
-    advertiserIds?: string[];
 }
 export async function exchangeTikTokCodeForToken(options: {
     clientKey: string;
@@ -86,7 +80,6 @@ export async function exchangeTikTokCodeForToken(options: {
             expires_in?: number;
             refresh_token_expires_in?: number;
             scope?: string | string[];
-            advertiser_ids?: string[];
         };
     };
     if (payload.code && payload.code !== 0) {
@@ -110,7 +103,6 @@ export async function exchangeTikTokCodeForToken(options: {
         expiresIn: data.expires_in ?? null,
         refreshTokenExpiresIn: data.refresh_token_expires_in ?? null,
         scopes: scopesArray,
-        advertiserIds: Array.isArray(data.advertiser_ids) ? data.advertiser_ids : undefined,
     };
 }
 function computeExpiryDate(seconds?: number | null): Date | null {
@@ -126,7 +118,7 @@ export async function completeTikTokOAuthFlow(options: {
     redirectUri: string;
     clientId?: string | null;
 }): Promise<{
-    account: TikTokAdAccount | null;
+    account: null;
 }> {
     const { code, userId, redirectUri, clientId } = options;
     const clientKey = process.env.TIKTOK_CLIENT_KEY;
@@ -142,22 +134,6 @@ export async function completeTikTokOAuthFlow(options: {
     });
     const accessTokenExpiresAt = computeExpiryDate(tokenResult.expiresIn);
     const refreshTokenExpiresAt = computeExpiryDate(tokenResult.refreshTokenExpiresIn);
-    let selectedAccount: TikTokAdAccount | null = null;
-    const advertiserIds = tokenResult.advertiserIds ?? [];
-    if (tokenResult.accessToken && advertiserIds.length > 0) {
-        try {
-            const accounts = await fetchTikTokAdAccounts({
-                accessToken: tokenResult.accessToken,
-                advertiserIds,
-            });
-            selectedAccount =
-                accounts.find((account) => account.status?.toUpperCase() === 'ENABLE') ?? accounts[0] ?? null;
-        }
-        catch (error) {
-            logger.error('[tiktok.oauth] failed to load advertiser accounts', error);
-            selectedAccount = null;
-        }
-    }
     await persistIntegrationTokens({
         userId,
         providerId: 'tiktok',
@@ -165,13 +141,12 @@ export async function completeTikTokOAuthFlow(options: {
         accessToken: tokenResult.accessToken,
         refreshToken: tokenResult.refreshToken ?? null,
         scopes: tokenResult.scopes ?? [],
-        accountId: selectedAccount?.id ?? null,
-        accountName: selectedAccount?.name ?? null,
+        accountId: null,
+        accountName: null,
         accessTokenExpiresAt,
         refreshTokenExpiresAt,
     });
-    await enqueueSyncJob({ userId, providerId: 'tiktok', jobType: 'initial-backfill', clientId: clientId ?? null });
-    return { account: selectedAccount };
+    return { account: null };
 }
 export function buildTikTokOAuthUrl(options: {
     clientKey: string;

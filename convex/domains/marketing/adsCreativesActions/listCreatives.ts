@@ -5,6 +5,7 @@ import { api, internal } from '/_generated/api'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from '../../../errors'
 import { resolveLinkedInAccessToken } from '../../../lib/linkedinAdsAccess'
+import { resolveTikTokAccessToken } from '../../../lib/tiktokAdsAccess'
 
 import {
   isTokenExpiringSoon,
@@ -53,7 +54,11 @@ export const listCreatives = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (args.providerId !== 'linkedin' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+    if (
+      args.providerId !== 'linkedin' &&
+      args.providerId !== 'tiktok' &&
+      isTokenExpiringSoon(integration.accessTokenExpiresAtMs)
+    ) {
       throw Errors.integration.expired(args.providerId)
     }
 
@@ -92,8 +97,9 @@ export const listCreatives = action({
         throw Errors.integration.notConfigured('TikTok', 'TikTok credentials not configured')
       }
 
+      const tiktokAccessToken = await resolveTikTokAccessToken(args.workspaceId, integration, clientId)
       const tiktokCreatives = await fetchTikTokCreatives({
-        accessToken: integration.accessToken,
+        accessToken: tiktokAccessToken,
         advertiserId,
         campaignId: args.campaignId,
         adGroupId: args.adGroupId,

@@ -263,6 +263,7 @@ import type * as lib_metaSha256 from "../lib/metaSha256.js";
 import type * as lib_metaWebhookAuth from "../lib/metaWebhookAuth.js";
 import type * as lib_r2ArtifactStore from "../lib/r2ArtifactStore.js";
 import type * as lib_storageAccess from "../lib/storageAccess.js";
+import type * as lib_tiktokAdsAccess from "../lib/tiktokAdsAccess.js";
 import type * as lib_webhookAuth from "../lib/webhookAuth.js";
 import type * as meetingArchiveActions from "../meetingArchiveActions.js";
 import type * as meetingArchives from "../meetingArchives.js";
@@ -574,6 +575,7 @@ declare const fullApi: ApiFromModules<{
   "lib/metaWebhookAuth": typeof lib_metaWebhookAuth;
   "lib/r2ArtifactStore": typeof lib_r2ArtifactStore;
   "lib/storageAccess": typeof lib_storageAccess;
+  "lib/tiktokAdsAccess": typeof lib_tiktokAdsAccess;
   "lib/webhookAuth": typeof lib_webhookAuth;
   meetingArchiveActions: typeof meetingArchiveActions;
   meetingArchives: typeof meetingArchives;

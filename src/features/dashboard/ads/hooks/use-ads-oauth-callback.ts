@@ -9,28 +9,32 @@ import { PROVIDER_IDS, SUCCESS_MESSAGES, TOAST_TITLES } from '../components/cons
 type UseAdsOauthCallbackArgs = {
     googleNeedsAccountSelection: boolean;
     metaNeedsAccountSelection: boolean;
+    tiktokNeedsAccountSelection: boolean;
     linkedinNeedsAccountSelection: boolean;
     googleAccountOptionsLength: number;
     metaAccountOptionsLength: number;
+    tiktokAccountOptionsLength: number;
     linkedinAccountOptionsLength: number;
     loadingGoogleAccountOptions: boolean;
     loadingMetaAccountOptions: boolean;
+    loadingTikTokAccountOptions: boolean;
     loadingLinkedInAccountOptions: boolean;
     loadGoogleAdAccounts: (clientIdOverride?: string | null) => Promise<unknown>;
     loadMetaAdAccounts: (clientIdOverride?: string | null) => Promise<unknown>;
+    loadTikTokAdAccounts: (clientIdOverride?: string | null) => Promise<unknown>;
     loadLinkedInAdAccounts: (clientIdOverride?: string | null) => Promise<unknown>;
-    initializeTikTokIntegration: (clientIdOverride?: string | null) => Promise<void>;
     setGoogleSetupUi: Dispatch<SetStateAction<{
         message: string | null;
         dialogOpen: boolean;
     }>>;
     setGoogleSetupMessage: (message: string | null) => void;
     setMetaSetupMessage: (message: string | null) => void;
+    setTiktokSetupMessage: (message: string | null) => void;
     setLinkedinSetupMessage: (message: string | null) => void;
     setConnectionErrors: Dispatch<SetStateAction<Record<string, string>>>;
     triggerRefresh: () => void;
 };
-export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAccountSelection, linkedinNeedsAccountSelection, googleAccountOptionsLength, metaAccountOptionsLength, linkedinAccountOptionsLength, loadingGoogleAccountOptions, loadingMetaAccountOptions, loadingLinkedInAccountOptions, loadGoogleAdAccounts, loadMetaAdAccounts, loadLinkedInAdAccounts, initializeTikTokIntegration, setGoogleSetupUi, setGoogleSetupMessage, setMetaSetupMessage, setLinkedinSetupMessage, setConnectionErrors, triggerRefresh, }: UseAdsOauthCallbackArgs) {
+export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAccountSelection, tiktokNeedsAccountSelection, linkedinNeedsAccountSelection, googleAccountOptionsLength, metaAccountOptionsLength, tiktokAccountOptionsLength, linkedinAccountOptionsLength, loadingGoogleAccountOptions, loadingMetaAccountOptions, loadingTikTokAccountOptions, loadingLinkedInAccountOptions, loadGoogleAdAccounts, loadMetaAdAccounts, loadTikTokAdAccounts, loadLinkedInAdAccounts, setGoogleSetupUi, setGoogleSetupMessage, setMetaSetupMessage, setTiktokSetupMessage, setLinkedinSetupMessage, setConnectionErrors, triggerRefresh, }: UseAdsOauthCallbackArgs) {
     const { replace } = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -65,7 +69,24 @@ export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAcco
                 return;
             }
             if (providerId === PROVIDER_IDS.TIKTOK) {
-                void initializeTikTokIntegration(oauthClientId);
+                setTiktokSetupMessage(null);
+                notifySuccess({
+                    title: SUCCESS_MESSAGES.TIKTOK_CONNECTED,
+                    message: 'TikTok connected. Select an ad account to finish setup.',
+                });
+                void loadTikTokAdAccounts(oauthClientId)
+                    .then(() => {
+                        triggerRefresh();
+                    })
+                    .catch((error) => {
+                        reportConvexFailure({
+                            error,
+                            context: 'useAdsConnections:oauthSuccess:tiktok',
+                            title: TOAST_TITLES.TIKTOK_SETUP_FAILED,
+                            fallbackMessage: 'Unable to load TikTok ad accounts.',
+                        });
+                        setTiktokSetupMessage(convexErrorMessage(error, 'Unable to load TikTok ad accounts.'));
+                    });
                 return;
             }
             if (providerId === PROVIDER_IDS.GOOGLE) {
@@ -211,5 +232,23 @@ export function useAdsOauthCallback({ googleNeedsAccountSelection, metaNeedsAcco
         loadLinkedInAdAccounts,
         loadingLinkedInAccountOptions,
         setLinkedinSetupMessage,
+    ]);
+    useEffect(() => {
+        if (!tiktokNeedsAccountSelection) {
+            return;
+        }
+        if (loadingTikTokAccountOptions || tiktokAccountOptionsLength > 0) {
+            return;
+        }
+        void loadTikTokAdAccounts().catch((error) => {
+            logError(error, 'useAdsConnections:autoLoadTikTokAccounts');
+            setTiktokSetupMessage(asErrorMessage(error));
+        });
+    }, [
+        tiktokAccountOptionsLength,
+        tiktokNeedsAccountSelection,
+        loadTikTokAdAccounts,
+        loadingTikTokAccountOptions,
+        setTiktokSetupMessage,
     ]);
 }

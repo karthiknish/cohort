@@ -75,6 +75,12 @@ export function normalizeLinkedInAccountId(value: string | null | undefined): st
   return stripped.length > 0 ? stripped : null
 }
 
+export function normalizeTikTokAccountId(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
 export function resolveGoogleAdsDeveloperToken(integrationDeveloperToken: string | null | undefined): string {
   const fromIntegration = typeof integrationDeveloperToken === 'string' ? integrationDeveloperToken.trim() : ''
   if (fromIntegration.length > 0) {

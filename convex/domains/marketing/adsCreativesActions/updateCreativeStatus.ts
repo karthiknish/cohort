@@ -6,6 +6,7 @@ import { v } from 'convex/values'
 import { Errors, withErrorHandling } from '../../../errors'
 
 import { resolveLinkedInAccessToken } from '../../../lib/linkedinAdsAccess'
+import { resolveTikTokAccessToken } from '../../../lib/tiktokAdsAccess'
 import { isTokenExpiringSoon, normalizeClientId, requireIdentity } from './shared'
 
 export const updateCreativeStatus = action({
@@ -40,7 +41,11 @@ export const updateCreativeStatus = action({
       throw Errors.integration.missingToken(args.providerId)
     }
 
-    if (args.providerId !== 'linkedin' && isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+    if (
+      args.providerId !== 'linkedin' &&
+      args.providerId !== 'tiktok' &&
+      isTokenExpiringSoon(integration.accessTokenExpiresAtMs)
+    ) {
       throw Errors.integration.expired(args.providerId)
     }
 
@@ -83,10 +88,11 @@ export const updateCreativeStatus = action({
         throw Errors.integration.notConfigured('TikTok', 'TikTok credentials not configured')
       }
 
+      const tiktokAccessToken = await resolveTikTokAccessToken(args.workspaceId, integration, clientId)
       const tiktokStatus = status === 'ACTIVE' || status === 'ENABLE' || status === 'ENABLED' ? 'ENABLE' : 'DISABLE'
 
       await updateTikTokAdStatus({
-        accessToken: integration.accessToken,
+        accessToken: tiktokAccessToken,
         advertiserId,
         adId: args.creativeId,
         status: tiktokStatus as 'ENABLE' | 'DISABLE',

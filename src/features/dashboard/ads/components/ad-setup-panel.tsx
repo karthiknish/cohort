@@ -10,7 +10,7 @@ import { Progress } from '@/shared/ui/progress';
 import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme';
 import { cn } from '@/lib/utils';
 import { PROVIDER_INFO, PROVIDER_IDS } from '@/features/dashboard/ads/components/constants';
-import type { LinkedInAdAccountOption } from '../hooks/ads-connections-types';
+import type { LinkedInAdAccountOption, TikTokAdAccountOption } from '../hooks/ads-connections-types';
 type MetaAccountOption = {
     id: string;
     name: string;
@@ -37,6 +37,11 @@ export type AdSetupPanelProps = {
     tiktokNeedsAccountSelection: boolean;
     initializingTikTok: boolean;
     onInitializeTikTok: () => void;
+    tiktokAccountOptions: TikTokAdAccountOption[];
+    selectedTikTokAccountId: string;
+    onTikTokAccountSelectionChange: (accountId: string) => void;
+    loadingTikTokAccountOptions: boolean;
+    onReloadTikTokAccountOptions: () => void;
     linkedinSetupMessage: string | null;
     linkedinNeedsAccountSelection: boolean;
     initializingLinkedIn: boolean;
@@ -67,7 +72,7 @@ function SetupTaskRow({ children, done, title, description, }: {
       {children ? <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">{children}</div> : null}
     </div>);
 }
-export function AdSetupPanel({ connectedCount, totalProviders, googleNeedsAccountSelection, googleSetupMessage, onOpenGoogleSetup, metaSetupMessage, metaNeedsAccountSelection, initializingMeta, onInitializeMeta, metaAccountOptions, selectedMetaAccountId, onMetaAccountSelectionChange, loadingMetaAccountOptions, onReloadMetaAccountOptions, tiktokSetupMessage, tiktokNeedsAccountSelection, initializingTikTok, onInitializeTikTok, linkedinSetupMessage, linkedinNeedsAccountSelection, initializingLinkedIn, onInitializeLinkedIn, linkedinAccountOptions, selectedLinkedInAccountId, onLinkedInAccountSelectionChange, loadingLinkedInAccountOptions, onReloadLinkedInAccountOptions, initializingGoogle = false, }: AdSetupPanelProps) {
+export function AdSetupPanel({ connectedCount, totalProviders, googleNeedsAccountSelection, googleSetupMessage, onOpenGoogleSetup, metaSetupMessage, metaNeedsAccountSelection, initializingMeta, onInitializeMeta, metaAccountOptions, selectedMetaAccountId, onMetaAccountSelectionChange, loadingMetaAccountOptions, onReloadMetaAccountOptions, tiktokSetupMessage, tiktokNeedsAccountSelection, initializingTikTok, onInitializeTikTok, tiktokAccountOptions, selectedTikTokAccountId, onTikTokAccountSelectionChange, loadingTikTokAccountOptions, onReloadTikTokAccountOptions, linkedinSetupMessage, linkedinNeedsAccountSelection, initializingLinkedIn, onInitializeLinkedIn, linkedinAccountOptions, selectedLinkedInAccountId, onLinkedInAccountSelectionChange, loadingLinkedInAccountOptions, onReloadLinkedInAccountOptions, initializingGoogle = false, }: AdSetupPanelProps) {
     const pendingTasks = [
         googleNeedsAccountSelection,
         metaNeedsAccountSelection,
@@ -190,14 +195,39 @@ export function AdSetupPanel({ connectedCount, totalProviders, googleNeedsAccoun
             </Button>
           </Alert>) : null}
 
-        {tiktokNeedsAccountSelection && !tiktokSetupMessage ? (<SetupTaskRow done={false} title="Complete TikTok Ads setup" description="Confirm your default TikTok ad account so we can queue the initial 90-day sync.">
-            <Button size="sm" onClick={onInitializeTikTok} disabled={initializingTikTok}>
-              {initializingTikTok ? (<>
-                  <Loader2 className="mr-2 size-3 animate-spin"/>
-                  Finishing…
-                </>) : ('Finish setup')}
-            </Button>
+        {tiktokNeedsAccountSelection && !tiktokSetupMessage ? (<SetupTaskRow done={false} title="Select your TikTok ad account" description="OAuth succeeded — pick which ad account to sync into this workspace.">
+            <>
+              <select
+                className="h-9 w-full min-w-[12rem] rounded-md border border-input bg-transparent px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:max-w-xs"
+                value={selectedTikTokAccountId || ''}
+                onChange={(e) => onTikTokAccountSelectionChange(e.target.value)}
+                disabled={loadingTikTokAccountOptions || initializingTikTok || tiktokAccountOptions.length === 0}
+                aria-label="TikTok ad account"
+              >
+                <option value="" disabled>
+                  {loadingTikTokAccountOptions ? 'Loading accounts…' : 'TikTok ad account'}
+                </option>
+                {tiktokAccountOptions.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+                <Button size="sm" variant="outline" onClick={onReloadTikTokAccountOptions} disabled={loadingTikTokAccountOptions || initializingTikTok}>
+                  Reload
+                </Button>
+                <Button size="sm" onClick={onInitializeTikTok} disabled={initializingTikTok || loadingTikTokAccountOptions || !selectedTikTokAccountId}>
+                  {initializingTikTok ? (<>
+                      <Loader2 className="mr-2 size-3 animate-spin"/>
+                      Finishing…
+                    </>) : ('Finish setup')}
+                </Button>
+            </>
           </SetupTaskRow>) : null}
+
+        {!loadingTikTokAccountOptions && tiktokNeedsAccountSelection && tiktokAccountOptions.length === 0 && !tiktokSetupMessage ? (<p className="text-xs text-warning">
+            No TikTok ad accounts found. Confirm your TikTok Ads access, then reload accounts.
+          </p>) : null}
 
         {linkedinSetupMessage ? (<Alert variant="destructive">
             <AlertTriangle className="size-4"/>

@@ -5,7 +5,7 @@ import { adsIntegrationsApi } from '@/lib/convex-api';
 import { convexErrorMessage, reportConvexFailure } from '@/lib/handle-convex-error';
 import { notifySuccess } from '@/lib/notifications';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES, TOAST_TITLES, } from '../components/constants';
-import type { GoogleAdAccountOption, MetaAdAccountOption, LinkedInAdAccountOption, } from './ads-connections-types';
+import type { GoogleAdAccountOption, MetaAdAccountOption, LinkedInAdAccountOption, TikTokAdAccountOption, } from './ads-connections-types';
 type UseAdsProviderSetupArgs = {
     workspaceId: string | null;
     selectedClientId: string | null;
@@ -16,6 +16,7 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
     const listGoogleAdAccounts = useAction(adsIntegrationsApi.listGoogleAdAccounts);
     const listMetaAdAccounts = useAction(adsIntegrationsApi.listMetaAdAccounts);
     const listLinkedInAdAccounts = useAction(adsIntegrationsApi.listLinkedInAdAccounts);
+    const listTikTokAdAccounts = useAction(adsIntegrationsApi.listTikTokAdAccounts);
     const [googleSetupUi, setGoogleSetupUi] = useState({
         message: null as string | null,
         dialogOpen: false,
@@ -43,6 +44,9 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
     const [linkedinAccountOptions, setLinkedinAccountOptions] = useState<LinkedInAdAccountOption[]>([]);
     const [selectedLinkedInAccountId, setSelectedLinkedInAccountId] = useState('');
     const [loadingLinkedInAccountOptions, setLoadingLinkedInAccountOptions] = useState(false);
+    const [tiktokAccountOptions, setTiktokAccountOptions] = useState<TikTokAdAccountOption[]>([]);
+    const [selectedTikTokAccountId, setSelectedTikTokAccountId] = useState('');
+    const [loadingTikTokAccountOptions, setLoadingTikTokAccountOptions] = useState(false);
     useEffect(() => {
         setGoogleAccountOptions([]);
         setSelectedGoogleAccountId('');
@@ -51,6 +55,8 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
         setSelectedMetaAccountId('');
         setLinkedinAccountOptions([]);
         setSelectedLinkedInAccountId('');
+        setTiktokAccountOptions([]);
+        setSelectedTikTokAccountId('');
     }, [selectedClientId]);
     const loadGoogleAdAccounts = async (clientIdOverride?: string | null) => {
         if (!workspaceId) {
@@ -143,6 +149,37 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
         }
         finally {
             setLoadingLinkedInAccountOptions(false);
+        }
+    };
+    const loadTikTokAdAccounts = async (clientIdOverride?: string | null) => {
+        if (!workspaceId) {
+            throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED);
+        }
+        setLoadingTikTokAccountOptions(true);
+        try {
+            const payload = (await listTikTokAdAccounts({
+                workspaceId,
+                providerId: 'tiktok',
+                clientId: clientIdOverride ?? selectedClientId ?? null,
+            })) as TikTokAdAccountOption[];
+            const options = Array.isArray(payload) ? payload : [];
+            setTiktokAccountOptions(options);
+            setSelectedTikTokAccountId((currentValue) => {
+                if (currentValue && options.some((option) => option.id === currentValue)) {
+                    return currentValue;
+                }
+                const defaultOption = options.find((option) => option.isActive) ?? options[0];
+                return defaultOption?.id ?? '';
+            });
+            return options;
+        }
+        catch (error) {
+            setTiktokAccountOptions([]);
+            setSelectedTikTokAccountId('');
+            throw error;
+        }
+        finally {
+            setLoadingTikTokAccountOptions(false);
         }
     };
     const initializeGoogleIntegration = async (clientIdOverride?: string | null, accountIdOverride?: string | null) => {
@@ -284,17 +321,28 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
             setInitializingMeta(false);
         }
     };
-    const initializeTikTokIntegration = async (clientIdOverride?: string | null) => {
+    const initializeTikTokIntegration = async (clientIdOverride?: string | null, accountIdOverride?: string | null) => {
         setTiktokSetupMessage(null);
         setInitializingTikTok(true);
         try {
             if (!workspaceId) {
                 throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED);
             }
+            let accountId = (accountIdOverride ?? selectedTikTokAccountId).trim();
+            if (!accountId) {
+                const availableAccounts = await loadTikTokAdAccounts(clientIdOverride);
+                const defaultAccount = availableAccounts.find((option) => option.isActive) ?? availableAccounts[0];
+                if (!defaultAccount) {
+                    throw new Error('No TikTok ad accounts are available for this integration token.');
+                }
+                accountId = defaultAccount.id;
+                setSelectedTikTokAccountId(defaultAccount.id);
+            }
             const payload = (await initializeAdAccount({
                 workspaceId,
                 providerId: 'tiktok',
                 clientId: clientIdOverride ?? selectedClientId ?? null,
+                accountId,
             })) as {
                 accountName?: string;
             };
@@ -302,8 +350,10 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
                 title: SUCCESS_MESSAGES.TIKTOK_CONNECTED,
                 message: payload?.accountName
                     ? `Syncing data from ${payload.accountName}.`
-                    : 'Default ad account linked successfully.',
+                    : 'TikTok ad account linked successfully.',
             });
+            setTiktokAccountOptions([]);
+            setSelectedTikTokAccountId('');
             triggerRefresh();
         }
         catch (error: unknown) {
@@ -347,9 +397,14 @@ export function useAdsProviderSetup({ workspaceId, selectedClientId, triggerRefr
         selectedLinkedInAccountId,
         setSelectedLinkedInAccountId,
         loadingLinkedInAccountOptions,
+        tiktokAccountOptions,
+        selectedTikTokAccountId,
+        setSelectedTikTokAccountId,
+        loadingTikTokAccountOptions,
         loadGoogleAdAccounts,
         loadMetaAdAccounts,
         loadLinkedInAdAccounts,
+        loadTikTokAdAccounts,
         initializeGoogleIntegration,
         initializeLinkedInIntegration,
         initializeMetaIntegration,
