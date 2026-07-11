@@ -1,5 +1,6 @@
 'use client';
 import { notifyFailure } from '@/lib/notifications';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useEffect, useEffectEvent, useReducer } from 'react';
 import { useAction } from 'convex/react';
 import { adsAdSetsApi, adsTargetingApi } from '@/lib/convex-api';
@@ -88,9 +89,11 @@ export function useAudienceControlSection({ providerId, campaignId, clientId, is
                 logError(new Error(message), 'AudienceControl:fetchTargeting:suppressedMeta');
             }
             else {
-                notifyFailure({
+                reportConvexFailure({
+                    error,
+                    context: 'AudienceControlSection:fetchTargeting',
                     title: 'Error',
-                    message: message,
+                    message,
                 });
             }
         })

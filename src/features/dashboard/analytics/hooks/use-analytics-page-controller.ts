@@ -13,6 +13,7 @@ import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { asErrorMessage, isIntegrationScopeAppError, logError, mapGoogleAnalyticsIntegrationError } from '@/lib/convex-errors';
 import { getPreviewAnalyticsMetrics } from '@/lib/preview-data';
 import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
 import type { AnalyticsDateRange } from '../components/analytics-date-range-picker';
 import { buildAnalyticsMoneyDisplay } from '../lib/analytics-currency';
 import { buildGoogleAnalyticsStory } from '../lib/google-analytics-story';
@@ -263,7 +264,12 @@ export function useAnalyticsPageController() {
                 requestAnimationFrame(() => {
                     setGaSetupFlow((prev) => ({ ...prev, setupMessage: mappedMessage }));
                 });
-                notifyFailure({ title: 'Property load failed', message: mappedMessage });
+                reportConvexFailure({
+                    error,
+                    context: 'AnalyticsPage:loadGoogleAnalyticsProperties:oauth',
+                    title: 'Property load failed',
+                    message: mappedMessage,
+                });
             });
         }
         else {
@@ -420,7 +426,12 @@ export function useAnalyticsPageController() {
         void loadGoogleAnalyticsPropertyOptions().catch((error) => {
             const message = mapGoogleAnalyticsIntegrationError(error);
             setGaSetupMessage(message);
-            notifyFailure({ title: 'Property load failed', message });
+            reportConvexFailure({
+                error,
+                context: 'AnalyticsPage:loadGoogleAnalyticsProperties:setup',
+                title: 'Property load failed',
+                message,
+            });
         });
     };
     const handleFinalizeGoogleAnalyticsSetup = () => {
@@ -452,7 +463,12 @@ export function useAnalyticsPageController() {
             .catch((error) => {
             const message = mapGoogleAnalyticsIntegrationError(error);
             setGaSetupMessage(message);
-            notifyFailure({ title: 'Setup failed', message });
+            reportConvexFailure({
+                error,
+                context: 'AnalyticsPage:initializeGoogleAnalyticsProperty',
+                title: 'Setup failed',
+                message,
+            });
         })
             .finally(() => {
             setGaInitializingProperty(false);

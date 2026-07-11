@@ -257,9 +257,10 @@ export async function notifyApiCall<T>(operation: string, apiCall: () => Promise
         return result;
     }
     catch (error) {
-        notifyFailure({
-            title: `${operation} failed`,
+        reportConvexFailure({
             error,
+            context: operation,
+            title: `${operation} failed`,
             message: options?.errorMessage,
             fallbackMessage: 'An unexpected error occurred',
         });

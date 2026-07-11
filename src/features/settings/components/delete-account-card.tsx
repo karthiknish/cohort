@@ -1,6 +1,7 @@
 'use client';
 import { asErrorMessage } from '@/lib/convex-errors';
-import { notifyFailure, notifyInfo, notifySuccess } from '@/lib/notifications';
+import { notifyInfo, notifySuccess } from '@/lib/notifications';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useState, useCallback, useEffect, type ChangeEvent } from 'react';
 import { useRouter } from '@/shared/ui/navigation';
 import { LoaderCircle, Trash2 } from 'lucide-react';
@@ -116,9 +117,11 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
             .catch((accountError) => {
             const message = asErrorMessage(accountError, 'Failed to delete account');
             setDeleteDialogState((prev) => ({ ...prev, error: message }));
-            notifyFailure({
+            reportConvexFailure({
+                error: accountError,
+                context: 'DeleteAccountDialog:handleAccountDeletion',
                 title: 'Account deletion failed',
-                message: message,
+                message,
             });
         })
             .finally(() => {

@@ -1,6 +1,7 @@
 'use client';
 import { asErrorMessage } from '@/lib/convex-errors';
 import { notifyFailure } from '@/lib/notifications';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { useCallback, useReducer } from 'react';
 import { useAction } from 'convex/react';
 import { adsTargetingApi } from '@/lib/convex-api';
@@ -180,21 +181,27 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
             .catch((error) => {
             const message = asErrorMessage(error, 'Failed to load audience targeting data');
             if (message.includes('not configured') || message.includes('missing token') || message.includes('expired')) {
-                notifyFailure({
+                reportConvexFailure({
+                    error,
+                    context: 'AudienceTargetingCard:fetchTargeting',
                     title: 'Integration Issue',
                     message: 'Please connect or refresh your Meta ad account.',
                 });
             }
             else if (message.includes('Meta API') || message.includes('Facebook')) {
-                notifyFailure({
+                reportConvexFailure({
+                    error,
+                    context: 'AudienceTargetingCard:fetchTargeting',
                     title: 'Meta API Error',
                     message: 'Could not fetch targeting data. Please check your connection and try again.',
                 });
             }
             else {
-                notifyFailure({
+                reportConvexFailure({
+                    error,
+                    context: 'AudienceTargetingCard:fetchTargeting',
                     title: 'Error',
-                    message: message,
+                    message,
                 });
             }
         })

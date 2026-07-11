@@ -1,4 +1,5 @@
 'use client';
+import { asErrorMessage } from '@/lib/convex-errors';
 import { useReducer, useMemo, useCallback, useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import { useQuery } from 'convex/react';
@@ -69,9 +70,7 @@ export function useClientWorkspaceSelector(_props: ClientWorkspaceSelectorProps)
             handleSheetChange(false);
         })
             .catch((createError: unknown) => {
-            const message = createError instanceof Error && createError.message
-                ? createError.message
-                : 'Unable to create client';
+            const message = asErrorMessage(createError, 'Unable to create client');
             dispatch({ type: 'setErrorMessage', value: message });
         })
             .finally(() => {
@@ -85,9 +84,7 @@ export function useClientWorkspaceSelector(_props: ClientWorkspaceSelectorProps)
             await removeClient(clientId);
         }
         catch (removeError: unknown) {
-            const message = removeError instanceof Error && removeError.message
-                ? removeError.message
-                : 'Unable to remove client';
+            const message = asErrorMessage(removeError, 'Unable to remove client');
             dispatch({ type: 'setErrorMessage', value: message });
         }
         finally {

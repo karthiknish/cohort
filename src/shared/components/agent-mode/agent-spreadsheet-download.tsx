@@ -6,8 +6,7 @@ import type { AgentAttachmentContext } from '@/lib/agent-attachments';
 import { downloadAgentSpreadsheetExport, parseAgentSpreadsheetExport, parseStoredSpreadsheetExport, persistAgentSpreadsheetExport, } from '@/lib/agent/spreadsheet-export';
 import { agentApi, filesApi } from '@/lib/convex-api';
 import { isPreviewModeEnabled } from '@/lib/preview-data';
-import { asErrorMessage } from '@/lib/convex-errors';
-import { notifyFailure } from '@/lib/notifications';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { Button } from '@/shared/ui/button';
 type AgentSpreadsheetDownloadProps = {
     messageId: string;
@@ -73,9 +72,11 @@ export function AgentSpreadsheetDownload({ messageId, conversationId, workspaceI
         }
         catch (error) {
             setIsStoring(false);
-            notifyFailure({
+            reportConvexFailure({
+                error,
+                context: 'AgentSpreadsheetDownload:storeExport',
                 title: 'Could not save Excel file',
-                message: asErrorMessage(error, 'Upload to storage failed.'),
+                fallbackMessage: 'Upload to storage failed.',
             });
             return null;
         }
@@ -97,9 +98,11 @@ export function AgentSpreadsheetDownload({ messageId, conversationId, workspaceI
             await downloadAgentSpreadsheetExport(payload);
         }
         catch (error) {
-            notifyFailure({
+            reportConvexFailure({
+                error,
+                context: 'AgentSpreadsheetDownload:handleDownload',
                 title: 'Excel export failed',
-                message: asErrorMessage(error, 'Could not build the spreadsheet.'),
+                fallbackMessage: 'Could not build the spreadsheet.',
             });
         }
         setIsDownloading(false);

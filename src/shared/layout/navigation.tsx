@@ -25,7 +25,7 @@ import { CommandMenuDynamic } from '@/shared/layout/navigation/command-menu-dyna
 import { HelpModal, useHelpModal } from '@/shared/layout/navigation/help-modal';
 import { KeyboardShortcutBadge, useKeyboardShortcuts } from '@/shared/hooks/use-keyboard-shortcuts';
 import { ProblemReportModal } from '@/shared/layout/navigation/problem-report-modal';
-import { notifyFailure } from '@/lib/notifications';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { KeyboardShortcutsOverlay } from '@/shared/layout/navigation/keyboard-shortcuts-overlay';
 import { getShortcutsForRole } from '@/shared/layout/navigation/keyboard-shortcuts';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shared/ui/tooltip';
@@ -218,8 +218,9 @@ export function Header() {
     const handleSignOut = () => {
         setOpen(false);
         void signOut().catch((err: unknown) => {
-            notifyFailure({
+            reportConvexFailure({
                 error: err,
+                context: 'navigation:handleSignOut',
                 title: 'Sign out incomplete',
                 fallbackMessage: 'Sign out failed. You were signed out locally; try again or clear cookies if issues persist.',
             });

@@ -3,7 +3,7 @@ import { useQuery } from 'convex/react';
 import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error';
 import { dynamic } from '@/shared/ui/dynamic';
 import { usePathname, useRouter } from '@/shared/ui/navigation';
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { formatAssigneeList, formatDate, clientRosterAssigneeNames, mergeTaskParticipants, resolveAssigneeUserIds, ProjectFilterBanner, TaskBulkToolbar, TaskFilters, type TaskParticipant, TasksHeader, TaskViewControls, useDebouncedValue, useTaskFilters, useTaskForm, useTasks, } from '@/features/dashboard/tasks';
 import { PageMotionShell } from '@/shared/components/page-motion-shell';
 import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
@@ -22,7 +22,8 @@ import { buildTaskListFilters } from './hooks/task-list-filters';
 import { TASKS_THEME } from './tasks-theme';
 import { isFeatureEnabled } from '@/lib/features';
 import { exportToCsv } from '@/lib/export/export-to-spreadsheet';
-import { notifyFailure, notifySuccess } from '@/lib/notifications';
+import { notifySuccess } from '@/lib/notifications';
+import { reportConvexFailure } from '@/lib/handle-convex-error';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import type { TaskPriority, TaskStatus } from '@/types/tasks';
@@ -41,6 +42,45 @@ const TaskKanban = dynamic(() => import('@/features/dashboard/tasks/task-kanban'
 const CreateTaskSheet = dynamic(() => import('@/features/dashboard/tasks/task-form-sheets').then((mod) => mod.CreateTaskSheet), { ssr: false });
 const EditTaskSheet = dynamic(() => import('@/features/dashboard/tasks/task-form-sheets').then((mod) => mod.EditTaskSheet), { ssr: false });
 const DeleteTaskDialog = dynamic(() => import('@/features/dashboard/tasks/delete-task-dialog').then((mod) => mod.DeleteTaskDialog), { ssr: false });
+const ONE_MINUTE_MS = 60 * 1000;
+let nowSnapshot = 0;
+let nowIntervalId: ReturnType<typeof setInterval> | undefined;
+const nowSubscribers = new Set<() => void>();
+function startNowClock() {
+    if (nowIntervalId !== undefined) {
+        return;
+    }
+    nowSnapshot = Date.now();
+    nowIntervalId = setInterval(() => {
+        nowSnapshot = Date.now();
+        for (const callback of nowSubscribers) {
+            callback();
+        }
+    }, ONE_MINUTE_MS);
+}
+function stopNowClock() {
+    if (nowIntervalId !== undefined && nowSubscribers.size === 0) {
+        clearInterval(nowIntervalId);
+        nowIntervalId = undefined;
+    }
+}
+function subscribeNowClock(callback: () => void) {
+    nowSubscribers.add(callback);
+    startNowClock();
+    return () => {
+        nowSubscribers.delete(callback);
+        stopNowClock();
+    };
+}
+function getNowSnapshot() {
+    return nowSnapshot;
+}
+function getServerNowSnapshot() {
+    return 0;
+}
+function useNowMs() {
+    return useSyncExternalStore(subscribeNowClock, getNowSnapshot, getServerNowSnapshot);
+}
 export type TasksPageClientProps = {
     initialProjectId?: string | null;
     initialProjectName?: string | null;
@@ -276,15 +316,15 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
                 title: 'Export complete',
                 message: `Exported ${filters.filteredTasks.length} task${filters.filteredTasks.length === 1 ? '' : 's'} to Excel.`,
             });
+            setIsExporting(false);
         }
         catch (exportError) {
-            notifyFailure({
-                title: 'Export failed',
+            reportConvexFailure({
                 error: exportError,
+                context: 'useTasksPageContent:handleExport',
+                title: 'Export failed',
                 fallbackMessage: 'Could not build the spreadsheet.',
             });
-        }
-        finally {
             setIsExporting(false);
         }
     };
@@ -374,8 +414,8 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
         setRawSelectedTaskIds(new Set(filtered.map((task) => task.id)));
     };
     const highPriorityCount = visibleTasks.filter((task) => task.priority === 'high' || task.priority === 'urgent').length;
-    const dueSoonCount = (() => {
-        const now = Date.now();
+    const now = useNowMs();
+    const dueSoonCount = useMemo(() => {
         const cutoff = now + 7 * 24 * 60 * 60 * 1000;
         return visibleTasks.filter((task) => {
             if (!task.dueDate)
@@ -385,7 +425,7 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
                 return false;
             return ts >= now && ts <= cutoff;
         }).length;
-    })();
+    }, [now, visibleTasks]);
     const handleBulkStatusChange = async (status: TaskStatus) => {
         if (!hasSelection)
             return;

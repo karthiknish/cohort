@@ -252,8 +252,9 @@ export function useInSiteMeetingRoomPostCall({ meetingLegacyId, markCompleted, n
                 notesProcessingState: 'failed',
                 notesProcessingError: 'AI notes could not be generated because post-call finalization failed.',
             }));
-            notifyFailure({
+            reportConvexFailure({
                 error,
+                context: 'useInSiteMeetingRoomPostCall:handleRetryPostCallProcessing',
                 title: 'Post-call retry failed',
                 fallbackMessage: 'Meeting finalization failed',
             });

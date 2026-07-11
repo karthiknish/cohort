@@ -2,7 +2,7 @@
 
 import { api, internal } from '/_generated/api'
 import { internalAction } from '../../_generated/server'
-import { Errors } from '../../errors'
+import { Errors, asErrorMessage, withErrorHandling } from '../../errors'
 import { zWorkspaceAction } from '../../functions'
 import { enforceDeepSeekActionRateLimit } from '../../deepseekRateLimit'
 import { v } from 'convex/values'
@@ -67,7 +67,7 @@ export const generateFromProposal = zWorkspaceAction({
     legacyId: z.string(),
     generatePdf: z.boolean().optional().default(false),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => withErrorHandling(async () => {
     if (isGenerationInProgress(args.workspaceId, args.legacyId)) {
       return { ok: true, status: 'in_progress', idempotent: true }
     }
@@ -263,7 +263,7 @@ export const generateFromProposal = zWorkspaceAction({
           storageUrl: null,
           pdfStorageUrl: null,
           warnings: ['Deck generation failed. Please try again.'],
-          error: String(error),
+          error: asErrorMessage(error),
           creditsDeducted: null,
           creditsRemaining: null,
           externalDeckId: null,
@@ -274,5 +274,5 @@ export const generateFromProposal = zWorkspaceAction({
 
       throw error
     }
-  },
+  }, 'generateFromProposal'),
 })
