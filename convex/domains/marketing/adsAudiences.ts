@@ -8,12 +8,7 @@ import { resolveLinkedInAccessToken } from '../../lib/linkedinAdsAccess'
 import { resolveTikTokAccessToken } from '../../lib/tiktokAdsAccess'
 import { normalizeClientId } from '@/lib/normalizeClientId'
 import { isTokenExpiringSoon } from '../../lib/isTokenExpiringSoon'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+import { requireIdentity } from '../../lib/functions/auth'
 
 export const createAudience = action({
   args: {

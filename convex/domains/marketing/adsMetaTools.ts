@@ -9,12 +9,7 @@ import {
   requireFacebookAdAccount,
   resolveFacebookAccessToken,
 } from '../../lib/facebookAdsAccess'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+import { requireIdentity } from '../../lib/functions/auth'
 
 export const searchTargetingInterests = action({
   args: {

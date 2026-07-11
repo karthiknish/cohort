@@ -12,12 +12,7 @@ import type {
   MetaCapiActionSource,
   MetaCapiHashedUserData,
 } from '@/lib/meta-capi-events'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+import { requireIdentity } from '../../lib/functions/auth'
 
 const capiEventArgs = v.object({
   eventName: v.string(),

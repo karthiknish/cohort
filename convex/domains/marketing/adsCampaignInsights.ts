@@ -13,12 +13,7 @@ import { resolveGoogleAdsDeveloperToken } from './adsIntegrations/shared'
 import type { PlatformInsightResult } from '@/services/integrations/shared/insights-types'
 import { normalizeClientId } from '@/lib/normalizeClientId'
 import { isTokenExpiringSoon } from '../../lib/isTokenExpiringSoon'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+import { requireIdentity } from '../../lib/functions/auth'
 
 function todayIsoDate(): string {
   return new Date().toISOString().split('T')[0]!

@@ -6,12 +6,7 @@ import { v } from 'convex/values'
 import { formatMetaCallToActionLabel } from '../../../src/services/integrations/meta-ads/meta-call-to-action'
 import { deepseekAI } from '../../../src/services/deepseek'
 import { Errors, withErrorHandling } from '../../errors'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+import { requireIdentity } from '../../lib/functions/auth'
 import { enforceDeepSeekActionRateLimit } from '../../deepseekRateLimit'
 
 const providerIdValidator = v.union(

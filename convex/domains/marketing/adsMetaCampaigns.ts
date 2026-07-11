@@ -10,12 +10,7 @@ import {
   resolveFacebookAccessToken,
 } from '../../lib/facebookAdsAccess'
 import type { CampaignObjective } from '@/services/integrations/meta-ads/campaign-modules/types'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+import { requireIdentity } from '../../lib/functions/auth'
 
 export const createMetaCampaign = action({
   args: {
