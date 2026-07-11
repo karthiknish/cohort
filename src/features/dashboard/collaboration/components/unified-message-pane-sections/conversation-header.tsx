@@ -28,7 +28,7 @@ import { RichComposer } from '../rich-composer';
 import { ChannelAvatar } from '../channel-avatar';
 import { ChannelInfoDialog } from '../channel-info-dialog';
 import { PinMessageButton } from '../pinned-messages';
-import { ChannelPresenceList } from '../user-presence';
+import { ChannelPresenceList, UserPresenceIndicator } from '../user-presence';
 import type { MessagePaneHeaderInfo } from '../unified-message-pane-types';
 function getInitials(name: string): string {
     return name
@@ -99,6 +99,15 @@ export function UnifiedConversationHeader({ header, canSearchMessages = false, m
     if (header.type === 'channel' && header.messageCount !== undefined) {
         subtitleParts.push(`${header.messageCount} message${header.messageCount === 1 ? '' : 's'}`);
     }
+    const dmPresenceStatus = (() => {
+        if (header.type !== 'dm') {
+            return undefined;
+        }
+        if (header.presenceMembers === undefined || header.presenceMembers === null) {
+            return undefined;
+        }
+        return header.presenceMembers.some((member) => member.online) ? 'online' : 'offline';
+    })();
     return (<div className="shrink-0 border-b border-muted/40 bg-background/80 p-3 shadow-sm backdrop-blur-md supports-backdrop-filter:bg-background/70 sm:p-4">
       <div className="flex items-start justify-between gap-2 sm:gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-2 sm:gap-3">
@@ -126,8 +135,8 @@ export function UnifiedConversationHeader({ header, canSearchMessages = false, m
                   {header.role}
                 </Badge>) : null}
             </div>
-            {subtitleParts.length > 0 ? (<p className="text-xs text-muted-foreground">{subtitleParts.join(' · ')}</p>) : header.type === 'dm' ? (<p className="text-xs text-muted-foreground">Direct message</p>) : null}
-            {header.presenceMembers && header.presenceMembers.length > 0 ? (<ChannelPresenceList className="pt-0.5" members={header.presenceMembers.map((member) => ({
+            {subtitleParts.length > 0 ? (<p className="text-xs text-muted-foreground">{subtitleParts.join(' · ')}</p>) : header.type === 'dm' ? (dmPresenceStatus ? (<UserPresenceIndicator status={dmPresenceStatus} showLabel size="sm" className="pt-0.5"/>) : (<p className="text-xs text-muted-foreground">Direct message</p>)) : null}
+            {header.type !== 'dm' && header.presenceMembers && header.presenceMembers.length > 0 ? (<ChannelPresenceList className="pt-0.5" members={header.presenceMembers.map((member) => ({
                 id: member.id,
                 name: member.name,
                 avatarUrl: member.avatarUrl,

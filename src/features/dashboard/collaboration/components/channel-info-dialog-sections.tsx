@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { Link } from '@/shared/ui/link';
 import { Bell, Camera, FileStack, Hash, Info, LoaderCircle, Lock, Settings2, Trash2, Users, } from 'lucide-react';
 import { ChatMediaGallery } from '@/shared/ui/chat-media-gallery';
@@ -6,7 +7,8 @@ import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { EmptyState } from '@/shared/ui/empty-state';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+import { Tabs, TabsContent } from '@/shared/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { cn } from '@/lib/utils';
 import type { ClientTeamMember } from '@/types/clients';
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration';
@@ -184,27 +186,24 @@ export function ChannelInfoTabs({ channel, channelMessages, channelParticipants,
     canManageMembers?: boolean;
     onManageMembers?: () => void;
 }) {
+    const [activeTab, setActiveTab] = useState('members');
     const fileCount = sharedFiles.length;
     const memberCount = channelParticipants.length;
     const pinnedCount = channelMessages.filter((message) => message.isPinned && !message.isDeleted).length;
-    return (<Tabs defaultValue="members" className="flex min-h-0 flex-1 flex-col">
-      <TabsList className={CHANNEL_INFO_THEME.tabList}>
-        <TabsTrigger value="members" className={CHANNEL_INFO_THEME.tabTrigger}>
-          Members
-          {memberCount > 0 ? (<span className="ml-1.5 tabular-nums text-muted-foreground">({memberCount})</span>) : null}
-        </TabsTrigger>
-        <TabsTrigger value="pinned" className={CHANNEL_INFO_THEME.tabTrigger}>
-          Pinned
-          {pinnedCount > 0 ? (<span className="ml-1.5 tabular-nums text-muted-foreground">({pinnedCount})</span>) : null}
-        </TabsTrigger>
-        <TabsTrigger value="files" className={CHANNEL_INFO_THEME.tabTrigger}>
-          Files
-          {fileCount > 0 ? (<span className="ml-1.5 tabular-nums text-muted-foreground">({fileCount})</span>) : null}
-        </TabsTrigger>
-        <TabsTrigger value="about" className={CHANNEL_INFO_THEME.tabTrigger}>
-          About
-        </TabsTrigger>
-      </TabsList>
+    return (<Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as string)} className="flex min-h-0 flex-1 flex-col">
+      <div className="px-4 pt-4">
+        <Select value={activeTab} onValueChange={(value) => setActiveTab(value as string)}>
+          <SelectTrigger aria-label="Channel info section" className="h-10 w-full rounded-xl bg-muted/50 px-3 text-sm font-semibold">
+            <SelectValue placeholder="Select section" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="members">Members ({memberCount})</SelectItem>
+            <SelectItem value="pinned">Pinned ({pinnedCount})</SelectItem>
+            <SelectItem value="files">Files ({fileCount})</SelectItem>
+            <SelectItem value="about">About</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-4">
         <TabsContent value="members" className="mt-0 focus-visible:outline-none">

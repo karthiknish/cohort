@@ -60,7 +60,6 @@ export function useChannelPresence({ workspaceId, userId, selectedChannel = null
     const [roomToken, setRoomToken] = useState<string | null>(null);
     const sessionTokenRef = useRef<string | null>(null);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    // Stable per-mount session id; regenerated when the room changes.
     const sessionIdRef = useRef<string>(typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).slice(2));
 
     const presenceRows = useQuery(presenceApi.list, roomToken ? { roomToken } : 'skip') as
@@ -76,6 +75,7 @@ export function useChannelPresence({ workspaceId, userId, selectedChannel = null
         if (!enabled || !roomId || !userId) {
             return;
         }
+        sessionIdRef.current = typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).slice(2);
         const sid = sessionIdRef.current;
 
         const sendHeartbeat = async () => {
@@ -165,6 +165,9 @@ export function useChannelPresence({ workspaceId, userId, selectedChannel = null
             if (!entry.online) {
                 continue;
             }
+            if (userId && entry.userId === userId) {
+                continue;
+            }
             const name = entry.data?.name ?? 'User';
             result.push({
                 id: entry.userId,
@@ -175,7 +178,7 @@ export function useChannelPresence({ workspaceId, userId, selectedChannel = null
             });
         }
         return result;
-    }, [enabled, presenceRows]);
+    }, [enabled, presenceRows, userId]);
 
     return members;
 }

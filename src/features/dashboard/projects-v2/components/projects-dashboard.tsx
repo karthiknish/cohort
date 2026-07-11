@@ -168,10 +168,6 @@ function ProjectsHeaderSection() {
           >
             Open tasks
           </Link>
-          <span className="text-muted-foreground/40" aria-hidden>
-            ·
-          </span>
-          <span>Drop a PDF or image anywhere to import projects with AI</span>
         </p>
       </div>
 

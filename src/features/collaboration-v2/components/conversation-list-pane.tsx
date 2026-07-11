@@ -119,7 +119,7 @@ export function ConversationListPane({
     >
       <LiveRegion message={totalUnread > 0 ? `${totalUnread} unread conversations` : ''} />
       <div className="space-y-3 border-b border-muted/30 p-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col items-start gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary shadow-sm ring-1 ring-primary/15">
               <Inbox className="size-4" />
@@ -138,7 +138,7 @@ export function ConversationListPane({
               </Badge>
             ) : null}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex w-full items-center gap-1">
             {createChannelProps ? (
               <CreateChannelDialog
                 workspaceId={createChannelProps.workspaceId}
