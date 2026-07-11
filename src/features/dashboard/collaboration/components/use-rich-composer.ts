@@ -175,17 +175,29 @@ export function useRichComposer({ value, onChange, onSend, disabled = false, par
                     };
                 }
                 case 'unordered-list': {
-                    const lines = (selectedText || 'List item').split('\n');
+                    const placeholder = selectedText || 'List item';
+                    const lines = placeholder.split('\n');
                     const prefixed = lines.map((line) => (line ? `- ${line}` : '- ')).join('\n');
                     const nextValue = current.slice(0, selectionStart) + prefixed + current.slice(selectionEnd);
                     const nextEnd = selectionStart + prefixed.length;
+                    if (noSelection) {
+                        const startInside = selectionStart + 2;
+                        const endInside = startInside + placeholder.length;
+                        return { nextValue, nextSelectionStart: startInside, nextSelectionEnd: endInside };
+                    }
                     return { nextValue, nextSelectionStart: selectionStart, nextSelectionEnd: nextEnd };
                 }
                 case 'ordered-list': {
-                    const lines = (selectedText || 'List item').split('\n');
+                    const placeholder = selectedText || 'List item';
+                    const lines = placeholder.split('\n');
                     const prefixed = lines.map((line, index) => `${index + 1}. ${line || 'Item'}`).join('\n');
                     const nextValue = current.slice(0, selectionStart) + prefixed + current.slice(selectionEnd);
                     const nextEnd = selectionStart + prefixed.length;
+                    if (noSelection) {
+                        const startInside = selectionStart + 3;
+                        const endInside = startInside + placeholder.length;
+                        return { nextValue, nextSelectionStart: startInside, nextSelectionEnd: endInside };
+                    }
                     return { nextValue, nextSelectionStart: selectionStart, nextSelectionEnd: nextEnd };
                 }
                 default:
@@ -380,6 +392,8 @@ export function useRichComposer({ value, onChange, onSend, disabled = false, par
             const insertionPoint = selectionStart === selectionEnd ? selectionStart : selectionEnd;
             const nextValue = `${current.slice(0, insertionPoint)}@${current.slice(insertionPoint)}`;
             const nextCaret = insertionPoint + 1;
+            setMentionState({ active: true, startIndex: insertionPoint, query: '' });
+            setHighlightedMention(0);
             return { nextValue, nextSelectionStart: nextCaret, nextSelectionEnd: nextCaret };
         });
     };
