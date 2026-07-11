@@ -39,4 +39,11 @@ describe('MessageContent', () => {
         expect(markup).toContain('bg-current/10');
         expect(markup).toContain('text-current');
     });
+
+    it('renders single-star emphasis as bold and underscore emphasis as italic', () => {
+        const markup = renderToStaticMarkup(<MessageContent content="*bold* and _italic_" />);
+        expect(markup).toContain('font-semibold');
+        expect(markup).toContain('<em');
+        expect(markup).toContain('italic');
+    });
 });

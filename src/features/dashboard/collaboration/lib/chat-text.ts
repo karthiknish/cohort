@@ -7,6 +7,9 @@ export function formatConversationSnippet(raw: string | null | undefined, maxLen
         .replace(/`([^`]+)`/g, '$1')
         .replace(/!\[[^\]]*\]\([^)]+\)/g, '[image]')
         .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/\*([^*\n]+)\*/g, '$1')
+        .replace(/_([^_\n]+)_/g, '$1')
         .replace(/<[^>]+>/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();

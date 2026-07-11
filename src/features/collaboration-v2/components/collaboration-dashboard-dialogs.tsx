@@ -16,6 +16,7 @@ export type CollaborationDashboardDialogsProps = {
   isNewDMDialogOpen: boolean;
   setIsNewDMDialogOpen: (open: boolean) => void;
   onUserSelect: (targetUser: { id: string; name: string; role?: string | null }) => Promise<void>;
+  workspaceMembers: WorkspaceMember[];
   workspaceId: string | null;
   currentUserId: string | null;
   currentUserRole: string | null;
@@ -31,6 +32,7 @@ export function CollaborationDashboardDialogs({
   isNewDMDialogOpen,
   setIsNewDMDialogOpen,
   onUserSelect,
+  workspaceMembers,
   workspaceId,
   currentUserId,
   currentUserRole,
@@ -47,7 +49,7 @@ export function CollaborationDashboardDialogs({
         open={isNewDMDialogOpen}
         onOpenChange={setIsNewDMDialogOpen}
         onUserSelect={onUserSelect}
-        workspaceId={workspaceId}
+        workspaceMembers={workspaceMembers}
         currentUserId={currentUserId}
         currentUserRole={currentUserRole}
       />

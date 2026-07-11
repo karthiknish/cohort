@@ -6,9 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Badge } from '@/shared/ui/badge';
-import { useQuery } from 'convex/react';
 import { usePreview } from '@/shared/contexts/preview-context';
-import { api } from '@/lib/convex-api';
 import { getPreviewCollaborationParticipants } from '@/lib/preview-data';
 interface NewDMDialogProps {
     open: boolean;
@@ -18,7 +16,12 @@ interface NewDMDialogProps {
         name: string;
         role?: string | null;
     }) => Promise<void>;
-    workspaceId: string | null;
+    workspaceMembers: Array<{
+        id: string;
+        name: string;
+        email?: string;
+        role?: string | null;
+    }>;
     currentUserId: string | null;
     currentUserRole: string | null | undefined;
 }
@@ -28,15 +31,12 @@ type DmParticipant = {
     email?: string;
     role?: string | null;
 };
-export function NewDMDialog({ open, onOpenChange, onUserSelect, workspaceId, currentUserId, currentUserRole, }: NewDMDialogProps) {
+export function NewDMDialog({ open, onOpenChange, onUserSelect, workspaceMembers, currentUserId, currentUserRole, }: NewDMDialogProps) {
     const { isPreviewMode } = usePreview();
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreating, setIsCreating] = useState(false);
-    const dmParticipants = useQuery(api.users.listDMParticipants, !isPreviewMode && workspaceId && currentUserId
-        ? { workspaceId, currentUserId, currentUserRole: currentUserRole ?? null }
-        : 'skip');
-    const filteredUsers = (() => {
-        const participants = isPreviewMode
+    const filteredUsers = useMemo(() => {
+        const base = isPreviewMode
             ? getPreviewCollaborationParticipants()
                 .flatMap((participant) => participant.id !== currentUserId
                 ? [{
@@ -46,17 +46,21 @@ export function NewDMDialog({ open, onOpenChange, onUserSelect, workspaceId, cur
                         role: participant.role,
                     }]
                 : [])
-            : (Array.isArray(dmParticipants) ? (dmParticipants as DmParticipant[]) : []);
-        return participants
-            .filter((member) => {
-            if (!searchQuery.trim())
-                return true;
-            const query = searchQuery.toLowerCase();
-            return (member.name?.toLowerCase().includes(query) ||
-                member.email?.toLowerCase().includes(query) ||
-                member.role?.toLowerCase().includes(query));
-        });
-    })();
+            : workspaceMembers.reduce<DmParticipant[]>((acc, member) => {
+                if (member.id === currentUserId)
+                    return acc;
+                if (currentUserRole?.toLowerCase() === 'client' && member.role?.toLowerCase() === 'client')
+                    return acc;
+                acc.push({ id: member.id, name: member.name, email: member.email, role: member.role });
+                return acc;
+            }, []);
+        const query = searchQuery.trim().toLowerCase();
+        if (!query)
+            return base;
+        return base.filter((member) => (member.name?.toLowerCase().includes(query) ||
+            member.email?.toLowerCase().includes(query) ||
+            member.role?.toLowerCase().includes(query)));
+    }, [isPreviewMode, workspaceMembers, currentUserId, currentUserRole, searchQuery]);
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(event.target.value);
     };

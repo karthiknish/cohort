@@ -161,8 +161,35 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
         del: ({ children }) => <del className="line-through text-muted-foreground">{children}</del>,
     };
 }
+function normalizeChatMarkdown(source: string): string {
+    let result = '';
+    let i = 0;
+    while (i < source.length) {
+        if (source.startsWith('```', i)) {
+            const end = source.indexOf('```', i + 3);
+            if (end !== -1) {
+                result += source.slice(i, end + 3);
+                i = end + 3;
+                continue;
+            }
+        }
+        if (source[i] === '`') {
+            const end = source.indexOf('`', i + 1);
+            if (end !== -1) {
+                result += source.slice(i, end + 1);
+                i = end + 1;
+                continue;
+            }
+        }
+        const nextTick = source.indexOf('`', i);
+        const segment = nextTick === -1 ? source.slice(i) : source.slice(i, nextTick);
+        result += segment.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '**$1**');
+        i = nextTick === -1 ? source.length : nextTick;
+    }
+    return result;
+}
 function RawMessageContent({ content, mentions, highlightTerms }: MessageContentProps) {
-    const markdown = content?.trim() ?? "";
+    const markdown = useMemo(() => normalizeChatMarkdown(content?.trim() ?? ""), [content]);
     const markdownComponents = createMarkdownComponents(highlightTerms);
     const mentionBadges = (() => {
         if (!Array.isArray(mentions)) {

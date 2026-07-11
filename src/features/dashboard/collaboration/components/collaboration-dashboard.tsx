@@ -335,7 +335,7 @@ function CollaborationInboxSection({ context }: { context: Context }) {
     <Card className={DASHBOARD_THEME.cards.base}>
       <CardContent className="flex min-h-0 flex-col overflow-hidden p-0 max-lg:min-h-[min(72dvh,640px)] lg:flex-row">
         <UnifiedInbox currentUserId={currentUserId} sidebar={sidebar} channelPane={channelPane} directMessagePane={directMessagePane} manageChannel={manageChannel} />
-        <NewDMDialog open={isNewDMDialogOpen} onOpenChange={setIsNewDMDialogOpen} onUserSelect={handleStartNewDM} workspaceId={workspaceId} currentUserId={currentUserId} currentUserRole={currentUserRole} />
+        <NewDMDialog open={isNewDMDialogOpen} onOpenChange={setIsNewDMDialogOpen} onUserSelect={handleStartNewDM} workspaceMembers={workspaceMembers} currentUserId={currentUserId} currentUserRole={currentUserRole} />
         {channelExtras.taskModal}
         {channelExtras.forwardDialog}
       </CardContent>

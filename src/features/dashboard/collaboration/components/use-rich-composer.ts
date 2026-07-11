@@ -111,10 +111,10 @@ export function useRichComposer({ value, onChange, onSend, disabled = false, par
             switch (action) {
                 case 'bold': {
                     const placeholder = selectedText || 'bold text';
-                    const wrapped = `**${placeholder}**`;
+                    const wrapped = `*${placeholder}*`;
                     const nextValue = current.slice(0, selectionStart) + wrapped + current.slice(selectionEnd);
                     if (noSelection) {
-                        const startInside = selectionStart + 2;
+                        const startInside = selectionStart + 1;
                         const endInside = startInside + placeholder.length;
                         return { nextValue, nextSelectionStart: startInside, nextSelectionEnd: endInside };
                     }
@@ -126,7 +126,7 @@ export function useRichComposer({ value, onChange, onSend, disabled = false, par
                 }
                 case 'italic': {
                     const placeholder = selectedText || 'emphasis';
-                    const wrapped = `*${placeholder}*`;
+                    const wrapped = `_${placeholder}_`;
                     const nextValue = current.slice(0, selectionStart) + wrapped + current.slice(selectionEnd);
                     if (noSelection) {
                         const startInside = selectionStart + 1;

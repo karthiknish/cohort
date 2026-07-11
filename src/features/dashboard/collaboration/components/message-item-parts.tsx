@@ -258,7 +258,7 @@ export interface DeletedMessageInfoProps {
 }
 export function DeletedMessageInfo({ deletedBy, deletedAt }: DeletedMessageInfoProps) {
     return (<div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-      <span>Deleted by {deletedBy ?? 'teammate'}</span>
+      <span>Deleted by teammate</span>
       {deletedAt && <span>· {formatRelativeTime(deletedAt)}</span>}
     </div>);
 }

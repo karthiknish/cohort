@@ -896,6 +896,7 @@ export function CollaborationDashboardV2() {
         isNewDMDialogOpen={isNewDMDialogOpen}
         setIsNewDMDialogOpen={setIsNewDMDialogOpen}
         onUserSelect={handleStartNewDM}
+        workspaceMembers={workspaceMembers}
         workspaceId={workspaceId}
         currentUserId={currentUserId}
         currentUserRole={currentUserRole}

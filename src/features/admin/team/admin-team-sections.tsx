@@ -181,16 +181,16 @@ type AdminTeamDirectorySectionProps = {
     createStatusActionHandler: (record: AdminUserRecord) => () => void;
 };
 export function AdminTeamDirectorySection({ loading, internalUsers, filteredUsers, hasActiveFilters, workspaceQueryError, actionError, clearActionError, searchTerm, statusFilter, roleFilter, savingId, allocationSummary, paginatedStatus, loadingMore, onSearchChange, onStatusFilterChange, onRoleFilterChange, onOpenInviteDialog, onClearFilters, onLoadMore, createRoleChangeHandler, createAdminToggleHandler, createStatusActionHandler, }: AdminTeamDirectorySectionProps) {
-    return (<Card className="border-muted/60 bg-background">
-      <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    return (<div className="space-y-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <CardTitle className="text-lg">Team directory</CardTitle>
-          <CardDescription>
+          <h2 className="text-lg font-semibold text-foreground">Team directory</h2>
+          <p className="text-sm text-muted-foreground">
             Search internal teammates, manage permissions, and review their current client allocation load.
             {!loading && internalUsers.length > 0 ? (<span className="mt-1 block text-xs text-muted-foreground/90">
                 Showing {filteredUsers.length} of {internalUsers.length}
               </span>) : null}
-          </CardDescription>
+          </p>
         </div>
         <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-center">
           <Input placeholder="Search by name or email" value={searchTerm} onChange={onSearchChange} className="lg:w-64" aria-label="Search team by name or email"/>
@@ -216,8 +216,8 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
             </SelectContent>
           </Select>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      </div>
+      <div className="space-y-4">
         <AdminQueryErrorAlert error={workspaceQueryError} title="Unable to load workspace data"/>
         <AdminActionErrorAlert error={actionError} onDismiss={clearActionError}/>
 
@@ -380,8 +380,8 @@ export function AdminTeamDirectorySection({ loading, internalUsers, filteredUser
               {loadingMore ? 'Loading…' : 'Load more'}
             </Button>
           </div>) : null}
-      </CardContent>
-    </Card>);
+      </div>
+    </div>);
 }
 type AdminTeamPageContentProps = {
     isPreviewMode: boolean;
