@@ -266,23 +266,38 @@ function KanbanColumn({
               )}
             </li>
           ) : (
-            column.items.map((project) => (
-              <KanbanProjectItem
-                key={project.id}
-                dragState={dragState}
-                handleDragEnd={handleDragEnd}
-                handleDragStart={handleDragStart}
-                keyboardInstructionsId={keyboardInstructionsId}
-                onDelete={onDelete}
-                onEdit={onEdit}
-                onKeyboardMoveProject={onKeyboardMoveProject}
-                onUpdateStatus={onUpdateStatus}
-                onViewDetails={onViewDetails}
-                pending={pendingStatusUpdates.has(project.id)}
-                project={project}
-                reorderEnabled={canDragProjectKanbanCard(project, pendingStatusUpdates)}
-              />
-            ))
+            <>
+              {column.items.map((project) => (
+                <KanbanProjectItem
+                  key={project.id}
+                  dragState={dragState}
+                  handleDragEnd={handleDragEnd}
+                  handleDragStart={handleDragStart}
+                  keyboardInstructionsId={keyboardInstructionsId}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
+                  onKeyboardMoveProject={onKeyboardMoveProject}
+                  onUpdateStatus={onUpdateStatus}
+                  onViewDetails={onViewDetails}
+                  pending={pendingStatusUpdates.has(project.id)}
+                  project={project}
+                  reorderEnabled={canDragProjectKanbanCard(project, pendingStatusUpdates)}
+                />
+              ))}
+              {dragState.draggedProjectId ? (
+                <li
+                  className={cn(
+                    'flex min-h-16 list-none flex-col items-center justify-center rounded-lg border border-dashed p-3 text-center transition-colors',
+                    isDragTarget
+                      ? 'border-primary/35 bg-primary/5'
+                      : 'border-border/40 bg-background/40',
+                  )}
+                >
+                  <GripVertical className="mb-1 size-4 text-muted-foreground" aria-hidden />
+                  <p className="text-xs font-medium text-muted-foreground">Drop to move here</p>
+                </li>
+              ) : null}
+            </>
           )}
         </ul>
       </ScrollArea>

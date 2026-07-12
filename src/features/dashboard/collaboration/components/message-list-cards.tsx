@@ -62,7 +62,7 @@ export function ChannelMessageCard({ currentUserId, highlighted, pending, localR
           {message.edited && !message.deleted ? <span className="text-xs text-muted-foreground">(edited)</span> : null}
         </div>
 
-        {isEditing && renderers.renderEditForm ? (renderers.renderEditForm(message)) : message.deleted ? (renderers.renderDeletedInfo ? renderers.renderDeletedInfo(message) : <p className="text-sm italic text-muted-foreground">Message removed</p>) : (<>
+        {message.deleted ? (renderers.renderDeletedInfo ? renderers.renderDeletedInfo(message) : <p className="text-sm italic text-muted-foreground">Message removed</p>) : (<>
             {renderers.renderMessageContent ? (<MessageContentBody message={message} Content={renderers.renderMessageContent}/>) : (<p className={cn(CHAT_MESSAGE_BODY_CLASS, 'whitespace-pre-wrap text-sm')}>{message.content}</p>)}
             {renderers.renderMessageAttachments?.(message)}
           </>)}
@@ -106,7 +106,7 @@ export function DirectMessageCard({ currentUserId, isDeleting, isEditing, localR
             : isOwn
                 ? 'border-primary/20 bg-primary text-primary-foreground shadow-sm'
                 : 'border-muted/40 bg-muted shadow-sm')}>
-          {isEditing && renderers.renderEditForm ? (renderers.renderEditForm(message)) : message.deleted ? (renderers.renderDeletedInfo ? renderers.renderDeletedInfo(message) : <p className="text-sm italic text-muted-foreground">Message removed</p>) : (<>
+          {message.deleted ? (renderers.renderDeletedInfo ? renderers.renderDeletedInfo(message) : <p className="text-sm italic text-muted-foreground">Message removed</p>) : (<>
             {renderers.renderMessageContent ? (<MessageContentBody message={message} Content={renderers.renderMessageContent}/>) : (<p className={cn(CHAT_MESSAGE_BODY_CLASS, 'whitespace-pre-wrap text-sm')}>{message.content}</p>)}
             {message.attachments && message.attachments.length > 0 ? (
               <div className="mt-2 border-t border-border/20 pt-2">

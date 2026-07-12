@@ -97,6 +97,8 @@ type UnifiedMessagePaneComposerSectionProps = {
     onAttachmentInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
     replyingToMessage?: CollaborationMessage | null;
     onCancelReply?: () => void;
+    editingMessage?: CollaborationMessage | null;
+    onCancelEdit?: () => void;
     typingIndicator?: string;
     composerToolbar?: ReactNode;
     confirmingDeleteMessageId: string | null;
@@ -105,9 +107,9 @@ type UnifiedMessagePaneComposerSectionProps = {
     onConfirmDelete: () => void;
     onCancelDelete: () => void;
 };
-export function UnifiedMessagePaneComposerSection({ pendingAttachments, uploadingAttachments, isSending, onRemoveAttachment, isComposerFocused, hasPendingAttachments, messageInput, onMessageInputChange, onSend, placeholder, participants, onFocus, onBlur, onDrop, onDragOver, onPaste, onAttachClick, fileInputRef, onAttachmentInputChange, replyingToMessage, onCancelReply, typingIndicator, composerToolbar, confirmingDeleteMessageId, activeDeletingMessageId, onDeleteConfirmOpenChange, onConfirmDelete, onCancelDelete, }: UnifiedMessagePaneComposerSectionProps) {
+export function UnifiedMessagePaneComposerSection({ pendingAttachments, uploadingAttachments, isSending, onRemoveAttachment, isComposerFocused, hasPendingAttachments, messageInput, onMessageInputChange, onSend, placeholder, participants, onFocus, onBlur, onDrop, onDragOver, onPaste, onAttachClick, fileInputRef, onAttachmentInputChange, replyingToMessage, onCancelReply, editingMessage, onCancelEdit, typingIndicator, composerToolbar, confirmingDeleteMessageId, activeDeletingMessageId, onDeleteConfirmOpenChange, onConfirmDelete, onCancelDelete, }: UnifiedMessagePaneComposerSectionProps) {
     return (<>
-      <UnifiedComposerSection pendingAttachments={pendingAttachments} uploadingAttachments={uploadingAttachments} isSending={isSending} onRemoveAttachment={onRemoveAttachment} isComposerFocused={isComposerFocused} hasPendingAttachments={hasPendingAttachments} messageInput={messageInput} onMessageInputChange={onMessageInputChange} onSend={onSend} replyingToMessage={replyingToMessage} onCancelReply={onCancelReply} placeholder={placeholder} participants={participants} onFocus={onFocus} onBlur={onBlur} onDrop={onDrop} onDragOver={onDragOver} onPaste={onPaste} onAttachClick={onAttachClick} fileInputRef={fileInputRef} onAttachmentInputChange={onAttachmentInputChange} typingIndicator={typingIndicator} composerToolbar={composerToolbar}/>
+      <UnifiedComposerSection pendingAttachments={pendingAttachments} uploadingAttachments={uploadingAttachments} isSending={isSending} onRemoveAttachment={onRemoveAttachment} isComposerFocused={isComposerFocused} hasPendingAttachments={hasPendingAttachments} messageInput={messageInput} onMessageInputChange={onMessageInputChange} onSend={onSend} replyingToMessage={replyingToMessage} onCancelReply={onCancelReply} editingMessage={editingMessage} onCancelEdit={onCancelEdit} placeholder={placeholder} participants={participants} onFocus={onFocus} onBlur={onBlur} onDrop={onDrop} onDragOver={onDragOver} onPaste={onPaste} onAttachClick={onAttachClick} fileInputRef={fileInputRef} onAttachmentInputChange={onAttachmentInputChange} typingIndicator={typingIndicator} composerToolbar={composerToolbar}/>
 
       <UnifiedMessagePaneDeleteConfirm confirmingDeleteMessageId={confirmingDeleteMessageId} activeDeletingMessageId={activeDeletingMessageId} onOpenChange={onDeleteConfirmOpenChange} onConfirm={onConfirmDelete} onCancel={onCancelDelete}/>
     </>);

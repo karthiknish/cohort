@@ -147,7 +147,7 @@ export const toggleReaction = zWorkspaceMutation({
           reactions[existingIndex] = { ...reaction, count: newUserIds.length, userIds: newUserIds }
         }
       } else {
-        reactions[existingIndex] = { ...reaction, count: reaction.count + 1, userIds: [...userIds, currentUserId] }
+        reactions[existingIndex] = { ...reaction, count: userIds.length + 1, userIds: [...userIds, currentUserId] }
       }
     } else {
       reactions.push({ emoji: args.emoji, count: 1, userIds: [currentUserId] })

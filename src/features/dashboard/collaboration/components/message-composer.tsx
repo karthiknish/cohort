@@ -1,7 +1,7 @@
 'use client';
 import { useCallback } from 'react';
 import type { ChangeEvent, RefObject, ClipboardEvent } from 'react';
-import { FileText, Image as ImageIcon, LoaderCircle, Reply, Send, X } from 'lucide-react';
+import { FileText, Image as ImageIcon, LoaderCircle, Pencil, Reply, Send, X } from 'lucide-react';
 import { listItemEnterClass } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator';
@@ -75,6 +75,30 @@ export function ReplyIndicator({ message, onCancel }: ReplyIndicatorProps) {
           </span>)}
       </div>
       <Button variant="ghost" size="icon" className="size-5 rounded-full hover:bg-muted/50" onClick={onCancel} aria-label="Cancel reply">
+        <X className="size-3" aria-hidden/>
+      </Button>
+    </div>);
+}
+export interface EditIndicatorProps {
+    message: CollaborationMessage;
+    onCancel: () => void;
+}
+export function EditIndicator({ message, onCancel }: EditIndicatorProps) {
+    return (<div className={cn('flex items-center justify-between rounded-t-lg border-b border-muted/40 bg-muted/20 px-3 py-2 text-xs', listItemEnterClass)}>
+      <div className="flex items-center gap-2">
+        <div className="flex size-5 items-center justify-center rounded-full bg-accent/10">
+          <Pencil className="size-3 text-primary"/>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-muted-foreground">Editing message</span>
+          <span className="font-medium text-foreground">{message.senderName}</span>
+        </div>
+        {message.content && (<span className="ml-2 max-w-[200px] truncate border-l border-muted pl-2 text-muted-foreground">
+            &quot;{message.content.slice(0, 50)}
+            {message.content.length > 50 ? '…' : ''}&quot;
+          </span>)}
+      </div>
+      <Button variant="ghost" size="icon" className="size-5 rounded-full hover:bg-muted/50" onClick={onCancel} aria-label="Cancel edit">
         <X className="size-3" aria-hidden/>
       </Button>
     </div>);

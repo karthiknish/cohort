@@ -19,7 +19,7 @@ type EmojiPickerProps = Omit<LibraryEmojiPickerProps, 'theme'> & {
 
 const LazyEmojiPicker = dynamic(
   () => import('emoji-picker-react').then((m) => m.default),
-  { ssr: false, loading: () => null },
+  { ssr: false, loading: () => <div className="flex h-[400px] w-[320px] items-center justify-center text-sm text-muted-foreground">Loading emojis…</div> },
 );
 
 export default function EmojiPicker({ theme, ...props }: EmojiPickerProps) {

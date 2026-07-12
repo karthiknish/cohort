@@ -9,7 +9,7 @@ import { extractUrlsFromContent, isLikelyImageUrl, } from '../../utils';
 import { MessageAttachments } from '../message-attachments';
 import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator';
 import { DateSeparator, EmptyMessagesState, MessagesErrorState, NoSearchResultsState, } from '../message-pane-parts';
-import { DeletingOverlay, DeletedMessageInfo, MessageActionsBar, MessageAvatar, MessageEditForm, MessageHeader, ReplyActionsBar, } from '../message-item-parts';
+import { DeletingOverlay, DeletedMessageInfo, MessageActionsBar, MessageAvatar, MessageHeader, ReplyActionsBar, } from '../message-item-parts';
 import { MessageList } from '../message-list';
 import { toMessageContentComponent } from '../message-list-render-utils';
 import { collaborationToUnifiedMessage } from '../message-list-utils';
@@ -142,9 +142,9 @@ export function CollaborationMessageItem({ currentUserId, currentUserRole, editi
 
         {!isReply ? (<MessageActionsBar message={message} permissions={permissions} pending={pending} onReaction={handleReaction} onReply={handleReply} onEdit={handleEdit} onDelete={handleDelete} onCreateTask={handleCreateTask}/>) : (<ReplyActionsBar message={message} canManage={canManageMessage} isUpdating={isUpdating} isDeleting={isDeleting} onEdit={handleEdit} onDelete={handleDelete}/>)}
 
-        {editingMessageId === message.id ? (<MessageEditForm value={editingValue} onChange={onEditingValueChange} onConfirm={onConfirmEdit} onCancel={onCancelEdit} isUpdating={isUpdating} editingPreview={editingPreview}/>) : message.isDeleted ? (<p className="text-sm italic text-muted-foreground">Message removed</p>) : (<MessageContent content={message.content ?? ''} mentions={message.mentions}/>)}
+        {message.isDeleted ? (<p className="text-sm italic text-muted-foreground">Message removed</p>) : (<MessageContent content={message.content ?? ''} mentions={message.mentions}/>)}
 
-        {!message.isDeleted && editingMessageId !== message.id && imageUrlPreviews.length > 0 ? (<div className="mt-2 flex flex-wrap gap-2">
+        {!message.isDeleted && imageUrlPreviews.length > 0 ? (<div className="mt-2 flex flex-wrap gap-2">
             {imageUrlPreviews.map((url) => (<ImageUrlPreview key={`${message.id}-img-${url}`} url={url}/>))}
           </div>) : null}
 
@@ -154,7 +154,7 @@ export function CollaborationMessageItem({ currentUserId, currentUserRole, editi
             {linkPreviews.map((url) => (<LinkPreviewCard key={`${message.id}-${url}`} url={url}/>))}
           </div>) : null}
 
-        {!message.isDeleted && editingMessageId !== message.id ? (<MessageReactions reactions={message.reactions ?? []} currentUserId={currentUserId} pendingEmoji={reactionPendingEmoji} disabled={disableReactionActions} onToggle={handleReaction}/>) : null}
+        {!message.isDeleted ? (<MessageReactions reactions={message.reactions ?? []} currentUserId={currentUserId} pendingEmoji={reactionPendingEmoji} disabled={disableReactionActions} onToggle={handleReaction}/>) : null}
 
         {!message.isDeleted && message.sharedTo && message.sharedTo.length > 0 ? (<SharedPlatformIcons sharedTo={message.sharedTo}/>) : null}
 

@@ -74,8 +74,36 @@ export async function hydrateMessageRow(
 ): Promise<CollaborationMessageRow> {
   const attachments = Array.isArray(row.attachments) ? row.attachments : null
   const hydrated = await hydrateAttachments(ctx, attachments)
-  if (hydrated === attachments) return row
-  return { ...row, attachments: hydrated }
+  const normalizedReactions = normalizeReactions(row.reactions)
+  if (hydrated === attachments && normalizedReactions === row.reactions) return row
+  return { ...row, attachments: hydrated, reactions: normalizedReactions }
+}
+
+function normalizeReactions(
+  reactions: CollaborationMessageRow['reactions'],
+): CollaborationMessageRow['reactions'] {
+  if (!Array.isArray(reactions) || reactions.length === 0) return reactions
+  let changed = false
+  const normalized = reactions.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return []
+    const emoji = typeof entry.emoji === 'string' ? entry.emoji : null
+    if (!emoji) return []
+    const userIds: string[] = Array.isArray(entry.userIds)
+      ? entry.userIds.filter((v): v is string => typeof v === 'string')
+      : []
+    const correctCount = userIds.length
+    const storedCount = typeof entry.count === 'number' ? entry.count : correctCount
+    if (userIds.length === 0 && storedCount === 0) {
+      changed = true
+      return []
+    }
+    if (storedCount !== correctCount) {
+      changed = true
+    }
+    return [{ emoji, count: correctCount, userIds }]
+  })
+  if (!changed) return reactions
+  return normalized.length > 0 ? normalized : null
 }
 
 export function clampLimit(value: number, min: number, max: number) {

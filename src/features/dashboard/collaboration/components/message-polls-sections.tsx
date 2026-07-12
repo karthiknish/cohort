@@ -1,5 +1,5 @@
 'use client';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { useCallback, useMemo } from 'react';
 import { BarChart3, Check, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -277,8 +277,8 @@ export function CreatePollDialogFooter({ isCreating, onCancel, onCreate, questio
       </Button>
     </DialogFooter>);
 }
-export function QuickPollTrigger() {
-    return (<Button type="button" variant="ghost" size="icon" className="size-7" aria-label="Create poll">
+export function QuickPollTrigger(props: ComponentProps<typeof Button>) {
+    return (<Button type="button" variant="ghost" size="icon" className="size-7" aria-label="Create poll" {...props}>
       <BarChart3 className="size-4"/>
       <span className="sr-only">Create poll</span>
     </Button>);

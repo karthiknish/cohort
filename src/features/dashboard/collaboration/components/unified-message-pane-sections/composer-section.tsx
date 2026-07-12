@@ -16,9 +16,9 @@ import type { PendingAttachment } from '../../hooks/types';
 import { CHANNEL_TYPE_COLORS } from '../../utils';
 import { MessageAttachments } from '../message-attachments';
 import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator';
-import { PendingAttachmentsList, ReplyIndicator } from '../message-composer';
+import { PendingAttachmentsList, EditIndicator, ReplyIndicator } from '../message-composer';
 import { MessageContent } from '../message-content';
-import { DeletedMessageInfo, DeletingOverlay, MessageEditForm } from '../message-item-parts';
+import { DeletedMessageInfo, DeletingOverlay } from '../message-item-parts';
 import { collaborationToUnifiedMessage } from '../message-list-utils';
 import { getSharePlatformLabel } from '../unified-message-pane-render-utils';
 import type { UnifiedMessage } from '../message-list-types';
@@ -49,6 +49,8 @@ type UnifiedComposerSectionProps = {
     onSend: () => void;
     replyingToMessage?: CollaborationMessage | null;
     onCancelReply?: () => void;
+    editingMessage?: CollaborationMessage | null;
+    onCancelEdit?: () => void;
     placeholder: string;
     participants: ClientTeamMember[];
     onFocus: () => void;
@@ -62,7 +64,7 @@ type UnifiedComposerSectionProps = {
     typingIndicator?: string;
     composerToolbar?: ReactNode;
 };
-export function UnifiedComposerSection({ pendingAttachments, uploadingAttachments, isSending, onRemoveAttachment, isComposerFocused, hasPendingAttachments, messageInput, onMessageInputChange, onSend, replyingToMessage, onCancelReply, placeholder, participants, onFocus, onBlur, onDrop, onDragOver, onPaste, onAttachClick, fileInputRef, onAttachmentInputChange, typingIndicator, composerToolbar, }: UnifiedComposerSectionProps) {
+export function UnifiedComposerSection({ pendingAttachments, uploadingAttachments, isSending, onRemoveAttachment, isComposerFocused, hasPendingAttachments, messageInput, onMessageInputChange, onSend, replyingToMessage, onCancelReply, editingMessage, onCancelEdit, placeholder, participants, onFocus, onBlur, onDrop, onDragOver, onPaste, onAttachClick, fileInputRef, onAttachmentInputChange, typingIndicator, composerToolbar, }: UnifiedComposerSectionProps) {
     const handleRemoveAttachment = (attachmentId: string) => {
         onRemoveAttachment?.(attachmentId);
     };
@@ -73,6 +75,7 @@ export function UnifiedComposerSection({ pendingAttachments, uploadingAttachment
       <PendingAttachmentsList attachments={pendingAttachments} uploading={uploadingAttachments} disabled={isSending} onRemove={handleRemoveAttachment}/>
       <div className={cn('w-full rounded-lg border border-muted/40 bg-background shadow-sm focus-within:border-accent/40 focus-within:ring-1 focus-within:ring-primary/20', chromaticTransitionClass, (isComposerFocused || hasPendingAttachments) && 'border-accent/30 shadow-md shadow-primary/5')}>
         {replyingToMessage && onCancelReply ? (<ReplyIndicator message={replyingToMessage} onCancel={onCancelReply}/>) : null}
+        {editingMessage && onCancelEdit ? (<EditIndicator message={editingMessage} onCancel={onCancelEdit}/>) : null}
         <RichComposer value={messageInput} onChange={onMessageInputChange} onSend={onSend} disabled={isSending || uploadingAttachments} placeholder={placeholder} participants={participants} onFocus={onFocus} onBlur={onBlur} onDrop={onDrop} onDragOver={onDragOver} onPaste={onPaste} onAttachClick={onAttachClick} hasAttachments={hasPendingAttachments}/>
       </div>
       <input ref={fileInputRef} type="file" multiple aria-label="Attach files to message" className="hidden" onChange={onAttachmentInputChange}/>
@@ -85,7 +88,7 @@ export function UnifiedComposerSection({ pendingAttachments, uploadingAttachment
         </div>
         <Button onClick={handleSend} disabled={(!messageInput.trim() && !hasPendingAttachments) || isSending || uploadingAttachments} size="sm" className={cn(chromaticTransitionClass, 'hover:-translate-y-0.5 active:translate-y-0')}>
           {isSending || uploadingAttachments ? (<LoaderCircle className="size-4 animate-spin"/>) : (<Send className="size-4"/>)}
-          <span className="ml-2">{uploadingAttachments ? 'Uploading…' : isSending ? 'Sending…' : 'Send'}</span>
+          <span className="ml-2">{uploadingAttachments ? 'Uploading…' : isSending ? (editingMessage ? 'Saving…' : 'Sending…') : (editingMessage ? 'Save' : 'Send')}</span>
         </Button>
       </div>
     </div>);

@@ -20,6 +20,7 @@ type UseUnifiedMessagePaneControllerArgs = {
     onComposerFocus?: () => void;
     onDeleteMessage?: (messageId: string) => Promise<void>;
     onEditMessage?: (messageId: string, newContent: string) => Promise<void>;
+    onMessageInputChange?: (value: string) => void;
     onLoadMoreThreadReplies?: (threadRootId: string) => Promise<void> | void;
     onLoadThreadReplies?: (threadRootId: string) => Promise<void> | void;
     onMarkThreadAsRead?: (threadRootId: string, beforeMs?: number) => Promise<void> | void;
@@ -33,7 +34,7 @@ type UseUnifiedMessagePaneControllerArgs = {
     threadMessagesByRootId: Record<string, CollaborationMessage[]>;
     uploadingAttachments: boolean;
 };
-export function useUnifiedMessagePaneController({ channelMessages, focusMessageId = null, focusThreadId = null, header, isSending, messageDeletingId = null, messageInput, messageUpdatingId = null, onAddAttachments, onComposerBlur, onComposerFocus, onDeleteMessage, onEditMessage, onLoadMoreThreadReplies, onLoadThreadReplies, onMarkThreadAsRead, onReply, onSendMessage, onShareToPlatform, onToggleReaction, pendingAttachments, threadErrorsByRootId, threadLoadingByRootId, threadMessagesByRootId, uploadingAttachments, }: UseUnifiedMessagePaneControllerArgs) {
+export function useUnifiedMessagePaneController({ channelMessages, focusMessageId = null, focusThreadId = null, header, isSending, messageDeletingId = null, messageInput, messageUpdatingId = null, onAddAttachments, onComposerBlur, onComposerFocus, onDeleteMessage, onEditMessage, onMessageInputChange, onLoadMoreThreadReplies, onLoadThreadReplies, onMarkThreadAsRead, onReply, onSendMessage, onShareToPlatform, onToggleReaction, pendingAttachments, threadErrorsByRootId, threadLoadingByRootId, threadMessagesByRootId, uploadingAttachments, }: UseUnifiedMessagePaneControllerArgs) {
     const [sharingTo, setSharingTo] = useState<string | null>(null);
     const [paneUi, setPaneUi] = useState({
         deletingMessageId: null as string | null,
@@ -145,6 +146,7 @@ export function useUnifiedMessagePaneController({ channelMessages, focusMessageI
     const handleStartEdit = (message: UnifiedMessage) => {
         if (!onEditMessage || message.deleted)
             return;
+        onMessageInputChange?.(message.content ?? '');
         setPaneUi((prev) => ({
             ...prev,
             editingMessageId: message.id,
@@ -155,6 +157,7 @@ export function useUnifiedMessagePaneController({ channelMessages, focusMessageI
     const handleCancelEdit = () => {
         if (messageUpdatingId)
             return;
+        onMessageInputChange?.('');
         setPaneUi((prev) => ({
             ...prev,
             editingMessageId: null,
@@ -165,7 +168,7 @@ export function useUnifiedMessagePaneController({ channelMessages, focusMessageI
     const handleConfirmEdit = async () => {
         if (!onEditMessage || !editingMessageId)
             return;
-        const trimmedValue = editingValue.trim();
+        const trimmedValue = messageInput.trim();
         if (!trimmedValue) {
             notifyFailure({
                 title: 'Message required',
@@ -175,6 +178,7 @@ export function useUnifiedMessagePaneController({ channelMessages, focusMessageI
         }
         try {
             await onEditMessage(editingMessageId, trimmedValue);
+            onMessageInputChange?.('');
             setPaneUi((prev) => ({
                 ...prev,
                 editingMessageId: null,
@@ -207,6 +211,10 @@ export function useUnifiedMessagePaneController({ channelMessages, focusMessageI
         setSharingTo(null);
     };
     const handleSend = async () => {
+        if (editingMessageId) {
+            await handleConfirmEdit();
+            return;
+        }
         const content = messageInput.trim();
         if ((!content && !hasPendingAttachments) || isSending || uploadingAttachments)
             return;
@@ -317,10 +325,12 @@ export function useUnifiedMessagePaneController({ channelMessages, focusMessageI
         void onMarkThreadAsRead?.(effectiveFocusThreadId);
         return () => window.cancelAnimationFrame(frame);
     }, [effectiveFocusThreadId, onLoadThreadReplies, onMarkThreadAsRead, threadLoadingByRootId, threadMessagesByRootId]);
+    const editingMessage = editingMessageId ? channelMessagesById.get(editingMessageId) ?? null : null;
     return {
         activeDeletingMessageId,
         channelMessagesById,
         confirmingDeleteMessageId,
+        editingMessage,
         editingMessageId,
         editingPreview,
         editingValue,

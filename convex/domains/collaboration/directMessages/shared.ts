@@ -84,14 +84,44 @@ export async function hydrateAttachments(
   return next
 }
 
-export async function hydrateMessageRow<TRow extends { attachments?: Array<{ name: string; url: string; storageId?: string | null; type?: string | null; size?: string | null }> | null }>(
+type ReactionEntry = { emoji: string; count: number; userIds: string[] }
+
+function normalizeReactions(reactions: unknown): { changed: boolean; reactions: ReactionEntry[] | null } {
+  if (!Array.isArray(reactions) || reactions.length === 0) {
+    return { changed: false, reactions: null }
+  }
+  let changed = false
+  const normalized = reactions.flatMap((entry): ReactionEntry[] => {
+    if (!entry || typeof entry !== 'object') return []
+    const emoji = typeof (entry as any).emoji === 'string' ? (entry as any).emoji : null
+    if (!emoji) return []
+    const userIds: string[] = Array.isArray((entry as any).userIds)
+      ? (entry as any).userIds.filter((v: unknown): v is string => typeof v === 'string')
+      : []
+    const correctCount = userIds.length
+    const storedCount = typeof (entry as any).count === 'number' ? (entry as any).count : correctCount
+    if (userIds.length === 0 && storedCount === 0) {
+      changed = true
+      return []
+    }
+    if (storedCount !== correctCount) {
+      changed = true
+    }
+    return [{ emoji, count: correctCount, userIds }]
+  })
+  if (!changed) return { changed: false, reactions: reactions as ReactionEntry[] }
+  return { changed: true, reactions: normalized.length > 0 ? normalized : null }
+}
+
+export async function hydrateMessageRow<TRow extends { attachments?: Array<{ name: string; url: string; storageId?: string | null; type?: string | null; size?: string | null }> | null; reactions?: ReactionEntry[] | null }>(
   ctx: Parameters<typeof resolveStoredObjectUrl>[0],
   row: TRow,
 ): Promise<TRow> {
   const attachments = Array.isArray(row.attachments) ? row.attachments : null
   const hydrated = await hydrateAttachments(ctx, attachments)
-  if (hydrated === attachments) return row
-  return { ...row, attachments: hydrated }
+  const { changed: reactionsChanged, reactions: normalizedReactions } = normalizeReactions(row.reactions)
+  if (hydrated === attachments && !reactionsChanged) return row
+  return { ...row, attachments: hydrated, reactions: normalizedReactions as TRow['reactions'] }
 }
 
 export const attachmentZ = z.object({

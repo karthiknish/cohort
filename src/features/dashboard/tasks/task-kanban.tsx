@@ -304,7 +304,13 @@ function KanbanColumn({ bulkActive, column, dragOverStatus, draggedTask, handleD
                   <GripVertical className="mb-1.5 size-5 text-muted-foreground" aria-hidden/>
                   <p className="text-xs font-medium text-muted-foreground">Drop to move here</p>
                 </>) : (<p className="text-xs text-muted-foreground">No tasks in this column</p>)}
-            </li>) : (column.items.map((task) => (<KanbanTaskItem key={task.id} bulkActive={bulkActive} handleDragEnd={handleDragEnd} handleDragStart={handleDragStart} handleViewTask={handleViewTask} isDragging={draggedTask?.id === task.id} keyboardInstructionsId={keyboardInstructionsId} onClone={onClone} onDelete={onDelete} onEdit={onEdit} onKeyboardMoveTask={onKeyboardMoveTask} onQuickStatusChange={onQuickStatusChange} onShare={onShare} onToggleTaskSelection={onToggleTaskSelection} pending={pendingStatusUpdates.has(task.id)} searchQuery={searchQuery} selected={selectedTaskIds.has(task.id)} task={task}/>)))}
+            </li>) : (<>
+              {column.items.map((task) => (<KanbanTaskItem key={task.id} bulkActive={bulkActive} handleDragEnd={handleDragEnd} handleDragStart={handleDragStart} handleViewTask={handleViewTask} isDragging={draggedTask?.id === task.id} keyboardInstructionsId={keyboardInstructionsId} onClone={onClone} onDelete={onDelete} onEdit={onEdit} onKeyboardMoveTask={onKeyboardMoveTask} onQuickStatusChange={onQuickStatusChange} onShare={onShare} onToggleTaskSelection={onToggleTaskSelection} pending={pendingStatusUpdates.has(task.id)} searchQuery={searchQuery} selected={selectedTaskIds.has(task.id)} task={task}/>))}
+              {draggedTask ? (<li className={cn('list-none flex min-h-16 flex-col items-center justify-center rounded-lg border border-dashed p-3 text-center transition-colors', isDragTarget ? 'border-primary/35 bg-primary/5' : 'border-border/40 bg-card/40')}>
+                  <GripVertical className="mb-1 size-4 text-muted-foreground" aria-hidden/>
+                  <p className="text-xs font-medium text-muted-foreground">Drop to move here</p>
+                </li>) : null}
+            </>)}
         </ul>
       </ScrollArea>
     </section>);

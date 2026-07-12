@@ -6,7 +6,7 @@ import { ImageUrlPreview } from './image-url-preview';
 import { LinkPreviewCard } from './link-preview-card';
 import { MessageAttachments } from './message-attachments';
 import { MessageContent } from './message-content';
-import { DeletedMessageInfo, MessageEditForm } from './message-item-parts';
+import { DeletedMessageInfo } from './message-item-parts';
 import { MessagePollCardBlock } from './message-poll-card-block';
 import type { UnifiedMessage } from './message-list-types';
 export function getSharePlatformLabel(platform: 'email'): string {
@@ -66,9 +66,6 @@ export function renderDeletedMessageInfo(message: UnifiedMessage, deletedInfoByM
     }
     return <DeletedMessageInfo deletedBy={info.deletedBy} deletedAt={info.deletedAt}/>;
 }
-export function renderMessageEditForm(message: UnifiedMessage, editingMessageId: string | null, editingValue: string, onChange: (value: string) => void, onConfirm: () => void, onCancel: () => void, isUpdating: boolean, editingPreview: string) {
-    if (editingMessageId !== message.id) {
-        return null;
-    }
-    return (<MessageEditForm value={editingValue} onChange={onChange} onConfirm={onConfirm} onCancel={onCancel} isUpdating={isUpdating} editingPreview={editingPreview}/>);
+export function renderMessageEditForm(_message: UnifiedMessage, _editingMessageId: string | null, _editingValue: string, _onChange: (value: string) => void, _onConfirm: () => void, _onCancel: () => void, _isUpdating: boolean, _editingPreview: string) {
+    return null;
 }

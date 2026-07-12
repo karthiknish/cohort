@@ -10,7 +10,7 @@ import { extractUrlsFromContent, isLikelyImageUrl, } from '../../utils';
 import { MessageAttachments } from '../message-attachments';
 import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator';
 import { DateSeparator, EmptyMessagesState, MessagesErrorState, NoSearchResultsState, } from '../message-pane-parts';
-import { DeletingOverlay, DeletedMessageInfo, MessageActionsBar, MessageAvatar, MessageEditForm, MessageHeader, ReplyActionsBar, } from '../message-item-parts';
+import { DeletingOverlay, DeletedMessageInfo, MessageActionsBar, MessageAvatar, MessageHeader, ReplyActionsBar, } from '../message-item-parts';
 import { MessageList } from '../message-list';
 import { toMessageContentComponent } from '../message-list-render-utils';
 import { collaborationToUnifiedMessage } from '../message-list-utils';
@@ -222,12 +222,10 @@ export function CollaborationSearchMessageList({ currentUserId, currentUserRole,
             return null;
         return (<SearchMessageActionsBar currentUserId={currentUserId} currentUserRole={currentUserRole} message={originalMsg} messageDeletingId={messageDeletingId} messageUpdatingId={messageUpdatingId} onConfirmDelete={onConfirmDelete} onCreateTask={onCreateTask} onReply={onReply} onStartEdit={onStartEdit} onToggleReaction={onToggleReaction}/>);
     };
-    const renderEditForm = (message: {
+    const renderEditForm = (_message: {
         id: string;
     }) => {
-        if (editingMessageId !== message.id)
-            return null;
-        return (<MessageEditForm value={editingValue} onChange={onEditingValueChange} onConfirm={onConfirmEdit} onCancel={onCancelEdit} isUpdating={messageUpdatingId === message.id} editingPreview={editingPreview}/>);
+        return null;
     };
     const renderDeletedInfo = (message: {
         id: string;

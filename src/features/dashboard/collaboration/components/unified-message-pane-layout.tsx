@@ -33,6 +33,7 @@ type UnifiedMessagePaneConversationLayoutProps = {
     confirmingDeleteMessageId: string | null;
     currentUserId: string | null;
     currentUserRole?: string | null;
+    editingMessage?: CollaborationMessage | null;
     editingMessageId: string | null;
     effectiveFocusMessageId: string | null;
     effectiveFocusThreadId: string | null;
@@ -40,6 +41,7 @@ type UnifiedMessagePaneConversationLayoutProps = {
     fileInputRef: RefObject<HTMLInputElement | null>;
     handleAttachmentInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
     handleCancelDelete: () => void;
+    handleCancelEdit: () => void;
     handleComposerBlurInternal: () => void;
     handleComposerDragOver: (event: DragEvent<HTMLTextAreaElement>) => void;
     handleComposerDrop: (event: DragEvent<HTMLTextAreaElement>) => void;
@@ -76,7 +78,7 @@ type UnifiedMessagePaneConversationLayoutProps = {
     uploadingAttachments: boolean;
     onCreatePoll?: (poll: Omit<MessagePoll, 'id' | 'createdAt'>) => Promise<void>;
 };
-export function UnifiedMessagePaneConversationLayout({ activeDeletingMessageId, confirmingDeleteMessageId, currentUserId, currentUserRole, editingMessageId, effectiveFocusMessageId, effectiveFocusThreadId, emptyState, fileInputRef, handleAttachmentInputChange, handleCancelDelete, handleComposerBlurInternal, handleComposerDragOver, handleComposerDrop, handleComposerFocusInternal, handleComposerPaste, handleConfirmDelete, handleReaction, handleSend, listState, composerState, searchState, header, messageInput, messageListRenderers, messageSearchQuery, messageUpdatingId, messages, onAddAttachments, onDeleteMessage, onLoadMore, onMessageInputChange, onMessageSearchChange, onRefresh, onRemoveAttachment, onReply, replyingToMessage, onCancelReply, participants, pendingAttachments, placeholder, reactionPendingByMessage, statusBanner, typingIndicator, onCreatePoll, }: UnifiedMessagePaneConversationLayoutProps) {
+export function UnifiedMessagePaneConversationLayout({ activeDeletingMessageId, confirmingDeleteMessageId, currentUserId, currentUserRole, editingMessage, editingMessageId, effectiveFocusMessageId, effectiveFocusThreadId, emptyState, fileInputRef, handleAttachmentInputChange, handleCancelDelete, handleCancelEdit, handleComposerBlurInternal, handleComposerDragOver, handleComposerDrop, handleComposerFocusInternal, handleComposerPaste, handleConfirmDelete, handleReaction, handleSend, listState, composerState, searchState, header, messageInput, messageListRenderers, messageSearchQuery, messageUpdatingId, messages, onAddAttachments, onDeleteMessage, onLoadMore, onMessageInputChange, onMessageSearchChange, onRefresh, onRemoveAttachment, onReply, replyingToMessage, onCancelReply, participants, pendingAttachments, placeholder, reactionPendingByMessage, statusBanner, typingIndicator, onCreatePoll, }: UnifiedMessagePaneConversationLayoutProps) {
     const { loading: isLoading, loadingMore: isLoadingMore, hasMore } = listState;
     const { focused: isComposerFocused, sending: isSending, pendingAttachments: hasPendingAttachments, uploadingAttachments, } = composerState;
     const { canSearch: canSearchMessages, active: isMessageSearchActive } = searchState;
@@ -102,7 +104,7 @@ export function UnifiedMessagePaneConversationLayout({ activeDeletingMessageId, 
 
       <UnifiedMessagePaneMessagesSection header={header} messageListRenderers={messageListRenderers} messages={messages} currentUserId={currentUserId} currentUserRole={currentUserRole} isLoading={isLoading || isLoadingMore} hasMore={hasMore} onLoadMore={onLoadMore} onRefresh={onRefresh} onToggleReaction={handleReaction} reactionPendingByMessage={reactionPendingByMessage} onReply={onReply} onDeleteMessage={onDeleteMessage} activeDeletingMessageId={activeDeletingMessageId} messageUpdatingId={messageUpdatingId} emptyState={resolvedEmptyState} editingMessageId={editingMessageId} effectiveFocusMessageId={effectiveFocusMessageId} effectiveFocusThreadId={effectiveFocusThreadId}/>
 
-      <UnifiedMessagePaneComposerSection pendingAttachments={pendingAttachments} uploadingAttachments={uploadingAttachments} isSending={isSending} onRemoveAttachment={onRemoveAttachment} isComposerFocused={isComposerFocused} hasPendingAttachments={hasPendingAttachments} messageInput={messageInput} onMessageInputChange={onMessageInputChange} onSend={handleSend} replyingToMessage={replyingToMessage} onCancelReply={onCancelReply} placeholder={placeholder} participants={participants} onFocus={handleComposerFocusInternal} onBlur={handleComposerBlurInternal} onDrop={handleComposerDrop} onDragOver={handleComposerDragOver} onPaste={handleComposerPaste} onAttachClick={onAddAttachments ? handleAttachClick : undefined} fileInputRef={fileInputRef} onAttachmentInputChange={handleAttachmentInputChange} typingIndicator={typingIndicator} composerToolbar={composerToolbar} confirmingDeleteMessageId={confirmingDeleteMessageId} activeDeletingMessageId={activeDeletingMessageId} onDeleteConfirmOpenChange={handleConfirmDeleteChange} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete}/>
+      <UnifiedMessagePaneComposerSection pendingAttachments={pendingAttachments} uploadingAttachments={uploadingAttachments} isSending={isSending} onRemoveAttachment={onRemoveAttachment} isComposerFocused={isComposerFocused} hasPendingAttachments={hasPendingAttachments} messageInput={messageInput} onMessageInputChange={onMessageInputChange} onSend={handleSend} replyingToMessage={replyingToMessage} onCancelReply={onCancelReply} editingMessage={editingMessage} onCancelEdit={handleCancelEdit} placeholder={placeholder} participants={participants} onFocus={handleComposerFocusInternal} onBlur={handleComposerBlurInternal} onDrop={handleComposerDrop} onDragOver={handleComposerDragOver} onPaste={handleComposerPaste} onAttachClick={onAddAttachments ? handleAttachClick : undefined} fileInputRef={fileInputRef} onAttachmentInputChange={handleAttachmentInputChange} typingIndicator={typingIndicator} composerToolbar={composerToolbar} confirmingDeleteMessageId={confirmingDeleteMessageId} activeDeletingMessageId={activeDeletingMessageId} onDeleteConfirmOpenChange={handleConfirmDeleteChange} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete}/>
     </div>)}
     </UnifiedMessagePaneMessageSearchBindings>);
 }

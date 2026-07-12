@@ -81,7 +81,7 @@ export function UnifiedThreadReplyCard({ reply, currentUserId, editingMessageId,
           {message.edited && !message.deleted ? <span>edited</span> : null}
         </div>
 
-        {isEditing ? (effectiveRenderEditForm?.(message) ?? null) : message.deleted ? (effectiveRenderDeletedInfo?.(message) ?? <p className="text-sm italic text-muted-foreground">Message removed</p>) : (<>
+        {message.deleted ? (effectiveRenderDeletedInfo?.(message) ?? <p className="text-sm italic text-muted-foreground">Message removed</p>) : (<>
             {effectiveRenderMessageContent ? (createElement(effectiveRenderMessageContent as React.ComponentType<{
                 message: UnifiedMessage;
             }>, { message })) : (<p className="max-w-full min-w-0 overflow-hidden break-words whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">

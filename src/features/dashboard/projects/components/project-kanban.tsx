@@ -141,7 +141,18 @@ function ProjectKanbanColumn({ column, dragOverStatus, draggedProject, handleDra
         </div>
       </div>
       <div className="flex-1 space-y-2" onDragOver={handleDragOverColumn} onDragLeave={handleDragLeave} onDrop={handleDropColumn}>
-        {column.items.map((project) => (<ProjectKanbanCard key={project.id} project={project} draggedProject={draggedProject} handleDragEnd={handleDragEnd} handleDragStart={handleDragStart} keyboardInstructionsId={keyboardInstructionsId} onDelete={onDelete} onEdit={onEdit} onKeyboardMoveProject={onKeyboardMoveProject} onUpdateStatus={onUpdateStatus} pendingStatusUpdates={pendingStatusUpdates}/>))}
+        {column.items.length === 0 ? (<div className={cn('flex min-h-24 flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/60 p-4 text-center', isActive && 'border-primary/35 bg-primary/5')}>
+            {draggedProject ? (<>
+                <GripVertical className="mb-1.5 size-5 text-muted-foreground" aria-hidden/>
+                <p className="text-xs font-medium text-muted-foreground">Drop to move here</p>
+              </>) : (<p className="text-xs text-muted-foreground">No projects in this column</p>)}
+          </div>) : (<>
+            {column.items.map((project) => (<ProjectKanbanCard key={project.id} project={project} draggedProject={draggedProject} handleDragEnd={handleDragEnd} handleDragStart={handleDragStart} keyboardInstructionsId={keyboardInstructionsId} onDelete={onDelete} onEdit={onEdit} onKeyboardMoveProject={onKeyboardMoveProject} onUpdateStatus={onUpdateStatus} pendingStatusUpdates={pendingStatusUpdates}/>))}
+            {draggedProject ? (<div className={cn('flex min-h-16 flex-col items-center justify-center rounded-lg border border-dashed p-3 text-center transition-colors', isActive ? 'border-primary/35 bg-primary/5' : 'border-border/40 bg-background/40')}>
+                <GripVertical className="mb-1 size-4 text-muted-foreground" aria-hidden/>
+                <p className="text-xs font-medium text-muted-foreground">Drop to move here</p>
+              </div>) : null}
+          </>)}
       </div>
     </div>);
 }
