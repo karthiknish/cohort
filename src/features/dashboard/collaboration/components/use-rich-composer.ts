@@ -175,6 +175,17 @@ export function useRichComposer({ value, onChange, onSend, disabled = false, par
                     };
                 }
                 case 'blockquote': {
+                    if (noSelection) {
+                        const lineStart = current.lastIndexOf('\n', selectionStart - 1) + 1;
+                        const lineEndIndex = current.indexOf('\n', selectionEnd);
+                        const lineEnd = lineEndIndex === -1 ? current.length : lineEndIndex;
+                        const lineText = current.slice(lineStart, lineEnd);
+                        if (lineText) {
+                            const nextValue = current.slice(0, lineStart) + '> ' + current.slice(lineStart);
+                            const nextCursor = selectionStart + 2;
+                            return { nextValue, nextSelectionStart: nextCursor, nextSelectionEnd: nextCursor };
+                        }
+                    }
                     const placeholder = selectedText || 'Quoted text';
                     const lines = placeholder.split('\n');
                     const prefixed = lines.map((line) => (line ? `> ${line}` : '> ')).join('\n');
@@ -194,6 +205,17 @@ export function useRichComposer({ value, onChange, onSend, disabled = false, par
                         const anchor = selectionStart + wrapped.indexOf('\n') + 3;
                         const nextEnd = anchor + blockPlaceholder.length;
                         return { nextValue, nextSelectionStart: anchor, nextSelectionEnd: nextEnd };
+                    }
+                    if (noSelection) {
+                        const wordRange = getWordRangeAt(current, selectionStart);
+                        if (wordRange) {
+                            const word = current.slice(wordRange.start, wordRange.end);
+                            const wrapped = `\`${word}\``;
+                            const nextValue = current.slice(0, wordRange.start) + wrapped + current.slice(wordRange.end);
+                            const caretOffset = selectionStart - wordRange.start;
+                            const nextCursor = wordRange.start + 1 + caretOffset;
+                            return { nextValue, nextSelectionStart: nextCursor, nextSelectionEnd: nextCursor };
+                        }
                     }
                     const inlinePlaceholder = selectedText || 'inline code';
                     const wrapped = `\`${inlinePlaceholder}\``;
