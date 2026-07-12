@@ -32,7 +32,6 @@ const jsonLayer2Z = z.union([jsonLayer1Z, z.array(jsonLayer1Z), z.record(z.strin
 const jsonRecordZ = z.record(z.string(), jsonLayer2Z)
 
 const proposalStatusZ = z.enum(['draft', 'in_progress', 'ready', 'partial_success', 'failed', 'sent'])
-const STUCK_RECOVERY_THRESHOLD_MS = 10 * 60 * 1000
  
 const proposalZ = z.object({
   legacyId: z.string(),
@@ -378,42 +377,4 @@ export const fixOrphanedClientId = internalMutation({
   },
 })
 
-/**
- * Cron-triggered: recover proposals stuck in 'in_progress' for more than 10 minutes.
- * Marks them as 'failed' with an error message so users can re-trigger generation.
- */
-export const recoverStuckGenerations = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const now = Date.now()
-    const stuckProposals = await ctx.db
-      .query('proposals')
-      .filter((q) =>
-        q.and(
-          q.eq(q.field('status'), 'in_progress'),
-          q.lt(q.field('updatedAtMs'), now - STUCK_RECOVERY_THRESHOLD_MS),
-        ),
-      )
-      .collect()
 
-    let recovered = 0
-    for (const p of stuckProposals) {
-      const deck = p.presentationDeck && typeof p.presentationDeck === 'object'
-        ? { ...(p.presentationDeck as Record<string, unknown>) }
-        : {}
-
-      await ctx.db.patch(p._id, {
-        status: 'failed',
-        presentationDeck: {
-          ...deck,
-          status: 'failed',
-          error: 'Generation timed out — the proposal was stuck in progress for more than 10 minutes. Please try regenerating.',
-          warnings: ['Generation timed out. Please try regenerating.'],
-        },
-        updatedAtMs: now,
-      })
-      recovered++
-    }
-    return { recovered }
-  },
-})
