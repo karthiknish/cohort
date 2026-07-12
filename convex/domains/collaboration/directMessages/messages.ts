@@ -11,6 +11,7 @@ import {
   attachmentZ,
   canManageDirectMessage,
   clampSearchLimit,
+  formatAttachmentSummary,
   generateLegacyId,
   hydrateMessageRow,
   normalizeSearchValue,
@@ -185,10 +186,7 @@ export const sendMessage = zWorkspaceMutation({
     const snippet = (() => {
       const text = args.content.trim()
       if (text) return text.length > 100 ? text.substring(0, 97) + '...' : text
-      const attachments = args.attachments ?? []
-      if (attachments.length === 0) return ''
-      if (attachments.length === 1) return `Sent ${attachments[0]?.name ?? 'an attachment'}`
-      return `Sent ${attachments.length} attachments`
+      return formatAttachmentSummary(args.attachments) ?? ''
     })()
 
     const messageId = await ctx.db.insert('directMessages', {

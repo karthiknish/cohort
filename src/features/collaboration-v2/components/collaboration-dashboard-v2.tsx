@@ -10,6 +10,7 @@ import { useProjectsData } from '@/features/dashboard/collaboration/hooks/use-pr
 import { useThreads } from '@/features/dashboard/collaboration/hooks/use-threads';
 import { useAttachments } from '@/features/dashboard/collaboration/hooks/use-attachments';
 import { directMessageToCollaborationMessage } from '@/features/dashboard/collaboration/lib/direct-message-collaboration';
+import { formatAttachmentSummary } from '@/features/dashboard/collaboration/lib/chat-text';
 import type { SendMessageOptions } from '@/features/dashboard/collaboration/hooks/types';
 import type { UnifiedMessage } from '@/features/dashboard/collaboration/components/message-list-types';
 import { useQuery, useMutation } from 'convex/react';
@@ -314,11 +315,14 @@ export function CollaborationDashboardV2() {
     const map: Record<string, { content: string; createdAtMs: number } | undefined> = {};
     if (effectiveSelectedChannel && channelMessages.length > 0) {
       const last = channelMessages[channelMessages.length - 1];
-      if (last?.content && last.createdAt) {
-        map[effectiveSelectedChannel.id] = {
-          content: last.content,
-          createdAtMs: new Date(last.createdAt).getTime(),
-        };
+      if (last && last.createdAt) {
+        const content = last.content.trim() || (formatAttachmentSummary(last.attachments) ?? '');
+        if (content) {
+          map[effectiveSelectedChannel.id] = {
+            content,
+            createdAtMs: new Date(last.createdAt).getTime(),
+          };
+        }
       }
     }
     return map;
