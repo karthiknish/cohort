@@ -4,13 +4,13 @@ import { Clock, Download, ExternalLink, FileText, Layout, LoaderCircle, MoreHori
 import { Link } from '@/shared/ui/link';
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme';
 import { withPreviewModeSearchParamIfEnabled, isPreviewModeEnabled } from '@/lib/preview-data';
+import { useDownloadFile } from '@/lib/hooks/use-download-file';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from '@/shared/ui/dropdown-menu';
 import { ViewTransition } from '@/shared/ui/view-transition';
 import { cn, formatRelativeTime } from '@/lib/utils';
 import type { ProposalDraft } from '@/types/proposals';
-import { buildDownloadUrl } from '@/lib/build-download-url';
 function proposalStatusBadgeClass(status: ProposalDraft['status']): string {
     if (status === 'ready') {
         return cn(DASHBOARD_THEME.badges.base, DASHBOARD_THEME.badges.success);
@@ -89,15 +89,17 @@ export type ProposalHistoryRowViewModel = {
     resumeDisabled: boolean;
     resumeLabel: string;
 };
-export function ProposalHistoryRow({ canManage = true, deletingProposalId, onDownloadDeck, onRequestDelete, onResume, row, }: {
+export function ProposalHistoryRow({ canManage = true, deletingProposalId, onDownloadDeck, onRequestDelete, onResume, row, workspaceId, }: {
     canManage?: boolean;
     deletingProposalId: string | null;
     onDownloadDeck: (proposal: ProposalDraft) => void;
     onRequestDelete: (proposal: ProposalDraft) => void;
     onResume: (proposal: ProposalDraft, forceEdit?: boolean) => void;
     row: ProposalHistoryRowViewModel;
+    workspaceId?: string | null;
 }) {
     const { deckRequestable, displayName, isActiveDraft, isDeckPreparing, presentationUrl, pdfUrl, proposal, resumeDisabled, resumeLabel } = row;
+    const downloadFile = useDownloadFile();
     const handleResumeAsEdit = () => {
         onResume(proposal, true);
     };
@@ -109,6 +111,14 @@ export function ProposalHistoryRow({ canManage = true, deletingProposalId, onDow
     };
     const handleRequestDelete = () => {
         onRequestDelete(proposal);
+    };
+    const handleDownloadPptx = () => {
+        if (!presentationUrl) return;
+        void downloadFile({ url: presentationUrl, filename: `${displayName}.pptx`, workspaceId });
+    };
+    const handleDownloadPdf = () => {
+        if (!pdfUrl) return;
+        void downloadFile({ url: pdfUrl, filename: `${displayName}.pdf`, workspaceId });
     };
     const updatedLabel = formatProposalUpdatedAt(proposal.updatedAt);
     const isDeleting = deletingProposalId === proposal.id;
@@ -153,17 +163,13 @@ export function ProposalHistoryRow({ canManage = true, deletingProposalId, onDow
                   Preview
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="ghost" className="h-9 rounded-full px-3">
-                <a href={buildDownloadUrl(presentationUrl, `${displayName}.pptx`) ?? undefined} target="_blank" rel="noopener noreferrer">
-                  <Download className="mr-1.5 size-3.5" aria-hidden/>
-                  PPT
-                </a>
+              <Button size="sm" variant="ghost" className="h-9 rounded-full px-3" onClick={handleDownloadPptx}>
+                <Download className="mr-1.5 size-3.5" aria-hidden/>
+                PPT
               </Button>
-              {pdfUrl ? (<Button asChild size="sm" variant="ghost" className="h-9 rounded-full px-3">
-                  <a href={buildDownloadUrl(pdfUrl, `${displayName}.pdf`) ?? undefined} target="_blank" rel="noopener noreferrer">
-                    <FileText className="mr-1.5 size-3.5" aria-hidden/>
-                    PDF
-                  </a>
+              {pdfUrl ? (<Button size="sm" variant="ghost" className="h-9 rounded-full px-3" onClick={handleDownloadPdf}>
+                  <FileText className="mr-1.5 size-3.5" aria-hidden/>
+                  PDF
                 </Button>) : null}
             </>) : canManage && deckRequestable ? (<Button size="sm" variant="outline" onClick={handleDownloadDeck} disabled={isDeckPreparing} className="h-9 gap-1.5 rounded-full border-dashed px-3">
               {isDeckPreparing ? (<LoaderCircle className="size-3.5 animate-spin" aria-hidden/>) : (<FileText className="size-3.5 text-primary" aria-hidden/>)}

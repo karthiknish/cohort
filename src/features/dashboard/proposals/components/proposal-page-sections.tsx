@@ -143,8 +143,9 @@ export function ProposalBuilderOverlay(props: {
     isFirstStep: boolean;
     isLastStep: boolean;
     validationMessages: string[];
+    workspaceId?: string | null;
 }) {
-    const { open, onClose, isBootstrapping, submitted, isPresentationReady, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, canResumeSubmission, onResumeSubmission, onRegenerate, isSubmitting, onRecheckDeck, isRecheckingDeck, steps, currentStep, draftId, autosaveStatus, stepContent, onBack, onNext, onGoToStep, isFirstStep, isLastStep, validationMessages, } = props;
+    const { open, onClose, isBootstrapping, submitted, isPresentationReady, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, canResumeSubmission, onResumeSubmission, onRegenerate, isSubmitting, onRecheckDeck, isRecheckingDeck, steps, currentStep, draftId, autosaveStatus, stepContent, onBack, onNext, onGoToStep, isFirstStep, isLastStep, validationMessages, workspaceId, } = props;
     const isMobile = useIsMobile();
     useEffect(() => {
         if (!open) {
@@ -197,7 +198,7 @@ export function ProposalBuilderOverlay(props: {
         </div>) : submitted ? (<div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:px-6">
           <Card className="min-w-0 overflow-hidden border-border/60 bg-background shadow-sm">
             <CardContent className="p-6">
-              <ProposalSubmittedPanel summary={summary} presentationDeck={presentationDeck as Parameters<typeof ProposalSubmittedPanel>[0]['presentationDeck']} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} onResumeSubmission={onResumeSubmission} onRegenerate={onRegenerate} isSubmitting={isSubmitting} onRecheckDeck={onRecheckDeck} isRecheckingDeck={isRecheckingDeck}/>
+              <ProposalSubmittedPanel summary={summary} presentationDeck={presentationDeck as Parameters<typeof ProposalSubmittedPanel>[0]['presentationDeck']} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} onResumeSubmission={onResumeSubmission} onRegenerate={onRegenerate} isSubmitting={isSubmitting} onRecheckDeck={onRecheckDeck} isRecheckingDeck={isRecheckingDeck} workspaceId={workspaceId}/>
             </CardContent>
           </Card>
         </div>) : (<div className="flex min-h-0 flex-1 overflow-hidden border-t border-border/50">

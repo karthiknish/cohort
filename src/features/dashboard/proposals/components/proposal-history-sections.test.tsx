@@ -7,6 +7,18 @@ vi.mock('next/link', () => ({
         href: string;
     }) => <a href={href}>{children}</a>,
 }));
+vi.mock('@/lib/hooks/use-download-file', () => ({
+    useDownloadFile: () => async () => false,
+}));
+vi.mock('convex/react', () => ({
+    useConvex: () => ({ action: vi.fn() }),
+}));
+vi.mock('@/shared/contexts/auth-context', () => ({
+    useAuth: () => ({ user: null, getIdToken: vi.fn() }),
+}));
+vi.mock('@/shared/contexts/client-context', () => ({
+    useClientContext: () => ({ selectedClient: null }),
+}));
 import { ProposalHistoryEmptyState, ProposalHistoryHeader, ProposalHistoryRow, type ProposalHistoryRowViewModel, } from './proposal-history-sections';
 const baseProposal = {
     id: 'proposal-12345678',

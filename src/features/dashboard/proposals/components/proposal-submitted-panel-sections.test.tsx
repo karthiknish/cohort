@@ -1,5 +1,17 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+vi.mock('@/lib/hooks/use-download-file', () => ({
+    useDownloadFile: () => async () => false,
+}));
+vi.mock('convex/react', () => ({
+    useConvex: () => ({ action: vi.fn() }),
+}));
+vi.mock('@/shared/contexts/auth-context', () => ({
+    useAuth: () => ({ user: null, getIdToken: vi.fn() }),
+}));
+vi.mock('@/shared/contexts/client-context', () => ({
+    useClientContext: () => ({ selectedClient: null }),
+}));
 import { ProposalSubmittedPanel } from './proposal-submitted-panel';
 const summary = {
     company: { name: 'Acme', industry: 'SaaS', website: 'https://acme.test' },

@@ -6,6 +6,7 @@ import { Link } from '@/shared/ui/link';
 import { dynamic } from '@/shared/ui/dynamic';
 import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data';
 import { notifySuccess } from '@/lib/notifications';
+import { useDownloadFile } from '@/lib/hooks/use-download-file';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -13,7 +14,6 @@ import { fadeInUpVariants, slideInLeftVariants, slideInRightVariants, transition
 import type { ProposalFormData } from '@/lib/proposals';
 import { cn } from '@/lib/utils';
 import type { ProposalPresentationDeck } from '@/types/proposals';
-import { buildDownloadUrl } from '@/lib/build-download-url';
 
 const PptViewer = dynamic(() => import('@/shared/components/ppt-viewer').then((m) => ({ default: m.PptViewer })), {
     loading: () => (
@@ -51,6 +51,7 @@ interface ProposalSubmittedPanelProps {
     onRecheckDeck?: () => Promise<void>;
     isRecheckingDeck?: boolean;
     isSubmitting: boolean;
+    workspaceId?: string | null;
 }
 
 export function ProposalSubmittedPanel({
@@ -64,7 +65,9 @@ export function ProposalSubmittedPanel({
     onRecheckDeck,
     isRecheckingDeck = false,
     isSubmitting,
+    workspaceId,
 }: ProposalSubmittedPanelProps) {
+    const downloadFile = useDownloadFile();
     const presentationHref = activeProposalIdForDeck
         ? withPreviewModeSearchParamIfEnabled(`/dashboard/proposals/${activeProposalIdForDeck}/deck`, isPreviewModeEnabled())
         : null;
@@ -73,9 +76,19 @@ export function ProposalSubmittedPanel({
         : deckDownloadUrl
             ? `/dashboard/proposals/viewer?src=${encodeURIComponent(deckDownloadUrl)}`
             : null;
-    const downloadUrl = buildDownloadUrl(deckDownloadUrl || presentationDeck?.storageUrl || presentationDeck?.pptxUrl || null, 'proposal-deck.pptx');
-    const pdfDownloadUrl = buildDownloadUrl(presentationDeck?.pdfUrl ?? presentationDeck?.pdfStorageUrl ?? null, 'proposal.pdf');
+    const pptxSourceUrl = deckDownloadUrl || presentationDeck?.storageUrl || presentationDeck?.pptxUrl || null;
+    const pdfSourceUrl = presentationDeck?.pdfUrl ?? presentationDeck?.pdfStorageUrl ?? null;
     const pptxPreviewUrl = resolvePptxPreviewUrl(presentationDeck, deckDownloadUrl);
+
+    const handleDownloadPptx = useCallback(() => {
+        if (!pptxSourceUrl) return;
+        void downloadFile({ url: pptxSourceUrl, filename: 'proposal-deck.pptx', workspaceId });
+    }, [pptxSourceUrl, downloadFile, workspaceId]);
+
+    const handleDownloadPdf = useCallback(() => {
+        if (!pdfSourceUrl) return;
+        void downloadFile({ url: pdfSourceUrl, filename: 'proposal.pdf', workspaceId });
+    }, [pdfSourceUrl, downloadFile, workspaceId]);
 
     const handleCopySummary = useCallback(() => {
         const text = `
@@ -215,20 +228,16 @@ Timeline: ${summary.timelines.startTime}
                                         </div>
                                     ) : null}
                                     <div className="space-y-3">
-                                        {downloadUrl ? (
-                                            <Button variant="outline" className="h-12 w-full justify-start rounded-xl" asChild>
-                                                <a href={downloadUrl ?? undefined} rel="noreferrer">
-                                                    <Download className="mr-3 size-4 text-muted-foreground" />
-                                                    <span className="text-sm font-semibold">Download PowerPoint</span>
-                                                </a>
+                                        {pptxSourceUrl ? (
+                                            <Button variant="outline" className="h-12 w-full justify-start rounded-xl" onClick={handleDownloadPptx}>
+                                                <Download className="mr-3 size-4 text-muted-foreground" />
+                                                <span className="text-sm font-semibold">Download PowerPoint</span>
                                             </Button>
                                         ) : null}
-                                        {pdfDownloadUrl ? (
-                                            <Button variant="outline" className="h-12 w-full justify-start rounded-xl" asChild>
-                                                <a href={pdfDownloadUrl ?? undefined} rel="noreferrer">
-                                                    <FileText className="mr-3 size-4 text-muted-foreground" />
-                                                    <span className="text-sm font-semibold">Download PDF</span>
-                                                </a>
+                                        {pdfSourceUrl ? (
+                                            <Button variant="outline" className="h-12 w-full justify-start rounded-xl" onClick={handleDownloadPdf}>
+                                                <FileText className="mr-3 size-4 text-muted-foreground" />
+                                                <span className="text-sm font-semibold">Download PDF</span>
                                             </Button>
                                         ) : null}
                                         {viewerHref ? (

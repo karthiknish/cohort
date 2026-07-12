@@ -76,8 +76,9 @@ interface ProposalHistoryProps {
     downloadingDeckId: string | null;
     onDownloadDeck: (proposal: ProposalDraft) => void;
     onCreateNew: () => void;
+    workspaceId?: string | null;
 }
-function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, deletingProposalId, queryError, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, }: ProposalHistoryProps) {
+function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, deletingProposalId, queryError, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, workspaceId, }: ProposalHistoryProps) {
     const { loading: isLoading, generating: isGenerating, creating: isCreating, refreshing: isRefreshing } = workflow;
     const { canCreate, canManage = true } = capabilities;
     const emptyStateActions = ({
@@ -155,7 +156,7 @@ function ProposalHistoryComponent({ proposals, draftId, workflow, capabilities, 
           </div>) : proposals.length === 0 && !isLoading ? (<ProposalHistoryEmptyState actions={emptyStateActions} onCreateNew={onCreateNew}/>) : (<>
             <FadeInStagger className="space-y-1">
               {pagedRows.map((row) => (<FadeInItem key={row.proposal.id} y={8}>
-                    <ProposalHistoryRow canManage={canManage} deletingProposalId={deletingProposalId} onDownloadDeck={onDownloadDeck} onRequestDelete={onRequestDelete} onResume={onResume} row={row}/>
+                    <ProposalHistoryRow canManage={canManage} deletingProposalId={deletingProposalId} onDownloadDeck={onDownloadDeck} onRequestDelete={onRequestDelete} onResume={onResume} row={row} workspaceId={workspaceId}/>
                   </FadeInItem>))}
             </FadeInStagger>
             {totalPages > 1 ? (<div className="flex items-center justify-between gap-3 pt-1">

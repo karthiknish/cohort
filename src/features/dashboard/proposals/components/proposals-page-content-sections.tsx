@@ -46,7 +46,7 @@ export function ProposalsPageHeroSection({ clientName, workflow, formState, draf
       <ProposalPageActions canManage={canManageProposals} currentFormData={formState} draftId={draftId} isSubmitting={isSubmitting} selectedClientId={selectedClientId} isCreatingDraft={isCreatingDraft} onVersionRestored={onVersionRestored} onStartProposal={onStartProposal}/>
     </DashboardPageHero>);
 }
-export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clientName, workflow, viewState, formState, draftId, selectedClientId, onVersionRestored, onStartProposal, displayedProposals, displayedDraftId, proposalHistoryWorkflow, proposalHistoryCapabilities, proposalsQueryError, deletingProposalId, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, proposalPendingDelete, onDeleteDialogChange, onConfirmDelete, activeDeckStage, onCloseWizard, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, onResumeSubmission, onRegenerate, onRecheckDeck, steps, currentStep, autosaveStatus, stepContent, onBack, onNext, onGoToStep, validationMessages, }: {
+export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clientName, workflow, viewState, formState, draftId, selectedClientId, onVersionRestored, onStartProposal, displayedProposals, displayedDraftId, proposalHistoryWorkflow, proposalHistoryCapabilities, proposalsQueryError, deletingProposalId, onRefresh, onResume, onRequestDelete, downloadingDeckId, onDownloadDeck, onCreateNew, proposalPendingDelete, onDeleteDialogChange, onConfirmDelete, activeDeckStage, onCloseWizard, summary, presentationDeck, deckDownloadUrl, activeProposalIdForDeck, onResumeSubmission, onRegenerate, onRecheckDeck, steps, currentStep, autosaveStatus, stepContent, onBack, onNext, onGoToStep, validationMessages, workspaceId, }: {
     wizardRef: React.RefObject<HTMLDivElement | null>;
     submissionAnnouncement: string;
     clientName: string | null;
@@ -96,6 +96,7 @@ export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clien
     onNext: () => void;
     onGoToStep: (step: number) => void;
     validationMessages: string[];
+    workspaceId?: string | null;
 }) {
     const { canManageProposals, isPreviewMode, isSubmitting } = workflow;
     const { displayedLoadingState, isWizardOpen, isDeleteDialogOpen, isPresentationReady, isBootstrapping, submitted, canResumeSubmission, isRecheckingDeck, isFirstStep, isLastStep, } = viewState;
@@ -115,11 +116,11 @@ export function ProposalsPageMainView({ wizardRef, submissionAnnouncement, clien
                 : 'Pick a client from the workspace switcher in the header. Proposals are always created for the active client.'}/>
         </FadeIn>) : null}
 
-      <ProposalHistory proposals={displayedProposals} draftId={displayedDraftId} workflow={proposalHistoryWorkflow} capabilities={proposalHistoryCapabilities} queryError={isPreviewMode ? null : proposalsQueryError} deletingProposalId={deletingProposalId} onRefresh={onRefresh} onResume={onResume} onRequestDelete={onRequestDelete} downloadingDeckId={downloadingDeckId} onDownloadDeck={onDownloadDeck} onCreateNew={onCreateNew}/>
+      <ProposalHistory proposals={displayedProposals} draftId={displayedDraftId} workflow={proposalHistoryWorkflow} capabilities={proposalHistoryCapabilities} queryError={isPreviewMode ? null : proposalsQueryError} deletingProposalId={deletingProposalId} onRefresh={onRefresh} onResume={onResume} onRequestDelete={onRequestDelete} downloadingDeckId={downloadingDeckId} onDownloadDeck={onDownloadDeck} onCreateNew={onCreateNew} workspaceId={workspaceId}/>
       <ProposalDeleteDialog open={isDeleteDialogOpen} isDeleting={Boolean(deletingProposalId)} proposalName={proposalPendingDelete?.clientName ?? proposalPendingDelete?.id ?? null} onOpenChange={onDeleteDialogChange} onConfirm={onConfirmDelete}/>
       <ProposalGenerationOverlay isSubmitting={isSubmitting} isPresentationReady={isPresentationReady}/>
       <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)}/>
 
-      <ProposalBuilderOverlay open={isWizardOpen} onClose={onCloseWizard} isBootstrapping={isBootstrapping} submitted={submitted} isPresentationReady={isPresentationReady} summary={summary} presentationDeck={presentationDeck} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} onResumeSubmission={onResumeSubmission} onRegenerate={onRegenerate} isSubmitting={isSubmitting} onRecheckDeck={handleRecheckDeck} isRecheckingDeck={isRecheckingDeck} steps={steps} currentStep={currentStep} draftId={draftId} autosaveStatus={autosaveStatus} stepContent={stepContent} onBack={onBack} onNext={onNext} onGoToStep={onGoToStep} isFirstStep={isFirstStep} isLastStep={isLastStep} validationMessages={validationMessages}/>
+      <ProposalBuilderOverlay open={isWizardOpen} onClose={onCloseWizard} isBootstrapping={isBootstrapping} submitted={submitted} isPresentationReady={isPresentationReady} summary={summary} presentationDeck={presentationDeck} deckDownloadUrl={deckDownloadUrl} activeProposalIdForDeck={activeProposalIdForDeck} canResumeSubmission={canResumeSubmission} onResumeSubmission={onResumeSubmission} onRegenerate={onRegenerate} isSubmitting={isSubmitting} onRecheckDeck={handleRecheckDeck} isRecheckingDeck={isRecheckingDeck} steps={steps} currentStep={currentStep} draftId={draftId} autosaveStatus={autosaveStatus} stepContent={stepContent} onBack={onBack} onNext={onNext} onGoToStep={onGoToStep} isFirstStep={isFirstStep} isLastStep={isLastStep} validationMessages={validationMessages} workspaceId={workspaceId}/>
     </div>);
 }
