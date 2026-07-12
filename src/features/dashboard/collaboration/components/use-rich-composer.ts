@@ -18,6 +18,20 @@ const DEFAULT_MENTION_STATE: MentionState = {
     startIndex: -1,
     query: '',
 };
+const getWordRangeAt = (value: string, position: number) => {
+    let start = position;
+    while (start > 0 && !/\s/.test(value[start - 1] ?? '')) {
+        start -= 1;
+    }
+    let end = position;
+    while (end < value.length && !/\s/.test(value[end] ?? '')) {
+        end += 1;
+    }
+    if (start === end) {
+        return null;
+    }
+    return { start, end };
+};
 export type UseRichComposerArgs = {
     value: string;
     onChange: (value: string) => void;
@@ -110,6 +124,17 @@ export function useRichComposer({ value, onChange, onSend, disabled = false, par
             const noSelection = selectionStart === selectionEnd;
             switch (action) {
                 case 'bold': {
+                    if (noSelection) {
+                        const wordRange = getWordRangeAt(current, selectionStart);
+                        if (wordRange) {
+                            const word = current.slice(wordRange.start, wordRange.end);
+                            const wrapped = `*${word}*`;
+                            const nextValue = current.slice(0, wordRange.start) + wrapped + current.slice(wordRange.end);
+                            const caretOffset = selectionStart - wordRange.start;
+                            const nextCursor = wordRange.start + 1 + caretOffset;
+                            return { nextValue, nextSelectionStart: nextCursor, nextSelectionEnd: nextCursor };
+                        }
+                    }
                     const placeholder = selectedText || 'bold text';
                     const wrapped = `*${placeholder}*`;
                     const nextValue = current.slice(0, selectionStart) + wrapped + current.slice(selectionEnd);
@@ -125,6 +150,17 @@ export function useRichComposer({ value, onChange, onSend, disabled = false, par
                     };
                 }
                 case 'italic': {
+                    if (noSelection) {
+                        const wordRange = getWordRangeAt(current, selectionStart);
+                        if (wordRange) {
+                            const word = current.slice(wordRange.start, wordRange.end);
+                            const wrapped = `_${word}_`;
+                            const nextValue = current.slice(0, wordRange.start) + wrapped + current.slice(wordRange.end);
+                            const caretOffset = selectionStart - wordRange.start;
+                            const nextCursor = wordRange.start + 1 + caretOffset;
+                            return { nextValue, nextSelectionStart: nextCursor, nextSelectionEnd: nextCursor };
+                        }
+                    }
                     const placeholder = selectedText || 'emphasis';
                     const wrapped = `_${placeholder}_`;
                     const nextValue = current.slice(0, selectionStart) + wrapped + current.slice(selectionEnd);

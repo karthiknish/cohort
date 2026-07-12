@@ -39,6 +39,7 @@ import {
   useGetOrCreateConversation,
 } from '../api/use-direct-messages';
 import { useChannelUnreadCounts, useMarkChannelAsRead } from '../api/use-read-receipts';
+import { useChannelPreviews } from '../api/use-channel-previews';
 import { useTypingParticipants, useSetTyping } from '../api/use-typing';
 import { useMarkThreadAsRead } from '../api/use-thread-replies';
 import { useSearchChannelMessages } from '../api/use-search';
@@ -311,8 +312,17 @@ export function CollaborationDashboardV2() {
   ]);
 
   // ─── Channel last messages (for inbox previews) ──────────────────────────
+  // Server-fetched previews for all channels so the sidebar shows snippets
+  // regardless of which channel is currently selected.
+  const serverChannelPreviews = useChannelPreviews(workspaceId);
+
+  // Merge server previews with the locally-loaded selected channel messages.
+  // The local data overrides for the selected channel so newly sent messages
+  // appear instantly without waiting for the server query to re-run.
   const channelLastMessages = useMemo(() => {
-    const map: Record<string, { content: string; createdAtMs: number } | undefined> = {};
+    const map: Record<string, { content: string; createdAtMs: number } | undefined> = {
+      ...serverChannelPreviews,
+    };
     if (effectiveSelectedChannel && channelMessages.length > 0) {
       const last = channelMessages[channelMessages.length - 1];
       if (last && last.createdAt) {
@@ -326,7 +336,7 @@ export function CollaborationDashboardV2() {
       }
     }
     return map;
-  }, [effectiveSelectedChannel, channelMessages]);
+  }, [serverChannelPreviews, effectiveSelectedChannel, channelMessages]);
 
   // ─── Inbox items ──────────────────────────────────────────────────────────
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');

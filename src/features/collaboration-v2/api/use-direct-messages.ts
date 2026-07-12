@@ -3,6 +3,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useConvex } from 'convex/react';
 import { api, directMessagesApi } from '@/lib/convex-api';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
+import { notifyFailure } from '@/lib/notifications';
 import { usePreview } from '@/shared/contexts/preview-context';
 import type { DirectConversation, DirectMessage } from '../types';
 import { mapDirectConversationRow, mapDirectMessageRow } from '../utils/message-mappers';
@@ -95,6 +97,12 @@ export function useDirectMessages(
         cursor: lastPageNextCursor,
       } as ListDmArgs)) as RawMessageListResponse;
       setOlderPages((prev) => [...prev, res]);
+    } catch (error) {
+      logError(error, 'useDirectMessages:loadMore');
+      notifyFailure({
+        title: 'Failed to load older messages',
+        message: asErrorMessage(error),
+      });
     } finally {
       setLoadingMore(false);
     }

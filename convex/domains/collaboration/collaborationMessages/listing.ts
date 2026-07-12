@@ -4,8 +4,10 @@ import {
   applyManualPagination,
   assertAccessToMessage,
   assertChannelAccess,
+  buildChannelTypeQuery,
   buildListChannelQuery,
   buildThreadQuery,
+  canAccessCustomChannel,
   clampLimit,
   fetchChannelRows,
   fuzzyScore,
@@ -13,6 +15,7 @@ import {
   hydrateMessageRow,
   normalizeChannelScope,
   normalizeTerm,
+  resolveChannelKey,
   tokenize,
   z,
   zWorkspacePaginatedQuery,
@@ -20,6 +23,109 @@ import {
   zWorkspaceQuery,
   zWorkspaceQueryActive,
 } from './shared'
+
+type AttachmentCategory = 'image' | 'video' | 'audio' | 'pdf' | 'excel' | 'document' | 'file'
+
+type RawAttachment = {
+  name?: string
+  type?: string | null
+}
+
+function getAttachmentCategory(attachment: RawAttachment | null | undefined): AttachmentCategory {
+  if (!attachment) return 'file'
+  const type = (attachment.type ?? '').toLowerCase()
+  const name = (attachment.name ?? '').toLowerCase()
+
+  if (type.startsWith('image/')) return 'image'
+  if (type.startsWith('video/')) return 'video'
+  if (type.startsWith('audio/')) return 'audio'
+  if (type.includes('pdf') || name.endsWith('.pdf')) return 'pdf'
+  if (
+    type.includes('spreadsheet') ||
+    type.includes('excel') ||
+    type === 'text/csv' ||
+    name.endsWith('.xlsx') ||
+    name.endsWith('.xls') ||
+    name.endsWith('.csv')
+  )
+    return 'excel'
+  if (
+    type.includes('word') ||
+    type.includes('msword') ||
+    type.includes('document') ||
+    type.includes('presentation') ||
+    type.includes('powerpoint') ||
+    name.endsWith('.doc') ||
+    name.endsWith('.docx') ||
+    name.endsWith('.ppt') ||
+    name.endsWith('.pptx') ||
+    name.endsWith('.odt') ||
+    name.endsWith('.odp')
+  )
+    return 'document'
+  return 'file'
+}
+
+const CATEGORY_LABEL: Record<AttachmentCategory, string> = {
+  image: 'image',
+  video: 'video',
+  audio: 'audio',
+  pdf: 'PDF',
+  excel: 'Excel',
+  document: 'document',
+  file: 'file',
+}
+
+const CATEGORY_LABEL_PLURAL: Record<AttachmentCategory, string> = {
+  image: 'images',
+  video: 'videos',
+  audio: 'audio files',
+  pdf: 'PDFs',
+  excel: 'Excel files',
+  document: 'documents',
+  file: 'files',
+}
+
+const SINGULAR_SNIPPET: Record<AttachmentCategory, string> = {
+  image: 'Sent an image',
+  video: 'Sent a video',
+  audio: 'Sent an audio file',
+  pdf: 'Sent a PDF',
+  excel: 'Sent an Excel file',
+  document: 'Sent a document',
+  file: 'Sent a file',
+}
+
+function joinLabels(labels: string[]): string {
+  if (labels.length === 0) return ''
+  if (labels.length === 1) return labels[0]!
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`
+  return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`
+}
+
+/** Server-side mirror of the frontend formatAttachmentSummary helper. */
+function buildAttachmentSummary(
+  attachments: CollaborationMessageRow['attachments'],
+): string {
+  if (!Array.isArray(attachments) || attachments.length === 0) return ''
+
+  const list = attachments.filter((a) => Boolean(a))
+  if (list.length === 0) return ''
+
+  const categories = list.map(getAttachmentCategory)
+
+  if (categories.length === 1) {
+    return SINGULAR_SNIPPET[categories[0]!]
+  }
+
+  const unique = [...new Set(categories)]
+  if (unique.length === 1) {
+    return `Sent ${CATEGORY_LABEL_PLURAL[unique[0]!]}`
+  }
+
+  const labels = unique.map((category) => CATEGORY_LABEL[category])
+  return `Sent ${joinLabels(labels)}`
+}
 
 export const listChannel = zWorkspacePaginatedQueryActive({
   args: {
@@ -225,6 +331,96 @@ export const searchChannel = zWorkspaceQueryActive({
       rows: top.map((item) => item.row),
       highlights,
     }
+  },
+})
+
+/**
+ * Fetch the latest non-deleted message for every channel in the workspace so
+ * the inbox sidebar can show previews without loading each channel's full
+ * message history. Returns a map keyed by channel key (e.g. "team-agency",
+ * "client-<id>", "project-<id>", or the custom channel legacyId).
+ */
+export const listChannelPreviews = zWorkspaceQueryActive({
+  args: {},
+  handler: async (ctx, args) => {
+    const channelTypeScanLimit = 200
+    const channelKeyToMessage: Record<
+      string,
+      { content: string; createdAtMs: number } | undefined
+    > = {}
+
+    const extractPreviewContent = (row: CollaborationMessageRow): string => {
+      const text =
+        typeof row.content === 'string' && row.content.trim().length > 0
+          ? row.content.trim()
+          : ''
+      if (text) return text
+      return buildAttachmentSummary(row.attachments)
+    }
+
+    // Scan each channel type's recent messages and keep the latest per channel key.
+    const channelTypes = ['team', 'client', 'project'] as const
+    for (const channelType of channelTypes) {
+      const rows = await buildChannelTypeQuery(
+        ctx,
+        args.workspaceId,
+        channelType,
+      )
+        .take(channelTypeScanLimit)
+
+      for (const row of rows) {
+        if (row.deleted) continue
+        const channelKey = resolveChannelKey(row)
+        if (!channelKey) continue
+
+        // buildChannelTypeQuery orders desc, so the first row we see for a
+        // given channel key is the latest.
+        if (channelKeyToMessage[channelKey]) continue
+
+        const content = extractPreviewContent(row)
+        if (!content) continue
+
+        channelKeyToMessage[channelKey] = {
+          content,
+          createdAtMs: typeof row.createdAtMs === 'number' ? row.createdAtMs : 0,
+        }
+      }
+    }
+
+    // Also scan custom channels (team channels with a channelId).
+    const customChannels = (await ctx.db
+      .query('collaborationChannels')
+      .withIndex('by_workspace_channelType_updatedAtMs_legacyId', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('channelType', 'team'),
+      )
+      .order('desc')
+      .take(200))
+      .filter((row) => canAccessCustomChannel(ctx, row))
+
+    for (const channel of customChannels) {
+      if (channelKeyToMessage[channel.legacyId]) continue
+
+      const rows = await buildListChannelQuery(ctx, {
+        workspaceId: args.workspaceId,
+        channelId: channel.legacyId,
+        channelType: 'team',
+        clientId: null,
+        projectId: null,
+      }).take(1)
+
+      const last = rows[0]
+      if (!last || last.deleted) continue
+
+      const content = extractPreviewContent(last)
+      if (!content) continue
+
+      channelKeyToMessage[channel.legacyId] = {
+        content,
+        createdAtMs: typeof last.createdAtMs === 'number' ? last.createdAtMs : 0,
+      }
+    }
+
+    return { previewsByChannelKey: channelKeyToMessage }
   },
 })
 

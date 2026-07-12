@@ -212,6 +212,7 @@ export const schedulerEventsApi = {
 };
 export const collaborationApi = {
     listChannel: looseApi.collaborationMessages.listChannel,
+    listChannelPreviews: looseApi.collaborationMessages.listChannelPreviews,
     listThreadReplies: looseApi.collaborationMessages.listThreadReplies,
     getByLegacyId: looseApi.collaborationMessages.getByLegacyId,
     searchChannel: looseApi.collaborationMessages.searchChannel,

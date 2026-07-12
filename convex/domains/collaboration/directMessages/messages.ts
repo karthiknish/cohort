@@ -10,6 +10,7 @@ import {
 import {
   attachmentZ,
   canManageDirectMessage,
+  clampLimit,
   clampSearchLimit,
   formatAttachmentSummary,
   generateLegacyId,
@@ -32,7 +33,7 @@ export const listMessages = zWorkspacePaginatedQueryActive({
 
     q = applyManualPagination(q, args.cursor)
 
-    const limit = args.limit ?? 50
+    const limit = clampLimit(typeof args.limit === 'number' ? args.limit : 50, 1, 500)
     const rows = await q.take(limit + 1)
     const result = getPaginatedResponse(rows, limit, 'createdAtMs')
     const items = await Promise.all(result.items.map((row) => hydrateMessageRow(ctx, row)))

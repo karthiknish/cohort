@@ -48,6 +48,11 @@ export function clampSearchLimit(limit: number): number {
   return Math.min(Math.max(Math.trunc(limit), 20), 400)
 }
 
+export function clampLimit(value: number, min: number, max: number): number {
+  const n = Number.isFinite(value) ? Math.trunc(value) : min
+  return Math.min(Math.max(n, min), max)
+}
+
 export function normalizeSearchValue(value: string | null | undefined): string {
   return typeof value === 'string' ? value.trim().toLowerCase() : ''
 }

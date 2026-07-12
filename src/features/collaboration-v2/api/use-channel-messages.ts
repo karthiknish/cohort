@@ -3,6 +3,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useConvex } from 'convex/react';
 import { collaborationApi } from '@/lib/convex-api';
+import { asErrorMessage, logError } from '@/lib/convex-errors';
+import { notifyFailure } from '@/lib/notifications';
 import { usePreview } from '@/shared/contexts/preview-context';
 import type { Channel, CollaborationMessage } from '../types';
 import { mapChannelMessageRow } from '../utils/message-mappers';
@@ -79,6 +81,12 @@ export function useChannelMessages(workspaceId: string | null, channel: Channel 
         cursor: lastPageNextCursor,
       })) as RawListResponse;
       setOlderPages((prev) => [...prev, res]);
+    } catch (error) {
+      logError(error, 'useChannelMessages:loadMore');
+      notifyFailure({
+        title: 'Failed to load older messages',
+        message: asErrorMessage(error),
+      });
     } finally {
       setLoadingMore(false);
     }
