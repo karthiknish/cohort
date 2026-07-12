@@ -1,6 +1,7 @@
 'use client';
 import { notifyFailure, notifySuccess } from '@/lib/notifications';
 import { logError } from '@/lib/convex-errors';
+import { stripMentionMarkdown } from '../utils/mentions';
 import { type ChangeEvent, type ClipboardEvent, type DragEvent, useCallback, useEffect, useMemo, useRef, useState, } from 'react';
 import type { CollaborationMessage } from '@/types/collaboration';
 import type { PendingAttachment, SendMessageOptions } from '../hooks/types';
@@ -146,12 +147,13 @@ export function useUnifiedMessagePaneController({ channelMessages, focusMessageI
     const handleStartEdit = (message: UnifiedMessage) => {
         if (!onEditMessage || message.deleted)
             return;
-        onMessageInputChange?.(message.content ?? '');
+        const displayContent = stripMentionMarkdown(message.content ?? '');
+        onMessageInputChange?.(displayContent);
         setPaneUi((prev) => ({
             ...prev,
             editingMessageId: message.id,
-            editingValue: message.content ?? '',
-            editingPreview: (message.content ?? '').trim().slice(0, 120),
+            editingValue: displayContent,
+            editingPreview: displayContent.trim().slice(0, 120),
         }));
     };
     const handleCancelEdit = () => {

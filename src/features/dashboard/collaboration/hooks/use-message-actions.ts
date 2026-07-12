@@ -9,7 +9,7 @@ import type { CollaborationMessage, CollaborationReaction } from '@/types/collab
 import { COLLABORATION_REACTION_SET } from '@/constants/collaboration-reactions';
 import type { Channel } from '../types';
 import type { ReactionPendingState } from './types';
-import { extractMentionsFromContent } from '../utils/mentions';
+import { convertMentionsToMarkdown, extractMentionsFromContent } from '../utils/mentions';
 import type { ClientTeamMember } from '@/types/clients';
 interface UseMessageActionsOptions {
     workspaceId: string | null;
@@ -143,7 +143,7 @@ export function useMessageActions({ workspaceId, userId, isPreviewMode, channels
         }
     };
     const handleEditMessage = async (channelId: string, messageId: string, nextContent: string) => {
-        const trimmedContent = nextContent.trim();
+        const trimmedContent = convertMentionsToMarkdown(nextContent.trim(), channelParticipants);
         if (!trimmedContent) {
             notifyFailure({
                 title: 'Message required',

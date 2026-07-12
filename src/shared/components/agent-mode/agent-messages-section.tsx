@@ -76,7 +76,7 @@ export function AgentMessagesSection({ isConversationLoading, isProcessing, ment
       </div>
 
       {showJumpToLatest ? (<div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
-          <Button type="button" size="sm" variant="outline" className="pointer-events-auto h-8 gap-1.5 rounded-full border-border/60 bg-background/95 px-4 text-foreground shadow-lg backdrop-blur-sm hover:bg-muted/80" onClick={onJumpToLatest}>
+          <Button type="button" size="sm" variant="outline" className="pointer-events-auto h-8 gap-1.5 rounded-full border-border/60 bg-background/95 px-4 text-foreground shadow-lg backdrop-blur-sm hover:bg-muted/80 hover:text-foreground" onClick={onJumpToLatest}>
             <ArrowDown className="size-3.5" aria-hidden/>
             Latest messages
           </Button>

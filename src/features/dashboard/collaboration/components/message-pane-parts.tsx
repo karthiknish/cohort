@@ -41,7 +41,7 @@ export function MessagePaneHeader({ channel, channelParticipants, messageCount, 
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <Button variant="ghost" size="sm" onClick={onExport} disabled={messageCount === 0} className="h-9 px-3 text-xs font-semibold gap-2 border border-muted/40 hover:bg-muted/60">
+        <Button variant="ghost" size="sm" onClick={onExport} disabled={messageCount === 0} className="h-9 px-3 text-xs font-semibold gap-2 border border-muted/40 hover:bg-muted/60 hover:text-foreground">
           <Download className="size-4"/>
           Export
         </Button>

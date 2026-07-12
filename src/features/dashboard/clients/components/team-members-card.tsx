@@ -57,7 +57,7 @@ function EmptyTeamState() {
       <p className="mt-1 max-w-xs text-xs font-medium leading-relaxed text-muted-foreground">
         Collaborators assigned to this client will appear here for project management.
       </p>
-      <Button asChild variant="outline" className="mt-6 h-9 rounded-xl border-muted/30 px-6 text-[10px] font-bold uppercase tracking-widest shadow-sm motion-chromatic hover:bg-muted/5 active:scale-[0.98]">
+      <Button asChild variant="outline" className="mt-6 h-9 rounded-xl border-muted/30 px-6 text-[10px] font-bold uppercase tracking-widest shadow-sm motion-chromatic hover:bg-muted/5 hover:text-foreground active:scale-[0.98]">
         <Link href="/admin/clients">
           <UserPlus className="mr-2 size-3.5"/>
           Manage Team
@@ -92,7 +92,7 @@ export function TeamMembersCard({ teamMembers, filteredTeamMembers, teamSearch, 
                   <X className="size-3.5"/>
                 </Button>)}
             </div>
-            <Button asChild variant="outline" size="sm" className="h-9 rounded-xl border-muted/30 bg-card px-4 text-[10px] font-bold uppercase tracking-widest shadow-sm motion-chromatic hover:bg-muted/5 active:scale-[0.98]">
+            <Button asChild variant="outline" size="sm" className="h-9 rounded-xl border-muted/30 bg-card px-4 text-[10px] font-bold uppercase tracking-widest shadow-sm motion-chromatic hover:bg-muted/5 hover:text-foreground active:scale-[0.98]">
               <Link href="/admin/clients">
                 <UserPlus className="mr-2 size-3.5"/>
                 Add

@@ -92,7 +92,7 @@ export function CreativeHeader(props: {
                   {isSaving ? 'Saving…' : 'Save changes'}
                 </Button>
               </>) : (<div className="hidden items-center gap-1.5 border-r border-border/50 pr-3 lg:flex">
-                <Button type="button" variant="ghost" size="sm" className="h-10 rounded-xl border border-transparent px-3 text-xs font-medium text-muted-foreground hover:border-border/60 hover:bg-muted/40">
+                <Button type="button" variant="ghost" size="sm" className="h-10 rounded-xl border border-transparent px-3 text-xs font-medium text-muted-foreground hover:border-border/60 hover:bg-muted/40 hover:text-foreground">
                   <Share className="mr-2 size-4" aria-hidden/>
                   Export
                 </Button>

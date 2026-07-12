@@ -74,7 +74,7 @@ export function ReplyIndicator({ message, onCancel }: ReplyIndicatorProps) {
             {message.content.length > 50 ? '…' : ''}&quot;
           </span>)}
       </div>
-      <Button variant="ghost" size="icon" className="size-5 rounded-full hover:bg-muted/50" onClick={onCancel} aria-label="Cancel reply">
+      <Button variant="ghost" size="icon" className="size-5 rounded-full hover:bg-muted/50 hover:text-foreground" onClick={onCancel} aria-label="Cancel reply">
         <X className="size-3" aria-hidden/>
       </Button>
     </div>);
@@ -98,7 +98,7 @@ export function EditIndicator({ message, onCancel }: EditIndicatorProps) {
             {message.content.length > 50 ? '…' : ''}&quot;
           </span>)}
       </div>
-      <Button variant="ghost" size="icon" className="size-5 rounded-full hover:bg-muted/50" onClick={onCancel} aria-label="Cancel edit">
+      <Button variant="ghost" size="icon" className="size-5 rounded-full hover:bg-muted/50 hover:text-foreground" onClick={onCancel} aria-label="Cancel edit">
         <X className="size-3" aria-hidden/>
       </Button>
     </div>);

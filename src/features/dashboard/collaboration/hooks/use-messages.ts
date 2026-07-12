@@ -9,7 +9,7 @@ import type { CollaborationMessage, CollaborationAttachment, CollaborationMentio
 import type { Channel } from '../types';
 import type { SendMessageOptions, MessagesByChannelState } from './types';
 import { MESSAGE_PAGE_SIZE } from './constants';
-import { extractMentionsFromContent } from '../utils/mentions';
+import { convertMentionsToMarkdown, extractMentionsFromContent } from '../utils/mentions';
 import type { ClientTeamMember } from '@/types/clients';
 interface UseSendMessageOptions {
     workspaceId: string | null;
@@ -28,7 +28,7 @@ export function useSendMessage({ workspaceId, currentUserId, channels, selectedC
     const [sendingMessage, setSendingMessage] = useState(false);
     const sendingMessageRef = useRef(false);
     const handleSendMessage = async (content: string, options?: SendMessageOptions) => {
-        const trimmedContent = content.trim();
+        const trimmedContent = convertMentionsToMarkdown(content.trim(), channelParticipants);
         const channelId = selectedChannelId;
         if (!trimmedContent && !options?.attachmentPaths?.length) {
             notifyFailure({

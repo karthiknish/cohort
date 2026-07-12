@@ -9,7 +9,7 @@ import { getPreviewCollaborationAutoReply } from '@/lib/preview-data';
 import type { ClientTeamMember } from '@/types/clients';
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration';
 import type { Channel } from '../types';
-import { extractMentionsFromContent } from '../utils/mentions';
+import { convertMentionsToMarkdown, extractMentionsFromContent } from '../utils/mentions';
 import { mapCollaborationMessageRow, previewPendingAttachmentToCollaborationAttachment } from './message-mappers';
 import type { PendingAttachment, SendMessageOptions } from './types';
 type UseChannelMessageSendOptions = {
@@ -94,7 +94,7 @@ export function useChannelMessageSend({ workspaceId, currentUserId, selectedChan
         previewReplyTimersRef.current.push(timerId);
     };
     const handleSendMessage = async (options?: SendMessageOptions) => {
-        const trimmedContent = (options?.content ?? messageInput).trim();
+        const trimmedContent = convertMentionsToMarkdown((options?.content ?? messageInput).trim(), channelParticipants);
         const channelId = selectedChannel?.id;
         if (!trimmedContent && pendingAttachments.length === 0) {
             notifyFailure({

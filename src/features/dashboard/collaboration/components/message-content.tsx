@@ -71,7 +71,7 @@ function CopyButton({ code }: {
     };
     return (<>
       <LiveRegion message={copied ? 'Code block copied to clipboard.' : ''}/>
-      <Button variant="ghost" size="icon" className="absolute right-2 top-2 size-7 opacity-0 group-hover:opacity-100 transition-opacity border border-muted/40 bg-background/80 shadow-sm hover:bg-background" onClick={handleCopy} title={copied ? "Copied!" : "Copy code"} aria-label={copied ? "Code copied" : "Copy code block to clipboard"}>
+      <Button variant="ghost" size="icon" className="absolute right-2 top-2 size-7 opacity-0 group-hover:opacity-100 transition-opacity border border-muted/40 bg-background/80 shadow-sm hover:bg-background hover:text-foreground" onClick={handleCopy} title={copied ? "Copied!" : "Copy code"} aria-label={copied ? "Code copied" : "Copy code block to clipboard"}>
         {copied ? (<Check className="size-3.5 text-success" aria-hidden/>) : (<Copy className="size-3.5" aria-hidden/>)}
       </Button>
     </>);

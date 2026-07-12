@@ -19,6 +19,7 @@ import type { ClientTeamMember } from '@/types/clients';
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration';
 import type { DirectConversation, DirectMessage } from '../../hooks/use-direct-messages';
 import { directMessageToCollaborationMessage } from '../../lib/direct-message-collaboration';
+import { convertMentionsToMarkdown } from '../../utils/mentions';
 import type { PendingAttachment, ReactionPendingState, SendMessageOptions, ThreadCursorsState, ThreadErrorsState, ThreadLoadingState, ThreadMessagesState } from '../../hooks/types';
 import { useChannelPresence } from '../../hooks/use-channel-presence';
 import { usePreview } from '@/shared/contexts/preview-context';
@@ -34,12 +35,17 @@ export type { DirectMessageConversationPaneProps } from './direct-message-conver
 export function DirectMessageConversationPane({ mentionParticipants, currentUserId, dmDeleteMessage, dmEditMessage, dmHasMoreMessages, dmIsLoadingMessages, dmIsLoadingMore, dmIsSending, dmLoadMoreMessages, dmMessageInput, dmMessageSearchQuery, dmMessagesForPane, dmMuteConversation, dmSearchHighlights, dmSearchingMessages, dmToggleReaction, handleSendDirectMessage, isDmSearchActive, onAddAttachments, onArchiveConversation, onBackToInbox, onDmMessageSearchChange, onRemoveAttachment, pendingAttachments, selectedDM, setActiveDmMessageInput, uploading, onStartNewDM, messagesError, onRetryMessages, onShareToPlatform, onComposerFocus, onComposerBlur, typingIndicatorText, onCreateTask, currentUserRole, workspaceId, deepLinkMessageId, onClearDeepLink, }: DirectMessageConversationPaneProps) {
     const { isPreviewMode } = usePreview();
     const handleDmSend = async () => {
-        const content = dmMessageInput.trim();
+        const content = convertMentionsToMarkdown(dmMessageInput.trim(), mentionParticipants);
         if (!content && pendingAttachments.length === 0) {
             return;
         }
         await handleSendDirectMessage(content);
     };
+    const handleDmEditMessage = dmEditMessage
+        ? async (messageLegacyId: string, newContent: string) => {
+            await dmEditMessage(messageLegacyId, convertMentionsToMarkdown(newContent, mentionParticipants));
+        }
+        : undefined;
     const dmEmptyState = (() => {
         if (dmIsLoadingMessages || dmSearchingMessages) {
             return undefined;
@@ -102,5 +108,5 @@ export function DirectMessageConversationPane({ mentionParticipants, currentUser
         uploadingAttachments: uploading,
     });
     const dmChannelMessages = dmMessagesForPane.map(directMessageToCollaborationMessage);
-    return (<UnifiedMessagePane header={dmHeader} messages={dmMessagesForPane.map(directMessageToUnifiedMessage)} channelMessages={dmChannelMessages} currentUserId={currentUserId} currentUserRole={currentUserRole} workspaceId={workspaceId} dmParticipantName={selectedDM.otherParticipantName} focusMessageId={deepLinkMessageId} onCreateTask={onCreateTask} listState={dmListState} onLoadMore={dmLoadMoreMessages} messageSearchQuery={dmMessageSearchQuery} onMessageSearchChange={onDmMessageSearchChange} messageSearchHighlights={dmSearchHighlights} messageInput={dmMessageInput} onMessageInputChange={setActiveDmMessageInput} onSendMessage={handleDmSend} emptyState={dmEmptyState} participants={mentionParticipants} composerState={dmComposerState} pendingAttachments={pendingAttachments} onAddAttachments={onAddAttachments} onRemoveAttachment={onRemoveAttachment} onToggleReaction={dmToggleReaction} onDeleteMessage={dmDeleteMessage} onEditMessage={dmEditMessage} onShareToPlatform={onShareToPlatform} onComposerFocus={onComposerFocus} onComposerBlur={onComposerBlur} typingIndicator={typingIndicatorText} placeholder={`Message ${selectedDM.otherParticipantName}...`} statusBanner={dmStatusBanner}/>);
+    return (<UnifiedMessagePane header={dmHeader} messages={dmMessagesForPane.map(directMessageToUnifiedMessage)} channelMessages={dmChannelMessages} currentUserId={currentUserId} currentUserRole={currentUserRole} workspaceId={workspaceId} dmParticipantName={selectedDM.otherParticipantName} focusMessageId={deepLinkMessageId} onCreateTask={onCreateTask} listState={dmListState} onLoadMore={dmLoadMoreMessages} messageSearchQuery={dmMessageSearchQuery} onMessageSearchChange={onDmMessageSearchChange} messageSearchHighlights={dmSearchHighlights} messageInput={dmMessageInput} onMessageInputChange={setActiveDmMessageInput} onSendMessage={handleDmSend} emptyState={dmEmptyState} participants={mentionParticipants} composerState={dmComposerState} pendingAttachments={pendingAttachments} onAddAttachments={onAddAttachments} onRemoveAttachment={onRemoveAttachment} onToggleReaction={dmToggleReaction} onDeleteMessage={dmDeleteMessage} onEditMessage={handleDmEditMessage} onShareToPlatform={onShareToPlatform} onComposerFocus={onComposerFocus} onComposerBlur={onComposerBlur} typingIndicator={typingIndicatorText} placeholder={`Message ${selectedDM.otherParticipantName}...`} statusBanner={dmStatusBanner}/>);
 }

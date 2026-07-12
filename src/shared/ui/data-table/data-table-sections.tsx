@@ -59,8 +59,8 @@ export function DataTableLoadingRows<TData, TValue>({ columns, loadingRows, }: {
         </TableRow>))}
     </>);
 }
-export function DataTableVirtualizedRows<TData>({ columns, rows, virtualItems, paddingTop, paddingBottom, onRowClick, rowClassName, }: {
-    columns: ColumnDef<TData, unknown>[];
+export function DataTableVirtualizedRows<TData, TValue = unknown>({ columns, rows, virtualItems, paddingTop, paddingBottom, onRowClick, rowClassName, }: {
+    columns: ColumnDef<TData, TValue>[];
     rows: Row<TData>[];
     virtualItems: Array<{
         index: number;

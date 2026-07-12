@@ -3,7 +3,6 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, DragEvent, KeyboardEvent, MouseEvent } from 'react';
 import type { EmojiClickData } from '@/shared/ui/emoji-picker';
 import type { ClientTeamMember } from '@/types/clients';
-import { buildMentionMarkup } from '../utils/mentions';
 const MAX_MENTION_RESULTS = 6;
 const MENTION_TRIGGER_LOOKBACK = 40;
 const MENTION_UPDATE_DELAY_MS = 150;
@@ -290,9 +289,11 @@ export function useRichComposer({ value, onChange, onSend, disabled = false, par
             return;
         }
         const caretPosition = textarea.selectionStart;
-        const markup = `${buildMentionMarkup(name)} `;
-        const nextValue = value.slice(0, state.startIndex) + markup + value.slice(caretPosition);
-        const nextCaret = state.startIndex + markup.length;
+        const trimmed = name.trim();
+        const display = trimmed.startsWith('@') ? trimmed : `@${trimmed}`;
+        const insertion = `${display} `;
+        const nextValue = value.slice(0, state.startIndex) + insertion + value.slice(caretPosition);
+        const nextCaret = state.startIndex + insertion.length;
         onChange(nextValue);
         requestAnimationFrame(() => {
             textarea.focus();

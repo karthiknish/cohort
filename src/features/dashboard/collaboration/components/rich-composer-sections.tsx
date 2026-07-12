@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, type ChangeEvent, type ClipboardEvent, type ComponentType, type DragEvent, type KeyboardEvent, type MouseEvent, type ReactNode, type RefObject, type UIEvent, } from 'react';
+import { type ChangeEvent, type ClipboardEvent, type ComponentType, type DragEvent, type KeyboardEvent, type MouseEvent, type RefObject, } from 'react';
 import EmojiPicker, { Theme, type EmojiClickData } from '@/shared/ui/emoji-picker';
 import { AtSign, Bold, Code, Italic, List, ListOrdered, Paperclip, Quote, Smile, Upload } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -27,7 +27,7 @@ function ComposerButton({ icon: Icon, label, title, onClick, disabled }: Compose
             return;
         onClick();
     };
-    return (<Button type="button" size="icon" variant="ghost" onClick={onComposerAction} disabled={disabled} className="size-7 hover:bg-muted/80 active:bg-muted/60" aria-label={label} title={title ?? label}>
+    return (<Button type="button" size="icon" variant="ghost" onClick={onComposerAction} disabled={disabled} className="size-7 hover:bg-muted/80 hover:text-foreground active:bg-muted/60" aria-label={label} title={title ?? label}>
       <Icon className="size-4"/>
       <span className="sr-only">{label}</span>
     </Button>);
@@ -93,30 +93,6 @@ export function RichComposerToolbar({ disabled, emojiPickerOpen, hasAttachments,
       <VoiceInputButton onTranscript={onVoiceTranscript} disabled={disabled}/>
     </div>);
 }
-const MENTION_MARKDOWN_REGEX = /\[([^\]]+)\]\(mention:\/\/[^\)]+\)/g;
-function renderComposerPreview(value: string) {
-    if (!value) {
-        return null;
-    }
-    const segments: ReactNode[] = [];
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-    MENTION_MARKDOWN_REGEX.lastIndex = 0;
-    while ((match = MENTION_MARKDOWN_REGEX.exec(value)) !== null) {
-        if (match.index > lastIndex) {
-            segments.push(value.slice(lastIndex, match.index));
-        }
-        segments.push(<span key={`mention-${match.index}`} className="rounded bg-primary/10 px-1 py-0.5 font-medium text-primary">{match[1]}</span>);
-        lastIndex = match.index + match[0].length;
-    }
-    if (lastIndex < value.length) {
-        segments.push(value.slice(lastIndex));
-    }
-    if (segments.length === 0) {
-        return null;
-    }
-    return segments;
-}
 export function RichComposerTextareaShell({ disabled, isDraggingOver, onBlur, onChange, onDragEnter, onDragLeave, onDragOver, onDrop, onFocus, onKeyDown, onPaste, placeholder, textareaRef, value, }: {
     disabled: boolean;
     isDraggingOver: boolean;
@@ -133,19 +109,8 @@ export function RichComposerTextareaShell({ disabled, isDraggingOver, onBlur, on
     textareaRef: RefObject<HTMLTextAreaElement | null>;
     value: string;
 }) {
-    const handleScroll = useCallback((event: UIEvent<HTMLTextAreaElement>) => {
-        const overlay = event.currentTarget.parentElement?.querySelector('[data-composer-overlay]') as HTMLElement | null;
-        if (overlay) {
-            overlay.scrollTop = event.currentTarget.scrollTop;
-            overlay.scrollLeft = event.currentTarget.scrollLeft;
-        }
-    }, []);
     return (<div className="relative">
-      <div data-composer-overlay aria-hidden="true" className="pointer-events-none absolute inset-0 whitespace-pre-wrap break-words p-3 text-sm leading-6 text-foreground/90 overflow-hidden">
-        {renderComposerPreview(value)}
-        <span>&nbsp;</span>
-      </div>
-      <Textarea ref={textareaRef} value={value} placeholder={placeholder} onChange={onChange} onKeyDown={onKeyDown} onBlur={onBlur} onFocus={onFocus} onDrop={onDrop} onDragOver={onDragOver} onDragEnter={onDragEnter} onDragLeave={onDragLeave} onPaste={onPaste} onScroll={handleScroll} disabled={disabled} maxLength={2000} className={cn('relative min-h-[120px] resize-y rounded-b-lg rounded-t-none border-0 bg-transparent p-3 text-sm leading-6 text-transparent shadow-none focus-visible:ring-0 caret-foreground', isDraggingOver && 'bg-accent/5')}/>
+      <Textarea ref={textareaRef} value={value} placeholder={placeholder} onChange={onChange} onKeyDown={onKeyDown} onBlur={onBlur} onFocus={onFocus} onDrop={onDrop} onDragOver={onDragOver} onDragEnter={onDragEnter} onDragLeave={onDragLeave} onPaste={onPaste} disabled={disabled} maxLength={2000} className={cn('relative min-h-[120px] resize-y rounded-b-lg rounded-t-none border-0 bg-transparent p-3 text-sm leading-6 text-foreground shadow-none focus-visible:ring-0 caret-foreground', isDraggingOver && 'bg-accent/5')}/>
       {isDraggingOver ? (<div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-b-lg bg-accent/10">
           <div className="flex flex-col items-center gap-2 text-primary">
             <Upload className="size-8"/>

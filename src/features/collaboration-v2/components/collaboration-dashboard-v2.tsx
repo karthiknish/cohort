@@ -11,6 +11,7 @@ import { useThreads } from '@/features/dashboard/collaboration/hooks/use-threads
 import { useAttachments } from '@/features/dashboard/collaboration/hooks/use-attachments';
 import { directMessageToCollaborationMessage } from '@/features/dashboard/collaboration/lib/direct-message-collaboration';
 import { formatAttachmentSummary } from '@/features/dashboard/collaboration/lib/chat-text';
+import { convertMentionsToMarkdown } from '@/features/dashboard/collaboration/utils/mentions';
 import type { SendMessageOptions } from '@/features/dashboard/collaboration/hooks/types';
 import type { UnifiedMessage } from '@/features/dashboard/collaboration/components/message-list-types';
 import { useQuery, useMutation } from 'convex/react';
@@ -379,7 +380,8 @@ export function CollaborationDashboardV2() {
 
   // ─── Send message handler ─────────────────────────────────────────────────
   const handleSendMessage = useCallback(async (options?: SendMessageOptions) => {
-    const content = (options?.content ?? messageInput).trim();
+    const rawContent = (options?.content ?? messageInput).trim();
+    const content = convertMentionsToMarkdown(rawContent, channelParticipants);
     const hasAttachments = pendingAttachments.length > 0;
     if ((!content && !hasAttachments) || sending || !workspaceId || !currentUserId) return;
 
@@ -501,6 +503,7 @@ export function CollaborationDashboardV2() {
     uploadAttachments,
     clearAttachments,
     stopTyping,
+    channelParticipants,
   ]);
 
   const handleMessageInputChange = useCallback(
@@ -544,17 +547,18 @@ export function CollaborationDashboardV2() {
   const handleEditMessage = useCallback(
     async (messageId: string, newContent: string) => {
       if (!workspaceId) return;
+      const content = convertMentionsToMarkdown(newContent, channelParticipants);
       if (effectiveSelectedChannel) {
         await editChannelMessage({
           workspaceId: String(workspaceId),
           legacyId: messageId,
-          content: newContent,
+          content,
         });
       } else if (selectedConversationLegacyId) {
         await editDirectMessage({
           workspaceId: String(workspaceId),
           messageLegacyId: messageId,
-          newContent,
+          newContent: content,
         });
       }
     },
@@ -564,6 +568,7 @@ export function CollaborationDashboardV2() {
       selectedConversationLegacyId,
       editChannelMessage,
       editDirectMessage,
+      channelParticipants,
     ],
   );
 

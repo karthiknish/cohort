@@ -123,7 +123,7 @@ export function ManageWorkspacesDialog({ isOpen, onOpenChange, newClientName, ac
 export function ManageWorkspacesButton({ onClick }: {
     onClick: () => void;
 }) {
-    return (<Button size="icon" variant="outline" onClick={onClick} className="size-11 rounded-xl border-input bg-background/50 backdrop-blur-sm hover:bg-background hover:border-accent/30 hover:shadow-sm motion-chromatic shrink-0">
+    return (<Button size="icon" variant="outline" onClick={onClick} className="size-11 rounded-xl border-input bg-background/50 backdrop-blur-sm hover:bg-background hover:border-accent/30 hover:shadow-sm hover:text-foreground motion-chromatic shrink-0">
       <Plus className="size-4"/>
       <span className="sr-only">Manage clients</span>
     </Button>);
