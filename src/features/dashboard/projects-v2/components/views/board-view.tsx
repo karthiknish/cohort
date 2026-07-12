@@ -154,7 +154,7 @@ export function BoardView({
         columns, or use <kbd className="rounded border border-border/60 bg-muted/40 px-1 text-[10px] font-medium">Alt</kbd> +{' '}
         <kbd className="rounded border border-border/60 bg-muted/40 px-1 text-[10px] font-medium">←/→</kbd> on a card.
       </p>
-      <ScrollArea className="w-full">
+      <div className="w-full overflow-x-auto">
         <div className="flex h-[28rem] w-full gap-4 pb-4 pr-2">
           {columns.map((column) => (
             <KanbanColumn
@@ -176,7 +176,7 @@ export function BoardView({
             />
           ))}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
@@ -222,7 +222,7 @@ function KanbanColumn({
     <section
       aria-label={`${column.label} projects`}
       className={cn(
-        'flex min-w-[17.5rem] max-w-[22rem] flex-1 flex-col rounded-xl border border-border/60 bg-muted/15 shadow-sm transition-colors',
+        'flex h-full min-h-0 min-w-[17.5rem] max-w-[22rem] flex-1 flex-col overflow-hidden rounded-xl border border-border/60 bg-muted/15 shadow-sm transition-colors',
         isDragTarget && 'border-primary/30 bg-primary/5 ring-1 ring-primary/15',
         isDraggingFrom && !isDragTarget && 'opacity-60',
       )}
