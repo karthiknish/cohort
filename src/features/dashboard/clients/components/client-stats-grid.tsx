@@ -61,13 +61,15 @@ export function ClientStatsGrid({ stats, statsLoading, teamMembersCount, manager
           <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Team</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-foreground">{teamMembersCount}</span>
-            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">members</span>
-          </div>
-          <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/70">
-            {managersCount} MANAGERS ASSIGNED
-          </p>
+          {statsLoading ? (<Skeleton className="h-8 w-16 rounded-lg"/>) : (<>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black tracking-tight text-foreground">{teamMembersCount}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">members</span>
+              </div>
+              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/70">
+                {managersCount} MANAGERS ASSIGNED
+              </p>
+            </>)}
         </CardContent>
       </Card>
 

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { AdminQueryErrorAlert } from '../components/admin-query-error-alert';
 import { UserSearchPicker } from '../components/user-search-picker';
 import type { AllocationUser } from '../lib/client-allocation';
@@ -162,8 +163,15 @@ export function AdminClientsWorkspaceList({ clientsLoading, clientsCount, client
         <Input value={clientSearch} onChange={onClientSearchChange} placeholder="Search clients or teammates" className="w-full sm:w-72"/>
       </div>
       <AdminQueryErrorAlert error={workspaceQueryError ?? clientsError} title="Unable to load clients"/>
-      {clientsLoading ? (<div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <LoaderCircle className="size-4 animate-spin"/> Loading clients…
+      {clientsLoading ? (<div className="space-y-3">
+          {['client-skeleton-a', 'client-skeleton-b', 'client-skeleton-c', 'client-skeleton-d'].map((key) => (<div key={key} className="flex items-center gap-4 rounded-md border border-muted/40 px-3 py-3">
+              <Skeleton className="size-9 rounded-full"/>
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-40"/>
+                <Skeleton className="h-3 w-24"/>
+              </div>
+              <Skeleton className="h-8 w-20 rounded-md"/>
+            </div>))}
         </div>) : clientsCount === 0 && !clientsError && !workspaceQueryError ? (<p className="text-sm text-muted-foreground">No clients yet. Add a workspace to get started.</p>) : filteredClients.length === 0 ? (<p className="text-sm text-muted-foreground">No client workspaces match your search.</p>) : (<div className="space-y-3">
           {filteredClients.map((client) => (<AdminClientsClientRow key={client.id} client={client} unmatchedCount={unmatchedByClientId[client.id] ?? 0} addingMember={addingMember} clientPendingMembersId={clientPendingMembersId} deletingClientId={deletingClientId} removingTeamMemberKey={removingTeamMemberKey} onAddTeamMember={onRequestAddTeamMember} onDeleteClient={onRequestDeleteClient} onRemoveTeamMember={onRemoveTeamMember} onEditTeamMemberRole={onEditTeamMemberRole} updatingMemberRoleKey={updatingMemberRoleKey}/>))}
 

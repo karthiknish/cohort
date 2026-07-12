@@ -247,7 +247,7 @@ export function AdminUsersSummaryCards({ summary, loading }: AdminUsersSummaryCa
           <UsersIcon className={cn('size-4 text-muted-foreground', loading && 'animate-spin')}/>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-semibold">{summary.total}</div>
+          {loading ? <Skeleton className="h-8 w-14"/> : <div className="text-2xl font-semibold">{summary.total}</div>}
           <p className="text-xs text-muted-foreground">All accounts in your organisation</p>
         </CardContent>
       </Card>
@@ -258,7 +258,7 @@ export function AdminUsersSummaryCards({ summary, loading }: AdminUsersSummaryCa
           <CircleAlert className="size-4 text-warning"/>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-semibold">{summary.pending}</div>
+          {loading ? <Skeleton className="h-8 w-14"/> : <div className="text-2xl font-semibold">{summary.pending}</div>}
           <p className="text-xs text-muted-foreground">Awaiting activation</p>
         </CardContent>
       </Card>
@@ -269,7 +269,7 @@ export function AdminUsersSummaryCards({ summary, loading }: AdminUsersSummaryCa
           <ShieldCheck className="size-4 text-primary"/>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-semibold">{summary.internal}</div>
+          {loading ? <Skeleton className="h-8 w-14"/> : <div className="text-2xl font-semibold">{summary.internal}</div>}
           <p className="text-xs text-muted-foreground">Admins and internal team accounts</p>
         </CardContent>
       </Card>
@@ -280,7 +280,7 @@ export function AdminUsersSummaryCards({ summary, loading }: AdminUsersSummaryCa
           <UsersIcon className="size-4 text-muted-foreground"/>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-semibold">{summary.clients}</div>
+          {loading ? <Skeleton className="h-8 w-14"/> : <div className="text-2xl font-semibold">{summary.clients}</div>}
           <p className="text-xs text-muted-foreground">Accounts currently marked as client users</p>
         </CardContent>
       </Card>
@@ -413,6 +413,14 @@ type AdminUsersInvitationsSectionProps = {
     onRevoke: (invitation: AdminInvitationRecord) => void;
 };
 export function AdminUsersInvitationsSection({ invitationSearchTerm, invitationStatusFilter, invitationSummary, invitationsLoading, filteredInvitations, invitationActionKey, onInvitationSearchChange, onInvitationStatusFilterChange, onResend, onRevoke, }: AdminUsersInvitationsSectionProps) {
+    const invitationsSkeleton = (<div className="space-y-3">
+      {['invite-skeleton-a', 'invite-skeleton-b', 'invite-skeleton-c', 'invite-skeleton-d', 'invite-skeleton-e'].map((key) => (<div key={key} className="flex items-center gap-4 rounded-md border border-muted/40 px-3 py-3">
+          <Skeleton className="size-9 rounded-full"/>
+          <Skeleton className="h-4 w-40"/>
+          <Skeleton className="h-8 w-28 rounded-md"/>
+          <Skeleton className="ml-auto h-8 w-20 rounded-md"/>
+        </div>))}
+    </div>);
     return (<Card className="border-muted/60 bg-background">
       <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
@@ -434,9 +442,9 @@ export function AdminUsersInvitationsSection({ invitationSearchTerm, invitationS
 
         {/* Mobile card layout */}
         <div className="space-y-3 lg:hidden">
-          {filteredInvitations.length === 0 ? (
+          {invitationsLoading && filteredInvitations.length === 0 ? (invitationsSkeleton) : filteredInvitations.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">
-              {invitationsLoading ? 'Loading invitation lifecycle…' : 'No invitations match this lifecycle status and search.'}
+              No invitations match this lifecycle status and search.
             </div>
           ) : filteredInvitations.map((invitation) => (
             <InvitationCard key={invitation.id} invitation={invitation} invitationActionKey={invitationActionKey} onResend={onResend} onRevoke={onRevoke}/>
@@ -459,11 +467,13 @@ export function AdminUsersInvitationsSection({ invitationSearchTerm, invitationS
               </tr>
             </thead>
             <tbody>
-              {filteredInvitations.length === 0 ? (<tr>
+              {invitationsLoading && filteredInvitations.length === 0 ? (<tr>
+                  <td colSpan={7} className="py-3">
+                    {invitationsSkeleton}
+                  </td>
+                </tr>) : filteredInvitations.length === 0 ? (<tr>
                   <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                    {invitationsLoading
-                ? 'Loading invitation lifecycle…'
-                : 'No invitations match this lifecycle status and search.'}
+                    No invitations match this lifecycle status and search.
                   </td>
                 </tr>) : (filteredInvitations.map((invitation) => (<InvitationRow key={invitation.id} invitation={invitation} invitationActionKey={invitationActionKey} onResend={onResend} onRevoke={onRevoke}/>)))}
             </tbody>
