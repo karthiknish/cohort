@@ -184,7 +184,7 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
     };
     if (initialLoading) {
         const columnSkeletonKeys = ['todo', 'in-progress', 'review', 'completed'] as const;
-        return (<div className="flex h-[28rem] gap-3 px-4 pb-4">
+        return (<div className="flex h-[47rem] gap-3 px-4 pb-4">
         {columnSkeletonKeys.map((columnKey) => (<div key={columnKey} className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 p-3">
             <Skeleton className="mb-3 h-8 w-full rounded-lg"/>
             <Skeleton className="mb-3 h-28 w-full rounded-xl"/>
@@ -242,7 +242,7 @@ export function TaskKanban({ tasks, loading, initialLoading, error, pendingStatu
         </div>
       </div>
 
-      <div className="flex h-[28rem] gap-3 overflow-x-auto pb-2">
+      <div className="flex h-[47rem] gap-3 overflow-x-auto pb-2">
           {columns.map((column) => (<KanbanColumn key={column.status} bulkActive={bulkActive} column={column} dragOverStatus={dragOverStatus} draggedTask={draggedTask} handleDragEnd={handleDragEnd} handleDragLeave={handleDragLeave} handleDragOver={handleDragOver} handleDrop={handleDrop} handleDragStart={handleDragStart} keyboardInstructionsId={keyboardInstructionsId} onKeyboardMoveTask={handleKeyboardMoveTask} handleViewTask={handleViewTask} onClone={onClone} onDelete={onDelete} onEdit={onEdit} onQuickStatusChange={onQuickStatusChange} onShare={onShare} onToggleTaskSelection={onToggleTaskSelection} pendingStatusUpdates={pendingStatusUpdates} searchQuery={searchQuery} selectedTaskIds={selectedTaskIds}/>))}
       </div>
 
