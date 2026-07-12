@@ -72,3 +72,7 @@ svgl-logos-fixed.png
 .playwright-mcp/
 .omo/
 dashboard-settings-404.png
+
+# E2E temp output and local docs (tracked specs/docs remain tracked)
+/e2e/
+/docs/
