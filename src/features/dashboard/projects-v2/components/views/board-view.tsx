@@ -155,7 +155,7 @@ export function BoardView({
         <kbd className="rounded border border-border/60 bg-muted/40 px-1 text-[10px] font-medium">←/→</kbd> on a card.
       </p>
       <ScrollArea className="w-full">
-        <div className="flex min-h-[28rem] w-full gap-4 pb-4 pr-2">
+        <div className="flex h-[28rem] w-full gap-4 pb-4 pr-2">
           {columns.map((column) => (
             <KanbanColumn
               key={column.status}

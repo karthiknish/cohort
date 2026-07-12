@@ -93,13 +93,14 @@ function normalizeReactions(reactions: unknown): { changed: boolean; reactions: 
   let changed = false
   const normalized = reactions.flatMap((entry): ReactionEntry[] => {
     if (!entry || typeof entry !== 'object') return []
-    const emoji = typeof (entry as any).emoji === 'string' ? (entry as any).emoji : null
+    const record = entry as Record<string, unknown>
+    const emoji = typeof record.emoji === 'string' ? record.emoji : null
     if (!emoji) return []
-    const userIds: string[] = Array.isArray((entry as any).userIds)
-      ? (entry as any).userIds.filter((v: unknown): v is string => typeof v === 'string')
+    const userIds: string[] = Array.isArray(record.userIds)
+      ? record.userIds.filter((v: unknown): v is string => typeof v === 'string')
       : []
     const correctCount = userIds.length
-    const storedCount = typeof (entry as any).count === 'number' ? (entry as any).count : correctCount
+    const storedCount = typeof record.count === 'number' ? record.count : correctCount
     if (userIds.length === 0 && storedCount === 0) {
       changed = true
       return []
