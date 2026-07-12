@@ -463,6 +463,72 @@ function addContentSlide(
         }
     }
 
+    // Timeline / process-flow block
+    if (slideContent.timeline && slideContent.timeline.length > 0) {
+        const phases = slideContent.timeline.slice(0, 5);
+        const colW = (contentW - (phases.length - 1) * 8) / phases.length;
+        const tlH = Math.min(100, contentBottom - y);
+        if (tlH > 50) {
+            phases.forEach((phase, i) => {
+                const px = contentX + i * (colW + 8);
+                const accentColor = i === 0 ? COLORS.secondary : i === phases.length - 1 ? COLORS.success : COLORS.accent;
+                drawCard(doc, px, y, colW - 4, tlH, accentColor);
+                // Phase number circle
+                doc.setFillColor(...rgb(accentColor));
+                doc.circle(px + colW / 2 - 2, y + 16, 8, 'F');
+                text(doc, `${phase.number}`, px + colW / 2 - 2, y + 19, {
+                    size: 11, color: COLORS.white, bold: true, align: 'center',
+                });
+                // Phase title
+                text(doc, phase.title, px + 4, y + 36, {
+                    size: FONT.panelLabel, color: COLORS.primary, bold: true, align: 'center',
+                    maxWidth: colW - 12, lineHeight: 12,
+                });
+                // Duration
+                if (phase.duration) {
+                    text(doc, phase.duration, px + 4, y + 50, {
+                        size: 8, color: COLORS.secondary, bold: true, align: 'center',
+                        maxWidth: colW - 12,
+                    });
+                }
+                // Detail
+                text(doc, phase.detail, px + 4, y + 62, {
+                    size: FONT.bodySmall, color: COLORS.dark, align: 'center',
+                    maxWidth: colW - 12, lineHeight: 11,
+                });
+            });
+            y += tlH + 14;
+        }
+    }
+
+    // Quote / stat-hero block
+    if (slideContent.quote) {
+        const quoteH = Math.min(100, contentBottom - y);
+        if (quoteH > 50) {
+            // Dark background card
+            doc.setFillColor(...rgb(COLORS.primary));
+            doc.roundedRect(contentX, y, contentW, quoteH, 6, 6, 'F');
+            fillRect(doc, contentX, y, 4, quoteH, COLORS.secondary);
+            // Large quotation mark
+            text(doc, '"', contentX + 14, y + 30, {
+                size: 48, color: COLORS.secondary, bold: true, align: 'left',
+            });
+            // Quote text
+            text(doc, slideContent.quote.text, contentX + 36, y + 24, {
+                size: FONT.title, color: COLORS.white, bold: true, align: 'left',
+                maxWidth: contentW - 52, lineHeight: 18,
+            });
+            // Attribution
+            if (slideContent.quote.attribution) {
+                text(doc, `— ${slideContent.quote.attribution}`, contentX + 36, y + quoteH - 16, {
+                    size: FONT.bodySmall, color: COLORS.accentLight, italic: true, align: 'left',
+                    maxWidth: contentW - 52,
+                });
+            }
+            y += quoteH + 14;
+        }
+    }
+
     // Bullets — render in a card, clamped to available space
     if (slideContent.bullets.length > 0) {
         const availH = contentBottom - y;
@@ -514,7 +580,7 @@ function addContentSlide(
     }
 
     // Fallback: if no body content at all, add a descriptive paragraph
-    const hasBody = slideContent.bullets.length > 0 || slideContent.metrics?.length || slideContent.comparison || slideContent.callout;
+    const hasBody = slideContent.bullets.length > 0 || slideContent.metrics?.length || slideContent.comparison || slideContent.callout || slideContent.timeline?.length || slideContent.quote;
     if (!hasBody && y < contentBottom - 40) {
         const fallbackH = contentBottom - y;
         drawCard(doc, contentX, y, contentW, fallbackH, COLORS.accent);
