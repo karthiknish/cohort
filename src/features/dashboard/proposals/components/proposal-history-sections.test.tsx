@@ -8,7 +8,7 @@ vi.mock('next/link', () => ({
     }) => <a href={href}>{children}</a>,
 }));
 vi.mock('@/lib/hooks/use-download-file', () => ({
-    useDownloadFile: () => async () => false,
+    useDownloadFile: () => ({ download: async () => false, isDownloading: false }),
 }));
 vi.mock('convex/react', () => ({
     useConvex: () => ({ action: vi.fn() }),

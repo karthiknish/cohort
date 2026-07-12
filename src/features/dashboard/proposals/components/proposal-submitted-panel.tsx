@@ -67,7 +67,7 @@ export function ProposalSubmittedPanel({
     isSubmitting,
     workspaceId,
 }: ProposalSubmittedPanelProps) {
-    const downloadFile = useDownloadFile();
+    const { download: downloadFile, isDownloading: isDownloadingFile } = useDownloadFile();
     const presentationHref = activeProposalIdForDeck
         ? withPreviewModeSearchParamIfEnabled(`/dashboard/proposals/${activeProposalIdForDeck}/deck`, isPreviewModeEnabled())
         : null;
@@ -229,15 +229,15 @@ Timeline: ${summary.timelines.startTime}
                                     ) : null}
                                     <div className="space-y-3">
                                         {pptxSourceUrl ? (
-                                            <Button variant="outline" className="h-12 w-full justify-start rounded-xl" onClick={handleDownloadPptx}>
-                                                <Download className="mr-3 size-4 text-muted-foreground" />
-                                                <span className="text-sm font-semibold">Download PowerPoint</span>
+                                            <Button variant="outline" className="h-12 w-full justify-start rounded-xl" onClick={handleDownloadPptx} disabled={isDownloadingFile}>
+                                                {isDownloadingFile ? <LoaderCircle className="mr-3 size-4 animate-spin text-muted-foreground" /> : <Download className="mr-3 size-4 text-muted-foreground" />}
+                                                <span className="text-sm font-semibold">{isDownloadingFile ? 'Downloading…' : 'Download PowerPoint'}</span>
                                             </Button>
                                         ) : null}
                                         {pdfSourceUrl ? (
-                                            <Button variant="outline" className="h-12 w-full justify-start rounded-xl" onClick={handleDownloadPdf}>
-                                                <FileText className="mr-3 size-4 text-muted-foreground" />
-                                                <span className="text-sm font-semibold">Download PDF</span>
+                                            <Button variant="outline" className="h-12 w-full justify-start rounded-xl" onClick={handleDownloadPdf} disabled={isDownloadingFile}>
+                                                {isDownloadingFile ? <LoaderCircle className="mr-3 size-4 animate-spin text-muted-foreground" /> : <FileText className="mr-3 size-4 text-muted-foreground" />}
+                                                <span className="text-sm font-semibold">{isDownloadingFile ? 'Downloading…' : 'Download PDF'}</span>
                                             </Button>
                                         ) : null}
                                         {viewerHref ? (

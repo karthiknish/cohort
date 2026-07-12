@@ -99,7 +99,7 @@ export function ProposalHistoryRow({ canManage = true, deletingProposalId, onDow
     workspaceId?: string | null;
 }) {
     const { deckRequestable, displayName, isActiveDraft, isDeckPreparing, presentationUrl, pdfUrl, proposal, resumeDisabled, resumeLabel } = row;
-    const downloadFile = useDownloadFile();
+    const { download: downloadFile, isDownloading: isDownloadingFile } = useDownloadFile();
     const handleResumeAsEdit = () => {
         onResume(proposal, true);
     };
@@ -163,12 +163,12 @@ export function ProposalHistoryRow({ canManage = true, deletingProposalId, onDow
                   Preview
                 </Link>
               </Button>
-              <Button size="sm" variant="ghost" className="h-9 rounded-full px-3" onClick={handleDownloadPptx}>
-                <Download className="mr-1.5 size-3.5" aria-hidden/>
+              <Button size="sm" variant="ghost" className="h-9 rounded-full px-3" onClick={handleDownloadPptx} disabled={isDownloadingFile}>
+                {isDownloadingFile ? <LoaderCircle className="mr-1.5 size-3.5 animate-spin" aria-hidden/> : <Download className="mr-1.5 size-3.5" aria-hidden/>}
                 PPT
               </Button>
-              {pdfUrl ? (<Button size="sm" variant="ghost" className="h-9 rounded-full px-3" onClick={handleDownloadPdf}>
-                  <FileText className="mr-1.5 size-3.5" aria-hidden/>
+              {pdfUrl ? (<Button size="sm" variant="ghost" className="h-9 rounded-full px-3" onClick={handleDownloadPdf} disabled={isDownloadingFile}>
+                  {isDownloadingFile ? <LoaderCircle className="mr-1.5 size-3.5 animate-spin" aria-hidden/> : <FileText className="mr-1.5 size-3.5" aria-hidden/>}
                   PDF
                 </Button>) : null}
             </>) : canManage && deckRequestable ? (<Button size="sm" variant="outline" onClick={handleDownloadDeck} disabled={isDeckPreparing} className="h-9 gap-1.5 rounded-full border-dashed px-3">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useConvex } from 'convex/react';
 import { proposalArchivesApi } from '@/lib/convex-api';
 import { asErrorMessage, logError } from '@/lib/convex-errors';
@@ -18,6 +18,13 @@ interface DownloadFileOptions {
   workspaceId?: string | null;
 }
 
+export interface UseDownloadFileReturn {
+  /** Triggers a download. Returns true on success. */
+  download: (opts: DownloadFileOptions) => Promise<boolean>;
+  /** True while a download is in progress. */
+  isDownloading: boolean;
+}
+
 /**
  * Download a file through the /api/proxy/file endpoint with automatic
  * expired-URL recovery.
@@ -28,15 +35,19 @@ interface DownloadFileOptions {
  *
  * On success, a blob download is triggered in the browser. On failure,
  * a user-friendly toast notification is shown.
+ *
+ * @returns `{ download, isDownloading }` — use `isDownloading` for button
+ *   loader states.
  */
-export function useDownloadFile() {
+export function useDownloadFile(): UseDownloadFileReturn {
   const convex = useConvex();
-  const { user, getIdToken } = useAuth();
+  const { user } = useAuth();
   const { selectedClient } = useClientContext();
   const fallbackWorkspaceId = selectedClient?.workspaceId ?? user?.agencyId ?? null;
   const inFlightRef = useRef(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  return useCallback(
+  const download = useCallback(
     async ({ url, filename, workspaceId }: DownloadFileOptions): Promise<boolean> => {
       if (!url) return false;
       if (inFlightRef.current) {
@@ -48,6 +59,7 @@ export function useDownloadFile() {
       }
 
       inFlightRef.current = true;
+      setIsDownloading(true);
       const wsId = workspaceId ?? fallbackWorkspaceId;
 
       try {
@@ -149,8 +161,11 @@ export function useDownloadFile() {
         return false;
       } finally {
         inFlightRef.current = false;
+        setIsDownloading(false);
       }
     },
     [convex, fallbackWorkspaceId],
   );
+
+  return { download, isDownloading };
 }

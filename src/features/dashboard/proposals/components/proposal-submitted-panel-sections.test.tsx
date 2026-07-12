@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 vi.mock('@/lib/hooks/use-download-file', () => ({
-    useDownloadFile: () => async () => false,
+    useDownloadFile: () => ({ download: async () => false, isDownloading: false }),
 }));
 vi.mock('convex/react', () => ({
     useConvex: () => ({ action: vi.fn() }),
