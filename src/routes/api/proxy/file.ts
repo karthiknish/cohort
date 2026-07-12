@@ -90,10 +90,12 @@ const handlers = adaptApiHandler(
     auth: 'required',
     querySchema: z.object({
       url: z.string().url('Invalid URL format'),
+      filename: z.string().optional(),
+      download: z.string().optional(),
     }),
   },
   async (req, { query }) => {
-    const { url: fileUrl } = query
+    const { url: fileUrl, filename: overrideFilename, download: downloadParam } = query
     const parsedUrl = new URL(fileUrl)
     if (!isAllowedHostname(parsedUrl.hostname)) {
       throw new ForbiddenError('URL domain not allowed')
@@ -114,15 +116,19 @@ const handlers = adaptApiHandler(
       throw new ServiceUnavailableError(`Failed to fetch file: ${upstream.status}`)
     }
     const contentType = upstream.headers.get('content-type') || 'application/octet-stream'
-    const rawFilename = decodeURIComponent(parsedUrl.pathname.split('/').pop() || 'file')
+    const rawFilename = overrideFilename || decodeURIComponent(parsedUrl.pathname.split('/').pop() || 'file')
     const filename = sanitizeFilename(rawFilename)
+    // Use attachment disposition when download param is present or filename is overridden,
+    // so the browser saves the file with the correct extension instead of ignoring
+    // the download attribute on cross-origin URLs.
+    const disposition = downloadParam !== undefined || overrideFilename ? 'attachment' : 'inline'
     // Read the full body as arrayBuffer — streaming (upstream.body) can fail
     // in some server environments (Nitro/Vinxi) due to web stream compatibility
     const bodyBuffer = await upstream.arrayBuffer()
     const headers: Record<string, string> = {
       'Content-Type': contentType,
       'Cache-Control': 'private, max-age=3600',
-      'Content-Disposition': `inline; filename="${filename}"; filename*=UTF-8''${encodeContentDispositionFilename(filename)}`,
+      'Content-Disposition': `${disposition}; filename="${filename}"; filename*=UTF-8''${encodeContentDispositionFilename(filename)}`,
       'Content-Length': String(bodyBuffer.byteLength),
     }
     return new Response(bodyBuffer, { status: 200, headers })

@@ -4,6 +4,7 @@ import { CheckCircle2, ExternalLink, LoaderCircle, Sparkles } from 'lucide-react
 import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data';
 import { Button } from '@/shared/ui/button';
 import { cn } from '@/lib/utils';
+import { buildDownloadUrl } from '@/lib/build-download-url';
 type ProposalBuilderJourneyBarProps = {
     isSubmitting: boolean;
     isRecheckingDeck: boolean;
@@ -51,7 +52,7 @@ export function ProposalBuilderJourneyBar({ isSubmitting, isRecheckingDeck, subm
               </Link>
             </Button>) : null}
           {deckDownloadUrl ? (<Button size="sm" variant="outline" asChild>
-              <a href={deckDownloadUrl} download="proposal-deck.pptx" rel="noopener noreferrer">
+              <a href={buildDownloadUrl(deckDownloadUrl, 'proposal-deck.pptx') ?? undefined} rel="noopener noreferrer">
                 Download
               </a>
             </Button>) : null}

@@ -21,6 +21,7 @@ import { PageSkeletonBoundary } from '@/shared/ui/page-skeleton-boundary';
 import { DirectionalPageTransition } from '@/shared/ui/page-transition';
 import { BackLink } from '@/shared/components/back-link';
 import { DeckPageViewerSection } from '@/features/dashboard/proposals/[proposalId]/deck/deck-page-viewer-section';
+import { buildDownloadUrl } from '@/lib/build-download-url';
 
 const LOADING_FALLBACK = (
     <div className="flex min-h-[60vh] items-center justify-center">
@@ -158,7 +159,7 @@ export default function ProposalDeckPage() {
                                 <div className="flex flex-wrap gap-3">
                                     {pdfViewerUrl ? (
                                         <Button variant="outline" asChild>
-                                            <a href={pdfViewerUrl} download={`${proposalDisplayName}.pdf`} target="_blank" rel="noreferrer">
+                                            <a href={buildDownloadUrl(pdfViewerUrl, `${proposalDisplayName}.pdf`) ?? undefined} target="_blank" rel="noreferrer">
                                                 <SvglPdfIcon className="mr-2 size-4" />
                                                 Download PDF
                                             </a>
@@ -166,7 +167,7 @@ export default function ProposalDeckPage() {
                                     ) : null}
                                     {pptxViewerUrl ? (
                                         <Button variant="outline" asChild>
-                                            <a href={pptxViewerUrl} download={`${proposalDisplayName}.pptx`} target="_blank" rel="noreferrer">
+                                            <a href={buildDownloadUrl(pptxViewerUrl, `${proposalDisplayName}.pptx`) ?? undefined} target="_blank" rel="noreferrer">
                                                 <Download className="mr-2 size-4" />
                                                 Download PowerPoint
                                             </a>

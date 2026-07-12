@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { ViewTransition } from '@/shared/ui/view-transition';
 import { cn, formatRelativeTime } from '@/lib/utils';
 import type { ProposalDraft } from '@/types/proposals';
+import { buildDownloadUrl } from '@/lib/build-download-url';
 function proposalStatusBadgeClass(status: ProposalDraft['status']): string {
     if (status === 'ready') {
         return cn(DASHBOARD_THEME.badges.base, DASHBOARD_THEME.badges.success);
@@ -153,13 +154,13 @@ export function ProposalHistoryRow({ canManage = true, deletingProposalId, onDow
                 </Link>
               </Button>
               <Button asChild size="sm" variant="ghost" className="h-9 rounded-full px-3">
-                <a href={presentationUrl} target="_blank" rel="noopener noreferrer">
+                <a href={buildDownloadUrl(presentationUrl, `${displayName}.pptx`) ?? undefined} target="_blank" rel="noopener noreferrer">
                   <Download className="mr-1.5 size-3.5" aria-hidden/>
                   PPT
                 </a>
               </Button>
               {pdfUrl ? (<Button asChild size="sm" variant="ghost" className="h-9 rounded-full px-3">
-                  <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                  <a href={buildDownloadUrl(pdfUrl, `${displayName}.pdf`) ?? undefined} target="_blank" rel="noopener noreferrer">
                     <FileText className="mr-1.5 size-3.5" aria-hidden/>
                     PDF
                   </a>

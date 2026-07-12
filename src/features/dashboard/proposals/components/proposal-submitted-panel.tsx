@@ -13,6 +13,7 @@ import { fadeInUpVariants, slideInLeftVariants, slideInRightVariants, transition
 import type { ProposalFormData } from '@/lib/proposals';
 import { cn } from '@/lib/utils';
 import type { ProposalPresentationDeck } from '@/types/proposals';
+import { buildDownloadUrl } from '@/lib/build-download-url';
 
 const PptViewer = dynamic(() => import('@/shared/components/ppt-viewer').then((m) => ({ default: m.PptViewer })), {
     loading: () => (
@@ -72,8 +73,8 @@ export function ProposalSubmittedPanel({
         : deckDownloadUrl
             ? `/dashboard/proposals/viewer?src=${encodeURIComponent(deckDownloadUrl)}`
             : null;
-    const downloadUrl = deckDownloadUrl || presentationDeck?.storageUrl || presentationDeck?.pptxUrl || null;
-    const pdfDownloadUrl = presentationDeck?.pdfUrl ?? presentationDeck?.pdfStorageUrl ?? null;
+    const downloadUrl = buildDownloadUrl(deckDownloadUrl || presentationDeck?.storageUrl || presentationDeck?.pptxUrl || null, 'proposal-deck.pptx');
+    const pdfDownloadUrl = buildDownloadUrl(presentationDeck?.pdfUrl ?? presentationDeck?.pdfStorageUrl ?? null, 'proposal.pdf');
     const pptxPreviewUrl = resolvePptxPreviewUrl(presentationDeck, deckDownloadUrl);
 
     const handleCopySummary = useCallback(() => {
@@ -216,7 +217,7 @@ Timeline: ${summary.timelines.startTime}
                                     <div className="space-y-3">
                                         {downloadUrl ? (
                                             <Button variant="outline" className="h-12 w-full justify-start rounded-xl" asChild>
-                                                <a href={downloadUrl} download="proposal-deck.pptx" rel="noreferrer">
+                                                <a href={downloadUrl ?? undefined} rel="noreferrer">
                                                     <Download className="mr-3 size-4 text-muted-foreground" />
                                                     <span className="text-sm font-semibold">Download PowerPoint</span>
                                                 </a>
@@ -224,7 +225,7 @@ Timeline: ${summary.timelines.startTime}
                                         ) : null}
                                         {pdfDownloadUrl ? (
                                             <Button variant="outline" className="h-12 w-full justify-start rounded-xl" asChild>
-                                                <a href={pdfDownloadUrl} download="proposal.pdf" rel="noreferrer">
+                                                <a href={pdfDownloadUrl ?? undefined} rel="noreferrer">
                                                     <FileText className="mr-3 size-4 text-muted-foreground" />
                                                     <span className="text-sm font-semibold">Download PDF</span>
                                                 </a>

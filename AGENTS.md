@@ -1,3 +1,8 @@
+## Production URL
+
+- Production deployment: `https://cohort-omega-five.vercel.app`
+- Test admin credentials for sign-in are stored in `.env.local` as `TEST_ADMIN_EMAIL` and `TEST_ADMIN_PASSWORD` (gitignored). Use these when filling out the proposal form or running E2E flows against prod.
+
 ## Engineering guardrails
 
 - CI: `bun run ci:check` (lint covers `src` + `convex`; `convex:typecheck` is hermetic).

@@ -7,6 +7,7 @@ import { trackDeckGenerationCompleted, trackDeckGenerationFailed, trackDeckGener
 import { refreshProposalDraft } from '@/services/proposals';
 import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals';
 import type { DeckProgressStage } from '../components/deck-progress-overlays';
+import { buildDownloadUrl } from '@/lib/build-download-url';
 export interface UseDeckPreparationOptions {
     draftId: string | null;
     refreshProposals: () => Promise<unknown>;
@@ -33,13 +34,13 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
         if (typeof window === 'undefined') {
             return;
         }
+        const proxyUrl = buildDownloadUrl(url, 'proposal-deck.pptx') ?? url;
         if (pendingWindow && !pendingWindow.closed) {
-            pendingWindow.location.href = url;
+            pendingWindow.location.href = proxyUrl;
             return;
         }
         const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = 'proposal-deck.pptx';
+        anchor.href = proxyUrl;
         anchor.target = '_blank';
         anchor.rel = 'noopener';
         anchor.style.display = 'none';
