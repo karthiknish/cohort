@@ -46,6 +46,20 @@ type Router = {
   prefetch: (href?: string) => void
 }
 
+/**
+ * Map Next.js navigation options to TanStack Router equivalents.
+ * Next.js uses `scroll: false` to suppress scroll-to-top; TanStack Router
+ * uses `resetScroll: false`.
+ */
+function mapNavOpts(opts?: Record<string, unknown>): Record<string, unknown> | undefined {
+  if (!opts) return opts
+  const { scroll, ...rest } = opts
+  if (scroll === false) {
+    return { ...rest, resetScroll: false }
+  }
+  return opts
+}
+
 export function useRouter(): Router {
   const navigate = useNavigate()
   const router = useTanStackRouter()
@@ -56,7 +70,7 @@ export function useRouter(): Router {
         to: to as never,
         ...(search ? { search: search as never } : {}),
         ...(hash ? { hash } : {}),
-        ...opts,
+        ...mapNavOpts(opts),
       })
     },
     replace: (href, opts) => {
@@ -66,7 +80,7 @@ export function useRouter(): Router {
         replace: true,
         ...(search ? { search: search as never } : {}),
         ...(hash ? { hash } : {}),
-        ...opts,
+        ...mapNavOpts(opts),
       })
     },
     back: () => router.history.back(),
