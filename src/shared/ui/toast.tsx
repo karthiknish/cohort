@@ -31,7 +31,7 @@ const toastVariants = cva('focus-ring-subtle group pointer-events-auto relative 
 type ToastVariantProps = VariantProps<typeof toastVariants>;
 const Toast = ({ className, variant, ref, ...props }: ToastPrimitiveProps) => (<ToastPrimitives.Root ref={ref} className={cn(toastVariants({ variant }), className)} {...props}/>);
 Toast.displayName = ToastPrimitives.Root.displayName;
-const ToastAction = ({ className, ref, ...props }: ToastActionProps) => (<ToastPrimitives.Action ref={ref} className={cn('focus-ring-subtle inline-flex h-8 items-center justify-center rounded-md border border-input bg-transparent px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50', interactiveTransitionClass, className)} {...props}/>);
+const ToastAction = ({ className, ref, ...props }: ToastActionProps) => (<ToastPrimitives.Action ref={ref} className={cn('focus-ring-subtle inline-flex h-8 items-center justify-center rounded-md border border-input bg-transparent px-3 text-sm font-medium text-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50', interactiveTransitionClass, className)} {...props}/>);
 ToastAction.displayName = ToastPrimitives.Action.displayName;
 const ToastClose = ({ className, ref, ...props }: ToastCloseProps) => (<ToastPrimitives.Close ref={ref} className={cn('focus-ring-subtle absolute right-2 top-2 rounded-md p-1 text-current opacity-70 hover:opacity-100', interactiveTransitionClass, className)} aria-label="Dismiss notification" toast-close="" {...props}>
     <X className="size-4"/>
